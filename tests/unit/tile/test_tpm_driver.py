@@ -79,7 +79,7 @@ class TestTPMDriver:
         the underlying component.
 
         :param mock_task_callback: A mocked callable
-        :param tpm_driver: the patched tpm driver under test.
+        :param tpm_driver: the tpm driver under test.
         :param static_tile_simulator: An hardware tile mock
         """
         assert tpm_driver.communication_state == CommunicationStatus.DISABLED
@@ -140,7 +140,7 @@ class TestTPMDriver:
         Using a static_tile_simulator to mock the functionality
         of writing to a register
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -201,7 +201,7 @@ class TestTPMDriver:
         """
         Test we can write and read addresses on the static_tile_simulator.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -229,7 +229,7 @@ class TestTPMDriver:
         Test we can update attributes.
 
         :param mock_task_callback: A mocked callable
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -276,7 +276,7 @@ class TestTPMDriver:
         """
         Test that tpm_driver can read attributes from tile.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -313,7 +313,7 @@ class TestTPMDriver:
         """
         Dumb test of attribute read. Just check that the attributes can be read.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         static_tile_simulator.connect()
@@ -337,7 +337,7 @@ class TestTPMDriver:
         """
         Dumb test of attribute write. Just check that the attributes can be written.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         static_tile_simulator.connect()
@@ -362,7 +362,7 @@ class TestTPMDriver:
         """
         Test the set_beamformer_regions command.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         static_tile_simulator.connect()
@@ -385,7 +385,7 @@ class TestTPMDriver:
         The start communicating function unblocks the polling loop, allows the polling
         loop to be tested.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -442,7 +442,7 @@ class TestTPMDriver:
         """
         Test that the tpm status reports as expected.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
@@ -469,7 +469,7 @@ class TestTPMDriver:
         """
         Test that we can get the tile_id from the mocked Tile.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -498,7 +498,7 @@ class TestTPMDriver:
         """
         Test that start acquisition writes to mocked registers on the mocked tile.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -536,7 +536,7 @@ class TestTPMDriver:
         """
         Test that we can set the delays to the tile hardware mock.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The static_tile_simulator
@@ -595,7 +595,7 @@ class TestTPMDriver:
         Test that when we write to a address on the tpm_driver, That value is written to
         the TPM_simulator.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
 
         Test that:
@@ -624,7 +624,7 @@ class TestTPMDriver:
         """
         Test that configuration is checked and raises errors.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
 
         Test that:
@@ -673,7 +673,7 @@ class TestTPMDriver:
         """
         Test that we can configure the 40g core.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
 
         Test that:
@@ -724,7 +724,7 @@ class TestTPMDriver:
         """
         Test that the we can get the firmware from the tpm_driver.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         firmware = tpm_driver.firmware_available
@@ -744,7 +744,7 @@ class TestTPMDriver:
         Test to ensure the tpm_driver can read the _check_programmed() method
         correctly if the mocked TPM is programmed.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
         assert tpm_driver._check_programmed() is False
@@ -760,7 +760,7 @@ class TestTPMDriver:
         """
         When we initialise the tpm_driver the mockedTPM gets the correct calls.
 
-        :param tpm_driver: The patched tpm driver under test.
+        :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
 
         Test cases:
@@ -770,8 +770,9 @@ class TestTPMDriver:
         # establish connection to the TPM
         static_tile_simulator.connect()
         initialise_task_callback = MockCallable()
-        tpm_driver.initialise(task_callback=initialise_task_callback)
         assert static_tile_simulator.is_programmed() is False
+        tpm_driver.initialise(task_callback=initialise_task_callback)
+        
 
         time.sleep(0.1)
         _, kwargs = initialise_task_callback.get_next_call()

@@ -358,8 +358,6 @@ class TileComponentManager(MccsComponentManager):
                 + " not valid. Trying to read version from board, which must be on"
             )
             tpm_version = None
-        else:
-            tpm_version = tpm_version
 
         tile = cast(
             Tile12,

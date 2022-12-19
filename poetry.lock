@@ -1,4 +1,5 @@
 [[package]]
+<<<<<<< HEAD
 name = "aavs-system"
 version = "1.1"
 description = "AAVS Software"
@@ -19,6 +20,8 @@ optional = false
 python-versions = "*"
 
 [[package]]
+=======
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 name = "astroid"
 version = "2.13.2"
 description = "An abstract syntax tree for Python with inference support."
@@ -33,7 +36,11 @@ wrapt = {version = ">=1.11,<2", markers = "python_version < \"3.11\""}
 
 [[package]]
 name = "astropy"
+<<<<<<< HEAD
 version = "5.2.1"
+=======
+version = "5.2"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "Astronomy and astrophysics core library"
 category = "main"
 optional = false
@@ -47,10 +54,17 @@ PyYAML = ">=3.13"
 
 [package.extras]
 all = ["asdf (>=2.10.0)", "beautifulsoup4", "bleach", "bottleneck", "certifi", "dask[array]", "fsspec[http] (>=2022.8.2)", "h5py", "html5lib", "ipython (>=4.2)", "jplephem", "matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "mpmath", "pandas", "pyarrow (>=5.0.0)", "pytest (>=7.0)", "pytz", "s3fs (>=2022.8.2)", "scipy (>=1.5)", "sortedcontainers", "typing-extensions (>=3.10.0.1)"]
+<<<<<<< HEAD
 docs = ["Jinja2 (>=3.0)", "matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "pytest (>=7.0)", "scipy (>=1.3)", "sphinx", "sphinx-astropy (>=1.6)", "sphinx-changelog (>=1.2.0)", "towncrier (<22.12.0)"]
 recommended = ["matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "scipy (>=1.5)"]
 test = ["pytest (>=7.0)", "pytest-astropy (>=0.10)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist"]
 test_all = ["coverage[toml]", "ipython (>=4.2)", "objgraph", "pytest (>=7.0)", "pytest-astropy (>=0.10)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist", "sgp4 (>=2.3)", "skyfield (>=1.20)"]
+=======
+docs = ["Jinja2 (>=3.0,<3.1)", "matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "pytest (>=7.0)", "scipy (>=1.3)", "sphinx (<4)", "sphinx-astropy (>=1.6)", "sphinx-changelog (>=1.2.0)"]
+recommended = ["matplotlib (>=3.1,!=3.4.0,!=3.5.2)", "scipy (>=1.5)"]
+test = ["pytest (>=7.0)", "pytest-astropy (>=0.10)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist"]
+test_all = ["coverage[toml]", "ipython (>=4.2)", "objgraph", "pooch", "pytest (>=7.0)", "pytest-astropy (>=0.10)", "pytest-astropy-header (>=0.2.1)", "pytest-doctestplus (>=0.12)", "pytest-xdist", "sgp4 (>=2.3)", "skyfield (>=1.20)"]
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 
 [[package]]
 name = "atomicwrites"
@@ -183,7 +197,11 @@ python-versions = ">=3.6,<4.0"
 
 [[package]]
 name = "debugpy"
+<<<<<<< HEAD
 version = "1.6.5"
+=======
+version = "1.6.4"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "An implementation of the Debug Adapter Protocol for Python"
 category = "main"
 optional = false
@@ -261,15 +279,24 @@ testing = ["pre-commit"]
 
 [[package]]
 name = "filelock"
+<<<<<<< HEAD
 version = "3.9.0"
+=======
+version = "3.8.2"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "A platform independent file lock."
 category = "dev"
 optional = false
 python-versions = ">=3.7"
 
 [package.extras]
+<<<<<<< HEAD
 docs = ["furo (>=2022.12.7)", "sphinx (>=5.3)", "sphinx-autodoc-typehints (>=1.19.5)"]
 testing = ["covdefaults (>=2.2.2)", "coverage (>=7.0.1)", "pytest (>=7.2)", "pytest-cov (>=4)", "pytest-timeout (>=2.1)"]
+=======
+docs = ["furo (>=2022.9.29)", "sphinx (>=5.3)", "sphinx-autodoc-typehints (>=1.19.5)"]
+testing = ["covdefaults (>=2.2.2)", "coverage (>=6.5)", "pytest (>=7.2)", "pytest-cov (>=4)", "pytest-timeout (>=2.1)"]
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 
 [[package]]
 name = "fire"
@@ -400,7 +427,11 @@ python-versions = ">=3.7"
 
 [[package]]
 name = "isort"
+<<<<<<< HEAD
 version = "5.11.4"
+=======
+version = "5.11.1"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "A Python utility / library to sort Python imports."
 category = "dev"
 optional = false
@@ -537,7 +568,11 @@ python-versions = ">=3.8"
 
 [[package]]
 name = "packaging"
+<<<<<<< HEAD
 version = "23.0"
+=======
+version = "22.0"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "Core utilities for Python packages"
 category = "main"
 optional = false
@@ -588,7 +623,11 @@ flake8 = ">=5.0.0"
 
 [[package]]
 name = "platformdirs"
+<<<<<<< HEAD
 version = "2.6.2"
+=======
+version = "2.6.0"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
 category = "dev"
 optional = false
@@ -671,21 +710,6 @@ docs = ["sphinx-astropy (>=1.3)"]
 test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
-name = "pyfabil"
-version = "1.1"
-description = "A general Python package for interfacing with FPGA boards"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-enum34 = "*"
-
-[package.source]
-type = "file"
-url = "pyfabil-1.1-py3-none-any.whl"
-
-[[package]]
 name = "pyflakes"
 version = "2.5.0"
 description = "passive checker of Python programs"
@@ -706,7 +730,11 @@ plugins = ["importlib-metadata"]
 
 [[package]]
 name = "pylint"
+<<<<<<< HEAD
 version = "2.15.10"
+=======
+version = "2.15.8"
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 description = "python code static checker"
 category = "dev"
 optional = false
@@ -1056,6 +1084,19 @@ url = "https://artefact.skao.int/repository/pypi-internal/simple"
 reference = 'ska-nexus'
 
 [[package]]
+name = "ska-low-mccs-spshw"
+version = "0.1.0"
+description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
+category = "main"
+optional = false
+python-versions = "*"
+develop = true
+
+[package.source]
+type = "directory"
+url = "../ska-low-mccs-spshw"
+
+[[package]]
 name = "ska-ser-logging"
 version = "0.4.1+0a677a67"
 description = "Square Kilometre Array logging configuration library"
@@ -1286,6 +1327,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
+<<<<<<< HEAD
 content-hash = "d4cc81541ca3b04804f5543b2a8b3db989f85887b54268221faf05c0a78fe3f6"
 
 [metadata.files]
@@ -1296,11 +1338,21 @@ appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
 ]
+=======
+<<<<<<< HEAD
+content-hash = "3bd51022a90e1c5f08da2e9dfc6ed5e91ff273585601a5d308b511407cbed29e"
+=======
+content-hash = "b383195d91decdcc7b761d1a72044b5ad295d876d3d6ecfc9cc65c9a71ed595e"
+>>>>>>> 29ccfe2e (MCCS-1254 Remove tile and subrack)
+
+[metadata.files]
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 astroid = [
     {file = "astroid-2.13.2-py3-none-any.whl", hash = "sha256:8f6a8d40c4ad161d6fc419545ae4b2f275ed86d1c989c97825772120842ee0d2"},
     {file = "astroid-2.13.2.tar.gz", hash = "sha256:3bc7834720e1a24ca797fd785d77efb14f7a28ee8e635ef040b6e2d80ccb3303"},
 ]
 astropy = [
+<<<<<<< HEAD
     {file = "astropy-5.2.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e0dad969b05f73f38714d2dede4445a9ce9cd5fa8386b7f1f3a3122d4574a115"},
     {file = "astropy-5.2.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d9b1c97a5cc079c48fbc8a470ca2c6d9da256866de6391b00a39ceab10a11416"},
     {file = "astropy-5.2.1-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:6f2e95b17299fddafc5f5dd547f3e04cf5e3ada9ef645f52ebb218ec8d2ed429"},
@@ -1332,6 +1384,39 @@ astropy = [
     {file = "astropy-5.2.1-cp39-cp39-win32.whl", hash = "sha256:c993d86e6ff9620450d39620017deac8431f1d369e8c50bc8fe695f3f4c65340"},
     {file = "astropy-5.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:2189bf55dc7b3ee760d22bd16e330c543bb263f940f8a3a15c359b608df365be"},
     {file = "astropy-5.2.1.tar.gz", hash = "sha256:f6ae27a077f8ea84903efa76c790b985617341a0084b0d21c391f7a3f332ac23"},
+=======
+    {file = "astropy-5.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:252ba92bee687548581f6c6a9ab61c7eec4c7a77e04bcf72478e474a578db338"},
+    {file = "astropy-5.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:d73b379b4521f68b11a3bae7343b948568191f3be74d3f7b4958d627c705212a"},
+    {file = "astropy-5.2-cp310-cp310-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:dff0ca9dc48fb15714c88416e85e9dd55936ba7858b9d98e3ad9d6fe98020fa3"},
+    {file = "astropy-5.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:711d2d4a0cc01aa456796c4ca931be90da27f7d2e529ca427c9f40fca0c8ec5d"},
+    {file = "astropy-5.2-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:5f0bb41d304a6b01b0cca0a4cfc91062754c33bee64ee0cb7ef448773cf2fc14"},
+    {file = "astropy-5.2-cp310-cp310-win32.whl", hash = "sha256:91359e2944816de216e0657e5c6a94fe5e7178781533d71e724b9f2612e80fdb"},
+    {file = "astropy-5.2-cp310-cp310-win_amd64.whl", hash = "sha256:0eabb6d7ff62ef8c0fd1901217dfb34ca3de14f6aa45ece0965970b7b71d7651"},
+    {file = "astropy-5.2-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:bbd94b7d41b314382617b5240082af5c8b10172ec84c239dc6f7ed92844f0b70"},
+    {file = "astropy-5.2-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:6bf229b6579e6ce7ca08f979b008475839d89047217d5a3ce7f1f11082158817"},
+    {file = "astropy-5.2-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:abeb1486a35d906f8e7f58d6b848a3637b33f180104f7cd9b4094ec810ac6aa3"},
+    {file = "astropy-5.2-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:3b906104f6a4c125d4a5794416b371d3bd4c176cf0db6cbcfd3107d7ce8a2103"},
+    {file = "astropy-5.2-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:4bb7f58ede5f47548e61ed4496cc61d341a1c000cc4b39fb84a03a71e2c7dfac"},
+    {file = "astropy-5.2-cp311-cp311-win32.whl", hash = "sha256:6d33f0559fb6152496480301c058a55ca49a0759d499a4be023efeae7a7d2412"},
+    {file = "astropy-5.2-cp311-cp311-win_amd64.whl", hash = "sha256:ef8162c121ec2fe30d3720f838d7fe1d2d70811a83b1087bdb31c72df88c857e"},
+    {file = "astropy-5.2-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:15e1a663e415a7f4bc56aede6bbf9985e93264c69fc45e67265e22d7cabaf392"},
+    {file = "astropy-5.2-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:ad196f3c16138155b28660e4fba7b4f39431459a1d3b453a168a5bef3163fb07"},
+    {file = "astropy-5.2-cp38-cp38-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:0e4db330bce35a66e98d56aa9eb61472b42f0af79c5e8985d4af10ac435f310c"},
+    {file = "astropy-5.2-cp38-cp38-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:bd87867dd7d7a1962d6e5f6c63e8e38958018879fd5b13bf3d0efe2a0b7c4ae1"},
+    {file = "astropy-5.2-cp38-cp38-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:861a4cbe7be43a7dda4d5965650cde00185338c203fa16d6fed1268a0f6b57a0"},
+    {file = "astropy-5.2-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:7fe2303d21c9572a5a5a44775339d01f2fc1097db8a925b75ca4377cdd18cae2"},
+    {file = "astropy-5.2-cp38-cp38-win32.whl", hash = "sha256:ce0b7b079737dc2716aa78f5e2d13c1e1ec70ead13538440ce1a96bac210c5ae"},
+    {file = "astropy-5.2-cp38-cp38-win_amd64.whl", hash = "sha256:7ce65dfd539d6c5b7871e8f86475fd6e6bd28e3c31f92ee8feefe5c4316444d9"},
+    {file = "astropy-5.2-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:e56a88590e2f6e041ef4312f353e321de210ad82ae280965c76b8b6bd598e156"},
+    {file = "astropy-5.2-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:1a8f3ef46b411e04ef2cdf383049a63869ed7df307f25384411c799f58d66a1c"},
+    {file = "astropy-5.2-cp39-cp39-manylinux_2_12_i686.manylinux2010_i686.whl", hash = "sha256:c31de7d7e00e31dbc843a0201bcf9099dc9b08ae937ceee16235f37aabe330dc"},
+    {file = "astropy-5.2-cp39-cp39-manylinux_2_12_x86_64.manylinux2010_x86_64.whl", hash = "sha256:ab71607d954b3284256fb995969600dbdfaf461f6036e474b7bbf3b3c2e1a4a6"},
+    {file = "astropy-5.2-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7444a441df33916cb3d18afe3b187c368c605b34196ea625f7fb560a9973cbda"},
+    {file = "astropy-5.2-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:96dc0b9d6c17346e4877a97464ba1bad83be02b565259a094a891358872a10d3"},
+    {file = "astropy-5.2-cp39-cp39-win32.whl", hash = "sha256:3d48efa24dc7d1dfb301c8dbb8edb0b544af945512f0a802aca421eb675ed197"},
+    {file = "astropy-5.2-cp39-cp39-win_amd64.whl", hash = "sha256:d9bd65b8232f8b866fef70c2984a5b96cecd8c53e3231394cbcb9b8f2c84162e"},
+    {file = "astropy-5.2.tar.gz", hash = "sha256:d335604025f6e16f7c9bf82d5ba28e5db4745a82e5823a9d17bdd9b9bd46b2a2"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 atomicwrites = [
     {file = "atomicwrites-1.4.1.tar.gz", hash = "sha256:81b2c9071a49367a7f770170e5eec8cb66567cfbbc8c73d20ce5ca4a8d71cf11"},
@@ -1439,6 +1524,7 @@ darglint = [
     {file = "darglint-1.8.1.tar.gz", hash = "sha256:080d5106df149b199822e7ee7deb9c012b49891538f14a11be681044f0bb20da"},
 ]
 debugpy = [
+<<<<<<< HEAD
     {file = "debugpy-1.6.5-cp310-cp310-macosx_11_0_x86_64.whl", hash = "sha256:696165f021a6a17da08163eaae84f3faf5d8be68fb78cd78488dd347e625279c"},
     {file = "debugpy-1.6.5-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:17039e392d6f38388a68bd02c5f823b32a92142a851e96ba3ec52aeb1ce9d900"},
     {file = "debugpy-1.6.5-cp310-cp310-win32.whl", hash = "sha256:62a06eb78378292ba6c427d861246574dc8b84471904973797b29dd33c7c2495"},
@@ -1457,6 +1543,26 @@ debugpy = [
     {file = "debugpy-1.6.5-cp39-cp39-win_amd64.whl", hash = "sha256:7e84d9e4420122384cb2cc762a00b4e17cbf998022890f89b195ce178f78ff47"},
     {file = "debugpy-1.6.5-py2.py3-none-any.whl", hash = "sha256:8116e40a1cd0593bd2aba01d4d560ee08f018da8e8fbd4cbd24ff09b5f0e41ef"},
     {file = "debugpy-1.6.5.zip", hash = "sha256:5e55e6c79e215239dd0794ee0bf655412b934735a58e9d705e5c544f596f1603"},
+=======
+    {file = "debugpy-1.6.4-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:6ae238943482c78867ac707c09122688efb700372b617ffd364261e5e41f7a2f"},
+    {file = "debugpy-1.6.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:2a39e7da178e1f22f4bc04b57f085e785ed1bcf424aaf318835a1a7129eefe35"},
+    {file = "debugpy-1.6.4-cp310-cp310-win32.whl", hash = "sha256:143f79d0798a9acea21cd1d111badb789f19d414aec95fa6389cfea9485ddfb1"},
+    {file = "debugpy-1.6.4-cp310-cp310-win_amd64.whl", hash = "sha256:563f148f94434365ec0ce94739c749aabf60bf67339e68a9446499f3582d62f3"},
+    {file = "debugpy-1.6.4-cp37-cp37m-macosx_10_15_x86_64.whl", hash = "sha256:1caee68f7e254267df908576c0d0938f8f88af16383f172cb9f0602e24c30c01"},
+    {file = "debugpy-1.6.4-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:40e2a83d31a16b83666f19fa06d97b2cc311af88e6266590579737949971a17e"},
+    {file = "debugpy-1.6.4-cp37-cp37m-win32.whl", hash = "sha256:82229790442856962aec4767b98ba2559fe0998f897e9f21fb10b4fd24b6c436"},
+    {file = "debugpy-1.6.4-cp37-cp37m-win_amd64.whl", hash = "sha256:67edf033f9e512958f7b472975ff9d9b7ff64bf4440f6f6ae44afdc66b89e6b6"},
+    {file = "debugpy-1.6.4-cp38-cp38-macosx_10_15_x86_64.whl", hash = "sha256:4ab5e938925e5d973f567d6ef32751b17d10f3be3a8c4d73c52f53e727f69bf1"},
+    {file = "debugpy-1.6.4-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d8df268e9f72fc06efc2e75e8dc8e2b881d6a397356faec26efb2ee70b6863b7"},
+    {file = "debugpy-1.6.4-cp38-cp38-win32.whl", hash = "sha256:86bd25f38f8b6c5d430a5e2931eebbd5f580c640f4819fcd236d0498790c7204"},
+    {file = "debugpy-1.6.4-cp38-cp38-win_amd64.whl", hash = "sha256:62ba4179b372a62abf9c89b56997d70a4100c6dea6c2a4e0e4be5f45920b3253"},
+    {file = "debugpy-1.6.4-cp39-cp39-macosx_10_15_x86_64.whl", hash = "sha256:d2968e589bda4e485a9c61f113754a28e48d88c5152ed8e0b2564a1fadbe50a5"},
+    {file = "debugpy-1.6.4-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e62b8034ede98932b92268669318848a0d42133d857087a3b9cec03bb844c615"},
+    {file = "debugpy-1.6.4-cp39-cp39-win32.whl", hash = "sha256:3d9c31baf64bf959a593996c108e911c5a9aa1693a296840e5469473f064bcec"},
+    {file = "debugpy-1.6.4-cp39-cp39-win_amd64.whl", hash = "sha256:ea4bf208054e6d41749f17612066da861dff10102729d32c85b47f155223cf2b"},
+    {file = "debugpy-1.6.4-py2.py3-none-any.whl", hash = "sha256:e886a1296cd20a10172e94788009ce74b759e54229ebd64a43fa5c2b4e62cd76"},
+    {file = "debugpy-1.6.4.zip", hash = "sha256:d5ab9bd3f4e7faf3765fd52c7c43c074104ab1e109621dc73219099ed1a5399d"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 dill = [
     {file = "dill-0.3.6-py3-none-any.whl", hash = "sha256:a07ffd2351b8c678dfc4a856a3005f8067aea51d6ba6c700796a4d9e280f39f0"},
@@ -1487,8 +1593,13 @@ execnet = [
     {file = "execnet-1.9.0.tar.gz", hash = "sha256:8f694f3ba9cc92cab508b152dcfe322153975c29bda272e2fd7f3f00f36e47c5"},
 ]
 filelock = [
+<<<<<<< HEAD
     {file = "filelock-3.9.0-py3-none-any.whl", hash = "sha256:f58d535af89bb9ad5cd4df046f741f8553a418c01a7856bf0d173bbc9f6bd16d"},
     {file = "filelock-3.9.0.tar.gz", hash = "sha256:7b319f24340b51f55a2bf7a12ac0755a9b03e718311dac567a0f4f7fabd2f5de"},
+=======
+    {file = "filelock-3.8.2-py3-none-any.whl", hash = "sha256:8df285554452285f79c035efb0c861eb33a4bcfa5b7a137016e32e6a90f9792c"},
+    {file = "filelock-3.8.2.tar.gz", hash = "sha256:7565f628ea56bfcd8e54e42bdc55da899c85c1abfe1b5bcfd147e9188cebb3b2"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 fire = [
     {file = "fire-0.4.0.tar.gz", hash = "sha256:c5e2b8763699d1142393a46d0e3e790c5eb2f0706082df8f647878842c216a62"},
@@ -1532,8 +1643,13 @@ iniconfig = [
     {file = "iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3"},
 ]
 isort = [
+<<<<<<< HEAD
     {file = "isort-5.11.4-py3-none-any.whl", hash = "sha256:c033fd0edb91000a7f09527fe5c75321878f98322a77ddcc81adbd83724afb7b"},
     {file = "isort-5.11.4.tar.gz", hash = "sha256:6db30c5ded9815d813932c04c2f85a360bcdd35fed496f4d8f35495ef0a261b6"},
+=======
+    {file = "isort-5.11.1-py3-none-any.whl", hash = "sha256:bf02c95f1fe615ebbe13a619cfed1619ddfe8941274c9e3de3143adca406cb02"},
+    {file = "isort-5.11.1.tar.gz", hash = "sha256:7c5bd998504826b6f1e6f2f98b533976b066baba29b8bae83fdeefd0b89c6b70"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 jsonschema = [
     {file = "jsonschema-4.17.3-py3-none-any.whl", hash = "sha256:a870ad254da1a8ca84b6a2905cac29d265f805acc57af304784962a2aa6508f6"},
@@ -1693,8 +1809,13 @@ numpy = [
     {file = "numpy-1.23.0.tar.gz", hash = "sha256:bd3fa4fe2e38533d5336e1272fc4e765cabbbde144309ccee8675509d5cd7b05"},
 ]
 packaging = [
+<<<<<<< HEAD
     {file = "packaging-23.0-py3-none-any.whl", hash = "sha256:714ac14496c3e68c99c29b00845f7a2b85f3bb6f1078fd9f72fd20f0570002b2"},
     {file = "packaging-23.0.tar.gz", hash = "sha256:b6ad297f8907de0fa2fe1ccbd26fdaf387f5f47c7275fedf8cce89f99446cf97"},
+=======
+    {file = "packaging-22.0-py3-none-any.whl", hash = "sha256:957e2148ba0e1a3b282772e791ef1d8083648bc131c8ab0c1feba110ce1146c3"},
+    {file = "packaging-22.0.tar.gz", hash = "sha256:2198ec20bd4c017b8f9717e00f0c8714076fc2fd93816750ab48e2c41de2cfd3"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 parse = [
     {file = "parse-1.19.0.tar.gz", hash = "sha256:9ff82852bcb65d139813e2a5197627a94966245c897796760a3a2a8eb66f020b"},
@@ -1712,8 +1833,13 @@ pep8-naming = [
     {file = "pep8_naming-0.13.3-py3-none-any.whl", hash = "sha256:1a86b8c71a03337c97181917e2b472f0f5e4ccb06844a0d6f0a33522549e7a80"},
 ]
 platformdirs = [
+<<<<<<< HEAD
     {file = "platformdirs-2.6.2-py3-none-any.whl", hash = "sha256:83c8f6d04389165de7c9b6f0c682439697887bca0aa2f1c87ef1826be3584490"},
     {file = "platformdirs-2.6.2.tar.gz", hash = "sha256:e1fea1fe471b9ff8332e229df3cb7de4f53eeea4998d3b6bfff542115e998bd2"},
+=======
+    {file = "platformdirs-2.6.0-py3-none-any.whl", hash = "sha256:1a89a12377800c81983db6be069ec068eee989748799b946cce2a6e80dcc54ca"},
+    {file = "platformdirs-2.6.0.tar.gz", hash = "sha256:b46ffafa316e6b83b47489d240ce17173f123a9b9c83282141c3daf26ad9ac2e"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 pluggy = [
     {file = "pluggy-1.0.0-py2.py3-none-any.whl", hash = "sha256:74134bbf457f031a36d68416e1509f34bd5ccc019f0bcc952c7b909d06b37bd3"},
@@ -1766,9 +1892,12 @@ pyerfa = [
     {file = "pyerfa-2.0.0.1-cp39-cp39-win_amd64.whl", hash = "sha256:63a83c35cea8c5d50d53c18089f1e625c0ffc59a7a5b8d44e0f1b3ec5288f183"},
     {file = "pyerfa-2.0.0.1.tar.gz", hash = "sha256:2fd4637ffe2c1e6ede7482c13f583ba7c73119d78bef90175448ce506a0ede30"},
 ]
+<<<<<<< HEAD
 pyfabil = [
     {file = "pyfabil-1.1-py3-none-any.whl", hash = "sha256:2c6f34ad972a98a5a1a4bc2adbd1590bc23e15571c689ceb872786f56181d541"},
 ]
+=======
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 pyflakes = [
     {file = "pyflakes-2.5.0-py2.py3-none-any.whl", hash = "sha256:4579f67d887f804e67edb544428f264b7b24f435b263c4614f384135cea553d2"},
     {file = "pyflakes-2.5.0.tar.gz", hash = "sha256:491feb020dca48ccc562a8c0cbe8df07ee13078df59813b83959cbdada312ea3"},
@@ -1778,8 +1907,13 @@ Pygments = [
     {file = "Pygments-2.14.0.tar.gz", hash = "sha256:b3ed06a9e8ac9a9aae5a6f5dbe78a8a58655d17b43b93c078f094ddc476ae297"},
 ]
 pylint = [
+<<<<<<< HEAD
     {file = "pylint-2.15.10-py3-none-any.whl", hash = "sha256:9df0d07e8948a1c3ffa3b6e2d7e6e63d9fb457c5da5b961ed63106594780cc7e"},
     {file = "pylint-2.15.10.tar.gz", hash = "sha256:b3dc5ef7d33858f297ac0d06cc73862f01e4f2e74025ec3eff347ce0bc60baf5"},
+=======
+    {file = "pylint-2.15.8-py3-none-any.whl", hash = "sha256:ea82cd6a1e11062dc86d555d07c021b0fb65afe39becbe6fe692efd6c4a67443"},
+    {file = "pylint-2.15.8.tar.gz", hash = "sha256:ec4a87c33da054ab86a6c79afa6771dc8765cb5631620053e727fcf3ef8cbed7"},
+>>>>>>> fcd9487c (MCCS-1254 Remove tile and subrack)
 ]
 pylint-junit = [
     {file = "pylint_junit-0.3.2.tar.gz", hash = "sha256:c6dbe956e55bb9b365d86e2ec77b58df6b95262b5515d187ac54b8359507174b"},
@@ -1964,6 +2098,7 @@ ska-low-mccs-common = [
     {file = "ska_low_mccs_common-0.3.0-py3-none-any.whl", hash = "sha256:89d472a9f91df7aca3671a4db102ee697a58bad731260692593707587e28aa96"},
     {file = "ska_low_mccs_common-0.3.0.tar.gz", hash = "sha256:b02eee83929f71df4aaa7ade5d01c712fbc3c6f7d5f924530e30264ca4734e1e"},
 ]
+ska-low-mccs-spshw = []
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},
     {file = "ska_ser_logging-0.4.1+0a677a67.tar.gz", hash = "sha256:558622000db39668d3a35b6986af9d70dac36635826636ef2c07f816a149a06d"},

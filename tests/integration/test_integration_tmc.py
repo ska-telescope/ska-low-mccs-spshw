@@ -361,6 +361,7 @@ def subarray_beam_4(tango_harness: TangoHarness) -> MccsDeviceProxy:
 class TestMccsIntegrationTmc:
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
+    @pytest.mark.skip(reason="Subrack is no longer in the ska-low-mccs repository")
     def test_controller_on_off(
         self: TestMccsIntegrationTmc,
         controller: MccsDeviceProxy,

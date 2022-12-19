@@ -113,6 +113,7 @@ class MccsSubarray(SKASubarray):
     class InitCommand(SKAObsDevice.InitCommand):
         """Command class for device initialisation."""
 
+        # pylint: disable-next=arguments-differ
         def do(  # type: ignore[override]
             self: MccsSubarray.InitCommand,
         ) -> tuple[ResultCode, str]:

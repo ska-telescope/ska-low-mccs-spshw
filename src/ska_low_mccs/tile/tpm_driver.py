@@ -25,7 +25,6 @@ import time
 from typing import Any, Callable, Optional, cast
 
 # import numpy as np
-from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
@@ -118,20 +117,18 @@ class TpmDriver(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
-        ip: str,
-        port: int,
+        tile: HwTile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
-        Initialise a new TPM driver instance trying to connect to the given IP and port.
+        Initialise a new TPM driver instance passing in the Tile object.
 
         :param logger: a logger for this simulator to use
         :param max_workers: Nos. of worker threads for async commands.
         :param tile_id: the unique ID for the tile
-        :param ip: IP address for hardware tile
-        :param port: IP address for hardware tile control
+        :param tile: the tile driven by this TpmDriver
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -146,8 +143,6 @@ class TpmDriver(MccsComponentManager):
         self._station_id = 0
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
-        self._ip = ip
-        self._port = port
         self._tpm_status = TpmStatus.UNKNOWN
         # Configuration table cache
         self._beamformer_table = self.BEAMFORMER_TABLE
@@ -180,23 +175,8 @@ class TpmDriver(MccsComponentManager):
         self._pll_locked = True
         self._register_list = self.REGISTER_LIST
         # Hardware
-        self._tpm_version: str | None  # type hint only
-        if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
-            self.logger.warning(
-                "TPM version "
-                + tpm_version
-                + " not valid. Trying to read version from board, which must be on"
-            )
-            self._tpm_version = None
-        else:
-            self._tpm_version = tpm_version
-
-        self.tile = cast(
-            Tile12,
-            HwTile(
-                ip=self._ip, port=self._port, logger=logger, tpm_version=tpm_version
-            ),
-        )
+        self._tpm_version = tpm_version
+        self.tile = tile
 
         super().__init__(
             logger,

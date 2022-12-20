@@ -152,12 +152,12 @@ class SubrackDriver(MccsComponentManager):
             self.logger.info(message)
             if task_callback:
                 task_callback(status=TaskStatus.COMPLETED)
-
-        self.logger.error("status:ERROR")
-        message = f"Failed to connect to {target_connection}"
-        self.logger.info(message)
-        if task_callback:
-            task_callback(status=TaskStatus.FAILED)
+        else:
+            self.logger.error("status:ERROR")
+            message = f"Failed to connect to {target_connection}"
+            self.logger.info(message)
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED)
 
     def stop_communicating(self: SubrackDriver) -> None:
         """Stop communicating with the subrack."""

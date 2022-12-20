@@ -14,7 +14,7 @@ import logging
 import time
 import unittest.mock
 from datetime import datetime, timezone
-from typing import Any, Callable, Union
+from typing import Any, Union
 
 import pytest
 import pytest_mock
@@ -1149,95 +1149,47 @@ class TestTpmDriver:
         """
         return unittest.mock.Mock()
 
-    class PatchedTpmDriver(TpmDriver):
-        """Patched TpmDriver class."""
-
-        def __init__(
-            self: TestTpmDriver.PatchedTpmDriver,
-            logger: logging.Logger,
-            max_workers: int,
-            tile_id: int,
-            ip: str,
-            port: int,
-            tpm_version: str,
-            communication_state_changed_callback: Callable[[CommunicationStatus], None],
-            component_state_changed_callback: Callable[[bool], None],
-            aavs_tile: unittest.mock.Mock,
-        ) -> None:
-            """
-            Initialise a new patched TPM driver instance.
-
-            :param logger: a logger for this simulator to use
-            :param max_workers: nos of worker threads
-            :param tile_id: the unique ID for the tile
-            :param ip: IP address for hardware tile
-            :param port: IP address for hardware tile control
-            :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-            :param communication_state_changed_callback: callback to be
-                called when the status of the communications channel between
-                the component manager and its component changes
-            :param component_state_changed_callback: callback to be called when the
-                component faults (or stops faulting)
-            :param aavs_tile: a mock of the hardware tile
-            """
-            super().__init__(
-                logger,
-                max_workers,
-                tile_id,
-                ip,
-                port,
-                tpm_version,
-                communication_state_changed_callback,
-                component_state_changed_callback,
-            )
-            self.tile = aavs_tile
-
     @pytest.fixture()
-    def patched_tpm_driver(
+    def tpm_driver_with_mocked_tile(
         self: TestTpmDriver,
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
-        tpm_ip: str,
-        tpm_cpld_port: int,
         tpm_version: str,
         communication_state_changed_callback: MockCallable,
         component_state_changed_callback: MockCallable,
         hardware_tile_mock: unittest.mock.Mock,
-    ) -> PatchedTpmDriver:
+    ) -> TpmDriver:
         """
-        Return a patched TPM driver.
+        Return a TPMDriver using a mocked Tile.
 
-        :param logger: the logger to be used by this object
-        :param max_workers: nos of worker threads
+        :param logger: a object that implements the standard logging
+            interface of :py:class:`logging.Logger`
+        :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
-        :param tpm_ip: the IP address of the tile
-        :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
-        :param component_state_changed_callback: callback to be called when the
-            component faults (or stops faulting)
-        :param hardware_tile_mock: a mock of the hardware tile
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param hardware_tile_mock: The mock tile used by the TpmDriver.
 
-        :return: a patched TPM driver
+        :return: a TpmDriver driving a mocked tile
         """
-        return self.PatchedTpmDriver(
+        return TpmDriver(
             logger,
             max_workers,
             tile_id,
-            tpm_ip,
-            tpm_cpld_port,
+            hardware_tile_mock,
             tpm_version,
             communication_state_changed_callback,
             component_state_changed_callback,
-            hardware_tile_mock,
         )
 
     def test_communication_fails(
         self: TestTpmDriver,
-        patched_tpm_driver: PatchedTpmDriver,
+        tpm_driver_with_mocked_tile: TpmDriver,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
@@ -1248,14 +1200,17 @@ class TestTpmDriver:
         (which is a hardware TPM that does not exist in this test
         harness).
 
-        :param patched_tpm_driver: the patched tpm driver under test.
+        :param tpm_driver_with_mocked_tile: the patched tpm driver under test.
         :param hardware_tile_mock: An hardware tile mock
         """
         hardware_tile_mock.tpm = None
-        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
-        patched_tpm_driver.start_communicating()
         assert (
-            patched_tpm_driver.communication_state
+            tpm_driver_with_mocked_tile.communication_state
+            == CommunicationStatus.DISABLED
+        )
+        tpm_driver_with_mocked_tile.start_communicating()
+        assert (
+            tpm_driver_with_mocked_tile.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
         # Wait for the message to execute
@@ -1264,13 +1219,13 @@ class TestTpmDriver:
         time.sleep(0.3)
         hardware_tile_mock.connect.assert_called_with()
         assert (
-            patched_tpm_driver.communication_state
+            tpm_driver_with_mocked_tile.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
     def test_communication(
         self: TestTpmDriver,
-        patched_tpm_driver: PatchedTpmDriver,
+        tpm_driver_with_mocked_tile: TpmDriver,
         hardware_tile_mock: unittest.mock.Mock,
     ) -> None:
         """
@@ -1280,25 +1235,32 @@ class TestTpmDriver:
         the underlying component (which is a hardware TPM that does not exist
         in this test harness).
 
-        :param patched_tpm_driver: the patched tpm driver under test.
+        :param tpm_driver_with_mocked_tile: the patched tpm driver under test.
         :param hardware_tile_mock: An hardware tile mock
         """
         hardware_tile_mock.tpm = True
-        assert patched_tpm_driver.communication_state == CommunicationStatus.DISABLED
-        patched_tpm_driver.start_communicating()
         assert (
-            patched_tpm_driver.communication_state
+            tpm_driver_with_mocked_tile.communication_state
+            == CommunicationStatus.DISABLED
+        )
+        tpm_driver_with_mocked_tile.start_communicating()
+        assert (
+            tpm_driver_with_mocked_tile.communication_state
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Wait for the message to execute
         time.sleep(1)
         hardware_tile_mock.connect.assert_called_once()
-        # assert "_ConnectToTile" in patched_tpm_driver._queue_manager._task_result[0]
-        # assert patched_tpm_driver._queue_manager._task_result[1] == str(
+        # assert "_ConnectToTile" in
+        # tpm_driver_with_mocked_tile._queue_manager._task_result[0]
+        # assert tpm_driver_with_mocked_tile._queue_manager._task_result[1] == str(
         #    ResultCode.OK.value
         # )
 
-        # assert patched_tpm_driver._queue_manager._task_result[2] ==
+        # assert tpm_driver_with_mocked_tile._queue_manager._task_result[2] ==
         # "Connected to Tile"
-        assert patched_tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
+        assert (
+            tpm_driver_with_mocked_tile.communication_state
+            == CommunicationStatus.ESTABLISHED
+        )

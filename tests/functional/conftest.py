@@ -327,7 +327,7 @@ def subrack_tpm_power_state_changed_callback(
 @pytest.fixture()
 def tile_device_admin_mode_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> #:
+) -> MockChangeEventCallback:
     """
     Return a mock change event callback for tile device admin mode change.
 

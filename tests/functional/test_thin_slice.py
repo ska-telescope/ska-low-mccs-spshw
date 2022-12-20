@@ -33,7 +33,7 @@ def devices_to_load(tpm_number: int) -> DevicesToLoadType:
     :return: specification of the devices to be loaded.
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "charts/ska-low-mccs/data/deployment_configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
@@ -78,7 +78,7 @@ def daq_device(daq: MccsDeviceProxy) -> MccsDeviceProxy:
 
 
 @pytest.fixture()
-def daq_processed_data_callback_fixture() -> MockCallable:
+def daq_processed_data_callback() -> MockCallable:
     """
     Return the callback to be called when the daq processes some data.
 
@@ -88,7 +88,7 @@ def daq_processed_data_callback_fixture() -> MockCallable:
 
 
 @pytest.fixture()
-def daq_config_fixture() -> dict[str, Any]:
+def daq_config() -> dict[str, Any]:
     """
     Return the configuration to be provided to the daq.
 
@@ -450,9 +450,9 @@ def tpm_assert_initialised(tile_device: MccsDeviceProxy) -> None:
 
     :param tile_device: the tile fixture to use.
     """
-    max_timeout = 10
+    max_count = 10
     count = 0
-    while tile_device.tileProgrammingState != "Initialised" and count < max_timeout:
+    while tile_device.tileProgrammingState != "Initialised" and count < max_count:
         time.sleep(0.5)
         count += 1
     assert tile_device.tileProgrammingState == "Initialised"
@@ -519,9 +519,7 @@ def start_acquisition(tile_device: MccsDeviceProxy) -> str:
     :param tile_device: the tile fixture to use.
     :return: the command unique id
     """
-    ([return_code], [unique_id]) = tile_device.StartAcquisition(
-        '{"StartTime":10, "Delay":20}'
-    )
+    ([return_code], [unique_id]) = tile_device.StartAcquisition('{}')
     assert return_code == ResultCode.QUEUED
     assert "_StartAcquisition" in unique_id
     return unique_id
@@ -563,9 +561,9 @@ def tpm_assert_synchronised(tile_device: MccsDeviceProxy) -> None:
 
     :param tile_device: the tile fixture to use.
     """
-    max_timeout = 10
+    max_count = 10
     count = 0
-    while tile_device.tileProgrammingState != "Synchronised" and count < max_timeout:
+    while tile_device.tileProgrammingState != "Synchronised" and count < max_count:
         time.sleep(0.5)
         count += 1
     assert tile_device.tileProgrammingState == "Synchronised"
@@ -602,7 +600,7 @@ def daq_assert_configured(
     :param daq_device: the daq fixture to use.
     :param daq_config: the desired configuration.
     """
-    assert daq_device.configuration().items() == daq_config
+    assert daq_config.items() <= daq_device.GetConfiguration().items() 
 
 
 @given("the DAQRX has been configured")

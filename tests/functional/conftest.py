@@ -125,109 +125,11 @@ def tango_harness(
 
 
 @pytest.fixture()
-def state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
-    """
-    Return a mock change event callback factory for device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("state")
-
-    return _factory
-
-
-@pytest.fixture()
-def obs_state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
-    """
-    Return a mock change event callback factory for device obs state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("obsState")
-
-    return _factory
-
-
-@pytest.fixture()
-def controller_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def controller_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
-
-
-@pytest.fixture()
-def controller_device_lrc_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
-    """
-    return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
 def subrack_device_lrc_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
-    Return a mock change event callback for subrack device state change.
+    Return a mock change event callback for subrack device LRC result change.
 
     :param mock_change_event_callback_factory: fixture that provides a
         mock change event callback factory (i.e. an object that returns
@@ -235,27 +137,9 @@ def subrack_device_lrc_changed_callback(
 
     :return: a mock change event callback to be registered with the
         controller device via a change event subscription, so that it
-        gets called when the device state changes.
+        gets called when the device long running command result changes.
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def subarray_device_obs_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subarray device obs state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subarray device via a change event subscription, so that it gets
-        called when the device obs state changes.
-    """
-    return mock_change_event_callback_factory("obsState")
 
 
 @pytest.fixture()
@@ -365,7 +249,7 @@ def tile_device_lrc_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
-    Return a mock change event callback for tile device state change.
+    Return a mock change event callback for tile device LRC result change.
 
     :param mock_change_event_callback_factory: fixture that provides a
         mock change event callback factory (i.e. an object that returns
@@ -373,27 +257,9 @@ def tile_device_lrc_changed_callback(
 
     :return: a mock change event callback to be registered with the
         tile device via a change event subscription, so that it
-        gets called when the device state changes.
+        gets called when the device long running command result changes.
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def daq_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for daq device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
 
 
 @pytest.fixture()
@@ -401,7 +267,7 @@ def daq_device_lrc_changed_callback(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
-    Return a mock change event callback for daq device state change.
+    Return a mock change event callback for daq device LRC result change.
 
     :param mock_change_event_callback_factory: fixture that provides a
         mock change event callback factory (i.e. an object that returns
@@ -409,7 +275,7 @@ def daq_device_lrc_changed_callback(
 
     :return: a mock change event callback to be registered with the
         daq device via a change event subscription, so that it
-        gets called when the device state changes.
+        gets called when the device long running command result changes.
     """
     return mock_change_event_callback_factory("longRunningCommandResult")
 

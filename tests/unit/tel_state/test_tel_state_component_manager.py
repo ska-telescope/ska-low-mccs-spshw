@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -62,7 +60,7 @@ class TestTelState:
         """
         if request.param == "tel_state":
             return tel_state_component
-        elif request.param == "tel_state_component_manager":
+        if request.param == "tel_state_component_manager":
             tel_state_component_manager.start_communicating()
             return tel_state_component_manager
         raise ValueError("tel_state fixture parametrized with unrecognised option")

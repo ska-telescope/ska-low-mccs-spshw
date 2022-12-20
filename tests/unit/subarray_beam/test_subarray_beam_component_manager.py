@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -73,7 +71,7 @@ class TestSubarrayBeam:
             )
             return subarray_beam_component
 
-        elif request.param == "subarray_beam_component_manager":
+        if request.param == "subarray_beam_component_manager":
             subarray_beam_component_manager.start_communicating()
             time.sleep(0.1)
             return subarray_beam_component_manager

@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -10,7 +8,6 @@
 """This module contains the tests for MccsSubarrayBeam."""
 from __future__ import annotations
 
-import unittest
 from typing import Any, Type
 
 import pytest
@@ -26,8 +23,8 @@ from ska_low_mccs.subarray_beam.subarray_beam_component_manager import (
 )
 
 
-@pytest.fixture()
-def patched_subarray_beam_device_class(
+@pytest.fixture(name="patched_subarray_beam_device_class")
+def patched_subarray_beam_device_class_fixture(
     subarray_beam_component_manager: SubarrayBeamComponentManager,
 ) -> Type[MccsSubarrayBeam]:
     """
@@ -45,11 +42,11 @@ def patched_subarray_beam_device_class(
 
         def create_component_manager(
             self: PatchedSubarrayBeamDevice,
-        ) -> unittest.mock.Mock:
+        ) -> SubarrayBeamComponentManager:
             """
-            Return a mock component manager instead of the usual one.
+            Return a patched component manager instead of the usual one.
 
-            :return: a mock component manager
+            :return: a patched component manager
             """
             subarray_beam_component_manager._communication_state_changed_callback = (
                 self._component_communication_state_changed
@@ -62,8 +59,8 @@ def patched_subarray_beam_device_class(
     return PatchedSubarrayBeamDevice
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_subarray_beam_device_class: type[MccsSubarrayBeam],
 ) -> DeviceToLoadType:
     """
@@ -83,7 +80,7 @@ def device_to_load(
     }
 
 
-class TestMccsSubarrayBeam(object):
+class TestMccsSubarrayBeam:
     """Test class for MccsSubarrayBeam tests."""
 
     @pytest.fixture()
@@ -126,9 +123,10 @@ class TestMccsSubarrayBeam(object):
         )
         assert device_under_test.healthState == HealthState.UNKNOWN
 
-        subarray_beam_component_manager._component_state_changed_callback(
-            {"health_state": HealthState.OK}
-        )
+        if subarray_beam_component_manager._component_state_changed_callback:
+            subarray_beam_component_manager._component_state_changed_callback(
+                {"health_state": HealthState.OK}
+            )
 
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert device_under_test.healthState == HealthState.OK
@@ -202,7 +200,7 @@ class TestMccsSubarrayBeam(object):
 
         device_under_test.adminMode = AdminMode.ONLINE
 
-        assert list(device_under_test.stationIds) == []
+        assert not list(device_under_test.stationIds)
 
         value_to_write = [3, 4, 5, 6]
         device_under_test.stationIds = value_to_write
@@ -259,7 +257,7 @@ class TestMccsSubarrayBeam(object):
             _ = device_under_test.desiredPointing
         device_under_test.adminMode = AdminMode.ONLINE
 
-        assert list(device_under_test.desiredPointing) == []
+        assert not list(device_under_test.desiredPointing)
 
         value_to_write = [1585619550.0, 192.85948, 2.0, 27.12825, 1.0]
         device_under_test.desiredPointing = value_to_write

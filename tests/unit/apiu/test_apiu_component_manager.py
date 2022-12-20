@@ -1,4 +1,3 @@
-# type: ignore
 # pylint: skip-file
 # -*- coding: utf-8 -*
 #
@@ -316,8 +315,8 @@ class TestApiuComponentManager:
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(False)
         time.sleep(0.1)
-        expected_arguments = {"fault": False}
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        expected_arguments = [{"fault": False}]
+        component_state_changed_callback.assert_in_deque(expected_arguments[0])
 
     def test_turn_on_off_antenna(
         self: TestApiuComponentManager,
@@ -342,7 +341,7 @@ class TestApiuComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
-        def mocked_failure():
+        def mocked_failure() -> None:
             raise Exception("mocked exception")
 
         with patch(
@@ -354,6 +353,7 @@ class TestApiuComponentManager:
             task_callback_on = MockCallable()
             apiu_component_manager.on(task_callback_on)
             time.sleep(0.1)
+            kwargs: dict[str, TaskStatus]
             _, kwargs = task_callback_on.get_next_call()
             assert kwargs["status"] == TaskStatus.QUEUED
             time.sleep(0.1)
@@ -398,7 +398,7 @@ class TestApiuComponentManager:
             test
         """
 
-        def mocked_failure():
+        def mocked_failure() -> None:
             raise Exception("mocked exception")
 
         with patch(

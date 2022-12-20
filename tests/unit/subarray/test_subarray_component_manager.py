@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -25,6 +23,7 @@ from ska_low_mccs.subarray import SubarrayComponentManager
 class TestSubarrayComponentManager:
     """Class for testing the subarray component manager."""
 
+    # pylint: disable=too-many-arguments
     def test_communication(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -106,6 +105,7 @@ class TestSubarrayComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
+    # pylint: disable=too-many-arguments
     def test_assign_and_release(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -145,10 +145,10 @@ class TestSubarrayComponentManager:
         )
 
         assert subarray_component_manager.assigned_resources_dict == {
-            "stations": list(),
-            "subarray_beams": list(),
-            "station_beams": list(),
-            "channel_blocks": list(),
+            "stations": [],
+            "subarray_beams": [],
+            "station_beams": [],
+            "channel_blocks": [],
         }
 
         # Assignment from empty
@@ -239,10 +239,10 @@ class TestSubarrayComponentManager:
         component_state_changed_callback.assert_in_deque({"release_completed": None})
 
         assert subarray_component_manager.assigned_resources_dict == {
-            "stations": list(),
-            "subarray_beams": list(),
-            "station_beams": list(),
-            "channel_blocks": list(),
+            "stations": [],
+            "subarray_beams": [],
+            "station_beams": [],
+            "channel_blocks": [],
         }
 
     def test_release(
@@ -276,6 +276,7 @@ class TestSubarrayComponentManager:
             # is where the exception is supposed to be raised.
             subarray_component_manager._release(release_json, None, None)
 
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def test_configure(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -619,6 +620,7 @@ class TestSubarrayComponentManager:
         time.sleep(0.1)
         component_state_changed_callback.assert_in_deque(expected_arguments)
 
+    # pylint: disable=too-many-arguments, too-many-locals
     def test_scan(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#
+# pylint: skip-file
 # This file is part of the SKA Low MCCS project
 #
 #
@@ -11,20 +11,21 @@ from __future__ import annotations
 import datetime
 import json
 import time
+from typing import Any
 
 import pytest
 import tango
 from pytest_bdd import given, scenarios, then, when
 from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockCallable
+from ska_low_mccs_common.testing.mock import MockCallable, MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType
 
 scenarios("features/thin_slice.feature")
 
 
 @pytest.fixture(scope="module")
-def devices_to_load(tpm_number) -> DevicesToLoadType:
+def devices_to_load(tpm_number: int) -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
@@ -32,7 +33,7 @@ def devices_to_load(tpm_number) -> DevicesToLoadType:
     :return: specification of the devices to be loaded.
     """
     return {
-        "path": "charts/ska-low-mccs/data/deployment_configuration.json",
+        "path": "charts/ska-low-mccs/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "subrack_01", "proxy": MccsDeviceProxy},
@@ -43,7 +44,7 @@ def devices_to_load(tpm_number) -> DevicesToLoadType:
 
 
 @pytest.fixture()
-def tile_device(tiles, tpm_number):
+def tile_device(tiles: dict[int, MccsDeviceProxy], tpm_number: int) -> MccsDeviceProxy:
     """
     Return the tile device.
 
@@ -55,7 +56,7 @@ def tile_device(tiles, tpm_number):
 
 
 @pytest.fixture()
-def subrack_device(subrack):
+def subrack_device(subrack: MccsDeviceProxy) -> MccsDeviceProxy:
     """
     Return the subrack device.
 
@@ -66,7 +67,7 @@ def subrack_device(subrack):
 
 
 @pytest.fixture()
-def daq_device(daq):
+def daq_device(daq: MccsDeviceProxy) -> MccsDeviceProxy:
     """
     Return the daq device.
 
@@ -77,7 +78,7 @@ def daq_device(daq):
 
 
 @pytest.fixture()
-def daq_processed_data_callback():
+def daq_processed_data_callback_fixture() -> MockCallable:
     """
     Return the callback to be called when the daq processes some data.
 
@@ -87,7 +88,7 @@ def daq_processed_data_callback():
 
 
 @pytest.fixture()
-def daq_config():
+def daq_config_fixture() -> dict[str, Any]:
     """
     Return the configuration to be provided to the daq.
 
@@ -103,13 +104,13 @@ def daq_config():
 
 @given("the subrack is online")
 def turn_subrack_on(
-    subrack_device,
-    tpm_number,
-    subrack_device_state_changed_callback,
-    subrack_device_admin_mode_changed_callback,
-    subrack_tpm_power_state_changed_callback,
-    subrack_device_lrc_changed_callback,
-):
+    subrack_device: MccsDeviceProxy,
+    tpm_number: int,
+    subrack_device_state_changed_callback: MockChangeEventCallback,
+    subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+    subrack_tpm_power_state_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn the subrack on if necessary.
 
@@ -194,13 +195,13 @@ def turn_subrack_on(
 
 @given("the TPM is off")
 def given_tile_off(
-    subrack_device,
-    tile_device,
-    tpm_number,
-    tile_device_state_changed_callback,
-    tile_device_lrc_changed_callback,
-    subrack_device_lrc_changed_callback,
-):
+    subrack_device: MccsDeviceProxy,
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn the tile device off if necessary.
 
@@ -227,17 +228,17 @@ def given_tile_off(
 
 @given("the TPM is on")
 def given_tile_on(
-    subrack_device,
-    tile_device,
-    tpm_number,
-    subrack_device_state_changed_callback,
-    subrack_device_admin_mode_changed_callback,
-    subrack_tpm_power_state_changed_callback,
-    subrack_device_lrc_changed_callback,
-    tile_device_state_changed_callback,
-    tile_device_admin_mode_changed_callback,
-    tile_device_lrc_changed_callback,
-):
+    subrack_device: MccsDeviceProxy,
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    subrack_device_state_changed_callback: MockChangeEventCallback,
+    subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+    subrack_tpm_power_state_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn the tile (and subrack) on if necessary.
 
@@ -284,14 +285,14 @@ def given_tile_on(
 
 @when("the user tells the subrack to turn the TPM on")
 def turn_tile_on(
-    subrack_device,
-    tile_device,
-    tpm_number,
-    tile_device_state_changed_callback,
-    tile_device_admin_mode_changed_callback,
-    tile_device_lrc_changed_callback,
-    subrack_device_lrc_changed_callback,
-):
+    subrack_device: MccsDeviceProxy,
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn the tile on.
 
@@ -349,8 +350,11 @@ def turn_tile_on(
         [result_code], [unique_id] = tile_device.On()
         tile_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
         if starting_admin_mode != AdminMode.MAINTENANCE:
-            args = tile_device_lrc_changed_callback.get_next_call()
-            assert "_On" in args[0][1][0]
+            tile_device_lrc_changed_callback.assert_next_call(
+                "longrunningcommandresult",
+                (unique_id, '"On command has completed"'),
+                tango.AttrQuality.ATTR_VALID,
+            )
     assert tile_device.adminMode == AdminMode.ONLINE
 
     args = subrack_device_lrc_changed_callback.get_next_call()
@@ -362,12 +366,12 @@ def turn_tile_on(
 
 @when("the user tells the subrack to turn the TPM off")
 def turn_tile_off(
-    tile_device,
-    tpm_number,
-    tile_device_state_changed_callback,
-    tile_device_lrc_changed_callback,
-    subrack_device_lrc_changed_callback,
-):
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn the tile off.
 
@@ -395,7 +399,7 @@ def turn_tile_off(
 
 
 @then("the subrack reports that the TPM is on")
-def subrack_assert_tpm_on(subrack_device, tpm_number):
+def subrack_assert_tpm_on(subrack_device: MccsDeviceProxy, tpm_number: int) -> None:
     """
     Verify that the subrack returns the ON power state for the TPM.
 
@@ -408,7 +412,7 @@ def subrack_assert_tpm_on(subrack_device, tpm_number):
 
 
 @then("the TPM reports that it is on")
-def tpm_assert_on(tile_device):
+def tpm_assert_on(tile_device: MccsDeviceProxy) -> None:
     """
     Verify that the tile has the ON state.
 
@@ -418,7 +422,7 @@ def tpm_assert_on(tile_device):
 
 
 @then("the subrack reports that the TPM is off")
-def subrack_assert_tpm_off(subrack_device, tpm_number):
+def subrack_assert_tpm_off(subrack_device: MccsDeviceProxy, tpm_number: int) -> None:
     """
     Verify that the subrack returns the ON power state for the TPM.
 
@@ -430,7 +434,7 @@ def subrack_assert_tpm_off(subrack_device, tpm_number):
 
 
 @then("the TPM reports that it is off")
-def tpm_assert_off(tile_device):
+def tpm_assert_off(tile_device: MccsDeviceProxy) -> None:
     """
     Verify that the tile has the ON state.
 
@@ -440,7 +444,7 @@ def tpm_assert_off(tile_device):
 
 
 @then("the TPM reports that it is initialised")
-def tpm_assert_initialised(tile_device):
+def tpm_assert_initialised(tile_device: MccsDeviceProxy) -> None:
     """
     Verify that the tile enters the initialised programming state.
 
@@ -454,11 +458,61 @@ def tpm_assert_initialised(tile_device):
     assert tile_device.tileProgrammingState == "Initialised"
 
 
+@given("the TPM reports that it is initialised")
+def initialise_tpm(
+    subrack_device: MccsDeviceProxy,
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    subrack_device_state_changed_callback: MockChangeEventCallback,
+    subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+    subrack_tpm_power_state_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
+    """
+    Turn the tile on and verify it is initialised.
+
+    :param subrack_device: the subrack fixture to use.
+    :param tile_device: the tile fixture to use.
+    :param tpm_number: the id of the tpm to use.
+    :param subrack_device_state_changed_callback: a callback that we can use
+        to subscribe to state changes on the subrack device.
+    :param subrack_device_admin_mode_changed_callback: a callback that we can
+        use to subscribe to admin mode changes on the subrack device.
+    :param subrack_tpm_power_state_changed_callback: a callback that we can
+        use to subscribe to tpm power state changes on the subrack device.
+    :param subrack_device_lrc_changed_callback: a callback that we can use to
+        subscribe to long running command result changes on the subrack device.
+    :param tile_device_state_changed_callback: a callback that we can use to
+        subscribe to state changes on the tile device.
+    :param tile_device_admin_mode_changed_callback: a callback that we can use
+        to subscribe to admin mode changes on the tile device.
+    :param tile_device_lrc_changed_callback: a callback that we can use to
+        subscribe to long running command result changes on the tile device.
+    """
+    given_tile_on(
+        subrack_device,
+        tile_device,
+        tpm_number,
+        subrack_device_state_changed_callback,
+        subrack_device_admin_mode_changed_callback,
+        subrack_tpm_power_state_changed_callback,
+        subrack_device_lrc_changed_callback,
+        tile_device_state_changed_callback,
+        tile_device_admin_mode_changed_callback,
+        tile_device_lrc_changed_callback,
+    )
+
+    tpm_assert_initialised(tile_device)
+
+
 @when(
     "the user tells the TPM to start acquisition",
     target_fixture="tpm_acquisition_unique_id",
 )
-def start_acquisition(tile_device):
+def start_acquisition(tile_device: MccsDeviceProxy) -> str:
     """
     Start data acquisition on the tile.
 
@@ -475,8 +529,10 @@ def start_acquisition(tile_device):
 
 @then("the TPM reports that it is acquiring data")
 def tpm_assert_data_acquisition(
-    tile_device, tile_device_lrc_changed_callback, tpm_acquisition_unique_id
-):
+    tile_device: MccsDeviceProxy,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+    tpm_acquisition_unique_id: str,
+) -> None:
     """
     Verify that the tile has started acquiring data.
 
@@ -501,7 +557,7 @@ def tpm_assert_data_acquisition(
 
 
 @then("the TPM reports that it is synchronised")
-def tpm_assert_synchronised(tile_device):
+def tpm_assert_synchronised(tile_device: MccsDeviceProxy) -> None:
     """
     Verify that the tile enters the synchronised programming state.
 
@@ -516,7 +572,7 @@ def tpm_assert_synchronised(tile_device):
 
 
 @given("the DAQRX has not been started")
-def daq_stopped(daq_device):
+def daq_stopped(daq_device: MccsDeviceProxy) -> None:
     """
     Turn off the daq.
 
@@ -526,7 +582,7 @@ def daq_stopped(daq_device):
 
 
 @when("the user configures the DAQRX")
-def configure_daq(daq_device, daq_config):
+def configure_daq(daq_device: MccsDeviceProxy, daq_config: dict[str, Any]) -> None:
     """
     Configure the daq device with the desired configuration.
 
@@ -537,7 +593,9 @@ def configure_daq(daq_device, daq_config):
 
 
 @then("the DAQRX reports that it has the provided configuration")
-def daq_assert_configured(daq_device, daq_config):
+def daq_assert_configured(
+    daq_device: MccsDeviceProxy, daq_config: dict[str, Any]
+) -> None:
     """
     Verify that the daq has the desired configuration.
 
@@ -548,7 +606,9 @@ def daq_assert_configured(daq_device, daq_config):
 
 
 @given("the DAQRX has been configured")
-def given_daq_configured(daq_device, daq_config):
+def given_daq_configured(
+    daq_device: MccsDeviceProxy, daq_config: dict[str, Any]
+) -> None:
     """
     Configure the daq device with the desired configuration.
 
@@ -559,7 +619,11 @@ def given_daq_configured(daq_device, daq_config):
 
 
 @when("the user starts the DAQRX", target_fixture="daq_start_unique_id")
-def start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback):
+def start_daq(
+    daq_device: MccsDeviceProxy,
+    daq_processed_data_callback: MockChangeEventCallback,
+    daq_device_lrc_changed_callback: MockChangeEventCallback,
+) -> str:
     """
     Start the daq with the desired processing mode and callback.
 
@@ -594,7 +658,9 @@ def start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_ca
 
 
 @then("the DAQRX reports that it has been started")
-def assert_daq_started(daq_device_lrc_changed_callback, daq_start_unique_id):
+def assert_daq_started(
+    daq_device_lrc_changed_callback: MockChangeEventCallback, daq_start_unique_id: str
+) -> None:
     """
     Verify that the daq has been started.
 
@@ -610,19 +676,25 @@ def assert_daq_started(daq_device_lrc_changed_callback, daq_start_unique_id):
 
 
 @given("the DAQRX has been started")
-def given_daq_started(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback):
+def given_daq_started(
+    daq_device: MccsDeviceProxy,
+    daq_processed_data_callback: MockCallable,
+    daq_device_lrc_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Start the daq.
 
     :param daq_device: the daq fixture to use.
     :param daq_processed_data_callback: a callback to provide the daq to
         verify that it has processed data.
+    :param daq_device_lrc_changed_callback: a callback that we can use to
+        subscribe to long running command result changes on the daq device.
     """
     start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback)
 
 
 @when("the user stops the DAQRX", target_fixture="daq_stop_unique_id")
-def stop_daq(daq_device):
+def stop_daq(daq_device: MccsDeviceProxy) -> str:
     """
     Stop the daq.
 
@@ -636,7 +708,9 @@ def stop_daq(daq_device):
 
 
 @then("the DAQRX reports that it has been stopped")
-def assert_daq_stopped(daq_device_lrc_changed_callback, daq_stop_unique_id):
+def assert_daq_stopped(
+    daq_device_lrc_changed_callback: MockChangeEventCallback, daq_stop_unique_id: str
+) -> None:
     """
     Verify the daq has been stopped.
 
@@ -651,16 +725,19 @@ def assert_daq_stopped(daq_device_lrc_changed_callback, daq_stop_unique_id):
     )
 
 
-@given("the TPM is synchronised")
+@given("the TPM reports that it is synchronised")
 def synchronise_tpm(
-    subrack_device,
-    tile_device,
-    tpm_number,
-    tile_device_state_changed_callback,
-    tile_device_admin_mode_changed_callback,
-    tile_device_lrc_changed_callback,
-    subrack_device_lrc_changed_callback,
-):
+    subrack_device: MccsDeviceProxy,
+    tile_device: MccsDeviceProxy,
+    tpm_number: int,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+    tile_device_admin_mode_changed_callback: MockChangeEventCallback,
+    tile_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack_device_lrc_changed_callback: MockChangeEventCallback,
+    subrack_device_state_changed_callback: MockChangeEventCallback,
+    subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
+    subrack_tpm_power_state_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Turn on the tile and start acquisition.
 
@@ -672,27 +749,35 @@ def synchronise_tpm(
     :param tile_device_admin_mode_changed_callback: a callback that we can use
         to subscribe to admin mode changes on the tile device.
     :param tile_device_lrc_changed_callback: a callback that we can use to
-        subscribe to long running command result changes on the subrack device
+        subscribe to long running command result changes on the tile device.
     :param subrack_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the subrack device.
+    :param subrack_device_state_changed_callback: a callback that we can use
+        to subscribe to state changes on the subrack device.
+    :param subrack_device_admin_mode_changed_callback: a callback that we can
+        use to subscribe to admin mode changes on the subrack device.
+    :param subrack_tpm_power_state_changed_callback: a callback that we can
+        use to subscribe to tpm power state changes on the subrack device.
     """
-    if tile_device.state() != tango.DevState.ON:
-        turn_tile_on(
-            subrack_device,
-            tile_device,
-            tpm_number,
-            tile_device_state_changed_callback,
-            tile_device_admin_mode_changed_callback,
-            tile_device_lrc_changed_callback,
-            subrack_device_lrc_changed_callback,
-        )
+    given_tile_on(
+        subrack_device,
+        tile_device,
+        tpm_number,
+        subrack_device_state_changed_callback,
+        subrack_device_admin_mode_changed_callback,
+        subrack_tpm_power_state_changed_callback,
+        subrack_device_lrc_changed_callback,
+        tile_device_state_changed_callback,
+        tile_device_admin_mode_changed_callback,
+        tile_device_lrc_changed_callback,
+    )
     if tile_device.tileProgrammingState != "Synchronised":
         start_acquisition(tile_device)
     tpm_assert_synchronised(tile_device)
 
 
 @when("the user tells the TPM to send data")
-def tpm_send_data(tile_device):
+def tpm_send_data(tile_device: MccsDeviceProxy) -> None:
     """
     Tell the tile to send data.
 
@@ -704,7 +789,10 @@ def tpm_send_data(tile_device):
 
 
 @then("the TPM does not report a fault")
-def tpm_check_no_fault(tile_device, tile_device_state_changed_callback):
+def tpm_check_no_fault(
+    tile_device: MccsDeviceProxy,
+    tile_device_state_changed_callback: MockChangeEventCallback,
+) -> None:
     """
     Verify that the tile hasn't encountered a fault.
 
@@ -713,11 +801,11 @@ def tpm_check_no_fault(tile_device, tile_device_state_changed_callback):
         subscribe to state changes on the tile device.
     """
     assert tile_device.state() == tango.DevState.ON
-    assert tile_device_state_changed_callback.assert_not_called()
+    tile_device_state_changed_callback.assert_not_called()
 
 
 @then("the DAQRX reports that it has received data from the TPM")
-def assert_daq_received_data(daq_processed_data_callback):
+def assert_daq_received_data(daq_processed_data_callback: MockCallable) -> None:
     """
     Verify that the daq has received data from the TPM.
 

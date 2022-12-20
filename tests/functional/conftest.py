@@ -81,7 +81,7 @@ def tango_config() -> dict[str, Any]:
 
     :return: a dictionary of configuration key-value pairs
     """
-    return {"process": True}
+    return {"process": False}
 
 
 @pytest.fixture(scope="module")

@@ -94,9 +94,9 @@ class MccsAntenna(SKABaseDevice):
         :return: a component manager for this device.
         """
         return AntennaComponentManager(
-            f"low-mccs/apiu/{self.ApiuId:03}",
+            f"low-mccs/apiu/{self.ApiuId}",
             self.LogicalApiuAntennaId,
-            f"low-mccs/tile/{self.TileId:04}",
+            f"low-mccs/tile/{self.TileId}",
             self.LogicalTileAntennaId,
             self.logger,
             self._max_workers,

@@ -388,8 +388,11 @@ def turn_tile_off(
     [result_code], [unique_id] = tile_device.Off()
     tile_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
 
-    args = tile_device_lrc_changed_callback.get_next_call()
-    assert "_Off" in args[0][1][0]
+    tile_device_lrc_changed_callback.assert_next_call(
+        "longrunningcommandresult",
+        (unique_id, '"Tile off completed"'),
+        tango.AttrQuality.ATTR_VALID,
+    )
 
     args = subrack_device_lrc_changed_callback.get_next_call()
     assert "_PowerOffTpm" in args[0][1][0]

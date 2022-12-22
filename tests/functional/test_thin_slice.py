@@ -394,7 +394,7 @@ def turn_tile_off(
     args = subrack_device_lrc_changed_callback.get_next_call()
     assert "_PowerOffTpm" in args[0][1][0]
     assert args[0][1][1] == (
-        f'"Subrack TPM {tpm_number} turn off tpm task has' ' completed"'
+        f'"Subrack TPM {tpm_number} turn off tpm task has completed"'
     )
 
 
@@ -519,7 +519,7 @@ def start_acquisition(tile_device: MccsDeviceProxy) -> str:
     :param tile_device: the tile fixture to use.
     :return: the command unique id
     """
-    ([return_code], [unique_id]) = tile_device.StartAcquisition('{}')
+    ([return_code], [unique_id]) = tile_device.StartAcquisition("{}")
     assert return_code == ResultCode.QUEUED
     assert "_StartAcquisition" in unique_id
     return unique_id
@@ -587,7 +587,7 @@ def configure_daq(daq_device: MccsDeviceProxy, daq_config: dict[str, Any]) -> No
     :param daq_device: the daq fixture to use.
     :param daq_config: the daq configuration to use.
     """
-    daq_device.Configure(daq_config)
+    daq_device.Configure(json.dumps(daq_config))
 
 
 @then("the DAQRX reports that it has the provided configuration")
@@ -600,7 +600,7 @@ def daq_assert_configured(
     :param daq_device: the daq fixture to use.
     :param daq_config: the desired configuration.
     """
-    assert daq_config.items() <= daq_device.GetConfiguration().items() 
+    assert daq_config.items() <= daq_device.GetConfiguration().items()
 
 
 @given("the DAQRX has been configured")
@@ -781,7 +781,7 @@ def tpm_send_data(tile_device: MccsDeviceProxy) -> None:
 
     :param tile_device: the tile fixture to use.
     """
-    ([return_code], [unique_id]) = tile_device.SendRawData()
+    ([return_code], [unique_id]) = tile_device.SendDataSamples('{"data_type": "raw"}')
     assert return_code == ResultCode.QUEUED
     assert "_SendRawData" in unique_id
 

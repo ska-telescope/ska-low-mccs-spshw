@@ -784,9 +784,9 @@ def tpm_send_data(tile_device: MccsDeviceProxy) -> None:
 
     :param tile_device: the tile fixture to use.
     """
-    ([return_code], [unique_id]) = tile_device.SendDataSamples('{"data_type": "raw"}')
-    assert return_code == ResultCode.QUEUED
-    assert "_SendRawData" in unique_id
+    ([return_code], [message]) = tile_device.SendDataSamples('{"data_type": "raw"}')
+    assert return_code == ResultCode.OK
+    assert message == "SendDataSamples command completed OK"
 
 
 @then("the TPM does not report a fault")

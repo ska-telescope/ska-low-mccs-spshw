@@ -352,7 +352,7 @@ def turn_tile_on(
         if starting_admin_mode != AdminMode.MAINTENANCE:
             tile_device_lrc_changed_callback.assert_next_call(
                 "longrunningcommandresult",
-                (unique_id, '"On command has completed"'),
+                (unique_id, '"Tile on completed"'),
                 tango.AttrQuality.ATTR_VALID,
             )
     assert tile_device.adminMode == AdminMode.ONLINE

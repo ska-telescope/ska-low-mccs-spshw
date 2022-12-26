@@ -45,7 +45,6 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
-    "astropy",
     "numpy",
     "pyfabil",
     "pyaavs",
@@ -83,16 +82,15 @@ copyright = "2020, SKA MCCS Team"
 # -- General configuration ------------------------------------------------
 nitpick_ignore = [
     # TODO: these all have to be ignored because we are exposing through
-    # our public interface, objects from external packages that we are
-    # mocking out when we build our docs. We should look at refactoring
-    # so that these external dependencies don't leak out through our
-    # public interface.
+    # our public interface, objects from external packages that do not
+    # have sphinx-based online docs for us to cross-link to.
+    # In many case, we should look at refactoring so that these external
+    # dependencies don't leak out through our public interface.
     ("py:class", "Angle"),
-    ("py:class", "pyaavs.tile_wrapper.Tile"),
-    ("py:class", "astropy.time.core.Time"),
     ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "yaml.YAMLError"),
+    ("py:class", "pyaavs.tile_wrapper.Tile"),
     # These last two come from ska-control-model so might be impossible
     # to # factor out of the public interface.
     ("py:class", "HealthState"),
@@ -275,12 +273,10 @@ epub_exclude_files = ["search.html"]
 
 set_type_checking_flag = True
 typehints_fully_qualified = True
-typing.TYPE_CHECKING = True
 
 
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3.10/", None),
-    "astropy": ("https://docs.astropy.org/en/stable/", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "pytango": ("https://pytango.readthedocs.io/en/stable/", None),
     "ska-control-model": (

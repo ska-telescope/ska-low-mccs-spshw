@@ -14,13 +14,12 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Final, Optional
 
 import numpy as np
 
 # from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import ObjectComponent
-from typing_extensions import Final
 
 from ska_low_mccs_spshw.tile.tile_data import TileData
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus

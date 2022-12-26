@@ -30,7 +30,7 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 
-from .internal_subrack_simulator import SubrackSimulator
+from .internal_subrack_simulator import InternalSubrackSimulator as SubrackSimulator
 from .subrack_data import SubrackData
 from .subrack_driver import SubrackDriver
 

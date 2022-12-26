@@ -91,6 +91,8 @@ nitpick_ignore = [
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "pyaavs.tile_wrapper.Tile"),
+    ("py:exc", "HTTPException"), # fastapi online docs are mkdocs-based
+    ("py:class", "starlette.requests.Request"), # mkdocs-based
     # These last two come from ska-control-model so might be impossible
     # to # factor out of the public interface.
     ("py:class", "HealthState"),

@@ -8,6 +8,8 @@ sphinx == 5.1.1
 sphinx-autodoc-typehints == 1.19.1
 sphinx-rtd-theme
 sphinxcontrib-plantuml
+fastapi
 fire
 pyyaml
 uritools
+uvicorn[standard]

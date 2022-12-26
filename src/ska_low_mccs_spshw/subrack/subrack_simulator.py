@@ -1,714 +1,210 @@
-# type: ignore
-# pylint: skip-file
-#  -*- coding: utf-8 -*
-#
-# This file is part of the SKA Low MCCS project
-#
-#
-# Distributed under the terms of the BSD 3-clause new license.
-# See LICENSE for more info.
-"""
-This module contains an implementation of a simulator for a subrack management board.
+"""A simple subrack simulator."""
 
-Some assumptions of this class are:
-
-* The subrack management board supplies power to various modules, such
-  as TPMs. The subrack can deny or supply power to these modules; i.e.
-  turn them off and on. If a module supports a low-power standby mode,
-  then you have to talk to the module itself in order to switch it
-  between standby and on.
-* The subrack management board has its own sensors for module bay
-  temperature, current, etc. For example, it can measure the temperature
-  of a TPM even when the TPM is turned off, by measuring the bay
-  temperature for the bay in which the TPM is installed. It doesn't need
-  to turn the TPM on and query it in order to find out what its
-  temperature is.
-
-These assumptions may need to change in future.
-"""
-
-from __future__ import annotations  # allow forward references in type hints
-
-import os
 import threading
-from time import sleep
-from typing import Any, Callable, Optional
+from typing import Any, Final, Optional, TypedDict, cast
 
-from ska_control_model import PowerState
-from ska_low_mccs_common.component import ObjectComponent
+from .subrack_api import SubrackProtocol
+from .subrack_data import SubrackData
 
-from ska_low_mccs_spshw.subrack.subrack_data import FanMode, SubrackData
-
-__all__ = ["SubrackSimulator"]
+# https://github.com/python/typing/issues/182
+JsonSerializable = Any
 
 
-class SubrackSimulator(ObjectComponent):
-    """A simulator of a subrack management board."""
+class SubrackSimulator(SubrackProtocol):
+    """A simple simulator of a subrack management board web server."""
 
-    DEFAULT_TPM_TEMPERATURE = 40.0
-    """The default temperature for a module contained in a subrack bay."""
+    class AttributeMetadataType(TypedDict):
+        """Type for attribute metadata dictionary."""
 
-    DEFAULT_TPM_CURRENT = 0.4
-    """The default current for a module contained in a subrack bay"""
+        length: int
+        default: JsonSerializable
+        writable: bool
 
-    DEFAULT_TPM_VOLTAGE = 12.0
-    """The default voltage for a module contained in a subrack bay."""
+    ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
+        "tpm_present": {
+            "length": SubrackData.TPM_BAY_COUNT,
+            "default": [False, True, False, False, True, False, False, False],
+            "writable": False,
+        },
+        "tpm_on_off": {
+            "length": SubrackData.TPM_BAY_COUNT,
+            "default": [False] * SubrackData.TPM_BAY_COUNT,
+            "writable": False,
+        },
+    }
 
-    DEFAULT_TPM_POWER = DEFAULT_TPM_CURRENT * DEFAULT_TPM_VOLTAGE
-    """The default power for a module contained in a subrack bay."""
-
-    DEFAULT_BACKPLANE_TEMPERATURES = [38.0, 39.0]
-    """The default temperature for the subrack backplane."""
-
-    DEFAULT_BOARD_TEMPERATURES = [39.0, 40.0]
-    """The default temperature for the subrack management board."""
-
-    DEFAULT_BOARD_CURRENT = 1.1
-    """The default current for the subrack management board."""
-
-    DEFAULT_SUBRACK_FAN_SPEEDS = [4999.0, 5000.0, 5001.0, 5002.0]
-    """
-    The default fan speeds for the subrack.
-
-    This can be overruled using the set_subrack_fan_speed method.
-    """
-
-    DEFAULT_SUBRACK_FAN_MODES = [FanMode.AUTO] * 4
-    """
-    The default fan mode for the subrack.
-
-    This can be overruled using the set_fan_mode method.
-    """
-
-    DEFAULT_ARE_TPMS_ON = [False] * SubrackData.TPM_BAY_COUNT
-    """The default on/off status of the housed TPMs."""
-
-    DEFAULT_TPM_PRESENT = [True] * SubrackData.TPM_BAY_COUNT
-    """Whether each TPM is present in the subrack by default."""
-
-    DEFAULT_POWER_SUPPLY_POWERS = [50.0, 70.0]
-    """The default power supply power."""
-
-    DEFAULT_POWER_SUPPLY_VOLTAGES = [12.0, 12.1]
-    """The default power supply voltage."""
-
-    DEFAULT_POWER_SUPPLY_CURRENTS = [50.0 / 12.0, 70.0 / 12.1]
-    """The default power supply current."""
-
-    DEFAULT_POWER_SUPPLY_FAN_SPEEDS = [90.0, 100.0]
-    """The default power supply fan speeds."""
-
-    def __init__(
-        self: SubrackSimulator,
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-        backplane_temperatures: list[float] = DEFAULT_BACKPLANE_TEMPERATURES,
-        board_temperatures: list[float] = DEFAULT_BOARD_TEMPERATURES,
-        board_current: float = DEFAULT_BOARD_CURRENT,
-        subrack_fan_speeds: list[float] = DEFAULT_SUBRACK_FAN_SPEEDS,
-        subrack_fan_modes: list[FanMode] = DEFAULT_SUBRACK_FAN_MODES,
-        power_supply_currents: list[float] = DEFAULT_POWER_SUPPLY_CURRENTS,
-        power_supply_voltages: list[float] = DEFAULT_POWER_SUPPLY_VOLTAGES,
-        power_supply_fan_speeds: list[float] = DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-        initial_are_tpms_on: list[bool] = DEFAULT_ARE_TPMS_ON,
-        tpm_present: list[bool] = DEFAULT_TPM_PRESENT,
-        _tpm_data: Optional[list[dict[str, Any]]] = None,
-    ) -> None:
+    def __init__(self, **kwargs: JsonSerializable) -> None:
         """
         Initialise a new instance.
 
-        :param backplane_temperatures: the initial temperature of the subrack
-            backplane from sensor 1 and 2
-        :param board_temperatures: the initial temperature of the subrack management
-            board from sensor 1 and 2
-        :param board_current: the initial current of the subrack management board
-        :param subrack_fan_speeds: the initial fan_speeds of the subrack backplane
-            management board
-        :param subrack_fan_modes: the initial fan modes of the subrack backplane
-        :param power_supply_currents: the initial currents for the 2 power supply in the
-            subrack
-        :param power_supply_voltages: the initial voltages for the 2 power supply in the
-            subrack
-        :param power_supply_fan_speeds: the initial fan speeds in percent for the 2
-            power supply in the subrack
-        :param initial_are_tpms_on: the initial power state of each TPM
-        :param tpm_present: the initial TPM board present on subrack
-        :param _tpm_data: optional list of subrack bay simulators to be
-            used. This is for testing purposes only, allowing us to
-            inject our own bays instead of letting this simulator create
-            them.
-        :param component_state_changed_callback: callback to be called when the
-            component state changes
-        """
-        self._backplane_temperatures = list(backplane_temperatures)
-        self._board_temperatures = list(board_temperatures)
-        self._board_current = board_current
-        self._subrack_fan_speeds = list(subrack_fan_speeds)
-        self._subrack_fan_modes = list(subrack_fan_modes)
-        self._power_supply_currents = list(power_supply_currents)
-        self._power_supply_voltages = list(power_supply_voltages)
-        self._power_supply_fan_speeds = list(power_supply_fan_speeds)
-        self._tpm_data_lock = threading.RLock()
-        with self._tpm_data_lock:
-            self._tpm_data = _tpm_data or [
-                {
-                    "is_on": initial_are_tpms_on[i],
-                    "voltage": self.DEFAULT_TPM_VOLTAGE,
-                    "current": self.DEFAULT_TPM_CURRENT,
-                    "temperature": self.DEFAULT_TPM_TEMPERATURE,
-                    "power": self.DEFAULT_TPM_POWER,
-                }
-                for i in range(len(initial_are_tpms_on))
-            ]
-
-        self._bay_count = len(self._tpm_data)
-        self._tpm_present = tpm_present[0 : self._bay_count]
-        self._tpm_supply_fault = [0] * self._bay_count
-
-        self._are_tpms_on_changed_callback: Optional[Callable] = None
-        self._component_state_changed_callback: Optional[
-            Callable
-        ] = component_state_changed_callback
-
-    def set_are_tpms_on_changed_callback(
-        self: SubrackSimulator,
-        are_tpms_on_changed_callback: Optional[Callable] = None,
-    ) -> None:
-        """
-        Set the callback to be called when the power mode of a TPM changes.
-
-        If a callback is provided (i.e. not None), then this method
-        registers it, then calls it immediately.
-
-        If the value provided is None, then any set callback is removed.
-
-        :param are_tpms_on_changed_callback: the callback to be called
-            whenever any TPM its turned off or on
-        """
-        self._are_tpms_on_changed_callback = are_tpms_on_changed_callback
-        self._are_tpms_on_changed()
-
-    def set_progress_changed_callback(
-        self: SubrackSimulator,
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Set the callback to be called when the progress value changes.
-
-        :param component_state_changed_callback: callback to be called when the
-            component command progress values changes
-        """
-        self._component_state_changed_callback = component_state_changed_callback
-
-    def check_tpm_power_states(self: SubrackSimulator) -> None:
-        """Check TPM power states, calling the relevant callback."""
-        self._are_tpms_on_changed()
-
-    def _are_tpms_on_changed(self: SubrackSimulator) -> None:
-        """
-        Handle a change in TPM power.
-
-        This is a helper method that calls the callback if it exists.
-        """
-        tpm_power_states = [
-            PowerState.ON if tpm_data["is_on"] else PowerState.OFF
-            for tpm_data in self._tpm_data
-        ]
-        with self._tpm_data_lock:
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(
-                    {"tpm_power_states": tpm_power_states}
-                )
-        if self._are_tpms_on_changed_callback is not None:
-            self._are_tpms_on_changed_callback(self.are_tpms_on)
-
-    @property
-    def backplane_temperatures(self: SubrackSimulator) -> list[float]:
-        """
-        Return the subrack backplane temperatures.
-
-        :return: the subrack backplane temperatures
-        """
-        return self._backplane_temperatures
-
-    def simulate_backplane_temperatures(
-        self: SubrackSimulator, backplane_temperatures: list[float]
-    ) -> None:
-        """
-        Set the simulated backplane temperatures for this subrack simulator.
-
-        :param backplane_temperatures: the simulated backplane
-            temperature for this subrack simulator.
-        """
-        self._backplane_temperatures = backplane_temperatures
-
-    @property
-    def board_temperatures(self: SubrackSimulator) -> list[float]:
-        """
-        Return the subrack management board temperatures.
-
-        :return: the board temperatures, in degrees celsius
-        """
-        return self._board_temperatures
-
-    def simulate_board_temperatures(
-        self: SubrackSimulator, board_temperatures: list[float]
-    ) -> None:
-        """
-        Set the simulated board temperatures for this subrack simulator.
-
-        :param board_temperatures: the simulated board temperature for
-            this subrack simulator.
-        """
-        self._board_temperatures = board_temperatures
-
-    @property
-    def board_current(self: SubrackSimulator) -> float:
-        """
-        Return the subrack management board current.
-
-        :return: the subrack management board current
-        """
-        return self._board_current
-
-    def simulate_board_current(self: SubrackSimulator, board_current: float) -> None:
-        """
-        Set the simulated board current for this subrack simulator.
-
-        :param board_current: the simulated board current for this subrack simulator.
-        """
-        self._board_current = board_current
-
-    @property
-    def subrack_fan_speeds(self: SubrackSimulator) -> list[float]:
-        """
-        Return the subrack backplane fan speeds (in RPMs).
-
-        :return: the subrack fan speeds (RPMs)
-        """
-        return self._subrack_fan_speeds
-
-    def simulate_subrack_fan_speeds(
-        self: SubrackSimulator, subrack_fan_speeds: list[float]
-    ) -> None:
-        """
-        Set the simulated fan speed for this subrack simulator.
-
-        :param subrack_fan_speeds: the simulated fan speed for this subrack simulator.
-        """
-        self._subrack_fan_speeds = subrack_fan_speeds
-
-    @property
-    def subrack_fan_speeds_percent(self: SubrackSimulator) -> list[float]:
-        """
-        Return the subrack backplane fan speeds in percent.
-
-        :return: the fan speed, in percent
-        """
-        return [
-            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
-            for speed in self._subrack_fan_speeds
-        ]
-
-    @property
-    def subrack_fan_modes(self: SubrackSimulator) -> list[FanMode]:
-        """
-        Return the subrack fan Mode.
-
-        :return: subrack fan mode AUTO or  MANUAL
-        """
-        return self._subrack_fan_modes
-
-    @property
-    def bay_count(self: SubrackSimulator) -> int:
-        """
-        Return the number of TPM bays housed in this subrack.
-
-        :return: the number of TPM bays housed in this subrack
-        """
-        return self._bay_count
-
-    @property
-    def tpm_count(self: SubrackSimulator) -> int:
-        """
-        Return the number of TPMs housed in this subrack.
-
-        :return: the number of TPMs housed in this subrack
-        """
-        return self._tpm_present.count(True)
-
-    def _check_tpm_id(self: SubrackSimulator, logical_tpm_id: int) -> None:
-        """
-        Check that a TPM id passed as an argument is within range.
-
-        :param logical_tpm_id: the id to check
-
-        :raises ValueError: if the tpm id is out of range for this
-            subrack or the TPM is not installed
-        """
-        if logical_tpm_id < 1 or logical_tpm_id > self.bay_count:
-            raise ValueError(
-                f"Cannot access TPM {logical_tpm_id}; "
-                f"this subrack has {self.bay_count} TPM bays."
-            )
-        if self._tpm_present[logical_tpm_id - 1] is False:
-            raise ValueError(
-                f"Cannot access TPM {logical_tpm_id}; TPM not present in this bay"
-            )
-
-    @property
-    def tpm_temperatures(self: SubrackSimulator) -> list[float]:
-        """
-        Return the temperatures of the TPMs housed in this subrack.
+        :param kwargs: initial values, different from the defaults, that
+            the simulator should take.
 
-        :return: the temperatures of the TPMs housed in this subrack
+        :raises AttributeError: if kwargs refer to an non-existent attribute.
         """
-        with self._tpm_data_lock:
-            return [tpm_data["temperature"] for tpm_data in self._tpm_data]
-
-    def simulate_tpm_temperatures(
-        self: SubrackSimulator, tpm_temperatures: list[float]
-    ) -> None:
-        """
-        Set the simulated temperatures for all TPMs housed in this subrack simulator.
+        unknown_names = [name for name in kwargs if name not in self.ATTRIBUTE_METADATA]
+        if unknown_names:
+            raise AttributeError(f"Unknown attributes: {','.join(unknown_names)}.")
 
-        :param tpm_temperatures: the simulated TPM temperatures.
+        self._attribute_values: dict[str, JsonSerializable] = dict(kwargs)
+        for attribute, metadata in self.ATTRIBUTE_METADATA.items():
+            self._attribute_values.setdefault(attribute, metadata["default"])
 
-        :raises ValueError: If the argument doesn't match the number of
-            TPMs in this subrack
-        """
-        if len(tpm_temperatures) != self.bay_count:
-            raise ValueError("Argument does not match number of TPMs")
-
-        with self._tpm_data_lock:
-            for (tpm_data, temperature) in zip(self._tpm_data, tpm_temperatures):
-                tpm_data["temperature"] = temperature
-
-    @property
-    def tpm_currents(self: SubrackSimulator) -> list[float]:
-        """
-        Return the currents of the TPMs housed in this subrack.
+        self._aborted_event = threading.Event()
+        self._command_is_running = False
+        self._command_duration: Final = 0.2
 
-        :return: the currents of the TPMs housed in this subrack
+    def set_attribute(self, name: str, value: JsonSerializable) -> JsonSerializable:
         """
-        with self._tpm_data_lock:
-            return [tpm_data["current"] for tpm_data in self._tpm_data]
-
-    def simulate_tpm_currents(
-        self: SubrackSimulator, tpm_currents: list[float]
-    ) -> None:
-        """
-        Set the simulated currents for all TPMs housed in this subrack simulator.
+        Set the value of a simulator attribute.
 
-        :param tpm_currents: the simulated TPM currents.
+        :param name: name of the simulator attribute to be set.
+        :param value: new values for the simulator attribute
 
-        :raises ValueError: If the argument doesn't match the number of
-            TPMs in this subrack
-        """
-        if len(tpm_currents) != self.bay_count:
-            raise ValueError("Argument does not match number of TPMs")
-
-        with self._tpm_data_lock:
-            for (tpm_data, current) in zip(self._tpm_data, tpm_currents):
-                tpm_data["simulate_current"] = current
-
-    @property
-    def tpm_powers(self: SubrackSimulator) -> list[float]:
+        :return: the new values for the attribute
         """
-        Return the powers of the TPMs housed in this subrack.
+        special_set_method = getattr(self, f"_set_{name}", None)
 
-        :return: the powers of the TPMs housed in this subrack
-        """
-        with self._tpm_data_lock:
-            return [tpm_data["power"] for tpm_data in self._tpm_data]
+        if special_set_method is None:
+            return self._set_attribute(name, value)
+        return special_set_method(value)
 
-    def simulate_tpm_powers(self: SubrackSimulator, tpm_powers: list[float]) -> None:
+    def simulate_attribute(
+        self, name: str, values: JsonSerializable
+    ) -> JsonSerializable:
         """
-        Set the simulated powers for all TPMs housed in this subrack simulator.
+        Simulate a change in attribute value.
 
-        :param tpm_powers: the simulated TPM currents.
-
-        :raises ValueError: If the argument doesn't match the number of
-            TPMs in this subrack
-        """
-        if len(tpm_powers) != self.bay_count:
-            raise ValueError("Argument does not match number of TPMs")
-
-        with self._tpm_data_lock:
-            for (tpm_data, power) in zip(self._tpm_data, tpm_powers):
-                tpm_data["power"] = power
-
-    @property
-    def tpm_voltages(self: SubrackSimulator) -> list[float]:
-        """
-        Return the voltages of theControl TPMs housed in this subrack.
+        :param name: name of the simulator attribute to be set.
+        :param values: new values for the simulator attribute
 
-        :return: the voltages of the TPMs housed in this subrack
+        :return: the new values for the attribute
         """
-        with self._tpm_data_lock:
-            return [tpm_data["voltage"] for tpm_data in self._tpm_data]
-
-    def simulate_tpm_voltages(
-        self: SubrackSimulator, tpm_voltages: list[float]
-    ) -> None:
-        """
-        Set the simulated voltages for all TPMs housed in this subrack simulator.
-
-        :param tpm_voltages: the simulated TPM currents.
+        special_simulate_method = getattr(self, f"_simulate_{name}", None)
 
-        :raises ValueError: If the argument doesn't match the number of
-            TPMs in this subrack
-        """
-        if len(tpm_voltages) != self.bay_count:
-            raise ValueError("Argument does not match number of TPMs")
-
-        with self._tpm_data_lock:
-            for (tpm_data, voltage) in zip(self._tpm_data, tpm_voltages):
-                tpm_data["voltage"] = voltage
-
-    @property
-    def power_supply_fan_speeds(self: SubrackSimulator) -> list[float]:
-        """
-        Return the power supply fan speeds for this subrack.
+        if special_simulate_method is None:
+            return self._set_attribute(name, values, _force=True)
+        return special_simulate_method(values)
 
-        :return: the power supply fan speed
-        """
-        return self._power_supply_fan_speeds
-
-    def simulate_power_supply_fan_speeds(
-        self: SubrackSimulator, power_supply_fan_speeds: list[float]
-    ) -> None:
-        """
-        Set the power supply fan_speeds for this subrack.
+    def _set_attribute(
+        self, name: str, values: JsonSerializable, _force: bool = False
+    ) -> list[str]:
+        if name not in self.ATTRIBUTE_METADATA:
+            raise AttributeError(f"{name} not present")
 
-        :param power_supply_fan_speeds: the simulated  power supply fan_speeds
-        """
-        self._power_supply_fan_speeds = power_supply_fan_speeds
+        metadata = self.ATTRIBUTE_METADATA[name]
+        if not metadata["writable"] and not _force:
+            raise TypeError(f"Attempt to write read-only attribute {name}")
+        if len(values) != metadata["length"]:
+            raise ValueError(f"Wrong number of values for attribute {name}")
+        self._attribute_values[name] = values
+        return values
 
-    @property
-    def power_supply_currents(self: SubrackSimulator) -> list[float]:
+    def get_attribute(self, name: str) -> JsonSerializable:
         """
-        Return the power supply currents for this subrack.
+        Return the value of a simulator attribute.
 
-        :return: the power supply current
-        """
-        return self._power_supply_currents
-
-    def simulate_power_supply_currents(
-        self: SubrackSimulator, power_supply_currents: list[float]
-    ) -> None:
-        """
-        Set the power supply current for this subrack.
+        :param name: name of the simulator attribute to be returned.
 
-        :param power_supply_currents: the simulated  power supply current
+        :return: the value of the attribute
         """
-        self._power_supply_currents = power_supply_currents
+        special_get_method = getattr(self, f"_get_{name}", None)
 
-    @property
-    def power_supply_powers(self: SubrackSimulator) -> list[float]:
-        """
-        Return the power supply power for this subrack.
+        if special_get_method is None:
+            return self._get_attribute(name)
+        return special_get_method()
 
-        :return: the power supply power
-        """
-        powers = [
-            self._power_supply_currents[i] * self._power_supply_voltages[i]
-            for i in range(len(self._power_supply_currents))
-        ]
-        return powers
-
-    def simulate_power_supply_powers(
-        self: SubrackSimulator, power_supply_powers: list[float]
-    ) -> None:
-        """
-        Set the power supply power for this subrack.
+    def _get_attribute(self, name: str) -> JsonSerializable:
+        if name not in self.ATTRIBUTE_METADATA:
+            raise AttributeError(f"{name} not present")
 
-        :param power_supply_powers: the simulated  power supply power
-        """
-        self._power_supply_currents = [
-            power_supply_powers[i] / self._power_supply_voltages[i]
-            for i in range(len(self._power_supply_currents))
-        ]
-
-    @property
-    def power_supply_voltages(self: SubrackSimulator) -> list[float]:
-        """
-        Return the power supply voltages for this subrack.
+        return self._attribute_values[name]
 
-        :return: the power supply voltages
-        """
-        return self._power_supply_voltages
-
-    def simulate_power_supply_voltages(
-        self: SubrackSimulator, power_supply_voltages: list[float]
-    ) -> None:
+    def execute_command(
+        self, name: str, argument: Optional[JsonSerializable]
+    ) -> JsonSerializable:
         """
-        Set the power supply voltage for this subrack.
+        Execute a command on the subrack hardware/simulator.
 
-        :param power_supply_voltages: the simulated  power supply voltage
-        """
-        self._power_supply_voltages = power_supply_voltages
+        It works by checking for a method named f"_{name}"; that is, if
+        the command name is "turn_on_tpms", then it checks for a method
+        named "_turn_on_tpms". If it finds such a method, it calls it
+        with the provided argument, and returns the return value.
 
-    @property
-    def tpm_present(self: SubrackSimulator) -> list[bool]:
-        """
-        Return the tpm detected in the subrack.
+        Otherwise, it checks for a method named f"_async_{name}; for
+        example, "_async_turn_on_tpms". If it finds such a method, it
+        simulates a long running command by returning "STARTED", then
+        letting a little time pass, then invoking the method.
 
-        :return: list of tpm detected
-        """
-        return self._tpm_present
+        :param name: name of the command to execute.
+        :param argument: argument to the command.
 
-    @property
-    def tpm_supply_fault(self: SubrackSimulator) -> list[int]:
-        """
-        Return info about about TPM supply fault status.
+        :return: the return value. For synchronous commands, this is the
+            returned value of the fully executed command. For
+            asynchronous commands, this is the string "STARTED" or
+            "FAILED".
 
-        :return: the TPM supply fault status
+        :raises AttributeError: if the command method does not exist in
+            the simulator.
         """
-        return self._tpm_supply_fault
+        command_method = getattr(self, f"_{name}", None)
+        if command_method is not None:
+            return command_method(argument)
 
-    def is_tpm_on(self: SubrackSimulator, logical_tpm_id: int) -> Optional[bool]:
-        """
-        Return whether a specified TPM is turned on.
+        command_method = getattr(self, f"_async_{name}", None)
+        if command_method is not None:
+            if self._command_is_running:
+                return "FAILED"
+            self._command_is_running = True
 
-        :param logical_tpm_id: this subrack's internal id for the
-            TPM to be checked
+            def simulate_async_command() -> None:
+                if self._aborted_event.wait(self._command_duration):
+                    self._aborted_event.clear()
+                else:
+                    assert command_method is not None  # for the type checker
+                    command_method(argument)
+                self._command_is_running = False
 
-        :return: whether the TPM is on, or None if the subrack itself
-            is off
-        """
-        self._check_tpm_id(logical_tpm_id)
-        with self._tpm_data_lock:
-            return self._tpm_data[logical_tpm_id - 1]["is_on"]
-
-    @property
-    def are_tpms_on(self: SubrackSimulator) -> list[bool]:
-        """
-        Return whether each TPM is on.
+            threading.Thread(target=simulate_async_command).start()
+            return "STARTED"
 
-        :return: whether each TPM is on
-        """
-        return [tpm_data["is_on"] for tpm_data in self._tpm_data]
+        raise AttributeError(f"Unknown command {name}.")
 
-    def turn_off_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
+    def _command_completed(self, _not_used: Optional[str]) -> bool:
         """
-        Turn off a specified TPM.
-
-        :param logical_tpm_id: this subrack's internal id for the
-            TPM to be turned off
+        Check if no command is currently running.
 
-        :return: whether successful, or None if there was nothing to do
-        """
-        self._check_tpm_id(logical_tpm_id)
-        with self._tpm_data_lock:
-            tpm_data = self._tpm_data[logical_tpm_id - 1]
-            if tpm_data["is_on"]:
-                tpm_data["is_on"] = False
-                self._are_tpms_on_changed()
-                return True
-            return None
-
-    def _emulate_hardware_delay(self: SubrackSimulator) -> None:
-        """
-        Specialist implementation to emulate a real hardware delay.
+        :param _not_used: not used, should always be `None`
 
-        To be used specifically in a K8s deployment i.e. TestMode.NONE.
+        :return: False if a command is currently run; otherwise True.
         """
-        # Safeguard against deployment in unit testing environment
-        if "PYTEST_CURRENT_TEST" in os.environ:
-            return
-
-        for i in range(1, 5):
-            if self._component_state_changed_callback:
-                self._component_state_changed_callback({"progress": (i * 20)})
-            sleep(1.0)
-
-    def turn_on_tpm(self: SubrackSimulator, logical_tpm_id: int) -> bool | None:
-        """
-        Turn on a specified TPM.
+        assert _not_used is None
+        return not self._command_is_running
 
-        :param logical_tpm_id: this subrack's internal id for the
-            TPM to be turned on
-
-        :return: whether successful, or None if there was nothing to do
-        """
-        self._check_tpm_id(logical_tpm_id)
-        with self._tpm_data_lock:
-            tpm_data = self._tpm_data[logical_tpm_id - 1]
-            if not tpm_data["is_on"]:
-                if self._component_state_changed_callback:
-                    self._component_state_changed_callback({"progress": 0})
-                    self._emulate_hardware_delay()  # TODO: we're still holding the lock
-                    self._component_state_changed_callback({"progress": 100})
-                tpm_data["is_on"] = True
-                self._are_tpms_on_changed()
-                return True
-            return None
-
-    def turn_on_tpms(self: SubrackSimulator) -> bool | None:
+    def _abort_command(self, _not_used: Optional[str]) -> None:
         """
-        Turn on all TPMs that are present in the subrack.
+        Abort any currently running command.
 
-        :return: whether successful, or None if there was nothing to do
+        :param _not_used: not used, should always be `None`
         """
-        changed = False
-        with self._tpm_data_lock:
-            for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
-                if present and not tpm_data["is_on"]:
-                    tpm_data["is_on"] = True
-                    changed = True
-            if changed:
-                self._are_tpms_on_changed()
-                return True
-            return None
-
-    def turn_off_tpms(self: SubrackSimulator) -> bool | None:
-        """
-        Turn off all TPMs.
+        assert _not_used is None
+        if self._command_is_running:
+            self._aborted_event.set()
 
-        :return: whether successful, or None if there was nothing to do
-        """
-        changed = False
-        with self._tpm_data_lock:
-            for (tpm_data, present) in zip(self._tpm_data, self._tpm_present):
-                if present and tpm_data["is_on"]:
-                    tpm_data["is_on"] = False
-                    changed = True
-            if changed:
-                self._are_tpms_on_changed()
-                return True
-            return None
-
-    def set_subrack_fan_speed(
-        self: SubrackSimulator, fan_id: int, speed_percent: float
-    ) -> None:
+    def _async_turn_off_tpm(self, arg: str) -> None:
         """
-        Set the subrack backplane fan speed in percent.
+        Turn off a TPM.
 
-        :param fan_id: id of the selected fan accepted value: 1-4
-        :param speed_percent: percentage value of fan RPM  (MIN 0=0% - MAX 100=100%)
+        :param arg: number of the TPM to be turned off (in string form).
         """
-        self._subrack_fan_speeds[fan_id - 1] = (
-            speed_percent / 100.0 * SubrackData.MAX_SUBRACK_FAN_SPEED
-        )
-
-    def set_subrack_fan_modes(
-        self: SubrackSimulator, fan_id: int, mode: FanMode
-    ) -> None:
-        """
-        Set Fan Operational Mode for the subrack's fan.
+        tpm_number = int(arg)  # input is 0-based, so no need for an offset
+        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = False
 
-        :param fan_id: id of the selected fan accepted value: 1-4
-        :param mode: AUTO or MANUAL
-        """
-        self.subrack_fan_modes[fan_id - 1] = mode
-
-    def set_power_supply_fan_speed(
-        self: SubrackSimulator, power_supply_fan_id: int, speed_percent: float
-    ) -> None:
+    def _async_turn_on_tpm(self, arg: str) -> None:
         """
-        Set the power supply  fan speed.
+        Turn on a TPM.
 
-        :param power_supply_fan_id: power supply id from 0 to 2
-        :param speed_percent: fan speed in percent
+        :param arg: number of the TPM to be turned on (in string form).
         """
-        self._power_supply_fan_speeds[power_supply_fan_id - 1] = speed_percent
+        tpm_number = int(arg)  # input is 0-based, so no need for an offset
+        cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True

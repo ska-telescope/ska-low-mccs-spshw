@@ -16,7 +16,6 @@ import logging
 import threading
 from typing import Any, Optional, cast
 
-import tango
 from ska_control_model import (
     AdminMode,
     CommunicationStatus,
@@ -55,7 +54,6 @@ class MccsSubrack(SKABaseDevice):
     # -----------------
     SubrackIp = device_property(dtype=str, default_value="0.0.0.0")
     SubrackPort = device_property(dtype=int, default_value=8081)
-    TileFQDNs = device_property(dtype=(str,), default_value=[])
 
     # ---------------
     # Initialisation
@@ -84,10 +82,14 @@ class MccsSubrack(SKABaseDevice):
 
         This is overridden here to change the Tango serialisation model.
         """
-        util = tango.Util.instance()
-        util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
+
+        self.logger.info(
+            "Initialised MccsSubrack device with properties:\n"
+            f"\tSubrackIp: {self.SubrackIp}\n"
+            f"\tSubrackPort: {self.SubrackPort}"
+        )
 
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()

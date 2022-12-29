@@ -1,0 +1,47 @@
+{{- $subracks := .Values.deviceServers.subracks}}
+name: "subrack-{{.Release.Name}}"
+function: ska-low-mccs-spshw-subrack
+domain: ska-low-mccs-spshw
+instances:
+{{- range $key, $this_subrack := $subracks.instances}}
+{{- if or $this_subrack.enabled (not (hasKey $this_subrack "enabled"))}}
+  - {{printf "subrack-%s" $key}}
+{{- end}}
+{{- end}}
+entrypoints:
+  - name: "subrack.MccsSubrack"
+    path: "/app/src/ska_low_mccs_spshw/subrack/subrack_device.py"
+server: 
+  name: "MccsSubrack"
+  instances:
+{{- range $key, $this_subrack := $subracks.instances}}
+    - name: {{printf "subrack-%s" $key}}
+      classes:
+      - name: "MccsSubrack"
+        devices:
+        - name: {{printf "low-mccs-spshw/subrack/%s" $key}}
+          properties:
+          - name: "SubrackIp"
+            values: 
+            - {{$this_subrack.host | quote}}
+          - name: "SubrackPort"
+            values: 
+            - {{$this_subrack.port | default 8081 | toString | quote}}
+          - name: "LoggingLevelDefault"
+            values: 
+            - {{pluck "logging_level_default" $this_subrack $subracks | first | default 3 | toString | quote}}
+
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.low_mccs_spshw.image}}
+  registry: {{.registry | quote}}
+  image: {{.image | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

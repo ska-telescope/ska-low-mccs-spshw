@@ -59,9 +59,10 @@ isort = "^5.10.1"
 httpx = "^0.23.1"
 
 [tool.poetry.scripts]
-MccsSubrack = "ska_low_mccs.subrack.subrack_device:main"
-MccsTile = "ska_low_mccs.tile.tile_device:main"
-Mccs-tile = "ska_low_mccs.tile.tile_cli:main"
+MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
+MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
+Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
+SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"

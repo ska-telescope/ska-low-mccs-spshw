@@ -111,30 +111,6 @@ class SpsStation(SKAObsDevice):
             """Set up the handler objects for Commands."""
             super().init_command_objects()
 
-            for (command_name, command_object) in [
-                ("SetLmcDownload", self.SetLmcDownloadCommand),
-                ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
-                ("SetCspIngest", self.SetCspIngest),
-                ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
-                ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
-                ("ApplyCalibration", self.ApplyCalibrationCommand),
-                ("LoadPointingDelays", self.LoadPointingDelaysCommand),
-                ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
-                ("StartBeamformer", self.StartBeamformerCommand),
-                ("StopBeamformer", self.StopBeamformerCommand),
-                (
-                    "ConfigureIntegratedChannelData",
-                    self.ConfigureIntegratedChannelDataCommand,
-                ),
-                ("ConfigureIntegratedBeamData", self.ConfigureIntegratedBeamDataCommand),
-                ("StopIntegratedData", self.StopIntegratedDataCommand),
-                ("SendDataSamples", self.SendDataSamplesCommand),
-                ("StopDataTransmission", self.StopDataTransmissionCommand),
-                ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
-            ]:
-                self.register_command_object(
-                    command_name, command_object(self.component_manager, self.logger)
-                )
             #
             # Long running commands
             #
@@ -269,10 +245,10 @@ class SpsStation(SKAObsDevice):
             device_family = fqdn.split("/")[1]
             if device_family == "subrack":
                 health_state_changed_callback = functools.partial(
-                    self._health_model.antenna_health_changed, fqdn
+                    self._health_model.subrack_health_changed, fqdn
                 )
                 power_state_changed_callback = functools.partial(
-                    self.component_manager._antenna_power_state_changed, fqdn
+                    self.component_manager._subrack_power_state_changed, fqdn
                 )
             elif device_family == "tile":
                 health_state_changed_callback = functools.partial(
@@ -283,8 +259,8 @@ class SpsStation(SKAObsDevice):
                 )
             else:
                 raise ValueError(
-                    f"unknown fqdn '{fqdn}', should be None or belong to antenna,"
-                    " tile or apiu"
+                    f"unknown fqdn '{fqdn}', should be None or belong to subrack"
+                    " or tile"
                 )
 
         if "power_state" in state_change.keys():
@@ -421,18 +397,18 @@ class SpsStation(SKAObsDevice):
             dtype=("DevLong",),
             max_dim_x=384,
         )
-        def cspRounding(self: SpsStation) -> list[int]:
-            """
-            CSP formatter rounding.
+    def cspRounding(self: SpsStation) -> list[int]:
+        """
+        CSP formatter rounding.
 
-            Rounding from 16 to 8 bits in final stage of the
-            station beamformer, before sending data to CSP.
-            Array of (up to) 384 values, one for each logical channel.
-            Range 0 to 7, as number of discarded LS bits.
+        Rounding from 16 to 8 bits in final stage of the
+        station beamformer, before sending data to CSP.
+        Array of (up to) 384 values, one for each logical channel.
+        Range 0 to 7, as number of discarded LS bits.
 
-            :return: CSP formatter rounding for each logical channel.
-            """
-            return self.component_manager.csp_rounding
+        :return: CSP formatter rounding for each logical channel.
+        """
+        return self.component_manager.csp_rounding
 
     @cspRounding.write
     def cspRounding(self: SpsStation, rounding: list[int]) -> None:
@@ -644,9 +620,9 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.forty_gb_network_errors()
 
-    # --------
-    # Commands
-    # --------
+    # -------------
+    # Slow Commands
+    # -------------
 
     @command(
         dtype_in="DevString",
@@ -690,56 +666,9 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class SetLmcDownloadCommand(FastCommand):
-        """Class for handling the SetLmcDownload(argin) command."""
-
-        def __init__(
-            self: SpsStation.SetLmcDownloadCommand,
-            component_manager: SpsStationComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetLmcDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
-
-        def do(  # type: ignore[override]
-            self: SpsStation.SetLmcDownloadCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.SpsStation.SetLmcDownload` command functionality.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            mode = params.get("mode", "40G")
-
-            if mode == "40g" or mode == "40G":
-                mode = "10g"
-            payload_length = params.get("payload_length", None)
-            if payload_length is None:
-                if mode == "10g" or mode == "10G":
-                    payload_length = 8192
-                else:
-                    payload_length = 1024
-            dst_ip = params.get("destination_ip", None)
-            src_port = params.get("source_port", 0xF0D0)
-            dst_port = params.get("destination_port", 4660)
-
-            self._component_manager.set_lmc_download(
-                mode, payload_length, dst_ip, src_port, dst_port
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+    # -------------
+    # Fast Commands
+    # -------------
 
     @command(
         dtype_in="DevString",
@@ -768,61 +697,25 @@ class SpsStation(SKAObsDevice):
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
-        handler = self.get_command_object("SetLmcDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        mode = params.get("mode", "40G")
 
-    class SetLmcIntegratedDownloadCommand(FastCommand):
-        """Class for handling the SetLmcIntegratedDownload(argin) command."""
+        if mode == "40g" or mode == "40G":
+            mode = "10g"
+        payload_length = params.get("payload_length", None)
+        if payload_length is None:
+            if mode == "10g" or mode == "10G":
+                payload_length = 8192
+            else:
+                payload_length = 1024
+        dst_ip = params.get("destination_ip", None)
+        src_port = params.get("source_port", 0xF0D0)
+        dst_port = params.get("destination_port", 4660)
 
-        def __init__(
-            self: SpsStation.SetLmcIntegratedDownloadCommand,
-            component_manager: SpsStationComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetLmcIntegratedDownloadCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
-
-        def do(  # type: ignore[override]
-            self: SpsStation.SetLmcIntegratedDownloadCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            mode = params.get("mode", "40G")
-
-            if mode == "40g" or mode == "40G":
-                mode = "10g"
-            channel_payload_length = params.get("channel_payload_lenth", 1024)
-            beam_payload_length = params.get("beam_payload_length", 1024)
-            dst_ip = params.get("destination_ip", None)
-            src_port = params.get("source_port", 0xF0D0)
-            dst_port = params.get("destination_port", 4660)
-
-            self._component_manager.set_lmc_integrated_download(
-                mode,
-                channel_payload_length,
-                beam_payload_length,
-                dst_ip,
-                src_port,
-                dst_port,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.set_lmc_download(
+            mode, payload_length, dst_ip, src_port, dst_port
+        )
+        return ([ResultCode.OK], []"SetLmcDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -854,52 +747,26 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        mode = params.get("mode", "40G")
 
-    class SetCspIngestCommand(FastCommand):
-        """Class for handling the SeCspIngest(argin) command."""
+        if mode == "40g" or mode == "40G":
+            mode = "10g"
+        channel_payload_length = params.get("channel_payload_lenth", 1024)
+        beam_payload_length = params.get("beam_payload_length", 1024)
+        dst_ip = params.get("destination_ip", None)
+        src_port = params.get("source_port", 0xF0D0)
+        dst_port = params.get("destination_port", 4660)
 
-        def __init__(
-            self: SpsStation.SetCspIngestCommand,
-            component_manager: SpsStationComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new SetCspIngestCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "SetCspIngest command completed OK"
-
-        def do(  # type: ignore[override]
-            self: SpsStation.SetCspIngestCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement SetCspIngestCommand commands.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            params = json.loads(argin)
-            dst_ip = params.get("destination_ip", None)
-            src_port = params.get("source_port", 0xF0D0)
-            dst_port = params.get("destination_port", 4660)
-
-            self._component_manager.set_csp_ingest(
-                dst_ip,
-                src_port,
-                dst_port,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+        self.component_manager.set_lmc_integrated_download(
+            mode,
+            channel_payload_length,
+            beam_payload_length,
+            dst_ip,
+            src_port,
+            dst_port,
+        )
+        return ([ResultCode.OK], []"SetLmcIntegratedDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -916,15 +783,23 @@ class SpsStation(SKAObsDevice):
             * destination_port - (int) Destination port for integrated data streams
 
         """
-        handler = self.get_command_object("SetCspIngest")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        dst_ip = params.get("destination_ip", None)
+        src_port = params.get("source_port", 0xF0D0)
+        dst_port = params.get("destination_port", 4660)
+
+        self.component_manager.set_csp_ingest(
+            dst_ip,
+            src_port,
+            dst_port,
+        )
+        return ([ResultCode.OK], []"SetCspIngest command completed OK"])
 
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def SetBeamFormerRegions(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def SetBeamFormerRegions(self: SpsStation, argin: list(int)) -> DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
 
@@ -953,9 +828,53 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetBeamFormerRegions", input)
         """
-        handler = self.get_command_object("SetBeamformerRegions")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        return_code = ""
+        if len(argin) < 8:
+            self.logger.error(
+                "Insufficient parameters specified"
+            )
+            raise ValueError("Insufficient parameters specified")
+        if len(argin) > (48 * 8):
+            self.logger.error("Too many regions specified")
+            raise ValueError("Too many regions specified")
+        if len(argin) % 8 != 0:
+            self.logger.error(
+                "Incomplete specification of region. Regions specified by 8 values"
+            )
+            raise ValueError("Incomplete specification of region")
+        regions = []
+        total_chan = 0
+        for i in range(0, len(argin), 8):
+            region = argin[i : i + 8]  # noqa: E203
+            start_channel = region[0]
+            if start_channel % 2 != 0:
+                self.logger.error(
+                    "Start channel in region must be even"
+                )
+                raise ValueError("Start channel in region must be even")
+            nchannels = region[1]
+            if nchannels % 8 != 0:
+                self.logger.error(
+                    "Nos. of channels in region must be multiple of 8"
+                )
+                raise ValueError("Nos. of channels in region must be multiple of 8")
+            beam_index = region[2]
+            if beam_index < 0 or beam_index > 47:
+                self.logger.error(
+                    "Beam_index is out side of range 0-47"
+                )
+                raise ValueError("Beam_index is out side of range 0-47")
+            total_chan += nchannels
+            if total_chan > 384:
+                self.logger.error(
+                    "Too many channels specified > 384"
+                )
+                raise ValueError("Too many channels specified > 384")
+            regions.append(region)
+        self.component_manager.set_beamformer_regions(argin)
+        # handler = self.get_command_object("SetBeamformerRegions")
+        # (return_code, message) = handler(argin)
+        return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -963,10 +882,64 @@ class SpsStation(SKAObsDevice):
     )
     def LoadCalibrationCoefficients(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Load the calibration coefficients, but does not apply them.
+
+        This is performed by apply_calibration.
+        The calibration coefficients may include any rotation
+        matrix (e.g. the parallactic angle), but do not include the geometric delay.
+
+        :param argin: list comprises:
+
+        * antenna - (int) is the antenna to which the coefficients will be applied.
+        * calibration_coefficients - [array] a bidimensional complex array comprising
+            calibration_coefficients[channel, polarization], with each element
+            representing a normalized coefficient, with (1.0, 0.0) being the
+            normal, expected response for an ideal antenna.
+
+            * channel - (int) channel is the index specifying the channels at the
+                              beamformer output, i.e. considering only those channels
+                              actually processed and beam assignments.
+            * polarization index ranges from 0 to 3.
+
+                * 0: X polarization direct element
+                * 1: X->Y polarization cross element
+                * 2: Y->X polarization cross element
+                * 3: Y polarization direct element
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> antenna = 2
+        >>> complex_coefficients = [[complex(3.4, 1.2), complex(2.3, 4.1),
+        >>>            complex(4.6, 8.2), complex(6.8, 2.4)]]*5
+        >>> inp = list(itertools.chain.from_iterable(complex_coefficients))
+        >>> out = ([v.real, v.imag] for v in inp]
+        >>> coefficients = list(itertools.chain.from_iterable(out))
+        >>> coefficients.insert(0, float(antenna))
+        >>> input = list(itertools.chain.from_iterable(coefficients))
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
-        handler = self.get_command_object("LoadCalibrationCoefficients")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        if len(argin) < 9:
+            self.logger.error(
+                "Insufficient calibration coefficients"
+            )
+            raise ValueError("Insufficient calibration coefficients")
+        if len(argin[1:]) % 8 != 0:
+            self.logger.error(
+                "Incomplete specification of coefficient. "
+                "Needs 8 values (4 complex Jones) per channel"
+            )
+            raise ValueError("Incomplete specification of coefficient")
+
+        self.component_manager.load_calibration_coefficients(argin)
+
+        # handler = self.get_command_object("LoadCalibrationCoefficients")
+        # (return_code, message) = handler(argin)
+        return ([ResultCode.OK], ["LoadCalibrationCoefficients command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -974,10 +947,26 @@ class SpsStation(SKAObsDevice):
     )
     def ApplyCalibration(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Load the calibration coefficients at the specified time delay.
+
+        :param argin: switch time, in ISO formatted time. Default: now
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("ApplyCalibration", "")
         """
-        handler = self.get_command_object("ApplyCalibration")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        switch_time = argin
+
+        self.component_manager.apply_calibration(switch_time)
+        return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
+        # handler = self.get_command_object("ApplyCalibration")
+        # (return_code, message) = handler(argin)
+        # return ([return_code], [message])
 
 
     @command(
@@ -1001,10 +990,19 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/station/01")
         >>> dp.command_inout("LoadPointingDelays", delay_list)
         """
-        handler = self.get_command_object("LoadPointingDelays")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        if len(argin) < self._antennas_per_tile * 2 + 1:
+            self._component_manager.logger.error("Insufficient parameters")
+            raise ValueError("Insufficient parameters")
+        beam_index = int(argin[0])
+        if beam_index < 0 or beam_index > 7:
+            self._component_manager.logger.error("Invalid beam index")
+            raise ValueError("Invalid beam index")
 
+        self.component_manager.load_pointing_delays(argin)
+        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        # handler = self.get_command_object("LoadPointingDelays")
+        # (return_code, message) = handler(argin)
+        # return ([return_code], [message])
 
     @command(
         dtype_in="DevString",
@@ -1016,7 +1014,7 @@ class SpsStation(SKAObsDevice):
         """
         Set the pointing delay parameters of this Station's Tiles.
 
-        :param argin: an array containing a beam index followed by antenna delays
+        :param argin: switch time, in ISO formatted time. Default: now
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1025,11 +1023,14 @@ class SpsStation(SKAObsDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> time_string = switch time as ISO formatted time
         >>> dp.command_inout("ApplyPointingDelays", time_string)
         """
-        handler = self.get_command_object("ApplyPointingDelays")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        self.component_manager.apply_pointing_delays(argin)
+        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        # handler = self.get_command_object("ApplyPointingDelays")
+        # (return_code, message) = handler(argin)
+        # return ([return_code], [message])
 
     @command(
         dtype_in="DevString",
@@ -1037,21 +1038,57 @@ class SpsStation(SKAObsDevice):
     )
     def StartBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Start the beamformer at the specified time delay.
+
+        :param argin: json dictionary with optional keywords:
+
+        * start_time - (str, ISO UTC time) start time
+        * duration - (int) if > 0 is a duration in seconds
+               if < 0 run forever
+        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
+                Command affects only beamformed channels for given subarray ID
+                Default -1: all channels
+        * scan_id - (int) The unique ID for the started scan. Default 0
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"StartTime": "2022-01-02T34:56:08.987Z", "Duration": 30.0}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StartBeamformer", jstr)
         """
-        handler = self.get_command_object("StartBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        start_time = params.get("start_time", None)
+        duration = params.get("duration", -1)
+        subarray_beam_id = params.get("subarray_beam_id", -1)
+        scan_id = params.get("scan_id", 0)
+        self._component_manager.start_beamformer(
+            start_time, duration, subarray_beam_id, scan_id
+        )
+        return ([ResultCode.OK], ["StartBeamformer command completed OK"])
 
     @command(
-        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     def StopBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Stop the beamformer.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopBeamformer")
         """
-        handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        self.component_manager.stop_beamformer()
+        return ([ResultCode.OK], ["StopBeamformer command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1059,10 +1096,37 @@ class SpsStation(SKAObsDevice):
     )
     def ConfigureIntegratedChannelData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Configure and start the transmission of integrated channel data.
+
+        Using the provided integration time, first channel and last channel.
+        Data are sent continuously until the StopIntegratedData command is run.
+
+        :param argin: json dictionary with optional keywords:
+
+        * integration_time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 511
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("ConfigureIntegratedChannelData", jstr)
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        integration_time = params.get("integration_time", 0.5)
+        first_channel = params.get("first_channel", 0)
+        last_channel = params.get("last_channel", 511)
+
+        self.component_manager.configure_integrated_channel_data(
+            integration_time, first_channel, last_channel
+        )
+        return ([ResultCode.OK], ["ConfigureIntegratedChannelData command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1070,10 +1134,37 @@ class SpsStation(SKAObsDevice):
     )
     def ConfigureIntegratedBeamData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Configure the transmission of integrated beam data.
+
+        Using the provided integration time, the first channel and the last channel.
+        The data are sent continuously until the StopIntegratedData command is run.
+
+        :param argin: json dictionary with optional keywords:
+
+        * integration_time - (float) in seconds (default = 0.5)
+        * first_channel - (int) default 0
+        * last_channel - (int) default 191
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"integration_time": 0.2, "first_channel":0, "last_channel": 191}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("ConfigureIntegratedBeamData", jstr)
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+        integration_time = params.get("integration_time", 0.5)
+        first_channel = params.get("first_channel", 0)
+        last_channel = params.get("last_channel", 191)
+
+        self.component_manager.configure_integrated_beam_data(
+            integration_time, first_channel, last_channel
+        )
+        return ([ResultCode.OK], ["ConfigureIntegratedBeamData command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1081,10 +1172,14 @@ class SpsStation(SKAObsDevice):
     )
     def StopIntegratedData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Stop the integrated  data.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        self.component_manager.stop_integrated_data()
+        return ([ResultCode.OK], ["StopIntegratedData command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1092,10 +1187,96 @@ class SpsStation(SKAObsDevice):
     )
     def SendDataSamples(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
+        Transmit a snapshot containing raw antenna data.
+
+        :param argin: json dictionary with optional keywords:
+
+        * data_type - type of snapshot data (mandatory): "raw", "channel",
+                    "channel_continuous", "narrowband", "beam"
+        * start_time - Time (UTC string) to start sending data. Default immediately
+        * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+
+        Depending on the data type:
+        raw:
+
+        * sync: bool: send synchronised samples for all antennas, vs. round robin
+                larger snapshot from each antenna
+
+        channel:
+
+        * n_samples: Number of samples per channel, default 1024
+        * first_channel - (int) first channel to send, default 0
+        * last_channel - (int) last channel to send, default 511
+
+        channel_continuous
+
+        * channel_id - (int) channel_id (Mandatory)
+        * n_samples -  (int) number of samples to send per packet, default 128
+
+        narrowband:
+
+        * frequency - (int) Sky frequency for band centre, in Hz (Mandatory)
+        * round_bits - (int)  Specify whow many bits to round
+        * n_samples -  (int) number of spectra to send
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :raises ValueError: if mandatory parameters are missing
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"data_type": "raw", "Sync":True, "Seconds": 0.2}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SendDataSamples", jstr)
         """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        params = json.loads(argin)
+
+        # Check for mandatory parameters and syntax.
+        # argin is left as is and forwarded to tiles
+        data_type = params.get("data_type", None)
+        if data_type is None:
+            self._component_manager.logger.error(
+                "data_type is a mandatory parameter"
+            )
+            raise ValueError("data_type is a mandatory parameter")
+        if data_type not in [
+            "raw",
+            "channel",
+            "channel_continuous",
+            "narrowband",
+            "beam",
+        ]:
+            self._component_manager.logger.error("Invalid data_type specified")
+            raise ValueError("Invalid data_type specified")
+        if data_type == "channel_continuous":
+            channel_id = params.get("channel_id", None)
+            if channel_id is None:
+                self._component_manager.logger.error(
+                    "channel_id is a mandatory parameter"
+                )
+                raise ValueError("channel_id is a mandatory parameter")
+            if channel_id < 1 or channel_id > 511:
+                self._component_manager.logger.error(
+                    "channel_id must be between 1 and 511"
+                )
+                raise ValueError("channel_id must be between 1 and 511")
+        if data_type == "narrowband":
+            frequency = params.get("frequency", None)
+            if frequency is None:
+                self._component_manager.logger.error(
+                    "frequency is a mandatory parameter"
+                )
+                raise ValueError("frequency is a mandatory parameter")
+            if frequency < 1e6 or frequency > 390e6:
+                self._component_manager.logger.error(
+                    "frequency must be between 1 and 390 MHz"
+                )
+                raise ValueError("frequency must be between 1 and 390 MHz")
+        self.component_manager.send_data_samples(argin)
+        return ([ResultCode.OK], ["SendDataSamples command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1103,21 +1284,19 @@ class SpsStation(SKAObsDevice):
     )
     def StopDataTransmission(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
-        """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        Stop data transmission from board.
 
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    def ConfigureTestGenerator(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopDataTransmission")
         """
-        """
-        handler = self.get_command_object("SetLmcIntegratedDownload")
-        (return_code, message) = handler(argin)
-        return ([return_code], [message])
+        self.component_manager.stop_data_transmission()
+        return ([ResultCode.OK], ["StopDataTransmission command completed OK"])
 
 # ----------
 # Run server

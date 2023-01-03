@@ -68,6 +68,95 @@ class TestMccsTile:
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
 
+    @pytest.mark.parametrize(
+        "config_in, expected_config",
+        [
+            pytest.param(
+                {
+                    "fixed_delays": [1, 2],
+                    "antenna_ids": [1, 2],
+                },
+                {
+                    "fixed_delays": [1, 2],
+                    "antenna_ids": [1, 2],
+                },
+                id="valid config is entered correctly",
+            ),
+            pytest.param(
+                {
+                    "fixed_delays": [1, 2],
+                },
+                {
+                    "fixed_delays": [1, 2],
+                    "antenna_ids": [],
+                },
+                id="missing config data is valid",
+            ),
+            pytest.param(
+                {
+                    "fixed_delays_wrong_name": [1, 2],
+                },
+                {
+                    "fixed_delays": [],
+                    "antenna_ids": [],
+                },
+                id="invalid named configs are skipped",
+            ),
+            pytest.param(
+                {},
+                {
+                    "fixed_delays": [],
+                    "antenna_ids": [],
+                },
+                id="invalid types dont apply",
+            ),
+        ],
+    )
+    def test_Configure(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+        config_in: dict,
+        expected_config: dict,
+    ) -> None:
+        """
+        Test for Configure.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the device
+        :param config_in: configuration of the device
+        :param expected_config: the expected output configuration
+        """
+        tile_device.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+        time.sleep(0.1)
+        tile_device.MockTpmOn()
+
+        init_value = getattr(tile_device, "staticTimeDelays")
+
+        tile_device.Configure(json.dumps(config_in))
+
+        assert list(tile_device.antennaIds) == expected_config["antenna_ids"]
+
+        value = expected_config["fixed_delays"]
+        write_value = np.array(value)
+        init_value = np.array(init_value)
+        if value:
+            assert (getattr(tile_device, "staticTimeDelays") == write_value).all()
+        else:
+            assert (getattr(tile_device, "staticTimeDelays") == init_value).all()
+
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
@@ -831,8 +920,9 @@ class TestMccsTileCommands:
         Test for WriteAddress.
 
         This is a very weak test but the
-        :py:class:`~ska_low_mccs_spshw.tile.tile_hardware.TileHardwareManager`'s
-        write_address method is well tested.
+        :py:class:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager`'s
+        :py:meth:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager.write_address`
+        method is well tested.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a

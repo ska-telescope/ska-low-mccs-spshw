@@ -13,7 +13,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import re
-from typing import Any, List
+from typing import Any, Callable, Optional
 
 from pyfabil.base.definitions import LibraryError
 
@@ -29,11 +29,19 @@ class StaticTpmSimulator(BaseTpmSimulator):
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
 
-    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: StaticTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
@@ -41,7 +49,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
 
-        super().__init__(logger)
+        super().__init__(logger, component_state_changed_callback)
 
     @property
     def board_temperature(self: StaticTpmSimulator) -> float:
@@ -105,13 +113,21 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     wrapped this to give that interface needed for testing tpm_driver.
     """
 
-    def __init__(self: StaticTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: StaticTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
-        super().__init__(logger)
+        super().__init__(logger, component_state_changed_callback)
 
     def read_address(self: BaseTpmSimulator, address: int) -> list[int]:
         """
@@ -151,7 +167,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         return self._register_map.get(str(address), 0)
 
-    def find_register(self, address: int) -> List[Any]:
+    def find_register(self, address: int) -> list[Any]:
         """
         Find a item in a dictionary.
 
@@ -283,8 +299,12 @@ class StaticTileSimulator(StaticTpmSimulator):
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
 
-    def get_firmware_list(self: StaticTileSimulator) -> List[dict]:
-        """:return: the firmware list."""
+    def get_firmware_list(self: StaticTileSimulator) -> list[dict]:
+        """
+        Return the list of firmaware available.
+
+        :return: the firmware list.
+        """
         return self.firmware_list
 
     def program_fpgas(self: StaticTileSimulator, firmware_name: str) -> None:

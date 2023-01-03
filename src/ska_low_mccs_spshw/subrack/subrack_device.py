@@ -264,9 +264,10 @@ class MccsSubrack(SKABaseDevice):
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)
             else:
-                self.op_state_model.perform_action(
-                    action_map[self.component_manager.power_state]
-                )
+                if self.component_manager.power_state is not None:
+                    self.op_state_model.perform_action(
+                        action_map[self.component_manager.power_state]
+                    )
                 self._health_model.component_fault(False)
 
         if "health_state" in state_change.keys():

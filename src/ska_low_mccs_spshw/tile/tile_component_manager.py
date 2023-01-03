@@ -17,6 +17,8 @@ import time
 from typing import Any, Callable, Optional, cast
 
 import tango
+from pyaavs.tile import Tile as Tile12
+from pyaavs.tile_wrapper import Tile as HwTile
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
@@ -218,6 +220,14 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         # This one-liner is only a method so that we can decorate it.
         setattr(self._component, name, value)
 
+    def _set_tpm_status(self: _TpmSimulatorComponentManager, status: TpmStatus) -> None:
+        """
+        Set the TPM status in the simulator.
+
+        :param status: the new TPM status
+        """
+        self._component._set_tpm_status(status)
+
 
 class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
     """A component manager for a static TPM simulator."""
@@ -241,7 +251,7 @@ class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            StaticTpmSimulator(logger),
+            StaticTpmSimulator(logger, component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -273,7 +283,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
             component state changes.
         """
         super().__init__(
-            DynamicTpmSimulator(logger),
+            DynamicTpmSimulator(logger, component_state_changed_callback),
             logger,
             max_workers,
             communication_state_changed_callback,
@@ -341,13 +351,27 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_communication_state = CommunicationStatus.DISABLED
         self._tpm_communication_state = CommunicationStatus.DISABLED
 
+        if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
+            self.logger.warning(
+                "TPM version "
+                + tpm_version
+                + " not valid. Trying to read version from board, which must be on"
+            )
+            tpm_version = None
+
+        tile = cast(
+            Tile12,
+            HwTile(
+                ip=tpm_ip, port=tpm_cpld_port, logger=logger, tpm_version=tpm_version
+            ),
+        )
+
         if simulation_mode == SimulationMode.FALSE:
             self._tpm_component_manager = TpmDriver(
                 logger,
                 max_workers,
                 tile_id,
-                tpm_ip,
-                tpm_cpld_port,
+                tile,
                 tpm_version,
                 self._tpm_communication_state_changed,
                 component_state_changed_callback,
@@ -1272,6 +1296,9 @@ class TileComponentManager(MccsComponentManager):
     def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
         """
         Set the power state of the tile.
+
+        If power state changed, re-evaluate the tile programming state and
+        updates it inside the driver. This pushes a callback if it changed.
 
         :param power_state: The desired power state
         """

@@ -170,11 +170,19 @@ class DynamicTpmSimulator(BaseTpmSimulator):
     This is useful for demoing.
     """
 
-    def __init__(self: DynamicTpmSimulator, logger: logging.Logger) -> None:
+    def __init__(
+        self: DynamicTpmSimulator,
+        logger: logging.Logger,
+        component_state_changed_callback: Optional[
+            Callable[[dict[str, Any]], None]
+        ] = None,
+    ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
         """
         self._voltage: Optional[float] = None
         self._board_temperature: Optional[float] = None
@@ -199,7 +207,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         )
         self._updater.start()
 
-        super().__init__(logger)
+        super().__init__(logger, component_state_changed_callback)
 
     def __del__(self: DynamicTpmSimulator) -> None:
         """Garbage-collection hook."""

@@ -167,7 +167,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         return self._register_map.get(str(address), 0)
 
-    def find_register(self, address: int) -> List[Any]:
+    def find_register(self, address: int) -> list[Any]:
         """
         Find a item in a dictionary.
 
@@ -299,8 +299,12 @@ class StaticTileSimulator(StaticTpmSimulator):
         self.attributes.update({"start_channel": start_channel})
         self.attributes.update({"nof_channels": nof_channels})
 
-    def get_firmware_list(self: StaticTileSimulator) -> List[dict]:
-        """:return: the firmware list."""
+    def get_firmware_list(self: StaticTileSimulator) -> list[dict]:
+        """
+        Return the list of firmaware available.
+
+        :return: the firmware list.
+        """
         return self.firmware_list
 
     def program_fpgas(self: StaticTileSimulator, firmware_name: str) -> None:

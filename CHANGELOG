@@ -2,3 +2,7 @@
 
 ## unrelease
 
+## 0.1.0
+
+* MCCS-1292 - Move any changed tile & subrack files from ska-low-mccs
+* MCCS-1218 - Generate new repository mccs-spshw

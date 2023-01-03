@@ -23,8 +23,6 @@ import tango
 
 from ska_low_mccs_spshw.tile.base_tpm_simulator import BaseTpmSimulator
 
-# from ska_control_model import CommunicationStatus
-
 
 class _DynamicValuesGenerator:
     """

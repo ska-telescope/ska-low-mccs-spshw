@@ -13,13 +13,11 @@ from __future__ import annotations  # allow forward references in type hints
 
 import logging
 import re
-from typing import Any, Callable, List, Optional
+from typing import Any, Callable, Optional
 
 from pyfabil.base.definitions import LibraryError
 
 from ska_low_mccs_spshw.tile.base_tpm_simulator import BaseTpmSimulator
-
-# from ska_control_model import CommunicationStatus
 
 
 class StaticTpmSimulator(BaseTpmSimulator):

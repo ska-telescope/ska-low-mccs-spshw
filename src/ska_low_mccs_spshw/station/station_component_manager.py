@@ -8,10 +8,12 @@
 """This module implements component management for stations."""
 from __future__ import annotations
 
+import copy
 import functools
 import json
 import logging
 import threading
+import time
 from typing import Any, Callable, Optional, Sequence
 
 import tango
@@ -26,8 +28,10 @@ from ska_low_mccs_common.utils import threadsafe
 
 __all__ = ["SpsStationComponentManager"]
 
+
 class _SubrackProxy(DeviceComponentManager):
     """A proxy to a subrack, for a station to use."""
+
     # pylint: disable=too-many-arguments
     def __init__(
         self: _SubrackProxy,
@@ -65,6 +69,7 @@ class _SubrackProxy(DeviceComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
+
     def start_communicating(self: _TileProxy) -> None:
         self._connecting = True
         super().start_communicating()
@@ -166,7 +171,9 @@ class SpsStationComponentManager(MccsComponentManager):
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
+        subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
+        station_network_address: str,
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -176,8 +183,11 @@ class SpsStationComponentManager(MccsComponentManager):
         Initialise a new instance.
 
         :param station_id: the id of this station
-        :param tile_fqdns: FQDNs of the Tango devices and manage this
+        :param subrack_fqdns: FQDNs of the Tango devices which manage this
+            station's subracks
+        :param tile_fqdns: FQDNs of the Tango devices which manage this
             station's TPMs
+        :param station_network_address: address prefix for station 40G subnet
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -188,17 +198,14 @@ class SpsStationComponentManager(MccsComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._apiu_fqdn = apiu_fqdn
-
         self._is_configured = False
         self._on_called = False
 
         self._communication_state_lock = threading.Lock()
         self._communication_statees = {
             fqdn: CommunicationStatus.DISABLED
-            for fqdn in [apiu_fqdn] + list(antenna_fqdns) + list(tile_fqdns)
+            for fqdn in list(subrack_fqdns) + list(tile_fqdns)
         }
-
 
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_proxies = {
@@ -213,11 +220,41 @@ class SpsStationComponentManager(MccsComponentManager):
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
-        self._subrack_power_states = {fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns}
+        self._subrack_proxies = {
+            subrack_fqdn: _SubrackProxy(
+                subrack_fqdn,
+                station_id,
+                logger,
+                max_workers,
+                functools.partial(
+                    self._device_communication_state_changed, subrack_fqdn
+                ),
+                functools.partial(component_state_changed_callback, fqdn=subrack_fqdn),
+            )
+            for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
+        }
+        self._subrack_power_states = {
+            fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
+        }
 
         # configuration parameters
+        # more to come
+        self._csp_ingest_address = "0.0.0.0"
+        self._csp_ingest_port = 4660
+        self._csp_source_port = 0xF0D0
+        self._lmc_param = {
+            "mode": "10g",
+            "payload_length": 8192,
+            "dst_ip": "0.0.0.0",
+            "dst_port": 4660,
+            "src_port": 0xF0D0,
+        }
+        self._lmc_integrated_mode = "10g"
+        self._lmc_channel_payload_length = 8192
+        self._lmc_beam_payload_length = 8192
+        self._fortygb_network_address = station_network_address
+        self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
 
-        self._
         super().__init__(
             logger,
             max_workers,
@@ -229,21 +266,19 @@ class SpsStationComponentManager(MccsComponentManager):
         """Establish communication with the station components."""
         super().start_communicating()
 
-        self._apiu_proxy.start_communicating()
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.start_communicating()
-        for antenna_proxy in self._antenna_proxies.values():
-            antenna_proxy.start_communicating()
+        for subrack_proxy in self._subrack_proxies.values():
+            subrack_proxy.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
         super().stop_communicating()
 
-        for antenna_proxy in self._antenna_proxies.values():
-            antenna_proxy.stop_communicating()
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.stop_communicating()
-        self._apiu_proxy.stop_communicating()
+        for subrack_proxy in self._subrack_proxies.values():
+            subrack_proxy.stop_communicating()
 
     def _device_communication_state_changed(
         self: SpsStationComponentManager,
@@ -315,9 +350,8 @@ class SpsStationComponentManager(MccsComponentManager):
         self: SpsStationComponentManager,
     ) -> None:
         with self._power_state_lock:
-            power_states = (
-                + list(self._subrack_power_states.values())
-                + list(self._tile_power_states.values())
+            power_states = list(self._subrack_power_states.values()) + list(
+                self._tile_power_states.values()
             )
             if all(power_state == PowerState.ON for power_state in power_states):
                 evaluated_power_state = PowerState.ON
@@ -353,7 +387,7 @@ class SpsStationComponentManager(MccsComponentManager):
             if fqdn is None:
                 self.power_state = power_state
             elif fqdn in self._subrack_proxies.keys():
-                self._antenna_proxies[fqdn].power_state = power_state
+                self._subrack_proxies[fqdn].power_state = power_state
             elif fqdn in self._tile_proxies.keys():
                 self._tile_proxies[fqdn].power_state = power_state
             else:
@@ -451,14 +485,12 @@ class SpsStationComponentManager(MccsComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if not all(
-            power_state == PowerState.ON
-            for power_state in self._subrack_power_states
+            power_state == PowerState.ON for power_state in self._subrack_power_states
         ):
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
 
         if not all(
-            power_state == PowerState.ON
-            for power_state in self._tile_power_states
+            power_state == PowerState.ON for power_state in self._tile_power_states
         ):
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
@@ -474,15 +506,55 @@ class SpsStationComponentManager(MccsComponentManager):
             task_status = TaskStatus.FAILED
         if task_callback:
             task_callback(status=task_status)
-        return
 
     @check_communicating
-    def _turn_on_tile(
+    def _turn_on_subracks(
         self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Turn on subracks if not already on.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        with self._power_state_lock:
+            if not all(
+                power_state == PowerState.ON
+                for power_state in self._subrack_power_states.values()
+            ):
+                results = []
+                for proxy in self._subrack_proxies.values():
+                    result_code = proxy.on()
+                    results.append(result_code)
+                if ResultCode.FAILED in results:
+                    return ResultCode.FAILED
+        # wait for subracks to come up
+        timeout = 60  # Seconds
+        last_time = time.time() + timeout
+        while time.time() < last_time:
+            time.sleep(2)
+            if all(
+                power_state == PowerState.ON
+                for power_state in self._subrack_power_states.values()
+            ):
+                return ResultCode.OK
+        self.logger.error("Timed out waiting for subracks to come up")
+        return ResultCode.FAILED
+
+    @check_communicating
+    def _turn_on_tiles(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> ResultCode:
         """
         Turn on tiles if not already on.
 
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
         :return: a result code
         """
         with self._power_state_lock:
@@ -493,25 +565,56 @@ class SpsStationComponentManager(MccsComponentManager):
                 results = []
                 for proxy in self._tile_proxies.values():
                     result_code = proxy.on()
-                    time.sleep(4)    # stagger power on by 4 seconds per tile
+                    time.sleep(4)  # stagger power on by 4 seconds per tile
                     results.append(result_code)
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
         # wait for tiles to come up
-        timeout = 60 # Seconds
-        last_time = time.now + timeout
-        while time.now < last_time:
-            time.sleep(2):
+        timeout = 60  # Seconds
+        last_time = time.time() + timeout
+        while time.time() < last_time:
+            time.sleep(2)
             results = []
             for proxy in self._tile_proxies.values():
                 result_code = proxy._proxy.tileProgrammingState
-            if all (
-                result == "INITIALISED"
-                for result in results
-            ):
-            return ResultCode.OK
+            if all(result == "INITIALISED" for result in results):
+                return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
+
+    @check_communicating
+    def _initialise_tiles(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Initialise tilesn.
+
+        :TODO: MCCS-1257
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        return ResultCode.OK
+
+    @check_communicating
+    def _initialise_station(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Initialise complete station.
+
+        :TODO: MCCS-1257
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        return ResultCode.OK
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -540,21 +643,22 @@ class SpsStationComponentManager(MccsComponentManager):
         """
         return copy.deepcopy(self._static_delays)
 
-    @static_time_delays.setter(self: SpsStationComponentManager, delays: list[int]) -> None:
+    @static_time_delays.setter
+    def static_time_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
         """
         Set static time delay correction.
+
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
         self._static_delays = copy.deepcopy(delays)
         i = 0
         for tile in self._tile_proxies:
             if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
-                tile.proxy.StaticTimeDelays = delays[i:i+32]
+                tile.proxy.StaticTimeDelays = delays[i : i + 32]
             i = i + 32
 
     @property
     def channeliser_truncation(self: SpsStationComponentManager) -> list(int):
-        channeliserRounding(self: SpsStation) -> list[int]:
         """
         Channeliser rounding.
 
@@ -566,7 +670,10 @@ class SpsStationComponentManager(MccsComponentManager):
         """
         return copy.deepcopy(self._channeliser_truncation)
 
-    @channeliser_truncation.setter(self: SpsStationComponentManager, truncation: list[int]) -> None:
+    @channeliser_truncation.setter
+    def channeliser_truncation(
+        self: SpsStationComponentManager, truncation: list[int]
+    ) -> None:
         """
         Set channeliser rounding.
 
@@ -580,9 +687,26 @@ class SpsStationComponentManager(MccsComponentManager):
 
     @property
     def csp_rounding(self: SpsStationComponentManager) -> list(int):
+        """
+        CSP formatter rounding.
+
+        Rounding from 16 to 8 bits in final stage of the
+        station beamformer, before sending data to CSP.
+        Array of (up to) 384 values, one for each logical channel.
+        Range 0 to 7, as number of discarded LS bits.
+
+        :return: CSP formatter rounding for each logical channel.
+        """
         return copy.deepcopy(self._csp_rounding)
 
-    @csp_rounding.setter(self: SpsStationComponentManager, truncation: list[int]) -> None:
+    @csp_rounding.setter
+    def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
+        """
+        Set CSP formatter rounding.
+
+        :param truncation: list of up to 384 values in the range 0-7.
+            Current hardware supports only a single value, thus oly 1st value is used
+        """
         self._csp_rounding = copy.deepcopy(truncation)
         tile = self._tile_proxies[-1]
         if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
@@ -590,68 +714,187 @@ class SpsStationComponentManager(MccsComponentManager):
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
+        """
+        Get attenuator level of preADU channels, one per input channel.
+
+        :return: Array of one value per antenna/polarization (32 per tile)
+        """
         return copy.deepcopy(self._preadu_levels)
+
+    @preadu_levels.setter
+    def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
+        """
+        Set attenuator level of preADU channels, one per input channel.
+
+        :param levels: ttenuator level of preADU channels, one per input channel, in dB
+        """
+        self._preadu_levels = copy.deepcopy(levels)
+        i = 0
+        for tile in self._tile_proxies:
+            if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
+                tile._proxy.preaduLeves = levels[i : i + 32]
+            i = i + 32
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[float]]:
+        """
+        Get beamformer region table.
+
+        Bidimensional array of one row for each 8 channels, with elements:
+        0. start physical channel
+        1. beam number
+        2. subarray ID
+        3. subarray_logical_channel
+        4. subarray_beam_id
+        5. substation_id
+        6. aperture_id
+
+        Each row is a set of 7 consecutive elements in the list.
+
+        :return: list of up to 7*48 values
+        """
         return copy.deepcopy(self._beamformer_table)
 
     def forty_gb_network_address(self: SpsStationComponentManager) -> str:
+        """
+        Get 40Gb network address.
+
+        :return: IP network address for station network
+        """
         return self._fortygb_network_address
 
     def csp_ingest_address(self: SpsStationComponentManager) -> str:
+        """
+        Get 40Gb CSP address.
+
+        :return: IP address for CSP ingest port
+        """
         return self._csp_ingest_address
 
     def csp_ingest_port(self: SpsStationComponentManager) -> int:
+        """
+        Get 40Gb CSP ingest port.
+
+        :return: UDP port for CSP ingest port
+        """
         return self._csp_ingest_port
 
-    def isProgrammed(self: SpsStationComponentManager) -> bool:
+    def is_programmed(self: SpsStationComponentManager) -> bool:
+        """
+        Get TPM programming state.
+
+        :return: True if all TPMs are programmed
+        """
         return True
 
-    def testGeneratorActive(self: SpsStationComponentManager) -> bool:
+    def test_generator_active(self: SpsStationComponentManager) -> bool:
+        """
+        Get test generator state.
+
+        :return: True if at least one TPM uses test generator
+        """
         return False
 
-    def isBeamformerRunning(self: SpsStationComponentManager) -> bool:
+    def is_beamformer_running(self: SpsStationComponentManager) -> bool:
+        """
+        Get station beamformer state.
+
+        :return: Get station beamformer state
+        """
         return False
 
-    def tileProgrammingState(self: SpsStationComponentManager) -> list[str]:
+    def tile_programming_state(self: SpsStationComponentManager) -> list[str]:
+        """
+        Get TPM programming state.
+
+        :return: list of programming state for all TPMs
+        """
+        result = []
+        for tile in self._tile_proxies:
+            result.append(tile._proxy.tileProgrammingState)
+        return result
 
     def adc_power(self: SpsStationComponentManager) -> list[float]:
+        """
+        Get input RMS levels.
+
+        :return: list of RMS levels of ADC inputs
+        """
         rms_values = []
         for tile in self._tile_proxies:
-            rms_values.append(self._proxy.AdcPower)
+            rms_values.append(tile._proxy.AdcPower)
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
-        return [35.,35., 35.]
+        """
+        Get summary of board temperatures.
+
+        :return: minimum, average and maximum of board temperatures
+        """
+        return [35.0, 35.0, 35.0]
 
     def fpga_temperatures_summary(self: SpsStationComponentManager) -> list[float]:
-        return [35.,35., 35.]
+        """
+        Get summary of FPGAs temperatures.
+
+        :return: minimum, average and maximum of FPGAs temperatures
+        """
+        return [35.0, 35.0, 35.0]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
-        return [0., 0., 0.]
+        """
+        Get summary of PPS delays.
+
+        :return: minimum, average and maximum of PPS delays
+        """
+        return [0.0, 0.0, 0.0]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:
+        """
+        Get summary of SYSREF presence.
+
+        :return: TRUE if SYSREF is present in all tiles
+        """
         return True
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
+        """
+        Get summary of PLL lock state.
+
+        :return: TRUE if SYSREF is present in all tiles
+        """
         return True
 
     def pps_present_summary(self: SpsStationComponentManager) -> bool:
+        """
+        Get summary of PPS presence.
+
+        :return: TRUE if PPS is present in all tiles
+        """
         return True
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:
+        """
+        Get summary of 10 MHz clock presence.
+
+        :return: TRUE if 10 MHz clock is present in all tiles
+        """
         return True
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
+        """
+        Get summary of network errors.
+
+        :return: list of 40Gb network errors for all tiles
+        """
         result = []
         for tile in self._tile_proxies:
-            result.append([0, 0])
+            result = result + [0, 0]
         return result
 
-    #------------
+    # ------------
     # commands
-    #------------
+    # ------------
     def set_lmc_download(
         self: SpsStationComponentManager,
         mode: str,
@@ -660,6 +903,24 @@ class SpsStationComponentManager(MccsComponentManager):
         src_port: int,
         dst_port: int,
     ) -> None:
+        """
+        Configure link and size of LMC channel.
+
+        :param mode: '1g' or '10g'
+        :param payload_length: SPEAD payload length for LMC packets
+        :param dst_ip: Destination IP, defaults to None
+        :param src_port: source port, defaults to 0xF0D0
+        :param dst_port: destination port, defaults to 4660
+        """
+        self._lmc_param["mode"] = mode
+        self._lmc_param["payload_length"] = payload_length
+        self._lmc_param["dst_ip"] = dst_ip
+        self._lmc_param["src_port"] = src_port
+        self._lmc_param["dst_port"] = dst_port
+        json_param = json.dumps(self._lmc_param)
+        for tile in self._tile_proxies:
+            if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
+                tile._proxy.set_lmc_download(json_param)
 
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
@@ -670,6 +931,34 @@ class SpsStationComponentManager(MccsComponentManager):
         src_port: int,
         dst_port: int,
     ) -> None:
+        """
+        Configure link and size of integrated LMC channel.
+
+        :param mode: '1g' or '10g'
+        :param channel_payload_length: SPEAD payload length for
+            integrated channel data
+        :param beam_payload_length: SPEAD payload length for integrated
+            beam data
+        :param dst_ip: Destination IP, defaults to None
+        :param src_port: source port, defaults to 0xF0D0
+        :param dst_port: destination port, defaults to 4660
+        """
+        self._lmc_integrated_mode = mode
+        self._lmc_channel_payload_length = channel_payload_length
+        self._lmc_beam_payload_length = beam_payload_length
+        json_param = json.dumps(
+            {
+                "mode": mode,
+                "channel_payload_length": channel_payload_length,
+                "beam_payload_length": beam_payload_length,
+                "dst_ip": dst_ip,
+                "src_port": src_port,
+                "dst_port": dst_port,
+            }
+        )
+        for tile in self._tile_proxies:
+            if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
+                tile._proxy.set_lmc_download(json_param)
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -677,62 +966,118 @@ class SpsStationComponentManager(MccsComponentManager):
         src_port: int,
         dst_port: int,
     ) -> None:
-    self._csp_ingest_address = dst_ip
-    self._csp_ingest_port = dst_port
-    self._csp_source_port = src_port
+        """
+        Configure link for CSP ingest channel.
+
+        :param dst_ip: Destination IP, defaults to None
+        :param src_port: source port, defaults to 0xF0D0
+        :param dst_port: destination port, defaults to 4660
+        """
+        self._csp_ingest_address = dst_ip
+        self._csp_ingest_port = dst_port
+        self._csp_source_port = src_port
 
     def set_beamformer_regions(
-        self: SpsStationComponentManager,
-        beamformer_table: list[int]
+        self: SpsStationComponentManager, beamformer_table: list[int]
     ) -> None:
+        """
+        Set the frequency regions to be beamformed into a single beam.
 
+        :param beamformer_table: a list encoding up to 48 regions, with each
+            region containing a start channel, the size of the region
+            (which must be a multiple of 8), and a beam index (between 0 and 7)
+            and a substation ID (not used)
+        """
+        for tile in self._tile_proxies:
+            if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
+                tile._proxy.set_beamformer_regions(beamformer_table)
 
     def load_calibration_coefficients(
-        self: SpsStationComponentManager,
-        coefficient_list: list[float]
+        self: SpsStationComponentManager, calibration_coefficients: list[float]
     ) -> None:
-        antenna = int(beamformer_table[0])
+        """
+        Load calibration coefficients.
+
+        These may include any rotation matrix (e.g. the
+        parallactic angle), but do not include the geometric delay.
+
+        :param calibration_coefficients: a bidirectional complex array of
+            coefficients, flattened into a list
+        """
+        antenna = int(calibration_coefficients[0])
         tile = antenna // 16
         tile_antenna = antenna % 16
+        tile = self._tile_proxies[tile]._proxy
+        coefs = float([tile_antenna]) + calibration_coefficients[2:]
+        tile.LoadCalibrationCoefficients(coefs)
 
-    def apply_calibration(
-        self: SpsStationComponentManager,
-        switch_time: str
-    ) -> None:
+    def apply_calibration(self: SpsStationComponentManager, switch_time: str) -> None:
+        """
+        Switch the calibration bank.
+
+        (i.e. apply the calibration coefficients previously loaded by
+        :py:meth:`load_calibration_coefficients`).
+
+        :param switch_time: an optional time at which to perform the
+            switch
+        """
         for tile in self._tile_proxies:
-            self._proxy.ApplyCalibration()
+            tile._proxy.ApplyCalibration()
 
     def load_pointing_delays(
-        self: SpsStationComponentManager,
-        delay_list: list[float]
+        self: SpsStationComponentManager, delay_list: list[float]
     ) -> None:
-        for tile in self._tile_proxies:
-            self._proxy.LoadPointingDelay(delay_list)
+        """
+        Specify the delay in seconds and the delay rate in seconds/second.
 
-    def apply_pointing_delys(self: SpsStationComponentManager,switch_time) -> None:
+        The delay_array specifies the delay and delay rate for each antenna. beam_index
+        specifies which beam is desired (range 0-7)
+
+        :param delay_list: delay in seconds, and delay rate in seconds/second
+        """
         for tile in self._tile_proxies:
-            self._proxy.ApplyPointingDelay(switch_time)
+            tile._proxy.LoadPointingDelay(delay_list)
+
+    def apply_pointing_delays(self: SpsStationComponentManager, load_time) -> None:
+        """
+        Load the pointing delay at a specified time.
+
+        :param load_time: time at which to load the pointing delay
+        """
+        for tile in self._tile_proxies:
+            tile._proxy.ApplyPointingDelay(load_time)
 
     def start_beamformer(
         self: SpsStationComponentManager,
         start_time: str,
         duration: float,
         subarray_beam_id: int,
-        scan_id: int
+        scan_id: int,
     ) -> None:
+        """
+        Start the beamformer at the specified time.
+
+        :param start_time: time at which to start the beamformer,
+            defaults to 0
+        :param duration: duration for which to run the beamformer,
+            defaults to -1 (run forever)
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param scan_id: ID of the scan which is started.
+        """
         parameter_list = {
             "start_time": start_time,
             "duration": duration,
             "subarray_beam_id": subarray_beam_id,
-            "scan_id": scan_id
+            "scan_id": scan_id,
         }
         json_argument = json.dumps(parameter_list)
         for tile in self._tile_proxies:
-            self._proxy.StartBeamformer(json_argument)
+            tile._proxy.StartBeamformer(json_argument)
 
     def stop_beamformer(self: SpsStationComponentManager) -> None:
+        """Stop the beamformer."""
         for tile in self._tile_proxies:
-            self._proxy.StopBeamformer()
+            tile._proxy.StopBeamformer()
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
@@ -740,30 +1085,67 @@ class SpsStationComponentManager(MccsComponentManager):
         first_channel: int,
         last_channel: int,
     ) -> None:
+        """
+        Configure and start the transmission of integrated channel data.
+
+        Configure with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedData command is run.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :param first_channel: first channel
+        :param last_channel: last channel
+        """
+        parameter_list = {
+            "integration_time": integration_time,
+            "first_channel": first_channel,
+            "last_channel": last_channel,
+        }
+        json_argument = json.dumps(parameter_list)
+        for tile in self._tile_proxies:
+            tile._proxy.ConfigureIntegratedChannelData(json_argument)
 
     def configure_integrated_beam_data(
         self: SpsStationComponentManager,
         integration_time: float,
         first_channel: int,
-        last_channel: int
+        last_channel: int,
     ) -> None:
+        """
+        Configure and start the transmission of integrated channel data.
+
+        Configure with the
+        provided integration time, first channel and last channel. Data are sent
+        continuously until the StopIntegratedData command is run.
+
+        :param integration_time: integration time in seconds, defaults to 0.5
+        :param first_channel: first channel
+        :param last_channel: last channel
+        """
         parameter_list = {
             "integration_time": integration_time,
             "first_channel": first_channel,
-            "last_channel": last_channel
+            "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
         for tile in self._tile_proxies:
-            self._proxy.ConfigureIntegratedBeamData(json_argument)
+            tile._proxy.ConfigureIntegratedBeamData(json_argument)
 
     def stop_integrated_data(self: SpsStationComponentManager) -> None:
+        """Stop the integrated data."""
         for tile in self._tile_proxies:
-            self._proxy.StopIntegratedData()
+            tile._proxy.StopIntegratedData()
 
     def send_data_samples(self: SpsStationComponentManager, argin: str) -> None:
+        """
+        Front end for send_xxx_data methods.
+
+        :param argin: Json encoded parameter List
+        """
         for tile in self._tile_proxies:
-            self._proxy.SendDataSamples(argin)
+            tile._proxy.SendDataSamples(argin)
 
     def stop_data_transmission(self: SpsStationComponentManager) -> None:
+        """Stop data transmission for send_channelised_data_continuous."""
         for tile in self._tile_proxies:
-            self._proxy.StopDataTransmission()
+            tile._proxy.StopDataTransmission()

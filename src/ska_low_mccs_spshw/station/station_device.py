@@ -1,3 +1,5 @@
+# type: ignore
+# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -10,6 +12,8 @@
 from __future__ import annotations
 
 import functools
+import itertools
+import json
 from typing import Any, Optional, cast
 
 import tango
@@ -19,9 +23,11 @@ from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs_spshw.station.station_component_manager import StationComponentManager
-from ska_low_mccs_spshw.station.station_health_model import StationHealthModel
-from ska_low_mccs_spshw.station.station_obs_state_model import StationObsStateModel
+from ska_low_mccs_spshw.station.station_component_manager import (
+    SpsStationComponentManager,
+)
+from ska_low_mccs_spshw.station.station_health_model import SpsStationHealthModel
+from ska_low_mccs_spshw.station.station_obs_state_model import SpsStationObsStateModel
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
@@ -37,7 +43,7 @@ class SpsStation(SKAObsDevice):
     StationId = device_property(dtype=int, default_value=0)
     TileFQDNs = device_property(dtype=(str,), default_value=[])
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
-    CabinetNetworkAddress = device_property(dtype=(str,), default_value=[10.0.0.0])
+    CabinetNetworkAddress = device_property(dtype=(str,), default_value=["10.0.0.0"])
 
     # ---------------
     # Initialisation
@@ -58,10 +64,9 @@ class SpsStation(SKAObsDevice):
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
-        self._health_model: StationHealthModel
-        self.component_manager: StationComponentManager
-        self._delay_centre: list[float]
-        self._obs_state_model: StationObsStateModel
+        self._health_model: SpsStationHealthModel
+        self.component_manager: SpsStationComponentManager
+        self._obs_state_model: SpsStationObsStateModel
 
     def init_device(self: SpsStation) -> None:
         """
@@ -76,11 +81,11 @@ class SpsStation(SKAObsDevice):
 
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()
-        self._obs_state_model = StationObsStateModel(
+        self._obs_state_model = SpsStationObsStateModel(
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = StationHealthModel(
+        self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
             self.component_state_changed_callback,
@@ -89,13 +94,13 @@ class SpsStation(SKAObsDevice):
 
     def create_component_manager(
         self: SpsStation,
-    ) -> StationComponentManager:
+    ) -> SpsStationComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
-        return StationComponentManager(
+        return SpsStationComponentManager(
             self.StationId,
             self.SubrackFQDNs,
             self.TileFQDNs,
@@ -106,29 +111,28 @@ class SpsStation(SKAObsDevice):
             self.component_state_changed_callback,
         )
 
+    def init_command_objects(self: SpsStation) -> None:
+        """Set up the handler objects for Commands."""
+        super().init_command_objects()
 
-        def init_command_objects(self: MccsTile) -> None:
-            """Set up the handler objects for Commands."""
-            super().init_command_objects()
-
-            #
-            # Long running commands
-            #
-            for (command_name, method_name) in [
-                ("Initialise", "initialise"),
-                ("StartAcquisition", "start_acquisition"),
-            ]:
-                self.register_command_object(
+        #
+        # Long running commands
+        #
+        for (command_name, method_name) in [
+            ("Initialise", "initialise"),
+            ("StartAcquisition", "start_acquisition"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
                     command_name,
-                    SubmittedSlowCommand(
-                        command_name,
-                        self._command_tracker,
-                        self.component_manager,
-                        method_name,
-                        callback=None,
-                        logger=self.logger,
-                    ),
-                )
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    callback=None,
+                    logger=self.logger,
+                ),
+            )
 
     # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
@@ -158,9 +162,8 @@ class SpsStation(SKAObsDevice):
             self._device._is_programmed = False
             self._device._test_generator_active = False
             self._device._is_beamformer_running = False
-            self._device._current_beamformer_table = [[0]*7]*48
-            self._device._desired_beamformer_table = [[0]*7]*48
-            self._device._tile_programming_state =
+            self._device._current_beamformer_table = [[0] * 7] * 48
+            self._device._desired_beamformer_table = [[0] * 7] * 48
 
             self._device._build_state = release.get_release_info()
             self._device._version_id = release.version
@@ -367,6 +370,7 @@ class SpsStation(SKAObsDevice):
              2 values per antenna (pol. X and Y), 32 values per tile, 512 total.
         """
         self.component_manager.static_delays = delays
+
     @attribute(
         dtype=("DevLong",),
         max_dim_x=512,
@@ -394,9 +398,9 @@ class SpsStation(SKAObsDevice):
         self.component_manager.channeliser_truncation = truncation
 
     @attribute(
-            dtype=("DevLong",),
-            max_dim_x=384,
-        )
+        dtype=("DevLong",),
+        max_dim_x=384,
+    )
     def cspRounding(self: SpsStation) -> list[int]:
         """
         CSP formatter rounding.
@@ -525,8 +529,8 @@ class SpsStation(SKAObsDevice):
         return self.component_manager.is_beamformer_running()
 
     @attribute(
-    dtype="DevVarStringArray",
-    max_dim_x=16,
+        dtype="DevVarStringArray",
+        max_dim_x=16,
     )
     def tileProgrammingState(self: SpsStation) -> list(str):
         """
@@ -614,7 +618,7 @@ class SpsStation(SKAObsDevice):
     @attribute(dtype="DevVarULongArray", max_dim_x=32)
     def fortyGbNetworkErrors(self: SpsStation) -> list[int]:
         """
-        Get number of network errors for all 40 Gb interfaces
+        Get number of network errors for all 40 Gb interfaces.
 
         :return: Total number of errors on each interface (2 per tile)
         """
@@ -652,7 +656,7 @@ class SpsStation(SKAObsDevice):
     )
     def StartAcquisition(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
-        Start the acquisition synchronously for all tiles and checks for synchronisation
+        Start the acquisition synchronously for all tiles, checks for synchronisation.
 
         :param argin: Start acquisition time in ISO9601 format
         :return: A tuple containing a return code and a string message indicating
@@ -715,13 +719,15 @@ class SpsStation(SKAObsDevice):
         self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
         )
-        return ([ResultCode.OK], []"SetLmcDownload command completed OK"])
+        return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def SetLmIntegratedcDownload(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def SetLmIntegratedcDownload(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Configure link and size for integrated data packets, for all tiles.
 
@@ -766,7 +772,7 @@ class SpsStation(SKAObsDevice):
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], []"SetLmcIntegratedDownload command completed OK"])
+        return ([ResultCode.OK], ["SetLmcIntegratedDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -782,6 +788,16 @@ class SpsStation(SKAObsDevice):
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
 
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"destination_ip"="10.0.1.23"}
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("SetCspIngest", jstr)
         """
         params = json.loads(argin)
         dst_ip = params.get("destination_ip", None)
@@ -793,13 +809,15 @@ class SpsStation(SKAObsDevice):
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], []"SetCspIngest command completed OK"])
+        return ([ResultCode.OK], ["SetCspIngest command completed OK"])
 
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def SetBeamFormerRegions(self: SpsStation, argin: list(int)) -> DevVarLongStringArrayType:
+    def SetBeamFormerRegions(
+        self: SpsStation, argin: list(int)
+    ) -> DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
 
@@ -821,6 +839,8 @@ class SpsStation(SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
 
+        :raises ValueError: if parameters are illegal or inconsistent
+
         :example:
 
         >>> regions = [[4, 24, 0, 0, 0, 3, 1, 101], [26, 40, 1, 0, 24, 4, 2, 102]]
@@ -828,11 +848,8 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("SetBeamFormerRegions", input)
         """
-        return_code = ""
         if len(argin) < 8:
-            self.logger.error(
-                "Insufficient parameters specified"
-            )
+            self.logger.error("Insufficient parameters specified")
             raise ValueError("Insufficient parameters specified")
         if len(argin) > (48 * 8):
             self.logger.error("Too many regions specified")
@@ -848,27 +865,19 @@ class SpsStation(SKAObsDevice):
             region = argin[i : i + 8]  # noqa: E203
             start_channel = region[0]
             if start_channel % 2 != 0:
-                self.logger.error(
-                    "Start channel in region must be even"
-                )
+                self.logger.error("Start channel in region must be even")
                 raise ValueError("Start channel in region must be even")
             nchannels = region[1]
             if nchannels % 8 != 0:
-                self.logger.error(
-                    "Nos. of channels in region must be multiple of 8"
-                )
+                self.logger.error("Nos. of channels in region must be multiple of 8")
                 raise ValueError("Nos. of channels in region must be multiple of 8")
             beam_index = region[2]
             if beam_index < 0 or beam_index > 47:
-                self.logger.error(
-                    "Beam_index is out side of range 0-47"
-                )
+                self.logger.error("Beam_index is out side of range 0-47")
                 raise ValueError("Beam_index is out side of range 0-47")
             total_chan += nchannels
             if total_chan > 384:
-                self.logger.error(
-                    "Too many channels specified > 384"
-                )
+                self.logger.error("Too many channels specified > 384")
                 raise ValueError("Too many channels specified > 384")
             regions.append(region)
         self.component_manager.set_beamformer_regions(argin)
@@ -880,7 +889,9 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def LoadCalibrationCoefficients(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def LoadCalibrationCoefficients(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients, but does not apply them.
 
@@ -909,6 +920,7 @@ class SpsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :raises ValueError: if parameters are illegal or inconsistent
 
         :example:
 
@@ -924,9 +936,7 @@ class SpsStation(SKAObsDevice):
         >>> dp.command_inout("LoadCalibrationCoefficients", input)
         """
         if len(argin) < 9:
-            self.logger.error(
-                "Insufficient calibration coefficients"
-            )
+            self.logger.error("Insufficient calibration coefficients")
             raise ValueError("Insufficient calibration coefficients")
         if len(argin[1:]) % 8 != 0:
             self.logger.error(
@@ -968,7 +978,6 @@ class SpsStation(SKAObsDevice):
         # (return_code, message) = handler(argin)
         # return ([return_code], [message])
 
-
     @command(
         dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",
@@ -984,6 +993,7 @@ class SpsStation(SKAObsDevice):
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :raises ValueError: if parameters are illegal or inconsistent
 
         :example:
 
@@ -1008,9 +1018,7 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def ApplyPointingDelays(
-        self: SpsStation, argin: str
-    ) -> DevVarLongStringArrayType:
+    def ApplyPointingDelays(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Set the pointing delay parameters of this Station's Tiles.
 
@@ -1074,7 +1082,7 @@ class SpsStation(SKAObsDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    def StopBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
 
@@ -1094,7 +1102,9 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def ConfigureIntegratedChannelData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def ConfigureIntegratedChannelData(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -1126,13 +1136,18 @@ class SpsStation(SKAObsDevice):
         self.component_manager.configure_integrated_channel_data(
             integration_time, first_channel, last_channel
         )
-        return ([ResultCode.OK], ["ConfigureIntegratedChannelData command completed OK"])
+        return (
+            [ResultCode.OK],
+            ["ConfigureIntegratedChannelData command completed OK"],
+        )
 
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def ConfigureIntegratedBeamData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def ConfigureIntegratedBeamData(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Configure the transmission of integrated beam data.
 
@@ -1167,10 +1182,9 @@ class SpsStation(SKAObsDevice):
         return ([ResultCode.OK], ["ConfigureIntegratedBeamData command completed OK"])
 
     @command(
-        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def StopIntegratedData(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def StopIntegratedData(self: SpsStation) -> DevVarLongStringArrayType:
         """
         Stop the integrated  data.
 
@@ -1238,9 +1252,7 @@ class SpsStation(SKAObsDevice):
         # argin is left as is and forwarded to tiles
         data_type = params.get("data_type", None)
         if data_type is None:
-            self._component_manager.logger.error(
-                "data_type is a mandatory parameter"
-            )
+            self._component_manager.logger.error("data_type is a mandatory parameter")
             raise ValueError("data_type is a mandatory parameter")
         if data_type not in [
             "raw",
@@ -1279,10 +1291,9 @@ class SpsStation(SKAObsDevice):
         return ([ResultCode.OK], ["SendDataSamples command completed OK"])
 
     @command(
-        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def StopDataTransmission(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def StopDataTransmission(self: SpsStation) -> DevVarLongStringArrayType:
         """
         Stop data transmission from board.
 
@@ -1297,6 +1308,7 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.stop_data_transmission()
         return ([ResultCode.OK], ["StopDataTransmission command completed OK"])
+
 
 # ----------
 # Run server

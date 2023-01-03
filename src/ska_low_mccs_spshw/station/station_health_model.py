@@ -21,7 +21,7 @@ class SpsStationHealthModel(HealthModel):
 
     def __init__(
         self: SpsStationHealthModel,
-        subrack_fqdns: Sequence[str]
+        subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -43,7 +43,7 @@ class SpsStationHealthModel(HealthModel):
         super().__init__(component_state_changed_callback)
 
     def tile_health_changed(
-        self: StationHealthModel,
+        self: SpsStationHealthModel,
         tile_fqdn: str,
         tile_health: Optional[HealthState],
     ) -> None:
@@ -60,7 +60,7 @@ class SpsStationHealthModel(HealthModel):
             self.update_health()
 
     def evaluate_health(
-        self: StationHealthModel,
+        self: SpsStationHealthModel,
     ) -> HealthState:
         """
         Compute overall health of the station.

@@ -13,14 +13,14 @@ from typing import Callable, Optional
 
 from ska_control_model import ObsState
 
-__all__ = ["StationObsStateModel"]
+__all__ = ["SpsStationObsStateModel"]
 
 
-class StationObsStateModel:
+class SpsStationObsStateModel:
     """An observation state model for a station."""
 
     def __init__(
-        self: StationObsStateModel,
+        self: SpsStationObsStateModel,
         logger: logging.Logger,
         obs_state_changed_callback: Callable[[ObsState], None],
     ) -> None:
@@ -43,7 +43,7 @@ class StationObsStateModel:
         self._obs_state_changed_callback(self._obs_state)
 
     def is_configured_changed(
-        self: StationObsStateModel,
+        self: SpsStationObsStateModel,
         is_configured: bool,
     ) -> None:
         """
@@ -54,7 +54,7 @@ class StationObsStateModel:
         self._is_configured = is_configured
         self.update_obs_state()
 
-    def update_obs_state(self: StationObsStateModel) -> None:
+    def update_obs_state(self: SpsStationObsStateModel) -> None:
         """Update the observation state, ensuring that the callback is called."""
         obs_state = self._evaluate_obs_state()
         if obs_state is None:
@@ -64,7 +64,7 @@ class StationObsStateModel:
             self._obs_state_changed_callback(obs_state)
 
     def _evaluate_obs_state(
-        self: StationObsStateModel,
+        self: SpsStationObsStateModel,
     ) -> Optional[ObsState]:
         """
         Return the evaluated observation state of the station.

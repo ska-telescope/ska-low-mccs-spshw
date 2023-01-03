@@ -10,8 +10,8 @@
 
 __all__ = [
     "SpsStationComponentManager",
-    "StationHealthModel",
-    "StationObsStateModel",
+    "SpsStationHealthModel",
+    "SpsStationObsStateModel",
     "SpsStation",
 ]
 

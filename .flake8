@@ -15,6 +15,7 @@ rst-directives = uml
 
 per-file-ignores =
     # N802 = PEP8 lowercase function name -- conflicts with Tango conventions
+    src/ska_low_mccs_spshw/station/station_device.py: N802
     src/ska_low_mccs_spshw/subrack/demo_subrack_device.py: N802
     src/ska_low_mccs_spshw/subrack/subrack_device.py: N802
     src/ska_low_mccs_spshw/tile/tile_device.py: N802

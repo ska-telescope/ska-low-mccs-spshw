@@ -1,5 +1,5 @@
-# type: ignore
-# pylint: skip-file
+# pylint: disable=too-many-lines, too-many-public-methods
+#
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -279,9 +279,9 @@ class SpsStation(SKAObsDevice):
             health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
-        if "is_initialised" in state_change.keys():
-            is_initialised = cast(bool, state_change.get("is_initialised"))
-            self._obs_state_model.is_initialised(is_initialised)
+        if "is_configured" in state_change.keys():
+            is_configured = cast(bool, state_change.get("is_configured"))
+            self._obs_state_model.is_configured_changed(is_configured)
 
     def _component_power_state_changed(
         self: SpsStation,
@@ -360,7 +360,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.static_delays
 
-    @staticTimeDelays.write
+    @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: SpsStation, delays: list[float]) -> None:
         """
         Set static time delay.
@@ -387,7 +387,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.channeliser_truncation
 
-    @channeliserRounding.write
+    @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: SpsStation, truncation: list[int]) -> None:
         """
         Set channeliser rounding.
@@ -414,7 +414,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.csp_rounding
 
-    @cspRounding.write
+    @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: SpsStation, rounding: list[int]) -> None:
         """
         Set CSP formatter rounding.
@@ -436,7 +436,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.preadu_levels
 
-    @preaduLevels.write
+    @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: SpsStation, levels: list[int]) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
@@ -475,7 +475,7 @@ class SpsStation(SKAObsDevice):
 
         :return: IP subnet address
         """
-        return self.component_manager.fortyGb_network_address
+        return self.component_manager.forty_gb_network_address
 
     @attribute(dtype="DevBoolean")
     def cspIngestAddress(self: SpsStation) -> str:
@@ -508,7 +508,7 @@ class SpsStation(SKAObsDevice):
 
         :return: whether of not the TPM boards are programmed
         """
-        return self.component_manager.is_programmed()
+        return self.component_manager.is_programmed
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: SpsStation) -> bool:
@@ -517,7 +517,7 @@ class SpsStation(SKAObsDevice):
 
         :return: true if the test generator is active in at least one tile
         """
-        return self.component_manager.test_generator_active()
+        return self.component_manager.test_generator_active
 
     @attribute(dtype="DevBoolean")
     def isBeamformerRunning(self: SpsStation) -> bool:
@@ -526,13 +526,13 @@ class SpsStation(SKAObsDevice):
 
         :return: true if the test generator is active in at least one tile
         """
-        return self.component_manager.is_beamformer_running()
+        return self.component_manager.is_beamformer_running
 
     @attribute(
         dtype="DevVarStringArray",
         max_dim_x=16,
     )
-    def tileProgrammingState(self: SpsStation) -> list(str):
+    def tileProgrammingState(self: SpsStation) -> list[str]:
         """
         Get the tile programming state.
 
@@ -704,11 +704,11 @@ class SpsStation(SKAObsDevice):
         params = json.loads(argin)
         mode = params.get("mode", "40G")
 
-        if mode == "40g" or mode == "40G":
+        if mode in ("40g", "40G"):
             mode = "10g"
         payload_length = params.get("payload_length", None)
         if payload_length is None:
-            if mode == "10g" or mode == "10G":
+            if mode in ("10g", "10G"):
                 payload_length = 8192
             else:
                 payload_length = 1024
@@ -756,7 +756,7 @@ class SpsStation(SKAObsDevice):
         params = json.loads(argin)
         mode = params.get("mode", "40G")
 
-        if mode == "40g" or mode == "40G":
+        if mode in ("40g", "40G"):
             mode = "10g"
         channel_payload_length = params.get("channel_payload_lenth", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
@@ -816,7 +816,7 @@ class SpsStation(SKAObsDevice):
         dtype_out="DevVarLongStringArray",
     )
     def SetBeamFormerRegions(
-        self: SpsStation, argin: list(int)
+        self: SpsStation, argin: list[int]
     ) -> DevVarLongStringArrayType:
         """
         Set the frequency regions which are going to be beamformed into each beam.
@@ -886,11 +886,11 @@ class SpsStation(SKAObsDevice):
         return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
     @command(
-        dtype_in="DevString",
+        dtype_in="DevVarLongArray",
         dtype_out="DevVarLongStringArray",
     )
     def LoadCalibrationCoefficients(
-        self: SpsStation, argin: str
+        self: SpsStation, argin: list[float]
     ) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients, but does not apply them.

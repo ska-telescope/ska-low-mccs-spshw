@@ -42,6 +42,23 @@ class SpsStationHealthModel(HealthModel):
         }
         super().__init__(component_state_changed_callback)
 
+    def subrack_health_changed(
+        self: SpsStationHealthModel,
+        subrack_fqdn: str,
+        subrack_health: Optional[HealthState],
+    ) -> None:
+        """
+        Handle a change in subrack health.
+
+        :param subrack_fqdn: the FQDN of the tile whose health has changed
+        :param subrack_health: the health state of the specified tile, or
+            None if the subrack's admin mode indicates that its health
+            should not be rolled up.
+        """
+        if self._subrack_health.get(subrack_fqdn) != subrack_health:
+            self._subrack_health[subrack_fqdn] = subrack_health
+            self.update_health()
+
     def tile_health_changed(
         self: SpsStationHealthModel,
         tile_fqdn: str,
@@ -82,6 +99,8 @@ class SpsStationHealthModel(HealthModel):
             HealthState.DEGRADED,
         ]:
             if station_health == health:
+                return health
+            if health in self._subrack_health.values():
                 return health
             if health in self._tile_health.values():
                 return health

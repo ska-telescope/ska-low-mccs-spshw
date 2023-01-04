@@ -82,6 +82,10 @@ low_mccs_spshw:
 
 # Default ska-low-mccs-spshw  device server instances
 deviceServers:
+  stations:
+    # station instances have to be zero padded to two digits
+    instances: ["station-01"]
+    file: "data/station.yaml"
   subracks:
     # subrack instances have to be 0-padded to two digits
     instances: ["subrack-01"]

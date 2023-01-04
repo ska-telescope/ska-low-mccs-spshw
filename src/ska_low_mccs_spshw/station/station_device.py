@@ -528,10 +528,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(
-        dtype="DevVarStringArray",
-        max_dim_x=16,
-    )
+    @attribute(dtype=("DevString",), max_dim_x=16)
     def tileProgrammingState(self: SpsStation) -> list[str]:
         """
         Get the tile programming state.
@@ -540,7 +537,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.tile_programming_state()
 
-    @attribute(dtype="DevVarDoubleArray", max_dim_x=512)
+    @attribute(dtype=("DevDouble",), max_dim_x=512)
     def adcPower(self: SpsStation) -> list[float]:
         """
         Get the ADC RMS input levels for all input signals.
@@ -552,7 +549,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.adc_power()
 
-    @attribute(dtype="DevDoubleArray", dim_x=3)
+    @attribute(dtype=("DevDouble",), max_dim_x=3)
     def boardTemperaturesSummary(self: SpsStation) -> list[float]:
         """
         Get summary of board temperatures (minimum, average, maximum).
@@ -561,7 +558,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.board_temperature_summary()
 
-    @attribute(dtype="DevDoubleArray", dim_x=3)
+    @attribute(dtype=("DevDouble",), max_dim_x=3)
     def fpgaTemperaturesSummary(self: SpsStation) -> list[float]:
         """
         Get summary of FPGA temperatures (minimum, average, maximum).
@@ -570,7 +567,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.fpga_temperature_summary()
 
-    @attribute(dtype="DevDoubleArray", dim_x=3)
+    @attribute(dtype=("DevDouble",), max_dim_x=3)
     def ppsDelaySummary(self: SpsStation) -> list[float]:
         """
         Get summary of PPS delay (minimum, average, maximum).
@@ -615,7 +612,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.clock_present_summary()
 
-    @attribute(dtype="DevVarULongArray", max_dim_x=32)
+    @attribute(dtype=("DevLong",), max_dim_x=32)
     def fortyGbNetworkErrors(self: SpsStation) -> list[int]:
         """
         Get number of network errors for all 40 Gb interfaces.

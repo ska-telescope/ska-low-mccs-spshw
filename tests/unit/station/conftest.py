@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -53,8 +51,8 @@ class MockLongRunningCommand(MockCallable):
         return TaskStatus.QUEUED, "Task queued"
 
 
-@pytest.fixture()
-def station_id() -> int:
+@pytest.fixture(name="station_id")
+def station_id_fixture() -> int:
     """
     Return the station id of this station.
 
@@ -66,8 +64,8 @@ def station_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def apiu_fqdn() -> str:
+@pytest.fixture(name="apiu_fqdn")
+def apiu_fqdn_fixture() -> str:
     """
     Return the FQDN of the Tango device that manages the station's APIU.
 
@@ -80,8 +78,8 @@ def apiu_fqdn() -> str:
     return "low-mccs/apiu/001"
 
 
-@pytest.fixture()
-def antenna_fqdns() -> list[str]:
+@pytest.fixture(name="antenna_fqdns")
+def antenna_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of the Tango devices that manage the station's antennas.
 
@@ -99,8 +97,8 @@ def antenna_fqdns() -> list[str]:
     ]
 
 
-@pytest.fixture()
-def tile_fqdns() -> list[str]:
+@pytest.fixture(name="tile_fqdns")
+def tile_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of the Tango devices that manage the station's tiles.
 
@@ -113,8 +111,8 @@ def tile_fqdns() -> list[str]:
     return ["low-mccs/tile/0001", "low-mccs/tile/0002"]
 
 
-@pytest.fixture()
-def mock_apiu() -> MockDeviceBuilder:
+@pytest.fixture(name="mock_apiu")
+def mock_apiu_fixture() -> MockDeviceBuilder:
     """
     Fixture that provides a mock apiu.
 
@@ -130,8 +128,8 @@ def mock_apiu() -> MockDeviceBuilder:
     return builder()
 
 
-@pytest.fixture()
-def mock_antenna_factory() -> MockDeviceBuilder:
+@pytest.fixture(name="mock_antenna_factory")
+def mock_antenna_factory_fixture() -> MockDeviceBuilder:
     """
     Fixture that provides a factory for mock antennas.
 
@@ -147,8 +145,8 @@ def mock_antenna_factory() -> MockDeviceBuilder:
     return builder
 
 
-@pytest.fixture()
-def mock_tile_factory() -> MockDeviceBuilder:
+@pytest.fixture(name="mock_tile_factory")
+def mock_tile_factory_fixture() -> MockDeviceBuilder:
     """
     Fixture that provides a factory for mock tiles.
 
@@ -165,8 +163,8 @@ def mock_tile_factory() -> MockDeviceBuilder:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     apiu_fqdn: str,
     mock_apiu: unittest.mock.Mock,
     antenna_fqdns: list[str],
@@ -204,8 +202,8 @@ def initial_mocks(
     return initial_mocks
 
 
-@pytest.fixture()
-def apiu_health_changed_callback(
+@pytest.fixture(name="apiu_health_changed_callback")
+def apiu_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[HealthState], None]:
     """
@@ -221,8 +219,8 @@ def apiu_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def antenna_health_changed_callback(
+@pytest.fixture(name="antenna_health_changed_callback")
+def antenna_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[HealthState], None]:
     """
@@ -238,8 +236,8 @@ def antenna_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def tile_health_changed_callback(
+@pytest.fixture(name="tile_health_changed_callback")
+def tile_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[HealthState], None]:
     """
@@ -255,8 +253,8 @@ def tile_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def is_configured_changed_callback(
+@pytest.fixture(name="is_configured_changed_callback")
+def is_configured_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[bool], None]:
     """
@@ -272,8 +270,8 @@ def is_configured_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[], None]:
     """
@@ -288,8 +286,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Max worker threads available to run a LRC.
 
@@ -302,8 +300,9 @@ def max_workers() -> int:
     return max_workers
 
 
-@pytest.fixture()
-def station_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="station_component_manager")
+def station_component_manager_fixture(
     tango_harness: TangoHarness,
     station_id: int,
     apiu_fqdn: str,
@@ -347,8 +346,9 @@ def station_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_station_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="mock_station_component_manager")
+def mock_station_component_manage_fixturer(
     station_id: int,
     apiu_fqdn: str,
     antenna_fqdns: list[str],
@@ -390,8 +390,8 @@ def mock_station_component_manager(
     )
 
 
-@pytest.fixture()
-def pointing_delays(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
+@pytest.fixture(name="pointing_delays")
+def pointing_delays_fixture(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
     """
     Return some mock pointing_delays.
 
@@ -405,8 +405,8 @@ def pointing_delays(mocker: pytest_mock.MockerFixture) -> unittest.mock.Mock:
     return mocker.Mock()
 
 
-@pytest.fixture()
-def mock_component_manager(
+@pytest.fixture(name="mock_component_manager")
+def mock_component_manager_fixture(
     mocker: pytest_mock.MockerFixture,
 ) -> unittest.mock.Mock:
     """
@@ -424,8 +424,8 @@ def mock_component_manager(
     return mock_component_manager
 
 
-@pytest.fixture()
-def patched_station_class(
+@pytest.fixture(name="patched_station_class")
+def patched_station_class_fixture(
     mock_component_manager: unittest.mock.Mock,
 ) -> type[MccsStation]:
     """
@@ -453,8 +453,8 @@ def patched_station_class(
     return PatchedStation
 
 
-@pytest.fixture()
-def apiu_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
+@pytest.fixture(name="apiu_proxy")
+def apiu_proxy_fixture(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
     """
     Return a proxy to the APIU.
 
@@ -466,8 +466,8 @@ def apiu_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
     return MccsDeviceProxy(apiu_fqdn, logger)
 
 
-@pytest.fixture()
-def tile_proxies(
+@pytest.fixture(name="tile_proxies")
+def tile_proxies_fixture(
     tile_fqdns: Iterable[str], logger: logging.Logger
 ) -> list[MccsDeviceProxy]:
     """
@@ -481,8 +481,8 @@ def tile_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in tile_fqdns]
 
 
-@pytest.fixture()
-def antenna_proxies(
+@pytest.fixture(name="antenna_proxies")
+def antenna_proxies_fixture(
     antenna_fqdns: Iterable[str], logger: logging.Logger
 ) -> list[MccsDeviceProxy]:
     """

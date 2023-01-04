@@ -1,4 +1,3 @@
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -53,6 +52,7 @@ class TestApiuCommon:
         """
         return PowerState.ON
 
+    # pylint: disable=too-many-arguments
     @pytest.fixture(
         params=[
             "apiu_simulator",
@@ -67,7 +67,7 @@ class TestApiuCommon:
         apiu_simulator_component_manager: ApiuSimulatorComponentManager,
         switching_apiu_component_manager: SwitchingApiuComponentManager,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback,
+        component_state_changed_callback: Callable[..., None],
         request: SubRequest,
     ) -> Union[
         ApiuSimulator,
@@ -111,19 +111,20 @@ class TestApiuCommon:
         """
         if request.param == "apiu_simulator":
             return apiu_simulator
-        elif request.param == "apiu_simulator_component_manager":
+        if request.param == "apiu_simulator_component_manager":
             apiu_simulator_component_manager.start_communicating()
             return apiu_simulator_component_manager
-        elif request.param == "switching_apiu_component_manager":
+        if request.param == "switching_apiu_component_manager":
             switching_apiu_component_manager.start_communicating()
             return switching_apiu_component_manager
-        elif request.param == "apiu_component_manager":
+        if request.param == "apiu_component_manager":
             apiu_component_manager.start_communicating()
             time.sleep(0.1)
             apiu_component_manager.on()
             time.sleep(0.1)
             expected_arguments = {"power_state": PowerState.ON}
-            component_state_changed_callback.assert_in_deque(expected_arguments)
+            cscc = component_state_changed_callback
+            cscc.assert_in_deque(expected_arguments)  # type: ignore[attr-defined]
             apiu_component_manager.power_state = PowerState.ON
             return apiu_component_manager
         raise ValueError("apiu fixture parametrized with unrecognised option")
@@ -353,7 +354,6 @@ class TestApiuComponentManager:
             task_callback_on = MockCallable()
             apiu_component_manager.on(task_callback_on)
             time.sleep(0.1)
-            kwargs: dict[str, TaskStatus]
             _, kwargs = task_callback_on.get_next_call()
             assert kwargs["status"] == TaskStatus.QUEUED
             time.sleep(0.1)
@@ -555,12 +555,12 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         time.sleep(0.1)
-        expected_arguments = {"power_state": PowerState.ON}
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        expected_power_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_power_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
         expected_are_antennas_on = [False] * apiu_antenna_count
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_in_deque(expected_arguments)
         # time.sleep(0.1)
@@ -568,7 +568,7 @@ class TestApiuComponentManager:
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = True
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_in_deque(expected_arguments)
 
@@ -577,7 +577,7 @@ class TestApiuComponentManager:
 
         apiu_component_manager.turn_off_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = False
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_next_call(expected_are_antennas_on)
 

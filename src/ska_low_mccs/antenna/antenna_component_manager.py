@@ -399,7 +399,9 @@ class AntennaComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[
+            [dict[str, Any], Optional[str]], None
+        ],
     ) -> None:
         """
         Initialise a new instance.

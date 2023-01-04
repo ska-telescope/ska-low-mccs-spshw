@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -30,8 +28,8 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker("forked")
 
 
-@pytest.fixture()
-def state_changed_callback_factory(
+@pytest.fixture(name="state_changed_callback_factory")
+def state_changed_callback_factory_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> Callable[[], MockChangeEventCallback]:
     """
@@ -52,8 +50,8 @@ def state_changed_callback_factory(
     return _factory
 
 
-@pytest.fixture()
-def obs_state_changed_callback_factory(
+@pytest.fixture(name="obs_state_changed_callback_factory")
+def obs_state_changed_callback_factory_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> Callable[[], MockChangeEventCallback]:
     """
@@ -74,8 +72,8 @@ def obs_state_changed_callback_factory(
     return _factory
 
 
-@pytest.fixture()
-def controller_device_state_changed_callback(
+@pytest.fixture(name="controller_device_state_changed_callback")
+def controller_device_state_changed_callback_fixture(
     state_changed_callback_factory: Callable[[], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -91,8 +89,8 @@ def controller_device_state_changed_callback(
     return state_changed_callback_factory()
 
 
-@pytest.fixture()
-def controller_device_admin_mode_changed_callback(
+@pytest.fixture(name="controller_device_admin_mode_changed_callback")
+def controller_device_admin_mode_changed_callback_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -109,8 +107,8 @@ def controller_device_admin_mode_changed_callback(
     return mock_change_event_callback_factory("adminMode")
 
 
-@pytest.fixture()
-def subarray_device_obs_state_changed_callback(
+@pytest.fixture(name="subarray_device_obs_state_changed_callback")
+def subarray_device_obs_state_changed_callback_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -163,8 +161,8 @@ def subarray_device_obs_state_changed_callback(
 #     return mock_change_event_callback_factory("state")
 
 
-@pytest.fixture()
-def tile_device_admin_mode_changed_callback(
+@pytest.fixture(name="tile_device_admin_mode_changed_callback")
+def tile_device_admin_mode_changed_callback_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -181,8 +179,8 @@ def tile_device_admin_mode_changed_callback(
     return mock_change_event_callback_factory("adminMode")
 
 
-@pytest.fixture()
-def tile_device_state_changed_callback(
+@pytest.fixture(name="tile_device_state_changed_callback")
+def tile_device_state_changed_callback_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """

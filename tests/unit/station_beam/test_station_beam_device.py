@@ -65,7 +65,7 @@ def patched_station_beam_device_class_fixture(
         def examine_health_model(
             self: PatchedStationBeamDevice,
             get_station_health: bool,
-        ) -> HealthState:
+        ) -> HealthState | None:
             """
             Return the health state of the station beam or station.
 

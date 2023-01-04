@@ -126,7 +126,7 @@ class SubarrayComponentManager(
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -140,7 +140,7 @@ class SubarrayComponentManager(
         :param max_workers: Maximum number of workers in the worker pool.
             Defaults to None.
         """
-        self._component_state_changed_callback: Callable[[dict[str, Any]], None]
+        self._component_state_changed_callback: Callable[..., None]
         self._component_state_changed_callback = component_state_changed_callback
 
         self._device_communication_statees: dict[str, CommunicationStatus] = {}
@@ -213,7 +213,7 @@ class SubarrayComponentManager(
     @check_communicating
     def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resources: set[str],
+        resources: dict[str, Any],
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """

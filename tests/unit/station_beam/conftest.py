@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Callable
 
 import pytest
 import tango
@@ -23,20 +23,20 @@ from ska_low_mccs.station_beam import StationBeamComponentManager
 
 @pytest.fixture(name="component_state_changed_callback")
 def component_state_changed_callback_fixture(
-    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
 
     To be called when the subarray's state changes.
 
-    :param mock_callback_deque_factory: fixture that provides a mock callback
+    :param mock_callback_factory: fixture that provides a mock callback
         factory which uses a double-ended queue (i.e. an object that returns
         mock callbacks when called).
 
     :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_deque_factory()
+    return mock_callback_factory()
 
 
 @pytest.fixture(name="component_device_health_changed_callback")
@@ -137,7 +137,6 @@ def mock_station_beam_component_manager_fixture(
     )
 
 
-# pylint: disable=too-many-arguments
 @pytest.fixture(name="station_beam_component_manager")
 def station_beam_component_manager_fixture(
     tango_harness: TangoHarness,

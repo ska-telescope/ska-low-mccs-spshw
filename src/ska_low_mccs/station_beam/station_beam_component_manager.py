@@ -12,7 +12,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Optional, cast
+from typing import Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
@@ -47,14 +47,13 @@ class _StationProxy(DeviceComponentManager):
 class StationBeamComponentManager(MccsComponentManager):
     """A component manager for a station beam."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: StationBeamComponentManager,
         beam_id: int,
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -86,7 +85,7 @@ class StationBeamComponentManager(MccsComponentManager):
         self._station_fqdn: Optional[str] = None
         self._station_proxy: Optional[_StationProxy] = None
 
-        self._component_state_changed_callback: Callable[[dict[str, Any]], None]
+        self._component_state_changed_callback: Callable[..., None]
         self._component_state_changed_callback = component_state_changed_callback
         self._max_workers = max_workers
 

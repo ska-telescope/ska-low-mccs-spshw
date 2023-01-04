@@ -81,13 +81,13 @@ def patched_subarray_device_class_fixture(
             self: PatchedSubarrayDevice,
         ) -> None:
             """Turn on the proxies."""
-            for fqdn, proxy in self.component_manager._stations.items():
+            for fqdn, station_proxy in self.component_manager._stations.items():
                 if fqdn == station_on_fqdn:
-                    proxy.power_state = PowerState.ON
+                    station_proxy.power_state = PowerState.ON
 
-            for fqdn, proxy in self.component_manager._subarray_beams.items():
+            for fqdn, subbeam_proxy in self.component_manager._subarray_beams.items():
                 if fqdn == subarray_beam_on_fqdn:
-                    proxy.power_state = PowerState.ON
+                    subbeam_proxy.power_state = PowerState.ON
 
         @command(dtype_in=str)
         def set_obs_state(
@@ -107,7 +107,7 @@ def patched_subarray_device_class_fixture(
         def examine_health_model(
             self: PatchedSubarrayDevice,
             fqdn: str,
-        ) -> HealthState:
+        ) -> HealthState | None:
             """
             Return the health state of a subservient device.
 
@@ -118,7 +118,7 @@ def patched_subarray_device_class_fixture(
             :return: The HealthState of the device at the specified FQDN.
             """
             device_type = fqdn.split("/")[1]
-            health: HealthState
+            health: HealthState | None
             if device_type == "beam":
                 health = self._health_model._station_beam_healths[fqdn]
             if device_type == "station":
@@ -1021,7 +1021,6 @@ class TestMccsSubarray:
         time.sleep(0.1)
         assert device_under_test.obsState == final_obs_state
 
-    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize("target_health_state", list(HealthState))
     @pytest.mark.parametrize(
         "fqdn", ["station_on_fqdn", "subarray_beam_on_fqdn", "station_beam_on_fqdn"]

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Callable
 
 import pytest
 import tango
@@ -27,7 +27,7 @@ from ska_low_mccs.subarray import SubarrayComponentManager
 
 @pytest.fixture(name="component_state_changed_callback")
 def component_state_changed_callback_fixture(
-    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.

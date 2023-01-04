@@ -11,6 +11,13 @@ enable=
 min-similarity-lines=7
 ignore-imports=yes
 
+[FORMAT]
+max-module-lines=1000
+
+[DESIGN]
+max-args=6
+max-locals=15
+
 # pylint reports E1101 (no-member) for socket.SocketKind
 ignored-classes = socket
 

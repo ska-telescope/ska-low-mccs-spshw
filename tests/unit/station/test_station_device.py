@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -22,8 +20,8 @@ from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHar
 from ska_low_mccs import MccsStation
 
 
-@pytest.fixture()
-def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -37,8 +35,8 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
 class TestMccsStation:
     """Test class for MccsStation tests."""
 
-    @pytest.fixture()
-    def device_to_load(self: TestMccsStation) -> DeviceToLoadType:
+    @pytest.fixture(name="device_to_load")
+    def device_to_load_fixture(self: TestMccsStation) -> DeviceToLoadType:
         """
         Fixture that specifies the device to be loaded for testing.
 
@@ -79,7 +77,7 @@ class TestMccsStation:
         assert device_under_test.daqJobId == 0
         assert device_under_test.dataDirectory == ""
         assert device_under_test.beamFQDNs is None
-        assert list(device_under_test.delayCentre) == []
+        assert not list(device_under_test.delayCentre)
         assert device_under_test.calibrationCoefficients is None
 
     def test_healthState(
@@ -232,7 +230,7 @@ class TestMccsStation:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert list(device_under_test.delayCentre) == []
+        assert not list(device_under_test.delayCentre)
 
         # SETUP
         dummy_location = (-30.72113, 21.411128)
@@ -334,8 +332,8 @@ class TestPatchedStation:
     device are passed through to the component manager
     """
 
-    @pytest.fixture()
-    def device_to_load(
+    @pytest.fixture(name="device_to_load")
+    def device_to_load_fixture(
         self: TestPatchedStation, patched_station_class: type[MccsStation]
     ) -> DeviceToLoadType:
         """

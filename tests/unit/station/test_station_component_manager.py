@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -12,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Sequence
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus
@@ -103,11 +102,12 @@ class TestStationComponentManager:
         # tile, antenna and apiu devices are being received.
         station_component_manager.start_communicating()
         time.sleep(0.1)  # wait for events to come through
-        expected_calls = (
-            [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in antenna_fqdns]
-            + [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in tile_fqdns]
-            + [({"power_state": PowerState.UNKNOWN}, apiu_fqdn)]
-        )
+        expected_calls: Sequence
+        lst: Sequence
+        lst = [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in antenna_fqdns]
+        lst += [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in tile_fqdns]
+        lst += [({"power_state": PowerState.UNKNOWN}, apiu_fqdn)]
+        expected_calls = lst
         component_state_changed_callback.assert_next_calls_with_keys(expected_calls)
 
     def test_tile_setup(

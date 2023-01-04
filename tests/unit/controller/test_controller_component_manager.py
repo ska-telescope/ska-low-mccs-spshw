@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -123,14 +121,16 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in subrack_fqdns:
-            controller_component_manager._component_state_changed_callback(
-                {"power_state": PowerState.ON},
-                fqdn=fqdn,
-            )
+            if controller_component_manager._component_state_changed_callback:
+                controller_component_manager._component_state_changed_callback(
+                    {"power_state": PowerState.ON},
+                    fqdn,
+                )
         for fqdn in station_fqdns:
-            controller_component_manager._component_state_changed_callback(
-                {"power_state": PowerState.ON}, fqdn=fqdn
-            )
+            if controller_component_manager._component_state_changed_callback:
+                controller_component_manager._component_state_changed_callback(
+                    {"power_state": PowerState.ON}, fqdn
+                )
         controller_component_manager.component_state_changed_callback(
             {"power_state": PowerState.ON}
         )
@@ -143,9 +143,10 @@ class TestControllerComponentManager:
 
         # pretend to receive events
         for fqdn in station_fqdns:
-            controller_component_manager._component_state_changed_callback(
-                {"power_state": PowerState.OFF}, fqdn=fqdn
-            )
+            if controller_component_manager._component_state_changed_callback:
+                controller_component_manager._component_state_changed_callback(
+                    {"power_state": PowerState.OFF}, fqdn=fqdn
+                )
 
         for proxy in subrack_proxies:
             result, msg = proxy.Off()

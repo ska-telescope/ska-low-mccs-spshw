@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -27,8 +25,8 @@ from tango.server import attribute, command
 from ska_low_mccs import MccsController, MccsStation
 
 
-@pytest.fixture()
-def patched_station_device_class() -> type[MccsStation]:
+@pytest.fixture(name="patched_station_device_class")
+def patched_station_device_class_fixture() -> type[MccsStation]:
     """
     Return a station device class, patched with extra commands for testing.
 
@@ -48,6 +46,11 @@ def patched_station_device_class() -> type[MccsStation]:
         def FakeSubservientDevicesPowerState(
             self: PatchedStationDevice, power_state: int
         ) -> None:
+            """
+            Fake the device power state.
+
+            :param power_state: the power state to set
+            """
             power_state = PowerState(power_state)
             with self.component_manager._power_state_lock:
                 self.component_manager._apiu_power_state = power_state
@@ -60,8 +63,8 @@ def patched_station_device_class() -> type[MccsStation]:
     return PatchedStationDevice
 
 
-@pytest.fixture()
-def patched_controller_device_class() -> type[MccsController]:
+@pytest.fixture(name="patched_controller_device_class")
+def patched_controller_device_class_fixture() -> type[MccsController]:
     """
     Return a controller device class, patched with extra commands for testing.
 
@@ -87,8 +90,8 @@ def patched_controller_device_class() -> type[MccsController]:
     return PatchedControllerDevice
 
 
-@pytest.fixture()
-def devices_to_load(
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture(
     patched_station_device_class: MccsStation,
     patched_controller_device_class: MccsController,
 ) -> DevicesToLoadType:
@@ -133,8 +136,8 @@ def devices_to_load(
     }
 
 
-@pytest.fixture()
-def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_apiu_factory")
+def mock_apiu_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock APIU devices for use in testing.
 
@@ -147,8 +150,8 @@ def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_antenna_factory")
+def mock_antenna_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock antenna devices for use in testing.
 
@@ -162,8 +165,8 @@ def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_tile_factory")
+def mock_tile_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock tile devices for use in testing.
 
@@ -177,8 +180,8 @@ def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_station_beam_factory")
+def mock_station_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock station beam devices for use in testing.
 
@@ -191,8 +194,8 @@ def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_apiu_factory: Callable[[], unittest.mock.Mock],
     mock_antenna_factory: Callable[[], unittest.mock.Mock],
     mock_tile_factory: Callable[[], unittest.mock.Mock],
@@ -238,8 +241,8 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def controller(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="controller")
+def controller_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to the controller.
 
@@ -250,8 +253,8 @@ def controller(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/control/control")
 
 
-@pytest.fixture()
-def subarray_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_1")
+def subarray_1_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray 1.
 
@@ -262,8 +265,8 @@ def subarray_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarray/01")
 
 
-@pytest.fixture()
-def subarray_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_2")
+def subarray_2_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray 2.
 
@@ -274,8 +277,8 @@ def subarray_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarray/02")
 
 
-@pytest.fixture()
-def subrack(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subrack")
+def subrack_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to the subrack.
 
@@ -286,8 +289,8 @@ def subrack(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subrack/01")
 
 
-@pytest.fixture()
-def station_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="station_1")
+def station_1_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to station 1.
 
@@ -298,8 +301,8 @@ def station_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/station/001")
 
 
-@pytest.fixture()
-def station_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="station_2")
+def station_2_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to station 2.
 
@@ -310,8 +313,8 @@ def station_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/station/002")
 
 
-@pytest.fixture()
-def subarray_beam_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_beam_1")
+def subarray_beam_1_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 1.
 
@@ -322,8 +325,8 @@ def subarray_beam_1(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarraybeam/01")
 
 
-@pytest.fixture()
-def subarray_beam_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_beam_2")
+def subarray_beam_2_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 2.
 
@@ -334,8 +337,8 @@ def subarray_beam_2(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarraybeam/02")
 
 
-@pytest.fixture()
-def subarray_beam_3(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_beam_3")
+def subarray_beam_3_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 3.
 
@@ -346,8 +349,8 @@ def subarray_beam_3(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarraybeam/03")
 
 
-@pytest.fixture()
-def subarray_beam_4(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="subarray_beam_4")
+def subarray_beam_4_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Return a proxy to subarray beam 4.
 
@@ -358,9 +361,11 @@ def subarray_beam_4(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/subarraybeam/04")
 
 
+# pylint: disable=too-few-public-methods
 class TestMccsIntegrationTmc:
     """Integration test cases for interactions between TMC and MCCS device classes."""
 
+    # pylint: disable=too-many-arguments,too-many-locals,too-many-statements
     @pytest.mark.skip(reason="Subrack is no longer in the ska-low-mccs repository")
     def test_controller_on_off(
         self: TestMccsIntegrationTmc,

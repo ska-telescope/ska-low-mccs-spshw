@@ -1,4 +1,3 @@
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -26,8 +25,8 @@ from ska_low_mccs.apiu import (
 )
 
 
-@pytest.fixture()
-def apiu_antenna_count() -> int:
+@pytest.fixture(name="apiu_antenna_count")
+def apiu_antenna_count_fixture() -> int:
     """
     Return the number of antennas in the APIU.
 
@@ -38,8 +37,8 @@ def apiu_antenna_count() -> int:
     return 16
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
@@ -50,9 +49,9 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
+    mock_callback_deque_factory: Callable[..., unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback for when the state of a component changes.
@@ -67,8 +66,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def initial_power_mode() -> PowerState:
+@pytest.fixture(name="initial_power_mode")
+def initial_power_mode_fixture() -> PowerState:
     """
     Return the initial power mode of the APIU's simulated power supply.
 
@@ -78,8 +77,8 @@ def initial_power_mode() -> PowerState:
     return PowerState.OFF
 
 
-@pytest.fixture()
-def apiu_simulator(
+@pytest.fixture(name="apiu_simulator")
+def apiu_simulator_fixture(
     apiu_antenna_count: int,
     component_state_changed_callback: MockCallable,
     initial_fault: bool = False,
@@ -102,8 +101,8 @@ def apiu_simulator(
     )
 
 
-@pytest.fixture()
-def apiu_simulator_component_manager(
+@pytest.fixture(name="apiu_simulator_component_manager")
+def apiu_simulator_component_manager_fixture(
     apiu_antenna_count: int,
     logger: logging.Logger,
     max_workers: int,
@@ -135,11 +134,11 @@ def apiu_simulator_component_manager(
     )
 
 
-@pytest.fixture()
-def switching_apiu_component_manager(
+@pytest.fixture(name="switching_apiu_component_manager")
+def switching_apiu_component_manager_fixture(
     apiu_antenna_count: int,
     logger: logging.Logger,
-    max_workers,
+    max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
 ) -> SwitchingApiuComponentManager:
@@ -169,8 +168,8 @@ def switching_apiu_component_manager(
     )
 
 
-@pytest.fixture()
-def apiu_component_manager(
+@pytest.fixture(name="apiu_component_manager")
+def apiu_component_manager_fixture(
     apiu_antenna_count: int,
     logger: logging.Logger,
     max_workers: int,
@@ -207,8 +206,8 @@ def apiu_component_manager(
     )
 
 
-@pytest.fixture()
-def random_current() -> Callable[[], float]:
+@pytest.fixture(name="random_current")
+def random_current_fixture() -> Callable[[], float]:
     """
     Return a callable that returns a random current value.
 
@@ -217,8 +216,8 @@ def random_current() -> Callable[[], float]:
     return lambda: random.uniform(0.5, 1.0)
 
 
-@pytest.fixture()
-def random_humidity() -> Callable[[], float]:
+@pytest.fixture(name="random_humidity")
+def random_humidity_fixture() -> Callable[[], float]:
     """
     Return a callable that returns a random humidity value.
 
@@ -227,8 +226,8 @@ def random_humidity() -> Callable[[], float]:
     return lambda: random.uniform(5, 40.0)
 
 
-@pytest.fixture()
-def random_temperature() -> Callable[[], float]:
+@pytest.fixture(name="random_temperature")
+def random_temperature_fixture() -> Callable[[], float]:
     """
     Return a callable that returns a random temperature.
 
@@ -237,8 +236,8 @@ def random_temperature() -> Callable[[], float]:
     return lambda: random.uniform(42.0, 47.0)
 
 
-@pytest.fixture()
-def random_voltage() -> Callable[[], float]:
+@pytest.fixture(name="random_voltage")
+def random_voltage_fixture() -> Callable[[], float]:
     """
     Return a callable that returns a random voltage.
 

@@ -8,7 +8,7 @@
 """An implementation of a health model for subarrays."""
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Optional
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel
@@ -29,11 +29,11 @@ class SubarrayHealthModel(HealthModel):
         :param health_changed_callback: a callback to be called when the
             health of the subarray (as evaluated by this model) changes
         """
-        self._station_healths: dict[str, HealthState | None] = {}
-        self._subarray_beam_healths: dict[str, HealthState | None] = {}
-        self._station_beam_healths: dict[str, HealthState | None] = {}
-        self._subarray_beam_fqdns: dict[str, HealthState] = {}
-        self._station_beam_fqdns: dict[str, HealthState] = {}
+        self._station_healths: dict[str, Optional[HealthState]] = {}
+        self._subarray_beam_healths: dict[str, Optional[HealthState]] = {}
+        self._station_beam_healths: dict[str, Optional[HealthState]] = {}
+        self._subarray_beam_fqdns: dict[str, Optional[HealthState]] = {}
+        self._station_beam_fqdns: dict[str, Optional[HealthState]] = {}
         super().__init__(health_changed_callback)
 
     def evaluate_health(
@@ -107,7 +107,7 @@ class SubarrayHealthModel(HealthModel):
         """
         Handle change in station health.
 
-        This is a callback hook, called by the component manager when
+        This is a callback hook, called by the componenCat manager when
         the health of a station changes.
 
         :param fqdn: the FQDN of the station whose health has

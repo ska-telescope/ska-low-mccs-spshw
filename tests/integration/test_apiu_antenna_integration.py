@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -21,8 +19,8 @@ from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHa
 from tango import DevState
 
 
-@pytest.fixture()
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
@@ -41,8 +39,8 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
-@pytest.fixture()
-def mock_tile() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_tile")
+def mock_tile_fixture() -> unittest.mock.Mock:
     """
     Return a mock tile device for use in testing.
 
@@ -55,8 +53,8 @@ def mock_tile() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_tile: unittest.mock.Mock,
 ) -> dict[str, unittest.mock.Mock]:
     """
@@ -76,6 +74,7 @@ def initial_mocks(
     }
 
 
+# pylint: disable=too-few-public-methods
 class TestApiuAntennaIntegration:
     """Integration test cases for interactions between APIU and antenna."""
 

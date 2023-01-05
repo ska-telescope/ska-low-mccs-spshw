@@ -14,7 +14,7 @@ server:
         devices:
         - name: "low-mccs-spshw/station/01"
           properties:
-          - name: "StationFQDNs"
+          - name: "SubrackFQDNs"
             values:
             - "low-mccs-spshw/subrack/01"
           - name: "TileFQDNs"

@@ -5,7 +5,7 @@ instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004"]
 entrypoints:
   - name: "tile.MccsTile"
     path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
-server: 
+server:
   name: "MccsTile"
   instances:
     - name: "tile-0001"
@@ -38,6 +38,9 @@ server:
           - name: "TpmVersion"
             values:
             - "tpm_v1_6"
+          - name: "SimulationConfig"
+            values:
+            - "1"
           attribute_properties:
           - attribute: "simulationMode"
             properties:
@@ -74,6 +77,9 @@ server:
           - name: "TpmVersion"
             values:
             - "tpm_v1_6"
+          - name: "SimulationConfig"
+            values:
+            - "1"
           attribute_properties:
           - attribute: "simulationMode"
             properties:
@@ -110,6 +116,9 @@ server:
           - name: "TpmVersion"
             values:
             - "tpm_v1_2"
+          - name: "SimulationConfig"
+            values:
+            - "1"
           attribute_properties:
           - attribute: "simulationMode"
             properties:
@@ -146,6 +155,9 @@ server:
           - name: "TpmVersion"
             values:
             - "tpm_v1_6"
+          - name: "SimulationConfig"
+            values:
+            - "1"
           attribute_properties:
           - attribute: "simulationMode"
             properties:

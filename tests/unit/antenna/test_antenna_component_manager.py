@@ -558,7 +558,7 @@ class TestAntennaComponentManager:
         antenna_component_manager._configure(
             {
                 "antenna": {"xDisplacement": 1.0, "yDisplacement": 1.0},
-                "tile": {"fixed_delays": [1, 2]},
+                "tile": {"fixed_delays": (1, 2)},
             },
             mock_task_callback,
         )

@@ -25,7 +25,7 @@ def antenna_geojson_to_config(full_config: dict) -> dict:
             "xDisplacement": antenna_config.get('x_pos'),
             "yDisplacement": antenna_config.get('y_pos'),
         }
-        tile_config = {"delays": [antenna_config.get('delay_x'), antenna_config.get('delay_y')]}
+        tile_config = {"delays": (antenna_config.get('delay_x'), antenna_config.get('delay_y'))}
 
         new_config[antenna_fqdn]["antenna"] = antenna_config_formatted
         new_config[antenna_fqdn]["tile"] = tile_config

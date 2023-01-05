@@ -656,6 +656,9 @@ class MccsAntenna(SKABaseDevice):
             information purpose only.
 
         :example:
+
+          .. code-block: pycon
+
             >>> dp = tango.DeviceProxy("mccs/antenna/00001")
             >>> dp.command_inout("Configure", json_str)
         """

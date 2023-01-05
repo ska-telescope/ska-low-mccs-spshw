@@ -5,7 +5,7 @@ Using telmodel repository
 The telmodel repository is a gitlab repo that the yanda team have created.
 The idea of this repo is that it will be the central hub for all static
 data that needs to be shared across teams.
-Each team hosts the dta that they are responsible for themselves, and they
+Each team hosts the data that they are responsible for themselves, and they
 have the right to change/edit the data, but once you upload the data
 to the telmodel repo all other teams can access, read and use it.
 

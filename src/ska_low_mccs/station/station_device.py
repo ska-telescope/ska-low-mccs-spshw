@@ -13,6 +13,7 @@ import functools
 from typing import Any, Optional, cast
 
 import tango
+from jsonschema import ValidationError, validate
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_low_mccs_common import release
 from ska_tango_base.commands import SubmittedSlowCommand
@@ -341,16 +342,22 @@ class MccsStation(SKAObsDevice):
 
         :param config: the configuration settings for this station.
         """
+        station_config_schema = {
+            "type": "object",
+            "properties": {
+                "refLatitude": {"type": "number"},
+                "refLongitude": {"type": "number"},
+                "refHeight": {"type": "number"},
+            },
+        }
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
-            return default
-
-        self._refLatitude = apply_if_valid("refLatitude", self._refLatitude)
-        self._refLongitude = apply_if_valid("refLongitude", self._refLongitude)
-        self._refHeight = apply_if_valid("refHeight", self._refHeight)
+        try:
+            validate(instance=config, schema=station_config_schema)
+            self._refLongitude = config.get("refLatitude", self._refLongitude)
+            self._refLongitude = config.get("refLongitude", self._refLongitude)
+            self._refHeight = config.get("refHeight", self._refHeight)
+        except ValidationError as error:
+            self.logger.error("Failed to configure the device due to invalid schema:" + str(error))
 
     # ----------
     # Attributes

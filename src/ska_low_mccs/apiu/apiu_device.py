@@ -15,6 +15,7 @@ import threading
 from typing import Any, Optional, cast
 
 import tango
+from jsonschema import ValidationError, validate
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -441,21 +442,28 @@ class MccsAPIU(SKABaseDevice):
         """
         config = json.loads(argin)
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
-            return default
+        apiu_config_schema = {
+            "type": "object",
+            "properties": {
+                "overCurrentThreshold": {"type": "number"},
+                "overVoltageThreshold": {"type": "number"},
+                "humidityThreshold": {"type": "number"},
+            },
+        }
 
-        self._overCurrentThreshold = apply_if_valid(
-            "overCurrentThreshold", self._overCurrentThreshold
-        )
-        self._overVoltageThreshold = apply_if_valid(
-            "overVoltageThreshold", self._overVoltageThreshold
-        )
-        self._humidityThreshold = apply_if_valid(
-            "humidityThreshold", self._humidityThreshold
-        )
+        try:
+            validate(instance=config, schema=apiu_config_schema)
+            self._overCurrentThreshold = config.get(
+                "overCurrentThreshold", self._overCurrentThreshold
+            )
+            self._overVoltageThreshold = config.get(
+                "overVoltageThreshold", self._overVoltageThreshold
+            )
+            self._humidityThreshold = config.get(
+                "humidityThreshold", self._humidityThreshold
+            )
+        except ValidationError as error:
+            self.logger.error("Failed to configure the device due to invalid schema:" + str(error))
 
     @command(
         dtype_in="DevULong",

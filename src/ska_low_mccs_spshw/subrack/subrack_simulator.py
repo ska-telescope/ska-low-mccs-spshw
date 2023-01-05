@@ -4,7 +4,7 @@ import threading
 from typing import Any, Final, Optional, TypedDict, cast
 
 from .subrack_api import SubrackProtocol
-from .subrack_data import SubrackData
+from .subrack_data import FanMode, SubrackData
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
@@ -16,19 +16,74 @@ class SubrackSimulator(SubrackProtocol):
     class AttributeMetadataType(TypedDict):
         """Type for attribute metadata dictionary."""
 
-        length: int
+        length: Optional[int]
         default: JsonSerializable
         writable: bool
 
     ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
         "tpm_present": {
             "length": SubrackData.TPM_BAY_COUNT,
-            "default": [False, True, False, False, True, False, False, False],
+            "default": [True] * SubrackData.TPM_BAY_COUNT,
             "writable": False,
         },
         "tpm_on_off": {
             "length": SubrackData.TPM_BAY_COUNT,
             "default": [False] * SubrackData.TPM_BAY_COUNT,
+            "writable": False,
+        },
+        "backplane_temperatures": {
+            "length": 2,
+            "default": [38.0, 39.0],
+            "writable": False,
+        },
+        "board_temperatures": {
+            "length": 2,
+            "default": [39.0, 40.0],
+            "writable": False,
+        },
+        "board_current": {
+            "length": None,
+            "default": 1.1,
+            "writable": False,
+        },
+        "power_supply_fan_speeds": {
+            "length": 2,
+            "default": [6500.0, 6600.0],
+            "writable": False,
+        },
+        "power_supply_currents": {
+            "length": 2,
+            "default": [4.2, 5.8],
+            "writable": False,
+        },
+        "power_supply_voltages": {
+            "length": 2,
+            "default": [12.0, 12.1],
+            "writable": False,
+        },
+        "subrack_fan_speeds": {
+            "length": 4,
+            "default": [4999.0, 5000.0, 5001.0, 5002.0],
+            "writable": False,
+        },
+        "subrack_fan_modes": {
+            "length": 4,
+            "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
+            "writable": False,
+        },
+        "tpm_currents": {
+            "length": 8,
+            "default": [0.4] * 8,
+            "writable": False,
+        },
+        "tpm_temperatures": {
+            "length": 8,
+            "default": [40.0] * 8,
+            "writable": False,
+        },
+        "tpm_voltages": {
+            "length": 8,
+            "default": [12.0] * 8,
             "writable": False,
         },
     }
@@ -63,7 +118,7 @@ class SubrackSimulator(SubrackProtocol):
 
         :return: the new values for the attribute
         """
-        special_set_method = getattr(self, f"_set_{name}", None)
+        special_set_method = getattr(self, f"_set_attribute_{name}", None)
 
         if special_set_method is None:
             return self._set_attribute(name, value)
@@ -95,7 +150,7 @@ class SubrackSimulator(SubrackProtocol):
         metadata = self.ATTRIBUTE_METADATA[name]
         if not metadata["writable"] and not _force:
             raise TypeError(f"Attempt to write read-only attribute {name}")
-        if len(values) != metadata["length"]:
+        if metadata["length"] is not None and len(values) != metadata["length"]:
             raise ValueError(f"Wrong number of values for attribute {name}")
         self._attribute_values[name] = values
         return values
@@ -108,16 +163,16 @@ class SubrackSimulator(SubrackProtocol):
 
         :return: the value of the attribute
         """
-        special_get_method = getattr(self, f"_get_{name}", None)
+        special_get_method = getattr(self, f"_get_attribute_{name}", None)
 
         if special_get_method is None:
             return self._get_attribute(name)
+
         return special_get_method()
 
     def _get_attribute(self, name: str) -> JsonSerializable:
         if name not in self.ATTRIBUTE_METADATA:
             raise AttributeError(f"{name} not present")
-
         return self._attribute_values[name]
 
     def execute_command(
@@ -170,26 +225,71 @@ class SubrackSimulator(SubrackProtocol):
 
         raise AttributeError(f"Unknown command {name}.")
 
+    def _get_attribute_tpm_count(self) -> int:
+        return self._attribute_values["tpm_present"].count(True)
+
+    def _get_attribute_tpm_powers(self) -> list[float]:
+        return [
+            current * voltage
+            for current, voltage in zip(
+                self._attribute_values["tpm_currents"],
+                self._attribute_values["tpm_voltages"],
+            )
+        ]
+
+    def _get_attribute_power_supply_powers(self) -> list[float]:
+        return [
+            current * voltage
+            for current, voltage in zip(
+                self._attribute_values["power_supply_currents"],
+                self._attribute_values["power_supply_voltages"],
+            )
+        ]
+
+    def _get_attribute_subrack_fan_speeds_percent(self) -> list[float]:
+        return [
+            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
+            for speed in self._attribute_values["subrack_fan_speeds"]
+        ]
+
     def _command_completed(self, _not_used: Optional[str]) -> bool:
         """
         Check if no command is currently running.
 
-        :param _not_used: not used, should always be `None`
+        :param _not_used: not used, should always be empty e.g. ""
 
         :return: False if a command is currently run; otherwise True.
         """
-        assert _not_used is None
+        assert not _not_used
         return not self._command_is_running
 
     def _abort_command(self, _not_used: Optional[str]) -> None:
         """
         Abort any currently running command.
 
-        :param _not_used: not used, should always be `None`
+        :param _not_used: not used, should always be empty e.g. ""
         """
-        assert _not_used is None
+        assert not _not_used
         if self._command_is_running:
             self._aborted_event.set()
+
+    def _set_subrack_fan_speed(self, arg: str) -> None:
+        (fan_str, speed_str) = arg.split(",")
+        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
+        speed = float(speed_str)
+        self._attribute_values["subrack_fan_speeds"][fan_index] = speed
+
+    def _set_subrack_fan_mode(self, arg: str) -> None:
+        (fan_str, mode_str) = arg.split(",")
+        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
+        mode = FanMode[mode_str]
+        self._attribute_values["subrack_fan_modes"][fan_index] = mode
+
+    def _set_power_supply_fan_speed(self, arg: str) -> None:
+        (fan_str, speed_str) = arg.split(",")
+        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
+        speed = float(speed_str)
+        self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
 
     def _async_turn_off_tpm(self, arg: str) -> None:
         """
@@ -208,3 +308,19 @@ class SubrackSimulator(SubrackProtocol):
         """
         tpm_number = int(arg)  # input is 0-based, so no need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
+
+    def _async_turn_off_tpms(self, _not_used: Optional[str]) -> None:
+        """
+        Turn off all TPMs.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        """
+        self._attribute_values["tpm_on_off"] = [False] * SubrackData.TPM_BAY_COUNT
+
+    def _async_turn_on_tpms(self, _not_used: Optional[str]) -> None:
+        """
+        Turn on all TPM.
+
+        :param _not_used: not used, should always be empty e.g. ""
+        """
+        self._attribute_values["tpm_on_off"] = [True] * SubrackData.TPM_BAY_COUNT

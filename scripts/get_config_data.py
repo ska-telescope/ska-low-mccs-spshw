@@ -16,7 +16,7 @@ def antenna_geojson_to_config(full_config: dict) -> dict:
     new_config = {}
     for feature in features:
         antenna_config = feature.get('properties')
-        antenna_fqdn = f'low-mccs/antenna/00000{antenna_config["antenna_station_id"] + 1}'
+        antenna_fqdn = f'low-mccs/antenna/{antenna_config["antenna_station_id"] + 1:06}'
         antenna_config.get('antenna_station_id')
         new_config[antenna_fqdn] = {}
 
@@ -40,7 +40,7 @@ def station_geojson_to_config(full_config: dict) -> dict:
     for feature in features:
         station_config = feature.get('properties')
         station_geometry = feature.get('geometry')
-        station_fqdn = f'low-mccs/station/00{station_config["station_num"]}'
+        station_fqdn = f'low-mccs/station/{station_config["station_num"]:02}'
 
         station_config_formatted = {
             "nof_antennas": station_config.get('nof_antennas'),
@@ -48,6 +48,7 @@ def station_geojson_to_config(full_config: dict) -> dict:
             "refLongitude": station_geometry.get('coordinates')[1],
         }
 
+        new_config[station_fqdn] = {}
         new_config[station_fqdn]["station"] = station_config_formatted
 
     return new_config

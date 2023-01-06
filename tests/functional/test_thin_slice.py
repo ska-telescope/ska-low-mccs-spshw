@@ -552,12 +552,16 @@ def tpm_assert_data_acquisition(
     max_time_waited = 10.0
     while time_waited <= max_time_waited:
         try:
-            t0 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
+            t0 = datetime.datetime.strptime(
+                tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
             time.sleep(1.0)
-            t1 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
+            t1 = datetime.datetime.strptime(
+                tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ"
+            )
             timediff = datetime.datetime.timestamp(t1) - datetime.datetime.timestamp(t0)
             break
-        except:
+        except Exception:
             time_waited += 1.0
             if time_waited >= max_time_waited:
                 raise TimeoutError("fpgaFrameTime not read in time")

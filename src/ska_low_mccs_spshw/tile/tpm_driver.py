@@ -196,7 +196,7 @@ class TpmDriver(MccsComponentManager):
         )
         self._polling_thread.start()  # doesn't start polling, only starts the thread
 
-    def start_communicating(self) -> None:
+    def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         self.logger.debug("Start communication with the TPM...")
         if self.communication_state == CommunicationStatus.ESTABLISHED:
@@ -205,7 +205,7 @@ class TpmDriver(MccsComponentManager):
             self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self._start_polling_event.set()
 
-    def stop_communicating(self) -> None:
+    def stop_communicating(self: TpmDriver) -> None:
         """
         Stop communicating with the TPM.
 
@@ -217,7 +217,7 @@ class TpmDriver(MccsComponentManager):
             return
         self._stop_polling_event.set()
 
-    def _polling_loop(self) -> None:
+    def _polling_loop(self: TpmDriver) -> None:
         while True:
             # block on "start" event
             self._start_polling_event.wait()
@@ -234,7 +234,7 @@ class TpmDriver(MccsComponentManager):
             self._is_programmed = False
             self._start_polling_event.clear()
 
-    def _poll(self) -> None:
+    def _poll(self: TpmDriver) -> None:
         """
         Monitor tile connection to tpm.
 
@@ -2120,7 +2120,7 @@ class TpmDriver(MccsComponentManager):
         return self._current_tile_beamformer_frame
 
     @property
-    def is_beamformer_running(self) -> bool:
+    def is_beamformer_running(self: TpmDriver) -> bool:
         """
         Whether the beamformer is currently running.
 

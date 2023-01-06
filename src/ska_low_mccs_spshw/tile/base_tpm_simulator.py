@@ -1150,7 +1150,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._test_generator_active = bit_mask != 0
 
     @property
-    def test_generator_active(self) -> bool:
+    def test_generator_active(self: BaseTpmSimulator) -> bool:
         """
         Check if the test generator is active.
 

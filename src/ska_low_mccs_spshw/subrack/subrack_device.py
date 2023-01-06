@@ -58,7 +58,7 @@ class MccsSubrack(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self: MccsSubrack, *args: Any, **kwargs: Any) -> None:
         """
         Initialise this device object.
 

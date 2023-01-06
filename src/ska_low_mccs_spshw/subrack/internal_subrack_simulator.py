@@ -150,13 +150,13 @@ class InternalSubrackSimulator(ObjectComponent):
         with self._tpm_data_lock:
             self._tpm_data = _tpm_data or [
                 {
-                    "is_on": initial_are_tpms_on[i],
+                    "is_on": is_on,
                     "voltage": self.DEFAULT_TPM_VOLTAGE,
                     "current": self.DEFAULT_TPM_CURRENT,
                     "temperature": self.DEFAULT_TPM_TEMPERATURE,
                     "power": self.DEFAULT_TPM_POWER,
                 }
-                for i in range(len(initial_are_tpms_on))
+                for is_on in initial_are_tpms_on
             ]
 
         self._bay_count = len(self._tpm_data)
@@ -351,7 +351,7 @@ class InternalSubrackSimulator(ObjectComponent):
                 f"Cannot access TPM {logical_tpm_id}; "
                 f"this subrack has {self.bay_count} TPM bays."
             )
-        if self._tpm_present[logical_tpm_id - 1] is False:
+        if not self._tpm_present[logical_tpm_id - 1]:
             raise ValueError(
                 f"Cannot access TPM {logical_tpm_id}; TPM not present in this bay"
             )
@@ -513,11 +513,10 @@ class InternalSubrackSimulator(ObjectComponent):
 
         :return: the power supply power
         """
-        powers = [
-            self._power_supply_currents[i] * self._power_supply_voltages[i]
-            for i in range(len(self._power_supply_currents))
+        return [
+            i * v
+            for i, v in zip(self._power_supply_currents, self._power_supply_voltages)
         ]
-        return powers
 
     def simulate_power_supply_powers(
         self: InternalSubrackSimulator, power_supply_powers: list[float]

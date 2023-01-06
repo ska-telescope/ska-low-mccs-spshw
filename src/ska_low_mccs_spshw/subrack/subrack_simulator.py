@@ -1,4 +1,5 @@
 """A simple subrack simulator."""
+from __future__ import annotations
 
 import threading
 from typing import Any, Final, Optional, TypedDict, cast
@@ -88,7 +89,7 @@ class SubrackSimulator(SubrackProtocol):
         },
     }
 
-    def __init__(self, **kwargs: JsonSerializable) -> None:
+    def __init__(self: SubrackSimulator, **kwargs: JsonSerializable) -> None:
         """
         Initialise a new instance.
 
@@ -109,7 +110,9 @@ class SubrackSimulator(SubrackProtocol):
         self._command_is_running = False
         self._command_duration: Final = 0.2
 
-    def set_attribute(self, name: str, value: JsonSerializable) -> JsonSerializable:
+    def set_attribute(
+        self: SubrackSimulator, name: str, value: JsonSerializable
+    ) -> JsonSerializable:
         """
         Set the value of a simulator attribute.
 
@@ -125,7 +128,7 @@ class SubrackSimulator(SubrackProtocol):
         return special_set_method(value)
 
     def simulate_attribute(
-        self, name: str, values: JsonSerializable
+        self: SubrackSimulator, name: str, values: JsonSerializable
     ) -> JsonSerializable:
         """
         Simulate a change in attribute value.
@@ -142,7 +145,10 @@ class SubrackSimulator(SubrackProtocol):
         return special_simulate_method(values)
 
     def _set_attribute(
-        self, name: str, values: JsonSerializable, _force: bool = False
+        self: SubrackSimulator,
+        name: str,
+        values: JsonSerializable,
+        _force: bool = False,
     ) -> list[str]:
         if name not in self.ATTRIBUTE_METADATA:
             raise AttributeError(f"{name} not present")
@@ -155,7 +161,7 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values[name] = values
         return values
 
-    def get_attribute(self, name: str) -> JsonSerializable:
+    def get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
         """
         Return the value of a simulator attribute.
 
@@ -170,13 +176,13 @@ class SubrackSimulator(SubrackProtocol):
 
         return special_get_method()
 
-    def _get_attribute(self, name: str) -> JsonSerializable:
+    def _get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
         if name not in self.ATTRIBUTE_METADATA:
             raise AttributeError(f"{name} not present")
         return self._attribute_values[name]
 
     def execute_command(
-        self, name: str, argument: Optional[JsonSerializable]
+        self: SubrackSimulator, name: str, argument: Optional[JsonSerializable]
     ) -> JsonSerializable:
         """
         Execute a command on the subrack hardware/simulator.
@@ -225,10 +231,10 @@ class SubrackSimulator(SubrackProtocol):
 
         raise AttributeError(f"Unknown command {name}.")
 
-    def _get_attribute_tpm_count(self) -> int:
+    def _get_attribute_tpm_count(self: SubrackSimulator) -> int:
         return self._attribute_values["tpm_present"].count(True)
 
-    def _get_attribute_tpm_powers(self) -> list[float]:
+    def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
         return [
             current * voltage
             for current, voltage in zip(
@@ -237,7 +243,7 @@ class SubrackSimulator(SubrackProtocol):
             )
         ]
 
-    def _get_attribute_power_supply_powers(self) -> list[float]:
+    def _get_attribute_power_supply_powers(self: SubrackSimulator) -> list[float]:
         return [
             current * voltage
             for current, voltage in zip(
@@ -246,13 +252,15 @@ class SubrackSimulator(SubrackProtocol):
             )
         ]
 
-    def _get_attribute_subrack_fan_speeds_percent(self) -> list[float]:
+    def _get_attribute_subrack_fan_speeds_percent(
+        self: SubrackSimulator,
+    ) -> list[float]:
         return [
             speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
             for speed in self._attribute_values["subrack_fan_speeds"]
         ]
 
-    def _command_completed(self, _not_used: Optional[str]) -> bool:
+    def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
         """
         Check if no command is currently running.
 
@@ -263,7 +271,7 @@ class SubrackSimulator(SubrackProtocol):
         assert not _not_used
         return not self._command_is_running
 
-    def _abort_command(self, _not_used: Optional[str]) -> None:
+    def _abort_command(self: SubrackSimulator, _not_used: Optional[str]) -> None:
         """
         Abort any currently running command.
 
@@ -273,25 +281,25 @@ class SubrackSimulator(SubrackProtocol):
         if self._command_is_running:
             self._aborted_event.set()
 
-    def _set_subrack_fan_speed(self, arg: str) -> None:
+    def _set_subrack_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         speed = float(speed_str)
         self._attribute_values["subrack_fan_speeds"][fan_index] = speed
 
-    def _set_subrack_fan_mode(self, arg: str) -> None:
+    def _set_subrack_fan_mode(self: SubrackSimulator, arg: str) -> None:
         (fan_str, mode_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         mode = FanMode[mode_str]
         self._attribute_values["subrack_fan_modes"][fan_index] = mode
 
-    def _set_power_supply_fan_speed(self, arg: str) -> None:
+    def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         speed = float(speed_str)
         self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
 
-    def _async_turn_off_tpm(self, arg: str) -> None:
+    def _async_turn_off_tpm(self: SubrackSimulator, arg: str) -> None:
         """
         Turn off a TPM.
 
@@ -300,7 +308,7 @@ class SubrackSimulator(SubrackProtocol):
         tpm_number = int(arg)  # input is 0-based, so no need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = False
 
-    def _async_turn_on_tpm(self, arg: str) -> None:
+    def _async_turn_on_tpm(self: SubrackSimulator, arg: str) -> None:
         """
         Turn on a TPM.
 
@@ -309,7 +317,7 @@ class SubrackSimulator(SubrackProtocol):
         tpm_number = int(arg)  # input is 0-based, so no need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
 
-    def _async_turn_off_tpms(self, _not_used: Optional[str]) -> None:
+    def _async_turn_off_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
         """
         Turn off all TPMs.
 
@@ -317,7 +325,7 @@ class SubrackSimulator(SubrackProtocol):
         """
         self._attribute_values["tpm_on_off"] = [False] * SubrackData.TPM_BAY_COUNT
 
-    def _async_turn_on_tpms(self, _not_used: Optional[str]) -> None:
+    def _async_turn_on_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:
         """
         Turn on all TPM.
 

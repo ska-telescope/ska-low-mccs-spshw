@@ -156,7 +156,7 @@ def subrack_server(subrack_simulator: SubrackSimulator) -> None:
     """
 
     class ThreadableServer(uvicorn.Server):
-        def install_signal_handlers(self):
+        def install_signal_handlers(self: ThreadableServer):
             pass
 
     import socket

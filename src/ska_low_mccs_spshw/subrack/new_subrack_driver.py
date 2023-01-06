@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 #
-# (c) 2022 CSIRO.
+# This file is part of the SKA Low MCCS project
 #
-# Distributed under the terms of the CSIRO Open Source Software Licence
-# Agreement
-# See LICENSE.txt for more info.
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 
 """This module provides for monitoring and control of a PSI-Low subrack."""
 from __future__ import annotations
@@ -29,7 +29,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
 
     # pylint: disable-next=too-many-arguments
     def __init__(
-        self,
+        self: NewSubrackDriver,
         host: str,
         port: int,
         logger: logging.Logger,
@@ -113,7 +113,9 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
             f"Attributes will be updated roughly each {self._max_tick} polls."
         )
 
-    def off(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def off(
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component off.
 
@@ -126,7 +128,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         raise NotImplementedError("The device cannot be turned off or on.")
 
     def standby(
-        self, task_callback: Optional[Callable] = None
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Put the component into low-power standby mode.
@@ -139,7 +141,9 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         """
         raise NotImplementedError("The device cannot be put into standby mode.")
 
-    def on(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def on(
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Turn the component on.
 
@@ -151,7 +155,9 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         """
         raise NotImplementedError("The device cannot be turned off or on.")
 
-    def reset(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
+    def reset(
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str]:
         """
         Reset the component (from fault state).
 
@@ -164,7 +170,9 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         raise NotImplementedError("The device cannot be turned reset.")
 
     def turn_off_tpm(
-        self, tpm_number: int, task_callback: Optional[Callable] = None
+        self: NewSubrackDriver,
+        tpm_number: int,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Turn a TPM off.
@@ -178,7 +186,9 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         return self._turn_off_on_tpm(tpm_number, False, task_callback)
 
     def turn_on_tpm(
-        self, tpm_number: int, task_callback: Optional[Callable] = None
+        self: NewSubrackDriver,
+        tpm_number: int,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Turn a TPM on.
@@ -192,7 +202,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         return self._turn_off_on_tpm(tpm_number, True, task_callback)
 
     def turn_off_tpms(
-        self, task_callback: Optional[Callable] = None
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn all TPMs off.
@@ -205,7 +215,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         return self._turn_off_on_tpm(0, False, task_callback)
 
     def turn_on_tpms(
-        self, task_callback: Optional[Callable] = None
+        self: NewSubrackDriver, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Turn all TPMs on.
@@ -218,7 +228,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         return self._turn_off_on_tpm(0, True, task_callback)
 
     def _turn_off_on_tpm(
-        self,
+        self: NewSubrackDriver,
         tpm_number: int,
         is_turn_on: bool,
         task_callback: Optional[Callable] = None,
@@ -281,7 +291,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
             return (TaskStatus.QUEUED, message)
 
     def set_subrack_fan_speed(
-        self,
+        self: NewSubrackDriver,
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
@@ -321,7 +331,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         )
 
     def set_subrack_fan_mode(
-        self,
+        self: NewSubrackDriver,
         fan_number: int,
         mode: FanMode,
         task_callback: Optional[Callable] = None,
@@ -362,7 +372,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         )
 
     def set_power_supply_fan_speed(
-        self,
+        self: NewSubrackDriver,
         fan_number: int,
         speed: float,
         task_callback: Optional[Callable] = None,
@@ -401,7 +411,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
             f"Power supply fan {fan_number} will be set to speed {speed} at next poll.",
         )
 
-    def write_attribute(self, **kwargs: Any) -> None:
+    def write_attribute(self: NewSubrackDriver, **kwargs: Any) -> None:
         """
         Update subrack attribute value(s).
 
@@ -416,7 +426,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         with self._write_lock:
             self._attributes_to_write.update(kwargs)
 
-    def get_request(self) -> HttpPollRequest:
+    def get_request(self: NewSubrackDriver) -> HttpPollRequest:
         """
         Return the reads, writes and commands to be executed in the next poll.
 
@@ -476,7 +486,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         self.logger.debug("Returning request for next poll.")
         return poll_request
 
-    def poll(self, poll_request: HttpPollRequest) -> HttpPollResponse:
+    def poll(self: NewSubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
         """
         Poll the hardware.
 
@@ -527,7 +537,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
                 poll_response.add_query_response(attribute, attribute_response["value"])
         return poll_response
 
-    def poll_succeeded(self, poll_response: HttpPollResponse) -> None:
+    def poll_succeeded(self: NewSubrackDriver, poll_response: HttpPollResponse) -> None:
         """
         Handle the receipt of new polling values.
 
@@ -559,7 +569,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         # TODO: Always-on device for now.
         self._update_component_state(power=PowerState.ON, fault=fault, **values)
 
-    def polling_stopped(self) -> None:
+    def polling_stopped(self: NewSubrackDriver) -> None:
         """
         Respond to polling having stopped.
 

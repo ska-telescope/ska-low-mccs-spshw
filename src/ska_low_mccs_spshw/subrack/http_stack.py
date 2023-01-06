@@ -1,4 +1,6 @@
 """This module provides an attribute request and response."""
+from __future__ import annotations
+
 from typing import Any
 
 
@@ -18,13 +20,13 @@ class HttpPollRequest:
       argument case.
     """
 
-    def __init__(self) -> None:
+    def __init__(self: HttpPollRequest) -> None:
         """Initialise a new instance."""
         self._getattributes: dict[str, None] = {}  # using this as a sorted set
         self._setattributes: list[tuple[str, Any]] = []
         self._commands: list[tuple[str, tuple]] = []
 
-    def add_getattributes(self, *attributes: str) -> None:
+    def add_getattributes(self: HttpPollRequest, *attributes: str) -> None:
         """
         Add attributes to be queried as part of this request.
 
@@ -33,7 +35,7 @@ class HttpPollRequest:
         for attribute in attributes:
             self._getattributes[attribute] = None
 
-    def add_setattribute(self, name: str, value: Any) -> None:
+    def add_setattribute(self: HttpPollRequest, name: str, value: Any) -> None:
         """
         Add an attribute to be updated as part of this request.
 
@@ -44,7 +46,7 @@ class HttpPollRequest:
         """
         self._setattributes.append((name, value))
 
-    def add_command(self, name: str, *args: Any) -> None:
+    def add_command(self: HttpPollRequest, name: str, *args: Any) -> None:
         """
         Add a command to be executed as part of this request.
 
@@ -56,7 +58,7 @@ class HttpPollRequest:
         self._commands.append((name, args))
 
     @property
-    def getattributes(self) -> list[str]:
+    def getattributes(self: HttpPollRequest) -> list[str]:
         """
         Return a list of getattributes queried in this request.
 
@@ -65,7 +67,7 @@ class HttpPollRequest:
         return list(self._getattributes)
 
     @property
-    def setattributes(self) -> list[tuple[str, Any]]:
+    def setattributes(self: HttpPollRequest) -> list[tuple[str, Any]]:
         """
         Return a list of setattributes to be written in this request.
 
@@ -75,7 +77,7 @@ class HttpPollRequest:
         return list(self._setattributes)
 
     @property
-    def commands(self) -> list[tuple[str, tuple]]:
+    def commands(self: HttpPollRequest) -> list[tuple[str, tuple]]:
         """
         Return the commands to be executed in this request.
 
@@ -93,13 +95,13 @@ class HttpPollResponse:
     queried in an attribute request.
     """
 
-    def __init__(self) -> None:
+    def __init__(self: HttpPollResponse) -> None:
         """Initialise a new instance."""
         self._query_responses: dict[str, Any] = {}
         self._command_responses: dict[str, Any] = {}
 
     def add_query_response(
-        self,
+        self: HttpPollResponse,
         attribute: str,
         value: Any,
     ) -> None:
@@ -112,7 +114,7 @@ class HttpPollResponse:
         self._query_responses[attribute] = value
 
     def add_command_response(
-        self,
+        self: HttpPollResponse,
         command: str,
         value: Any,
     ) -> None:
@@ -125,7 +127,7 @@ class HttpPollResponse:
         self._command_responses[command] = value
 
     @property
-    def query_responses(self) -> dict[str, Any]:
+    def query_responses(self: HttpPollResponse) -> dict[str, Any]:
         """
         Return responses to queries in an attribute request.
 
@@ -134,7 +136,7 @@ class HttpPollResponse:
         return dict(self._query_responses)
 
     @property
-    def command_responses(self) -> dict[str, Any]:
+    def command_responses(self: HttpPollResponse) -> dict[str, Any]:
         """
         Return responses to commands.
 
@@ -142,7 +144,7 @@ class HttpPollResponse:
         """
         return dict(self._command_responses)
 
-    def __eq__(self, other: object) -> bool:
+    def __eq__(self: HttpPollResponse, other: object) -> bool:
         """
         Check for equality with another object.
 

@@ -1,4 +1,5 @@
 """This module provides a HTTP server that acts as front end to a subrack."""
+from __future__ import annotations
 
 from typing import Any, Optional, Protocol
 
@@ -18,7 +19,7 @@ class SubrackProtocol(Protocol):
     """
 
     def execute_command(
-        self, name: str, argument: Optional[JsonSerializable]
+        self: SubrackProtocol, name: str, argument: Optional[JsonSerializable]
     ) -> JsonSerializable:
         """
         Execute a command on the subrack hardware/simulator.
@@ -29,7 +30,9 @@ class SubrackProtocol(Protocol):
         :return: a status information dictionary
         """  # noqa: DAR202
 
-    def set_attribute(self, name: str, value: JsonSerializable) -> JsonSerializable:
+    def set_attribute(
+        self: SubrackProtocol, name: str, value: JsonSerializable
+    ) -> JsonSerializable:
         """
         Set an attribute value on the subrack hardware/simulator.
 
@@ -39,7 +42,7 @@ class SubrackProtocol(Protocol):
         :return: the new value for the attribute
         """  # noqa: DAR202
 
-    def get_attribute(self, name: str) -> JsonSerializable:
+    def get_attribute(self: SubrackProtocol, name: str) -> JsonSerializable:
         """
         Get an attribute value on the subrack hardware/simulator.
 

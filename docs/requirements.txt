@@ -11,5 +11,6 @@ sphinxcontrib-plantuml
 fastapi
 fire
 pyyaml
+typing-extensions
 uritools
 uvicorn[standard]

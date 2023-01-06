@@ -45,7 +45,7 @@ class TestMccsStation:
         :return: specification of the device to be loaded
         """
         return {
-            "path": "charts/ska-low-mccs/data/configuration.json",
+            "path": "tests/data/configuration.json",
             "package": "ska_low_mccs",
             "device": "station_001",
             "proxy": MccsDeviceProxy,
@@ -346,7 +346,7 @@ class TestPatchedStation:
         :return: specification of the device to be loaded
         """
         return {
-            "path": "charts/ska-low-mccs/data/configuration.json",
+            "path": "tests/data/configuration.json",
             "package": "ska_low_mccs",
             "device": "station_001",
             "proxy": MccsDeviceProxy,

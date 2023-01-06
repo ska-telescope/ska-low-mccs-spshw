@@ -31,7 +31,7 @@ def devices_to_load() -> DevicesToLoadType:
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},

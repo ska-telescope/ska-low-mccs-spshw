@@ -28,7 +28,7 @@ def device_to_load() -> DeviceToLoadType:
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/extra.json",
+        "path": "tests/data/extra.json",
         "package": "ska_low_mccs",
         "device": "telstate",
         "proxy": MccsDeviceProxy,

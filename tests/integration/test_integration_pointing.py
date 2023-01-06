@@ -54,7 +54,7 @@ def devices_to_load() -> DevicesToLoadType:
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "station_001", "proxy": MccsDeviceProxy},

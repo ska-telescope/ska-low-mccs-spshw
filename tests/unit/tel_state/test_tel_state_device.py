@@ -107,7 +107,7 @@ class TestMccsTelState:
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = getattr(device_under_test, attribute)
 

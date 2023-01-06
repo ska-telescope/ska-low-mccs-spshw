@@ -267,7 +267,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.voltage
 
@@ -328,7 +328,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.current
 
@@ -391,7 +391,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.temperature
 

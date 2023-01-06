@@ -167,7 +167,7 @@ class TestMccsSubarrayBeam(object):
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = getattr(device_under_test, attribute)
 
@@ -196,7 +196,7 @@ class TestMccsSubarrayBeam(object):
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.stationIds
 
@@ -231,7 +231,7 @@ class TestMccsSubarrayBeam(object):
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = getattr(device_under_test, attribute)
         device_under_test.adminMode = AdminMode.ONLINE
@@ -254,7 +254,7 @@ class TestMccsSubarrayBeam(object):
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.desiredPointing
         device_under_test.adminMode = AdminMode.ONLINE

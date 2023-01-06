@@ -18,7 +18,7 @@ import tango
 from pytest_bdd import given, scenarios, then, when
 from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockCallable, MockChangeEventCallback
+from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType
 
 scenarios("features/thin_slice.feature")
@@ -75,16 +75,6 @@ def daq_device(daq: MccsDeviceProxy) -> MccsDeviceProxy:
     :return: the daq device.
     """
     return daq
-
-
-@pytest.fixture()
-def daq_processed_data_callback() -> MockCallable:
-    """
-    Return the callback to be called when the daq processes some data.
-
-    :return: a mock object for the callback.
-    """
-    return MockCallable()
 
 
 @pytest.fixture()
@@ -542,11 +532,35 @@ def tpm_assert_data_acquisition(
         subscribe to long running command result changes on the subrack device.
     :param tpm_acquisition_unique_id: the unique id of the StartAcquisition
         command given
+
+    :raises TimeoutError: if the StartAcquisition doesn't finish execution in time,
+        or if the tile_device fails to read the fpgaFrameTime
     """
-    t0 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
-    time.sleep(1.0)
-    t1 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
-    timediff = datetime.datetime.timestamp(t1) - datetime.datetime.timestamp(t0)
+    time_waited = 0.0
+    max_time_waited = 4.0
+    # sleep to allow for operation to complete, may differ for hardware?
+    while (
+        tile_device.CheckLongRunningCommandStatus(tpm_acquisition_unique_id)
+        != "COMPLETED"
+    ):
+        time_waited += 0.1
+        time.sleep(0.1)
+        if time_waited > max_time_waited:
+            raise TimeoutError("StartAcquisition on tile device not completed in time")
+
+    time_waited = 0.0
+    max_time_waited = 10.0
+    while time_waited <= max_time_waited:
+        try:
+            t0 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
+            time.sleep(1.0)
+            t1 = datetime.datetime.strptime(tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ")
+            timediff = datetime.datetime.timestamp(t1) - datetime.datetime.timestamp(t0)
+            break
+        except:
+            time_waited += 1.0
+            if time_waited >= max_time_waited:
+                raise TimeoutError("fpgaFrameTime not read in time")
 
     assert 0.9 < timediff < 1.1
 
@@ -622,7 +636,6 @@ def given_daq_configured(
 @when("the user starts the DAQRX", target_fixture="daq_start_unique_id")
 def start_daq(
     daq_device: MccsDeviceProxy,
-    daq_processed_data_callback: MockChangeEventCallback,
     daq_device_lrc_changed_callback: MockChangeEventCallback,
 ) -> str:
     """
@@ -631,8 +644,6 @@ def start_daq(
     Also subscribes to the long running command result changed event
 
     :param daq_device: the daq fixture to use.
-    :param daq_processed_data_callback: a callback to provide the daq to
-        verify that it has processed data.
     :param daq_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the daq device.
     :return: the unique id of the Start command.
@@ -650,7 +661,9 @@ def start_daq(
     # DaqModes.RAW_DATA is 0 hence the 0 here
     config = {
         "modes_to_start": [0],
-        "callbacks": [daq_processed_data_callback],
+        "callbacks": {
+            0: ["raw_data"],
+        },
     }
     ([return_code], [unique_id]) = daq_device.Start(json.dumps(config))
     assert return_code == ResultCode.QUEUED
@@ -679,19 +692,16 @@ def assert_daq_started(
 @given("the DAQRX has been started")
 def given_daq_started(
     daq_device: MccsDeviceProxy,
-    daq_processed_data_callback: MockCallable,
     daq_device_lrc_changed_callback: MockChangeEventCallback,
 ) -> None:
     """
     Start the daq.
 
     :param daq_device: the daq fixture to use.
-    :param daq_processed_data_callback: a callback to provide the daq to
-        verify that it has processed data.
     :param daq_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the daq device.
     """
-    start_daq(daq_device, daq_processed_data_callback, daq_device_lrc_changed_callback)
+    start_daq(daq_device, daq_device_lrc_changed_callback)
 
 
 @when("the user stops the DAQRX", target_fixture="daq_stop_unique_id")
@@ -806,11 +816,13 @@ def tpm_check_no_fault(
 
 
 @then("the DAQRX reports that it has received data from the TPM")
-def assert_daq_received_data(daq_processed_data_callback: MockCallable) -> None:
+def assert_daq_received_data(daq_device: MccsDeviceProxy) -> None:
     """
     Verify that the daq has received data from the TPM.
 
-    :param daq_processed_data_callback: a callback to verify that the daq has
-        processed data.
+    :param daq_device: the daq fixture to use.
     """
-    assert len(daq_processed_data_callback.get_whole_queue()) > 0
+    init_data = daq_device.raw_data_processed
+    time.sleep(1)
+    final_data = daq_device.raw_data_processed
+    assert final_data > init_data

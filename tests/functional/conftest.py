@@ -16,8 +16,9 @@ from typing import Any, Callable, Generator
 import _pytest
 import pytest
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
+from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 
 # TODO: pytest is partially typehinted but does not yet export Config
@@ -125,192 +126,17 @@ def tango_harness(
 
 
 @pytest.fixture()
-def subrack_device_lrc_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+def change_event_callbacks() -> MockTangoEventCallbackGroup:
     """
-    Return a mock change event callback for subrack device LRC result change.
+    Return a dictionary of change event callbacks with asynchrony support.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device long running command result changes.
+    :returns: a callback group.
     """
-    return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def subrack_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def subrack_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
-
-
-@pytest.fixture(scope="module")
-def tpm_number():
-    """
-    Get the id of the tpm to use.
-
-    :return: the tpm id to use
-    """
-    return 2
-
-
-@pytest.fixture()
-def subrack_tpm_power_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-    tpm_number,
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device tpm power state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-    :param tpm_number: the id of the tpm to use
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the tpm power state changes.
-    """
-    return mock_change_event_callback_factory(f"tpm{tpm_number}PowerState")
-
-
-@pytest.fixture()
-def tile_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def tile_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
-
-
-@pytest.fixture()
-def tile_device_lrc_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device LRC result change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        tile device via a change event subscription, so that it
-        gets called when the device long running command result changes.
-    """
-    return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def daq_device_lrc_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for daq device LRC result change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        daq device via a change event subscription, so that it
-        gets called when the device long running command result changes.
-    """
-    return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def daq_device_data_received_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for daq device data received result change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        daq device via a change event subscription, so that it
-        gets called when the device data received result changes.
-    """
-    return mock_change_event_callback_factory("daqDataReceived")
-
-
-@pytest.fixture()
-def mock_callback_called_timeout() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is expected.
-
-    This is a high value because calls will usually arrive much much
-    sooner, but we should be prepared to wait plenty of time before
-    giving up and failing a test.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is asserted.
-    """
-    return 30.0
+    return MockTangoEventCallbackGroup(
+        "controller_health",
+        "controller_state",
+        timeout=30.0,
+    )
 
 
 @pytest.fixture(scope="module")

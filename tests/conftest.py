@@ -27,7 +27,6 @@ import yaml
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import (
     ClientProxyTangoHarness,
-    DeploymentContextTangoHarness,
     DevicesToLoadType,
     MccsDeviceInfo,
     MockingTangoHarness,
@@ -35,6 +34,7 @@ from ska_low_mccs_common.testing.tango_harness import (
     TangoHarness,
     TestContextTangoHarness,
 )
+from ska_tango_testing.context import TrueTangoContextManager
 
 
 def pytest_sessionstart(session: pytest.Session) -> None:
@@ -227,18 +227,17 @@ def tango_harness_factory(
 
         :return: a tango test harness
         """
-        if devices_to_load is None:
-            device_info = None
-        else:
-            device_info = MccsDeviceInfo(**devices_to_load)
-
         tango_harness: TangoHarness  # type hint only
+        if testbed == "local":
+            return TrueTangoContextManager()
+
         if testbed == "test":
+            if devices_to_load is None:
+                device_info = None
+            else:
+                device_info = MccsDeviceInfo(**devices_to_load)
+
             tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
-        elif testbed == "local":
-            tango_harness = DeploymentContextTangoHarness(
-                device_info, logger, **tango_config
-            )
         else:
             tango_harness = ClientProxyTangoHarness(device_info, logger)
 

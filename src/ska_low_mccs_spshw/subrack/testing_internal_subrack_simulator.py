@@ -1,4 +1,3 @@
-# type: ignore
 # pylint: skip-file
 #  -*- coding: utf-8 -*
 #
@@ -17,7 +16,7 @@ overwritten for use in the unit testing environment.
 
 from __future__ import annotations  # allow forward references in type hints
 
-from ska_low_mccs_spshw.subrack import SubrackSimulator
+from .internal_subrack_simulator import InternalSubrackSimulator as SubrackSimulator
 
 __all__ = ["TestingSubrackSimulator"]
 

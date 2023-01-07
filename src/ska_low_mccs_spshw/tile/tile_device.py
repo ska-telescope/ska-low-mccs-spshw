@@ -74,6 +74,19 @@ class MccsTile(SKABaseDevice):
         self._tile_programming_state = TpmStatus.UNKNOWN
         super().init_device()
 
+        self.logger.info(
+            "Initialised MccsTile device with properties:\n"
+            f"\tSubrackFQDN: {self.SubrackFQDN}\n"
+            f"\tSubrackBay: {self.SubrackBay}\n"
+            f"\tTileId: {self.TileId}\n"
+            f"\tTpmIp: {self.TpmIp}\n"
+            f"\tTpmCpldPort: {self.TpmCpldPort}\n"
+            f"\tTpmVersion: {self.TpmVersion}\n"
+            f"\tAntennasPerTile: {self.AntennasPerTile}\n"
+            f"\tSimulationConfig: {self.SimulationConfig}\n"
+            f"\tTestConfig: {self.TestConfig}\n"
+        )
+
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.

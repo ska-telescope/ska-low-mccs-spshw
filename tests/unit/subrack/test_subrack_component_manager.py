@@ -28,9 +28,11 @@ from ska_low_mccs_spshw.subrack import (
     SubrackComponentManager,
     SubrackData,
     SubrackDriver,
-    SubrackSimulator,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
+)
+from ska_low_mccs_spshw.subrack.internal_subrack_simulator import (
+    InternalSubrackSimulator as SubrackSimulator,
 )
 
 

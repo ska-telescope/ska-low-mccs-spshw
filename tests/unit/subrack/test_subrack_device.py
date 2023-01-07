@@ -24,7 +24,10 @@ from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback
 from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHarness
 
-from ska_low_mccs_spshw.subrack import SubrackDriver, SubrackSimulator
+from ska_low_mccs_spshw.subrack import SubrackDriver
+from ska_low_mccs_spshw.subrack.internal_subrack_simulator import (
+    InternalSubrackSimulator as SubrackSimulator,
+)
 
 
 @pytest.fixture()

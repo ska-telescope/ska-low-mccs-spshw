@@ -1,4 +1,3 @@
-# type: ignore
 # pylint: skip-file
 #  -*- coding: utf-8 -*
 #
@@ -39,7 +38,5 @@ class FanMode(enum.IntEnum):
     """Python enumerated type for ``FanMode`` attribute."""
 
     MANUAL = 1
-    """
-    Tango Device accepts commands from all clients.
-    """
+    """Tango Device accepts commands from all clients."""
     AUTO = 2

@@ -281,6 +281,24 @@ def daq_device_lrc_changed_callback(
 
 
 @pytest.fixture()
+def daq_device_data_received_callback(
+    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
+) -> MockChangeEventCallback:
+    """
+    Return a mock change event callback for daq device data received result change.
+
+    :param mock_change_event_callback_factory: fixture that provides a
+        mock change event callback factory (i.e. an object that returns
+        mock callbacks when called).
+
+    :return: a mock change event callback to be registered with the
+        daq device via a change event subscription, so that it
+        gets called when the device data received result changes.
+    """
+    return mock_change_event_callback_factory("daqDataReceived")
+
+
+@pytest.fixture()
 def mock_callback_called_timeout() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.

@@ -350,7 +350,7 @@ def turn_tile_on(
     args = subrack_device_lrc_changed_callback.get_next_call()
     assert "_PowerOnTpm" in args[0][1][0]
     assert args[0][1][1] == (
-        f'"Subrack TPM {tpm_number} turn on tpm task has' ' completed"'
+        f'"Subrack TPM {tpm_number} turn on tpm task has completed"'
     )
 
 
@@ -560,13 +560,12 @@ def tpm_assert_data_acquisition(
                 tile_device.fpgaFrameTime, "%Y-%m-%dT%H:%M:%S.%fZ"
             )
             timediff = datetime.datetime.timestamp(t1) - datetime.datetime.timestamp(t0)
+            assert 0.9 < timediff < 1.1
             break
         except Exception:
             time_waited += 1.0
             if time_waited >= max_time_waited:
                 raise TimeoutError("fpgaFrameTime not read in time")
-
-    assert 0.9 < timediff < 1.1
 
     tile_device_lrc_changed_callback.assert_next_call(
         "longrunningcommandresult",
@@ -641,6 +640,7 @@ def given_daq_configured(
 def start_daq(
     daq_device: MccsDeviceProxy,
     daq_device_lrc_changed_callback: MockChangeEventCallback,
+    daq_device_data_received_callback: MockChangeEventCallback,
 ) -> str:
     """
     Start the daq with the desired processing mode and callback.
@@ -650,6 +650,8 @@ def start_daq(
     :param daq_device: the daq fixture to use.
     :param daq_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the daq device.
+    :param daq_device_data_received_callback: a callback that we can use to
+        verify that the daq is receiving data.
     :return: the unique id of the Start command.
     """
     # Subscribe to daq's LRC result attribute
@@ -662,13 +664,12 @@ def start_daq(
         in daq_device._change_event_subscription_ids
     )
 
+    daq_device.add_change_event_callback(
+        "dataReceivedResult", daq_device_data_received_callback
+    )
+
     # DaqModes.RAW_DATA is 0 hence the 0 here
-    config = {
-        "modes_to_start": [0],
-        "callbacks": {
-            0: ["raw_data"],
-        },
-    }
+    config = {"modes_to_start": [0]}
     ([return_code], [unique_id]) = daq_device.Start(json.dumps(config))
     assert return_code == ResultCode.QUEUED
     assert "_Start" in unique_id
@@ -697,6 +698,7 @@ def assert_daq_started(
 def given_daq_started(
     daq_device: MccsDeviceProxy,
     daq_device_lrc_changed_callback: MockChangeEventCallback,
+    daq_device_data_received_callback: MockChangeEventCallback,
 ) -> None:
     """
     Start the daq.
@@ -704,8 +706,12 @@ def given_daq_started(
     :param daq_device: the daq fixture to use.
     :param daq_device_lrc_changed_callback: a callback that we can use to
         subscribe to long running command result changes on the daq device.
+    :param daq_device_data_received_callback: a callback that we can use to
+        verify that the daq is receiving data.
     """
-    start_daq(daq_device, daq_device_lrc_changed_callback)
+    start_daq(
+        daq_device, daq_device_lrc_changed_callback, daq_device_data_received_callback
+    )
 
 
 @when("the user stops the DAQRX", target_fixture="daq_stop_unique_id")
@@ -820,13 +826,14 @@ def tpm_check_no_fault(
 
 
 @then("the DAQRX reports that it has received data from the TPM")
-def assert_daq_received_data(daq_device: MccsDeviceProxy) -> None:
+def assert_daq_received_data(
+    daq_device_data_received_callback: MockChangeEventCallback,
+) -> None:
     """
     Verify that the daq has received data from the TPM.
 
-    :param daq_device: the daq fixture to use.
+    :param daq_device_data_received_callback: a callback that we can use to
+        verify that the daq is receiving data.
     """
-    init_data = daq_device.raw_data_processed
-    time.sleep(1)
-    final_data = daq_device.raw_data_processed
-    assert final_data > init_data
+    daq_data, _ = daq_device_data_received_callback.get_next_call()
+    assert daq_data[0]["raw_data"] > 0

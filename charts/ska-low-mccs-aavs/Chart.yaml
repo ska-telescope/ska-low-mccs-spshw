@@ -1,6 +1,6 @@
 apiVersion: v2
-name: ska-low-mccs-aavs
 description: A Helm chart for deploying the MCCS prototype on Kubernetes
+name: ska-low-mccs-aavs
 version: "0.10.2"
 appVersion: "0.10.2"
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png

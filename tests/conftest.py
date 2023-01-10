@@ -231,6 +231,8 @@ def tango_harness_factory(
         if testbed == "local":
             return TrueTangoContextManager()
 
+        # TODO: [MCCS-1299] Update remaining testbeds to use ska_tango-testing.context
+        # instead of the obsolete ska_low_mccs_common.testing.tango_harness
         if testbed == "test":
             if devices_to_load is None:
                 device_info = None

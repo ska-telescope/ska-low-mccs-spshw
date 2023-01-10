@@ -978,7 +978,7 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.1.2"
+version = "0.3.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
@@ -1207,7 +1207,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "aa05f435346759a6dfd3a57f0967140705fe68962092ebbfb9cb6a2386e0f1b8"
+content-hash = "3bd51022a90e1c5f08da2e9dfc6ed5e91ff273585601a5d308b511407cbed29e"
 
 [metadata.files]
 aavs-system = [
@@ -1850,8 +1850,8 @@ ska-control-model = [
     {file = "ska_control_model-0.1.2-py3-none-any.whl", hash = "sha256:aa5d57e579109d3e22487d73a3ee6059c0306e4daa960d3636c43027b376b1dd"},
 ]
 ska-low-mccs-common = [
-    {file = "ska_low_mccs_common-0.1.2-py3-none-any.whl", hash = "sha256:d1a30e5667167556e84bed14874a0c8d5f0f987c18b37430ab93014efbc24eec"},
-    {file = "ska_low_mccs_common-0.1.2.tar.gz", hash = "sha256:d96cb772a1df57801b4a665b527caff6b874bae8a8aaebe777b4464ad26c4d83"},
+    {file = "ska_low_mccs_common-0.3.0-py3-none-any.whl", hash = "sha256:89d472a9f91df7aca3671a4db102ee697a58bad731260692593707587e28aa96"},
+    {file = "ska_low_mccs_common-0.3.0.tar.gz", hash = "sha256:b02eee83929f71df4aaa7ade5d01c712fbc3c6f7d5f924530e30264ca4734e1e"},
 ]
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},

@@ -43,7 +43,7 @@ def device_to_load(
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "antenna_000001",
         "patch": patched_antenna_device_class,
@@ -267,7 +267,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.voltage
 
@@ -328,7 +328,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.current
 
@@ -391,7 +391,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.temperature
 

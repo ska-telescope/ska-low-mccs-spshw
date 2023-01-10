@@ -28,7 +28,7 @@ def device_to_load() -> DeviceToLoadType:
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/extra.json",
+        "path": "tests/data/extra.json",
         "package": "ska_low_mccs",
         "device": "telstate",
         "proxy": MccsDeviceProxy,
@@ -107,7 +107,7 @@ class TestMccsTelState:
         """
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = getattr(device_under_test, attribute)
 

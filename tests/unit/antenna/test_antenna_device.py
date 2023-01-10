@@ -690,7 +690,7 @@ class TestPatchedAntenna:
         :return: specification of the device to be loaded
         """
         return {
-            "path": "charts/ska-low-mccs/data/configuration.json",
+            "path": "tests/data/configuration.json",
             "package": "ska_low_mccs",
             "device": "antenna_000001",
             "proxy": MccsDeviceProxy,

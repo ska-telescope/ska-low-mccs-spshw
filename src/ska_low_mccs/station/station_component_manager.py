@@ -684,10 +684,10 @@ class StationComponentManager(MccsComponentManager):
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
-        Submit the configure_children method.
+        Submit the configure method.
 
         This method returns immediately after it submitted
-        `self._configure_children` for execution.
+        `self._configure` for execution.
 
         :param argin: Configuration specification dict as a json string.
         :param task_callback: Update task state, defaults to None

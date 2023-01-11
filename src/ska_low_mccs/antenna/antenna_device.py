@@ -8,7 +8,6 @@
 """This module implements an antenna Tango device for MCCS."""
 from __future__ import annotations
 
-import json
 from typing import Any, Optional, cast
 
 import tango
@@ -275,6 +274,10 @@ class MccsAntenna(SKABaseDevice):
                 self.component_manager.set_power_state(power_state, fqdn=fqdn)
                 if power_state:
                     power_state_changed_callback(power_state)
+        if "configuration_changed" in state_change.keys():
+            configuration = state_change.get("configuration_changed")
+            assert isinstance(configuration, dict)
+            self._configure_antenna(configuration)
 
     def _component_power_state_changed(
         self: MccsAntenna,
@@ -313,6 +316,24 @@ class MccsAntenna(SKABaseDevice):
             return
         self._health_state = health
         self.push_change_event("healthState", health)
+
+    def _configure_antenna(self: MccsAntenna, config: dict) -> None:
+        """
+        Configure the antenna attributes.
+
+        :param config: the configuration settings for this antenna.
+        """
+
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._antennaId = apply_if_valid("antennaId", self._antennaId)
+        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
+        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
+        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
 
     # ----------
     # Attributes
@@ -618,25 +639,32 @@ class MccsAntenna(SKABaseDevice):
             tango.DevState.FAULT,
         ]
 
-    @command(dtype_in="DevString")
-    def Configure(self: MccsAntenna, argin: str) -> None:
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def Configure(self: MccsAntenna, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the antenna device attributes.
 
-        :param argin: the configuration for the device in stringified json format
+        Also configures children device that are connected to the antenna.
+
+        :param argin: Configuration parameters encoded in a json string
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+          .. code-block: pycon
+
+            >>> dp = tango.DeviceProxy("mccs/antenna/00001")
+            >>> dp.command_inout("Configure", json_str)
         """
-        config = json.loads(argin)
-
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
-            return default
-
-        self._antennaId = apply_if_valid("antennaId", self._antennaId)
-        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
-        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
-        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
+        handler = self.get_command_object("Configure")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
 
 # ----------

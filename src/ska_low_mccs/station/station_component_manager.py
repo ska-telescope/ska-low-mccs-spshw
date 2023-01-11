@@ -30,7 +30,6 @@ __all__ = ["StationComponentManager"]
 class _ApiuProxy(DeviceComponentManager):
     """A proxy to a APIU device, for a station to use."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: _ApiuProxy,
         fqdn: str,
@@ -63,7 +62,6 @@ class _ApiuProxy(DeviceComponentManager):
 class _AntennaProxy(DeviceComponentManager):
     """A proxy to a antenna device, for a station to use."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: _AntennaProxy,
         fqdn: str,

@@ -223,7 +223,7 @@ def tango_harness_factory_fixture(
         """
         tango_harness: TangoHarness  # type hint only
         if testbed == "local":
-            return TrueTangoContextManager()
+            return TrueTangoContextManager()  # type: ignore[return-value]
 
         # TODO: [MCCS-1299] Update remaining testbeds to use ska_tango-testing.context
         # instead of the obsolete ska_low_mccs_common.testing.tango_harness

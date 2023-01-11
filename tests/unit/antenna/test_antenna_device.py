@@ -677,8 +677,8 @@ class TestPatchedAntenna:
     device are passed through to the component manager
     """
 
-    @pytest.fixture()
-    def device_to_load(
+    @pytest.fixture(name="device_to_load")
+    def device_to_load_fixture(
         self: TestPatchedAntenna, patched_antenna_class: type[MccsAntenna]
     ) -> DeviceToLoadType:
         """

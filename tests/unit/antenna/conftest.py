@@ -57,7 +57,7 @@ class MockLongRunningCommand(MockCallable):
         return TaskStatus.QUEUED, "Task queued"
 
 
-@pytest.fixture(name="mock_component_manage")
+@pytest.fixture(name="mock_component_manager")
 def mock_component_manager_fixture(
     mocker: pytest_mock.MockerFixture,
 ) -> unittest.mock.Mock:

@@ -4,14 +4,15 @@ max-line-length = 88
 extend-ignore = BLK,T
 enable = DAR104
 # E203 and W503 conflict with black
-ignore = E203, W503, C901
-max-complexity = 10
+ignore = E203,W503
+
+# this should be 10 and needs addressing
+max-complexity = 21
 
 docstring-style = sphinx
 rst-roles = py:attr, py:class, py:const, py:exc, py:func, py:meth, py:mod
-rst-directives = uml, literalinclude
+rst-directives = uml
 
-#ignore = FS003,T101
 per-file-ignores =
     # N802 = PEP8 lowercase function name -- conflicts with Tango conventions
     src/ska_low_mccs/antenna/antenna_device.py: N802
@@ -23,12 +24,7 @@ per-file-ignores =
     src/ska_low_mccs/station_beam/station_beam_device.py: N802
     src/ska_low_mccs/subarray/subarray_device.py: N802
     src/ska_low_mccs/subarray_beam/subarray_beam_device.py: N802
-    src/ska_low_mccs/subrack/demo_subrack_device.py: N802
-    src/ska_low_mccs/subrack/subrack_device.py: N802
     src/ska_low_mccs/tel_state/tel_state_device.py: N802
-    src/ska_low_mccs/tile/tile_device.py: N802
-    src/ska_low_mccs/tile/demo_tile_device.py: N802
-    src/ska_low_mccs/tile/tile_cli.py: N802
     src/ska_low_mccs/transient_buffer/transient_buffer_device.py: N802
     tests/integration/test_integration_tmc.py: N802
     tests/unit/antenna/conftest.py: N802
@@ -39,8 +35,5 @@ per-file-ignores =
     tests/unit/station_beam/test_station_beam_device.py: N802
     tests/unit/subarray/test_subarray_device.py: N802
     tests/unit/subarray_beam/test_subarray_beam_device.py: N802
-    tests/unit/subrack/test_subrack_device.py: N802
     tests/unit/tel_state/test_tel_state_device.py: N802
-    tests/unit/tile/conftest.py: N802
-    tests/unit/tile/test_tile_device.py: N802
     tests/unit/transient_buffer/test_transient_buffer_device.py: N802

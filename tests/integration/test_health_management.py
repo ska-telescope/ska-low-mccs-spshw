@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -19,28 +19,21 @@ from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
 
-from ska_low_mccs.tile import DemoTile
 
-
-@pytest.fixture()
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
             {"name": "station_001", "proxy": MccsDeviceProxy},
             {"name": "station_002", "proxy": MccsDeviceProxy},
-            {"name": "subrack_01", "proxy": MccsDeviceProxy},
-            {"name": "tile_0001", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0002", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0003", "proxy": MccsDeviceProxy, "patch": DemoTile},
-            {"name": "tile_0004", "proxy": MccsDeviceProxy, "patch": DemoTile},
             {"name": "apiu_001", "proxy": MccsDeviceProxy},
             {"name": "apiu_002", "proxy": MccsDeviceProxy},
             {"name": "antenna_000001", "proxy": MccsDeviceProxy},
@@ -55,8 +48,8 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
-@pytest.fixture()
-def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_subarray_beam_factory")
+def mock_subarray_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock subarray beam devices for use in testing.
 
@@ -70,8 +63,8 @@ def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_station_beam_factory")
+def mock_station_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock station beam devices for use in testing.
 
@@ -85,8 +78,8 @@ def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
     mock_station_beam_factory: Callable[[], unittest.mock.Mock],
 ) -> dict[str, unittest.mock.Mock]:
@@ -117,8 +110,8 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def controller_device_health_state_changed_callback(
+@pytest.fixture(name="controller_device_health_state_changed_callback")
+def controller_device_health_state_changed_callback_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -136,9 +129,11 @@ def controller_device_health_state_changed_callback(
     return mock_change_event_callback_factory("healthState")
 
 
+# pylint: disable=too-few-public-methods
 class TestHealthManagement:
     """Test cases for the MCCS health management subsystem."""
 
+    # pylint: disable=too-many-locals
     def test_controller_health_rollup(
         self: TestHealthManagement,
         tango_harness: TangoHarness,
@@ -164,13 +159,8 @@ class TestHealthManagement:
             "state", controller_device_state_changed_callback
         )
 
-        subrack = tango_harness.get_device("low-mccs/subrack/01")
         station_1 = tango_harness.get_device("low-mccs/station/001")
         station_2 = tango_harness.get_device("low-mccs/station/002")
-        tile_1 = tango_harness.get_device("low-mccs/tile/0001")
-        tile_2 = tango_harness.get_device("low-mccs/tile/0002")
-        tile_3 = tango_harness.get_device("low-mccs/tile/0003")
-        tile_4 = tango_harness.get_device("low-mccs/tile/0004")
         apiu_1 = tango_harness.get_device("low-mccs/apiu/001")
         apiu_2 = tango_harness.get_device("low-mccs/apiu/002")
         antenna_1 = tango_harness.get_device("low-mccs/antenna/000001")
@@ -209,13 +199,13 @@ class TestHealthManagement:
         assert antenna_8.healthState == HealthState.UNKNOWN
         assert apiu_1.healthState == HealthState.UNKNOWN
         assert apiu_2.healthState == HealthState.UNKNOWN
-        assert tile_1.healthState == HealthState.UNKNOWN
-        assert tile_2.healthState == HealthState.UNKNOWN
-        assert tile_3.healthState == HealthState.UNKNOWN
-        assert tile_4.healthState == HealthState.UNKNOWN
+        # assert tile_1.healthState == HealthState.UNKNOWN
+        # assert tile_2.healthState == HealthState.UNKNOWN
+        # assert tile_3.healthState == HealthState.UNKNOWN
+        # assert tile_4.healthState == HealthState.UNKNOWN
         assert station_1.healthState == HealthState.UNKNOWN
         assert station_2.healthState == HealthState.UNKNOWN
-        assert subrack.healthState == HealthState.UNKNOWN
+        # assert subrack.healthState == HealthState.UNKNOWN
         assert controller.healthState == HealthState.UNKNOWN
 
         # TODO: Fix this test once the below bug is fixed.

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Callable
 
 import pytest
 import tango
@@ -21,26 +21,26 @@ from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
 from ska_low_mccs.station_beam import StationBeamComponentManager
 
 
-@pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
+    mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
 
     To be called when the subarray's state changes.
 
-    :param mock_callback_deque_factory: fixture that provides a mock callback
+    :param mock_callback_factory: fixture that provides a mock callback
         factory which uses a double-ended queue (i.e. an object that returns
         mock callbacks when called).
 
     :return: a mock callback to be called when the subarray's state changes.
     """
-    return mock_callback_deque_factory()
+    return mock_callback_factory()
 
 
-@pytest.fixture()
-def component_device_health_changed_callback(
+@pytest.fixture(name="component_device_health_changed_callback")
+def component_device_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -58,8 +58,8 @@ def component_device_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def component_device_fault_changed_callback(
+@pytest.fixture(name="component_device_fault_changed_callback")
+def component_device_fault_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -75,8 +75,8 @@ def component_device_fault_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def component_is_beam_locked_changed_callback(
+@pytest.fixture(name="component_is_beam_locked_changed_callback")
+def component_is_beam_locked_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[bool], None]:
     """
@@ -92,8 +92,8 @@ def component_is_beam_locked_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def beam_id() -> int:
+@pytest.fixture(name="beam_id")
+def beam_id_fixture() -> int:
     """
     Return a beam id for the station beam under test.
 
@@ -102,8 +102,8 @@ def beam_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def mock_station_beam_component_manager(
+@pytest.fixture(name="mock_station_beam_component_manager")
+def mock_station_beam_component_manager_fixture(
     beam_id: int,
     logger: logging.Logger,
     max_workers: int,
@@ -137,8 +137,8 @@ def mock_station_beam_component_manager(
     )
 
 
-@pytest.fixture()
-def station_beam_component_manager(
+@pytest.fixture(name="station_beam_component_manager")
+def station_beam_component_manager_fixture(
     tango_harness: TangoHarness,
     beam_id: int,
     logger: logging.Logger,
@@ -170,8 +170,8 @@ def station_beam_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_station_off_fqdn() -> str:
+@pytest.fixture(name="mock_station_off_fqdn")
+def mock_station_off_fqdn_fixture() -> str:
     """
     Fixture that provides the FQDN for a mock station that is in state OFF.
 
@@ -180,8 +180,8 @@ def mock_station_off_fqdn() -> str:
     return "mock/station/off"
 
 
-@pytest.fixture()
-def mock_station_off() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_off")
+def mock_station_off_fixture() -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsStation device that is in OFF state.
 
@@ -192,8 +192,8 @@ def mock_station_off() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_station_on_fqdn() -> str:
+@pytest.fixture(name="mock_station_on_fqdn")
+def mock_station_on_fqdn_fixture() -> str:
     """
     Fixture that provides the FQDN for a mock station that is in state ON.
 
@@ -202,8 +202,8 @@ def mock_station_on_fqdn() -> str:
     return "mock/station/on"
 
 
-@pytest.fixture()
-def mock_station_on() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_on")
+def mock_station_on_fixture() -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsStation device that is in ON state.
 
@@ -214,8 +214,8 @@ def mock_station_on() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_station_off_fqdn: str,
     mock_station_off: unittest.mock.Mock,
     mock_station_on_fqdn: str,
@@ -242,8 +242,8 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return a value for max_workers.
 

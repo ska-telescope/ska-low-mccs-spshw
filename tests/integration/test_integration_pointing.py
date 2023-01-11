@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -42,8 +42,8 @@ BEAM_4_DELAY_RATE_AZIMUTH = 0.4e-11
 BEAM_4_DELAY_RATE_ELEVATION = 0.4e-11
 
 
-@pytest.fixture()
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
@@ -52,7 +52,7 @@ def devices_to_load() -> DevicesToLoadType:
     # TODO: Once https://github.com/tango-controls/cppTango/issues/816 is resolved, we
     # should reinstate the APIUs and antennas in these tests.
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "station_001", "proxy": MccsDeviceProxy},
@@ -65,8 +65,8 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
-@pytest.fixture()
-def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_apiu_factory")
+def mock_apiu_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock APIU devices for use in testing.
 
@@ -80,8 +80,8 @@ def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_antenna_factory")
+def mock_antenna_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock antenna device for use in testing.
 
@@ -94,8 +94,8 @@ def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_tile_factory")
+def mock_tile_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock tile devices for use in testing.
 
@@ -109,8 +109,8 @@ def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_apiu_factory: Callable[[], unittest.mock.Mock],
     mock_antenna_factory: Callable[[], unittest.mock.Mock],
     mock_tile_factory: Callable[[], unittest.mock.Mock],
@@ -147,9 +147,11 @@ def initial_mocks(
     }
 
 
+# pylint: disable=too-few-public-methods
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
+    # pylint: disable=too-many-statements
     def test_stationbeam_apply_pointing(
         self: TestMccsIntegration, tango_harness: TangoHarness
     ) -> None:

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -31,8 +31,8 @@ from ska_low_mccs.controller import (
 )
 
 
-@pytest.fixture()
-def subarray_fqdns() -> list[str]:
+@pytest.fixture(name="subarray_fqdns")
+def subarray_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of subarrays managed by the controller.
 
@@ -44,8 +44,8 @@ def subarray_fqdns() -> list[str]:
     return ["low-mccs/subarray/01", "low-mccs/subarray/02"]
 
 
-@pytest.fixture()
-def subrack_fqdns() -> list[str]:
+@pytest.fixture(name="subrack_fqdns")
+def subrack_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of subracks managed by the controller.
 
@@ -57,8 +57,8 @@ def subrack_fqdns() -> list[str]:
     return ["low-mccs/subrack/01"]
 
 
-@pytest.fixture()
-def station_fqdns() -> list[str]:
+@pytest.fixture(name="station_fqdns")
+def station_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of stations managed by the controller.
 
@@ -70,8 +70,8 @@ def station_fqdns() -> list[str]:
     return ["low-mccs/station/001", "low-mccs/station/002"]
 
 
-@pytest.fixture()
-def subarray_beam_fqdns() -> list[str]:
+@pytest.fixture(name="subarray_beam_fqdns")
+def subarray_beam_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of subarray_beams managed by the controller.
 
@@ -88,8 +88,8 @@ def subarray_beam_fqdns() -> list[str]:
     ]
 
 
-@pytest.fixture()
-def station_beam_fqdns() -> list[str]:
+@pytest.fixture(name="station_beam_fqdns")
+def station_beam_fqdns_fixture() -> list[str]:
     """
     Return the FQDNs of station_beams managed by the controller.
 
@@ -106,8 +106,8 @@ def station_beam_fqdns() -> list[str]:
     ]
 
 
-@pytest.fixture()
-def channel_blocks() -> list[int]:
+@pytest.fixture(name="channel_blocks")
+def channel_blocks_fixture() -> list[int]:
     """
     Return the channel blocks controlled by this controller.
 
@@ -116,8 +116,8 @@ def channel_blocks() -> list[int]:
     return list(range(1, 49))  # TODO: Should this be "range(9, 57)"?
 
 
-@pytest.fixture()
-def controller_resource_manager(
+@pytest.fixture(name="controller_resource_manager")
+def controller_resource_manager_fixture(
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
     subarray_beam_fqdns: Iterable[str],
@@ -144,8 +144,8 @@ def controller_resource_manager(
     )
 
 
-@pytest.fixture()
-def subrack_health_changed_callback(
+@pytest.fixture(name="subrack_health_changed_callback")
+def subrack_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -161,8 +161,8 @@ def subrack_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def station_health_changed_callback(
+@pytest.fixture(name="station_health_changed_callback")
+def station_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -178,8 +178,8 @@ def station_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def subarray_beam_health_changed_callback(
+@pytest.fixture(name="subarray_beam_health_changed_callback")
+def subarray_beam_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -195,8 +195,8 @@ def subarray_beam_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def station_beam_health_changed_callback(
+@pytest.fixture(name="station_beam_health_changed_callback")
+def station_beam_health_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -212,8 +212,8 @@ def station_beam_health_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -229,8 +229,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of MockCallableworker threads.
 
@@ -241,8 +241,9 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def controller_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="controller_component_manager")
+def controller_component_manager_fixture(
     tango_harness: TangoHarness,
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
@@ -286,8 +287,9 @@ def controller_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_controller_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="mock_controller_component_manager")
+def mock_controller_component_manager_fixture(
     subarray_fqdns: Iterable[str],
     subrack_fqdns: Iterable[str],
     station_fqdns: Iterable[str],
@@ -329,8 +331,8 @@ def mock_controller_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_subarray_factory() -> MockSubarrayBuilder:
+@pytest.fixture(name="mock_subarray_factory")
+def mock_subarray_factory_fixture() -> MockSubarrayBuilder:
     """
     Fixture that provides a factory for mock subarrays.
 
@@ -339,8 +341,8 @@ def mock_subarray_factory() -> MockSubarrayBuilder:
     return MockSubarrayBuilder()
 
 
-@pytest.fixture()
-def mock_station_factory() -> MockDeviceBuilder:
+@pytest.fixture(name="mock_station_factory")
+def mock_station_factory_fixture() -> MockDeviceBuilder:
     """
     Fixture that provides a factory for mock stations.
 
@@ -355,8 +357,8 @@ def mock_station_factory() -> MockDeviceBuilder:
     return builder
 
 
-@pytest.fixture()
-def mock_subrack_factory() -> MockDeviceBuilder:
+@pytest.fixture(name="mock_subrack_factory")
+def mock_subrack_factory_fixture() -> MockDeviceBuilder:
     """
     Fixture that provides a factory for mock subracks.
 
@@ -371,8 +373,8 @@ def mock_subrack_factory() -> MockDeviceBuilder:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     subarray_fqdns: list[str],
     mock_subarray_factory: Callable[[], unittest.mock.Mock],
     station_fqdns: list[str],
@@ -414,8 +416,8 @@ def initial_mocks(
     return initial_mocks
 
 
-@pytest.fixture()
-def subarray_proxies(
+@pytest.fixture(name="subarray_proxies")
+def subarray_proxies_fixture(
     subarray_fqdns: Iterable[str], logger: logging.Logger
 ) -> dict[str, MccsDeviceProxy]:
     """
@@ -429,8 +431,8 @@ def subarray_proxies(
     return {fqdn: MccsDeviceProxy(fqdn, logger) for fqdn in subarray_fqdns}
 
 
-@pytest.fixture()
-def station_proxies(
+@pytest.fixture(name="station_proxies")
+def station_proxies_fixture(
     station_fqdns: Iterable[str], logger: logging.Logger
 ) -> list[MccsDeviceProxy]:
     """
@@ -444,8 +446,8 @@ def station_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in station_fqdns]
 
 
-@pytest.fixture()
-def subrack_proxies(
+@pytest.fixture(name="subrack_proxies")
+def subrack_proxies_fixture(
     subrack_fqdns: Iterable[str], logger: logging.Logger
 ) -> list[MccsDeviceProxy]:
     """
@@ -459,8 +461,8 @@ def subrack_proxies(
     return [MccsDeviceProxy(fqdn, logger) for fqdn in subrack_fqdns]
 
 
-@pytest.fixture
-def unique_id() -> str:
+@pytest.fixture(name="unique_id")
+def unique_id_fixture() -> str:
     """
     Return a unique ID used to test Tango layer infrastructure.
 
@@ -469,8 +471,8 @@ def unique_id() -> str:
     return "a unique id"
 
 
-@pytest.fixture()
-def mock_component_manager(
+@pytest.fixture(name="mock_component_manager")
+def mock_component_manager_fixture(
     mocker: pytest_mock.mocker,  # type: ignore[valid-type]
     unique_id: str,
 ) -> unittest.mock.Mock:
@@ -506,7 +508,7 @@ def mock_component_manager(
     return mock
 
 
-@pytest.fixture()
+@pytest.fixture(name="patched_controller_device_class")
 def patched_controller_device_class(
     mock_component_manager: ControllerComponentManager,
 ) -> type[MccsController]:

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,26 +10,25 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, List, Optional, Tuple
+from typing import Any, Optional, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
+from ska_low_mccs_common import release
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.station import (
-    StationComponentManager,
-    StationHealthModel,
-    StationObsStateModel,
-)
+from ska_low_mccs.station.station_component_manager import StationComponentManager
+from ska_low_mccs.station.station_health_model import StationHealthModel
+from ska_low_mccs.station.station_obs_state_model import StationObsStateModel
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["MccsStation", "main"]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsStation(SKAObsDevice):
     """An implementation of a station beam Tango device for MCCS."""
 
@@ -44,6 +43,30 @@ class MccsStation(SKAObsDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: StationHealthModel
+        self.component_manager: StationComponentManager
+        self._delay_centre: list[float]
+        self._obs_state_model: StationObsStateModel
+        self._refLatitude: float
+        self._refLongitude: float
+        self._refHeight: float
+
     def init_device(self: MccsStation) -> None:
         """
         Initialise the device.
@@ -108,6 +131,7 @@ class MccsStation(SKAObsDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.MccsStation`'s Init command.
@@ -116,11 +140,16 @@ class MccsStation(SKAObsDevice):
         called upon :py:class:`~.MccsStation`'s initialisation.
         """
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsStation.InitCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the :py:class:`.MccsStation`.
+
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -224,7 +253,9 @@ class MccsStation(SKAObsDevice):
         else:
             device_family = fqdn.split("/")[1]
             if device_family == "apiu":
-                health_state_changed_callback = self._health_model.apiu_health_changed
+                health_state_changed_callback = functools.partial(
+                    self._health_model.apiu_health_changed, fqdn
+                )
                 power_state_changed_callback = (
                     self.component_manager._apiu_power_state_changed
                 )
@@ -251,17 +282,21 @@ class MccsStation(SKAObsDevice):
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
             with self.component_manager.power_state_lock:
-                self.component_manager.set_power_state(power_state, fqdn=fqdn)
+                self.component_manager.set_power_state(
+                    cast(PowerState, power_state), fqdn=fqdn
+                )
                 if power_state is not None:
                     power_state_changed_callback(power_state)
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             health_state_changed_callback(health)
 
-        if "is_configured" in state_change.keys():
-            is_configured = state_change.get("is_configured")
-            self._obs_state_model.is_configured_changed(is_configured)
+        if "configuration_changed" in state_change.keys():
+            self._obs_state_model.is_configured_changed(True)
+            configuration = state_change.get("configuration_changed")
+            assert isinstance(configuration, dict)
+            self._configure_station(configuration)
 
     def _component_power_state_changed(
         self: MccsStation,
@@ -296,74 +331,26 @@ class MccsStation(SKAObsDevice):
 
         :param health: the new health value
         """
-        if self._health_state == health:
-            return
-        self._health_state = health
-        self.push_change_event("healthState", health)
+        if self._health_state != health:
+            self._health_state = health
+            self.push_change_event("healthState", health)
 
-    # Reimplementation for debugging purposes
-    def _update_state(self: MccsStation, state: tango.DevState) -> None:
+    def _configure_station(self: MccsStation, config: dict) -> None:
         """
-        Update the device state.
+        Configure the station attributes.
 
-        TODO: This is already implemented in
-        :py:class:`ska_tango_base.base.SKABaseDevice`, and it should not
-        be necessary to re-implement it here. However, updating state in
-        this device is sometimes erroring for an unknown reason. These
-        try-except clauses were added for diagnostics, but instead they
-        seem to be magically fixing the problem. We need to develop an
-        understanding of this issue.
-
-        :param state: the new state of the device
-
-        :raises Exception: for unknown reasons. This is a to-do.
+        :param config: the configuration settings for this station.
         """
-        try:
-            current_state = self.get_state()
-        except Exception as e:
-            self.logger.error(f"Attempt to get state resulted in exception {e}")
-            raise
 
-        if state != current_state:
-            try:
-                self.set_state(state)
-            except Exception as e:
-                self.logger.error(f"Attempt to set state resulted in exception {e}")
-                raise
-            try:
-                self.set_status(f"The device is in {state} state.")
-            except Exception as e:
-                self.logger.error(f"Attempt to set status resulted in exception {e}")
-                raise
-            self.logger.info(f"Device state changed from {self.get_state()} to {state}")
-            try:
-                self.push_change_event("state")
-            except Exception as e:
-                self.logger.error(
-                    f"Attempt to push state change event resulted in exception {e}"
-                )
-                raise
-            try:
-                self.push_archive_event("state")
-            except Exception as e:
-                self.logger.error(
-                    f"Attempt to push state archive event resulted in exception {e}"
-                )
-                raise
-            try:
-                self.push_change_event("status")
-            except Exception as e:
-                self.logger.error(
-                    f"Attempt to push status change event resulted in exception {e}"
-                )
-                raise
-            try:
-                self.push_archive_event("status")
-            except Exception as e:
-                self.logger.error(
-                    f"Attempt to push status archive event resulted in exception {e}"
-                )
-                raise
+        def apply_if_valid(attribute_name: str, default: Any) -> Any:
+            value = config.get(attribute_name)
+            if isinstance(value, type(default)):
+                return value
+            return default
+
+        self._refLatitude = apply_if_valid("refLatitude", self._refLatitude)
+        self._refLongitude = apply_if_valid("refLongitude", self._refLongitude)
+        self._refHeight = apply_if_valid("refHeight", self._refHeight)
 
     # ----------
     # Attributes
@@ -544,6 +531,8 @@ class MccsStation(SKAObsDevice):
     def Configure(self: MccsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Configure the station with all relevant parameters.
+
+        Also configures children device that are connected to the station.
 
         :param argin: Configuration parameters encoded in a json string
 

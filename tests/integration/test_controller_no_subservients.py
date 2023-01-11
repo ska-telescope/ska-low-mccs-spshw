@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -16,15 +16,15 @@ from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHa
 from tango import DevState
 
 
-@pytest.fixture()
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/controller_only_configuration.json",
+        "path": "tests/data/controller_only_configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -32,6 +32,7 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
+# pylint: disable=too-few-public-methods
 class TestMccsController:
     """Integration test case for the MccsController class."""
 
@@ -39,7 +40,7 @@ class TestMccsController:
     def test_controller_no_subservient(
         self: TestMccsController,
         tango_harness: TangoHarness,
-    ):
+    ) -> None:
         """
         Test that an MccsController can allocate resources to an MccsSubarray.
 

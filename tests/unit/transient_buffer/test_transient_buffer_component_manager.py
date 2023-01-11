@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -63,7 +63,7 @@ class TestTransientBuffer:
         """
         if request.param == "transient_buffer":
             return transient_buffer_component
-        elif request.param == "transient_buffer_component_manager":
+        if request.param == "transient_buffer_component_manager":
             transient_buffer_component_manager.start_communicating()
             return transient_buffer_component_manager
         raise ValueError(

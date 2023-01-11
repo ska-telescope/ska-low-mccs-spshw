@@ -13,7 +13,5 @@ API
   Station beam<station_beam/index>
   Subarray<subarray/index>
   Subarray beam<subarray_beam/index>
-  Subrack<subrack/index>
   TelState<tel_state/index>
-  Tile<tile/index>
   Transient buffer<transient_buffer/index>

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -21,8 +21,8 @@ from ska_low_mccs.transient_buffer import (
 )
 
 
-@pytest.fixture()
-def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
+@pytest.fixture(name="transient_buffer_component")
+def transient_buffer_component_fixture(logger: logging.Logger) -> TransientBuffer:
     """
     Fixture that returns a transient buffer.
 
@@ -33,8 +33,8 @@ def transient_buffer_component(logger: logging.Logger) -> TransientBuffer:
     return TransientBuffer(logger)
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of maximum worker threads.
 
@@ -43,8 +43,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -60,8 +60,8 @@ def component_state_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def transient_buffer_component_manager(
+@pytest.fixture(name="transient_buffer_component_manager")
+def transient_buffer_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],

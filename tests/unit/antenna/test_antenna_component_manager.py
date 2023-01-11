@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -80,7 +80,7 @@ class TestAntennaApiuProxy:
         """
         with pytest.raises(
             ConnectionError,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             antenna_apiu_proxy.on()
 
@@ -345,7 +345,7 @@ class TestAntennaComponentManager:
         mock_apiu_device_proxy.PowerUpAntenna.assert_not_called()
         assert antenna_component_manager.power_state == PowerState.ON
 
-        assert antenna_component_manager.off() == ResultCode.OK
+        assert antenna_component_manager.off() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.PowerDownAntenna.assert_next_call(apiu_antenna_id)
 
         # The power state won't update until an event confirms that the antenna is on.
@@ -363,7 +363,7 @@ class TestAntennaComponentManager:
         antenna_component_manager.power_state = PowerState.OFF
         assert antenna_component_manager.power_state == PowerState.OFF
 
-        assert antenna_component_manager.off() is None
+        assert antenna_component_manager.off() == (TaskStatus.QUEUED, "Task queued")
         mock_apiu_device_proxy.PowerDownAntenna.assert_not_called()
         assert antenna_component_manager.power_state == PowerState.OFF
 
@@ -520,3 +520,51 @@ class TestAntennaComponentManager:
         time.sleep(0.1)
         _, kwargs = task_callback_on.get_next_call()
         assert kwargs["status"] == TaskStatus.COMPLETED
+
+    def test_configure(
+        self: TestAntennaComponentManager,
+        antenna_component_manager: AntennaComponentManager,
+        communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallableDeque,
+    ) -> None:
+        """
+        Test tile attribute assignment.
+
+        Specifically, test that when the antenna component manager
+        established communication with its tiles, it write its antenna
+        id and a unique logical tile id to each one.
+
+        :param antenna_component_manager: the antenna component manager
+            under test.
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be called
+            when the antenna state changes
+        """
+        antenna_component_manager.start_communicating()
+        communication_state_changed_callback.assert_next_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        communication_state_changed_callback.assert_next_call(
+            CommunicationStatus.ESTABLISHED
+        )
+        time.sleep(0.1)
+
+        mock_task_callback = MockCallable()
+
+        antenna_component_manager._configure(
+            {
+                "antenna": {"xDisplacement": 1.0, "yDisplacement": 1.0},
+                "tile": {"fixed_delays": (1, 2)},
+            },
+            mock_task_callback,
+        )
+        mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
+        mock_task_callback.assert_next_call(
+            status=TaskStatus.COMPLETED, result="Configure command has completed"
+        )
+
+        component_state_changed_callback.assert_next_call_with_keys(
+            {"configuration_changed": {"xDisplacement": 1.0, "yDisplacement": 1.0}}
+        )

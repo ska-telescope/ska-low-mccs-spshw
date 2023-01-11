@@ -15,34 +15,17 @@ server:
         - name: "low-mccs/control/control"
           properties:
           - name: "MccsSubarrays"
-            values:
-            - "low-mccs/subarray/01"
-            - "low-mccs/subarray/02"
+            values: []
           - name: "MccsSubracks"
-            values:
-              - "low-mccs/subrack/01"
+            values: []
           - name: "MccsStations"
-            values:
-              - "low-mccs/station/001"
-              - "low-mccs/station/002"
+            values: []
           - name: "MccsTiles"
-            values:
-              - "low-mccs/tile/0001"
-              - "low-mccs/tile/0002"
-              - "low-mccs/tile/0003"
-              - "low-mccs/tile/0004"
+            values: []
           - name: "MccsStationBeams"
-            values:
-              - "low-mccs/beam/01"
-              - "low-mccs/beam/02"
-              - "low-mccs/beam/03"
-              - "low-mccs/beam/04"
+            values: []
           - name: "MccsSubarrayBeams"
-            values:
-              - "low-mccs/subarraybeam/01"
-              - "low-mccs/subarraybeam/02"
-              - "low-mccs/subarraybeam/03"
-              - "low-mccs/subarraybeam/04"
+            values: []
           - name: "LoggingLevelDefault"
             values: 
               - "3"          

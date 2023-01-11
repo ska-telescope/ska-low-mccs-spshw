@@ -1,11 +1,29 @@
-[pylint]
+[MESSAGES CONTROL]
+disable=
+    duplicate-code,
+    fixme,
+    invalid-name,  # conflicts with Tango naming conventions
 
-# Disable warning(W), convention(C), and refactoring messages(R)
-# E1101 (no-member) for socket.SocketKind
-# E1121 (too-many-function-args)
-# E1120 (no-value-for-parameter)
-# E1136 (unsubscriptable-object)
-# E0611 (no-name-in-module)
-# E0603 (undefined-all-variable),
-disable = W,C,R,E1101,E1136,E0611,E0603,E1121,E1120
+enable=
+    useless-suppression,
+
+[SIMILARITIES]
+min-similarity-lines=7
+ignore-imports=yes
+
+[FORMAT]
+max-module-lines=1000
+
+[DESIGN]
+max-args=6
+max-locals=15
+
+# pylint reports E1101 (no-member) for socket.SocketKind
 ignored-classes = socket
+
+# TODO: remove these when possible
+# W0212 protected-access
+# W0613 unused-argument
+# W0612 unused variable
+# W0223 abstract-method
+disable = W0212, W0613, W0612, W0223

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -22,8 +22,8 @@ from ska_low_mccs import MccsController
 from ska_low_mccs.controller import ControllerComponentManager
 
 
-@pytest.fixture
-def patched_controller_device_class(
+@pytest.fixture(name="patched_controller_device_class")
+def patched_controller_device_class_fixture(
     mock_controller_component_manager: ControllerComponentManager,
 ) -> Type[MccsController]:
     """
@@ -78,8 +78,8 @@ def patched_controller_device_class(
     return PatchedControllerDevice
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_controller_device_class: Type[MccsController],
 ) -> DeviceToLoadType:
     """
@@ -91,7 +91,7 @@ def device_to_load(
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "controller",
         "proxy": MccsDeviceProxy,
@@ -99,8 +99,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def device_under_test(
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(
     tango_harness: TangoHarness,
 ) -> MccsDeviceProxy:
     """
@@ -113,6 +113,7 @@ def device_under_test(
     return tango_harness.get_device("low-mccs/control/control")
 
 
+# pylint: disable=too-few-public-methods
 class TestControllerPowerEvents:
     """Tests of the controller component manager."""
 

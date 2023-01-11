@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,22 +10,26 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from typing import Any, List, Optional, Tuple, cast
+from typing import Any, Optional, cast
 
-import ska_low_mccs_common.release as release
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
-from ska_tango_base.base import SKABaseDevice
+from ska_low_mccs_common import release
+from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs.controller import ControllerComponentManager, ControllerHealthModel
+from ska_low_mccs.controller.controller_component_manager import (
+    ControllerComponentManager,
+)
+from ska_low_mccs.controller.controller_health_model import ControllerHealthModel
 
 __all__ = ["MccsController", "main"]
 
-DevVarLongStringArrayType = Tuple[List[ResultCode], List[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsController(SKABaseDevice):
     """An implementation of a controller Tango device for MCCS."""
 
@@ -41,6 +45,27 @@ class MccsController(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._communication_state: Optional[CommunicationStatus]
+        self._num_subservients: int
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: ControllerHealthModel
+        self.component_manager: ControllerComponentManager  # type: ignore[assignment]
+
     def init_device(self: MccsController) -> None:
         """
         Initialise the device.
@@ -51,7 +76,7 @@ class MccsController(SKABaseDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         self._power_state_lock = threading.RLock()
-        self._communication_state: Optional[CommunicationStatus] = None
+        self._communication_state = None
         self._component_power_state: Optional[PowerState] = None
         self._mccs_build_state = release.get_release_info()
         self._mccs_version_id = release.version
@@ -113,13 +138,14 @@ class MccsController(SKABaseDevice):
                 SubmittedSlowCommand(
                     command_name,
                     self._command_tracker,
-                    self.component_manager,
+                    cast(BaseComponentManager, self.component_manager),
                     method_name,
                     callback=None,
                     logger=self.logger,
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """
         A class for :py:class:`~.MccsController`'s Init command.
@@ -130,9 +156,14 @@ class MccsController(SKABaseDevice):
 
         def do(  # type: ignore[override]
             self: MccsController.InitCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the `MccsController`.
+
+            :param args: positional args to the component manager method
+            :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -199,6 +230,7 @@ class MccsController(SKABaseDevice):
             communication_state == CommunicationStatus.ESTABLISHED
         )
 
+    # pylint: disable=too-many-branches
     def _component_state_changed_callback(
         self: MccsController,
         state_change: dict[str, Any],
@@ -220,7 +252,7 @@ class MccsController(SKABaseDevice):
             PowerState.UNKNOWN: "component_unknown",
         }
         if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
+            power_state = cast(PowerState, state_change.get("power_state"))
             if fqdn is None:
                 if self._communication_state == CommunicationStatus.ESTABLISHED:
                     self.op_state_model.perform_action(action_map[power_state])
@@ -232,10 +264,10 @@ class MccsController(SKABaseDevice):
                         self.component_manager._evaluate_power_state()
 
         if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
+            health = cast(HealthState, state_change.get("health_state"))
             if fqdn is None:
                 if self._health_state != health:
-                    self._health_state = cast(HealthState, health)
+                    self._health_state = health
                     self.push_change_event("healthState", health)
             else:
                 device_family = fqdn.split("/")[1]
@@ -254,7 +286,7 @@ class MccsController(SKABaseDevice):
                     self._health_model.subrack_health_changed(fqdn, health)
 
         if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
+            is_fault = cast(bool, state_change.get("fault"))
             if is_fault:
                 self.op_state_model.perform_action("component_fault")
                 self._health_model.component_fault(True)

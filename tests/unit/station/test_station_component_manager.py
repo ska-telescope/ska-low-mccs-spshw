@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
+from typing import Sequence
 
 import tango
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus
@@ -101,11 +102,12 @@ class TestStationComponentManager:
         # tile, antenna and apiu devices are being received.
         station_component_manager.start_communicating()
         time.sleep(0.1)  # wait for events to come through
-        expected_calls = (
-            [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in antenna_fqdns]
-            + [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in tile_fqdns]
-            + [({"power_state": PowerState.UNKNOWN}, apiu_fqdn)]
-        )
+        expected_calls: Sequence
+        lst: Sequence
+        lst = [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in antenna_fqdns]
+        lst += [({"power_state": PowerState.UNKNOWN}, fqdn) for fqdn in tile_fqdns]
+        lst += [({"power_state": PowerState.UNKNOWN}, apiu_fqdn)]
+        expected_calls = lst
         component_state_changed_callback.assert_next_calls_with_keys(expected_calls)
 
     def test_tile_setup(
@@ -194,7 +196,7 @@ class TestStationComponentManager:
 
         mock_task_callback = MockCallable()
         station_component_manager._configure(
-            station_id + 1, task_callback=mock_task_callback
+            {"station": {"StationId": station_id + 1}}, task_callback=mock_task_callback
         )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
@@ -207,13 +209,14 @@ class TestStationComponentManager:
         assert not station_component_manager.is_configured
 
         # result = station_component_manager._configure(station_id)
-        station_component_manager._configure(station_id, mock_task_callback)
+        station_component_manager._configure(
+            {"station": {"StationId": station_id}}, mock_task_callback
+        )
         mock_task_callback.assert_next_call(status=TaskStatus.IN_PROGRESS)
         mock_task_callback.assert_next_call(
             status=TaskStatus.COMPLETED, result="Configure command has completed"
         )
 
         component_state_changed_callback.assert_next_call_with_keys(
-            {"is_configured": True}
+            {"configuration_changed": {"StationId": station_id}}
         )
-        assert station_component_manager.is_configured

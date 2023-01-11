@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,24 +10,24 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Callable
 
 import pytest
 import tango
+from ska_control_model import ResultCode
 from ska_low_mccs_common.testing import TangoHarness
-from ska_low_mccs_common.testing.mock import (  # MockChangeEventCallback,
+from ska_low_mccs_common.testing.mock import (
     MockCallable,
     MockCallableDeque,
     MockDeviceBuilder,
 )
-from ska_tango_base.commands import ResultCode
 
 from ska_low_mccs.subarray import SubarrayComponentManager
 
 
-@pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[["dict[str, Any]"], unittest.mock.Mock],
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
+    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
     Return a mock callback.
@@ -44,8 +44,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def subarray_component_manager(
+@pytest.fixture(name="subarray_component_manager")
+def subarray_component_manager_fixture(
     tango_harness: TangoHarness,
     logger: logging.Logger,
     max_workers: int,
@@ -78,8 +78,8 @@ def subarray_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_subarray_component_manager(
+@pytest.fixture(name="mock_subarray_component_manager")
+def mock_subarray_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: MockCallable,
@@ -110,8 +110,8 @@ def mock_subarray_component_manager(
     )
 
 
-@pytest.fixture()
-def station_off_id() -> int:
+@pytest.fixture(name="station_off_id")
+def station_off_id_fixture() -> int:
     """
     Return the id of a mock station that is powered off.
 
@@ -120,8 +120,8 @@ def station_off_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def station_on_id() -> int:
+@pytest.fixture(name="station_on_id")
+def station_on_id_fixture() -> int:
     """
     Return the id of a mock station that is powered on.
 
@@ -130,8 +130,8 @@ def station_on_id() -> int:
     return 2
 
 
-@pytest.fixture()
-def station_off_fqdn(station_off_id: int) -> str:
+@pytest.fixture(name="station_off_fqdn")
+def station_off_fqdn_fixture(station_off_id: int) -> str:
     """
     Return the FQDN of a mock station that is powered off.
 
@@ -143,8 +143,8 @@ def station_off_fqdn(station_off_id: int) -> str:
     return f"low-mccs/station/{station_off_id:03d}"
 
 
-@pytest.fixture()
-def station_on_fqdn(station_on_id: int) -> str:
+@pytest.fixture(name="station_on_fqdn")
+def station_on_fqdn_fixture(station_on_id: int) -> str:
     """
     Return the FQDN of a mock station that is powered on.
 
@@ -155,8 +155,8 @@ def station_on_fqdn(station_on_id: int) -> str:
     return f"low-mccs/station/{station_on_id:03d}"
 
 
-@pytest.fixture()
-def subarray_beam_off_id() -> int:
+@pytest.fixture(name="subarray_beam_off_id")
+def subarray_beam_off_id_fixture() -> int:
     """
     Return the id of a mock subarray beam that is powered off.
 
@@ -165,8 +165,8 @@ def subarray_beam_off_id() -> int:
     return 2
 
 
-@pytest.fixture()
-def subarray_beam_on_id() -> int:
+@pytest.fixture(name="subarray_beam_on_id")
+def subarray_beam_on_id_fixture() -> int:
     """
     Return the id of a mock subarray beam that is powered on.
 
@@ -175,8 +175,8 @@ def subarray_beam_on_id() -> int:
     return 3
 
 
-@pytest.fixture()
-def subarray_beam_off_fqdn(subarray_beam_off_id: int) -> str:
+@pytest.fixture(name="subarray_beam_off_fqdn")
+def subarray_beam_off_fqdn_fixture(subarray_beam_off_id: int) -> str:
     """
     Fixture that provides the FQDN for a mock subarray beam that is powered off.
 
@@ -188,8 +188,8 @@ def subarray_beam_off_fqdn(subarray_beam_off_id: int) -> str:
     return f"low-mccs/subarraybeam/{subarray_beam_off_id:02d}"
 
 
-@pytest.fixture()
-def subarray_beam_on_fqdn(subarray_beam_on_id: int) -> str:
+@pytest.fixture(name="subarray_beam_on_fqdn")
+def subarray_beam_on_fqdn_fixture(subarray_beam_on_id: int) -> str:
     """
     Fixture that provides the FQDN for a mock subarray beam that is powered on.
 
@@ -201,8 +201,8 @@ def subarray_beam_on_fqdn(subarray_beam_on_id: int) -> str:
     return f"low-mccs/subarraybeam/{subarray_beam_on_id:02d}"
 
 
-@pytest.fixture()
-def station_beam_off_id() -> int:
+@pytest.fixture(name="station_beam_off_id")
+def station_beam_off_id_fixture() -> int:
     """
     Return the id of a mock station beam that is powered off.
 
@@ -211,8 +211,8 @@ def station_beam_off_id() -> int:
     return 2
 
 
-@pytest.fixture()
-def station_beam_on_id() -> int:
+@pytest.fixture(name="station_beam_on_id")
+def station_beam_on_id_fixture() -> int:
     """
     Return the id of a mock station beam that is powered on.
 
@@ -221,8 +221,8 @@ def station_beam_on_id() -> int:
     return 3
 
 
-@pytest.fixture()
-def station_beam_off_fqdn(station_beam_off_id: int) -> str:
+@pytest.fixture(name="station_beam_off_fqdn")
+def station_beam_off_fqdn_fixture(station_beam_off_id: int) -> str:
     """
     Fixture that provides the FQDN for a mock station beam that is powered off.
 
@@ -234,8 +234,8 @@ def station_beam_off_fqdn(station_beam_off_id: int) -> str:
     return f"low-mccs/beam/{station_beam_off_id:02d}"
 
 
-@pytest.fixture()
-def station_beam_on_fqdn(station_beam_on_id: int) -> str:
+@pytest.fixture(name="station_beam_on_fqdn")
+def station_beam_on_fqdn_fixture(station_beam_on_id: int) -> str:
     """
     Fixture that provides the FQDN for a mock station beam that is powered on.
 
@@ -247,8 +247,8 @@ def station_beam_on_fqdn(station_beam_on_id: int) -> str:
     return f"low-mccs/beam/{station_beam_on_id:02d}"
 
 
-@pytest.fixture()
-def channel_blocks() -> list[int]:
+@pytest.fixture(name="channel_blocks")
+def channel_blocks_fixture() -> list[int]:
     """
     Return a list of channel blocks.
 
@@ -257,8 +257,8 @@ def channel_blocks() -> list[int]:
     return [1]
 
 
-@pytest.fixture()
-def mock_station_off() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_off")
+def mock_station_off_fixture() -> unittest.mock.Mock:
     """
     Return a mock station device that is powered off.
 
@@ -270,8 +270,8 @@ def mock_station_off() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_station_on() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_on")
+def mock_station_on_fixture() -> unittest.mock.Mock:
     """
     Return a mock station device that is powered on.
 
@@ -283,8 +283,8 @@ def mock_station_on() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_subarray_beam_off() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_subarray_beam_off")
+def mock_subarray_beam_off_fixture() -> unittest.mock.Mock:
     """
     Return a mock subarray beam device that is powered off.
 
@@ -296,8 +296,8 @@ def mock_subarray_beam_off() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_subarray_beam_on() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_subarray_beam_on")
+def mock_subarray_beam_on_fixture() -> unittest.mock.Mock:
     """
     Return a mock subarray beam device that is powered on.
 
@@ -310,8 +310,8 @@ def mock_subarray_beam_on() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_station_beam_off() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_beam_off")
+def mock_station_beam_off_fixture() -> unittest.mock.Mock:
     """
     Return a mock station beam device that is powered off.
 
@@ -323,8 +323,8 @@ def mock_station_beam_off() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_station_beam_on() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_station_beam_on")
+def mock_station_beam_on_fixture() -> unittest.mock.Mock:
     """
     Return a mock station beam device that is powered on.
 
@@ -336,8 +336,9 @@ def mock_station_beam_on() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     station_off_fqdn: str,
     mock_station_off: unittest.mock.Mock,
     station_on_fqdn: str,
@@ -392,8 +393,8 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def scan_id() -> int:
+@pytest.fixture(name="scan_id")
+def scan_id_fixture() -> int:
     """
     Return a scan id for use in testing.
 
@@ -402,8 +403,8 @@ def scan_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def start_time() -> float:
+@pytest.fixture(name="start_time")
+def start_time_fixture() -> float:
     """
     Return a scan start time for use in testing.
 
@@ -412,8 +413,8 @@ def start_time() -> float:
     return 0.0
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return a value for max_workers for use in testing.
 

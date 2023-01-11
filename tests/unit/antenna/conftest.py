@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 import pytest
+import pytest_mock
 import tango
-from ska_control_model import CommunicationStatus, PowerState, ResultCode
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing import TangoHarness
 from ska_low_mccs_common.testing.mock import (
@@ -29,8 +30,83 @@ from ska_low_mccs.antenna import AntennaComponentManager
 from ska_low_mccs.antenna.antenna_component_manager import _ApiuProxy, _TileProxy
 
 
-@pytest.fixture()
-def apiu_fqdn() -> str:
+class MockLongRunningCommand(MockCallable):
+    """
+    Mock the call to submit a LRC.
+
+    A long running command submission, if successful, returns a
+    TaskStatus and result message.
+    """
+
+    def __call__(self: MockCallable, *args: Any, **kwargs: Any) -> Any:
+        """
+        Handle a callback call.
+
+        Create a standard mock, call it, and put it on the queue. (This
+        approach lets us take advantange of the mock's assertion
+        functionality later.)
+
+        :param args: positional args in the call
+        :param kwargs: keyword args in the call
+
+        :return: the object's return calue
+        """
+        called_mock = unittest.mock.Mock()
+        called_mock(*args, **kwargs)
+        self._queue.put(called_mock)
+        return TaskStatus.QUEUED, "Task queued"
+
+
+@pytest.fixture(name="mock_component_manager")
+def mock_component_manager_fixture(
+    mocker: pytest_mock.MockerFixture,
+) -> unittest.mock.Mock:
+    """
+    Return a mock to be used as a component manager for the antenna device.
+
+    :param mocker: fixture that wraps the :py:mod:`unittest.mock`
+        module
+
+    :return: a mock to be used as a component manager for the antenna
+        device.
+    """
+    mock_component_manager = mocker.Mock()
+    mock_component_manager.apply_pointing = MockLongRunningCommand()
+    mock_component_manager.configure = MockLongRunningCommand()
+    return mock_component_manager
+
+
+@pytest.fixture(name="patched_antenna_class")
+def patched_antenna_class_fixture(
+    mock_component_manager: unittest.mock.Mock,
+) -> type[MccsAntenna]:
+    """
+    Return a antenna device class that has been patched for testing.
+
+    :param mock_component_manager: the mock component manage to patch
+        into this antenna.
+
+    :return: a antenna device class that has been patched for testing.
+    """
+
+    class PatchedAntenna(MccsAntenna):
+        """A antenna class that has had its component manager mocked out for testing."""
+
+        def create_component_manager(
+            self: PatchedAntenna,
+        ) -> unittest.mock.Mock:
+            """
+            Return a mock component manager instead of the usual one.
+
+            :return: a mock component manager
+            """
+            return mock_component_manager
+
+    return PatchedAntenna
+
+
+@pytest.fixture(name="apiu_fqdn")
+def apiu_fqdn_fixture() -> str:
     """
     Return the FQDN of the antenna's APIU device.
 
@@ -39,8 +115,8 @@ def apiu_fqdn() -> str:
     return "low-mccs/apiu/001"
 
 
-@pytest.fixture()
-def apiu_antenna_id() -> int:
+@pytest.fixture(name="apiu_antenna_id")
+def apiu_antenna_id_fixture() -> int:
     """
     Return the id of the antenna in the APIU.
 
@@ -52,8 +128,8 @@ def apiu_antenna_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def tile_fqdn() -> str:
+@pytest.fixture(name="tile_fqdn")
+def tile_fqdn_fixture() -> str:
     """
     Return the FQDN of the antenna's tile device.
 
@@ -62,8 +138,8 @@ def tile_fqdn() -> str:
     return "low-mccs/tile/0001"
 
 
-@pytest.fixture()
-def tile_antenna_id() -> int:
+@pytest.fixture(name="tile_antenna_id")
+def tile_antenna_id_fixture() -> int:
     """
     Return the id of the antenna in the tile.
 
@@ -72,8 +148,8 @@ def tile_antenna_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of maximum worker threads.
 
@@ -82,8 +158,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -116,8 +192,9 @@ def component_state_changed_callback(
 #     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def antenna_apiu_proxy(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="antenna_apiu_proxy")
+def antenna_apiu_proxy_fixture(
     tango_harness: TangoHarness,
     apiu_fqdn: str,
     apiu_antenna_id: int,
@@ -154,8 +231,9 @@ def antenna_apiu_proxy(
     )
 
 
-@pytest.fixture()
-def antenna_tile_proxy(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="antenna_tile_proxy")
+def antenna_tile_proxy_fixture(
     tango_harness: TangoHarness,
     tile_fqdn: str,
     tile_antenna_id: int,
@@ -192,8 +270,9 @@ def antenna_tile_proxy(
     )
 
 
-@pytest.fixture()
-def antenna_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="antenna_component_manager")
+def antenna_component_manager_fixture(
     tango_harness: TangoHarness,
     apiu_fqdn: str,
     apiu_antenna_id: int,
@@ -202,7 +281,7 @@ def antenna_component_manager(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[Any], None],
+    component_state_changed_callback: Callable[[dict[str, Any], Optional[str]], None],
 ) -> AntennaComponentManager:
     """
     Return an antenna component manager.
@@ -234,8 +313,8 @@ def antenna_component_manager(
     )
 
 
-@pytest.fixture()
-def initial_antenna_power_mode() -> int:
+@pytest.fixture(name="initial_antenna_power_mode")
+def initial_antenna_power_mode_fixture() -> int:
     """
     Return the initial power mode of the antenna.
 
@@ -244,8 +323,8 @@ def initial_antenna_power_mode() -> int:
     return PowerState.OFF
 
 
-@pytest.fixture()
-def initial_are_antennas_on(
+@pytest.fixture(name="initial_are_antennas_on")
+def initial_are_antennas_on_fixture(
     apiu_antenna_id: int,
     initial_antenna_power_mode: PowerState,
 ) -> list[bool]:
@@ -267,8 +346,8 @@ def initial_are_antennas_on(
     return are_antennas_on
 
 
-@pytest.fixture()
-def mock_apiu(initial_are_antennas_on: list[bool]) -> unittest.mock.Mock:
+@pytest.fixture(name="mock_apiu")
+def mock_apiu_fixture(initial_are_antennas_on: list[bool]) -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsAPIU device.
 
@@ -287,8 +366,8 @@ def mock_apiu(initial_are_antennas_on: list[bool]) -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def mock_tile() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_tile")
+def mock_tile_fixture() -> unittest.mock.Mock:
     """
     Fixture that provides a mock MccsTile device.
 
@@ -300,8 +379,8 @@ def mock_tile() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     apiu_fqdn: str,
     mock_apiu: unittest.mock.Mock,
     tile_fqdn: str,
@@ -328,8 +407,10 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def mock_apiu_device_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDeviceProxy:
+@pytest.fixture(name="mock_apiu_device_proxy")
+def mock_apiu_device_proxy_fixture(
+    apiu_fqdn: str, logger: logging.Logger
+) -> MccsDeviceProxy:
     """
     Return a mock device proxy to an APIU device.
 
@@ -341,8 +422,8 @@ def mock_apiu_device_proxy(apiu_fqdn: str, logger: logging.Logger) -> MccsDevice
     return MccsDeviceProxy(apiu_fqdn, logger)
 
 
-@pytest.fixture()
-def patched_antenna_device_class(
+@pytest.fixture(name="patched_antenna_device_class")
+def patched_antenna_device_class_fixture(
     initial_are_antennas_on: list[bool],
 ) -> type[MccsAntenna]:
     """
@@ -367,6 +448,7 @@ def patched_antenna_device_class(
 
         @command()
         def MockAntennaPoweredOn(self: PatchedAntennaDevice) -> None:
+            """Mock the Antenna being turned on."""
             are_antennas_on = list(initial_are_antennas_on)
             are_antennas_on[self.LogicalApiuAntennaId - 1] = True
             self.component_manager._apiu_proxy._antenna_power_state_changed(

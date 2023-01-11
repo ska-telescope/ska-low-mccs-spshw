@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -18,8 +18,8 @@ from ska_control_model import CommunicationStatus
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 
 
-@pytest.fixture()
-def component_is_beam_locked_changed_callback(
+@pytest.fixture(name="component_is_beam_locked_changed_callback")
+def component_is_beam_locked_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[bool], None]:
     """
@@ -35,8 +35,8 @@ def component_is_beam_locked_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def is_configured_changed_callback(
+@pytest.fixture(name="is_configured_changed_callback")
+def is_configured_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> Callable[[bool], None]:
     """
@@ -52,8 +52,8 @@ def is_configured_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
@@ -62,8 +62,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -79,8 +79,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def subarray_beam_component(
+@pytest.fixture(name="subarray_beam_component")
+def subarray_beam_component_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -107,8 +107,8 @@ def subarray_beam_component(
     )
 
 
-@pytest.fixture()
-def subarray_beam_component_manager(
+@pytest.fixture(name="subarray_beam_component_manager")
+def subarray_beam_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],

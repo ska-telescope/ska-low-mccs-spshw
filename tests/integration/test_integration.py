@@ -349,15 +349,14 @@ class TestMccsIntegration:
 
         time.sleep(0.2)
         assert [controller.longRunningCommandResult[0]] == unique_id
-
         # A subarray/station beam cannot be allocated to multiple subarrays.
-        # TODO: this will always evaluate to True.!!!!!!!!!!!!!
-        # pylint: disable=condition-evals-to-constant
         assert (
-            "The allocate command has failed with the exception: Cannot allocate"
-            "resources:"
-            and "subarraybeam"
-            or "beam" in controller.longRunningCommandResult[1]
+            "The allocate command has failed. Exception message: Cannot allocate "
+            "resources:" in controller.longRunningCommandResult[1]
+            and (
+                "subarraybeam" in controller.longRunningCommandResult[1]
+                or "beam" in controller.longRunningCommandResult[1]
+            )
         )
 
         # check no side-effects

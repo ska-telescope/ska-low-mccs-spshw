@@ -107,7 +107,7 @@ class SubarrayHealthModel(HealthModel):
         """
         Handle change in station health.
 
-        This is a callback hook, called by the componenCat manager when
+        This is a callback hook, called by the component manager when
         the health of a station changes.
 
         :param fqdn: the FQDN of the station whose health has

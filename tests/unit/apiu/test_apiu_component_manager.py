@@ -67,7 +67,7 @@ class TestApiuCommon:
         apiu_simulator_component_manager: ApiuSimulatorComponentManager,
         switching_apiu_component_manager: SwitchingApiuComponentManager,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback: Callable[..., None],
+        component_state_changed_callback: MockCallableDeque,
         request: SubRequest,
     ) -> Union[
         ApiuSimulator,
@@ -123,8 +123,7 @@ class TestApiuCommon:
             apiu_component_manager.on()
             time.sleep(0.1)
             expected_arguments = {"power_state": PowerState.ON}
-            cscc = component_state_changed_callback
-            cscc.assert_in_deque(expected_arguments)  # type: ignore[attr-defined]
+            component_state_changed_callback.assert_in_deque(expected_arguments)
             apiu_component_manager.power_state = PowerState.ON
             return apiu_component_manager
         raise ValueError("apiu fixture parametrized with unrecognised option")

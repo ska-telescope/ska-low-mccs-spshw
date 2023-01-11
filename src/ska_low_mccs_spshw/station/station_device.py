@@ -43,7 +43,7 @@ class SpsStation(SKAObsDevice):
     StationId = device_property(dtype=int, default_value=0)
     TileFQDNs = device_property(dtype=(str,), default_value=[])
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
-    CabinetNetworkAddress = device_property(dtype=(str,), default_value=["10.0.0.0"])
+    CabinetNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
 
     # ---------------
     # Initialisation
@@ -809,7 +809,7 @@ class SpsStation(SKAObsDevice):
         return ([ResultCode.OK], ["SetCspIngest command completed OK"])
 
     @command(
-        dtype_in="DevString",
+        dtype_in="DevVarLongArray",
         dtype_out="DevVarLongStringArray",
     )
     def SetBeamFormerRegions(

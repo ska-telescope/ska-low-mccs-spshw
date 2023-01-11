@@ -17,6 +17,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any, Callable, Optional, Sequence
 
 import tango
@@ -154,6 +155,8 @@ class _TileProxy(DeviceComponentManager):
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(MccsComponentManager):
     """A component manager for a station."""
+
+    RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -497,7 +500,6 @@ class SpsStationComponentManager(MccsComponentManager):
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
-        self.logger.debug("Tiles now on")
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
@@ -546,7 +548,7 @@ class SpsStationComponentManager(MccsComponentManager):
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
         # wait for subracks to come up
-        timeout = 60  # Seconds
+        timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         last_time = time.time() + timeout
         while time.time() < last_time:
             time.sleep(2)
@@ -584,7 +586,7 @@ class SpsStationComponentManager(MccsComponentManager):
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
         # wait for tiles to come up
-        timeout = 60  # Seconds
+        timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         last_time = time.time() + timeout
         while time.time() < last_time:
             time.sleep(2)
@@ -627,8 +629,11 @@ class SpsStationComponentManager(MccsComponentManager):
             tile.staticTimeDelays = self._static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_truncation
             tile.cspRounding = self.csp_rounding
-            tile.beamformerTable = list(
-                itertools.chain.from_iterable(self._beamformer_table)
+            beamformer_regions: list[list[int]] = []
+            for entry in self._beamformer_table:
+                beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
+            tile.SetBeamformerTable(
+                list(itertools.chain.from_iterable(beamformer_regions))
             )
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.SetLmcIntegratedDownload(
@@ -770,7 +775,7 @@ class SpsStationComponentManager(MccsComponentManager):
     # Attributes
     # ----------
     @property
-    def static_time_delays(self: SpsStationComponentManager) -> list[int]:
+    def static_delays(self: SpsStationComponentManager) -> list[int]:
         """
         Get static time delay correction.
 
@@ -782,8 +787,8 @@ class SpsStationComponentManager(MccsComponentManager):
         """
         return copy.deepcopy(self._static_delays)
 
-    @static_time_delays.setter
-    def static_time_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    @static_delays.setter
+    def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
         """
         Set static time delay correction.
 
@@ -1146,6 +1151,10 @@ class SpsStationComponentManager(MccsComponentManager):
             assert tile._proxy is not None  # for the type checker
             if tile._proxy.tile_programming_state in ["INITIALISED", "SYNCHRONISED"]:
                 tile._proxy.set_beamformer_regions(beamformer_table)
+        proxies = list(self._tile_proxies.values())
+        proxy = proxies[0]._proxy
+        assert proxy is not None  # for the type checker
+        self._beamformer_table = proxy.beamformerTable.reshape(-1, 7)
 
     def load_calibration_coefficients(
         self: SpsStationComponentManager, calibration_coefficients: list[float]
@@ -1316,3 +1325,73 @@ class SpsStationComponentManager(MccsComponentManager):
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             tile._proxy.StopDataTransmission()
+
+    def start_acquisition(
+        self: SpsStationComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the start acquisition method.
+
+        This method returns immediately after it submitted
+        `self._on` for execution.
+
+        :param argin: json dictionary with optional keywords
+
+        * start_time - (str) start time
+        * delay - (int) delay start
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        params = json.loads(argin)
+        start_time = params.get("start_time", None)
+        if start_time is None:
+            start_time = datetime.strftime(
+                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
+            )
+            delay = 0
+
+        return self.submit_task(
+            self._start_acquisition,
+            args=[start_time, delay],
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _start_acquisition(
+        self: SpsStationComponentManager,
+        start_time: Optional[str] = None,
+        delay: Optional[int] = 2,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start acquisition using slow command.
+
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        success = True
+
+        parameter_list = {"start_time": start_time, "delay": delay}
+        json_argument = json.dumps(parameter_list)
+        for tile in self._tile_proxies.values():
+            assert tile._proxy is not None  # for the type checker
+            tile._proxy.StartAcquisition(json_argument)
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Start acquisition has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                )
+            return

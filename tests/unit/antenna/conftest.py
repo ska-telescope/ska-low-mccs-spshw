@@ -57,8 +57,8 @@ class MockLongRunningCommand(MockCallable):
         return TaskStatus.QUEUED, "Task queued"
 
 
-@pytest.fixture()
-def mock_component_manager(
+@pytest.fixture(name="mock_component_manage")
+def mock_component_manager_fixture(
     mocker: pytest_mock.MockerFixture,
 ) -> unittest.mock.Mock:
     """
@@ -76,8 +76,8 @@ def mock_component_manager(
     return mock_component_manager
 
 
-@pytest.fixture()
-def patched_antenna_class(
+@pytest.fixture(name="patched_antenna_class")
+def patched_antenna_class_fixture(
     mock_component_manager: unittest.mock.Mock,
 ) -> type[MccsAntenna]:
     """
@@ -105,8 +105,8 @@ def patched_antenna_class(
     return PatchedAntenna
 
 
-@pytest.fixture()
-def apiu_fqdn() -> str:
+@pytest.fixture(name="apiu_fqdn")
+def apiu_fqdn_fixture() -> str:
     """
     Return the FQDN of the antenna's APIU device.
 

@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -54,6 +52,7 @@ class TestApiuCommon:
         """
         return PowerState.ON
 
+    # pylint: disable=too-many-arguments
     @pytest.fixture(
         params=[
             "apiu_simulator",
@@ -68,7 +67,7 @@ class TestApiuCommon:
         apiu_simulator_component_manager: ApiuSimulatorComponentManager,
         switching_apiu_component_manager: SwitchingApiuComponentManager,
         apiu_component_manager: ApiuComponentManager,
-        component_state_changed_callback,
+        component_state_changed_callback: MockCallableDeque,
         request: SubRequest,
     ) -> Union[
         ApiuSimulator,
@@ -112,13 +111,13 @@ class TestApiuCommon:
         """
         if request.param == "apiu_simulator":
             return apiu_simulator
-        elif request.param == "apiu_simulator_component_manager":
+        if request.param == "apiu_simulator_component_manager":
             apiu_simulator_component_manager.start_communicating()
             return apiu_simulator_component_manager
-        elif request.param == "switching_apiu_component_manager":
+        if request.param == "switching_apiu_component_manager":
             switching_apiu_component_manager.start_communicating()
             return switching_apiu_component_manager
-        elif request.param == "apiu_component_manager":
+        if request.param == "apiu_component_manager":
             apiu_component_manager.start_communicating()
             time.sleep(0.1)
             apiu_component_manager.on()
@@ -316,8 +315,8 @@ class TestApiuComponentManager:
             SwitchingApiuComponentManager, apiu_component_manager
         )._hardware_component_manager._component.simulate_fault(False)
         time.sleep(0.1)
-        expected_arguments = {"fault": False}
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        expected_arguments = [{"fault": False}]
+        component_state_changed_callback.assert_in_deque(expected_arguments[0])
 
     def test_turn_on_off_antenna(
         self: TestApiuComponentManager,
@@ -342,7 +341,7 @@ class TestApiuComponentManager:
         component_state_changed_callback.assert_in_deque(expected_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
-        def mocked_failure():
+        def mocked_failure() -> None:
             raise Exception("mocked exception")
 
         with patch(
@@ -398,7 +397,7 @@ class TestApiuComponentManager:
             test
         """
 
-        def mocked_failure():
+        def mocked_failure() -> None:
             raise Exception("mocked exception")
 
         with patch(
@@ -555,12 +554,12 @@ class TestApiuComponentManager:
         time.sleep(0.1)
         apiu_component_manager.on()
         time.sleep(0.1)
-        expected_arguments = {"power_state": PowerState.ON}
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        expected_power_arguments = {"power_state": PowerState.ON}
+        component_state_changed_callback.assert_in_deque(expected_power_arguments)
         apiu_component_manager.power_state = PowerState.ON
 
         expected_are_antennas_on = [False] * apiu_antenna_count
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_in_deque(expected_arguments)
         # time.sleep(0.1)
@@ -568,7 +567,7 @@ class TestApiuComponentManager:
 
         apiu_component_manager.turn_on_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = True
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_in_deque(expected_arguments)
 
@@ -577,7 +576,7 @@ class TestApiuComponentManager:
 
         apiu_component_manager.turn_off_antenna(antenna_id)
         expected_are_antennas_on[antenna_id - 1] = False
-        expected_arguments = {"are_antennas_on": expected_are_antennas_on}
+        # expected_arguments = {"are_antennas_on": expected_are_antennas_on}
         assert apiu_component_manager.are_antennas_on() == expected_are_antennas_on
         # component_state_changed_callback.assert_next_call(expected_are_antennas_on)
 

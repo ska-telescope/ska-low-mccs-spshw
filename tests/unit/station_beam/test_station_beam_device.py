@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -25,8 +23,8 @@ from ska_low_mccs.station_beam.station_beam_component_manager import (
 from ska_low_mccs.station_beam.station_beam_device import MccsStationBeam
 
 
-@pytest.fixture()
-def patched_station_beam_device_class(
+@pytest.fixture(name="patched_station_beam_device_class")
+def patched_station_beam_device_class_fixture(
     mock_station_beam_component_manager: StationBeamComponentManager,
 ) -> Type[MccsStationBeam]:
     """
@@ -67,7 +65,7 @@ def patched_station_beam_device_class(
         def examine_health_model(
             self: PatchedStationBeamDevice,
             get_station_health: bool,
-        ) -> HealthState:
+        ) -> HealthState | None:
             """
             Return the health state of the station beam or station.
 
@@ -81,8 +79,7 @@ def patched_station_beam_device_class(
             """
             if get_station_health:
                 return self._health_model._station_health
-            else:
-                return self._health_state
+            return self._health_state
 
         @command(dtype_out=bool)
         def get_station_fault(
@@ -118,7 +115,8 @@ def patched_station_beam_device_class(
 
             :return: a mock component manager
             """
-            mock_station_beam_component_manager._communication_state_changed_callback = (  # noqa E501
+            mscbm = mock_station_beam_component_manager
+            mscbm._communication_state_changed_callback = (
                 self._communication_state_changed
             )
             mock_station_beam_component_manager._component_state_changed_callback = (
@@ -130,8 +128,8 @@ def patched_station_beam_device_class(
     return PatchedStationBeamDevice
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_station_beam_device_class: type[MccsStationBeam],
 ) -> DeviceToLoadType:
     """
@@ -151,11 +149,11 @@ def device_to_load(
     }
 
 
-class TestMccsStationBeam(object):
+class TestMccsStationBeam:
     """Test class for MccsStationBeam tests."""
 
-    @pytest.fixture()
-    def device_under_test(
+    @pytest.fixture(name="device_under_test")
+    def device_under_test_fixture(
         self: TestMccsStationBeam, tango_harness: TangoHarness
     ) -> MccsDeviceProxy:
         """
@@ -297,7 +295,7 @@ class TestMccsStationBeam(object):
         :param attribute: name of the attribute under test.
         """
         value = getattr(device_under_test, attribute)
-        assert value is None or list(value) == []
+        assert value is None or not list(value)
 
     def test_desired_pointing(
         self: TestMccsStationBeam,
@@ -314,7 +312,7 @@ class TestMccsStationBeam(object):
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        assert list(device_under_test.desiredPointing) == []
+        assert not list(device_under_test.desiredPointing)
 
         value_to_write = [1585619550.0, 192.85948, 2.0, 27.12825, 1.0]
         device_under_test.desiredPointing = value_to_write

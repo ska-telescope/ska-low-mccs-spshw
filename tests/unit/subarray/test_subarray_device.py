@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -8,6 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module contains the tests for MccsSubarray."""
+# pylint: disable=too-many-lines
 from __future__ import annotations
 
 import json
@@ -36,8 +35,8 @@ from ska_low_mccs import MccsSubarray
 from ska_low_mccs.subarray.subarray_component_manager import SubarrayComponentManager
 
 
-@pytest.fixture()
-def patched_subarray_device_class(
+@pytest.fixture(name="patched_subarray_device_class")
+def patched_subarray_device_class_fixture(
     mock_subarray_component_manager: SubarrayComponentManager,
     station_on_fqdn: str,
     subarray_beam_on_fqdn: str,
@@ -68,6 +67,11 @@ def patched_subarray_device_class(
         def FakeSubservientDevicesObsState(
             self: PatchedSubarrayDevice, obs_state: ObsState
         ) -> None:
+            """
+            Fake ObsState and send changed events.
+
+            :param obs_state: Starting ObsState
+            """
             obs_state = ObsState(obs_state)
             for fqdn in self.component_manager._device_obs_states:
                 self.component_manager._device_obs_state_changed(fqdn, obs_state)
@@ -76,13 +80,14 @@ def patched_subarray_device_class(
         def TurnOnProxies(
             self: PatchedSubarrayDevice,
         ) -> None:
-            for fqdn, proxy in self.component_manager._stations.items():
+            """Turn on the proxies."""
+            for fqdn, station_proxy in self.component_manager._stations.items():
                 if fqdn == station_on_fqdn:
-                    proxy.power_state = PowerState.ON
+                    station_proxy.power_state = PowerState.ON
 
-            for fqdn, proxy in self.component_manager._subarray_beams.items():
+            for fqdn, subbeam_proxy in self.component_manager._subarray_beams.items():
                 if fqdn == subarray_beam_on_fqdn:
-                    proxy.power_state = PowerState.ON
+                    subbeam_proxy.power_state = PowerState.ON
 
         @command(dtype_in=str)
         def set_obs_state(
@@ -102,21 +107,25 @@ def patched_subarray_device_class(
         def examine_health_model(
             self: PatchedSubarrayDevice,
             fqdn: str,
-        ) -> HealthState:
+        ) -> HealthState | None:
             """
             Return the health state of a subservient device.
 
             Returns the health state of the device at the given FQDN.
+
             :param fqdn: The FQDN of a device whose health state we want.
+
             :return: The HealthState of the device at the specified FQDN.
             """
             device_type = fqdn.split("/")[1]
+            health: HealthState | None
             if device_type == "beam":
-                return self._health_model._station_beam_healths[fqdn]
-            elif device_type == "station":
-                return self._health_model._station_healths[fqdn]
-            elif device_type == "subarraybeam":
-                return self._health_model._subarray_beam_healths[fqdn]
+                health = self._health_model._station_beam_healths[fqdn]
+            if device_type == "station":
+                health = self._health_model._station_healths[fqdn]
+            if device_type == "subarraybeam":
+                health = self._health_model._subarray_beam_healths[fqdn]
+            return health
 
         def create_component_manager(
             self: PatchedSubarrayDevice,
@@ -138,8 +147,8 @@ def patched_subarray_device_class(
     return PatchedSubarrayDevice
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_subarray_device_class: type[MccsSubarray],
 ) -> DeviceToLoadType:
     """
@@ -159,8 +168,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def mock_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_factory")
+def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks.
 
@@ -176,11 +185,12 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
+# pylint: disable=too-many-public-methods
 class TestMccsSubarray:
     """Test class for MccsSubarray tests."""
 
-    @pytest.fixture()
-    def device_under_test(
+    @pytest.fixture(name="device_under_test")
+    def device_under_test_fixture(
         self: TestMccsSubarray, tango_harness: TangoHarness
     ) -> MccsDeviceProxy:
         """
@@ -260,7 +270,6 @@ class TestMccsSubarray:
         """
         # To please the linter and to show this test is skipped explicitly
         # in test reports.
-        pass
 
     #     # TODO: Is this test pointless now? GetVersionInfo isn't a LRC anymore
     #     # Subscribe to controller's LRC result attribute
@@ -342,6 +351,7 @@ class TestMccsSubarray:
         """
         assert device_under_test.stationFQDNs is None
 
+    # pylint: disable=too-many-arguments
     @pytest.mark.skip(
         reason="covered by ticket MCCS-1138, skipped to allow other work to progress"
     )
@@ -443,9 +453,6 @@ class TestMccsSubarray:
         )
         assert device_under_test.obsState == ObsState.IDLE
         ([result_code], [unique_id]) = device_under_test.ReleaseAllResources()
-        import pdb
-
-        pdb.set_trace()
         assert result_code == ResultCode.QUEUED
         assert "ReleaseAllResources" in unique_id
         time.sleep(0.5)
@@ -467,6 +474,7 @@ class TestMccsSubarray:
         )
         assert device_under_test.obsState == ObsState.EMPTY
 
+    # pylint: disable=too-many-arguments
     def test_configure(
         self: TestMccsSubarray,
         device_under_test: MccsDeviceProxy,
@@ -617,7 +625,7 @@ class TestMccsSubarray:
     @pytest.mark.parametrize("target_health_state", list(HealthState))
     def test_component_state_changed_callback_health_state(
         self: TestMccsSubarray,
-        device_under_test: MccsDeviceProxy,  # pylint: disable=unused-argument
+        device_under_test: MccsDeviceProxy,
         mock_subarray_component_manager: SubarrayComponentManager,
         target_health_state: HealthState,
         device_health_state_changed_callback: MockChangeEventCallback,
@@ -1019,7 +1027,7 @@ class TestMccsSubarray:
     )
     def test_component_state_changed_callback_subservient_device_health_state(
         self: TestMccsSubarray,
-        device_under_test: MccsDeviceProxy,  # pylint: disable=unused-argument
+        device_under_test: MccsDeviceProxy,
         mock_subarray_component_manager: SubarrayComponentManager,
         target_health_state: HealthState,
         fqdn: str,

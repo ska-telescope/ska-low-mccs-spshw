@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -23,8 +21,8 @@ from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHar
 from ska_low_mccs import MccsTransientBuffer
 
 
-@pytest.fixture()
-def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -156,6 +154,7 @@ class TestMccsTransientBuffer:
             ("stationIds", "station_ids", ("example_string",)),
         ],
     )
+    # pylint: disable=too-many-arguments
     def test_attributes(
         self: TestMccsTransientBuffer,
         mocker: pytest_mock.MockerFixture,

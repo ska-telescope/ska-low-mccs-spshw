@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -18,8 +16,8 @@ from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType
 
 
-@pytest.fixture(scope="module")
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(scope="module", name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
@@ -68,8 +66,11 @@ def controller_bdd(controller: MccsDeviceProxy) -> MccsDeviceProxy:
     return controller
 
 
+# pylint: disable=redefined-outer-name
 @given(parsers.cfparse("MccsController is in 'disable' state"))
-def put_controller_in_disable_state(controller_bdd, change_event_callbacks):
+def put_controller_in_disable_state(
+    controller_bdd: MccsDeviceProxy, change_event_callbacks: dict
+) -> None:
     """
     Make an assertion that MccsController is in the desired state.
 
@@ -101,7 +102,9 @@ def put_controller_in_disable_state(controller_bdd, change_event_callbacks):
 @then(
     parsers.cfparse("MccsController state becomes '{state:w}'", extra_types=EXTRA_TYPES)
 )
-def controller_state_becomes(change_event_callbacks, state):
+def controller_state_becomes(
+    change_event_callbacks: dict, state: tango.DevState
+) -> None:
     """
     Make an assertion that MccsController eventually transitions to the desired state.
 
@@ -112,10 +115,9 @@ def controller_state_becomes(change_event_callbacks, state):
     :param state: The state that MccsController should be in.
     """
     state_map = {"on": tango.DevState.ON, "disable": tango.DevState.DISABLE}
-    if state not in state_map.keys():
+    if state not in state_map:
         raise KeyError(
-            f"State = {state} | Controller state must be one of "
-            f"{list[state_map.keys()]}!"
+            f"State = {state} | Controller state must be one of " f"{state_map.keys()}!"
         )
 
     change_event_callbacks["controller_state"].assert_change_event(
@@ -123,8 +125,11 @@ def controller_state_becomes(change_event_callbacks, state):
     )
 
 
+# pylint: disable=redefined-outer-name
 @when(parsers.cfparse("MccsController AdminMode is set to '{admin_mode_value}'"))
-def controller_ready_for_commands(controller_bdd, admin_mode_value):
+def controller_ready_for_commands(
+    controller_bdd: MccsDeviceProxy, admin_mode_value: AdminMode
+) -> None:
     """
     Set the adminMode of MccsController to the desired value.
 
@@ -135,12 +140,15 @@ def controller_ready_for_commands(controller_bdd, admin_mode_value):
     controller_bdd.adminMode = admin_mode_value
 
 
+# pylint: disable=redefined-outer-name
 @given(
     parsers.cfparse(
         "MccsController is in '{health:w}' healthState", extra_types=EXTRA_TYPES
     )
 )
-def controller_has_health(controller_bdd, change_event_callbacks, health):
+def controller_has_health(
+    controller_bdd: MccsDeviceProxy, change_event_callbacks: dict, health: str
+) -> None:
     """
     Make an assertion that MccsController is in the proper HealthState.
 
@@ -157,10 +165,10 @@ def controller_has_health(controller_bdd, change_event_callbacks, health):
         "failed": HealthState.FAILED,
         "degraded": HealthState.DEGRADED,
     }
-    if health not in health_map.keys():
+    if health not in health_map:
         raise KeyError(
             f"Health = {health} | Controller health must be one of "
-            f"{list[health_map.keys()]}!"
+            f"{health_map.keys()}!"
         )
 
     controller_bdd.subscribe_event(
@@ -176,7 +184,7 @@ def controller_has_health(controller_bdd, change_event_callbacks, health):
         "MccsController healthState becomes '{health:w}'", extra_types=EXTRA_TYPES
     )
 )
-def controller_health_becomes(change_event_callbacks, health):
+def controller_health_becomes(change_event_callbacks: dict, health: str) -> None:
     """
     Make an assertion that MccsController transitions to the proper HealthState.
 
@@ -192,10 +200,10 @@ def controller_health_becomes(change_event_callbacks, health):
         "failed": HealthState.FAILED,
         "degraded": HealthState.DEGRADED,
     }
-    if health not in health_map.keys():
+    if health not in health_map:
         raise KeyError(
             f"Health = {health} | Controller health must be one of "
-            f"{list[health_map.keys()]}!"
+            f"{health_map.keys()}!"
         )
 
     assert change_event_callbacks["controller_health"].assert_change_event(

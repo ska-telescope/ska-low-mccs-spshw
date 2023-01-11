@@ -36,7 +36,6 @@ __all__ = ["ApiuSimulatorComponentManager", "ApiuComponentManager"]
 class ApiuSimulatorComponentManager(ObjectComponentManager):
     """A component manager for an APIU simulator."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: ApiuSimulatorComponentManager,
         antenna_count: int,

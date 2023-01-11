@@ -19,7 +19,6 @@ __all__ = ["ControllerHealthModel"]
 class ControllerHealthModel(HealthModel):
     """A health model for a controller."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: ControllerHealthModel,
         station_fqdns: Sequence[str],

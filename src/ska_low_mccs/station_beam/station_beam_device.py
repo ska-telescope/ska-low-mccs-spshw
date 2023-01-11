@@ -121,6 +121,7 @@ class MccsStationBeam(SKAObsDevice):
         called upon :py:class:`~.MccsStationBeam`'s initialisation.
         """
 
+        # pylint: disable-next=arguments-differ
         def do(  # type: ignore[override]
             self: MccsStationBeam.InitCommand,
         ) -> tuple[ResultCode, str]:

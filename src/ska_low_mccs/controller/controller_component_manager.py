@@ -13,7 +13,7 @@ import functools
 import json
 import logging
 import threading
-from typing import Any, Callable, Hashable, Iterable, Optional
+from typing import Callable, Iterable, Optional
 
 from ska_control_model import (
     CommunicationStatus,
@@ -48,7 +48,7 @@ class _StationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -311,7 +311,7 @@ class ControllerComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -383,7 +383,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subrack_fqdns
         }
-        self._stations: dict[Hashable, _StationProxy] = {
+        self._stations: dict[str, _StationProxy] = {
             fqdn: _StationProxy(
                 fqdn,
                 subarray_fqdns,
@@ -394,7 +394,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in station_fqdns
         }
-        self._subarray_beams: dict[Hashable, _SubarrayBeamProxy] = {
+        self._subarray_beams: dict[str, _SubarrayBeamProxy] = {
             fqdn: _SubarrayBeamProxy(
                 fqdn,
                 logger,
@@ -404,7 +404,7 @@ class ControllerComponentManager(MccsComponentManager):
             )
             for fqdn in subarray_beam_fqdns
         }
-        self._station_beams: dict[Hashable, _StationBeamProxy] = {
+        self._station_beams: dict[str, _StationBeamProxy] = {
             fqdn: _StationBeamProxy(
                 fqdn,
                 logger,

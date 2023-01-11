@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -23,6 +21,7 @@ outputfile = "tests/results/pointingtest.txt"
 stat_lat, stat_lon, stat_height = (-26.82472208, 116.7644482, 346.59)
 
 
+# pylint: disable=too-few-public-methods
 class TestPointStation:
     """Tests of point_station.py."""
 

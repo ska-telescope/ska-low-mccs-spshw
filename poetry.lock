@@ -1,16 +1,4 @@
 [[package]]
-name = "aavs-system"
-version = "1.1"
-description = "AAVS Software"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.source]
-type = "file"
-url = "aavs_system-1.1-py3-none-any.whl"
-
-[[package]]
 name = "appdirs"
 version = "1.4.4"
 description = "A small Python module for determining appropriate platform-specific dirs, e.g. a \"user data dir\"."
@@ -671,21 +659,6 @@ docs = ["sphinx-astropy (>=1.3)"]
 test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
-name = "pyfabil"
-version = "1.1"
-description = "A general Python package for interfacing with FPGA boards"
-category = "main"
-optional = false
-python-versions = "*"
-
-[package.dependencies]
-enum34 = "*"
-
-[package.source]
-type = "file"
-url = "pyfabil-1.1-py3-none-any.whl"
-
-[[package]]
 name = "pyflakes"
 version = "2.5.0"
 description = "passive checker of Python programs"
@@ -1286,12 +1259,9 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "d4cc81541ca3b04804f5543b2a8b3db989f85887b54268221faf05c0a78fe3f6"
+content-hash = "a153777a67213b1d94b11685fdfe18be0dc3e837c7ec118214eeb47836ee0204"
 
 [metadata.files]
-aavs-system = [
-    {file = "aavs_system-1.1-py3-none-any.whl", hash = "sha256:19170bcfb88fb0bac09b7e5e23c4d0633875a4a9fdc376f146d2ba49e7032123"},
-]
 appdirs = [
     {file = "appdirs-1.4.4-py2.py3-none-any.whl", hash = "sha256:a841dacd6b99318a741b166adb07e19ee71a274450e68237b4650ca1055ab128"},
     {file = "appdirs-1.4.4.tar.gz", hash = "sha256:7d5d0167b2b1ba821647616af46a749d1c653740dd0d2415100fe26e27afdf41"},
@@ -1765,9 +1735,6 @@ pyerfa = [
     {file = "pyerfa-2.0.0.1-cp39-cp39-win32.whl", hash = "sha256:7895b7e6f3bc36442d1969bf3bda5a4c3b661be7a5a468798369cbd5d81023d8"},
     {file = "pyerfa-2.0.0.1-cp39-cp39-win_amd64.whl", hash = "sha256:63a83c35cea8c5d50d53c18089f1e625c0ffc59a7a5b8d44e0f1b3ec5288f183"},
     {file = "pyerfa-2.0.0.1.tar.gz", hash = "sha256:2fd4637ffe2c1e6ede7482c13f583ba7c73119d78bef90175448ce506a0ede30"},
-]
-pyfabil = [
-    {file = "pyfabil-1.1-py3-none-any.whl", hash = "sha256:2c6f34ad972a98a5a1a4bc2adbd1590bc23e15571c689ceb872786f56181d541"},
 ]
 pyflakes = [
     {file = "pyflakes-2.5.0-py2.py3-none-any.whl", hash = "sha256:4579f67d887f804e67edb544428f264b7b24f435b263c4614f384135cea553d2"},

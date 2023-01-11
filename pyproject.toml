@@ -6,14 +6,12 @@ license = "BSD-3-Clause"
 authors = ["MCCS team"]
 readme = "README.md"
 documentation = "https://developer.skatelescope.org/projects/ska-low-mccs"
-include = ["./pyfabil-1.1-py3-none-any.whl","./aavs_system-1.1-py3-none-any.whl"]
 
 [[tool.poetry.source]]
 name = 'ska-nexus'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
 [tool.poetry.dependencies]
-aavs_system = {path = "./aavs_system-1.1-py3-none-any.whl"}
 python = "~3.10"
 astropy = "^5.1.1"
 backoff = "^2.2.1"
@@ -23,7 +21,6 @@ enum34 = "^1.1.10"
 jsonschema = "^4.16.0"
 numpy = "^1.23.0"
 pytango = "9.3.3"
-pyfabil = {path = "./pyfabil-1.1-py3-none-any.whl"}
 PyYAML = "^6.0"
 requests = "^2.28.1"
 scipy = "^1.9.3"
@@ -71,13 +68,10 @@ MccsAPIU = "ska_low_mccs.apiu.apiu_device:main"
 MccsController = "ska_low_mccs.controller.controller_device:main"
 MccsSubarray = "ska_low_mccs.subarray.subarray_device:main"
 MccsSubarrayBeam = "ska_low_mccs.subarray_beam.subarray_beam_device:main"
-MccsSubrack = "ska_low_mccs.subrack.subrack_device:main"
 MccsStation = "ska_low_mccs.station.station_device:main"
 MccsStationBeam = "ska_low_mccs.station_beam.station_beam_device:main"
-MccsTile = "ska_low_mccs.tile.tile_device:main"
 MccsTelState = "ska_low_mccs.tel_state.tel_state_device:main"
 mccs-controller = "ska_low_mccs.controller.controller_cli:main"
-mccs-tile = "ska_low_mccs.tile.tile_cli:main"
 
 [tool.pytest.ini_options]
 testpaths = "tests/"

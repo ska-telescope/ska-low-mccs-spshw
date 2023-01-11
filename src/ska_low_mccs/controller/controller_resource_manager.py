@@ -21,7 +21,6 @@ __all__ = ["ControllerResourceManager"]
 class ControllerResourceManager:
     """A resource manager for the controller component manager."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: ControllerResourceManager,
         subarrays: Iterable[str],

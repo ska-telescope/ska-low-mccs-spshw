@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -33,8 +31,8 @@ from ska_low_mccs.controller.controller_component_manager import (
 )
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_controller_device_class: type[MccsController],
 ) -> DeviceToLoadType:
     """
@@ -54,8 +52,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -108,7 +106,8 @@ class TestMccsController:
 
         time.sleep(0.2)
 
-        mock_component_manager.start_communicating.assert_called_once_with()
+        mcm = mock_component_manager
+        mcm.start_communicating.assert_called_once_with()  # type: ignore[attr-defined]
 
         assert device_under_test.adminMode == AdminMode.ONLINE
         assert device_under_test.state() == tango.DevState.OFF
@@ -199,6 +198,7 @@ class TestMccsController:
         """
         assert device_under_test.versionId == release.version
 
+    # pylint: disable=too-many-arguments
     def test_healthState(
         self: TestMccsController,
         device_under_test: MccsDeviceProxy,

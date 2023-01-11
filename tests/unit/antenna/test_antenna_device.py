@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -31,8 +29,8 @@ from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHar
 from ska_low_mccs import MccsAntenna
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_antenna_device_class: MccsAntenna,
 ) -> DeviceToLoadType:
     """
@@ -52,8 +50,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the device under test.
 
@@ -64,6 +62,7 @@ def device_under_test(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/antenna/000001")
 
 
+# pylint: disable=too-many-public-methods
 class TestMccsAntenna:
     """Test class for MccsAntenna tests."""
 
@@ -678,8 +677,8 @@ class TestPatchedAntenna:
     device are passed through to the component manager
     """
 
-    @pytest.fixture()
-    def device_to_load(
+    @pytest.fixture(name="device_to_load")
+    def device_to_load_fixture(
         self: TestPatchedAntenna, patched_antenna_class: type[MccsAntenna]
     ) -> DeviceToLoadType:
         """

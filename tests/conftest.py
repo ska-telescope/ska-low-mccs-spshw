@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -46,7 +44,7 @@ def pytest_sessionstart(session: pytest.Session) -> None:
     print(tango.utils.info())
 
 
-with open("tests/testbeds.yaml", "r") as stream:
+with open("tests/testbeds.yaml", "r", encoding="utf-8") as stream:
     _testbeds: dict[str, set[str]] = yaml.safe_load(stream)
 
 
@@ -64,9 +62,8 @@ def pytest_configure(
         config.addinivalue_line("markers", f"needs_{tag}")
 
 
-# TODO: pytest is partially typehinted but does not yet export Parser
 def pytest_addoption(
-    parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
+    parser: _pytest.config.argparsing.Parser,
 ) -> None:
     """
     Implement the add the `--testbed` option.
@@ -85,9 +82,8 @@ def pytest_addoption(
     )
 
 
-# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_collection_modifyitems(
-    config: _pytest.config.Config,  # type: ignore[name-defined]
+    config: _pytest.config.Config,
     items: list[pytest.Item],
 ) -> None:
     """
@@ -127,8 +123,8 @@ def pytest_collection_modifyitems(
             )
 
 
-@pytest.fixture()
-def initial_mocks() -> dict[str, unittest.mock.Mock]:
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture() -> dict[str, unittest.mock.Mock]:
     """
     Fixture that registers device proxy mocks prior to patching.
 
@@ -141,8 +137,8 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
     return {}
 
 
-@pytest.fixture()
-def mock_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_factory")
+def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks.
 
@@ -155,8 +151,8 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
     return MockDeviceBuilder()
 
 
-@pytest.fixture(scope="session")
-def tango_harness_factory(
+@pytest.fixture(scope="session", name="tango_harness_factory")
+def tango_harness_factory_fixture(
     request: pytest.FixtureRequest, logger: logging.Logger
 ) -> Callable[
     [
@@ -204,8 +200,6 @@ def tango_harness_factory(
         :py:class:`~ska_low_mccs_common.testing.tango_harness.TestContextTangoHarness`.
         """
 
-        pass
-
     testbed = request.config.getoption("--testbed")
 
     def build_harness(
@@ -229,7 +223,7 @@ def tango_harness_factory(
         """
         tango_harness: TangoHarness  # type hint only
         if testbed == "local":
-            return TrueTangoContextManager()
+            return TrueTangoContextManager()  # type: ignore[return-value]
 
         # TODO: [MCCS-1299] Update remaining testbeds to use ska_tango-testing.context
         # instead of the obsolete ska_low_mccs_common.testing.tango_harness
@@ -254,8 +248,8 @@ def tango_harness_factory(
     return build_harness
 
 
-@pytest.fixture()
-def tango_config() -> dict[str, Any]:
+@pytest.fixture(name="tango_config")
+def tango_config_fixture() -> dict[str, Any]:
     """
     Fixture that returns basic configuration information for a Tango test harness.
 
@@ -266,8 +260,8 @@ def tango_config() -> dict[str, Any]:
     return {"process": False}
 
 
-@pytest.fixture()
-def tango_harness(
+@pytest.fixture(name="tango_harness")
+def tango_harness_fixture(
     tango_harness_factory: Callable[
         [
             dict[str, Any],
@@ -303,8 +297,8 @@ def tango_harness(
         yield harness
 
 
-@pytest.fixture(scope="session")
-def logger() -> logging.Logger:
+@pytest.fixture(scope="session", name="logger")
+def logger_fixture() -> logging.Logger:
     """
     Fixture that returns a default logger.
 
@@ -315,8 +309,8 @@ def logger() -> logging.Logger:
     return debug_logger
 
 
-@pytest.fixture()
-def mock_callback_called_timeout() -> float:
+@pytest.fixture(name="mock_callback_called_timeout")
+def mock_callback_called_timeout_fixture() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.
 
@@ -330,8 +324,8 @@ def mock_callback_called_timeout() -> float:
     return 7.5
 
 
-@pytest.fixture()
-def mock_callback_not_called_timeout() -> float:
+@pytest.fixture(name="mock_callback_not_called_timeout")
+def mock_callback_not_called_timeout_fixture() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is unexpected.
 
@@ -347,8 +341,8 @@ def mock_callback_not_called_timeout() -> float:
     return 0.5
 
 
-@pytest.fixture()
-def mock_change_event_callback_factory(
+@pytest.fixture(name="mock_change_event_callback_factory")
+def mock_change_event_callback_factory_fixture(
     mock_callback_called_timeout: float,
     mock_callback_not_called_timeout: float,
 ) -> Callable[[str], MockChangeEventCallback]:
@@ -370,8 +364,8 @@ def mock_change_event_callback_factory(
     )
 
 
-@pytest.fixture()
-def lrc_result_changed_callback_factory(
+@pytest.fixture(name="lrc_result_changed_callback_factory")
+def lrc_result_changed_callback_factory_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> Callable[[], MockChangeEventCallback]:
     """
@@ -392,8 +386,8 @@ def lrc_result_changed_callback_factory(
     return _factory
 
 
-@pytest.fixture()
-def lrc_result_changed_callback(
+@pytest.fixture(name="lrc_result_changed_callback")
+def lrc_result_changed_callback_fixture(
     lrc_result_changed_callback_factory: Callable[[], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """
@@ -409,8 +403,8 @@ def lrc_result_changed_callback(
     return lrc_result_changed_callback_factory()
 
 
-@pytest.fixture()
-def lrc_status_changed_callback_factory(
+@pytest.fixture(name="lrc_status_changed_callback_factory")
+def lrc_status_changed_callback_factory_fixture(
     mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
 ) -> Callable[[], MockChangeEventCallback]:
     """
@@ -431,8 +425,8 @@ def lrc_status_changed_callback_factory(
     return _factory
 
 
-@pytest.fixture()
-def lrc_status_changed_callback(
+@pytest.fixture(name="lrc_status_changed_callback")
+def lrc_status_changed_callback_fixture(
     lrc_status_changed_callback_factory: Callable[[], MockChangeEventCallback],
 ) -> MockChangeEventCallback:
     """

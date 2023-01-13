@@ -14,9 +14,8 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
-from ska_control_model.power_state import PowerState
-from ska_control_model.task_status import TaskStatus
-from ska_low_mccs_common.component import WebHardwareClient
+from ska_control_model import CommunicationStatus, PowerState, TaskStatus
+from ska_low_mccs_common.component import MccsBaseComponentManager, WebHardwareClient
 from ska_tango_base.poller import PollingComponentManager
 
 from .http_stack import HttpPollRequest, HttpPollResponse
@@ -24,7 +23,9 @@ from .subrack_data import FanMode, SubrackData
 
 
 # pylint: disable-next=too-many-instance-attributes
-class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse]):
+class NewSubrackDriver(
+    MccsBaseComponentManager, PollingComponentManager[HttpPollRequest, HttpPollResponse]
+):
     """A component manager for the PSI-Low subrack."""
 
     # pylint: disable-next=too-many-arguments
@@ -88,7 +89,6 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
             component_state_callback,
             self._poll_rate,
             tpm_present=None,
-            tpm_count=None,
             tpm_on_off=None,
             backplane_temperatures=None,
             board_temperatures=None,
@@ -465,7 +465,6 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
             self.logger.debug("Adding queries.")
             poll_request.add_getattributes(
                 "tpm_present",
-                "tpm_count",
                 "tpm_on_off",
                 "backplane_temperatures",
                 "board_temperatures",
@@ -567,6 +566,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         self.logger.debug("Pushing updates.")
 
         # TODO: Always-on device for now.
+        print(f"Poller: values are {values}")
         self._update_component_state(power=PowerState.ON, fault=fault, **values)
 
     def polling_stopped(self: NewSubrackDriver) -> None:
@@ -580,4 +580,8 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
         # Set to max here so that if/when polling restarts, an update is
         # requested as soon as possible.
         self._tick = self._max_tick
-        super().polling_stopped()
+
+        # Not calling super().polling_stopped() here,
+        # because ska-tango-base inappropriately pushes power=UNKNOWN,
+        # but polling may have stopped because we learned that power is OFF.
+        self._update_communication_state(CommunicationStatus.DISABLED)

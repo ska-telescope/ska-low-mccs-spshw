@@ -17,9 +17,15 @@ from typing import Any, TypedDict
 
 import pytest
 import uvicorn
+from ska_control_model import PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
-from ska_low_mccs_spshw.subrack import FanMode, NewSubrackDriver, SubrackData
+from ska_low_mccs_spshw.subrack import (
+    FanMode,
+    NewSubrackComponentManager,
+    NewSubrackDriver,
+    SubrackData,
+)
 from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import configure_server
 
@@ -38,6 +44,7 @@ def callbacks() -> dict[str, MockCallable]:
     return {
         "communication_status": MockCallable(),
         "component_state": MockCallable(),
+        "task": MockCallable(),
     }
 
 
@@ -85,7 +92,6 @@ def subrack_simulator_attribute_values_fixture(
 
     return {
         "tpm_present": subrack_simulator_config["tpm_present"],
-        "tpm_count": subrack_simulator_config["tpm_present"].count(True),
         "tpm_on_off": subrack_simulator_config["tpm_on_off"],
         "backplane_temperatures": _approxify(
             subrack_simulator_config["backplane_temperatures"]
@@ -228,4 +234,41 @@ def subrack_driver(
         callbacks["communication_status"],
         callbacks["component_state"],
         update_rate=1.0,
+    )
+
+
+@pytest.fixture()
+def subrack_component_manager(
+    logger: logging.Logger,
+    subrack_ip: str,
+    subrack_port: int,
+    subrack_driver: NewSubrackDriver,
+    initial_power_state: PowerState,
+    callbacks: dict[str, MockCallable],
+) -> NewSubrackComponentManager:
+    """
+    Return an subrack component manager (in simulation mode as specified).
+
+    (This is a pytest fixture.)
+
+    :param logger: the logger to be used by this object.
+    :param subrack_ip: the IP address of the subrack
+    :param subrack_port: the subrack port
+    :param subrack_driver: the subrack driver to use. Normally the
+        subrack component manager creates its own driver; here we inject
+        this driver instead.
+    :param initial_power_state: the initial power state of the upstream
+        power supply
+    :param callbacks: dictionary of driver callbacks
+
+    :return: an subrack component manager in the specified simulation mode.
+    """
+    return NewSubrackComponentManager(
+        subrack_ip,
+        subrack_port,
+        logger,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        _driver=subrack_driver,
+        _initial_power_state=initial_power_state,
     )

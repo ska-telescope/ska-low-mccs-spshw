@@ -328,15 +328,6 @@ class InternalSubrackSimulator(ObjectComponent):
         """
         return self._bay_count
 
-    @property
-    def tpm_count(self: InternalSubrackSimulator) -> int:
-        """
-        Return the number of TPMs housed in this subrack.
-
-        :return: the number of TPMs housed in this subrack
-        """
-        return self._tpm_present.count(True)
-
     def _check_tpm_id(self: InternalSubrackSimulator, logical_tpm_id: int) -> None:
         """
         Check that a TPM id passed as an argument is within range.

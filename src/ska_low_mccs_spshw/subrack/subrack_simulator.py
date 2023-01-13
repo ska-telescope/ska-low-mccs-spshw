@@ -158,6 +158,7 @@ class SubrackSimulator(SubrackProtocol):
             raise TypeError(f"Attempt to write read-only attribute {name}")
         if metadata["length"] is not None and len(values) != metadata["length"]:
             raise ValueError(f"Wrong number of values for attribute {name}")
+        print(f"Simulator: Setting {name} to {values}")
         self._attribute_values[name] = values
         return values
 
@@ -230,9 +231,6 @@ class SubrackSimulator(SubrackProtocol):
             return "STARTED"
 
         raise AttributeError(f"Unknown command {name}.")
-
-    def _get_attribute_tpm_count(self: SubrackSimulator) -> int:
-        return self._attribute_values["tpm_present"].count(True)
 
     def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
         return [

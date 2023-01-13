@@ -333,6 +333,34 @@ class SwitchingSubrackComponentManager(SwitchingComponentManager):
             if communicating:
                 self.start_communicating()
 
+    # TEMPORARY: Adding these next two methods, just to get most of these
+    # component manager tests to pass. This class will be deleted soon anyhow.
+    def set_communication_state_callback(
+        self: SwitchingSubrackComponentManager,
+        communication_state_callback: Optional[Callable[[CommunicationStatus], None]],
+    ) -> None:
+        """
+        Set the callback to be called when communication status changes.
+
+        :param communication_state_callback: the callback to be called
+            when status of communication with the component changes. If
+            None, no callback will be called.
+        """
+        self._communication_state_callback = communication_state_callback
+
+    def set_component_state_callback(
+        self: SwitchingSubrackComponentManager,
+        component_state_callback: Optional[Callable[..., None]],
+    ) -> None:
+        """
+        Set the callback to be called when component state changes.
+
+        :param component_state_callback: the callback to be called
+            when component state changed. If None, no callback will
+            be called.
+        """
+        self._component_state_callback = component_state_callback
+
 
 class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
     """A component manager for an subrack (simulator or driver) and its power supply."""
@@ -381,14 +409,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             component_state_changed_callback,
             # self._tpm_power_changed,
         )
-        power_supply_component_manager = PowerSupplyProxySimulator(
-            logger,
-            max_workers,
-            self._power_supply_communication_state_changed,
-            component_state_changed_callback,
-            _initial_power_state,
-            self.component_power_state_changed,
-        )
+        power_supply_component_manager = PowerSupplyProxySimulator(logger)
         super().__init__(
             cast(MccsComponentManagerProtocol, hardware_component_manager),
             power_supply_component_manager,

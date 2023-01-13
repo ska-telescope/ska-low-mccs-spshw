@@ -518,7 +518,7 @@ class TileComponentManager(MccsComponentManager):
         unconnected = self._subrack_proxy is None
         if unconnected:
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self._logger, connect=False
+                self._subrack_fqdn, self.logger, connect=False
             )
             try:
                 self._subrack_proxy.connect()

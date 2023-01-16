@@ -19,7 +19,7 @@ from typing import Any, Callable, Optional, Type
 import tango
 from fire import Fire
 from fire.core import FireError
-from ska_tango_base.commands import ResultCode
+from ska_control_model import ResultCode
 
 
 class CliMeta(type):

@@ -18,7 +18,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Optional
 
-from ska_tango_base.commands import ResultCode
+from ska_control_model import ResultCode
 from tango.server import command
 
 from ska_low_mccs_spshw.subrack.subrack_device import MccsSubrack

@@ -19,14 +19,14 @@ server:
       classes:
       - name: "MccsTile"
         devices:
-        - name: {{printf "low-mccs-spshw/tile/%s" $key}}
+        - name: {{printf "low-mccs-spshw/tile/%04d" (int $key)}}
           properties:
           - name: "TileId"
             values:
             - "1"
           - name: "SubrackFQDN"
             values:
-            - {{printf "low-mccs-spshw/subrack/%s" $this_tile.subrack}}
+            - {{printf "low-mccs-spshw/subrack/%02d" (int $this_tile.subrack)}}
           - name: "SubrackBay"
             values:
             - {{$this_tile.subrack_bay | toString | quote}}

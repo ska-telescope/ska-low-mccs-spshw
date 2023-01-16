@@ -19,7 +19,7 @@ server:
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs-spshw/subrack/%s" $key}}
+        - name: {{printf "low-mccs-spshw/subrack/%02d" (int $key)}}
           properties:
           - name: "SubrackIp"
             values: 

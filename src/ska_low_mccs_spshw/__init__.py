@@ -15,6 +15,7 @@ for, amongst other things, monitoring and control of LFAA.
 
 __all__ = [
     # devices
+    "NewSubrackDevice",
     "MccsSubrack",
     "MccsTile",
     # device subpackages
@@ -22,5 +23,5 @@ __all__ = [
     "tile",
 ]
 
-from .subrack import MccsSubrack
+from .subrack import MccsSubrack, NewSubrackDevice
 from .tile import MccsTile

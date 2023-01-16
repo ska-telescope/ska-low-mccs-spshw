@@ -9,6 +9,7 @@
 
 __all__ = [
     "MccsSubrack",
+    "NewSubrackDevice",
     "SubrackData",
     "SubrackSimulator",
     "BaseSubrackSimulatorComponentManager",
@@ -36,3 +37,4 @@ from .subrack_component_manager import (  # type: ignore[attr-defined]
 from .new_subrack_component_manager import NewSubrackComponentManager
 from .subrack_health_model import SubrackHealthModel  # type: ignore[attr-defined]
 from .subrack_device import MccsSubrack  # type: ignore[attr-defined]
+from .new_subrack_device import NewSubrackDevice

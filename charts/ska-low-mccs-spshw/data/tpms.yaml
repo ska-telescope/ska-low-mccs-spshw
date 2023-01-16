@@ -5,7 +5,7 @@ domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_tile := $tiles.instances}}
 {{- if or $this_tile.enabled (not (hasKey $this_tile "enabled"))}}
-  - {{printf "tile-%s" $key}}
+  - {{printf "tile-%04d" (int $key)}}
 {{- end}}
 {{- end}}
 entrypoints:
@@ -15,7 +15,7 @@ server:
   name: "MccsTile"
   instances:
 {{- range $key, $this_tile := $tiles.instances}}
-    - name: {{printf "tile-%s" $key}}
+    - name: {{printf "tile-%04d" (int $key)}}
       classes:
       - name: "MccsTile"
         devices:

@@ -30,7 +30,7 @@ def device_to_load() -> DeviceToLoadType:
     return {
         "path": "tests/data/configuration.json",
         "package": "ska_low_mccs_spshw",
-        "device": "subrack_01",
+        "device": "subrack_0001",
         "patch": DemoSubrack,
         "proxy": MccsDeviceProxy,
     }
@@ -50,7 +50,7 @@ class TestDemoSubrack:
 
         :return: the device under test
         """
-        return tango_harness.get_device("low-mccs/subrack/01")
+        return tango_harness.get_device("low-mccs/subrack/0001")
 
     def test_demo_subrack(
         self: TestDemoSubrack, device_under_test: MccsDeviceProxy

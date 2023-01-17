@@ -24,7 +24,7 @@ server:
                 - name: "SubrackFQDNs"
                   values:
 {{- range $subrack := $this_station.subracks}}
-                    - {{printf "low-mccs-spshw/subrack/%02d" (int $subrack)}}
+                    - {{printf "low-mccs-spshw/subrack/%04d" (int $subrack)}}
 {{- end}}
                 - name: "TileFQDNs"
                   values:

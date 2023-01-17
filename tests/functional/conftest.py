@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,14 +14,14 @@ from typing import Any, Callable, Generator
 import _pytest
 import pytest
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
+from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
+from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 
-# TODO: pytest is partially typehinted but does not yet export Config
 def pytest_configure(
     config: _pytest.config.Config,
-) -> None:  # type: ignore[name-defined]
+) -> None:
     """
     Register custom markers to avoid pytest warnings.
 
@@ -36,8 +36,8 @@ def pytest_configure(
     config.addinivalue_line("markers", "XTP-1763: XRay BDD test marker")
 
 
-@pytest.fixture(scope="module")
-def initial_mocks() -> dict[str, unittest.mock.Mock]:
+@pytest.fixture(scope="module", name="initial_mocks")
+def initial_mocks_fixture() -> dict[str, unittest.mock.Mock]:
     """
     Fixture that registers device proxy mocks prior to patching.
 
@@ -53,8 +53,8 @@ def initial_mocks() -> dict[str, unittest.mock.Mock]:
     return {}
 
 
-@pytest.fixture(scope="module")
-def mock_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(scope="module", name="mock_factory")
+def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks.
 
@@ -70,8 +70,8 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
     return MockDeviceBuilder()
 
 
-@pytest.fixture(scope="module")
-def tango_config() -> dict[str, Any]:
+@pytest.fixture(scope="module", name="tango_config")
+def tango_config_fixture() -> dict[str, Any]:
     """
     Fixture that returns basic configuration information for a Tango test harness.
 
@@ -79,11 +79,11 @@ def tango_config() -> dict[str, Any]:
 
     :return: a dictionary of configuration key-value pairs
     """
-    return {"process": True}
+    return {"process": False}
 
 
-@pytest.fixture(scope="module")
-def tango_harness(
+@pytest.fixture(scope="module", name="tango_harness")
+def tango_harness_fixture(
     tango_harness_factory: Callable[
         [
             dict[str, Any],
@@ -123,65 +123,28 @@ def tango_harness(
 
 
 @pytest.fixture()
-def controller_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+def change_event_callbacks() -> MockTangoEventCallbackGroup:
     """
-    Return a mock change event callback for controller device state change.
+    Return a dictionary of change event callbacks with asynchrony support.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
+    :returns: a callback group.
     """
-    return mock_change_event_callback_factory("state")
+    return MockTangoEventCallbackGroup(
+        "controller_health",
+        "controller_state",
+        timeout=30.0,
+    )
 
 
-@pytest.fixture()
-def controller_device_lrc_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
-    """
-    return mock_change_event_callback_factory("longRunningCommandResult")
-
-
-@pytest.fixture()
-def mock_callback_called_timeout() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is expected.
-
-    This is a high value because calls will usually arrive much much
-    sooner, but we should be prepared to wait plenty of time before
-    giving up and failing a test.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is asserted.
-    """
-    return 30.0
-
-
-@pytest.fixture(scope="module")
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(scope="module", name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/deployment_configuration.json",
+        "path": "tests/data/deployment_configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -217,8 +180,8 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
-@pytest.fixture()
-def controller(
+@pytest.fixture(name="controller")
+def controller_fixture(
     tango_harness: TangoHarness,
 ) -> MccsDeviceProxy:
     """
@@ -231,8 +194,8 @@ def controller(
     return tango_harness.get_device("low-mccs/control/control")
 
 
-@pytest.fixture()
-def subrack(
+@pytest.fixture(name="subrack")
+def subrack_fixture(
     tango_harness: TangoHarness,
 ) -> MccsDeviceProxy:
     """
@@ -243,6 +206,20 @@ def subrack(
     :return: the subrack device
     """
     return tango_harness.get_device("low-mccs/subrack/01")
+
+
+@pytest.fixture()
+def daq(
+    tango_harness: TangoHarness,
+) -> MccsDeviceProxy:
+    """
+    Return the daq device.
+
+    :param tango_harness: a test harness for tango devices
+
+    :return: the daq device
+    """
+    return tango_harness.get_device("low-mccs/daq/01")
 
 
 @pytest.fixture()
@@ -260,8 +237,8 @@ def subarrays(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def stations(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="stations")
+def stations_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of stations keyed by their number.
 
@@ -275,8 +252,8 @@ def stations(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def apius(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="apius")
+def apius_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of APIUs keyed by their number.
 
@@ -290,8 +267,8 @@ def apius(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def subarray_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="subarray_beams")
+def subarray_beams_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of subarray beams keyed by their number.
 
@@ -307,8 +284,8 @@ def subarray_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="station_beams")
+def station_beams_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of station beams keyed by their number.
 
@@ -324,8 +301,8 @@ def station_beams(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def tiles(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="tiles")
+def tiles_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of tiles keyed by their number.
 
@@ -341,8 +318,8 @@ def tiles(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     }
 
 
-@pytest.fixture()
-def antennas(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
+@pytest.fixture(name="antennas")
+def antennas_fixture(tango_harness: TangoHarness) -> dict[int, MccsDeviceProxy]:
     """
     Return a dictionary of antennas keyed by their number.
 

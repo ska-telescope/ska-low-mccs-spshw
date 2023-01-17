@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,7 +8,9 @@
 """This module contains the tests for the MccsAntenna."""
 from __future__ import annotations
 
+import json
 import time
+import unittest.mock
 
 import pytest
 import tango
@@ -27,8 +29,8 @@ from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHar
 from ska_low_mccs import MccsAntenna
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_antenna_device_class: MccsAntenna,
 ) -> DeviceToLoadType:
     """
@@ -40,7 +42,7 @@ def device_to_load(
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "antenna_000001",
         "patch": patched_antenna_device_class,
@@ -48,22 +50,21 @@ def device_to_load(
     }
 
 
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
+    """
+    Fixture that returns the device under test.
+
+    :param tango_harness: a test harness for Tango devices
+
+    :return: the device under test
+    """
+    return tango_harness.get_device("low-mccs/antenna/000001")
+
+
+# pylint: disable=too-many-public-methods
 class TestMccsAntenna:
     """Test class for MccsAntenna tests."""
-
-    @pytest.fixture()
-    def device_under_test(
-        self: TestMccsAntenna,
-        tango_harness: TangoHarness,
-    ) -> MccsDeviceProxy:
-        """
-        Fixture that returns the device under test.
-
-        :param tango_harness: a test harness for Tango devices
-
-        :return: the device under test
-        """
-        return tango_harness.get_device("low-mccs/antenna/000001")
 
     def test_Reset(
         self: TestMccsAntenna,
@@ -164,7 +165,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.voltage
 
@@ -225,7 +226,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.current
 
@@ -288,7 +289,7 @@ class TestMccsAntenna:
 
         with pytest.raises(
             tango.DevFailed,
-            match="Communication with component is not established",
+            match="Communication is not being attempted so cannot be established.",
         ):
             _ = device_under_test.temperature
 
@@ -666,3 +667,51 @@ class TestMccsAntenna:
         device_under_test.MockAntennaPoweredOn()
         time.sleep(0.1)
         assert device_under_test.state() == tango.DevState.ON
+
+
+class TestPatchedAntenna:
+    """
+    Test class for MccsAntenna tests that patches the component manager.
+
+    These are thin tests that simply test that commands invoked on the
+    device are passed through to the component manager
+    """
+
+    @pytest.fixture(name="device_to_load")
+    def device_to_load_fixture(
+        self: TestPatchedAntenna, patched_antenna_class: type[MccsAntenna]
+    ) -> DeviceToLoadType:
+        """
+        Fixture that specifies the device to be loaded for testing.
+
+        :param patched_antenna_class: a subclass of MccsAntenna that has
+            been patched for testing
+        :return: specification of the device to be loaded
+        """
+        return {
+            "path": "tests/data/configuration.json",
+            "package": "ska_low_mccs",
+            "device": "antenna_000001",
+            "proxy": MccsDeviceProxy,
+            "patch": patched_antenna_class,
+        }
+
+    def test_configure(
+        self: TestPatchedAntenna,
+        device_under_test: MccsDeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for configure command.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: the mock component manage to patch
+            into this antenna.
+        """
+        config_dict = {"antenna_id": 1}
+        json_str = json.dumps(config_dict)
+
+        device_under_test.Configure(json_str)
+        mock_component_manager.configure.assert_next_call(json_str, unittest.mock.ANY)

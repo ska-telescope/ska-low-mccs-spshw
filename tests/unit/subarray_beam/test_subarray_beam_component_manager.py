@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,8 +14,8 @@ from typing import Any, Callable, Union
 
 import pytest
 from _pytest.fixtures import SubRequest
+from ska_control_model import TaskStatus
 from ska_low_mccs_common.testing.mock.mock_callable import MockCallableDeque
-from ska_tango_base.executor import TaskStatus
 
 from ska_low_mccs.subarray_beam import SubarrayBeam, SubarrayBeamComponentManager
 
@@ -71,7 +71,7 @@ class TestSubarrayBeam:
             )
             return subarray_beam_component
 
-        elif request.param == "subarray_beam_component_manager":
+        if request.param == "subarray_beam_component_manager":
             subarray_beam_component_manager.start_communicating()
             time.sleep(0.1)
             return subarray_beam_component_manager

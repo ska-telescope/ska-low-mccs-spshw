@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -24,8 +24,8 @@ from ska_low_mccs_common.testing.tango_harness import DeviceToLoadType, TangoHar
 from ska_low_mccs.station import MccsStation, StationComponentManager
 
 
-@pytest.fixture
-def patched_station_device_class(
+@pytest.fixture(name="patched_station_device_class")
+def patched_station_device_class_fixture(
     mock_station_component_manager: StationComponentManager,
 ) -> Type[MccsStation]:
     """
@@ -85,8 +85,8 @@ def patched_station_device_class(
     return PatchedStationDevice
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_station_device_class: Type[MccsStation],
 ) -> DeviceToLoadType:
     """
@@ -98,7 +98,7 @@ def device_to_load(
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "station_001",
         "proxy": MccsDeviceProxy,
@@ -106,8 +106,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def device_under_test(
+@pytest.fixture(name="device_under_test")
+def device_under_test_fixture(
     tango_harness: TangoHarness,
 ) -> MccsDeviceProxy:
     """
@@ -127,7 +127,7 @@ class TestStationComponentStateChangedCallback:
         self: TestStationComponentStateChangedCallback,
         device_under_test: MccsDeviceProxy,
         mock_station_component_manager: StationComponentManager,
-    ):
+    ) -> None:
         """
         Test the station component manager's management of power mode.
 
@@ -173,6 +173,7 @@ class TestStationComponentStateChangedCallback:
         # component_power_state_changed_callback.assert_next_call(PowerState.OFF)
         assert mock_station_component_manager.power_state == PowerState.OFF
 
+    # pylint: disable=too-many-arguments
     def test_apply_pointing(
         self: TestStationComponentStateChangedCallback,
         # station_component_manager: StationComponentManager,
@@ -259,6 +260,7 @@ class TestStationComponentStateChangedCallback:
             _, kwargs = task_callback.get_next_call()
             assert kwargs["status"] == status
 
+    # pylint: disable=too-many-arguments, too-many-locals
     def test_power_commands(
         self: TestStationComponentStateChangedCallback,
         device_under_test: MccsDeviceProxy,

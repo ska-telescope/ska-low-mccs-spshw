@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -9,8 +9,10 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 import unittest.mock
+from typing import Sequence
 
 import pytest
 import tango
@@ -23,6 +25,7 @@ from ska_low_mccs.subarray import SubarrayComponentManager
 class TestSubarrayComponentManager:
     """Class for testing the subarray component manager."""
 
+    # pylint: disable=too-many-arguments
     def test_communication(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -104,6 +107,7 @@ class TestSubarrayComponentManager:
             == CommunicationStatus.ESTABLISHED
         )
 
+    # pylint: disable=too-many-arguments
     def test_assign_and_release(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -143,10 +147,10 @@ class TestSubarrayComponentManager:
         )
 
         assert subarray_component_manager.assigned_resources_dict == {
-            "stations": list(),
-            "subarray_beams": list(),
-            "station_beams": list(),
-            "channel_blocks": list(),
+            "stations": [],
+            "subarray_beams": [],
+            "station_beams": [],
+            "channel_blocks": [],
         }
 
         # Assignment from empty
@@ -237,10 +241,10 @@ class TestSubarrayComponentManager:
         component_state_changed_callback.assert_in_deque({"release_completed": None})
 
         assert subarray_component_manager.assigned_resources_dict == {
-            "stations": list(),
-            "subarray_beams": list(),
-            "station_beams": list(),
-            "channel_blocks": list(),
+            "stations": [],
+            "subarray_beams": [],
+            "station_beams": [],
+            "channel_blocks": [],
         }
 
     def test_release(
@@ -272,8 +276,15 @@ class TestSubarrayComponentManager:
             # Following line changed to execute ._release rather than .release
             # as .release just queues the ._release command and ._release
             # is where the exception is supposed to be raised.
-            subarray_component_manager._release(release_json)
+            task_abort_event: threading.Event = threading.Event()
+            task_callback = MockCallableDeque()
+            subarray_component_manager._release(
+                release_json,
+                task_callback,
+                task_abort_event,
+            )
 
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def test_configure(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -337,9 +348,11 @@ class TestSubarrayComponentManager:
             subarray_component_manager.communication_state
             == CommunicationStatus.ESTABLISHED
         )
-        expected_arguments = {"power_state": PowerState.ON}
+        expected_power_arguments = {"power_state": PowerState.ON}
         time.sleep(0.1)
-        component_state_changed_callback.assert_next_call_with_keys(expected_arguments)
+        component_state_changed_callback.assert_next_call_with_keys(
+            expected_power_arguments
+        )
         # There are a few (unavoidable) nasty hacks like the following line
         # scattered around as a result of the changes to the callbacks during the
         # update to v0.13.
@@ -365,6 +378,7 @@ class TestSubarrayComponentManager:
             station_off_fqdn, PowerState.ON
         )
 
+        expected_arguments: Sequence
         expected_arguments = [
             {"assign_completed": None},
             {
@@ -379,11 +393,15 @@ class TestSubarrayComponentManager:
         component_state_changed_callback.assert_next_calls_with_keys(expected_arguments)
 
         with pytest.raises(ConnectionError, match="Component is not turned on."):
+            task_abort_event: threading.Event = threading.Event()
+            task_callback = MockCallable()
             subarray_component_manager._configure(
                 {
                     "stations": [{"station_id": station_off_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_off_id}],
-                }
+                },
+                task_callback,
+                task_abort_event,
             )
 
         task_status, response = subarray_component_manager.release_all()
@@ -439,7 +457,9 @@ class TestSubarrayComponentManager:
                 {
                     "stations": [{"station_id": station_on_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_off_id}],
-                }
+                },
+                task_callback,
+                task_abort_event,
             )
 
         time.sleep(0.1)
@@ -497,7 +517,9 @@ class TestSubarrayComponentManager:
                 {
                     "stations": [{"station_id": station_off_id}],
                     "subarray_beams": [{"subarray_beam_id": subarray_beam_on_id}],
-                }
+                },
+                task_callback,
+                task_abort_event,
             )
         mock_station_off.Configure.assert_not_called()
         mock_station_on.Configure.assert_not_called()
@@ -548,13 +570,13 @@ class TestSubarrayComponentManager:
         component_state_changed_callback.assert_all_in_deque(expected_arguments)
 
         # Hacky solution to set the power states of the proxies so configure finishes.
-        for fqdn, proxy in subarray_component_manager._stations.items():
+        for fqdn, stn_proxy in subarray_component_manager._stations.items():
             if fqdn == station_on_fqdn:
-                proxy.power_state = PowerState.ON
+                stn_proxy.power_state = PowerState.ON
 
-        for fqdn, proxy in subarray_component_manager._subarray_beams.items():
+        for fqdn, subbeam_proxy in subarray_component_manager._subarray_beams.items():
             if fqdn == subarray_beam_on_fqdn:
-                proxy.power_state = PowerState.ON
+                subbeam_proxy.power_state = PowerState.ON
 
         task_status, response = subarray_component_manager.configure(
             {
@@ -607,10 +629,11 @@ class TestSubarrayComponentManager:
         mock_subarray_beam_off.Configure.assert_not_called()
         mock_subarray_beam_on.Configure.assert_next_call(json.dumps({}))
 
-        expected_arguments = {"configured_changed": False}
+        expected_config_arguments = {"configured_changed": False}
         time.sleep(0.1)
-        component_state_changed_callback.assert_in_deque(expected_arguments)
+        component_state_changed_callback.assert_in_deque(expected_config_arguments)
 
+    # pylint: disable=too-many-arguments, too-many-locals
     def test_scan(
         self: TestSubarrayComponentManager,
         subarray_component_manager: SubarrayComponentManager,
@@ -673,18 +696,19 @@ class TestSubarrayComponentManager:
         assert response == "Task queued"
 
         # Hacky solution to set the power states of the proxies so configure finishes.
-        for fqdn, proxy in subarray_component_manager._stations.items():
+        for fqdn, station_proxy in subarray_component_manager._stations.items():
             if fqdn == station_on_fqdn:
-                proxy.power_state = PowerState.ON
+                station_proxy.power_state = PowerState.ON
 
-        for fqdn, proxy in subarray_component_manager._subarray_beams.items():
+        for fqdn, subbeam_proxy in subarray_component_manager._subarray_beams.items():
             if fqdn == subarray_beam_on_fqdn:
-                proxy.power_state = PowerState.ON
+                subbeam_proxy.power_state = PowerState.ON
 
-        for fqdn, proxy in subarray_component_manager._station_beams.items():
+        for fqdn, stnbeam_proxy in subarray_component_manager._station_beams.items():
             if fqdn == station_beam_on_fqdn:
-                proxy.power_state = PowerState.ON
+                stnbeam_proxy.power_state = PowerState.ON
 
+        expected_arguments: Sequence
         expected_arguments = [
             {"assign_completed": None},
             {
@@ -704,17 +728,17 @@ class TestSubarrayComponentManager:
         )
         component_state_changed_callback.assert_next_calls_with_keys(expected_arguments)
 
-        for fqdn, proxy in subarray_component_manager._stations.items():
+        for fqdn, subarray_proxy in subarray_component_manager._stations.items():
             if fqdn == station_on_fqdn:
-                proxy.power_state = PowerState.ON
+                subarray_proxy.power_state = PowerState.ON
 
-        for fqdn, proxy in subarray_component_manager._subarray_beams.items():
+        for fqdn, subbeam_proxy in subarray_component_manager._subarray_beams.items():
             if fqdn == subarray_beam_on_fqdn:
-                proxy.power_state = PowerState.ON
+                subbeam_proxy.power_state = PowerState.ON
 
-        for fqdn, proxy in subarray_component_manager._station_beams.items():
+        for fqdn, stnbeam_proxy in subarray_component_manager._station_beams.items():
             if fqdn == station_beam_on_fqdn:
-                proxy.power_state = PowerState.ON
+                stnbeam_proxy.power_state = PowerState.ON
 
         task_status, response = subarray_component_manager.configure(
             {

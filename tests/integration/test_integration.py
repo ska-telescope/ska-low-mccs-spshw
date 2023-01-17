@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -21,15 +21,15 @@ from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHa
 from ska_low_mccs_common.utils import call_with_json
 
 
-@pytest.fixture()
-def devices_to_load() -> DevicesToLoadType:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> DevicesToLoadType:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -41,8 +41,8 @@ def devices_to_load() -> DevicesToLoadType:
     }
 
 
-@pytest.fixture()
-def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_apiu_factory")
+def mock_apiu_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock APIU devices for use in testing.
 
@@ -58,8 +58,8 @@ def mock_apiu_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_antenna_factory")
+def mock_antenna_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock antenna device for use in testing.
 
@@ -74,8 +74,8 @@ def mock_antenna_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_subarray_beam_factory")
+def mock_subarray_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock subarray beam devices for use in testing.
 
@@ -88,8 +88,8 @@ def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_station_beam_factory")
+def mock_station_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock station beam devices for use in testing.
 
@@ -102,8 +102,8 @@ def mock_station_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_subrack_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_subrack_factory")
+def mock_subrack_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock subrack devices for use in testing.
 
@@ -119,8 +119,8 @@ def mock_subrack_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_tile_factory")
+def mock_tile_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock tile devices for use in testing.
 
@@ -136,8 +136,8 @@ def mock_tile_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_apiu_factory: Callable[[], unittest.mock.Mock],
     mock_antenna_factory: Callable[[], unittest.mock.Mock],
     mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
@@ -193,6 +193,7 @@ def initial_mocks(
 class TestMccsIntegration:
     """Integration test cases for the Mccs device classes."""
 
+    # pylint: disable=too-many-locals
     @pytest.mark.timeout(19)
     def test_controller_allocate_subarray(
         self: TestMccsIntegration,
@@ -249,23 +250,23 @@ class TestMccsIntegration:
 
         # TODO: This occansionally segfaults with warnings from Tango stating that
         # the event channel is not responding. Find out why.
-        """controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.DISABLE
-        )
-        subarray_1_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.DISABLE
-        )
-        subarray_2_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.DISABLE
-        )
+        # controller_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.DISABLE
+        # )
+        # subarray_1_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.DISABLE
+        # )
+        # subarray_2_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.DISABLE
+        # )
 
-        station_1_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.DISABLE
-        )
+        # station_1_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.DISABLE
+        # )
 
-        station_2_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.DISABLE
-        )"""
+        # station_2_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.DISABLE
+        # )
 
         controller.adminMode = AdminMode.ONLINE
         subarray_1.adminMode = AdminMode.ONLINE
@@ -282,21 +283,21 @@ class TestMccsIntegration:
 
         # TODO: This occansionally segfaults with warnings from Tango stating that
         # the event channel is not responding. Find out why.
-        """subarray_1_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-        subarray_2_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-        station_1_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-        station_2_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )
-        controller_device_state_changed_callback.assert_last_change_event(
-            tango.DevState.ON
-        )"""
+        # subarray_1_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
+        # subarray_2_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
+        # station_1_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
+        # station_2_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
+        # controller_device_state_changed_callback.assert_last_change_event(
+        #     tango.DevState.ON
+        # )
 
         assert subarray_1.state() == tango.DevState.ON
         assert subarray_2.state() == tango.DevState.ON
@@ -348,13 +349,14 @@ class TestMccsIntegration:
 
         time.sleep(0.2)
         assert [controller.longRunningCommandResult[0]] == unique_id
-
         # A subarray/station beam cannot be allocated to multiple subarrays.
         assert (
-            "The allocate command has failed with the exception: Cannot allocate"
-            "resources:"
-            and "subarraybeam"
-            or "beam" in controller.longRunningCommandResult[1]
+            "The allocate command has failed. Exception message: Cannot allocate "
+            "resources:" in controller.longRunningCommandResult[1]
+            and (
+                "subarraybeam" in controller.longRunningCommandResult[1]
+                or "beam" in controller.longRunningCommandResult[1]
+            )
         )
 
         # check no side-effects
@@ -392,6 +394,7 @@ class TestMccsIntegration:
 
     # TODO This test is an extension from the test above, which is only
     #      half working due to an obs state issue with subarray.
+    # pylint: disable=too-many-statements
     @pytest.mark.xfail(reason="obs state issue with subarray")
     def test_controller_release_subarray(
         self: TestMccsIntegration,

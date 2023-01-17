@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -24,7 +24,7 @@ class StationHealthModel(HealthModel):
         apiu_fqdn: str,
         antenna_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        component_state_changed_callback: Callable[[Any], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
         """
         Initialise a new instance.

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -18,8 +18,8 @@ from ska_control_model import CommunicationStatus
 from ska_low_mccs.tel_state import TelState, TelStateComponentManager
 
 
-@pytest.fixture()
-def tel_state_component(logger: logging.Logger) -> TelState:
+@pytest.fixture(name="tel_state_component")
+def tel_state_component_fixture(logger: logging.Logger) -> TelState:
     """
     Fixture that returns a tel state component.
 
@@ -30,8 +30,8 @@ def tel_state_component(logger: logging.Logger) -> TelState:
     return TelState(logger)
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of maximum worker threads.
 
@@ -40,8 +40,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -57,8 +57,8 @@ def component_state_changed_callback(
     return mock_callback_factory()
 
 
-@pytest.fixture()
-def tel_state_component_manager(
+@pytest.fixture(name="tel_state_component_manager")
+def tel_state_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],

@@ -98,22 +98,6 @@ deviceServers:
     # station instances have to be 0-padded to three digits
     instances: ["station-001", "station-002"]
     file: "data/station.yaml"
-  subracks:
-    # subrack instances have to be 0-padded to two digits
-    instances: ["subrack-01", "subrack-02"]
-    file: "data/subrack.yaml"
-  tiles:
-    # tile instances have to be 0-padded to four digits
-    instances: ["tile-0001", "tile-0002", "tile-0003", "tile-0004", 
-                "tile-0005", "tile-0006", "tile-0007", "tile-0008", 
-                "tile-0009", "tile-0010", "tile-0011", "tile-0012", 
-                "tile-0013", "tile-0014", "tile-0015", "tile-0016"]
-    file: "data/tile.yaml"
-    resources:
-      requests:
-        memory: 512Mi
-      limits:
-        memory: 512Mi
   apius:
     # apiu instances have to be 0-padded to three digits
     instances: ["apiu-001", "apiu-002", "apiu-003", "apiu-004"]

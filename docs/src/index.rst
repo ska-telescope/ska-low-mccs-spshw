@@ -22,6 +22,7 @@ prototype for the `Square Kilometre Array`_.
    :caption: Developer guide
 
    developer_guide/device_model
+   developer_guide/using_telmodel
    developer_guide/code_quality
 
 .. toctree::
@@ -29,11 +30,7 @@ prototype for the `Square Kilometre Array`_.
    :caption: Reference material
 
    reference/power
-   reference/tile_device_to_tpm
-   reference/tile_device_methods.rst
-   reference/tile_test_generator.rst
    reference/class_diagrams.rst
-   reference/subrack_driver.rst
    reference/pointing.rst
 
 .. toctree::

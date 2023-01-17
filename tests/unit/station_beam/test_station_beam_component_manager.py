@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -212,7 +212,10 @@ class TestStationBeamComponentManager:
         # Looks like this task actually ISN'T getting put on the queue...
         task_status, response = station_beam_component_manager.configure(config_dict)
 
-        # station_beam_component_manager._configure(beam_id,station_id,update_rate,channels,desired_pointing,antenna_weights,phase_centre)
+        # station_beam_component_manager._configure(
+        #     beam_id, station_id, update_rate, channels, desired_pointing,
+        #     antenna_weights,phase_centre
+        # )
         assert task_status == TaskStatus.QUEUED
         assert response == "Task queued"
         time.sleep(1)

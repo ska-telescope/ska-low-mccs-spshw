@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -114,6 +114,7 @@ class _StationBeamProxy(ObsDeviceComponentManager):
         return (result_code, unique_id)
 
 
+# pylint: disable=too-many-instance-attributes
 class SubarrayComponentManager(
     MccsComponentManager,
     ska_tango_base.subarray.SubarrayComponentManager,
@@ -125,7 +126,7 @@ class SubarrayComponentManager(
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -139,6 +140,7 @@ class SubarrayComponentManager(
         :param max_workers: Maximum number of workers in the worker pool.
             Defaults to None.
         """
+        self._component_state_changed_callback: Callable[..., None]
         self._component_state_changed_callback = component_state_changed_callback
 
         self._device_communication_statees: dict[str, CommunicationStatus] = {}
@@ -146,11 +148,11 @@ class SubarrayComponentManager(
         self._device_obs_states: dict[str, Optional[ObsState]] = {}
         self._is_assigning = False
         self._configuring_resources: set[str] = set()
-        self._station_groups: list[list[str]] = list()
-        self._stations: dict[str, _StationProxy] = dict()
-        self._subarray_beams: dict[str, _SubarrayBeamProxy] = dict()
-        self._station_beams: dict[str, _StationBeamProxy] = dict()
-        self._channel_blocks: list[int] = list()
+        self._station_groups: list[list[str]] = []
+        self._stations: dict[str, _StationProxy] = {}
+        self._subarray_beams: dict[str, _SubarrayBeamProxy] = {}
+        self._station_beams: dict[str, _StationBeamProxy] = {}
+        self._channel_blocks: list[int] = []
         self._max_workers = max_workers
 
         self._scan_id: Optional[int] = None
@@ -181,14 +183,14 @@ class SubarrayComponentManager(
         """Break off communication with the station components."""
         super().stop_communicating()
 
-        for fqdn in self._stations:
-            self._stations[fqdn].stop_communicating()
+        for station in self._stations.values():
+            station.stop_communicating()
 
-        for fqdn in self._subarray_beams:
-            self._subarray_beams[fqdn].stop_communicating()
+        for subarray_beam in self._subarray_beams.values():
+            subarray_beam.stop_communicating()
 
-        for fqdn in self._station_beams:
-            self._station_beams[fqdn].stop_communicating()
+        for station_beam in self._station_beams.values():
+            station_beam.stop_communicating()
 
     @property
     def scan_id(self: SubarrayComponentManager) -> Optional[int]:
@@ -209,9 +211,9 @@ class SubarrayComponentManager(
         return set(self._stations.keys())
 
     @check_communicating
-    def assign(
+    def assign(  # type: ignore[override]
         self: SubarrayComponentManager,
-        resource_spec: dict,
+        resources: dict[str, Any],
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
@@ -219,7 +221,7 @@ class SubarrayComponentManager(
 
         This method returns immediately after it is submitted for execution.
 
-        :param resource_spec: resource specification; for example
+        :param resources: resource specification; for example
 
             .. code-block:: python
 
@@ -234,16 +236,16 @@ class SubarrayComponentManager(
         """
         return self.submit_task(
             self._assign,
-            args=[resource_spec],
+            args=[resources],
             task_callback=task_callback,
         )
 
     @check_communicating
-    def _assign(  # type: ignore[override]
+    def _assign(
         self: SubarrayComponentManager,
-        resource_spec: dict,
+        resources: dict,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Assign resources to this subarray.
@@ -251,7 +253,7 @@ class SubarrayComponentManager(
         This is just for communication and health roll-up, resource management
         is done by controller.
 
-        :param resource_spec: resource specification; for example
+        :param resources: resource specification; for example
 
             .. code-block:: python
 
@@ -267,10 +269,10 @@ class SubarrayComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        station_fqdns: list[list[str]] = resource_spec.get("stations", [])
-        subarray_beam_fqdns: list[str] = resource_spec.get("subarray_beams", [])
-        station_beam_fqdns: list[str] = resource_spec.get("station_beams", [])
-        channel_blocks: list[int] = resource_spec.get("channel_blocks", [])
+        station_fqdns: list[list[str]] = resources.get("stations", [])
+        subarray_beam_fqdns: list[str] = resources.get("subarray_beams", [])
+        station_beam_fqdns: list[str] = resources.get("station_beams", [])
+        channel_blocks: list[int] = resources.get("channel_blocks", [])
 
         station_fqdn_set = self._flatten_new_station_groups(station_fqdns)
         self._channel_blocks = self._channel_blocks + channel_blocks
@@ -306,7 +308,8 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=fqdn
+                        self._component_state_changed_callback,
+                        fqdn=fqdn,
                     ),
                 )
             for fqdn in station_beam_fqdns_to_add:
@@ -316,7 +319,8 @@ class SubarrayComponentManager(
                     self._max_workers,
                     functools.partial(self._device_communication_state_changed, fqdn),
                     functools.partial(
-                        self._component_state_changed_callback, fqdn=fqdn
+                        self._component_state_changed_callback,
+                        fqdn=fqdn,
                     ),
                 )
             self._component_state_changed_callback(
@@ -370,14 +374,14 @@ class SubarrayComponentManager(
     @check_communicating
     def assigned_resources(
         self: SubarrayComponentManager,
-    ) -> set:
+    ) -> list[str]:
         """
         Return this subarray's resources.
 
         :return: this subarray's resources.
         """
-        return (
-            set(self._stations) | set(self._subarray_beams) | set(self._station_beams)
+        return list(
+            set(self._stations) | set(self._subarray_beams) | set(self._station_beams),
         )
 
     @property  # type: ignore[misc]
@@ -400,34 +404,34 @@ class SubarrayComponentManager(
     @check_communicating
     def release(  # type: ignore[override]
         self: SubarrayComponentManager,
-        argin: str,
+        resources: str,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `release` slow command.
 
-        :param argin: list of resource fqdns to release.
+        :param resources: list of resource fqdns to release.
         :param task_callback: Update task state, defaults to None
 
         :return: A task status and response message.
         """
         return self.submit_task(
             self._release,
-            args=[argin],
+            args=[resources],
             task_callback=task_callback,
         )
 
     @check_communicating
-    def _release(  # type: ignore[override]
+    def _release(
         self: SubarrayComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        resources: str,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release resources from this subarray.
 
-        :param argin: list of resource fqdns to release.
+        :param resources: list of resource fqdns to release.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
 
@@ -448,9 +452,8 @@ class SubarrayComponentManager(
         raise NotImplementedError("MCCS Subarray cannot partially release resources.")
 
     @check_communicating
-    def release_all(
-        self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
+    def release_all(  # type: ignore[override]
+        self: SubarrayComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
         """
         Submit the `ReleaseAllResources` slow command.
@@ -467,10 +470,10 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _release_all(  # type: ignore[override]
+    def _release_all(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Release all resources from this subarray.
@@ -527,11 +530,11 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _configure(  # type: ignore[override]
+    def _configure(
         self: SubarrayComponentManager,
         configuration: dict[str, Any],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Configure the resources for a scan.
@@ -616,6 +619,7 @@ class SubarrayComponentManager(
                     result_code = ResultCode.QUEUED
         return result_code
 
+    # pylint: disable=arguments-renamed
     @check_communicating
     def scan(  # type: ignore[override]
         self: SubarrayComponentManager,
@@ -639,12 +643,12 @@ class SubarrayComponentManager(
         )
 
     @check_communicating
-    def _scan(  # type: ignore[override]
+    def _scan(
         self: SubarrayComponentManager,
         scan_id: int,
         start_time: float,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Start scanning.
@@ -660,10 +664,8 @@ class SubarrayComponentManager(
 
         for subarray_beam_proxy in self._subarray_beams.values():
             proxy_result_code = subarray_beam_proxy.scan(scan_id, start_time)
-            if proxy_result_code == ResultCode.FAILED:
-                if task_callback is not None:
-                    task_callback(status=TaskStatus.FAILED, result="Scan has failed.")
-                    return
+            if proxy_result_code == ResultCode.FAILED and task_callback is not None:
+                task_callback(status=TaskStatus.FAILED, result="Scan has failed.")
         self._component_state_changed_callback({"scanning_changed": True})
         if task_callback is not None:
             task_callback(status=TaskStatus.COMPLETED, result="Scan has completed.")
@@ -686,14 +688,13 @@ class SubarrayComponentManager(
             task_callback=task_callback,
         )
 
-    @check_communicating
-    def _end_scan(  # type: ignore[override]
+    def _end_scan(
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
-        End scanning.
+        Submit the `end_scan` slow command.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
@@ -729,8 +730,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _deconfigure(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Deconfigure resources.
@@ -753,9 +754,13 @@ class SubarrayComponentManager(
     @check_communicating
     def abort(  # type: ignore[override]
         self: SubarrayComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> ResultCode:
         """
         Abort the observation.
+
+        :param task_callback: callback to be called when the status of
+            the command changes
 
         :return: a result code
         """
@@ -785,8 +790,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _obsreset(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Reset the observation by returning to unconfigured state.
@@ -823,8 +828,8 @@ class SubarrayComponentManager(
     @check_communicating
     def _restart(  # type: ignore[override]
         self: SubarrayComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Restart the subarray by returning to unresourced state.
@@ -867,8 +872,8 @@ class SubarrayComponentManager(
     def _send_transient_buffer(
         self: SubarrayComponentManager,
         argin: list[int],
-        task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_callback: Optional[Callable],
+        task_abort_event: threading.Event,
     ) -> None:
         """
         Send the transient buffer.

@@ -26,7 +26,7 @@ def device_to_load() -> DeviceToLoadType:
     :return: specification of the device to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "device": "apiu_001",
         "patch": DemoAPIU,

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -27,9 +27,74 @@ from ska_low_mccs_common.utils import threadsafe
 __all__ = ["StationComponentManager"]
 
 
+class _ApiuProxy(DeviceComponentManager):
+    """A proxy to a APIU device, for a station to use."""
+
+    def __init__(
+        self: _ApiuProxy,
+        fqdn: str,
+        logger: logging.Logger,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+    ) -> None:
+        super().__init__(
+            fqdn,
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+        )
+
+    @check_communicating
+    def configure(self: _ApiuProxy, config: str) -> None:
+        """
+        Configure the device proxy.
+
+        :param config: json string of configuration.
+        """
+        assert self._proxy is not None  # for the type checker
+        self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
+        self._proxy._device.Configure(config)
+
+
+class _AntennaProxy(DeviceComponentManager):
+    """A proxy to a antenna device, for a station to use."""
+
+    def __init__(
+        self: _AntennaProxy,
+        fqdn: str,
+        logger: logging.Logger,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+    ) -> None:
+        super().__init__(
+            fqdn,
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+        )
+
+    @check_communicating
+    def configure(self: _AntennaProxy, config: str) -> None:
+        """
+        Configure the device proxy.
+
+        :param config: json string of configuration.
+        """
+        assert self._proxy is not None  # for the type checker
+        self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
+        self._proxy._device.Configure(config)
+
+
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _TileProxy,
         fqdn: str,
@@ -38,7 +103,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -102,10 +167,24 @@ class _TileProxy(DeviceComponentManager):
         ([result_code], _) = self._proxy.SetPointingDelay(delays)
         return result_code
 
+    @check_communicating
+    def configure(self: _TileProxy, config: str) -> None:
+        """
+        Configure the device proxy.
 
+        :param config: json string of configuration.
+        """
+        assert self._proxy is not None  # for the type checker
+        self._proxy.connect()
+        assert self._proxy._device is not None  # for the type checker
+        self._proxy._device.Configure(config)
+
+
+# pylint: disable=too-many-instance-attributes
 class StationComponentManager(MccsComponentManager):
     """A component manager for a station."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: StationComponentManager,
         station_id: int,
@@ -153,7 +232,7 @@ class StationComponentManager(MccsComponentManager):
             fqdn: PowerState.UNKNOWN for fqdn in antenna_fqdns
         }
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
-        self._apiu_proxy = DeviceComponentManager(
+        self._apiu_proxy = _ApiuProxy(
             apiu_fqdn,
             logger,
             max_workers,
@@ -161,7 +240,7 @@ class StationComponentManager(MccsComponentManager):
             functools.partial(component_state_changed_callback, fqdn=apiu_fqdn),
         )
         self._antenna_proxies = {
-            antenna_fqdn: DeviceComponentManager(
+            antenna_fqdn: _AntennaProxy(
                 antenna_fqdn,
                 logger,
                 max_workers,
@@ -253,9 +332,10 @@ class StationComponentManager(MccsComponentManager):
         super().update_communication_state(communication_state)
 
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self._component_state_changed_callback(
-                {"is_configured": self.is_configured}
-            )
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(
+                    {"is_configured": self.is_configured}
+                )
 
     @threadsafe
     def _antenna_power_state_changed(
@@ -309,7 +389,7 @@ class StationComponentManager(MccsComponentManager):
                 "In StationComponentManager._evaluatePowerState with:\n"
                 f"\tapiu: {self._apiu_power_state}\n"
                 f"\tantennas: {self._antenna_power_states}\n"
-                f"\tiles: {self._tile_power_states}\n"
+                f"\ttiles: {self._tile_power_states}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self.update_component_state({"power_state": evaluated_power_state})
@@ -345,7 +425,7 @@ class StationComponentManager(MccsComponentManager):
                 )
 
     @property
-    def power_state_lock(self: MccsComponentManager) -> Optional[PowerState]:
+    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
         """
         Return the power state lock of this component manager.
 
@@ -356,7 +436,7 @@ class StationComponentManager(MccsComponentManager):
     def off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> ResultCode:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the _off method.
 
@@ -364,6 +444,7 @@ class StationComponentManager(MccsComponentManager):
         `self._off` for execution.
 
         :param task_callback: Update task state, defaults to None
+
         :return: a result code and response message
         """
         return self.submit_task(self._off, task_callback=task_callback)
@@ -372,8 +453,8 @@ class StationComponentManager(MccsComponentManager):
     def _off(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
-    ) -> ResultCode:
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Turn off this station.
 
@@ -420,7 +501,7 @@ class StationComponentManager(MccsComponentManager):
     def _on(
         self: StationComponentManager,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Turn on this station.
@@ -445,10 +526,13 @@ class StationComponentManager(MccsComponentManager):
                 task_callback(status=task_status)
             return
         self._on_called = True
-        result_code, _ = self._apiu_proxy.on()
-        # TODO: Monitor the APIU On command status and update the Station On command
-        # status accordingly.
-        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+        # result_code, _ = self._apiu_proxy.on()
+        task_status, _ = self._apiu_proxy.on()
+        # TODO: Monitor the APIU On command status and update the Station
+        # On command status accordingly.
+        # check return codes!!!!!!!!!!!
+        if task_status == TaskStatus.QUEUED:
+            # if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             task_status = TaskStatus.COMPLETED
         else:
             task_status = TaskStatus.FAILED
@@ -511,7 +595,7 @@ class StationComponentManager(MccsComponentManager):
         self: StationComponentManager,
         delays: list[float],
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Apply the pointing configuration by setting the delays on each tile.
@@ -549,19 +633,54 @@ class StationComponentManager(MccsComponentManager):
         """
         return self._is_configured
 
-    def _update_is_configured(
+    def _update_station_configs(
         self: StationComponentManager,
-        is_configured: bool,
+        configuration: dict,
     ) -> None:
-        if self._is_configured != is_configured:
-            self._is_configured = is_configured
-            self._component_state_changed_callback({"is_configured": is_configured})
+        """
+        Update the config for the station device.
+
+        :param configuration: dict containing the config of the device
+        """
+        if self._component_state_changed_callback is not None:
+            self._is_configured = True
+            self._component_state_changed_callback(
+                {"configuration_changed": configuration}
+            )
+
+    def _update_children_configs(
+        self: StationComponentManager,
+        configuration: dict,
+    ) -> None:
+        """
+        Update the config for the station device.
+
+        :param configuration: dict containing the config of the device
+        """
+        self.start_communicating()
+        for fqdn in self._antenna_proxies.keys():
+            self._antenna_proxies[fqdn].on()
+        apiu_config = configuration.get("apiu")
+        if apiu_config is not None:
+            self._apiu_proxy.configure(json.dumps(apiu_config))
+
+        antenna_config = configuration.get("antennas")
+        if antenna_config:
+            for fqdn in self._antenna_proxies.keys():
+                config = antenna_config[fqdn]
+                self._antenna_proxies[fqdn].configure(json.dumps(config))
+        tiles_config = configuration.get("tiles")
+        if tiles_config:
+            for fqdn in self._tile_proxies.keys():
+                config = tiles_config[fqdn]
+                self._tile_proxies[fqdn].configure(json.dumps(config))
+        self.stop_communicating()
 
     def configure(
         self: StationComponentManager,
         argin: str,
         task_callback: Optional[Callable] = None,
-    ) -> tuple[ResultCode, str]:
+    ) -> tuple[TaskStatus, str]:
         """
         Submit the configure method.
 
@@ -574,35 +693,38 @@ class StationComponentManager(MccsComponentManager):
         :return: a result code and response string
         """
         configuration = json.loads(argin)
-        station_id = configuration.get("station_id")
         return self.submit_task(
-            self._configure, args=[station_id], task_callback=task_callback
+            self._configure, args=[configuration], task_callback=task_callback
         )
 
     # @check_communicating
     def _configure(
         self: StationComponentManager,
-        station_id: int,
+        configuration: dict,
         task_callback: Optional[Callable] = None,
-        task_abort_event: threading.Event = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Configure the station.
+        Configure the stations children.
 
-        This is a placeholder for a real implementation. At present all
-        it accepts is the station id, which it checks.
+        This sends off configuration commands to all of the devices that
+        this station manages.
 
-        :param station_id: the id of the station for which the provided
-            configuration is intended.
+        :param configuration: Configuration specification dict.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            if station_id != self._station_id:
+            station_config = configuration.get("station")
+            if (
+                station_config is None
+                or station_config.get("StationId") != self._station_id
+            ):
                 raise ValueError("Wrong station id")
-            self._update_is_configured(True)
+            self._update_station_configs(station_config)
+            self._update_children_configs(configuration)
         except ValueError as value_error:
             if task_callback:
                 task_callback(

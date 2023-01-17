@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#  -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -16,11 +16,12 @@ from typing import Any, Callable, Optional, cast
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import ObjectComponentManager, check_communicating
 
-from ska_low_mccs.subarray_beam import SubarrayBeam
+from ska_low_mccs.subarray_beam.subarray_beam import SubarrayBeam
 
 __all__ = ["SubarrayBeamComponentManager"]
 
 
+# pylint: disable=too-many-instance-attributes
 class SubarrayBeamComponentManager(ObjectComponentManager):
     """A component manager for a subarray beam."""
 
@@ -29,7 +30,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -196,6 +197,7 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
             task_callback=task_callback,
         )
 
+    # pylint: disable=too-many-arguments
     def _configure(
         self,
         subarray_beam_id: int,
@@ -205,8 +207,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         sky_coordinates: list[float],
         antenna_weights: list[float],
         phase_centre: list[float],
-        task_callback: Callable,
-        task_abort_event: threading.Event,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Implement :py:meth:`.MccsSubarrayBeam.Configure` command.
@@ -223,18 +225,22 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         """
         self.component_state_changed_callback({"configured_changed": True})
 
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
         # TODO Ben add config stuff here
-        task_abort_event.wait(20)  # for testing purposes only
+        if task_abort_event:
+            task_abort_event.wait(20)  # for testing purposes only
 
-        if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
-            return
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+                return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="Configure command completed OK"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command completed OK"
+            )
 
     def scan(self, task_callback: Optional[Callable] = None) -> tuple[TaskStatus, str]:
         """
@@ -253,8 +259,8 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         self,
         scan_id: int,
         scan_time: float,
-        task_callback: Callable,
-        task_abort_event: threading.Event,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Implement :py:meth:`.MccsSubarrayBeam.Scan` command.
@@ -264,15 +270,19 @@ class SubarrayBeamComponentManager(ObjectComponentManager):
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Task abort, defaults to None
         """
-        task_callback(status=TaskStatus.IN_PROGRESS)
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
 
-        # TODO Ben add scan_id and scan_time here
-        task_abort_event.wait(20)  # for testing purposes only
+            # TODO Ben add scan_id and scan_time here
+        if task_abort_event:
+            task_abort_event.wait(20)  # for testing purposes only
 
-        if task_abort_event.is_set():
-            task_callback(status=TaskStatus.ABORTED, result="This task aborted")
-            return
+            if task_abort_event.is_set():
+                if task_callback:
+                    task_callback(status=TaskStatus.ABORTED, result="This task aborted")
+                    return
 
-        task_callback(
-            status=TaskStatus.COMPLETED, result="Configure command completed OK"
-        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED, result="Configure command completed OK"
+            )

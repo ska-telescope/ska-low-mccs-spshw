@@ -91,8 +91,9 @@ nitpick_ignore = [
     # so that these external dependencies don't leak out through our
     # public interface.
     ("py:class", "Angle"),
+    ("py:class", "pyaavs.tile_wrapper.Tile"),
     ("py:class", "astropy.time.core.Time"),
-    ("py:class", "numpy.complex"),
+    ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "yaml.YAMLError"),
     # These last two come from ska-control-model so might be impossible

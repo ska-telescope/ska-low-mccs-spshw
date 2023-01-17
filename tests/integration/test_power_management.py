@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -20,15 +20,15 @@ from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDevice
 from ska_low_mccs_common.testing.tango_harness import TangoHarness
 
 
-@pytest.fixture()
-def devices_to_load() -> dict[str, Any]:
+@pytest.fixture(name="devices_to_load")
+def devices_to_load_fixture() -> dict[str, Any]:
     """
     Fixture that specifies the devices to be loaded for testing.
 
     :return: specification of the devices to be loaded
     """
     return {
-        "path": "charts/ska-low-mccs/data/configuration.json",
+        "path": "tests/data/configuration.json",
         "package": "ska_low_mccs",
         "devices": [
             {"name": "controller", "proxy": MccsDeviceProxy},
@@ -53,8 +53,8 @@ def devices_to_load() -> dict[str, Any]:
     }
 
 
-@pytest.fixture()
-def mock_subarray_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_subarray_factory")
+def mock_subarray_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a factory for mock subarrays.
 
@@ -67,8 +67,8 @@ def mock_subarray_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_subarray_beam_factory")
+def mock_subarray_beam_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Return a factory that returns mock subarray beam devices for use in testing.
 
@@ -82,8 +82,8 @@ def mock_subarray_beam_factory() -> Callable[[], unittest.mock.Mock]:
     return builder
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     mock_subarray_factory: Callable[[], unittest.mock.Mock],
     mock_subarray_beam_factory: Callable[[], unittest.mock.Mock],
 ) -> dict[str, unittest.mock.Mock]:
@@ -139,6 +139,7 @@ class TestPowerManagement:
         for device in devices:
             assert device.state() == expected_state, f"device = {device.name}"
 
+    # pylint: disable=too-many-statements,too-many-locals
     @pytest.mark.skip(reason="Constantly hangs in CI pipeline")
     def test_controller_state_rollup(
         self: TestPowerManagement, tango_harness: TangoHarness
@@ -270,7 +271,7 @@ class TestPowerManagement:
             tiles + stations + [controller] + [subrack], tango.DevState.OFF
         )
 
-    # @pytest.mark.timeout(19)
+    # pylint: disable=too-many-locals
     @pytest.mark.skip("Timing out in CI pipeline")
     def test_power_on(
         self: TestPowerManagement,

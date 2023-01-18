@@ -2618,6 +2618,17 @@ class MccsTile(SKABaseDevice):
             ]:
                 self._component_manager.logger.error("Invalid data_type specified")
                 raise ValueError("Invalid data_type specified")
+            if data_type == "channel":
+                first_ch = params.get("first_channel", 0)
+                last_ch = params.get("last_channel", 511)
+                if not 0 <= first_ch <= last_ch <= 511:
+                    err = (
+                        f"first_channel ({first_ch}) and last_channel ({last_ch}) "
+                        f"must define a range within [0, 511]"
+                    )
+                    self._component_manager.logger.error(err)
+                    raise ValueError(err)
+
             if data_type == "channel_continuous":
                 channel_id = params.get("channel_id", None)
                 if channel_id is None:

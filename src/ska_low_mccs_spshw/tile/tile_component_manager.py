@@ -910,13 +910,6 @@ class TileComponentManager(MccsComponentManager):
                 raise ValueError(f"Invalid time: {start_time}")
             seconds = 0.0
 
-        if not 0 <= first_channel <= last_channel <= 511:
-            raise ValueError(
-                f"Invalid channel range [{first_channel}, {last_channel}] supplied. "
-                "last_channel must not be less than first_channel, and both must "
-                "fall within the range [0, 511]"
-            )
-
         self._tpm_component_manager.send_data_samples(
             data_type,
             timestamp,

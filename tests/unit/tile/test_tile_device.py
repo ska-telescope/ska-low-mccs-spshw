@@ -1279,9 +1279,10 @@ class TestMccsTileCommands:
             first_ch, last_ch = arg["first_channel"], arg["last_channel"]
             with pytest.raises(
                 DevFailed,
-                match=f"Invalid channel range [{first_ch}, {last_ch}] supplied.",
+                match=rf"first_channel \({first_ch}\) and last_channel \({last_ch}\) "
+                r"must define a range within \[0, 511\]",
             ):
-                tile_device.ConfigureTestGenerator(json_arg)
+                tile_device.SendDataSamples(json_arg)
 
     def test_configure_test_generator(
         self: TestMccsTileCommands,

@@ -10,6 +10,8 @@
 """This module contains integration tests of tile-subrack interactions in MCCS."""
 from __future__ import annotations
 
+from typing import Callable
+
 import pytest
 import tango
 from ska_control_model import AdminMode, PowerState, ResultCode
@@ -29,7 +31,7 @@ def devices_to_load() -> DevicesToLoadType:
         "path": "tests/data/configuration.json",
         "package": "ska_low_mccs_spshw",
         "devices": [
-            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "subrack_0001", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
             {"name": "tile_0002", "proxy": MccsDeviceProxy},
             {"name": "tile_0003", "proxy": MccsDeviceProxy},
@@ -47,7 +49,7 @@ class TestSubrackTileIntegration:
         subrack_device_admin_mode_changed_callback: MockChangeEventCallback,
         subrack_device_state_changed_callback: MockChangeEventCallback,
         tile_device_admin_mode_changed_callback: MockChangeEventCallback,
-        lrc_result_changed_callback: MockChangeEventCallback,
+        lrc_result_changed_callback_factory: Callable[[str], MockChangeEventCallback],
         tile_device_state_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
@@ -69,14 +71,17 @@ class TestSubrackTileIntegration:
         :param tile_device_admin_mode_changed_callback: a callback that
             we can use to subscribe to admin mode changes on the tile
             device
-        :param lrc_result_changed_callback: a callback to
-            be used to subscribe to device LRC result changes
+        :param lrc_result_changed_callback_factory: a factory to create
+            callbacks to be used to subscribe to device LRC result changes
         :param tile_device_state_changed_callback: a callback that we
             can use to subscribe to state changes on the tile device.
         """
         tile_device = tango_harness.get_device("low-mccs/tile/0001")
-        subrack_device = tango_harness.get_device("low-mccs/subrack/01")
+        subrack_device = tango_harness.get_device("low-mccs/subrack/0001")
         tpm_id = 1
+
+        tile_lrc_result_changed_callback = lrc_result_changed_callback_factory()
+        subrack_lrc_result_changed_callback = lrc_result_changed_callback_factory()
 
         tile_device.add_change_event_callback(
             "adminMode",
@@ -115,7 +120,7 @@ class TestSubrackTileIntegration:
         # Subscribe to subrack's LRC result attribute
         subrack_device.add_change_event_callback(
             "longRunningCommandResult",
-            lrc_result_changed_callback,
+            subrack_lrc_result_changed_callback,
         )
         assert (
             "longRunningCommandResult".casefold()
@@ -123,7 +128,19 @@ class TestSubrackTileIntegration:
         )
         initial_lrc_result = ("", "")
         assert subrack_device.longRunningCommandResult == initial_lrc_result
-        lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+        subrack_lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
+
+        # Subscribe to tile's LRC result attribute
+        tile_device.add_change_event_callback(
+            "longRunningCommandResult",
+            tile_lrc_result_changed_callback,
+        )
+        assert (
+            "longRunningCommandResult".casefold()
+            in tile_device._change_event_subscription_ids
+        )
+        assert tile_device.longRunningCommandResult == initial_lrc_result
+        tile_lrc_result_changed_callback.assert_next_change_event(initial_lrc_result)
 
         tile_device.adminMode = AdminMode.ONLINE
 
@@ -182,7 +199,7 @@ class TestSubrackTileIntegration:
         )
         assert subrack_device.tpm1PowerState == PowerState.OFF
 
-        lrc_result_changed_callback.assert_next_call(
+        subrack_lrc_result_changed_callback.assert_next_call(
             "longrunningcommandresult",
             (unique_id, '"On command has completed"'),
             tango.AttrQuality.ATTR_VALID,
@@ -195,6 +212,8 @@ class TestSubrackTileIntegration:
         tile_device_state_changed_callback.assert_not_called()
         assert tile_device.state() == tango.DevState.OFF
 
+        # Power on TPM using Tile On
+
         [result_code], [unique_id] = tile_device.On()
 
         # The tile device tells the subrack device to tell its subrack to power on its
@@ -203,18 +222,66 @@ class TestSubrackTileIntegration:
         tile_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
         assert tile_device.state() == tango.DevState.ON
         assert subrack_device.tpm1PowerState == PowerState.ON
-
+        tile_lrc_result_changed_callback.assert_next_call(
+            "longrunningcommandresult",
+            (unique_id, '"Tile on completed"'),
+            tango.AttrQuality.ATTR_VALID,
+        )
         # TurnOnTpm isn't directly called here so we have to get at it a bit
         # differently.
-        args = lrc_result_changed_callback.get_next_call()
+        args = subrack_lrc_result_changed_callback.get_next_call()
         assert "_PowerOnTpm" in args[0][1][0]
         assert args[0][1][1] == f'"Subrack TPM {tpm_id} turn on tpm task has completed"'
+
+        # Power off TPM using Tile
+
+        [result_code], [unique_id] = tile_device.Off()
+
+        # The tile device tells the subrack device to tell its subrack to power off its
+        # TPM. This is done. The subrack device detects that the TPM is now off.
+
+        tile_device_state_changed_callback.assert_last_change_event(tango.DevState.OFF)
+        assert tile_device.state() == tango.DevState.OFF
+        assert subrack_device.tpm1PowerState == PowerState.OFF
+
+        tile_lrc_result_changed_callback.assert_next_call(
+            "longrunningcommandresult",
+            (unique_id, '"Tile off completed"'),
+            tango.AttrQuality.ATTR_VALID,
+        )
+        # TurnOffTpm isn't directly called here so we have to get at it a bit
+        # differently.
+        args = subrack_lrc_result_changed_callback.get_next_call()
+        assert "_PowerOffTpm" in args[0][1][0]
+        assert (
+            args[0][1][1] == f'"Subrack TPM {tpm_id} turn off tpm task has completed"'
+        )
+
+        # Power on TPM using subrack
+
+        [[result_code], [unique_id]] = subrack_device.PowerOnTpm(tpm_id)
+        assert result_code == ResultCode.QUEUED
+        assert "_PowerOnTpm" in unique_id
+
+        subrack_lrc_result_changed_callback.assert_next_call(
+            "longrunningcommandresult",
+            (unique_id, f'"Subrack TPM {tpm_id} turn on tpm task has completed"'),
+            tango.AttrQuality.ATTR_VALID,
+        )
+        # A third party has told the subrack device to turn the TPM on. The subrack
+        # device tells the subrack to turn the TPM on. The subrack device detects that
+        # the TPM is on.
+        tile_device_state_changed_callback.assert_last_change_event(tango.DevState.ON)
+        assert tile_device.state() == tango.DevState.ON
+        assert subrack_device.tpm1PowerState == PowerState.ON
+
+        # Power off TPM using subrack
 
         [[result_code], [unique_id]] = subrack_device.PowerOffTpm(tpm_id)
         assert result_code == ResultCode.QUEUED
         assert "_PowerOffTpm" in unique_id
 
-        lrc_result_changed_callback.assert_next_call(
+        subrack_lrc_result_changed_callback.assert_next_call(
             "longrunningcommandresult",
             (unique_id, f'"Subrack TPM {tpm_id} turn off tpm task has completed"'),
             tango.AttrQuality.ATTR_VALID,

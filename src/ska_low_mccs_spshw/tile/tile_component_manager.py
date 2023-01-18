@@ -518,7 +518,7 @@ class TileComponentManager(MccsComponentManager):
         unconnected = self._subrack_proxy is None
         if unconnected:
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self._logger, connect=False
+                self._subrack_fqdn, self.logger, connect=False
             )
             try:
                 self._subrack_proxy.connect()
@@ -528,6 +528,10 @@ class TileComponentManager(MccsComponentManager):
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
+        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
+            "longRunningCommandResult",
+            self._tile_orchestrator.propogate_subrack_lrc,
+        )
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_state_change_event_received,
@@ -568,25 +572,29 @@ class TileComponentManager(MccsComponentManager):
     # This code only tells you if the command was submitted NOT the result
     def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], _) = self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
+        ([result_code], [unique_id]) = self._subrack_proxy.PowerOffTpm(
+            self._subrack_tpm_id
+        )
         # TODO better handling of result code and exceptions.
         if result_code > 2:
             self.logger.error(
                 f"Turn off tpm {self._subrack_tpm_id} returns {result_code}"
             )
-        return result_code
+        return result_code, unique_id
 
     # Converted to a LRC, in subrack
     # This code only tells you if the command was submitted NOT the result
     def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
         assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], _) = self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
+        ([result_code], [unique_id]) = self._subrack_proxy.PowerOnTpm(
+            self._subrack_tpm_id
+        )
         # TODO better handling of result code and exceptions.
         if result_code > 2:
             self.logger.error(
                 f"Turn on tpm {self._subrack_tpm_id} returns {result_code}"
             )
-        return result_code
+        return result_code, unique_id
 
     def _tpm_power_state_changed(
         self: TileComponentManager, power_state: PowerState

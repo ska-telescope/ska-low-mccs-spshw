@@ -16,6 +16,7 @@ import logging
 import threading
 from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
 
+import tango
 import yaml
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 
@@ -196,6 +197,8 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
+        self._subrack_lrc_callbacks = {}
+
         self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
         )
@@ -280,6 +283,36 @@ class TileOrchestrator:
         with self.__lock:
             self._act(Stimulus.DESIRE_OFFLINE)
 
+    def propogate_subrack_lrc(
+        self: TileOrchestrator,
+        event_name: str,
+        event_value: Tuple[str, str],
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Call LRC callbacks to reflect changes in the subrack.
+
+        This is needed as there are LRCs which call subrack LRCs:
+        (desire_on, desire_off, desire_standby)
+        Therefore the initial LRC callback needs to get called when the subsequent
+        LRC on the subrack completes
+
+        :param event_name: the name of the event, which will always be
+            longrunningcommandresult
+        :param event_value: a tuple containing the unique id and message from the LRC
+        :param event_quality: the quality of the change event
+        """
+        unique_id = event_value[0]
+        if unique_id in self._subrack_lrc_callbacks:
+            callback, lrc_name = self._subrack_lrc_callbacks.pop(unique_id)
+            message = event_value[1]
+            if "task has completed" in message:
+                callback(
+                    status=TaskStatus.COMPLETED, result=f"Tile {lrc_name} completed"
+                )
+            else:
+                callback(status=TaskStatus.FAILED, result=f"Tile {lrc_name} failed")
+
     def desire_on(
         self: TileOrchestrator,
         task_callback: Optional[Callable] = None,
@@ -299,17 +332,16 @@ class TileOrchestrator:
         try:
             with self.__lock:
                 self._tpm_power_state_on = PowerState.ON
-                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+                result = self._act(Stimulus.DESIRE_ON)
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-
-        if task_callback:
-            if result_code == ResultCode.OK:
-                task_callback(status=TaskStatus.COMPLETED, result="Tile on completed")
-            else:
-                task_callback(status=TaskStatus.FAILED, result="Tile on failed")
+        else:
+            if result is not None and isinstance(result, Tuple):
+                unique_id = result[1]
+                if task_callback:
+                    self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
 
     def desire_off(
         self: TileOrchestrator,
@@ -329,16 +361,16 @@ class TileOrchestrator:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             with self.__lock:
-                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_OFF))
+                result = self._act(Stimulus.DESIRE_OFF)
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        if task_callback:
-            if result_code == ResultCode.OK:
-                task_callback(status=TaskStatus.COMPLETED, result="Tile off completed")
-            else:
-                task_callback(status=TaskStatus.FAILED, result="Tile off failed")
+        else:
+            if result is not None and isinstance(result, Tuple):
+                unique_id = result[1]
+                if task_callback:
+                    self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
 
     def desire_standby(
         self: TileOrchestrator,
@@ -359,18 +391,16 @@ class TileOrchestrator:
         try:
             with self.__lock:
                 self._tpm_power_state_on = PowerState.STANDBY
-                result_code = cast(ResultCode, self._act(Stimulus.DESIRE_ON))
+                result = self._act(Stimulus.DESIRE_ON)
         except Exception as exc:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        if task_callback:
-            if result_code == ResultCode.OK:
-                task_callback(
-                    status=TaskStatus.COMPLETED, result="Tile standby completed"
-                )
-            else:
-                task_callback(status=TaskStatus.FAILED, result="Tile standby failed")
+        else:
+            if result is not None and isinstance(result, Tuple):
+                unique_id = result[1]
+                if task_callback:
+                    self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
 
     def update_subrack_communication_state(
         self: TileOrchestrator,

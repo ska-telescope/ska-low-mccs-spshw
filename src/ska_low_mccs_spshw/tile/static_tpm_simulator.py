@@ -114,7 +114,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     """
 
     def __init__(
-        self: StaticTpmSimulator,
+        self: StaticTpmSimulatorPatchedReadWrite,
         logger: logging.Logger,
         component_state_changed_callback: Optional[
             Callable[[dict[str, Any]], None]
@@ -129,7 +129,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         super().__init__(logger, component_state_changed_callback)
 
-    def read_address(self: BaseTpmSimulator, address: int) -> list[int]:
+    def read_address(
+        self: StaticTpmSimulatorPatchedReadWrite, address: int
+    ) -> list[int]:
         """
         Return a list of values from a given address.
 
@@ -139,7 +141,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         return self._address_map.get(str(address), 0)
 
-    def write_address(self: BaseTpmSimulator, address: int, values: int) -> None:
+    def write_address(
+        self: StaticTpmSimulatorPatchedReadWrite, address: int, values: int
+    ) -> None:
         """
         Write a integer value to a given address.
 
@@ -148,7 +152,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         self._address_map.update({str(address): values})
 
-    def write_register(self, address: int, values: int) -> None:
+    def write_register(
+        self: StaticTpmSimulatorPatchedReadWrite, address: int, values: int
+    ) -> None:
         """
         Write a integer value to a given register.
 
@@ -157,7 +163,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         self._register_map.update({str(address): values})
 
-    def read_register(self, address: int) -> None:
+    def read_register(self: StaticTpmSimulatorPatchedReadWrite, address: int) -> None:
         """
         Read a value at a given register.
 
@@ -167,7 +173,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         """
         return self._register_map.get(str(address), 0)
 
-    def find_register(self, address: int) -> list[Any]:
+    def find_register(
+        self: StaticTpmSimulatorPatchedReadWrite, address: int
+    ) -> list[Any]:
         """
         Find a item in a dictionary.
 
@@ -186,7 +194,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
                 matches.append(v)
         return matches
 
-    def __getitem__(self, key: int) -> Any | LibraryError:
+    def __getitem__(
+        self: StaticTpmSimulatorPatchedReadWrite, key: int
+    ) -> Any | LibraryError:
         """
         Check if the specified key is a memory address or register name.
 
@@ -209,7 +219,9 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         # Register not found
         raise LibraryError(f"Register {key} not found")
 
-    def __setitem__(self, key: int, value: Any) -> None | LibraryError:
+    def __setitem__(
+        self: StaticTpmSimulatorPatchedReadWrite, key: int, value: Any
+    ) -> None | LibraryError:
         """
         Check if the specified key is a memory address or register name.
 

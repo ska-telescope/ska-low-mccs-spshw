@@ -27,7 +27,7 @@ def devices_to_load() -> DevicesToLoadType:
         "path": "tests/data/configuration.json",
         "package": "ska_low_mccs_spshw",
         "devices": [
-            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "subrack_0001", "proxy": MccsDeviceProxy},
         ],
     }
 
@@ -55,4 +55,4 @@ def subrack_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
     :return: A MccsDeviceProxy instance to MccsSubrack stored in the target_fixture
         `subrack_bdd`.
     """
-    return tango_harness.get_device("low-mccs/subrack/01")
+    return tango_harness.get_device("low-mccs/subrack/0001")

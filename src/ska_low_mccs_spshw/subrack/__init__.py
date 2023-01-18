@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -18,6 +16,7 @@ __all__ = [
     "SwitchingSubrackComponentManager",
     "SubrackComponentManager",
     "SubrackDriver",
+    "NewSubrackDriver",
     "SubrackHealthModel",
     "FanMode",
 ]
@@ -25,12 +24,13 @@ __all__ = [
 from .subrack_data import SubrackData
 from .subrack_data import FanMode
 from .subrack_simulator import SubrackSimulator
-from .subrack_driver import SubrackDriver
-from .subrack_component_manager import (
+from .subrack_driver import SubrackDriver  # type: ignore[attr-defined]
+from .subrack_component_manager import (  # type: ignore[attr-defined]
     BaseSubrackSimulatorComponentManager,
     SubrackSimulatorComponentManager,
     SwitchingSubrackComponentManager,
     SubrackComponentManager,
 )
-from .subrack_health_model import SubrackHealthModel
-from .subrack_device import MccsSubrack
+from .new_subrack_driver import NewSubrackDriver
+from .subrack_health_model import SubrackHealthModel  # type: ignore[attr-defined]
+from .subrack_device import MccsSubrack  # type: ignore[attr-defined]

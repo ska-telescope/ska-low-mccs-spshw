@@ -2,6 +2,11 @@
 
 ## unrelease
 
+## 0.2.0
+
+* MCCS-1256 - External simulator
+* MCCS-1148 - Fix bug with incorrect reporting of Tile On/Off result
+
 ## 0.1.0
 
 * MCCS-1292 - Move any changed tile & subrack files from ska-low-mccs

@@ -23,25 +23,25 @@ class TpmStatus(enum.IntEnum):
     """
 
     UNKNOWN = 0
-    """ The status is not known """
+    """The status is not known."""
 
     OFF = 1
-    """ The TPM is not powered """
+    """The TPM is not powered."""
 
     UNCONNECTED = 2
-    """ The TPM is not connected """
+    """The TPM is not connected."""
 
     UNPROGRAMMED = 3
-    """ The TPM is powered on but FPGAS are not programmed """
+    """The TPM is powered on but FPGAS are not programmed."""
 
     PROGRAMMED = 4
-    """ The TPM is powered on and FPGAS are programmed """
+    """The TPM is powered on and FPGAS are programmed."""
 
     INITIALISED = 5
-    """ Initialise command has been issued """
+    """Initialise command has been issued."""
 
     SYNCHRONISED = 6
-    """ Time has been synchronised with UTC, timestamp is valid """
+    """Time has been synchronised with UTC, timestamp is valid."""
 
     """ TODO: More status values to come, for complete configuration in station """
 

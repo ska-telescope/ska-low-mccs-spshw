@@ -865,7 +865,7 @@ class TileComponentManager(MccsComponentManager):
         n_samples: int = 1024,
         sync: bool = False,
         first_channel: int = 0,
-        last_channel: int = 512,
+        last_channel: int = 511,
         channel_id: int = 128,
         frequency: float = 100.0,
         round_bits: int = 3,

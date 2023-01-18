@@ -31,7 +31,7 @@ def devices_to_load() -> DevicesToLoadType:
         "path": "tests/data/configuration.json",
         "package": "ska_low_mccs_spshw",
         "devices": [
-            {"name": "subrack_01", "proxy": MccsDeviceProxy},
+            {"name": "subrack_0001", "proxy": MccsDeviceProxy},
             {"name": "tile_0001", "proxy": MccsDeviceProxy},
             {"name": "tile_0002", "proxy": MccsDeviceProxy},
             {"name": "tile_0003", "proxy": MccsDeviceProxy},
@@ -77,7 +77,7 @@ class TestSubrackTileIntegration:
             can use to subscribe to state changes on the tile device.
         """
         tile_device = tango_harness.get_device("low-mccs/tile/0001")
-        subrack_device = tango_harness.get_device("low-mccs/subrack/01")
+        subrack_device = tango_harness.get_device("low-mccs/subrack/0001")
         tpm_id = 1
 
         tile_lrc_result_changed_callback = lrc_result_changed_callback_factory()

@@ -1,0 +1,56 @@
+{{- $stations := .Values.deviceServers.stations}}
+name: "station-{{.Release.Name}}"
+function: ska-low-mccs-spshw-station
+domain: ska-low-mccs-spshw
+instances:
+{{- range $key, $this_station := $stations.instances}}
+{{- if or $this_station.enabled (not (hasKey $this_station "enabled"))}}
+  - {{printf "station-%03d" (int $key)}}
+{{- end}}
+{{- end}}
+entrypoints:
+  - name: "station.SpsStation"
+    path: "/app/src/ska_low_mccs_spshw/station/station_device.py"
+server:
+  name: "SpsStation"
+  instances:
+{{- range $key, $this_station := $stations.instances}}
+    - name: {{printf "station-%03d" (int $key)}}
+      classes:
+        - name: "SpsStation"
+          devices:
+            - name: {{printf "low-mccs-spshw/station/%03d" (int $key)}}
+              properties:
+                - name: "SubrackFQDNs"
+                  values:
+{{- range $subrack := $this_station.subracks}}
+                    - {{printf "low-mccs-spshw/subrack/%04d" (int $subrack)}}
+{{- end}}
+                - name: "TileFQDNs"
+                  values:
+{{- range $tpm := $this_station.tpms}}
+                    - {{printf "low-mccs-spshw/tile/%04d" (int $tpm)}}
+{{- end}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{pluck "logging_level_default" $this_station $stations | first | default 3 | toString | quote}}
+                - name: "StationId"
+                  values:
+                    - {{$key | quote}}
+                - name: "CabinetNetworkAddress"
+                  values:
+                    - {{required "station definition requires a cabinet_network_address" $this_station.cabinet_network_address}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.low_mccs_spshw.image}}
+  registry: {{.registry | quote}}
+  image: {{.image | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

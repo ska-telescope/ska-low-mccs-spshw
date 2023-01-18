@@ -5,7 +5,7 @@ domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_subrack := $subracks.instances}}
 {{- if or $this_subrack.enabled (not (hasKey $this_subrack "enabled"))}}
-  - {{printf "subrack-%02d" (int $key)}}
+  - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
 entrypoints:
@@ -15,11 +15,11 @@ server:
   name: "MccsSubrack"
   instances:
 {{- range $key, $this_subrack := $subracks.instances}}
-    - name: {{printf "subrack-%02d" (int $key)}}
+    - name: {{printf "subrack-%04d" (int $key)}}
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs-spshw/subrack/%02d" (int $key)}}
+        - name: {{printf "low-mccs-spshw/subrack/%04d" (int $key)}}
           properties:
           - name: "SubrackIp"
             values: 

@@ -89,6 +89,11 @@ simulators:
       # port: 8081  # optional, defaults to 8081
 
 deviceServers:  # e.g....
+  # stations:
+  #   instances:
+  #     1:
+  #       enabled: false  # suppress this Tango device
+  #   logging_level_default: 5
   # subracks:
   #   instances:
   #     1:

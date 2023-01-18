@@ -78,7 +78,7 @@ def subrack_fqdn() -> str:
 
     :return: the FQDN of the subrack that powers the tile.
     """
-    return "low-mccs/subrack/01"
+    return "low-mccs/subrack/0001"
 
 
 @pytest.fixture()

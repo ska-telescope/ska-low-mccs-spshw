@@ -811,3 +811,45 @@ class TestTPMDriver:
         _, kwargs = initialise_task_callback.get_next_call()
         assert kwargs["status"] == TaskStatus.COMPLETED
         assert kwargs["result"] == "The initialisation task has failed"
+
+    @pytest.mark.parametrize(
+        "tpm_version_to_test, expected_firmware_name",
+        [("tpm_v1_2", "itpm_v1_2.bit"), ("tpm_v1_6", "itpm_v1_6.bit")],
+    )
+    def test_firmware_version(
+        self: TestTPMDriver,
+        tpm_version_to_test: str,
+        expected_firmware_name: str,
+        logger: logging.Logger,
+        max_workers: int,
+        tile_id: int,
+        communication_state_changed_callback: MockCallable,
+        component_state_changed_callback: MockCallable,
+        static_tile_simulator: StaticTileSimulator,
+    ) -> None:
+        """
+        Test that the tpm driver will get the correct firmware bitfile.
+
+        :param tpm_version_to_test: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param expected_firmware_name: the expected value of firmware_name
+        :param logger: a object that implements the standard logging
+            interface of :py:class:`logging.Logger`
+        :param max_workers: nos. of worker threads
+        :param tile_id: the unique ID for the tile
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param static_tile_simulator: The tile used by the TpmDriver.
+        """
+        driver = TpmDriver(
+            logger,
+            max_workers,
+            tile_id,
+            static_tile_simulator,
+            tpm_version_to_test,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+        )
+        assert driver.firmware_name == expected_firmware_name

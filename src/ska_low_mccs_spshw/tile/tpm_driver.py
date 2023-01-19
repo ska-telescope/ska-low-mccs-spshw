@@ -64,7 +64,7 @@ class TpmDriver(MccsComponentManager):
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 0
     PHASE_TERMINAL_COUNT = 0
-    FIRMWARE_NAME = "itpm_v1_6.bit"
+    FIRMWARE_NAME = {"tpm_v1_2": "itpm_v1_2.bit", "tpm_v1_6": "itpm_v1_6.bit"}
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -141,7 +141,7 @@ class TpmDriver(MccsComponentManager):
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
         self._station_id = 0
-        self._firmware_name = self.FIRMWARE_NAME
+        self._firmware_name = self.FIRMWARE_NAME[tpm_version]
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._tpm_status = TpmStatus.UNKNOWN
         # Configuration table cache

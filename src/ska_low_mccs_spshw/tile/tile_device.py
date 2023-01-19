@@ -1138,9 +1138,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the name is invalid
             """
             if name is None or name == "":
-                self._component_manager.logger.error(
-                    "register name is a mandatory parameter"
-                )
+                self.logger.error("register name is a mandatory parameter")
                 raise ValueError("register name is a mandatory parameter")
             value = self._component_manager.read_register(name)
             self.logger.debug(f"Register {name} = {value}")
@@ -1201,13 +1199,11 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             name = params.get("register_name", None)
             if name is None:
-                self._component_manager.logger.error(
-                    "register_name is a mandatory parameter"
-                )
+                self.logger.error("register_name is a mandatory parameter")
                 raise ValueError("register_name is a mandatory parameter")
             values = params.get("values", None)
             if values is None:
-                self._component_manager.logger.error("Values is a mandatory parameter")
+                self.logger.error("Values is a mandatory parameter")
                 raise ValueError("values is a mandatory parameter")
 
             self._component_manager.write_register(name, values)
@@ -1271,9 +1267,7 @@ class MccsTile(SKABaseDevice):
                 or structure
             """
             if len(argin) < 1:
-                self._component_manager.logger.error(
-                    "At least one parameter is required"
-                )
+                self.logger.error("At least one parameter is required")
                 raise ValueError("One or two parameters are required")
             if len(argin) == 1:
                 nvalues = 1
@@ -1335,9 +1329,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin has the wrong length/structure
             """
             if len(argin) < 2:
-                self._component_manager.logger.error(
-                    "A minimum of two parameters are required"
-                )
+                self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
             self._component_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1565,7 +1557,7 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             mode = params.get("mode", None)
             if mode is None:
-                self._component_manager.logger.error("mode is a mandatory parameter")
+                self.logger.error("mode is a mandatory parameter")
                 raise ValueError("mode is a mandatory parameter")
             if mode == "40g" or mode == "40G":
                 mode = "10g"
@@ -1651,7 +1643,7 @@ class MccsTile(SKABaseDevice):
             params = json.loads(argin)
             mode = params.get("mode", None)
             if mode is None:
-                self._component_manager.logger.error("mode is a mandatory parameter")
+                self.logger.error("mode is a mandatory parameter")
                 raise ValueError("mode is a mandatory parameter")
             if mode == "40g" or mode == "40G":
                 mode = "10g"
@@ -1791,15 +1783,13 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < 8:
-                self._component_manager.logger.error(
-                    "Insufficient parameters specified"
-                )
+                self.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
             if len(argin) > (48 * 8):
-                self._component_manager.logger.error("Too many regions specified")
+                self.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
             if len(argin) % 8 != 0:
-                self._component_manager.logger.error(
+                self.logger.error(
                     "Incomplete specification of region. Regions specified by 8 values"
                 )
                 raise ValueError("Incomplete specification of region")
@@ -1809,27 +1799,21 @@ class MccsTile(SKABaseDevice):
                 region = argin[i : i + 8]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
-                    self._component_manager.logger.error(
-                        "Start channel in region must be even"
-                    )
+                    self.logger.error("Start channel in region must be even")
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
-                    self._component_manager.logger.error(
+                    self.logger.error(
                         "Nos. of channels in region must be multiple of 8"
                     )
                     raise ValueError("Nos. of channels in region must be multiple of 8")
                 beam_index = region[2]
                 if beam_index < 0 or beam_index > 47:
-                    self._component_manager.logger.error(
-                        "Beam_index is out side of range 0-47"
-                    )
+                    self.logger.error("Beam_index is out side of range 0-47")
                     raise ValueError("Beam_index is out side of range 0-47")
                 total_chan += nchannels
                 if total_chan > 384:
-                    self._component_manager.logger.error(
-                        "Too many channels specified > 384"
-                    )
+                    self.logger.error("Too many channels specified > 384")
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
 
@@ -1995,12 +1979,10 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < 9:
-                self._component_manager.logger.error(
-                    "Insufficient calibration coefficients"
-                )
+                self.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
-                self._component_manager.logger.error(
+                self.logger.error(
                     "Incomplete specification of coefficient. "
                     "Needs 8 values (4 complex Jones) per channel"
                 )
@@ -2165,11 +2147,11 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < self._antennas_per_tile * 2 + 1:
-                self._component_manager.logger.error("Insufficient parameters")
+                self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
             if beam_index < 0 or beam_index > 7:
-                self._component_manager.logger.error("Invalid beam index")
+                self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
             for i in range(self._antennas_per_tile):
@@ -2605,9 +2587,7 @@ class MccsTile(SKABaseDevice):
             # Check for mandatory parameters
             data_type = params.get("data_type", None)
             if data_type is None:
-                self._component_manager.logger.error(
-                    "data_type is a mandatory parameter"
-                )
+                self.logger.error("data_type is a mandatory parameter")
                 raise ValueError("data_type is a mandatory parameter")
             if data_type not in [
                 "raw",
@@ -2616,7 +2596,7 @@ class MccsTile(SKABaseDevice):
                 "narrowband",
                 "beam",
             ]:
-                self._component_manager.logger.error("Invalid data_type specified")
+                self.logger.error("Invalid data_type specified")
                 raise ValueError("Invalid data_type specified")
             if data_type == "channel":
                 first_ch = params.get("first_channel", 0)
@@ -2626,32 +2606,24 @@ class MccsTile(SKABaseDevice):
                         f"first_channel ({first_ch}) and last_channel ({last_ch}) "
                         f"must define a range within [0, 511]"
                     )
-                    self._component_manager.logger.error(err)
+                    self.logger.error(err)
                     raise ValueError(err)
 
             if data_type == "channel_continuous":
                 channel_id = params.get("channel_id", None)
                 if channel_id is None:
-                    self._component_manager.logger.error(
-                        "channel_id is a mandatory parameter"
-                    )
+                    self.logger.error("channel_id is a mandatory parameter")
                     raise ValueError("channel_id is a mandatory parameter")
                 if channel_id < 1 or channel_id > 511:
-                    self._component_manager.logger.error(
-                        "channel_id must be between 1 and 511"
-                    )
+                    self.logger.error("channel_id must be between 1 and 511")
                     raise ValueError("channel_id must be between 1 and 511")
             if data_type == "narrowband":
                 frequency = params.get("frequency", None)
                 if frequency is None:
-                    self._component_manager.logger.error(
-                        "frequency is a mandatory parameter"
-                    )
+                    self.logger.error("frequency is a mandatory parameter")
                     raise ValueError("frequency is a mandatory parameter")
                 if frequency < 1e6 or frequency > 399e6:
-                    self._component_manager.logger.error(
-                        "frequency must be between 1 and 390 MHz"
-                    )
+                    self.logger.error("frequency must be between 1 and 390 MHz")
                     raise ValueError("frequency must be between 1 and 390 MHz")
 
             n_samples = None

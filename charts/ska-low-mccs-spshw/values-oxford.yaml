@@ -83,22 +83,27 @@ low_mccs_spshw:
 facility: oxford
 
 simulators:
-  subracks:
-    1:
-      host: subrack-simulator-1
+  # subracks:
+  #   1:
+  #     host: subrack-simulator-1
 
 deviceServers:
-  tpms:
-    instances:
-      1:
-        enabled: false
-      # 2:
-      #   enabled: true
-      #   simulation_config: false
-      3:
-        enabled: false
-      4:
-        enabled: false
+#Define what devices you want to deploy.
+#All devices at a facility will be deployed by default.
+#example configuration below deploys 2 TPM devices 1 and 2.
+#TPM 2 has a additional parameter as an example for defining 
+#Tile initialisation properties.
+  # tpms:
+  #   instances:
+  #     1:
+  #       enabled: true
+  #     2:
+  #       enabled: true
+  #       simulation_config: false
+  #     3:
+  #       enabled: false
+  #     4:
+  #       enabled: false
 
     logging_level_default: 5
     resources:

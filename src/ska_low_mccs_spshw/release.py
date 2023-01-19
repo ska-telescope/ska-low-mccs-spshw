@@ -12,7 +12,7 @@ from typing import Optional
 
 name = "ska_low_mccs_spshw"
 release_filename = os.path.join("..", "..", ".release")
-with open(".release", encoding="utf8") as fd:
+with open(".release", encoding="utf-8") as fd:
     line = fd.readline()
     version = line.strip().split("=")[1]
 version_info = version.split(".")
@@ -27,9 +27,9 @@ license = "BSD-3-Clause"  # noqa: A001
 
 # pylint: disable=redefined-builtin
 copyright = (  # noqa: A001
-    "CSIRO, INAF, I.T. Dev Ltd, Observatory Sciences Ltd"
-    "Raman Research Institute, Science and Technology Facilities Council"
-    "SKA Observatory, University of Malta, University of Manchester"
+    "CSIRO, INAF, I.T. Dev Ltd, Observatory Sciences Ltd "
+    "Raman Research Institute, Science and Technology Facilities Council "
+    "SKA Observatory, University of Malta, University of Manchester "
     "University of Oxford"
 )
 

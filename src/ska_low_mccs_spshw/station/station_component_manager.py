@@ -1348,10 +1348,13 @@ class SpsStationComponentManager(MccsComponentManager):
         """
         params = json.loads(argin)
         start_time = params.get("start_time", None)
+        delay = params.get("delay", 0)
+
         if start_time is None:
             start_time = datetime.strftime(
                 datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
             )
+        else:
             delay = 0
 
         return self.submit_task(

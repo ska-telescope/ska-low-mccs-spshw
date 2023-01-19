@@ -1185,9 +1185,12 @@ class TpmDriver(MccsComponentManager):
             white noise.
         """
         if type(truncation) == int:
-            self.channeliser_truncation = [truncation] * 512
+            self._channeliser_truncation = [truncation] * 512
         elif type(truncation) == list[int]:
-            self.channeliser_truncation = truncation
+            if len(truncation) == 1:
+                self._channeliser_truncation = truncation * 512
+            else:
+                self._channeliser_truncation = truncation
         self._set_channeliser_truncation(self._channeliser_truncation)
 
     def _set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:

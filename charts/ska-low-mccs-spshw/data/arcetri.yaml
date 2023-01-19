@@ -1,0 +1,67 @@
+stations: 
+  1:
+    cabinet_network_address: 10.0.0.0
+    subracks: [1]
+    tpms: [1, 2, 3, 4, 5, 6, 7, 8]
+subracks:
+  1:
+    host: 10.0.10.64
+    port: 8081
+    logging_level_default: 5
+tpms:
+  1:
+    host: 10.0.10.201
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 1
+    simulation_config: 0
+  2:
+    host: 10.0.10.202
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 2
+    simulation_config: 1
+  3:
+    host: 10.0.10.203
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 3
+    simulation_config: 1
+  4:
+    host: 10.0.10.214
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 4
+    simulation_config: 0
+  5:
+    host: 10.0.10.205
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 5
+    simulation_config: 1
+  6:
+    host: 10.0.10.206
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 6
+    simulation_config: 1
+  7:
+    host: 10.0.10.207
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 7
+    simulation_config: 1
+  8:
+    host: 10.0.10.208
+    port: 10000
+    version: tpm_v1_6
+    subrack: "1"
+    subrack_bay: 8
+    simulation_config: 1

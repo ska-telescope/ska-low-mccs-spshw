@@ -80,13 +80,13 @@ low_mccs_spshw:
     tag: 0.2.0  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
-facility: gmrt  # e.g. psi-low, aavs2, ...
+#facility: psi-low  # e.g. psi-low, aavs2, ...
 
-#simulators:
-#  subracks:
-#    1:  # these keys overrides keys in facility file
-#      host: subrack-simulator-1  # mandatory
-#      # port: 8081  # optional, defaults to 8081
+simulators:
+  subracks:
+    1:  # these keys overrides keys in facility file
+      host: subrack-simulator-1  # mandatory
+      # port: 8081  # optional, defaults to 8081
 
 deviceServers:  # e.g....
   # stations:

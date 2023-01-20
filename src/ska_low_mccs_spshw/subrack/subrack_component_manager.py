@@ -18,8 +18,8 @@ from ska_low_mccs_common.component import (
     PowerSupplyProxySimulator,
 )
 
-from .new_subrack_driver import NewSubrackDriver
 from .subrack_data import FanMode, SubrackData
+from .subrack_driver import SubrackDriver
 
 __all__ = ["SubrackComponentManager"]
 
@@ -35,7 +35,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
-        _driver: Optional[NewSubrackDriver] = None,
+        _driver: Optional[SubrackDriver] = None,
         _initial_power_state: PowerState = PowerState.OFF,
         _initial_fail: bool = False,
     ) -> None:
@@ -63,7 +63,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._component_state_changed_callback = component_state_changed_callback
 
-        hardware_component_manager = _driver or NewSubrackDriver(
+        hardware_component_manager = _driver or SubrackDriver(
             subrack_ip,
             subrack_port,
             logger,
@@ -116,7 +116,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the task status and a human-readable status message
         """
-        return cast(NewSubrackDriver, self._hardware_component_manager).turn_off_tpm(
+        return cast(SubrackDriver, self._hardware_component_manager).turn_off_tpm(
             tpm_number, task_callback=task_callback
         )
 
@@ -134,7 +134,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the task status and a human-readable status message
         """
-        return cast(NewSubrackDriver, self._hardware_component_manager).turn_on_tpm(
+        return cast(SubrackDriver, self._hardware_component_manager).turn_on_tpm(
             tpm_number, task_callback=task_callback
         )
 
@@ -149,7 +149,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the task status and a human-readable status message
         """
-        return cast(NewSubrackDriver, self._hardware_component_manager).turn_off_tpms(
+        return cast(SubrackDriver, self._hardware_component_manager).turn_off_tpms(
             task_callback=task_callback
         )
 
@@ -164,7 +164,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :return: the task status and a human-readable status message
         """
-        return cast(NewSubrackDriver, self._hardware_component_manager).turn_on_tpms(
+        return cast(SubrackDriver, self._hardware_component_manager).turn_on_tpms(
             task_callback=task_callback
         )
 
@@ -185,7 +185,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the task status and a human-readable status message
         """
         return cast(
-            NewSubrackDriver, self._hardware_component_manager
+            SubrackDriver, self._hardware_component_manager
         ).set_subrack_fan_speed(fan_number, speed, task_callback=task_callback)
 
     def set_subrack_fan_mode(
@@ -205,7 +205,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the task status and a human-readable status message
         """
         return cast(
-            NewSubrackDriver, self._hardware_component_manager
+            SubrackDriver, self._hardware_component_manager
         ).set_subrack_fan_mode(fan_number, mode, task_callback=task_callback)
 
     def set_power_supply_fan_speed(
@@ -225,5 +225,5 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :return: the task status and a human-readable status message
         """
         return cast(
-            NewSubrackDriver, self._hardware_component_manager
+            SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)

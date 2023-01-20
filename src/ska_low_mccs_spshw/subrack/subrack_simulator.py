@@ -158,7 +158,6 @@ class SubrackSimulator(SubrackProtocol):
             raise TypeError(f"Attempt to write read-only attribute {name}")
         if metadata["length"] is not None and len(values) != metadata["length"]:
             raise ValueError(f"Wrong number of values for attribute {name}")
-        print(f"Simulator: Setting {name} to {values}")
         self._attribute_values[name] = values
         return values
 

@@ -14,14 +14,14 @@ from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
-    NewSubrackDriver,
     SubrackData,
+    SubrackDriver,
     SubrackSimulator,
 )
 
 
 def test_attribute_reads(
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -51,7 +51,7 @@ def test_attribute_reads(
 
 def test_attribute_updates(  # pylint: disable=too-many-locals
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -164,7 +164,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
 
 def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -223,7 +223,7 @@ def test_tpm_power_commands(
 
 def test_other_commands(
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:

@@ -22,9 +22,9 @@ from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
-    NewSubrackDriver,
     SubrackComponentManager,
     SubrackData,
+    SubrackDriver,
 )
 from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
 from ska_low_mccs_spshw.subrack.subrack_simulator_server import configure_server
@@ -214,7 +214,7 @@ def subrack_driver(
     subrack_port: int,
     logger: logging.Logger,
     callbacks: dict[str, MockCallable],
-) -> NewSubrackDriver:
+) -> SubrackDriver:
     """
     Return a subrack driver, configured to talk to a running subrack server.
 
@@ -227,7 +227,7 @@ def subrack_driver(
 
     :return: a subrack driver.
     """
-    return NewSubrackDriver(
+    return SubrackDriver(
         subrack_ip,
         subrack_port,
         logger,
@@ -242,7 +242,7 @@ def subrack_component_manager(
     logger: logging.Logger,
     subrack_ip: str,
     subrack_port: int,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     initial_power_state: PowerState,
     callbacks: dict[str, MockCallable],
 ) -> SubrackComponentManager:

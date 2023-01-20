@@ -8,7 +8,6 @@ Subrack subpackage
 .. toctree::
 
   HTTP stack<http_stack>
-  New subrack driver<new_subrack_driver>
   Subrack API<subrack_api>
   Subrack component manager<subrack_component_manager>
   Subrack data<subrack_data>

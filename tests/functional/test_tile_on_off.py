@@ -10,13 +10,10 @@ from __future__ import annotations
 
 import pytest
 import tango
-import time
-from pytest_bdd import scenarios, given, then, when, parsers
-from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
+from pytest_bdd import given, parsers, scenarios, then, when
+from ska_control_model import AdminMode, PowerState, ResultCode
+from ska_low_mccs_common.testing.tango_harness import TangoHarness
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from ska_control_model import AdminMode, ResultCode
-#from ska_tango_testing.mock.placeholders import OneOf
 
 scenarios("./features/tile_on_off.feature")
 
@@ -26,24 +23,30 @@ def subrack_proxy_fixture(tango_harness: TangoHarness) -> tango.DeviceProxy:
     """
     Return the subrack device proxy.
 
+    :param tango_harness: a Tango harness against which to run tests of the deployment.
+
     :return: the subrack device proxy
     """
     return tango_harness.get_device("low-mccs/subrack/01")
+
 
 @pytest.fixture(name="tile_proxy")
 def tile_proxy_fixture(tango_harness: TangoHarness) -> tango.DeviceProxy:
     """
     Return the tile device proxy.
 
+    :param tango_harness: a Tango harness against which to run tests of the deployment.
+
     :return: the tile device proxy
     """
     return tango_harness.get_device("low-mccs/tile/0001")
 
+
 @pytest.fixture(name="change_event_callbacks")
 def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
-    Return a dictionary  of change event callbacks
-    
+    Return a dictionary  of change event callbacks.
+
     :return: a callback group
     """
     return MockTangoEventCallbackGroup(
@@ -53,29 +56,38 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_state_changed",
         "subrack_admin_mode_changed",
         "subrack_lrc_changed",
-     )
+    )
 
 
 @given(parsers.cfparse("the subrack is ONLINE"))
 def check_subrack_online(
     subrack_proxy: tango.DeviceProxy,
-    change_event_callbacks,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
+    """
+    Check starting state of the subrack.
+
+    If the starting adminMode of the subrack is OFFLINE and the state is DISABLED
+    then set the adminMode to ONLINE
+
+    :param subrack_proxy: a tango.DeviceProxy to the subrack device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
     starting_admin_mode = subrack_proxy.adminMode
     admin_mode_changed_callback = change_event_callbacks["subrack_admin_mode_changed"]
-    id = subrack_proxy.subscribe_event(
-        "adminMode", tango.EventType.CHANGE_EVENT,
+    subrack_proxy.subscribe_event(
+        "adminMode",
+        tango.EventType.CHANGE_EVENT,
         admin_mode_changed_callback,
-    
     )
     admin_mode_changed_callback.assert_change_event(AdminMode.OFFLINE)
 
     starting_state = subrack_proxy.state()
     state_changed_callback = change_event_callbacks["subrack_state_changed"]
-    id = subrack_proxy.subscribe_event(
-        "state", tango.EventType.CHANGE_EVENT,
+    subrack_proxy.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
         state_changed_callback,
-    
     )
     state_changed_callback.assert_change_event(tango.DevState.DISABLE)
 
@@ -86,26 +98,36 @@ def check_subrack_online(
         subrack_proxy.adminMode = AdminMode.ONLINE
         admin_mode_changed_callback.assert_change_event(AdminMode.ONLINE)
 
+
 @given("the tile is ONLINE")
 def check_tile_online(
     tile_proxy: tango.DeviceProxy,
-    change_event_callbacks,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
+    """
+    Check starting state of the tile.
+
+    If the starting adminMode of the tile is OFFLINE and the state is DISABLED
+    then set the adminMode to ONLINE
+
+    :param tile_proxy: a tango.DeviceProxy to the tile device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
     starting_admin_mode = tile_proxy.adminMode
     tile_admin_mode_changed_callback = change_event_callbacks["tile_admin_mode_changed"]
-    id = tile_proxy.subscribe_event(
-        "adminMode", tango.EventType.CHANGE_EVENT,
+    tile_proxy.subscribe_event(
+        "adminMode",
+        tango.EventType.CHANGE_EVENT,
         tile_admin_mode_changed_callback,
-      
     )
     tile_admin_mode_changed_callback.assert_change_event(AdminMode.OFFLINE)
 
     starting_state = tile_proxy.state()
     state_changed_callback = change_event_callbacks["tile_state_changed"]
-    id = tile_proxy.subscribe_event(
-        "state", tango.EventType.CHANGE_EVENT,
+    tile_proxy.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
         state_changed_callback,
-     
     )
     state_changed_callback.assert_change_event(tango.DevState.DISABLE)
 
@@ -113,21 +135,28 @@ def check_tile_online(
         assert starting_state == tango.DevState.ON
     else:
         assert starting_state == tango.DevState.DISABLE
-        tile_proxy.write_attribute("adminMode",AdminMode.ONLINE)
+        tile_proxy.write_attribute("adminMode", AdminMode.ONLINE)
         tile_admin_mode_changed_callback.assert_change_event(AdminMode.ONLINE)
 
-@when(parsers.cfparse("the subrack is turned ON"))
+
+@when("the subrack is turned ON")
 def turn_subrack_on(
-    change_event_callbacks,
-    subrack_proxy,
+    subrack_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-    id = subrack_proxy.subscribe_event(
+    """
+    Turn the subrack on.
+
+    :param subrack_proxy: a tango.DeviceProxy to the subrack device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    subrack_proxy.subscribe_event(
         "longRunningCommandStatus",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_lrc_changed"],
     )
     details = change_event_callbacks["subrack_lrc_changed"].assert_against_call()
-    [result_code],[command_id] = subrack_proxy.on()
+    [result_code], [command_id] = subrack_proxy.on()
     assert result_code == ResultCode.QUEUED
     while not result_code == "COMPLETED":
         details = change_event_callbacks["subrack_lrc_changed"].assert_against_call()
@@ -135,54 +164,113 @@ def turn_subrack_on(
     final_state = subrack_proxy.state()
     assert final_state == tango.DevState.ON
 
+
 @when("the tile is turned ON")
 def turn_tile_on(
-    change_event_callbacks,
-    tile_proxy,
+    tile_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-    id = tile_proxy.subscribe_event(
+    """
+    Turn the tile on.
+
+    :param tile_proxy: a tango.DeviceProxy to the tile device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    tile_proxy.subscribe_event(
         "longRunningCommandStatus",
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["tile_lrc_changed"],
     )
     details = change_event_callbacks["tile_lrc_changed"].assert_against_call()
-    [result_code],[command_id] = tile_proxy.on()
+    [result_code], [command_id] = tile_proxy.on()
     assert result_code == ResultCode.QUEUED
-    while not result_code == "FAILED":
+    while not result_code == "COMPLETED":
         details = change_event_callbacks["tile_lrc_changed"].assert_against_call()
         _, result_code = details["attribute_value"]
-        print(f"£££££££££££££££ {result_code}")
 
-@then("the subrack reports its state is ON")
-def check_tile_on(
-    change_event_callbacks,
+
+@then("the subrack reports the tpm power state is ON")
+def check_subrack_reports_tile_tpm_on(
+    subrack_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-    print(f"£££££££££££££££")
+    """
+    Check that the subrack reports the power to the tile/tpm is on.
+
+    :param subrack_proxy: a tango.DeviceProxy to the subrack device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    power_state = subrack_proxy.tpm1PowerState
+
+    assert power_state == PowerState.ON
+
 
 @then("the tile reports its state is ON")
 def check_tile_on(
-    change_event_callbacks,
+    tile_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-#     final_state = tile_proxy.state()
-#     assert final_state == tango.DevState.ON
-#     print(f"£££££££££££££££ {final_state}")
-    print(f"£££££££££££££££")
+    """
+    Check that the tile on.
+
+    :param tile_proxy: a tango.DeviceProxy to the tile device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    final_state = tile_proxy.state()
+    print(f"\n\n\n\n\n {final_state}")
+    assert final_state == tango.DevState.ON
+
 
 @when("the tile is turned OFF")
 def turn_tile_off(
-    change_event_callbacks,
+    tile_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-    print(f"£££££££££££££££")
+    """
+    Turn the tile off.
+
+    :param tile_proxy: a tango.DeviceProxy to the tile device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    # not sure whether we need to subscribe again.
+    #     tile_proxy.subscribe_event(
+    #         "longRunningCommandStatus",
+    #         tango.EventType.CHANGE_EVENT,
+    #         change_event_callbacks["tile_lrc_changed"],
+    #     )
+    #     details = change_event_callbacks["tile_lrc_changed"].assert_against_call()
+    [result_code], [command_id] = tile_proxy.off()
+    assert result_code == ResultCode.QUEUED
+    while not result_code == "COMPLETED":
+        details = change_event_callbacks["tile_lrc_changed"].assert_against_call()
+        _, result_code = details["attribute_value"]
+
+
+@then("the subrack reports the tpm power state as OFF")
+def check_subrack_reports_tile_off(
+    subrack_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Check that the subrack reports the power to the tile/tpm is off.
+
+    :param subrack_proxy: a tango.DeviceProxy to the subrack device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    power_state = subrack_proxy.tpm1PowerState
+    assert power_state == PowerState.OFF
+
 
 @then("the tile reports it's state OFF")
 def check_tile_off(
-    change_event_callbacks,
+    tile_proxy: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
-    print(f"£££££££££££££££")
+    """
+    Check that the tile off.
 
-@then("the subrack reports the tile as OFF")
-def check_tile_off(
-    change_event_callbacks,
-) -> None:
-    print(f"£££££££££££££££")
-
+    :param tile_proxy: a tango.DeviceProxy to the tile device
+    :param change_event_callbacks: callbacks for CHANGE_EVENT event types.
+    """
+    final_state = tile_proxy.state()
+    assert final_state == tango.DevState.DISABLED

@@ -11,382 +11,240 @@
 from __future__ import annotations
 
 import logging
-import unittest.mock
-from typing import Any, Callable, Optional
+import threading
+import time
+from typing import Any, TypedDict
 
 import pytest
-import requests
-from ska_control_model import CommunicationStatus, PowerState, SimulationMode
+import uvicorn
+from ska_control_model import PowerState
+from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack import (
+    FanMode,
+    NewSubrackDriver,
     SubrackComponentManager,
     SubrackData,
-    SubrackDriver,
-    SubrackSimulatorComponentManager,
-    SwitchingSubrackComponentManager,
 )
-from ska_low_mccs_spshw.subrack.internal_subrack_simulator import (
-    InternalSubrackSimulator as SubrackSimulator,
+from ska_low_mccs_spshw.subrack.subrack_simulator import SubrackSimulator
+from ska_low_mccs_spshw.subrack.subrack_simulator_server import configure_server
+
+SubrackInfoType = TypedDict(
+    "SubrackInfoType", {"host": str, "port": int, "simulator": bool}
 )
 
 
 @pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def callbacks() -> dict[str, MockCallable]:
     """
-    Return a mock callback for when the state of a component changes.
+    Return a dictionary of callables to be used as callbacks.
 
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the state of a
-        component changes.
+    :return: a dictionary of callables to be used as callbacks.
     """
-    return mock_callback_deque_factory()
+    return {
+        "communication_status": MockCallable(),
+        "component_state": MockCallable(),
+        "task": MockCallable(),
+    }
+
+
+@pytest.fixture(name="subrack_simulator_config")
+def subrack_simulator_config_fixture() -> dict[str, Any]:
+    """
+    Return attribute values with which the subrack simulator is configured.
+
+    :return: a key-value dictionary of attribute values with which the
+        subrack simulator is configured.
+    """
+    return {
+        "tpm_present": [False, True, False, False, True, False, False, False],
+        "tpm_on_off": [False, False, False, False, False, False, False, False],
+        "backplane_temperatures": [39.0, 40.0],
+        "board_temperatures": [40.0, 41.0],
+        "board_current": 1.1,
+        "power_supply_currents": [4.2, 5.8],
+        "power_supply_fan_speeds": [90.0, 100.0],
+        "power_supply_voltages": [12.0, 12.1],
+        "subrack_fan_speeds": [4999.0, 5000.0, 5001.0, 5002.0],
+        "subrack_fan_modes": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
+        "tpm_currents": [0.4] * 8,
+        "tpm_temperatures": [40.0] * 8,
+        "tpm_voltages": [12.0] * 8,
+    }
+
+
+@pytest.fixture(name="subrack_simulator_attribute_values")
+def subrack_simulator_attribute_values_fixture(
+    subrack_simulator_config,
+) -> dict[str, Any]:
+    """
+    Return attribute values that the subrack simulator is expected to report.
+
+    :param subrack_simulator_config: attribute values with which the
+        subrack simulator is configured.
+
+    :return: a key-value dictionary of attribute values that the subrack
+        simulator is expected to report.
+    """
+
+    def _approxify(list_of_floats):
+        return [pytest.approx(element) for element in list_of_floats]
+
+    return {
+        "tpm_present": subrack_simulator_config["tpm_present"],
+        "tpm_on_off": subrack_simulator_config["tpm_on_off"],
+        "backplane_temperatures": _approxify(
+            subrack_simulator_config["backplane_temperatures"]
+        ),
+        "board_temperatures": _approxify(
+            subrack_simulator_config["board_temperatures"]
+        ),
+        "board_current": pytest.approx(subrack_simulator_config["board_current"]),
+        "power_supply_currents": _approxify(
+            subrack_simulator_config["power_supply_currents"]
+        ),
+        "power_supply_fan_speeds": _approxify(
+            subrack_simulator_config["power_supply_fan_speeds"]
+        ),
+        "power_supply_voltages": _approxify(
+            subrack_simulator_config["power_supply_voltages"]
+        ),
+        "power_supply_powers": [
+            pytest.approx(c * v)
+            for c, v in zip(
+                subrack_simulator_config["power_supply_currents"],
+                subrack_simulator_config["power_supply_voltages"],
+            )
+        ],
+        "subrack_fan_speeds": subrack_simulator_config["subrack_fan_speeds"],
+        "subrack_fan_speeds_percent": [
+            pytest.approx(s * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED)
+            for s in subrack_simulator_config["subrack_fan_speeds"]
+        ],
+        "subrack_fan_modes": subrack_simulator_config["subrack_fan_modes"],
+        "tpm_currents": _approxify(subrack_simulator_config["tpm_currents"]),
+        "tpm_temperatures": _approxify(subrack_simulator_config["tpm_temperatures"]),
+        "tpm_voltages": _approxify(subrack_simulator_config["tpm_voltages"]),
+        "tpm_powers": [
+            pytest.approx(c * v)
+            for c, v in zip(
+                subrack_simulator_config["tpm_currents"],
+                subrack_simulator_config["tpm_voltages"],
+            )
+        ],
+    }
 
 
 @pytest.fixture()
-def component_tpm_power_changed_callback(
-    mock_callback_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
+def subrack_simulator(subrack_simulator_config: dict[str, Any]) -> SubrackSimulator:
     """
-    Return a mock callback for when the power mode of a component's TPM changes.
+    Return a subrack simulator.
 
-    :param mock_callback_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
+    This is the backend python object, not the web server interface to it.
 
-    :return: a mock callback to be called when the power mode of a
-        component's TPM changes.
+    :param subrack_simulator_config: a keyword dictionary that specifies
+        the desired configuration of the simulator backend.
+
+    :return: a subrack simulator.
     """
-    return mock_callback_factory()
+    return SubrackSimulator(**subrack_simulator_config)
 
 
 @pytest.fixture()
-def max_workers() -> int:
+def subrack_server(subrack_simulator: SubrackSimulator) -> None:
     """
-    Return the number of worker threads.
+    Yield a running subrack server.
 
-    (This is a pytest fixture.)
+    :param subrack_simulator: the actual backend simulator to which this
+        server provides an interface.
 
-    :return: the number of worker threads
+    :yields: a running subrack server.
     """
-    return 1
+
+    class ThreadableServer(uvicorn.Server):
+        def install_signal_handlers(self: ThreadableServer):
+            pass
+
+    import socket
+
+    my_socket = socket.socket()
+    server_config = configure_server(subrack_simulator, host="127.0.0.1", port=0)
+
+    the_server = ThreadableServer(config=server_config)
+    server_thread = threading.Thread(target=the_server.run, args=([my_socket],))
+    server_thread.start()
+
+    while not the_server.started:
+        time.sleep(1e-3)
+    yield my_socket.getsockname()
+    the_server.should_exit = True
+    server_thread.join()
 
 
 @pytest.fixture()
-def subrack_ip() -> str:
+def subrack_ip(subrack_server: tuple[str, int]) -> str:
     """
     Return the IP address of the subrack.
 
+    :param subrack_server: a running subrack server, available at this
+        IP address. (This pytest fixture does not actually need the
+        subrack server fixture. However specifying this dependency
+        prevents the subrack server fixture from being torn down for as
+        long as this fixture remains in use.)
+
     :return: the IP address of the subrack.
     """
-    return "0.0.0.0"
+    return "127.0.0.1"
 
 
 @pytest.fixture()
-def subrack_port() -> int:
+def subrack_port(subrack_server: None) -> int:
     """
     Return the subrack port.
 
+    :param subrack_server: a running subrack server.
     :return: the subrack port.
     """
-    return 10000
-
-
-@pytest.fixture()
-def initial_power_state() -> PowerState:
-    """
-    Return the initial power mode of the subrack's simulated power supply.
-
-    :return: the initial power mode of the subrack's simulated power
-        supply.
-    """
-    return PowerState.OFF
-
-
-@pytest.fixture()
-def subrack_simulator(
-    component_progress_changed_callback: Callable[[int], None],
-) -> SubrackSimulator:
-    """
-    Fixture that returns a subrack simulator.
-
-    :param component_progress_changed_callback: callback to be
-        called when the progress value changes
-
-    :return: a subrack simulator
-    """
-    subrack_simulator = SubrackSimulator()
-    subrack_simulator.set_progress_changed_callback(component_progress_changed_callback)
-    return subrack_simulator
-
-
-@pytest.fixture()
-def subrack_simulator_component_manager(
-    logger: logging.Logger,
-    max_workers: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
-) -> SubrackSimulatorComponentManager:
-    """
-    Return a subrack simulator component manager.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
-
-    :return: a subrack simulator component manager.
-    """
-    return SubrackSimulatorComponentManager(
-        logger,
-        max_workers,
-        communication_state_changed_callback,
-        component_state_changed_callback,
-    )
-
-
-@pytest.fixture()
-def switching_subrack_component_manager(
-    logger: logging.Logger,
-    max_workers,
-    subrack_ip: str,
-    subrack_port: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
-) -> SwitchingSubrackComponentManager:
-    """
-    Return an component manager that switched between subrack driver and simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param subrack_ip: the IP address of the subrack
-    :param subrack_port: the subrack port
-    :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback  to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be called when the
-        component state changes
-
-    :return: an subrack component manager in simulation mode.
-    """
-    return SwitchingSubrackComponentManager(
-        SimulationMode.TRUE,
-        logger,
-        max_workers,
-        subrack_ip,
-        subrack_port,
-        communication_state_changed_callback,
-        component_state_changed_callback,
-    )
+    return subrack_server[1]
 
 
 @pytest.fixture()
 def subrack_driver(
-    monkeypatch: pytest.MonkeyPatch,
-    logger: logging.Logger,
-    max_workers,
     subrack_ip: str,
     subrack_port: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
-) -> SubrackDriver:
+    logger: logging.Logger,
+    callbacks: dict[str, MockCallable],
+) -> NewSubrackDriver:
     """
-    Return a subrack driver (with HTTP connection monkey-patched).
+    Return a subrack driver, configured to talk to a running subrack server.
 
     (This is a pytest fixture.)
 
-    :param monkeypatch: the pytest monkey-patching fixture
-    :param logger: the logger to be used by this object.
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
-
-    :return: an subrack simulator component manager.
-    """
-
-    class MockResponse:
-        """A mock class to replace requests.Response."""
-
-        status_code = 200
-        ATTRIBUTE_VALUES = {
-            "tpm_on_off": [False, False, False],
-            "backplane_temperatures": SubrackSimulator.DEFAULT_BACKPLANE_TEMPERATURES,
-            "board_temperatures": SubrackSimulator.DEFAULT_BOARD_TEMPERATURES,
-            "board_current": SubrackSimulator.DEFAULT_BOARD_CURRENT,
-            "subrack_fan_speeds": SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS,
-            "subrack_fan_speeds_percent": [
-                speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
-                for speed in SubrackSimulator.DEFAULT_SUBRACK_FAN_SPEEDS
-            ],
-            "subrack_fan_modes": SubrackSimulator.DEFAULT_SUBRACK_FAN_MODES,
-            "tpm_count": SubrackData.TPM_BAY_COUNT,
-            #  "tpm_temperatures" is not implemented in driver
-            "tpm_powers": [
-                SubrackSimulator.DEFAULT_TPM_VOLTAGE
-                * SubrackSimulator.DEFAULT_TPM_CURRENT
-            ]
-            * 8,
-            "tpm_voltages": [SubrackSimulator.DEFAULT_TPM_VOLTAGE] * 8,
-            "power_supply_fan_speeds": SubrackSimulator.DEFAULT_POWER_SUPPLY_FAN_SPEEDS,
-            "power_supply_currents": SubrackSimulator.DEFAULT_POWER_SUPPLY_CURRENTS,
-            "power_supply_powers": SubrackSimulator.DEFAULT_POWER_SUPPLY_POWERS,
-            "power_supply_voltages": SubrackSimulator.DEFAULT_POWER_SUPPLY_VOLTAGES,
-            "tpm_present": SubrackSimulator.DEFAULT_TPM_PRESENT,
-            "tpm_currents": [SubrackSimulator.DEFAULT_TPM_CURRENT] * 8,
-        }
-
-        def __init__(
-            self: MockResponse, params: Optional[dict[str, str]] = None
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param params: requests.get parameters for which values are
-                to be returned in this response.
-            """
-            self._json: dict[str, Any] = {}
-
-            if params is not None:
-                if params["type"] == "command":
-                    self._json = {
-                        "status": "OK",
-                        "info": f"{params['param']} completed OK",
-                        "command": params["param"],
-                        "retvalue": "",
-                    }
-                elif params["type"] == "getattribute":
-                    self._json = {
-                        "status": "OK",
-                        "info": f"{params['param']} completed OK",
-                        "attribute": params["param"],
-                        "value": self.ATTRIBUTE_VALUES[params["param"]],
-                    }
-
-        def json(self: MockResponse) -> dict[str, str]:
-            """
-            Replace the patched :py:meth:`request.Response.json` with mock.
-
-            This implementation always returns the same key-value pair.
-
-            :return: a dictionary with a single key-value pair in it.
-            """
-            return self._json
-
-    def mock_request(method: str, url: str, **kwargs: Any) -> MockResponse:
-        """
-        Replace requests.request method with a mock method.
-
-        :param method: "GET" or "POST"
-        :param url: the URL
-        :param kwargs: other keyword args
-
-        :return: a response
-        """
-        return MockResponse()
-
-    def mock_get(url: str, params: Any = None, **kwargs: Any) -> MockResponse:
-        """
-        Replace requests.get with mock method.
-
-        :param url: the URL
-        :param params: arguments to the GET
-        :param kwargs: other keyword args
-
-        :return: a response
-        """
-        return MockResponse(params)
-
-    monkeypatch.setattr(requests, "request", mock_request)
-    monkeypatch.setattr(requests, "get", mock_get)
-
-    return SubrackDriver(
-        logger,
-        max_workers,
-        subrack_ip,
-        subrack_port,
-        communication_state_changed_callback,
-        component_state_changed_callback,
-    )
-
-
-@pytest.fixture()
-def component_manager_with_upstream_power_supply():
-    """
-    Mock callable.
-
-    :return: the mock callable
-    """
-    return unittest.mock.MagicMock
-
-
-@pytest.fixture()
-def subrack_component_manager_mocked_upstream_power(
-    logger: logging.Logger,
-    component_manager_with_upstream_power_supply,
-    max_workers: int,
-    subrack_ip: str,
-    subrack_port: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
-    initial_power_state: PowerState,
-) -> SubrackComponentManager:
-    """
-    Return an subrack component manager (in simulation mode as specified).
-
-    (This is a pytest fixture.)
-
     :param logger: the logger to be used by this object.
-    :param subrack_ip: the IP address of the subrack
-    :param subrack_port: the subrack port
-    :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
-    :param initial_power_state: the initial power mode of the simulated
-        power supply.
-    :param component_manager_with_upstream_power_supply: mocked component_manager
+    :param callbacks: dictionary of driver callbacks
 
-    :return: an subrack component manager in the specified simulation mode.
+    :return: a subrack driver.
     """
-    return SubrackComponentManager(
-        SimulationMode.TRUE,
-        logger,
-        max_workers,
+    return NewSubrackDriver(
         subrack_ip,
         subrack_port,
-        communication_state_changed_callback,
-        component_state_changed_callback,
-        initial_power_state,
+        logger,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        update_rate=1.0,
     )
 
 
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
-    max_workers: int,
     subrack_ip: str,
     subrack_port: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    subrack_driver: NewSubrackDriver,
     initial_power_state: PowerState,
+    callbacks: dict[str, MockCallable],
 ) -> SubrackComponentManager:
     """
     Return an subrack component manager (in simulation mode as specified).
@@ -396,24 +254,21 @@ def subrack_component_manager(
     :param logger: the logger to be used by this object.
     :param subrack_ip: the IP address of the subrack
     :param subrack_port: the subrack port
-    :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
-    :param initial_power_state: the initial power mode of the simulated
-        power supply.
+    :param subrack_driver: the subrack driver to use. Normally the
+        subrack component manager creates its own driver; here we inject
+        this driver instead.
+    :param initial_power_state: the initial power state of the upstream
+        power supply
+    :param callbacks: dictionary of driver callbacks
 
     :return: an subrack component manager in the specified simulation mode.
     """
     return SubrackComponentManager(
-        SimulationMode.TRUE,
-        logger,
-        max_workers,
         subrack_ip,
         subrack_port,
-        communication_state_changed_callback,
-        component_state_changed_callback,
-        initial_power_state,
+        logger,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        _driver=subrack_driver,
+        _initial_power_state=initial_power_state,
     )

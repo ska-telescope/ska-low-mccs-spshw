@@ -11,11 +11,8 @@ __all__ = [
     "MccsSubrack",
     "SubrackData",
     "SubrackSimulator",
-    "BaseSubrackSimulatorComponentManager",
-    "SubrackSimulatorComponentManager",
-    "SwitchingSubrackComponentManager",
     "SubrackComponentManager",
-    "NewSubrackComponentManager",
+    "SubrackComponentManager",
     "SubrackDriver",
     "NewSubrackDriver",
     "SubrackHealthModel",
@@ -27,12 +24,6 @@ from .subrack_data import FanMode
 from .subrack_simulator import SubrackSimulator
 from .subrack_driver import SubrackDriver  # type: ignore[attr-defined]
 from .new_subrack_driver import NewSubrackDriver
-from .subrack_component_manager import (  # type: ignore[attr-defined]
-    BaseSubrackSimulatorComponentManager,
-    SubrackSimulatorComponentManager,
-    SwitchingSubrackComponentManager,
-    SubrackComponentManager,
-)
-from .new_subrack_component_manager import NewSubrackComponentManager
+from .subrack_component_manager import SubrackComponentManager
 from .subrack_health_model import SubrackHealthModel  # type: ignore[attr-defined]
 from .subrack_device import MccsSubrack  # type: ignore[attr-defined]

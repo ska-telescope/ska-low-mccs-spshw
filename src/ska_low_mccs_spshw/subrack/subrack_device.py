@@ -24,7 +24,7 @@ from ska_tango_base.commands import (
 )
 from tango.server import attribute, command, device_property, run
 
-from .new_subrack_component_manager import NewSubrackComponentManager
+from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
 __all__ = ["MccsSubrack", "main"]
@@ -328,13 +328,13 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
     # --------------
     # Initialization
     # --------------
-    def create_component_manager(self) -> NewSubrackComponentManager:
+    def create_component_manager(self) -> SubrackComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
-        return NewSubrackComponentManager(
+        return SubrackComponentManager(
             self.SubrackIp,
             self.SubrackPort,
             self.logger,

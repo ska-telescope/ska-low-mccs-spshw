@@ -14,13 +14,12 @@ from typing import Any, Generator
 
 import pytest
 from ska_control_model import AdminMode, PowerState, ResultCode
-from ska_low_mccs_common import MccsDeviceProxy
 from ska_tango_testing.context import (
     TangoContextProtocol,
     ThreadedTestTangoContextManager,
 )
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from tango import AttrQuality, DevState, EventType
+from tango import AttrQuality, DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
@@ -117,7 +116,7 @@ def tango_harness_fixture(
 def subrack_device_fixture(
     tango_harness: TangoContextProtocol,
     subrack_name: str,
-) -> MccsDeviceProxy:
+) -> DeviceProxy:
     """
     Fixture that returns the subrack Tango device under test.
 
@@ -211,6 +210,11 @@ def test(  # pylint: disable=too-many-locals, too-many-statements
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
     change_event_callbacks["state"].assert_not_called()
+
+    for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+        change_event_callbacks[f"tpm{tpm_number}PowerState"].assert_change_event(
+            PowerState.NO_SUPPLY
+        )
 
     # It's off, so let's turn it on.
     subrack_device.subscribe_event(

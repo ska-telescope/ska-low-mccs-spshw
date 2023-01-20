@@ -851,6 +851,19 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
             else:
                 special_update_method(value)
 
+        tpm_power_state = None
+        if power == PowerState.OFF:
+            tpm_power_state = PowerState.NO_SUPPLY
+        elif power == PowerState.UNKNOWN:
+            tpm_power_state = PowerState.UNKNOWN
+        if tpm_power_state is not None:
+            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+                if self._tpm_power_states[tpm_number - 1] != tpm_power_state:
+                    self._tpm_power_states[tpm_number - 1] = tpm_power_state
+                    self.push_change_event(
+                        f"tpm{tpm_number}PowerState", tpm_power_state
+                    )
+
     def _update_tpm_present(self: MccsSubrack, tpm_present: list[bool]) -> None:
         if self._tpm_present == tpm_present:
             return

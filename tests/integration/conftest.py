@@ -10,10 +10,15 @@
 """This module contains pytest-specific test harness for SPSHW integration tests."""
 from __future__ import annotations
 
-from typing import Callable
+from typing import Generator
 
 import pytest
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+from ska_tango_testing.context import (
+    TangoContextProtocol,
+    ThreadedTestTangoContextManager,
+)
+from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+from tango import DeviceProxy
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
@@ -30,170 +35,116 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker("forked")
 
 
-@pytest.fixture()
-def state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
+@pytest.fixture(name="subrack_name")
+def subrack_name_fixture() -> str:
     """
-    Return a mock change event callback factory for device state change.
+    Return the name of the subrack Tango device.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
+    :return: the name of the subrack Tango device.
     """
-
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("state")
-
-    return _factory
+    return "low-mccs/subrack/0001"
 
 
-@pytest.fixture()
-def obs_state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
+@pytest.fixture(name="tile_name")
+def tile_name_fixture() -> str:
     """
-    Return a mock change event callback factory for device obs state change.
+    Return the name of the subrack Tango device.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
+    :return: the name of the subrack Tango device.
     """
-
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("obsState")
-
-    return _factory
+    return "low-mccs/tile/0001"
 
 
-@pytest.fixture()
-def controller_device_state_changed_callback(
-    state_changed_callback_factory: Callable[[], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+@pytest.fixture(name="tango_harness")
+def tango_harness_fixture(
+    subrack_name: str,
+    subrack_ip: str,
+    subrack_port: int,
+    tile_name: str,
+) -> Generator[TangoContextProtocol, None, None]:
     """
-    Return a mock change event callback for controller device state change.
+    Return a Tango harness against which to run tests of the deployment.
 
-    :param state_changed_callback_factory: fixture that provides a mock
-        change event callback factory for state change events.
+    :param subrack_name: the name of the subrack Tango device
+    :param subrack_ip: the hostname or IP address of the subrack
+        management board web server
+    :param subrack_port: the port of the subrack management board web
+        server
+    :param tile_name: the name of the tile Tango device
 
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
+    :yields: a tango context.
     """
-    return state_changed_callback_factory()
+    context_manager = ThreadedTestTangoContextManager()
+    context_manager.add_device(
+        subrack_name,
+        "ska_low_mccs_spshw.MccsSubrack",
+        SubrackIp=subrack_ip,
+        SubrackPort=subrack_port,
+        UpdateRate=1.0,
+        LoggingLevelDefault=5,
+    )
+    context_manager.add_device(
+        tile_name,
+        "ska_low_mccs_spshw.MccsTile",
+        TileId=1,
+        SubrackFQDN=subrack_name,
+        SubrackBay=1,
+        AntennasPerTile=2,
+        SimulationConfig=1,
+        TestConfig=1,
+        TpmIp="10.0.10.201",
+        TpmCpldPort=10000,
+        TpmVersion="tpm_v1_6",
+        LoggingLevelDefault=5,
+    )
+    with context_manager as context:
+        yield context
 
 
-@pytest.fixture()
-def controller_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+@pytest.fixture(name="subrack_device")
+def subrack_device_fixture(
+    tango_harness: TangoContextProtocol,
+    subrack_name: str,
+) -> DeviceProxy:
     """
-    Return a mock change event callback for controller device admin mode change.
+    Fixture that returns the subrack Tango device under test.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+    :param tango_harness: a test harness for Tango devices.
+    :param subrack_name: name of the subrack Tango device.
 
-    :return: a mock change event callback to be registered with the
-        controller via a change event subscription, so that it gets called
-        when the device admin mode changes.
+    :return: the subrack Tango device under test.
     """
-    return mock_change_event_callback_factory("adminMode")
+    return tango_harness.get_device(subrack_name)
 
 
-@pytest.fixture()
-def subarray_device_obs_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+@pytest.fixture(name="tile_device")
+def tile_device_fixture(
+    tango_harness: TangoContextProtocol,
+    tile_name: str,
+) -> DeviceProxy:
     """
-    Return a mock change event callback for subarray device obs state change.
+    Fixture that returns the tile Tango device under test.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+    :param tango_harness: a test harness for Tango devices.
+    :param tile_name: name of the tile Tango device.
 
-    :return: a mock change event callback to be registered with the
-        subarray device via a change event subscription, so that it gets
-        called when the device obs state changes.
+    :return: the tile Tango device under test.
     """
-    return mock_change_event_callback_factory("obsState")
+    return tango_harness.get_device(tile_name)
 
 
-@pytest.fixture()
-def subrack_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
+@pytest.fixture(name="change_event_callbacks")
+def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
-    Return a mock change event callback for subrack device admin mode change.
+    Return a dictionary of callables to be used as Tango change event callbacks.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device admin mode changes.
+    :return: a dictionary of callables to be used as tango change event
+        callbacks.
     """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def subrack_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
-
-
-@pytest.fixture()
-def tile_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def tile_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
+    return MockTangoEventCallbackGroup(
+        "subrack_state",
+        "subrack_result",
+        "subrack_tpm_power_state",
+        "tile_state",
+        timeout=2.0,
+    )

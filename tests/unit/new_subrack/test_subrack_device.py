@@ -24,7 +24,7 @@ from tango import AttrQuality, DevState, EventType
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
-    NewSubrackDevice,
+    MccsSubrack,
     SubrackData,
     SubrackSimulator,
 )
@@ -103,7 +103,7 @@ def tango_harness_fixture(
     context_manager = ThreadedTestTangoContextManager()
     context_manager.add_device(
         subrack_name,
-        "ska_low_mccs_spshw.NewSubrackDevice",
+        "ska_low_mccs_spshw.MccsSubrack",
         SubrackIp=subrack_ip,
         SubrackPort=subrack_port,
         UpdateRate=1.0,
@@ -130,7 +130,7 @@ def subrack_device_fixture(
 
 
 def test(  # pylint: disable=too-many-locals, too-many-statements
-    subrack_device: NewSubrackDevice,
+    subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     subrack_simulator_attribute_values: dict[str, Any],
     change_event_callbacks: MockTangoEventCallbackGroup,

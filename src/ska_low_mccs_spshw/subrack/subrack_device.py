@@ -1,63 +1,264 @@
-# type: ignore
-# pylint: skip-file
-#  -*- coding: utf-8 -*
+# -*- coding: utf-8 -*-
 #
-# This file is part of the SKA Low MCCS project
+# (c) 2022 CSIRO.
 #
-#
-# Distributed under the terms of the BSD 3-clause new license.
-# See LICENSE for more info.
-"""This module implements a subrack Tango device for MCCS."""
+# Distributed under the terms of the CSIRO Open Source Software Licence
+# Agreement
+# See LICENSE.txt for more info.
 
-from __future__ import annotations  # allow forward references in type hints
+"""This module provides a Tango device for a PSI-Low subrack."""
+from __future__ import annotations
 
 import json
 import logging
-import threading
-from typing import Any, Optional, cast
+from typing import Any, Optional
 
-from ska_control_model import (
-    AdminMode,
-    CommunicationStatus,
-    HealthState,
-    PowerState,
+import tango
+from ska_control_model import CommunicationStatus, PowerState
+from ska_tango_base.base import BaseComponentManager, SKABaseDevice
+from ska_tango_base.commands import (
+    CommandTrackerProtocol,
+    DeviceInitCommand,
     ResultCode,
-    SimulationMode,
-    TestMode,
+    SubmittedSlowCommand,
 )
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
-from tango.server import attribute, command, device_property
+from tango.server import attribute, command, device_property, run
 
-from ska_low_mccs_spshw.subrack.subrack_component_manager import SubrackComponentManager
-from ska_low_mccs_spshw.subrack.subrack_data import SubrackData
-from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
+from .new_subrack_component_manager import NewSubrackComponentManager
+from .subrack_data import FanMode, SubrackData
 
 __all__ = ["MccsSubrack", "main"]
 
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
-
-
-class MccsSubrack(SKABaseDevice):
+# pylint: disable-next=too-few-public-methods
+class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
     """
-    An implementation of MCCS Subrack device.
+    Class for handling the SetSubrackFanSpeed command.
 
-    The device is controlled by a remote microcontroller, which answers
-    to simple commands. It has the capabilities to switch on and off
-    individual TPMs, to measure temperatures, voltages and currents, and
-    to set-check fan speeds.
+    This command sets the selected subrack fan speed.
     """
 
-    # -----------------
-    # Device Properties
-    # -----------------
-    SubrackIp = device_property(dtype=str, default_value="0.0.0.0")
-    SubrackPort = device_property(dtype=int, default_value=8081)
+    def __init__(
+        self: _SetSubrackFanSpeedCommand,
+        command_tracker: CommandTrackerProtocol,
+        component_manager: BaseComponentManager,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
 
-    # ---------------
-    # Initialisation
-    # ---------------
+        :param command_tracker: the device's command tracker
+        :param component_manager: the component manager on which this
+            command acts.
+        :param logger: a logger for this command to use.
+        """
+        super().__init__(
+            "SetSubrackFanSpeed",
+            command_tracker,
+            component_manager,
+            "set_subrack_fan_speed",
+            callback=None,
+            logger=logger,
+        )
+
+    def do(  # type: ignore[override]
+        self: _SetSubrackFanSpeedCommand,
+        *args: Any,
+        subrack_fan_id: Optional[int] = None,
+        speed_percent: Optional[float] = None,
+        **kwargs: Any,
+    ) -> tuple[ResultCode, str]:
+        """
+        Implement :py:meth:`.MccsSubrack.SetSubrackFanSpeed` command.
+
+        :param args: unspecified positional arguments. This should be
+            empty and is provided for typehinting purposes only.
+        :param subrack_fan_id: id of the subrack (1-4).
+        :param speed_percent: fan speed in percent
+        :param kwargs: unspecified keyword arguments. This should be
+            empty and is provided for typehinting purposes only.
+
+        :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+        :raises ValueError: if the JSON input lacks of mandatory parameters
+        """
+        assert (
+            not args and not kwargs
+        ), f"do method has unexpected arguments: {args}, {kwargs}"
+
+        if subrack_fan_id is None:
+            self.logger.error("subrack_fan_id key is mandatory.")
+            raise ValueError("subrack_fan_id key is mandatory.")
+        if speed_percent is None:
+            self.logger.error("speed_percent key is mandatory.")
+            raise ValueError("speed_percent key is mandatory.")
+
+        return super().do(subrack_fan_id, speed_percent)
+
+
+# pylint: disable-next=too-few-public-methods
+class _SetSubrackFanModeCommand(SubmittedSlowCommand):
+    """
+    Class for handling the SetSubrackFanMode command.
+
+    This command set the selected subrack fan mode.
+    """
+
+    def __init__(
+        self: _SetSubrackFanModeCommand,
+        command_tracker: CommandTrackerProtocol,
+        component_manager: BaseComponentManager,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param command_tracker: the device's command tracker
+        :param component_manager: the component manager on which this
+            command acts.
+        :param logger: a logger for this command to use.
+        """
+        super().__init__(
+            "SetSubrackFanMode",
+            command_tracker,
+            component_manager,
+            "set_subrack_fan_mode",
+            callback=None,
+            logger=logger,
+        )
+
+    def do(  # type: ignore[override]
+        self: _SetSubrackFanModeCommand,
+        *args: Any,
+        fan_id: Optional[int] = None,
+        mode: Optional[int] = None,
+        **kwargs: Any,
+    ) -> tuple[ResultCode, str]:
+        """
+        Implement :py:meth:`.MccsSubrack.SetSubrackFanMode` command.
+
+        :param args: unspecified positional arguments. This should be
+            empty and is provided for typehinting purposes only.
+        :param fan_id: id of the subrack (1-4).
+        :param mode: fan mode
+        :param kwargs: unspecified keyword arguments. This should be
+            empty and is provided for typehinting purposes only.
+
+        :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+        :raises ValueError: if the JSON input lacks of mandatory parameters
+        """
+        assert (
+            not args and not kwargs
+        ), f"do method has unexpected arguments: {args}, {kwargs}"
+
+        if fan_id is None:
+            self.logger.error("fan_id key is mandatory.")
+            raise ValueError("fan_id key is mandatory.")
+        if mode is None:
+            self.logger.error("mode key is mandatory.")
+            raise ValueError("mode key is mandatory.")
+
+        return super().do(fan_id, FanMode(mode))
+
+
+# pylint: disable-next=too-few-public-methods
+class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
+    """
+    Class for handling the SetPowerSupplyFanSpeed command.
+
+    This command set the selected power supply fan speed.
+    """
+
+    def __init__(
+        self: _SetPowerSupplyFanSpeedCommand,
+        command_tracker: CommandTrackerProtocol,
+        component_manager: BaseComponentManager,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param command_tracker: the device's command tracker
+        :param component_manager: the component manager on which this
+            command acts.
+        :param logger: a logger for this command to use.
+        """
+        super().__init__(
+            "SetPowerSupplyFanSpeed",
+            command_tracker,
+            component_manager,
+            "set_power_supply_fan_speed",
+            callback=None,
+            logger=logger,
+        )
+
+    def do(  # type: ignore[override]
+        self: _SetPowerSupplyFanSpeedCommand,
+        *args: Any,
+        power_supply_fan_id: Optional[int] = None,
+        speed_percent: Optional[float] = None,
+        **kwargs: Any,
+    ) -> tuple[ResultCode, str]:
+        """
+        Implement :py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
+
+        :param args: unspecified positional arguments. This should be
+            empty and is provided for typehinting purposes only.
+        :param power_supply_fan_id: id of the power supply (1 or 2).
+        :param speed_percent: fan speed in percent
+        :param kwargs: unspecified keyword arguments. This should be
+            empty and is provided for typehinting purposes only.
+
+        :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+
+        :raises ValueError: if the JSON input lacks of mandatory parameters
+        """
+        assert (
+            not args and not kwargs
+        ), f"do method has unexpected arguments: {args}, {kwargs}"
+
+        if power_supply_fan_id is None:
+            self.logger.error("power_supply_fan_id key is mandatory.")
+            raise ValueError("power_supply_fan_id key is mandatory.")
+        if speed_percent is None:
+            self.logger.error("speed_percent key is mandatory.")
+            raise ValueError("speed_percent key is mandatory.")
+
+        return super().do(power_supply_fan_id, speed_percent)
+
+
+class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
+    """A Tango device for monitor and control of the PSI-Low subrack."""
+
+    # A map from the compnent manager argument to the name of the Tango attribute.
+    # This only includes one-to-one mappings. It lets us boilerplate these cases.
+    # Attributes that don't map one-to-one are handled individually.
+    # For example, tpm_on_off is not included here because it unpacks into eight
+    # Tango attributes of the form tpmNPowerState.
+    _ATTRIBUTE_MAP = {
+        "backplane_temperatures": "backplaneTemperatures",
+        "board_temperatures": "boardTemperatures",
+        "board_current": "boardCurrent",
+        "power_supply_currents": "powerSupplyCurrents",
+        "power_supply_powers": "powerSupplyPowers",
+        "power_supply_voltages": "powerSupplyVoltages",
+        "power_supply_fan_speeds": "powerSupplyFanSpeeds",
+        "subrack_fan_speeds": "subrackFanSpeeds",
+        "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
+        "subrack_fan_modes": "subrackFanModes",
+        "tpm_currents": "tpmCurrents",
+        "tpm_powers": "tpmPowers",
+        "tpm_temperatures": "tpmTemperatures",
+        "tpm_voltages": "tpmVoltages",
+    }
+
     def __init__(self: MccsSubrack, *args: Any, **kwargs: Any) -> None:
         """
         Initialise this device object.
@@ -73,54 +274,77 @@ class MccsSubrack(SKABaseDevice):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
-        self._health_state: HealthState = HealthState.UNKNOWN
-        self._health_model: SubrackHealthModel
+        self._attribute_quality = tango.AttrQuality.ATTR_INVALID
+        self._tpm_present: Optional[list[bool]] = None
+        self._tpm_count: Optional[int] = None
+        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
-    def init_device(self: MccsSubrack) -> None:
-        """
-        Initialise the device.
+        self._hardware_attributes: dict[str, Any] = {}
 
-        This is overridden here to change the Tango serialisation model.
-        """
-        self._max_workers = 1
-        super().init_device()
+    # ----------
+    # Properties
+    # ----------
+    SubrackIp = device_property(dtype=str)
+    SubrackPort = device_property(dtype=int, default_value=8081)
+    UpdateRate = device_property(dtype=float, default_value=15.0)
 
-        self.logger.info(
-            "Initialised MccsSubrack device with properties:\n"
-            f"\tSubrackIp: {self.SubrackIp}\n"
-            f"\tSubrackPort: {self.SubrackPort}"
-        )
+    # pylint: disable-next=too-few-public-methods
+    class InitCommand(DeviceInitCommand):
+        """Initialisation command class for this base device."""
 
-    def _init_state_model(self: MccsSubrack) -> None:
-        super()._init_state_model()
-        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self.component_state_changed_callback)
-        self.set_change_event("healthState", True, False)
+        # pylint: disable=protected-access
+        def do(
+            self: MccsSubrack.InitCommand, *args: Any, **kwargs: Any
+        ) -> tuple[ResultCode, str]:
+            """
+            Initialise the attributes of this MccsSubrack.
 
-    def create_component_manager(
-        self: MccsSubrack,
-    ) -> SubrackComponentManager:
+            :param args: additional positional arguments; unused here
+            :param kwargs: additional keyword arguments; unused here
+
+            :return: a resultcode, message tuple
+            """
+            self._device._attribute_quality = tango.AttrQuality.ATTR_INVALID
+
+            self._device._tpm_present = None
+            self._device._tpm_count = None
+            self._device._tpm_power_states = [
+                PowerState.UNKNOWN
+            ] * SubrackData.TPM_BAY_COUNT
+            self._device._hardware_attributes = {}
+
+            self._device.set_change_event("tpmPresent", True)
+            self._device.set_change_event("tpmCount", True)
+            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+                self._device.set_change_event(f"tpm{tpm_number}PowerState", True)
+            for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
+                self._device.set_change_event(attribute_name, True)
+
+            message = "MccsSubrack init complete."
+            self._device.logger.info(message)
+            self._completed()
+            return (ResultCode.OK, message)
+
+    # --------------
+    # Initialization
+    # --------------
+    def create_component_manager(self) -> NewSubrackComponentManager:
         """
         Create and return a component manager for this device.
 
         :return: a component manager for this device.
         """
-        # InitCommand.do() would do this too late
-        self._tpm_power_states_lock = threading.Lock()
-        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-
-        return SubrackComponentManager(
-            SimulationMode.TRUE,
-            self.logger,
-            self._max_workers,
+        return NewSubrackComponentManager(
             self.SubrackIp,
             self.SubrackPort,
-            self._component_communication_state_changed,
-            self.component_state_changed_callback,
+            self.logger,
+            self._communication_state_changed,
+            self._component_state_changed,
+            update_rate=self.UpdateRate,
         )
 
-    def init_command_objects(self: MccsSubrack) -> None:
-        """Initialise the command handlers for commands supported by this device."""
+    def init_command_objects(self) -> None:
+        """Initialise the command handlers for this device."""
         super().init_command_objects()
 
         for (command_name, method_name) in [
@@ -140,839 +364,528 @@ class MccsSubrack(SKABaseDevice):
                     logger=self.logger,
                 ),
             )
-
-        for (command_name, command_object) in [
-            ("SetSubrackFanSpeed", self.SetSubrackFanSpeedCommand),
-            ("SetSubrackFanMode", self.SetSubrackFanModeCommand),
-            ("SetPowerSupplyFanSpeed", self.SetPowerSupplyFanSpeedCommand),
+        for (command_name, command_class) in [
+            ("SetSubrackFanSpeed", _SetSubrackFanSpeedCommand),
+            ("SetSubrackFanMode", _SetSubrackFanModeCommand),
+            ("SetPowerSupplyFanSpeed", _SetPowerSupplyFanSpeedCommand),
         ]:
             self.register_command_object(
                 command_name,
-                command_object(self.component_manager, self.logger),
+                command_class(
+                    self._command_tracker, self.component_manager, logger=self.logger
+                ),
             )
 
-    class InitCommand(DeviceInitCommand):
-        """Class that implements device initialisation for the MCCS Subrack device."""
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.InitCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Initialise the attributes and properties of the MccsSubrack.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
-                self._device.set_change_event(f"tpm{tpm_number}PowerState", True, False)
-
-            return (ResultCode.OK, "Init command completed OK")
-
     # ----------
-    # Callbacks
-    # ----------
-    def _component_communication_state_changed(
-        self: MccsSubrack,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        """
-        Handle change in communications status between component manager and component.
-
-        This is a callback hook, called by the component manager when
-        the communications status changes. It is implemented here to
-        drive the op_state.
-
-        :param communication_state: the status of communications
-            between the component manager and its component.
-        """
-        action_map = {
-            CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
-            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
-        }
-        power_map = {
-            PowerState.UNKNOWN: "component_unknown",
-            PowerState.STANDBY: "component_standby",
-            PowerState.OFF: "component_off",
-            PowerState.ON: "component_on",
-        }
-        self.logger.debug(
-            "Component communication status changed to " + str(communication_state)
-        )
-
-        action = action_map[communication_state]
-        if action is not None:
-            self.op_state_model.perform_action(action)
-        else:
-            pscm = self.component_manager._power_supply_component_manager
-            power_supply_status = pscm.supplied_power_state
-            if (
-                self.admin_mode_model.admin_mode
-                in [
-                    AdminMode.ONLINE,
-                    AdminMode.MAINTENANCE,
-                ]
-                and power_supply_status is not None
-            ):
-                action = power_map[power_supply_status]
-                self.logger.debug(
-                    "Switch component according to power supply status"
-                    + str(power_supply_status)
-                )
-                self.op_state_model.perform_action(action)
-            else:
-                self.op_state_model.perform_action("component_unknown")
-                self.logger.debug("Power supply status unknown")
-
-        self._health_model.is_communicating(
-            communication_state == CommunicationStatus.ESTABLISHED
-        )
-        power_status = self.component_manager.power_state
-        self.logger.debug(
-            f"Power mode: {power_status}, Communicating: "
-            f"{self._health_model._communicating}"
-        )
-        if (power_status == PowerState.ON) and self._health_model._communicating:
-            self.logger.debug("Checking tpm power states")
-            self.component_manager.check_tpm_power_states()
-
-    def component_state_changed_callback(
-        self: MccsSubrack, state_change: dict[str, Any]
-    ) -> None:
-        """
-        Handle change in the state of the component.
-
-        This is a callback hook, called by the component manager when
-        the state of the component changes.
-
-        :param state_change: dictionary of state change parameters.
-        """
-        action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
-        }
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            self.component_manager.set_power_state(power_state)
-            if power_state is not None:
-                self.op_state_model.perform_action(action_map[power_state])
-
-        if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
-            if is_fault:
-                self.op_state_model.perform_action("component_fault")
-                self._health_model.component_fault(True)
-            else:
-                if self.component_manager.power_state is not None:
-                    self.op_state_model.perform_action(
-                        action_map[self.component_manager.power_state]
-                    )
-                self._health_model.component_fault(False)
-
-        if "health_state" in state_change.keys():
-            health = state_change.get("health_state")
-            if self._health_state != health:
-                self._health_state = cast(HealthState, health)
-                self.push_change_event("healthState", health)
-
-        if "tpm_power_states" in state_change.keys():
-            tpm_power_states = cast(
-                list[PowerState], state_change.get("tpm_power_states")
-            )
-            with self._tpm_power_states_lock:
-                for i in range(SubrackData.TPM_BAY_COUNT):
-                    if self._tpm_power_states[i] != tpm_power_states[i]:
-                        self._tpm_power_states[i] = tpm_power_states[i]
-                        self.push_change_event(
-                            f"tpm{i+1}PowerState", tpm_power_states[i]
-                        )
-
-    # def _component_progress_changed(self: MccsSubrack, progress: int) -> None:
-    #     """
-    #     Handle change in the progress of a long-running command.
-
-    #     This is a callback hook, called by the component manager when
-    #     the component progress value changes.
-
-    #     :param progress: the process percentage of a long-running command.
-    #     """
-    #     self._progress = progress
-    #     self.logger.debug(f"Subrack progress value = {progress}")
-    #     # TODO: Link the progress update to an attribute to be exposed
-    #     # to the real world...
-    # ----------
-    # Callbacks
-    # ----------
-    # def _tpm_power_modes_changed(
-    #     self: MccsSubrack, tpm_power_modes: list[ExtendedPowerState]
-    # ) -> None:
-    #     """
-    #     Update the power mode of a specified TPM.
-
-    #     This is a callback provided to the component manager. The
-    #     component manager will call it whenever the power mode of any of
-    #     its TPMs changes.
-
-    #     :param tpm_power_modes: the power modes of the TPMs
-    #     """
-    #     self.logger.debug(
-    #         "TPM power modes changed: old"
-    #         + str(self._tpm_power_modes)
-    #         + "new: "
-    #         + str(tpm_power_modes)
-    #     )
-
-    #     with self._tpm_power_modes_lock:
-    #         for i in range(SubrackData.TPM_BAY_COUNT):
-    #             if self._tpm_power_modes[i] != tpm_power_modes[i]:
-    #                 self._tpm_power_modes[i] = tpm_power_modes[i]
-    #                 self.push_change_event(f"tpm{i+1}PowerState", tpm_power_modes[i])
-
-    # ----------
-    # Attributes
-    # ----------
-    @attribute(
-        dtype=SimulationMode,
-        memorized=True,
-        hw_memorized=True,
-    )
-    def simulationMode(self: MccsSubrack) -> SimulationMode:
-        """
-        Report the simulation mode of the device.
-
-        :return: Return the current simulation mode
-        """
-        return self.component_manager.simulation_mode
-
-    @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(self: MccsSubrack, value: int) -> None:
-        """
-        Set the simulation mode.
-
-        :param value: The simulation mode, as a SimulationMode value
-        """
-        self.component_manager.simulation_mode = value
-
-    @attribute(
-        dtype=TestMode,
-        memorized=True,
-        hw_memorized=True,
-    )
-    def testMode(self: MccsSubrack) -> TestMode:
-        """
-        Report the test mode of the device.
-
-        :return: the current test mode
-        """
-        return self.component_manager.test_mode
-
-    @testMode.write  # type: ignore[no-redef]
-    def testMode(self: MccsSubrack, value: TestMode) -> None:
-        """
-        Set the test mode.
-
-        :param value: The test mode, as a TestMode value
-        """
-        self.component_manager.test_mode = TestMode(value)
-
-    @attribute(
-        dtype=("DevFloat",),
-        max_dim_x=2,
-        label="Backplane temperatures",
-        unit="Celsius",
-    )
-    def backplaneTemperatures(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the temperatures of the subrack backplane.
-
-        Two values are returned, respectively for the first (bays 1-4)
-        and second (bays 5-8) halves of the backplane.
-
-        :return: the temperatures of the subrack backplane
-        """
-        return self.component_manager.backplane_temperatures
-
-    @attribute(
-        dtype=("DevFloat",),
-        max_dim_x=2,
-        label="Subrack board temperatures",
-        unit="Celsius",
-    )
-    def boardTemperatures(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the temperatures of the subrack management board.
-
-        Two values are returned.
-
-        :return: the temperatures of the subrack management board
-        """
-        return self.component_manager.board_temperatures
-
-    @attribute(dtype="float", label="Board current")
-    def boardCurrent(self: MccsSubrack) -> float:
-        """
-        Return the subrack management board current.
-
-        Total current provided by the two power supplies.
-
-        :return: the subrack management board current
-        """
-        return self.component_manager.board_current
-
-    @attribute(dtype=("DevFloat",), max_dim_x=4, label="Subrack fans speeds (RPM)")
-    def subrackFanSpeeds(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the subrack fan speeds, in RPM.
-
-        Four fans are present in the subrack back side.
-
-        :return: the subrack fan speeds
-        """
-        return self.component_manager.subrack_fan_speeds
-
-    @attribute(dtype=("DevFloat",), max_dim_x=4, label="Subrack fans speeds (%)")
-    def subrackFanSpeedsPercent(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the subrack fan speeds in percent.
-
-        This is the commanded value, the
-        relation between this level and the actual RPMs is not linear. Subrack speed is
-        managed automatically by the controller, by default (see subrack_fan_modes)
-        Commanded speed is the same for fans 1-2 and 3-4.
-
-        :return: the subrack fan speeds in percent
-        """
-        return self.component_manager.subrack_fan_speeds_percent
-
-    @attribute(dtype=("DevUShort",), max_dim_x=4, label="Subrack Fan Mode")
-    def subrackFanMode(self: MccsSubrack) -> list[int]:
-        """
-        Return the subrackFanMode.
-
-        The mode is 1 (AUTO) at power-on When mode is AUTO,
-        the fan speed is managed automatically. When mode is MANUAL (0), the fan speed
-        is directly controlled using the SetSubrackFanSpeed command Mode is the same for
-        fans 1-2 and 3-4.
-
-        :return: the subrack fan mode, 1 AUTO 0 MANUAL
-        """
-        return self.component_manager.subrack_fan_modes
-
-    @attribute(dtype=("DevBoolean",), max_dim_x=8, label="TPM present")
-    def tpmPresent(self: MccsSubrack) -> tuple[bool]:
-        """
-        Return info about TPM board present on subrack.
-
-        Returns a list of 8 Bool
-        specifying presence of TPM in bays 1-8.
-
-        :return: the TPMs detected
-        """
-        return self.component_manager.tpm_present
-
-    @attribute(dtype=("DevUShort",), max_dim_x=8, label="TPM Supply Fault")
-    def tpmSupplyFault(self: MccsSubrack) -> tuple[int]:
-        """
-        Return info about about TPM supply fault status.
-
-        Returns a list of 8 int
-        specifying fault codeof TPM in bays 1-8 Current codes are 0 (no fault) or 1
-        (fault)
-
-        :return: the TPM supply fault status
-        """
-        return self.component_manager.tpm_supply_fault
-
-    @attribute(dtype=(float,), label="TPM temperatures", max_dim_x=8)
-    def tpmTemperatures(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the temperatures of the TPMs housed in subrack bays.
-
-        Command is not yet implemented.
-
-        :return: the TPM temperatures
-        """
-        return self.component_manager.tpm_temperatures
-
-    @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM power")
-    def tpmPowers(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the power used by TPMs in the subrack bays.
-
-        :return: the TPM powers
-        """
-        return self.component_manager.tpm_powers
-
-    @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM voltage")
-    def tpmVoltages(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the voltage at the power connector.
-
-        In the subrack bays Voltage is (approx) 0 for powered off bays.
-
-        :return: the TPM voltages
-        """
-        return self.component_manager.tpm_voltages
-
-    @attribute(dtype=("DevFloat",), max_dim_x=8, label="TPM currents")
-    def tpmCurrents(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the currents of the subrack bays.
-
-        (hence the currents of the TPMs housed in those bays).
-
-        :return: the TPM currents
-        """
-        return self.component_manager.tpm_currents
-
-    @attribute(dtype=int, label="TPM count")
-    def tpmCount(self: MccsSubrack) -> int:
-        """
-        Return the number of TPMs connected to this subrack.
-
-        :return: the number of TPMs connected to this subrack
-        """
-        return self.component_manager.tpm_count
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 1 power mode",
-    )
-    def tpm1PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 1.
-
-        :return: the power mode of TPM bay 1.
-        """
-        return self._tpm_power_states[0]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 2 power mode",
-    )
-    def tpm2PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 2.
-
-        :return: the power mode of TPM bay 2.
-        """
-        return self._tpm_power_states[1]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 3 power mode",
-    )
-    def tpm3PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 3.
-
-        :return: the power mode of TPM bay 3.
-        """
-        return self._tpm_power_states[2]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 4 power mode",
-    )
-    def tpm4PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 4.
-
-        :return: the power mode of TPM bay 4.
-        """
-        return self._tpm_power_states[3]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 5 power mode",
-    )
-    def tpm5PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 5.
-
-        :return: the power mode of TPM bay 5.
-        """
-        return self._tpm_power_states[4]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 6 power mode",
-    )
-    def tpm6PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 6.
-
-        :return: the power mode of TPM bay 6.
-        """
-        return self._tpm_power_states[5]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 7 power mode",
-    )
-    def tpm7PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 7.
-
-        :return: the power mode of TPM bay 7.
-        """
-        return self._tpm_power_states[6]
-
-    @attribute(
-        dtype=PowerState,
-        label="TPM bay 8 power mode",
-    )
-    def tpm8PowerState(self: MccsSubrack) -> PowerState:
-        """
-        Return the power mode of TPM bay 8.
-
-        :return: the power mode of TPM bay 8.
-        """
-        return self._tpm_power_states[7]
-
-    @attribute(dtype=("DevFloat",), max_dim_x=3, label="power supply fan speed")
-    def powerSupplyFanSpeeds(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the powerSupply FanSpeed for the two redundant power supplies.
-
-        Values expressed in percent of maximum.
-
-        :return: the power supply fan speeds
-        """
-        return self.component_manager.power_supply_fan_speeds
-
-    @attribute(dtype=("DevFloat",), max_dim_x=2, label="power_supply current")
-    def powerSupplyCurrents(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the power supply currents.
-
-        :return: the power supply currents for the two redundant power supplies
-        """
-        return self.component_manager.power_supply_currents
-
-    @attribute(dtype=("DevFloat",), max_dim_x=2, label="power_supply Powers")
-    def powerSupplyPowers(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the power supply power for the two redundant power supplies.
-
-        :return: the power supply power
-        """
-        return self.component_manager.power_supply_powers
-
-    @attribute(dtype=("DevFloat",), max_dim_x=2, label="power_supply voltage")
-    def powerSupplyVoltages(self: MccsSubrack) -> tuple[float]:
-        """
-        Return the power supply voltages for the two redundant power supplies.
-
-        :return: the power supply voltages
-        """
-        return self.component_manager.power_supply_voltages
-
-    # --------
     # Commands
-    # --------
-    @command(
-        dtype_in="DevULong",
-        dtype_out="DevVarLongStringArray",
-    )
-    def PowerOnTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
+    # ----------
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def PowerOnTpm(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: int
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Power up the TPM.
+        Power up a TPM.
 
-        Power on an individual TPM, specified by the TPM ID (range
-        1-8) Execution time is ~1.5 seconds.
+        :param argin: the logical id of the TPM to power up
 
-        :param argin: the logical id of the TPM to power
-            up
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
         """
         handler = self.get_command_object("PowerOnTpm")
         result_code, message = handler(argin)
         return ([result_code], [message])
 
-    @command(
-        dtype_in="DevULong",
-        dtype_out="DevVarLongStringArray",
-    )
-    def PowerOffTpm(self: MccsSubrack, argin: int) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def PowerOffTpm(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: int
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Power down the TPM.
+        Power down a TPM.
 
-        Power off an individual TPM, specified by the TPM ID (range
-        1-8) Execution time is ~1.5 seconds.
+        :param argin: the logical id of the TPM to power down
 
-        :param argin: the logical id of the TPM to power
-            down
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
         """
         handler = self.get_command_object("PowerOffTpm")
         result_code, message = handler(argin)
         return ([result_code], [message])
 
-    @command(
-        dtype_out="DevVarLongStringArray",
-    )
-    def PowerUpTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
+    @command(dtype_out="DevVarLongStringArray")
+    def PowerUpTpms(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Power up the TPMs.
+        Power up all TPMs.
 
-        Power on all the TPMs in the subrack. Execution time depends
-        on the number of TPMs present, for a fully populated subrack it may exceed 10
-        seconds.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
         """
         handler = self.get_command_object("PowerUpTpms")
         result_code, message = handler()
         return ([result_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def PowerDownTpms(self: MccsSubrack) -> DevVarLongStringArrayType:
+    def PowerDownTpms(  # pylint: disable=invalid-name
+        self: MccsSubrack,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Power down all the TPMs.
+        Power down all TPMs.
 
-        Power off all the TPMs in the subrack. Execution time
-        depends on the number of TPMs present, for a fully populated subrack it may
-        exceed 10 seconds.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes
+            only.
         """
         handler = self.get_command_object("PowerDownTpms")
         result_code, message = handler()
         return ([result_code], [message])
 
-    class SetSubrackFanSpeedCommand(FastCommand):
-        """
-        Class for handling the SetSubrackFanSpeed() command.
-
-        This command set the backplane fan speed.
-        """
-
-        def __init__(
-            self: MccsSubrack.SetSubrackFanSpeedCommand,
-            component_manager: SubrackComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.SetSubrackFanSpeedCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:'.MccsSubrack.SetSubrackFanSpeed' command.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string message
-                indicating status. The message is for information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-            """
-            params = json.loads(argin)
-            fan_id = params.get("fan_id", None)
-            speed_percent = params.get("speed_percent", None)
-            if fan_id or speed_percent is None:
-                self._component_manager.logger.error(
-                    "fan_ID and speed_percent are mandatory parameters"
-                )
-                raise ValueError("fan_ID and fan speed are mandatory parameters")
-
-            return self._component_manager.set_subrack_fan_speed(fan_id, speed_percent)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetSubrackFanSpeed(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
-        """
-        Set the subrack backplane fan speed.
-
-        :param argin: json dictionary with mandatory keywords:
-
-        * fan_id - (int) id of the selected fan accepted value: 1-4
-        * speed_percent - (float) percentage value of fan RPM  (MIN 0=0% - MAX
-                100=100%)
-
-        Setting fan speed for one of fans in groups (1-2) and (3-4) sets
-        the speed for both fans in that group
-
-        :return: A tuple containing return code and string message indicating
-                status. The message is for information purpose only.
-        """
-        handler = self.get_command_object("SetSubrackFanSpeed")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
-
-    class SetSubrackFanModeCommand(FastCommand):
-        """
-        Class for handling the SetSubrackFanMode() command.
-
-        This command can set the selected fan to manual or auto mode.
-        """
-
-        def __init__(
-            self: MccsSubrack.SetSubrackFanModeCommand,
-            component_manager: SubrackComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.SetSubrackFanModeCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsSubrack.SetSubrackFanMode` command.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                    message indicating status. The message is for
-                    information purpose only.
-
-            :raises ValueError: if the JSON input lacks of mandatory parameters
-            """
-            params = json.loads(argin)
-            fan_id = params.get("fan_id", None)
-            mode = params.get("mode", None)
-            if fan_id or mode is None:
-                self._component_manager.logger.error(
-                    "Fan_id and mode are mandatory parameters"
-                )
-                raise ValueError("Fan_id and mode are mandatory parameter")
-
-            return self._component_manager.set_subrack_fan_modes(fan_id, mode)
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetSubrackFanMode(self: MccsSubrack, argin: str) -> DevVarLongStringArrayType:
-        """
-        Set Fan Operational Mode: 2 AUTO, 1 MANUAL.
-
-        :param argin: json dictionary with mandatory keywords:
-
-        * fan_id - (int) id of the selected fan accepted value: 1-4
-        * mode - (int) 2 AUTO, 1 MANUAL
-
-        Setting fan speed for one of fans in groups (1-2) and (3-4) sets
-        the speed for both fans in that group
-
-        :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-        """
-        handler = self.get_command_object("SetSubrackFanMode")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
-
-    class SetPowerSupplyFanSpeedCommand(FastCommand):
-        """
-        Class for handling the SetPowerSupplyFanSpeed command.
-
-        This command set the selected power supply fan speed.
-        """
-
-        def __init__(
-            self: MccsSubrack.SetPowerSupplyFanSpeedCommand,
-            component_manager: SubrackComponentManager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        def do(  # type: ignore[override]
-            self: MccsSubrack.SetPowerSupplyFanSpeedCommand, argin: str
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsSubrack.SetPowerSupplyFanSpeed` command.
-
-            :param argin: a JSON-encoded dictionary of arguments
-
-            :return: A tuple containing a return code and a string
-                    message indicating status. The message is for
-                    information purpose only.
-
-            :raises ValueError: if the JSON input lacks of mandatory parameters
-            """
-            params = json.loads(argin)
-            power_supply_fan_id = params.get("power_supply_fan_id", None)
-            speed_percent = params.get("speed_percent", None)
-            if power_supply_fan_id or speed_percent is None:
-                self._component_manager.logger.error(
-                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
-                )
-                raise ValueError(
-                    "power_supply_fan_id and speed_percent are mandatory " "parameters"
-                )
-
-            return self._component_manager.set_power_supply_fan_speed(
-                power_supply_fan_id, speed_percent
-            )
-
-    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    def SetPowerSupplyFanSpeed(
+    def SetSubrackFanSpeed(  # pylint: disable=invalid-name
         self: MccsSubrack, argin: str
-    ) -> DevVarLongStringArrayType:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Set the selected power supply fan speed.
+        Set the selected subrack backplane fan speed.
 
-        :param argin: json dictionary with mandatory keywords:
+        :param argin: json dictionary with mandatory keywords
 
-        * power_supply_id - (int) power supply id from 1 to 2
-        * speed_percent - (float) fanspeed in percent
+            * `subrack_fan_id` (int) fan id from 1 to 4
+            * `speed_percent` - (float) fan speed in percent
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
+        kwargs = json.loads(argin)
+        handler = self.get_command_object("SetSubrackFanSpeed")
+        result_code, message = handler(**kwargs)
+        return ([result_code], [message])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetSubrackFanMode(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Set the selected subrack backplane fan mode.
+
+        :param argin: json dictionary with mandatory keywords
+
+            * `fan_id` (int) fan id from 1 to 4
+            * `mode` - (int) mode: 1=MANUAL, 2=AUTO
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        kwargs = json.loads(argin)
+        handler = self.get_command_object("SetSubrackFanMode")
+        result_code, message = handler(**kwargs)
+        return ([result_code], [message])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetPowerSupplyFanSpeed(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Set the selected power supply fan speed.
+
+        :param argin: json dictionary with mandatory keywords
+
+            * `power_supply_id` (int) power supply id from 1 to 2
+            * `speed_percent` - (float) fan speed in percent
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        kwargs = json.loads(argin)
         handler = self.get_command_object("SetPowerSupplyFanSpeed")
-        (return_code, unique_id) = handler(argin)
-        return ([return_code], [unique_id])
+        result_code, message = handler(**kwargs)
+        return ([result_code], [message])
+
+    # ----------
+    # Attributes
+    # ----------
+    @attribute(dtype=int, label="TPM count", abs_change=1)
+    def tpmCount(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of TPM count.
+
+        :param attr: the Tango attribute to be updated
+        """
+        if self._tpm_count is None:
+            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
+        else:
+            attr.set_value(self._tpm_count)
+            attr.set_quality(self._attribute_quality)
+
+    @attribute(dtype=("DevBoolean",), max_dim_x=8, label="TPM present")
+    def tpmPresent(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of which TPMs are present in the subrack.
+
+        :param attr: the Tango attribute to be updated
+        """
+        if self._tpm_present is None:
+            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
+        else:
+            attr.set_value(self._tpm_present)
+            attr.set_quality(self._attribute_quality)
+
+    @attribute(dtype=PowerState, label="TPM 1 power state", abs_change=1)
+    def tpm1PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 1.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 1)
+
+    @attribute(dtype=PowerState, label="TPM 2 power state")
+    def tpm2PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 2.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 2)
+
+    @attribute(dtype=PowerState, label="TPM 3 power state")
+    def tpm3PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 3.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 3)
+
+    @attribute(dtype=PowerState, label="TPM 4 power state")
+    def tpm4PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 4.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 4)
+
+    @attribute(dtype=PowerState, label="TPM 5 power state")
+    def tpm5PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 5.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 5)
+
+    @attribute(dtype=PowerState, label="TPM 6 power state")
+    def tpm6PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 6.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 6)
+
+    @attribute(dtype=PowerState, label="TPM 7 power state")
+    def tpm7PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 7.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 7)
+
+    @attribute(dtype=PowerState, label="TPM 8 power state")
+    def tpm8PowerState(  # pylint: disable=invalid-name
+        self: MccsSubrack, attr: tango.Attribute
+    ) -> None:
+        """
+        Handle a Tango attribute read of the power state of TPM 8.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_tpm_power_state(attr, 8)
+
+    def _get_tpm_power_state(
+        self: MccsSubrack, attr: tango.Attribute, tpm_number: int
+    ) -> None:
+        attr.set_value(self._tpm_power_states[tpm_number - 1])
+
+        # TODO: https://gitlab.com/tango-controls/pytango/-/issues/498
+        # Cannot set quality here
+        # attribute.set_quality(self._attribute_quality)
+
+    @attribute(
+        dtype=(float,),
+        max_dim_x=2,
+        label="Backplane temperatures",
+        unit="Celsius",
+        abs_change=0.1,
+    )
+    def backplaneTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the subrack backplane temperature.
+
+        Two values are returned, respectively for the first (bays 1-4)
+        and second (bays 5-8) halves of the backplane.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("backplaneTemperatures", attr)
+
+    @attribute(
+        dtype=(float,),
+        max_dim_x=2,
+        label="Subrack board temperatures",
+        unit="Celsius",
+        abs_change=0.1,
+    )
+    def boardTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the subrack board temperature.
+
+        Two values are returned.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("boardTemperatures", attr)
+
+    @attribute(
+        dtype=float,
+        label="Board current",
+        abs_change=0.1,
+    )
+    def boardCurrent(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of subrack management board current.
+
+        Total current provided by the two power supplies.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("boardCurrent", attr)
+
+    @attribute(
+        dtype=(float,), max_dim_x=2, label="power supply currents", abs_change=0.1
+    )
+    def powerSupplyCurrents(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the power supply currents.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("powerSupplyCurrents", attr)
+
+    @attribute(
+        dtype=(float,), max_dim_x=3, label="power supply fan speeds", abs_change=0.1
+    )
+    def powerSupplyFanSpeeds(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the power supply fan speeds.
+
+        Values expressed in percent of maximum.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("powerSupplyFanSpeeds", attr)
+
+    @attribute(dtype=(float,), max_dim_x=2, label="power supply powers", abs_change=0.1)
+    def powerSupplyPowers(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the power supply powers.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("powerSupplyPowers", attr)
+
+    @attribute(
+        dtype=(float,), max_dim_x=2, label="power supply voltages", abs_change=0.1
+    )
+    def powerSupplyVoltages(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the power supply voltages.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("powerSupplyVoltages", attr)
+
+    @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
+    def subrackFanSpeeds(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in RPM.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("subrackFanSpeeds", attr)
+
+    @attribute(
+        dtype=(float,), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
+    )
+    def subrackFanSpeedsPercent(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in percent.
+
+        This is the commanded setpoint; the relation between this level and
+        the actual RPMs is not linear. Subrack speed is managed
+        automatically by the controller, by default (see
+        subrack_fan_modes).
+
+        Commanded speed is the same for fans 1-2 and 3-4.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("subrackFanSpeedsPercent", attr)
+
+    # TODO: https://gitlab.com/tango-controls/pytango/-/issues/483
+    # Once this is fixed, we can use dtype=(FanMode,).
+    @attribute(dtype=(int,), max_dim_x=4, label="subrack fan modes", abs_change=1)
+    def subrackFanModes(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the subrack fan modes.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("subrackFanModes", attr)
+
+    @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
+    def tpmCurrents(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the TPM currents.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("tpmCurrents", attr)
+
+    @attribute(dtype=(float,), max_dim_x=8, label="TPM powers", abs_change=0.1)
+    def tpmPowers(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the TPM powers.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("tpmPowers", attr)
+
+    @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
+    def tpmTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the TPM temperatures.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("tpmTemperatures", attr)
+
+    @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
+    def tpmVoltages(self: MccsSubrack, attr: tango.Attribute) -> None:
+        """
+        Handle a Tango attribute read of the TPM voltages.
+
+        :param attr: the Tango attribute to be updated
+        """
+        self._get_hardware_attribute("tpmVoltages", attr)
+
+    def _get_hardware_attribute(
+        self: MccsSubrack, name: str, attr: tango.Attribute
+    ) -> None:
+        if name not in self._hardware_attributes:
+            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
+        else:
+            attr.set_value(self._hardware_attributes[name])
+            attr.set_quality(self._attribute_quality)
+
+    # ----------
+    # Callbacks
+    # ----------
+    def _communication_state_changed(
+        self: MccsSubrack, communication_state: CommunicationStatus
+    ) -> None:
+        self.logger.debug(
+            "Device received notification from component manager that communication "
+            f"with the component is {communication_state.name}."
+        )
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self._attribute_quality = tango.AttrQuality.ATTR_VALID
+        elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
+            # If comms temporarily drop out, do not overwrite the last known
+            # value, but mark it INVALID.
+            self._attribute_quality = tango.AttrQuality.ATTR_INVALID
+        else:
+            # If comms are disabled, we set attribute values to UNKNOWN.
+            self._attribute_quality = tango.AttrQuality.ATTR_VALID
+            self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+
+        super()._communication_state_changed(communication_state)
+
+    def _component_state_changed(
+        self: MccsSubrack,
+        fault: Optional[bool] = None,
+        power: Optional[PowerState] = None,
+        **kwargs: Any,
+    ) -> None:
+        super()._component_state_changed(fault=fault, power=power)
+
+        for key, value in kwargs.items():
+            special_update_method = getattr(self, f"_update_{key}", None)
+            if special_update_method is None:
+                tango_attribute_name = self._ATTRIBUTE_MAP[key]
+                self._hardware_attributes[tango_attribute_name] = value
+                self.push_change_event(tango_attribute_name, value)
+            else:
+                special_update_method(value)
+
+    def _update_tpm_present(self: MccsSubrack, tpm_present: list[bool]) -> None:
+        if self._tpm_present == tpm_present:
+            return
+        self._tpm_present = tpm_present
+        self.push_change_event("tpmPresent", tpm_present)
+
+        tpm_count = tpm_present.count(True)
+        if self._tpm_count == tpm_count:
+            return
+        self._tpm_count = tpm_count
+        self.push_change_event("tpmCount", tpm_count)
+
+    def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: list[bool]) -> None:
+        for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
+            power_state = (
+                PowerState.ON if tpm_on_off[tpm_number - 1] else PowerState.OFF
+            )
+            if self._tpm_power_states[tpm_number - 1] != power_state:
+                self._tpm_power_states[tpm_number - 1] = power_state
+                self.push_change_event(f"tpm{tpm_number}PowerState", power_state)
 
 
 # ----------
 # Run server
 # ----------
-
-
-def main(*args: str, **kwargs: str) -> int:
+def main(args: Any = None, **kwargs: Any) -> int:
     """
-    Entry point for module.
+    Launch a `MccsSubrack` Tango device server instance.
 
-    :param args: positional arguments
-    :param kwargs: named arguments
+    :param args: arguments to the Tango device.
+    :param kwargs: keyword arguments to the server
 
-    :return: exit code
+    :returns: the Tango server exit code
     """
-    return MccsSubrack.run_server(args=args or None, **kwargs)
+    return run((MccsSubrack,), args=args, **kwargs)
 
 
 if __name__ == "__main__":

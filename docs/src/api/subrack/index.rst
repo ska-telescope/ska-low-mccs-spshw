@@ -17,5 +17,3 @@ Subrack subpackage
   Subrack health model<subrack_health_model>
   Subrack simulator server<subrack_simulator_server>
   Subrack simulator<subrack_simulator>
-  Internal subrack simulator<internal_subrack_simulator>
-  Testing internal subrack simulator<testing_internal_subrack_simulator>

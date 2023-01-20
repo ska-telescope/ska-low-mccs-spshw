@@ -108,7 +108,7 @@ class SubrackSimulator(SubrackProtocol):
 
         self._aborted_event = threading.Event()
         self._command_is_running = False
-        self._command_duration: Final = 0.2
+        self._command_duration: Final = 0.05
 
     def set_attribute(
         self: SubrackSimulator, name: str, value: JsonSerializable

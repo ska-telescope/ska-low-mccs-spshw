@@ -319,7 +319,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
                         message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
-                "subrack_fan_speed",
+                "set_subrack_fan_speed",
                 f"{fan_number-1},{speed}",
                 task_callback,
             )
@@ -359,7 +359,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
                         message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
-                "subrack_fan_mode",
+                "set_subrack_fan_mode",
                 f"{fan_number-1},{mode.name}",
                 task_callback,
             )
@@ -400,7 +400,7 @@ class NewSubrackDriver(PollingComponentManager[HttpPollRequest, HttpPollResponse
                         message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
-                "power_supply_fan_speed",
+                "set_power_supply_fan_speed",
                 f"{fan_number-1},{speed}",
                 task_callback,
             )

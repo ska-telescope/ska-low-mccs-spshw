@@ -29,14 +29,7 @@ from ska_low_mccs_common.testing.mock.mock_callable import MockCallable
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
-from ska_low_mccs_spshw.tile import (
-    DynamicTpmSimulator,
-    DynamicTpmSimulatorComponentManager,
-    StaticTileSimulator,
-    StaticTpmSimulator,
-    StaticTpmSimulatorComponentManager,
-    TileComponentManager,
-)
+from ska_low_mccs_spshw.tile import AavsTileSimulator, TileComponentManager, TpmDriver
 
 
 @pytest.fixture()
@@ -254,105 +247,54 @@ def tile_id() -> int:
 
 
 @pytest.fixture()
-def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
+def aavs_tile_simulator(logger: logging.Logger) -> TileComponentManager:
     """
-    Return a static TPM simulator.
+    Return a AavsTileSimulator.
 
     (This is a pytest fixture.)
 
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a static TPM simulator
+    :param logger: logger
+    :return: a AavsTileSimulator
     """
-    return StaticTpmSimulator(logger)
-
-
-@pytest.fixture()
-def static_tile_simulator(logger: logging.Logger) -> StaticTpmSimulator:
-    """
-    Return a static TPM simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a static TPM simulator
-    """
-    return StaticTileSimulator(logger)
-
-
-@pytest.fixture()
-def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
-    """
-    Return a dynamic TPM simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a dynamic TPM simulator
-    """
-    return DynamicTpmSimulator(logger)
-
-
-@pytest.fixture()
-def static_tpm_simulator_component_manager(
-    logger: logging.Logger,
-    max_workers: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
-) -> StaticTpmSimulatorComponentManager:
-    """
-    Return an static TPM simulator component manager.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
-
-    :return: a static TPM simulator component manager.
-    """
-    return StaticTpmSimulatorComponentManager(
+    return AavsTileSimulator(
         logger,
-        max_workers,
-        communication_state_changed_callback,
-        component_state_changed_callback,
     )
 
 
 @pytest.fixture()
-def dynamic_tpm_simulator_component_manager(
+def tpm_driver(
     logger: logging.Logger,
     max_workers: int,
+    tile_id: int,
+    aavs_tile_simulator: AavsTileSimulator,
+    tpm_version: str,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
     component_state_changed_callback: Callable[[dict[str, Any]], None],
-) -> DynamicTpmSimulatorComponentManager:
+) -> TpmDriver:
     """
-    Return an dynamic TPM simulator component manager.
+    Return a TpmDriver driving a AavsTileSimulator.
 
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
+    :param max_workers: nos. of worker threads
+    :param tile_id: the unique ID for the tile
+    :param aavs_tile_simulator: the aavs_tile_simulator
+    :param tpm_version: the tpm_version
+    :param communication_state_changed_callback: callback  to be
         called when the status of the communications channel between
         the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
+    :param component_state_changed_callback: callback to be called when the
+        component state changes
 
-    :return: a static TPM simulator component manager.
+    :return: Tpmdriver with simulated tile.
     """
-    return DynamicTpmSimulatorComponentManager(
+    return TpmDriver(
         logger,
         max_workers,
+        tile_id,
+        aavs_tile_simulator,
+        tpm_version,
         communication_state_changed_callback,
         component_state_changed_callback,
     )

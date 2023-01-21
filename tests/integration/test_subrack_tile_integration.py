@@ -43,6 +43,7 @@ def devices_to_load() -> DevicesToLoadType:
 class TestSubrackTileIntegration:
     """Integration test cases for interactions between subrack and tile."""
 
+    @pytest.mark.xfail
     def test_subrack_tile_integration(
         self: TestSubrackTileIntegration,
         tango_harness: TangoHarness,

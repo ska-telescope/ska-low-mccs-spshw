@@ -404,7 +404,7 @@ class MccsTile(SKABaseDevice):
 
         :return: Return the current simulation mode
         """
-        return self.SimulationConfig
+        return self.component_manager.simulation_mode
 
     @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(self: MccsTile, value):
@@ -417,11 +417,7 @@ class MccsTile(SKABaseDevice):
 
         :param value: The simulation mode, as a SimulationMode value
         """
-        self.logger.warning(
-            "MccsTile's simulationMode attribute is currently unimplemented. "
-            "To change the simulation mode, relaunch the device with the"
-            "'SimulationConfig' property set as desired. "
-        )
+        self.component_manager.simulation_mode = SimulationMode(value)
 
     @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
     def testMode(self: MccsTile) -> int:

@@ -463,7 +463,9 @@ class MccsAPIU(SKABaseDevice):
                 "humidityThreshold", self._humidityThreshold
             )
         except ValidationError as error:
-            self.logger.error("Failed to configure the device due to invalid schema:" + str(error))
+            self.logger.error(
+                "Failed to configure the device due to invalid schema: %s", str(error)
+            )
 
     @command(
         dtype_in="DevULong",

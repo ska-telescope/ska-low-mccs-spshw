@@ -336,12 +336,14 @@ class MccsAntenna(SKABaseDevice):
 
         try:
             validate(instance=config, schema=antenna_config_schema)
-            self._antennaId = config.get("antennaId")
+            self._antennaId = config.get("antennaId", self._antennaId)
             self._xDisplacement = config.get("xDisplacement", self._xDisplacement)
             self._yDisplacement = config.get("yDisplacement", self._yDisplacement)
             self._zDisplacement = config.get("zDisplacement", self._zDisplacement)
         except ValidationError as error:
-            self.logger.error("Failed to configure the device due to invalid schema:" + str(error))
+            self.logger.error(
+                "Failed to configure the device due to invalid schema: +%s", str(error)
+            )
 
     # ----------
     # Attributes

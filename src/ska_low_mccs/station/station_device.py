@@ -357,7 +357,9 @@ class MccsStation(SKAObsDevice):
             self._refLongitude = config.get("refLongitude", self._refLongitude)
             self._refHeight = config.get("refHeight", self._refHeight)
         except ValidationError as error:
-            self.logger.error("Failed to configure the device due to invalid schema:" + str(error))
+            self.logger.error(
+                "Failed to configure the device due to invalid schema: %s", str(error)
+            )
 
     # ----------
     # Attributes

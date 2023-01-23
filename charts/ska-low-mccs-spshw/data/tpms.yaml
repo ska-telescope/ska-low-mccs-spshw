@@ -23,7 +23,7 @@ server:
           properties:
           - name: "TileId"
             values:
-            - "1"
+            - {{$key | toString | quote}}
           - name: "SubrackFQDN"
             values:
             - {{printf "low-mccs-spshw/subrack/%04d" (int $this_tile.subrack)}}

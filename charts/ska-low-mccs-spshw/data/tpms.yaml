@@ -23,7 +23,7 @@ server:
           properties:
           - name: "TileId"
             values:
-            - "1"
+            - {{$key | toString | quote}}
           - name: "SubrackFQDN"
             values:
             - {{printf "low-mccs-spshw/subrack/%04d" (int $this_tile.subrack)}}
@@ -32,7 +32,7 @@ server:
             - {{$this_tile.subrack_bay | toString | quote}}
           - name: "AntennasPerTile"
             values:
-            - "8"
+            - "16"
           - name: "LoggingLevelDefault"
             values:
             - {{pluck "logging_level_default" $this_tile $tiles | first | default 3 | toString | quote}}

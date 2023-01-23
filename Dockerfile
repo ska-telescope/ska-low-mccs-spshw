@@ -5,6 +5,8 @@ FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.3.19 AS runtime
 #RUN ipython profile create
 USER root
 
+RUN apt-get update && apt-get install -y git
+
 RUN poetry config virtualenvs.create false
 
 COPY pyproject.toml poetry.lock* ./

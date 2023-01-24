@@ -2,8 +2,8 @@ apiVersion: v2
 name: umbrella-mccs-spshw 
 description: A Helm chart for Kubernetes MCCS
 type: application
-version: 0.2.0
-appVersion: 0.2.0
+version: 0.2.1
+appVersion: 0.2.1
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
 dependencies:
   - name: ska-tango-base
@@ -11,7 +11,7 @@ dependencies:
     repository: https://artefact.skao.int/repository/helm-internal
     condition: ska-tango-base.enabled,global.sub-system.ska-tango-base.enable
   - name: ska-low-mccs-spshw 
-    version: 0.2.0  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    version: 0.2.1  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     repository: file://../ska-low-mccs-spshw 
   - name: ska-tango-util
     version: 0.3.23

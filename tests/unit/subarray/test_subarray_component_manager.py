@@ -238,7 +238,6 @@ class TestSubarrayComponentManager:
         component_state_changed_callback.assert_in_deque(
             {"resources_changed": [set(), set(), set()]}
         )
-        component_state_changed_callback.assert_in_deque({"release_completed": None})
 
         assert subarray_component_manager.assigned_resources_dict == {
             "stations": [],
@@ -412,7 +411,6 @@ class TestSubarrayComponentManager:
         # arguments expected.
         expected_arguments = [
             {"resources_changed": [set(), set(), set()]},
-            {"release_completed": None},
         ]
         time.sleep(0.1)
         component_state_changed_callback.assert_all_in_deque(expected_arguments)
@@ -473,7 +471,6 @@ class TestSubarrayComponentManager:
         assert response == "Task queued"
 
         expected_arguments = [
-            {"release_completed": None},
             {"resources_changed": [set(), set(), set()]},
         ]
         time.sleep(0.1)
@@ -531,7 +528,6 @@ class TestSubarrayComponentManager:
         assert response == "Task queued"
 
         expected_arguments = [
-            {"release_completed": None},
             {"resources_changed": [set(), set(), set()]},
         ]
         time.sleep(0.1)

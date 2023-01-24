@@ -14,15 +14,13 @@ ska-low-mccs-spshw:
   deviceServers:
     tpms:
       instances: #By default all devices at site are deployed
-        1:
-          enabled: true
-          #careful with version current release 0.2.0 has wrong version
-          version: tpm_v1_2
+        # 1:
+        #   enabled: true
         # 2:
         #   enabled: true
         #   simulation_config: false
-        3:
-          enabled: false
+        # 3:
+        #   enabled: false
         # 4:
         #   enabled: false
         # 5:
@@ -31,6 +29,24 @@ ska-low-mccs-spshw:
         # 6:
         #   enabled: false
         # 7:
+        #   enabled: false
+        # 8:
+        #   enabled: false
+        # 9:
+        #   enabled: false
+        # 10:
+        #   enabled: false
+        # 11:
+        #   enabled: false
+        # 12:
+        #   enabled: false
+        # 13:
+        #   enabled: false
+        # 14:
+        #   enabled: false
+        # 15:
+        #   enabled: false
+        # 16:
         #   enabled: false
       logging_level_default: 5
       resources:

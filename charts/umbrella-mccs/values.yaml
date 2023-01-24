@@ -1,10 +1,3 @@
-#This is the default values file
-
-#Do not modify:
-#To specify another values file to take precedence see example below:
-#make k8s-install-chart K8S_CHART=umbrella-mccs KUBE_NAMESPACE=ska-low-mccs-aavs 
-#K8S_CHART_PARAMS="-f charts/umbrella-mccs/value_files/values_thinslice_aavs.yaml"
-
 display: ":0"
 xauthority: "~/.Xauthority"
 
@@ -62,7 +55,6 @@ ska-taranta:
       limits:
         memory: 1024Mi # 1024Mi = 1 GB mem
 
-#default deployment uses taranta dashboards
 ska-taranta-dashboard:
   ingress:
     enabled: true
@@ -74,7 +66,6 @@ ska-taranta-auth:
     nginx: true
     hostname: test-taranta.k8s.stfc.skao.int
 
-#default deployment uses jupyter
 jupyterhub:
   hub:
     db:

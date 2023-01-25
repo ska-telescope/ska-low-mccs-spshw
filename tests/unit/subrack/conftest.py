@@ -40,8 +40,7 @@ def callbacks() -> dict[str, MockCallable]:
 
 @pytest.fixture()
 def subrack_driver(
-    subrack_ip: str,
-    subrack_port: int,
+    subrack_address: tuple[str, int],
     logger: logging.Logger,
     callbacks: dict[str, MockCallable],
 ) -> SubrackDriver:
@@ -50,13 +49,13 @@ def subrack_driver(
 
     (This is a pytest fixture.)
 
-    :param subrack_ip: the IP address of the subrack
-    :param subrack_port: the subrack port
+    :param subrack_address: the host and port of the subrack
     :param logger: the logger to be used by this object.
     :param callbacks: dictionary of driver callbacks
 
     :return: a subrack driver.
     """
+    subrack_ip, subrack_port = subrack_address
     return SubrackDriver(
         subrack_ip,
         subrack_port,
@@ -70,8 +69,7 @@ def subrack_driver(
 @pytest.fixture()
 def subrack_component_manager(
     logger: logging.Logger,
-    subrack_ip: str,
-    subrack_port: int,
+    subrack_address: tuple[str, int],
     subrack_driver: SubrackDriver,
     initial_power_state: PowerState,
     callbacks: dict[str, MockCallable],
@@ -82,8 +80,7 @@ def subrack_component_manager(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param subrack_ip: the IP address of the subrack
-    :param subrack_port: the subrack port
+    :param subrack_address: the host and port of the subrack
     :param subrack_driver: the subrack driver to use. Normally the
         subrack component manager creates its own driver; here we inject
         this driver instead.
@@ -93,6 +90,7 @@ def subrack_component_manager(
 
     :return: an subrack component manager in the specified simulation mode.
     """
+    subrack_ip, subrack_port = subrack_address
     return SubrackComponentManager(
         subrack_ip,
         subrack_port,

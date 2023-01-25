@@ -14,7 +14,7 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
-from ska_control_model import CommunicationStatus, PowerState, TaskStatus
+from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager, WebHardwareClient
 from ska_tango_base.poller import PollingComponentManager
 
@@ -565,8 +565,7 @@ class SubrackDriver(
         values = poll_response.query_responses
         self.logger.debug("Pushing updates.")
 
-        # TODO: Always-on device for now.
-        self._update_component_state(power=PowerState.ON, fault=fault, **values)
+        self._update_component_state(fault=fault, **values)
 
     def polling_stopped(self: SubrackDriver) -> None:
         """
@@ -579,6 +578,26 @@ class SubrackDriver(
         # Set to max here so that if/when polling restarts, an update is
         # requested as soon as possible.
         self._tick = self._max_tick
+
+        self._update_component_state(
+            fault=None,
+            tpm_present=None,
+            tpm_on_off=None,
+            backplane_temperatures=None,
+            board_temperatures=None,
+            board_current=None,
+            power_supply_currents=None,
+            power_supply_fan_speeds=None,
+            power_supply_powers=None,
+            power_supply_voltages=None,
+            subrack_fan_speeds=None,
+            subrack_fan_speeds_percent=None,
+            subrack_fan_modes=None,
+            tpm_currents=None,
+            tpm_powers=None,
+            tpm_temperatures=None,
+            tpm_voltages=None,
+        )
 
         # Not calling super().polling_stopped() here,
         # because ska-tango-base inappropriately pushes power=UNKNOWN,

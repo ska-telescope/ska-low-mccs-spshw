@@ -219,7 +219,8 @@ class TestOff:
         )
         callbacks["task"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.ON, fault=False)
+        callbacks["component_state"].assert_next_call(power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(fault=False)
 
         callbacks["component_state"].assert_next_call(
             **subrack_simulator_attribute_values
@@ -240,7 +241,27 @@ class TestOff:
         )
         callbacks["task"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.OFF)
+        # TODO: When we change over to ska-tango-testing,
+        # we can just use lookahead=2 here.
+        call_kwargs = callbacks["component_state"].get_next_call()[1]
+        if call_kwargs == {"power": PowerState.OFF}:
+            callbacks["component_state"].assert_next_call(
+                fault=None,
+                **{
+                    attribute_name: None
+                    for attribute_name in subrack_simulator_attribute_values
+                },
+            )
+        else:
+            assert call_kwargs == dict(
+                fault=None,
+                **{
+                    attribute_name: None
+                    for attribute_name in subrack_simulator_attribute_values
+                },
+            )
+            callbacks["component_state"].assert_next_call(power=PowerState.OFF)
+
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.stop_communicating()
@@ -305,7 +326,8 @@ class TestOn:
         )
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(fault=False)
         callbacks["component_state"].assert_next_call(
             **subrack_simulator_attribute_values
         )
@@ -336,15 +358,17 @@ class TestOn:
             ],
         )
 
-        new_subrack_fan_speeds = [3999.0, 4000.0, 4001.0, 4002.0]
+        new_subrack_fan_speeds_percent = [73.0, 74.0, 75.0, 76.0]
         subrack_simulator.simulate_attribute(
-            "subrack_fan_speeds", new_subrack_fan_speeds
+            "subrack_fan_speeds_percent", new_subrack_fan_speeds_percent
         )
         callbacks["component_state"].assert_next_call(
-            subrack_fan_speeds=[pytest.approx(s) for s in new_subrack_fan_speeds],
             subrack_fan_speeds_percent=[
-                pytest.approx(s * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED)
-                for s in new_subrack_fan_speeds
+                pytest.approx(p) for p in new_subrack_fan_speeds_percent
+            ],
+            subrack_fan_speeds=[
+                pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
+                for p in new_subrack_fan_speeds_percent
             ],
         )
 
@@ -397,7 +421,27 @@ class TestOn:
         )
 
         subrack_component_manager.stop_communicating()
-        callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
+
+        # TODO: When we change over to ska-tango-testing,
+        # we can just use lookahead=2 here.
+        call_kwargs = callbacks["component_state"].get_next_call()[1]
+        if call_kwargs == {"power": PowerState.UNKNOWN}:
+            callbacks["component_state"].assert_next_call(
+                fault=None,
+                **{
+                    attribute_name: None
+                    for attribute_name in subrack_simulator_attribute_values
+                },
+            )
+        else:
+            assert call_kwargs == dict(
+                fault=None,
+                **{
+                    attribute_name: None
+                    for attribute_name in subrack_simulator_attribute_values
+                },
+            )
+            callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
         callbacks["component_state"].assert_not_called()
 
     def test_tpm_power_commands(
@@ -437,7 +481,8 @@ class TestOn:
         )
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(fault=False)
         callbacks["component_state"].assert_next_call(
             **subrack_simulator_attribute_values
         )
@@ -507,24 +552,31 @@ class TestOn:
         )
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(power=PowerState.ON)
+        callbacks["component_state"].assert_next_call(fault=False)
         callbacks["component_state"].assert_next_call(
             **subrack_simulator_attribute_values
         )
         callbacks["component_state"].assert_not_called()
 
-        subrack_fan_speeds = subrack_simulator.get_attribute("subrack_fan_speeds")
+        subrack_fan_speeds_percent = subrack_simulator.get_attribute(
+            "subrack_fan_speeds_percent"
+        )
 
         fan_to_set = 1  # one-based
-        fan_speed_setting = 4500.0
-        subrack_component_manager.set_subrack_fan_speed(fan_to_set, fan_speed_setting)
+        fan_speed_percent_setting = 78.0
+        subrack_component_manager.set_subrack_fan_speed(
+            fan_to_set, fan_speed_percent_setting
+        )
 
-        subrack_fan_speeds[fan_to_set - 1] = fan_speed_setting
+        subrack_fan_speeds_percent[fan_to_set - 1] = fan_speed_percent_setting
         callbacks["component_state"].assert_next_call(
-            subrack_fan_speeds=[pytest.approx(s) for s in subrack_fan_speeds],
             subrack_fan_speeds_percent=[
-                pytest.approx(s * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED)
-                for s in subrack_fan_speeds
+                pytest.approx(p) for p in subrack_fan_speeds_percent
+            ],
+            subrack_fan_speeds=[
+                pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
+                for p in subrack_fan_speeds_percent
             ],
         )
 

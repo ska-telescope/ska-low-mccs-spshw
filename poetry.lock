@@ -1070,33 +1070,31 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.3.0"
+version = "0.4.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
-python-versions = "~3.10"
-develop = false
+python-versions = ">=3.10,<3.11"
 
 [package.dependencies]
-backoff = "^2.1.2"
-enum34 = "^1.1.10"
-future = "^0.18.2"
-jsonschema = "^4.9.0"
+backoff = ">=2.1.2,<3.0.0"
+enum34 = ">=1.1.10,<2.0.0"
+future = ">=0.18.2,<0.19.0"
+jsonschema = ">=4.9.0,<5.0.0"
 numpy = "1.23.0"
 pytango = "9.3.3"
-PyYAML = "^6.0"
-requests = "^2.28.1"
-ska-control-model = "^0.1.2"
-ska-ser-logging = "^0.4.1"
-ska-tango-base = "^0.14.0"
-ska-tango-testing = "^0.5.1"
-transitions = "^0.9.0"
+PyYAML = ">=6.0,<7.0"
+requests = ">=2.28.1,<3.0.0"
+ska-control-model = ">=0.1.2,<0.2.0"
+ska-ser-logging = ">=0.4.1,<0.5.0"
+ska-tango-base = ">=0.14.0,<0.15.0"
+ska-tango-testing = ">=0.5.1,<0.6.0"
+transitions = ">=0.9.0,<0.10.0"
 
 [package.source]
-type = "git"
-url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git"
-reference = "8a05cea88bff7754100ccdb3b61de91c36199f28"
-resolved_reference = "8a05cea88bff7754100ccdb3b61de91c36199f28"
+type = "legacy"
+url = "https://artefact.skao.int/repository/pypi-internal/simple"
+reference = 'ska-nexus'
 
 [[package]]
 name = "ska-ser-logging"
@@ -1378,7 +1376,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "6bcc2e860162547c3b84ce044d92b3e3c83f0afa5deaf13a0b1cd396f21d38f3"
+content-hash = "9f90c32b7bd89a9a603082575190e8d14772def8a268d03ed7189517fe8da296"
 
 [metadata.files]
 aavs-system = []
@@ -2081,7 +2079,10 @@ ska-control-model = [
     {file = "ska-control-model-0.1.2.tar.gz", hash = "sha256:8ae0e399189b99c64b4555bb91702ead2c373659dbebf37f451eb968a4d56dae"},
     {file = "ska_control_model-0.1.2-py3-none-any.whl", hash = "sha256:aa5d57e579109d3e22487d73a3ee6059c0306e4daa960d3636c43027b376b1dd"},
 ]
-ska-low-mccs-common = []
+ska-low-mccs-common = [
+    {file = "ska_low_mccs_common-0.4.0-py3-none-any.whl", hash = "sha256:3154dbbcc16816b98e0b998488c8b0d888098c72344cab3dc78a00e94ee56e48"},
+    {file = "ska_low_mccs_common-0.4.0.tar.gz", hash = "sha256:0a3d3dd309a440ee576e83ab00e6a0c7895e51163568b26c433cb98201e4ea0a"},
+]
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},
     {file = "ska_ser_logging-0.4.1+0a677a67.tar.gz", hash = "sha256:558622000db39668d3a35b6986af9d70dac36635826636ef2c07f816a149a06d"},

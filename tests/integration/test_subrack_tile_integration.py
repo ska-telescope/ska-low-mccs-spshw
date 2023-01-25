@@ -99,30 +99,6 @@ class TestSubrackTileIntegration:
             tango.DevState.UNKNOWN
         )
 
-        # The subrack device connects to its upstream power supply device
-        # and finds that the subrack is turned off,
-        # so it transitions to OFF state,
-        # and reports its TPMs' power states as NO_SUPPLY.
-        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.OFF)
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.NO_SUPPLY
-        )
-
-        # the tile device receives the same NO_SUPPLY event,
-        # so it transitions to OFF state.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-
-        # Now let's turn the subrack on.
-        _ = subrack_device.On()
-
-        # The subrack device tells the upstream power supply to power the subrack on.
-        # Once the upstream power supply has powered the subrack on,
-        # the subrack device tries to establish a connection to the subrack.
-        # Until that connection is established, it is in UNKNOWN state.
-        change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.UNKNOWN
-        )
-
         # Once the subrack device is connected to its subrack,
         # it transitions to ON state.
         # It is also now in a position to report on whether its TPMs are on or off.
@@ -132,9 +108,8 @@ class TestSubrackTileIntegration:
         )
 
         # The tile device receives the same event,
-        # but the TPM is still off,
-        # so the tile device does not change state.
-        change_event_callbacks["tile_state"].assert_not_called()
+        # so it transitions to OFF state.
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
 
         # But at least now the tile device can turn its TPM on:
         _ = tile_device.On()
@@ -150,7 +125,7 @@ class TestSubrackTileIntegration:
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-        # Now let's turn it off again.
+        # Now let's turn it off.
         _ = tile_device.Off()
 
         # The tile device tells the subrack device

@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import logging
-import threading
 from typing import Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus
@@ -18,7 +17,7 @@ from ska_low_mccs_common.component import (
     PowerSupplyProxySimulator,
 )
 
-from .subrack_data import FanMode, SubrackData
+from .subrack_data import FanMode
 from .subrack_driver import SubrackDriver
 
 __all__ = ["SubrackComponentManager"]
@@ -36,7 +35,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
         _driver: Optional[SubrackDriver] = None,
-        _initial_power_state: PowerState = PowerState.OFF,
+        _initial_power_state: PowerState = PowerState.ON,
         _initial_fail: bool = False,
     ) -> None:
         """
@@ -58,9 +57,18 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
+        :param _driver: for testing only, we can inject a driver rather
+            then letting the component manager create its own. If
+            provided, this overrides driver-specific arguments such as
+            the IP and port.
+        :param _initial_power_state: for testing only, we can set the
+            initial power state of the simulated subrack power supply.
+            If not provided, the default is ON, since all our current
+            facilities with a real hardware subrack do not yet allow it
+            to be powered on and off.
+        :param _initial_fail: for testing only, we can set the simulated
+            subrack power supply to fail.
         """
-        self._tpm_power_states_lock = threading.Lock()
-        self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
         self._component_state_changed_callback = component_state_changed_callback
 
         hardware_component_manager = _driver or SubrackDriver(
@@ -227,3 +235,13 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return cast(
             SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)
+
+    def _hardware_communication_state_changed(
+        self: SubrackComponentManager,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        super()._hardware_communication_state_changed(communication_state)
+
+        # TODO: This should be upstreamed to ska-low-mccs-common
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            self._update_component_state(power=PowerState.ON)

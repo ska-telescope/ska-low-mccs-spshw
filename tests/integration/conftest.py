@@ -35,16 +35,6 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker("forked")
 
 
-@pytest.fixture(name="subrack_name")
-def subrack_name_fixture() -> str:
-    """
-    Return the name of the subrack Tango device.
-
-    :return: the name of the subrack Tango device.
-    """
-    return "low-mccs/subrack/0001"
-
-
 @pytest.fixture(name="tile_name")
 def tile_name_fixture() -> str:
     """
@@ -58,22 +48,20 @@ def tile_name_fixture() -> str:
 @pytest.fixture(name="tango_harness")
 def tango_harness_fixture(
     subrack_name: str,
-    subrack_ip: str,
-    subrack_port: int,
+    subrack_address: tuple[str, int],
     tile_name: str,
 ) -> Generator[TangoContextProtocol, None, None]:
     """
     Return a Tango harness against which to run tests of the deployment.
 
     :param subrack_name: the name of the subrack Tango device
-    :param subrack_ip: the hostname or IP address of the subrack
-        management board web server
-    :param subrack_port: the port of the subrack management board web
-        server
+    :param subrack_address: the host and port of the subrack
     :param tile_name: the name of the tile Tango device
 
     :yields: a tango context.
     """
+    subrack_ip, subrack_port = subrack_address
+
     context_manager = ThreadedTestTangoContextManager()
     context_manager.add_device(
         subrack_name,
@@ -107,7 +95,7 @@ def subrack_device_fixture(
     subrack_name: str,
 ) -> DeviceProxy:
     """
-    Fixture that returns the subrack Tango device under test.
+    Return the subrack Tango device under test.
 
     :param tango_harness: a test harness for Tango devices.
     :param subrack_name: name of the subrack Tango device.

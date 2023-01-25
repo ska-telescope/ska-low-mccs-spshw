@@ -13,7 +13,6 @@ import json
 import logging
 from typing import Any, Optional
 
-import tango
 from ska_control_model import CommunicationStatus, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
@@ -241,7 +240,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
     # Attributes that don't map one-to-one are handled individually.
     # For example, tpm_on_off is not included here because it unpacks into eight
-    # Tango attributes of the form tpmNPowerState.
+    # Tango attributes of the form tpm{N}PowerState.
     _ATTRIBUTE_MAP = {
         "backplane_temperatures": "backplaneTemperatures",
         "board_temperatures": "boardTemperatures",
@@ -274,9 +273,8 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
-        self._attribute_quality = tango.AttrQuality.ATTR_INVALID
-        self._tpm_present: Optional[list[bool]] = None
-        self._tpm_count: Optional[int] = None
+        self._tpm_present: list[bool] = []
+        self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
 
         self._hardware_attributes: dict[str, Any] = {}
@@ -304,10 +302,8 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
 
             :return: a resultcode, message tuple
             """
-            self._device._attribute_quality = tango.AttrQuality.ATTR_INVALID
-
             self._device._tpm_present = None
-            self._device._tpm_count = None
+            self._device._tpm_count = 0
             self._device._tpm_power_states = [
                 PowerState.UNKNOWN
             ] * SubrackData.TPM_BAY_COUNT
@@ -509,130 +505,100 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
     # ----------
     # Attributes
     # ----------
+
     @attribute(dtype=int, label="TPM count", abs_change=1)
-    def tpmCount(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def tpmCount(self: MccsSubrack) -> int:
         """
         Handle a Tango attribute read of TPM count.
 
-        :param attr: the Tango attribute to be updated
+        :return: the number of TPMs present in the subrack.
+            When communication with the subrack is not established,
+            this returns 0.
         """
-        if self._tpm_count is None:
-            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
-        else:
-            attr.set_value(self._tpm_count)
-            attr.set_quality(self._attribute_quality)
+        return self._tpm_count
 
-    @attribute(dtype=("DevBoolean",), max_dim_x=8, label="TPM present")
-    def tpmPresent(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    @attribute(dtype=(bool,), max_dim_x=8, label="TPM present")
+    def tpmPresent(self: MccsSubrack) -> list[bool]:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of which TPMs are present in the subrack.
 
-        :param attr: the Tango attribute to be updated
+        :return: whether a TPM is present in each bay.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        if self._tpm_present is None:
-            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
-        else:
-            attr.set_value(self._tpm_present)
-            attr.set_quality(self._attribute_quality)
+        return self._tpm_present or []
 
-    @attribute(dtype=PowerState, label="TPM 1 power state", abs_change=1)
-    def tpm1PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    @attribute(dtype=PowerState, label="TPM 1 power state")
+    def tpm1PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 1.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 1.
         """
-        self._get_tpm_power_state(attr, 1)
+        return self._tpm_power_states[0]
 
     @attribute(dtype=PowerState, label="TPM 2 power state")
-    def tpm2PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm2PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 2.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 2.
         """
-        self._get_tpm_power_state(attr, 2)
+        return self._tpm_power_states[1]
 
     @attribute(dtype=PowerState, label="TPM 3 power state")
-    def tpm3PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm3PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 3.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 3.
         """
-        self._get_tpm_power_state(attr, 3)
+        return self._tpm_power_states[2]
 
     @attribute(dtype=PowerState, label="TPM 4 power state")
-    def tpm4PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm4PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 4.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 4.
         """
-        self._get_tpm_power_state(attr, 4)
+        return self._tpm_power_states[3]
 
     @attribute(dtype=PowerState, label="TPM 5 power state")
-    def tpm5PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm5PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 5.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 5.
         """
-        self._get_tpm_power_state(attr, 5)
+        return self._tpm_power_states[4]
 
     @attribute(dtype=PowerState, label="TPM 6 power state")
-    def tpm6PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm6PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 6.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 6.
         """
-        self._get_tpm_power_state(attr, 6)
+        return self._tpm_power_states[5]
 
     @attribute(dtype=PowerState, label="TPM 7 power state")
-    def tpm7PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm7PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 7.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 7.
         """
-        self._get_tpm_power_state(attr, 7)
+        return self._tpm_power_states[6]
 
     @attribute(dtype=PowerState, label="TPM 8 power state")
-    def tpm8PowerState(  # pylint: disable=invalid-name
-        self: MccsSubrack, attr: tango.Attribute
-    ) -> None:
+    def tpm8PowerState(self: MccsSubrack) -> PowerState:  # pylint: disable=invalid-name
         """
         Handle a Tango attribute read of the power state of TPM 8.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power state of TPM 8.
         """
-        self._get_tpm_power_state(attr, 8)
-
-    def _get_tpm_power_state(
-        self: MccsSubrack, attr: tango.Attribute, tpm_number: int
-    ) -> None:
-        attr.set_value(self._tpm_power_states[tpm_number - 1])
-
-        # TODO: https://gitlab.com/tango-controls/pytango/-/issues/498
-        # Cannot set quality here
-        # attribute.set_quality(self._attribute_quality)
+        return self._tpm_power_states[7]
 
     @attribute(
         dtype=(float,),
@@ -641,16 +607,18 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         unit="Celsius",
         abs_change=0.1,
     )
-    def backplaneTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def backplaneTemperatures(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack backplane temperature.
 
         Two values are returned, respectively for the first (bays 1-4)
         and second (bays 5-8) halves of the backplane.
 
-        :param attr: the Tango attribute to be updated
+        :return: the backplane temperatures.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("backplaneTemperatures", attr)
+        return self._hardware_attributes.get("backplaneTemperatures", None) or []
 
     @attribute(
         dtype=(float,),
@@ -659,88 +627,102 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         unit="Celsius",
         abs_change=0.1,
     )
-    def boardTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def boardTemperatures(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack board temperature.
 
         Two values are returned.
 
-        :param attr: the Tango attribute to be updated
+        :return: the board temperatures.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("boardTemperatures", attr)
+        return self._hardware_attributes.get("boardTemperatures", None) or []
 
     @attribute(
-        dtype=float,
+        dtype=(float,),
         label="Board current",
         abs_change=0.1,
     )
-    def boardCurrent(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def boardCurrent(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of subrack management board current.
 
         Total current provided by the two power supplies.
 
-        :param attr: the Tango attribute to be updated
+        :return: total board current, in a list of length 1.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("boardCurrent", attr)
+        return self._hardware_attributes.get("boardCurrent", None) or []
 
     @attribute(
         dtype=(float,), max_dim_x=2, label="power supply currents", abs_change=0.1
     )
-    def powerSupplyCurrents(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def powerSupplyCurrents(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the power supply currents.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power supply fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("powerSupplyCurrents", attr)
+        return self._hardware_attributes.get("powerSupplyCurrents", None) or []
 
     @attribute(
         dtype=(float,), max_dim_x=3, label="power supply fan speeds", abs_change=0.1
     )
-    def powerSupplyFanSpeeds(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the power supply fan speeds.
 
         Values expressed in percent of maximum.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power supply fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("powerSupplyFanSpeeds", attr)
+        return self._hardware_attributes.get("powerSupplyFanSpeeds", None) or []
 
     @attribute(dtype=(float,), max_dim_x=2, label="power supply powers", abs_change=0.1)
-    def powerSupplyPowers(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def powerSupplyPowers(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the power supply powers.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power supply powers.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("powerSupplyPowers", attr)
+        return self._hardware_attributes.get("powerSupplyPowers", None) or []
 
     @attribute(
         dtype=(float,), max_dim_x=2, label="power supply voltages", abs_change=0.1
     )
-    def powerSupplyVoltages(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def powerSupplyVoltages(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the power supply voltages.
 
-        :param attr: the Tango attribute to be updated
+        :return: the power supply voltages.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("powerSupplyVoltages", attr)
+        return self._hardware_attributes.get("powerSupplyVoltages", None) or []
 
     @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
-    def subrackFanSpeeds(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def subrackFanSpeeds(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack fan speeds, in RPM.
 
-        :param attr: the Tango attribute to be updated
+        :return: the subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("subrackFanSpeeds", attr)
+        return self._hardware_attributes.get("subrackFanSpeeds", None) or []
 
     @attribute(
         dtype=(float,), max_dim_x=4, label="subrack fan speeds (%)", abs_change=0.1
     )
-    def subrackFanSpeedsPercent(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def subrackFanSpeedsPercent(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack fan speeds, in percent.
 
@@ -751,65 +733,73 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
 
         Commanded speed is the same for fans 1-2 and 3-4.
 
-        :param attr: the Tango attribute to be updated
+        :return: the subrack fan speed setpoints in percent.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("subrackFanSpeedsPercent", attr)
+        return self._hardware_attributes.get("subrackFanSpeedsPercent", None) or []
 
     # TODO: https://gitlab.com/tango-controls/pytango/-/issues/483
     # Once this is fixed, we can use dtype=(FanMode,).
     @attribute(dtype=(int,), max_dim_x=4, label="subrack fan modes", abs_change=1)
-    def subrackFanModes(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def subrackFanModes(self: MccsSubrack) -> list[int]:
         """
         Handle a Tango attribute read of the subrack fan modes.
 
-        :param attr: the Tango attribute to be updated
+        :return: the subrack fan modes.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("subrackFanModes", attr)
+        return self._hardware_attributes.get("subrackFanModes", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
-    def tpmCurrents(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def tpmCurrents(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM currents.
 
-        :param attr: the Tango attribute to be updated
+        :return: the TPM currents.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("tpmCurrents", attr)
+        return self._hardware_attributes.get("tpmCurrents", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM powers", abs_change=0.1)
-    def tpmPowers(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def tpmPowers(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM powers.
 
-        :param attr: the Tango attribute to be updated
+        :return: the TPM powers.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("tpmPowers", attr)
+        return self._hardware_attributes.get("tpmPowers", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
-    def tpmTemperatures(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def tpmTemperatures(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM temperatures.
 
-        :param attr: the Tango attribute to be updated
+        :return: the TPM temperatures.
+            When communication with the subrack is not established,
+            this returns an empty list.
         """
-        self._get_hardware_attribute("tpmTemperatures", attr)
+        return self._hardware_attributes.get("tpmTemperatures", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
-    def tpmVoltages(self: MccsSubrack, attr: tango.Attribute) -> None:
+    def tpmVoltages(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM voltages.
 
-        :param attr: the Tango attribute to be updated
+        :return: the TPM voltages
         """
-        self._get_hardware_attribute("tpmVoltages", attr)
+        return self._hardware_attributes.get("tpmVoltages", None) or []
 
-    def _get_hardware_attribute(
-        self: MccsSubrack, name: str, attr: tango.Attribute
-    ) -> None:
-        if name not in self._hardware_attributes:
-            attr.set_quality(tango.AttrQuality.ATTR_INVALID)
-        else:
-            attr.set_value(self._hardware_attributes[name])
-            attr.set_quality(self._attribute_quality)
+    def _clear_hardware_attributes(self: MccsSubrack) -> None:
+        # TODO: It should would be nice to push change events here,
+        # but it seems pytango does not permit pushing change events
+        # for None / invalid values.
+        self._hardware_attributes.clear()
+        self._update_tpm_present(None)
 
     # ----------
     # Callbacks
@@ -821,16 +811,11 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
             "Device received notification from component manager that communication "
             f"with the component is {communication_state.name}."
         )
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            self._attribute_quality = tango.AttrQuality.ATTR_VALID
-        elif communication_state == CommunicationStatus.NOT_ESTABLISHED:
-            # If comms temporarily drop out, do not overwrite the last known
-            # value, but mark it INVALID.
-            self._attribute_quality = tango.AttrQuality.ATTR_INVALID
-        else:
-            # If comms are disabled, we set attribute values to UNKNOWN.
-            self._attribute_quality = tango.AttrQuality.ATTR_VALID
-            self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        if communication_state != CommunicationStatus.ESTABLISHED:
+            self._update_tpm_power_states(
+                [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+            )
+            self._clear_hardware_attributes()
 
         super()._communication_state_changed(communication_state)
 
@@ -857,14 +842,22 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         elif power == PowerState.UNKNOWN:
             tpm_power_state = PowerState.UNKNOWN
         if tpm_power_state is not None:
-            for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
-                if self._tpm_power_states[tpm_number - 1] != tpm_power_state:
-                    self._tpm_power_states[tpm_number - 1] = tpm_power_state
-                    self.push_change_event(
-                        f"tpm{tpm_number}PowerState", tpm_power_state
-                    )
+            self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
+            self._clear_hardware_attributes()
 
-    def _update_tpm_present(self: MccsSubrack, tpm_present: list[bool]) -> None:
+    def _update_board_current(self: MccsSubrack, board_current: float) -> None:
+        if board_current is None:
+            self._hardware_attributes["boardCurrent"] = None
+            self.push_change_event("boardCurrent", [])
+        else:
+            self._hardware_attributes["boardCurrent"] = [board_current]
+            self.push_change_event("boardCurrent", [board_current])
+
+    def _update_tpm_present(
+        self: MccsSubrack, tpm_present: Optional[list[bool]]
+    ) -> None:
+        if tpm_present is None:
+            tpm_present = []
         if self._tpm_present == tpm_present:
             return
         self._tpm_present = tpm_present
@@ -876,14 +869,22 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         self._tpm_count = tpm_count
         self.push_change_event("tpmCount", tpm_count)
 
-    def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: list[bool]) -> None:
-        for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
-            power_state = (
-                PowerState.ON if tpm_on_off[tpm_number - 1] else PowerState.OFF
-            )
-            if self._tpm_power_states[tpm_number - 1] != power_state:
-                self._tpm_power_states[tpm_number - 1] = power_state
-                self.push_change_event(f"tpm{tpm_number}PowerState", power_state)
+    def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: Optional[list[bool]]) -> None:
+        if tpm_on_off is None:
+            power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
+        else:
+            power_states = [
+                PowerState.ON if is_on else PowerState.OFF for is_on in tpm_on_off
+            ]
+        self._update_tpm_power_states(power_states)
+
+    def _update_tpm_power_states(
+        self: MccsSubrack, tpm_power_states: list[PowerState]
+    ) -> None:
+        for index, power_state in enumerate(tpm_power_states):
+            if self._tpm_power_states[index] != power_state:
+                self._tpm_power_states[index] = power_state
+                self.push_change_event(f"tpm{index+1}PowerState", power_state)
 
 
 # ----------

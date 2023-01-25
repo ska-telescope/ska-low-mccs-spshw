@@ -31,7 +31,6 @@ from ska_low_mccs_common.testing.mock import (
 )
 from ska_low_mccs_common.testing.tango_harness import (
     ClientProxyTangoHarness,
-    DeploymentContextTangoHarness,
     DevicesToLoadType,
     MccsDeviceInfo,
     MockingTangoHarness,
@@ -117,8 +116,6 @@ def tango_harness_factory(
 
         pass
 
-    testbed = request.config.getoption("--testbed")
-
     def build_harness(
         tango_config: dict[str, Any],
         devices_to_load: DevicesToLoadType,
@@ -143,18 +140,8 @@ def tango_harness_factory(
         else:
             device_info = MccsDeviceInfo(**devices_to_load)
 
-        tango_harness: TangoHarness  # type hint only
-        if testbed == "test":
-            tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
-        elif testbed == "local":
-            tango_harness = DeploymentContextTangoHarness(
-                device_info, logger, **tango_config
-            )
-        else:
-            tango_harness = ClientProxyTangoHarness(device_info, logger)
-
+        tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
         starting_state_harness = StartingStateTangoHarness(tango_harness)
-
         mocking_harness = MockingTangoHarness(
             starting_state_harness, mock_factory, initial_mocks
         )

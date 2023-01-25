@@ -503,7 +503,7 @@ class SubarrayComponentManager(
             )
 
             self._evaluate_communication_state()
-        self._component_state_changed_callback({"release_completed": None})
+
         if task_callback is not None:
             task_callback(
                 status=TaskStatus.COMPLETED, result="ReleaseAllResources has completed."

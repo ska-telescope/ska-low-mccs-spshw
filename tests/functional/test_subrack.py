@@ -25,7 +25,23 @@ from ska_tango_testing.context import TangoContextProtocol
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.subrack import FanMode, SubrackData
+# TODO: We need a better solution to this.
+try:
+    from ska_low_mccs_spshw.subrack import FanMode, SubrackData
+except (ImportError, ModuleNotFoundError):
+    import enum
+
+    class SubrackData:  # type: ignore[no-redef]
+        """Facts about subracks."""
+
+        TPM_BAY_COUNT = 8
+        MAX_SUBRACK_FAN_SPEED = 8000.0
+
+    class FanMode(enum.IntEnum):  # type: ignore[no-redef]
+        """Python enumerated type for FanMode."""
+
+        MANUAL = 1
+        AUTO = 2
 
 
 @pytest.fixture(name="subrack_device", scope="module")
@@ -171,7 +187,9 @@ def ensure_subrack_fan_mode(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-    expected_fan_modes = subrack_device.subrackFanModes
+    fan_modes = subrack_device.subrackFanModes
+    if fan_modes is not None:
+        fan_modes = list(fan_modes)  # from numpy
 
     subrack_device.subscribe_event(
         "subrackFanModes",
@@ -180,15 +198,17 @@ def ensure_subrack_fan_mode(
     )
     change_event_callbacks.assert_change_event(
         "subrack_fan_modes",
-        expected_fan_modes,
+        fan_modes,
     )
 
-    if expected_fan_modes is None:
+    if fan_modes is None:
         # We only just put it online / turned it on,
         # so let's wait for a poll to return a real value
         change_event_callbacks.assert_change_event("subrack_fan_modes", Anything)
-    expected_fan_modes = list(subrack_device.subrackFanModes)
+    fan_modes = subrack_device.subrackFanModes
+    assert fan_modes is not None
 
+    expected_fan_modes = list(fan_modes)
     if expected_fan_modes[fan_number - 1] == FanMode.AUTO:
         expected_fan_modes[fan_number - 1] = FanMode.MANUAL
 

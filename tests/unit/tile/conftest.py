@@ -67,7 +67,7 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
 
 @pytest.fixture(scope="session")
 def tango_harness_factory(
-    request: pytest.FixtureRequest, logger: logging.Logger
+    logger: logging.Logger,
 ) -> Callable[
     [
         dict[str, Any],
@@ -80,25 +80,6 @@ def tango_harness_factory(
     """
     Return a factory for creating a test harness for testing Tango devices.
 
-    The Tango context used depends upon the context in which the tests are being
-    run, as specified by the `--testbed` option.
-
-    If the context is "test", then this harness deploys the specified
-    devices into a
-    :py:class:`tango.test_context.MultiDeviceTestContext`.
-
-    Otherwise, this harness assumes that devices are already running;
-    that is, we are testing a deployed system.
-
-    This fixture is implemented as a factory so that the actual
-    `tango_harness` fixture can vary in scope: unit tests require test
-    isolation, so will want to build a new harness every time. But
-    functional tests assume a single harness that maintains state
-    across multiple tests, so they will want to instantiate the harness
-    once and then use it for multiple tests.
-
-    :param request: A pytest object giving access to the requesting test
-        context.
     :param logger: the logger to be used by this object.
 
     :return: a tango harness factory

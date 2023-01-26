@@ -367,17 +367,17 @@ class TestOn:
             ],
         )
 
-        new_subrack_fan_speeds_percent = [73.0, 74.0, 75.0, 76.0]
+        new_subrack_fan_speed_percent = [73.0, 74.0, 75.0, 76.0]
         subrack_simulator.simulate_attribute(
-            "subrack_fan_speeds_percent", new_subrack_fan_speeds_percent
+            "subrack_fan_speed_percent", new_subrack_fan_speed_percent
         )
         callbacks["component_state"].assert_next_call(
-            subrack_fan_speeds_percent=[
-                pytest.approx(p) for p in new_subrack_fan_speeds_percent
+            subrack_fan_speed_percent=[
+                pytest.approx(p) for p in new_subrack_fan_speed_percent
             ],
-            subrack_fan_speeds=[
+            subrack_fan_speed=[
                 pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-                for p in new_subrack_fan_speeds_percent
+                for p in new_subrack_fan_speed_percent
             ],
         )
 
@@ -568,8 +568,8 @@ class TestOn:
         )
         callbacks["component_state"].assert_not_called()
 
-        subrack_fan_speeds_percent = subrack_simulator.get_attribute(
-            "subrack_fan_speeds_percent"
+        subrack_fan_speed_percent = subrack_simulator.get_attribute(
+            "subrack_fan_speed_percent"
         )
 
         fan_to_set = 1  # one-based
@@ -578,14 +578,14 @@ class TestOn:
             fan_to_set, fan_speed_percent_setting
         )
 
-        subrack_fan_speeds_percent[fan_to_set - 1] = fan_speed_percent_setting
+        subrack_fan_speed_percent[fan_to_set - 1] = fan_speed_percent_setting
         callbacks["component_state"].assert_next_call(
-            subrack_fan_speeds_percent=[
-                pytest.approx(p) for p in subrack_fan_speeds_percent
+            subrack_fan_speed_percent=[
+                pytest.approx(p) for p in subrack_fan_speed_percent
             ],
-            subrack_fan_speeds=[
+            subrack_fan_speed=[
                 pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-                for p in subrack_fan_speeds_percent
+                for p in subrack_fan_speed_percent
             ],
         )
 

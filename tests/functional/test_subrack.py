@@ -15,6 +15,7 @@ and test its functionality.
 """
 from __future__ import annotations
 
+import enum
 import json
 
 import pytest
@@ -25,23 +26,22 @@ from ska_tango_testing.context import TangoContextProtocol
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-# TODO: We need a better solution to this.
-try:
-    from ska_low_mccs_spshw.subrack import FanMode, SubrackData
-except (ImportError, ModuleNotFoundError):
-    import enum
+TPM_BAY_COUNT = 8
+MAX_SUBRACK_FAN_SPEED = 8000.0
 
-    class SubrackData:  # type: ignore[no-redef]
-        """Facts about subracks."""
 
-        TPM_BAY_COUNT = 8
-        MAX_SUBRACK_FAN_SPEED = 8000.0
+# TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,
+# but we need to know the meaning of 1 and 2 in the context of fan modes,
+# so that the tests know how to drive the device. So for now we redefine it.
+# The necessity of importing or redefining this is a code smell.
+# We should change the SubrackDevice's interface to use string fan modes.
+# e.g. subrack.SetSubrackFanMode("{'fan_id': 1, 'mode'; 'auto'}")
+# which would be much more readable and self-describing.
+class FanMode(enum.IntEnum):  # type: ignore[no-redef]
+    """Redefinition of FanMode."""
 
-    class FanMode(enum.IntEnum):  # type: ignore[no-redef]
-        """Python enumerated type for FanMode."""
-
-        MANUAL = 1
-        AUTO = 2
+    MANUAL = 1
+    AUTO = 2
 
 
 @pytest.fixture(name="subrack_device", scope="module")
@@ -278,8 +278,7 @@ def ensure_subrack_fan_speed(
     assert fan_speeds_percent[fan_number - 1] == pytest.approx(90.0)  # just checkin'
 
     expected_fan_speeds = [
-        pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-        for p in fan_speeds_percent
+        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
     ]
 
     subrack_device.subscribe_event(
@@ -432,8 +431,7 @@ def check_subrack_fan_speed(
     assert fan_speeds_percent[fan_number - 1] == pytest.approx(100.0)  # just checkin'
 
     expected_fan_speeds = [
-        pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-        for p in fan_speeds_percent
+        pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
     ]
     change_event_callbacks.assert_change_event(
         "subrack_fan_speeds", expected_fan_speeds

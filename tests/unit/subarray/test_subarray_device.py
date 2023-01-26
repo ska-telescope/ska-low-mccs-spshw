@@ -352,9 +352,6 @@ class TestMccsSubarray:
         assert device_under_test.stationFQDNs is None
 
     # pylint: disable=too-many-arguments
-    @pytest.mark.skip(
-        reason="covered by ticket MCCS-1138, skipped to allow other work to progress"
-    )
     def test_assignResources(
         self: TestMccsSubarray,
         lrc_result_changed_callback: MockChangeEventCallback,

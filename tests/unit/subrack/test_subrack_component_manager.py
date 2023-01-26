@@ -589,19 +589,19 @@ class TestOn:
             ],
         )
 
-        subrack_fan_modes = subrack_simulator.get_attribute("subrack_fan_modes")
+        subrack_fan_mode = subrack_simulator.get_attribute("subrack_fan_mode")
 
         fan_to_set = 1  # one-based
         fan_speed_mode = (
             FanMode.AUTO
-            if subrack_fan_modes[fan_to_set - 1] == FanMode.MANUAL
+            if subrack_fan_mode[fan_to_set - 1] == FanMode.MANUAL
             else FanMode.MANUAL
         )
         subrack_component_manager.set_subrack_fan_mode(fan_to_set, fan_speed_mode)
 
-        subrack_fan_modes[fan_to_set - 1] = fan_speed_mode
+        subrack_fan_mode[fan_to_set - 1] = fan_speed_mode
         callbacks["component_state"].assert_next_call(
-            subrack_fan_modes=subrack_fan_modes,
+            subrack_fan_mode=subrack_fan_mode,
         )
 
         power_supply_fan_speeds = subrack_simulator.get_attribute(

@@ -68,7 +68,7 @@ class SubrackSimulator(SubrackProtocol):
             "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
         },
-        "subrack_fan_modes": {
+        "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
             "writable": False,
@@ -289,7 +289,7 @@ class SubrackSimulator(SubrackProtocol):
         (fan_str, mode_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         mode = FanMode[mode_str]
-        self._attribute_values["subrack_fan_modes"][fan_index] = mode
+        self._attribute_values["subrack_fan_mode"][fan_index] = mode
 
     def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")

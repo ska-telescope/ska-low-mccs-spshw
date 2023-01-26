@@ -194,17 +194,17 @@ def ensure_subrack_fan_mode(
     subrack_device.subscribe_event(
         "subrackFanModes",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_modes"],
+        change_event_callbacks["subrack_fan_mode"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_modes",
+        "subrack_fan_mode",
         fan_modes,
     )
 
     if fan_modes is None:
         # We only just put it online / turned it on,
         # so let's wait for a poll to return a real value
-        change_event_callbacks.assert_change_event("subrack_fan_modes", Anything)
+        change_event_callbacks.assert_change_event("subrack_fan_mode", Anything)
     fan_modes = subrack_device.subrackFanModes
     assert fan_modes is not None
 
@@ -216,7 +216,7 @@ def ensure_subrack_fan_mode(
         subrack_device.SetSubrackFanMode(encoded_arg)
 
         change_event_callbacks.assert_change_event(
-            "subrack_fan_modes",
+            "subrack_fan_mode",
             expected_fan_modes,
         )
 

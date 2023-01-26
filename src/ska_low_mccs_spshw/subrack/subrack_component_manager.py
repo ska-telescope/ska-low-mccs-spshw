@@ -103,7 +103,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             power_supply_voltages=None,
             subrack_fan_speed=None,
             subrack_fan_speed_percent=None,
-            subrack_fan_modes=None,
+            subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,
             tpm_temperatures=None,

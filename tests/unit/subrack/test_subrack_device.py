@@ -422,12 +422,12 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     change_event_callbacks["subrackFanSpeeds"].assert_change_event(expected_speeds)
 
     fan_to_change = 3
-    subrack_fan_modes = subrack_device.subrackFanModes
-    if subrack_fan_modes[fan_to_change - 1] == FanMode.AUTO:
+    subrack_fan_mode = subrack_device.subrackFanModes
+    if subrack_fan_mode[fan_to_change - 1] == FanMode.AUTO:
         mode_to_set = FanMode.MANUAL
     else:
         mode_to_set = FanMode.AUTO
-    expected_modes = list(subrack_fan_modes)
+    expected_modes = list(subrack_fan_mode)
     expected_modes[fan_to_change - 1] = mode_to_set
     json_kwargs = json.dumps({"fan_id": fan_to_change, "mode": int(mode_to_set)})
     _ = subrack_device.SetSubrackFanMode(json_kwargs)

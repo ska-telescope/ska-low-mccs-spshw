@@ -251,7 +251,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         "power_supply_fan_speeds": "powerSupplyFanSpeeds",
         "subrack_fan_speed": "subrackFanSpeeds",
         "subrack_fan_speed_percent": "subrackFanSpeedsPercent",
-        "subrack_fan_modes": "subrackFanModes",
+        "subrack_fan_mode": "subrackFanModes",
         "tpm_currents": "tpmCurrents",
         "tpm_powers": "tpmPowers",
         "tpm_temperatures": "tpmTemperatures",
@@ -729,7 +729,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         This is the commanded setpoint; the relation between this level and
         the actual RPMs is not linear. Subrack speed is managed
         automatically by the controller, by default (see
-        subrack_fan_modes).
+        subrack_fan_mode).
 
         Commanded speed is the same for fans 1-2 and 3-4.
 

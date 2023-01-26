@@ -285,9 +285,9 @@ class SubrackDriver(
                 task_callback(status=TaskStatus.QUEUED)
 
             if tpm_number == 0:
-                message = f"TPM {tpm_number} will be turned {off_on} at next poll."
-            else:
                 message = f"TPMs will be turned {off_on} at next poll."
+            else:
+                message = f"TPM {tpm_number} will be turned {off_on} at next poll."
             return (TaskStatus.QUEUED, message)
 
     def set_subrack_fan_speed(

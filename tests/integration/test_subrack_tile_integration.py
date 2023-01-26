@@ -157,7 +157,7 @@ class TestSubrackTileIntegration:
         _ = subrack_device.PowerDownTpms()
 
         # The subrack device tells the subrack to turn all the TPMs off.
-        # It does so. The subrack device detects that the TPM is on.
+        # It does so. The subrack device detects that the TPM is off.
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.OFF
         )

@@ -21,7 +21,7 @@ from ska_tango_base.commands import (
     ResultCode,
     SubmittedSlowCommand,
 )
-from tango.server import attribute, command, device_property, run
+from tango.server import attribute, command, device_property
 
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
@@ -890,16 +890,16 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
 # ----------
 # Run server
 # ----------
-def main(args: Any = None, **kwargs: Any) -> int:
+def main(*args: str, **kwargs: str) -> int:
     """
-    Launch a `MccsSubrack` Tango device server instance.
+    Launch an `MccsSubrack` Tango device server instance.
 
-    :param args: arguments to the Tango device.
-    :param kwargs: keyword arguments to the server
+    :param args: positional arguments, passed to the Tango device
+    :param kwargs: keyword arguments, passed to the sever
 
-    :returns: the Tango server exit code
+    :return: the Tango server exit code
     """
-    return run((MccsSubrack,), args=args, **kwargs)
+    return MccsSubrack.run_server(args=args or None, **kwargs)
 
 
 if __name__ == "__main__":

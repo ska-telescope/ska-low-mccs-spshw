@@ -478,7 +478,7 @@ class SubrackDriver(
                 "subrack_fan_mode",
                 "tpm_currents",
                 "tpm_powers",
-                "tpm_temperatures",
+                # "tpm_temperatures",
                 "tpm_voltages",
             )
             self._tick = 0

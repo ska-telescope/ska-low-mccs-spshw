@@ -66,7 +66,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",
-        "tpmTemperatures",
+        # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         timeout=2.0,
     )
@@ -292,7 +292,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("subrackFanModes", None),
         ("tpmCurrents", None),
         ("tpmPowers", None),
-        ("tpmTemperatures", None),
+        # ("tpmTemperatures", None),  # Not implemented on SMB
         ("tpmVoltages", None),
     ]:
         subrack_device.subscribe_event(
@@ -346,7 +346,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         "subrackFanModes",
         "tpmCurrents",
         "tpmPowers",
-        "tpmTemperatures",
+        # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
     ]:
         change_event_callbacks[attribute_name].assert_change_event(

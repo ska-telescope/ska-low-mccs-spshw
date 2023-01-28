@@ -78,11 +78,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": [0.4] * 8,
             "writable": False,
         },
-        "tpm_temperatures": {
-            "length": 8,
-            "default": [40.0] * 8,
-            "writable": False,
-        },
+        # "tpm_temperatures": {  # Not implemented on SMB
+        #     "length": 8,
+        #     "default": [40.0] * 8,
+        #     "writable": False,
+        # },
         "tpm_voltages": {
             "length": 8,
             "default": [12.0] * 8,

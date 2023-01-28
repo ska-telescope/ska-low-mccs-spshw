@@ -102,7 +102,7 @@ class SubrackDriver(
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,
-            tpm_temperatures=None,
+            # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
 
@@ -595,7 +595,7 @@ class SubrackDriver(
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,
-            tpm_temperatures=None,
+            # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
 

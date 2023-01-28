@@ -98,7 +98,8 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     for (name, values) in [
         ("backplane_temperatures", [45.0, 46.0]),
         ("board_temperatures", [47.0, 48.0]),
-        ("tpm_temperatures", [41.1, 41.2, 41.3, 41.4, 41.5, 41.6, 41.7, 41.8]),
+        # Not implemented on SMB
+        # ("tpm_temperatures", [41.1, 41.2, 41.3, 41.4, 41.5, 41.6, 41.7, 41.8]),
     ]:
         subrack_simulator.simulate_attribute(name, values)
         callbacks["component_state"].assert_next_call(

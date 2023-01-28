@@ -254,7 +254,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         "subrack_fan_mode": "subrackFanModes",
         "tpm_currents": "tpmCurrents",
         "tpm_powers": "tpmPowers",
-        "tpm_temperatures": "tpmTemperatures",
+        # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
     }
 
@@ -774,16 +774,17 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         """
         return self._hardware_attributes.get("tpmPowers", None) or []
 
-    @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
-    def tpmTemperatures(self: MccsSubrack) -> list[float]:
-        """
-        Handle a Tango attribute read of the TPM temperatures.
+    # Not implemented on SMB
+    # @attribute(dtype=(float,), max_dim_x=8, label="TPM temperatures", abs_change=0.1)
+    # def tpmTemperatures(self: MccsSubrack) -> list[float]:
+    #     """
+    #     Handle a Tango attribute read of the TPM temperatures.
 
-        :return: the TPM temperatures.
-            When communication with the subrack is not established,
-            this returns an empty list.
-        """
-        return self._hardware_attributes.get("tpmTemperatures", None) or []
+    #     :return: the TPM temperatures.
+    #         When communication with the subrack is not established,
+    #         this returns an empty list.
+    #     """
+    #     return self._hardware_attributes.get("tpmTemperatures", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
     def tpmVoltages(self: MccsSubrack) -> list[float]:

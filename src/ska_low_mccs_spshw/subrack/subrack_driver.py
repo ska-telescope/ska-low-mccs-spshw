@@ -508,6 +508,9 @@ class SubrackDriver(
                 command, " ".join(str(arg) for arg in args)
             )
             if command_response["status"] == "ERROR":
+                # TODO: [MCCS-1329] Only raise connection errors
+                # if the error indicates loss of communication.
+                # Otherwise return error details through the query response.
                 raise ConnectionError(f"Received ERROR response from command {command}")
             if command_response["status"] == "STARTED":
                 self._board_is_busy = True
@@ -522,6 +525,9 @@ class SubrackDriver(
         for name, value in poll_request.setattributes:
             attribute_response = self._client.set_attribute(name, value)
             if attribute_response["status"] == "ERROR":
+                # TODO: [MCCS-1329] Only raise connection errors
+                # if the error indicates loss of communication.
+                # Otherwise return error details through the query response.
                 raise ConnectionError(
                     f"Received ERROR response from setattribute {name}"
                 )
@@ -529,6 +535,9 @@ class SubrackDriver(
         for attribute in poll_request.getattributes:
             attribute_response = self._client.get_attribute(attribute)
             if attribute_response["status"] == "ERROR":
+                # TODO: [MCCS-1329] Only raise connection errors
+                # if the error indicates loss of communication.
+                # Otherwise return error details through the query response.
                 raise ConnectionError(
                     f"Received ERROR response from getattribute {attribute}"
                 )

@@ -9,45 +9,123 @@ ska-low-mccs-spshw:
     subracks:
       1:
         host: subrack-simulator-1
-    #   2:
-    #     host: subrack-simulator-2
+      2:
+        host: subrack-simulator-2
   deviceServers:
     tpms:
       instances: #By default all devices at site are deployed
-        # 1:
-        #   enabled: true
-        # 2:
-        #   enabled: true
-        #   simulation_config: false
-        # 3:
-        #   enabled: false
-        # 4:
-        #   enabled: false
-        # 5:
-        #   enabled: true
-        #   simulation_config: false
-        # 6:
-        #   enabled: false
-        # 7:
-        #   enabled: false
-        # 8:
-        #   enabled: false
-        # 9:
-        #   enabled: false
-        # 10:
-        #   enabled: false
-        # 11:
-        #   enabled: false
-        # 12:
-        #   enabled: false
-        # 13:
-        #   enabled: false
-        # 14:
-        #   enabled: false
-        # 15:
-        #   enabled: false
-        # 16:
-        #   enabled: false
+        1:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.17
+          subrack: "1"
+          subrack_bay: 1
+          simulation_config: false
+        2:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.18
+          subrack: "1"
+          subrack_bay: 2
+          simulation_config: false
+        3:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.19
+          subrack: "1"
+          subrack_bay: 3
+          simulation_config: false
+        4:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.20
+          subrack: "1"
+          subrack_bay: 4
+          simulation_config: false
+        5:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.21
+          subrack: "1"
+          subrack_bay: 5
+          simulation_config: false
+        6:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.22
+          subrack: "1"
+          subrack_bay: 6
+          simulation_config: false
+        7:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.23
+          subrack: "1"
+          subrack_bay: 7
+          simulation_config: false
+        8:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.24
+          subrack: "1"
+          subrack_bay: 8
+          simulation_config: false
+        9:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.25
+          subrack: "2"
+          subrack_bay: 1
+          simulation_config: false
+        10:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.26
+          subrack: "2"
+          subrack_bay: 2
+          simulation_config: false
+        11:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.27
+          subrack: "2"
+          subrack_bay: 3
+          simulation_config: false
+        12:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.28
+          subrack: "2"
+          subrack_bay: 4
+          simulation_config: false
+        13:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.29
+          subrack: "2"
+          subrack_bay: 5
+          simulation_config: false
+        14:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.30
+          subrack: "2"
+          subrack_bay: 6
+          simulation_config: false
+        15:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.31
+          subrack: "2"
+          subrack_bay: 7
+          simulation_config: false
+        16:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.32
+          subrack: "2"
+          subrack_bay: 8
+          simulation_config: false
       logging_level_default: 5
       resources:
         requests:

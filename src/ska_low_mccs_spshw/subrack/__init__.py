@@ -23,5 +23,5 @@ from .subrack_data import FanMode
 from .subrack_simulator import SubrackSimulator
 from .subrack_driver import SubrackDriver
 from .subrack_component_manager import SubrackComponentManager
-from .subrack_health_model import SubrackHealthModel  # type: ignore[attr-defined]
-from .subrack_device import MccsSubrack  # type: ignore[attr-defined]
+from .subrack_health_model import SubrackHealthModel
+from .subrack_device import MccsSubrack

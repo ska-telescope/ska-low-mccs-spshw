@@ -1,4 +1,3 @@
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -19,7 +18,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 gc.disable()
 
 
-class TestSubrackTileIntegration:
+class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
     """Integration test cases for interactions between subrack and tile."""
 
     def test_subrack_tile_integration(

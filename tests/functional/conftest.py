@@ -160,7 +160,7 @@ def subrack_address_context_manager_factory_fixture(
                     target=self._server.run, args=([self._socket],), daemon=True
                 )
 
-            def __enter__(self) -> tuple[str, int]:
+            def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
                 self._thread.start()
                 while not self._server.started:
                     time.sleep(1e-3)
@@ -168,7 +168,7 @@ def subrack_address_context_manager_factory_fixture(
                 return "127.0.0.1", port
 
             def __exit__(
-                self,
+                self: _SubrackServerContextManager,
                 exc_type: Optional[Type[BaseException]],
                 exception: Optional[BaseException],
                 trace: Optional[TracebackType],

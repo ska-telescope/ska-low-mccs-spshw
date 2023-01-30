@@ -86,7 +86,7 @@ class HttpPollRequest:
         """
         return list(self._commands)
 
-    def __bool__(self) -> bool:
+    def __bool__(self: HttpPollRequest) -> bool:
         """
         Return the boolean value of this request.
 

@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -23,4 +22,4 @@ __all__ = [
 ]
 
 from .subrack import MccsSubrack
-from .tile import MccsTile
+from .tile import MccsTile  # type: ignore[attr-defined]

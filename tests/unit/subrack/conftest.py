@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -16,7 +14,16 @@ import socket
 import threading
 import time
 from types import TracebackType
-from typing import Any, Callable, ContextManager, Literal, Optional, Type, TypedDict
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Generator,
+    Literal,
+    Optional,
+    Type,
+    TypedDict,
+)
 
 import pytest
 import uvicorn
@@ -35,8 +42,8 @@ SubrackInfoType = TypedDict(
 )
 
 
-@pytest.fixture(scope="session")
-def subrack_simulator_factory(
+@pytest.fixture(name="subrack_simulator_factory", scope="session")
+def subrack_simulator_factory_fixture(
     subrack_simulator_config: dict[str, Any],
 ) -> Callable[[], SubrackSimulator]:
     """
@@ -50,8 +57,8 @@ def subrack_simulator_factory(
     return functools.partial(SubrackSimulator, **subrack_simulator_config)
 
 
-@pytest.fixture()
-def subrack_simulator(
+@pytest.fixture(name="subrack_simulator")
+def subrack_simulator_fixture(
     subrack_simulator_factory: Callable[[], SubrackSimulator],
 ) -> SubrackSimulator:
     """
@@ -65,8 +72,8 @@ def subrack_simulator(
     return subrack_simulator_factory()
 
 
-@pytest.fixture(scope="session")
-def subrack_server_launcher() -> Callable[
+@pytest.fixture(name="subrack_server_launcher", scope="session")
+def subrack_server_launcher_fixture() -> Callable[
     [SubrackSimulator], ContextManager[tuple[str, int]]
 ]:
     """
@@ -77,11 +84,14 @@ def subrack_server_launcher() -> Callable[
     """
 
     class _ThreadableServer(uvicorn.Server):
-        def install_signal_handlers(self: _ThreadableServer):
+        def install_signal_handlers(self: _ThreadableServer) -> None:
             pass
 
     class _SubrackServerContextManager:
-        def __init__(self, subrack_simulator):
+        def __init__(
+            self: _SubrackServerContextManager,
+            subrack_simulator: SubrackSimulator,
+        ) -> None:
             self._socket = socket.socket()
             server_config = configure_server(
                 subrack_simulator, host="127.0.0.1", port=0
@@ -91,7 +101,7 @@ def subrack_server_launcher() -> Callable[
                 target=self._server.run, args=([self._socket],), daemon=True
             )
 
-        def __enter__(self):
+        def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
             self._thread.start()
 
             while not self._server.started:
@@ -122,11 +132,13 @@ def subrack_server_launcher() -> Callable[
     return _SubrackServerContextManager
 
 
-@pytest.fixture()
-def subrack_address(
-    subrack_server_launcher,
-    subrack_simulator,
-) -> tuple[str, int]:
+@pytest.fixture(name="subrack_address")
+def subrack_address_fixture(
+    subrack_server_launcher: Callable[
+        [SubrackSimulator], ContextManager[tuple[str, int]]
+    ],
+    subrack_simulator: SubrackSimulator,
+) -> Generator[tuple[str, int], None, None]:
     """
     Yield the host and port of a running subrack server.
 
@@ -142,8 +154,8 @@ def subrack_address(
         yield host, port
 
 
-@pytest.fixture()
-def subrack_driver(
+@pytest.fixture(name="subrack_driver")
+def subrack_driver_fixture(
     subrack_address: tuple[str, int],
     logger: logging.Logger,
     callbacks: dict[str, MockCallable],
@@ -170,8 +182,8 @@ def subrack_driver(
     )
 
 
-@pytest.fixture()
-def subrack_component_manager(
+@pytest.fixture(name="subrack_component_manager")
+def subrack_component_manager_fixture(
     logger: logging.Logger,
     subrack_address: tuple[str, int],
     subrack_driver: SubrackDriver,
@@ -206,8 +218,8 @@ def subrack_component_manager(
     )
 
 
-@pytest.fixture()
-def callbacks() -> dict[str, MockCallable]:
+@pytest.fixture(name="callbacks")
+def callbacks_fixture() -> dict[str, MockCallable]:
     """
     Return a dictionary of callables to be used as callbacks.
 

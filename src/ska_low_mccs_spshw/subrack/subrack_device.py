@@ -60,11 +60,11 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # type: ignore[override]
+    def do(  # pylint: disable=arguments-differ
         self: _SetSubrackFanSpeedCommand,
         *args: Any,
-        subrack_fan_id: Optional[int] = None,
-        speed_percent: Optional[float] = None,
+        subrack_fan_id: int,
+        speed_percent: float,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -80,19 +80,10 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
-        :raises ValueError: if the JSON input lacks of mandatory parameters
         """
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
-
-        if subrack_fan_id is None:
-            self.logger.error("subrack_fan_id key is mandatory.")
-            raise ValueError("subrack_fan_id key is mandatory.")
-        if speed_percent is None:
-            self.logger.error("speed_percent key is mandatory.")
-            raise ValueError("speed_percent key is mandatory.")
 
         return super().do(subrack_fan_id, speed_percent)
 
@@ -128,11 +119,11 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # type: ignore[override]
+    def do(  # pylint: disable=arguments-differ
         self: _SetSubrackFanModeCommand,
         *args: Any,
-        fan_id: Optional[int] = None,
-        mode: Optional[int] = None,
+        fan_id: int,
+        mode: int,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -146,21 +137,12 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
             empty and is provided for typehinting purposes only.
 
         :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-        :raises ValueError: if the JSON input lacks of mandatory parameters
+            message indicating status. The message is for
+            information purpose only.
         """
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
-
-        if fan_id is None:
-            self.logger.error("fan_id key is mandatory.")
-            raise ValueError("fan_id key is mandatory.")
-        if mode is None:
-            self.logger.error("mode key is mandatory.")
-            raise ValueError("mode key is mandatory.")
 
         return super().do(fan_id, FanMode(mode))
 
@@ -196,11 +178,11 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # type: ignore[override]
+    def do(  # pylint: disable=arguments-differ
         self: _SetPowerSupplyFanSpeedCommand,
         *args: Any,
-        power_supply_fan_id: Optional[int] = None,
-        speed_percent: Optional[float] = None,
+        power_supply_fan_id: int,
+        speed_percent: float,
         **kwargs: Any,
     ) -> tuple[ResultCode, str]:
         """
@@ -214,21 +196,12 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             empty and is provided for typehinting purposes only.
 
         :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-
-        :raises ValueError: if the JSON input lacks of mandatory parameters
+            message indicating status. The message is for
+            information purpose only.
         """
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
-
-        if power_supply_fan_id is None:
-            self.logger.error("power_supply_fan_id key is mandatory.")
-            raise ValueError("power_supply_fan_id key is mandatory.")
-        if speed_percent is None:
-            self.logger.error("speed_percent key is mandatory.")
-            raise ValueError("speed_percent key is mandatory.")
 
         return super().do(power_supply_fan_id, speed_percent)
 
@@ -324,7 +297,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
     # --------------
     # Initialization
     # --------------
-    def create_component_manager(self) -> SubrackComponentManager:
+    def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
         """
         Create and return a component manager for this device.
 
@@ -339,7 +312,7 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
             update_rate=self.UpdateRate,
         )
 
-    def init_command_objects(self) -> None:
+    def init_command_objects(self: MccsSubrack) -> None:
         """Initialise the command handlers for this device."""
         super().init_command_objects()
 

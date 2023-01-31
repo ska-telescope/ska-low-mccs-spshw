@@ -11,6 +11,7 @@ from __future__ import annotations
 from typing import Any, Optional, cast
 
 import tango
+from jsonschema import ValidationError, validate
 from ska_control_model import (  # SimulationMode,
     CommunicationStatus,
     HealthState,
@@ -323,17 +324,26 @@ class MccsAntenna(SKABaseDevice):
 
         :param config: the configuration settings for this antenna.
         """
+        antenna_config_schema = {
+            "type": "object",
+            "properties": {
+                "antennaId": {"type": "number"},
+                "xDisplacement": {"type": "number"},
+                "yDisplacement": {"type": "number"},
+                "zDisplacement": {"type": "number"},
+            },
+        }
 
-        def apply_if_valid(attribute_name: str, default: Any) -> Any:
-            value = config.get(attribute_name)
-            if isinstance(value, type(default)):
-                return value
-            return default
-
-        self._antennaId = apply_if_valid("antennaId", self._antennaId)
-        self._xDisplacement = apply_if_valid("xDisplacement", self._xDisplacement)
-        self._yDisplacement = apply_if_valid("yDisplacement", self._yDisplacement)
-        self._zDisplacement = apply_if_valid("zDisplacement", self._zDisplacement)
+        try:
+            validate(instance=config, schema=antenna_config_schema)
+            self._antennaId = config.get("antennaId", self._antennaId)
+            self._xDisplacement = config.get("xDisplacement", self._xDisplacement)
+            self._yDisplacement = config.get("yDisplacement", self._yDisplacement)
+            self._zDisplacement = config.get("zDisplacement", self._zDisplacement)
+        except ValidationError as error:
+            self.logger.error(
+                "Failed to configure the device due to invalid schema: +%s", str(error)
+            )
 
     # ----------
     # Attributes

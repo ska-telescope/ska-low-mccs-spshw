@@ -11,7 +11,7 @@ from __future__ import annotations
 import gc
 
 import tango
-from ska_control_model import AdminMode, PowerState
+from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 # TODO: Weird hang-at-garbage-collection bug
@@ -110,8 +110,25 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         # so it transitions to OFF state.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
 
-        # But at least now the tile device can turn its TPM on:
-        _ = tile_device.On()
+        # Now the tile device can turn its TPM on,
+        # but first let's subscribe to change events on command status,
+        # so that we can track the status of the command
+        tile_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_command_status"],
+        )
+        change_event_callbacks["tile_command_status"].assert_change_event(None)
+
+        ([result_code], [on_command_id]) = tile_device.On()
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "QUEUED")
+        )
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "IN_PROGRESS")
+        )
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -123,6 +140,10 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         # The tile device receives this event too.
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "COMPLETED")
+        )
 
         # Now let's turn it off.
         _ = tile_device.Off()

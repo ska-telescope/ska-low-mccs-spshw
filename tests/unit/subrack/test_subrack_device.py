@@ -358,14 +358,49 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     change_event_callbacks["boardCurrent"].assert_change_event([pytest.approx(0.7)])
 
     # Now let's try a command
+    subrack_device.subscribe_event(
+        "longRunningCommandStatus",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_status"],
+    )
+
+    change_event_callbacks["command_status"].assert_change_event(None)
+
+    subrack_device.subscribe_event(
+        "longRunningCommandResult",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_result"],
+    )
+    change_event_callbacks["command_result"].assert_change_event(("", ""))
+
     tpm_present = list(subrack_device.tpmPresent)
     tpm_to_power = tpm_present.index(True) + 1
     power_state = getattr(subrack_device, f"tpm{tpm_to_power}PowerState")
     if power_state == PowerState.OFF:
         expected_power_state = PowerState.ON
-        _ = subrack_device.PowerOnTpm(tpm_to_power)
+
+        ([result_code], [tpm_on_command_id]) = subrack_device.PowerOnTpm(tpm_to_power)
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "QUEUED")
+        )
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "IN_PROGRESS")
+        )
+
         change_event_callbacks[f"tpm{tpm_to_power}PowerState"].assert_change_event(
             PowerState.ON
+        )
+
+        change_event_callbacks["command_result"].assert_change_event(
+            (
+                tpm_on_command_id,
+                json.dumps([int(ResultCode.OK), "Command completed."]),
+            ),
+        )
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "COMPLETED")
         )
 
     _ = subrack_device.PowerDownTpms()

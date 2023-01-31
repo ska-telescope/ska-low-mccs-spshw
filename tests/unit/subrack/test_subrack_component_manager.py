@@ -501,17 +501,18 @@ class TestOn:
         tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
         tpm_to_power = 3  # one-based
 
-        turn_off_first = tpm_on_off[tpm_to_power - 1]
+        assert not tpm_on_off[tpm_to_power - 1], "Test assumes TPM to be off."
 
-        if turn_off_first:
-            subrack_component_manager.turn_off_tpm(tpm_to_power)
-            tpm_on_off[tpm_to_power - 1] = False
-            callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
-            # We know that at least one TPM is off.
-
-        subrack_component_manager.turn_on_tpms()
+        subrack_component_manager.turn_on_tpms(callbacks["task"])
         tpm_on_off = [True for _ in tpm_on_off]
+
+        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
         callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
+        callbacks["task"].assert_next_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command completed."),
+        )
 
         subrack_component_manager.turn_off_tpm(tpm_to_power)
         tpm_on_off[tpm_to_power - 1] = False

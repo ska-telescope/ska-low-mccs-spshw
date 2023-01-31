@@ -14,7 +14,7 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
-from ska_control_model import CommunicationStatus, TaskStatus
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager, WebHardwareClient
 from ska_tango_base.poller import PollingComponentManager
 
@@ -167,7 +167,7 @@ class SubrackDriver(
         :raises NotImplementedError: because this command is not yet
             implemented
         """
-        raise NotImplementedError("The device cannot be turned reset.")
+        raise NotImplementedError("The device cannot be reset.")
 
     def turn_off_tpm(
         self: SubrackDriver,
@@ -565,10 +565,19 @@ class SubrackDriver(
         self.logger.debug(f"Calculated fault status is {fault}.")
 
         retvalues = poll_response.command_responses
-        if "command_completed" in retvalues and retvalues["command_completed"]:
-            if self._active_callback is not None:
-                self._active_callback(status=TaskStatus.COMPLETED)
+        if "command_completed" in retvalues and not retvalues["command_completed"]:
+            # A command that is asynchronous on the SMB is still running,
+            # So there's nothing to do here.
+            pass
+        elif retvalues:
+            # The presence of any other retvalues indicate
+            # that the active command has completed.
             self._board_is_busy = False
+            if self._active_callback is not None:
+                self._active_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Command completed."),
+                )
             self._active_callback = None
 
         values = poll_response.query_responses

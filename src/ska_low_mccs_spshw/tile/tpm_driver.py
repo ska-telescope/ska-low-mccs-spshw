@@ -1186,7 +1186,7 @@ class TpmDriver(MccsComponentManager):
         """
         if type(truncation) == int:
             self._channeliser_truncation = [truncation] * 512
-        elif type(truncation) == list[int]:
+        elif type(truncation) == list:
             if len(truncation) == 1:
                 self._channeliser_truncation = truncation * 512
             else:

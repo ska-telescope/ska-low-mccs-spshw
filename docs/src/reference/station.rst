@@ -46,7 +46,7 @@ to the associated devices and monitor their state.
 Station initialisation is performed by bringing all hardware elements online. Then the semi-static attributes are specified. Then the On() or Initialise() 
 commands are issued. Initialise() is used if the Station is already On, 
 and resets the station status to *Initialised*.
-When all the stations in the telescoper are correctly initialised, proper
+When all the stations in the telescope are correctly initialised, proper
 operation is started using the StartAcquisition command. 
 
 **********************************
@@ -150,7 +150,7 @@ Other monitor attributes
     MAC addresses, the internal PPS is synchronsed with the
     distributed PPS signal, the internal coarse clock is syncrhonous with UTC
 
-  * ``Synchronised``: Tje ADCs have been synchronised. The internal timestamp
+  * ``Synchronised``: The ADCs have been synchronised. The internal timestamp
     counter is synchronised among TPMs, and can be used to infer sample time
 
 * *adcPower*: RMS level of the signals in the station inputs. Each consecutive pair of values

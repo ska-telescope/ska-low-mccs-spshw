@@ -193,7 +193,7 @@ class SpsStationComponentManager(MccsComponentManager):
         self._on_called = False
 
         self._communication_state_lock = threading.Lock()
-        self._communication_statees = {
+        self._communication_states = {
             fqdn: CommunicationStatus.DISABLED
             for fqdn in list(subrack_fqdns) + list(tile_fqdns)
         }
@@ -293,16 +293,16 @@ class SpsStationComponentManager(MccsComponentManager):
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
         with self._communication_state_lock:
-            self._communication_statees[fqdn] = communication_state
+            self._communication_states[fqdn] = communication_state
 
             if self.communication_state == CommunicationStatus.DISABLED:
                 return
 
-            if CommunicationStatus.DISABLED in self._communication_statees.values():
+            if CommunicationStatus.DISABLED in self._communication_states.values():
                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             elif (
                 CommunicationStatus.NOT_ESTABLISHED
-                in self._communication_statees.values()
+                in self._communication_states.values()
             ):
                 self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
@@ -378,6 +378,10 @@ class SpsStationComponentManager(MccsComponentManager):
     ) -> None:
         """
         Set the power_state of the component.
+        :TODO: Power state should be set in the component mananger and then
+            the device updated. Current design sets the component power state
+            from the device component_state_changed calbback. This must be
+            corrected
 
         :param power_state: the value of PowerState to be set.
         :param fqdn: the fqdn of the component's device.

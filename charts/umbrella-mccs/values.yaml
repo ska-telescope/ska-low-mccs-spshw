@@ -91,20 +91,11 @@ jupyterhub:
       type: ClusterIP
 
 # example overrides
-ska-low-mccs:
-  ska-tango-base:
-    enabled: false
+# ska-low-mccs:
+#   deviceServers:
 #     # no tiles
 #     tiles:
 #       instances: []
 #     # change controller command
 #     controller:
 #       command: "SimController"
-
-ska-low-mccs-spshw:
-  ska-tango-base:
-    enabled: false
-
-ska-low-mccs-daq:
-  ska-tango-base:
-    enabled: false

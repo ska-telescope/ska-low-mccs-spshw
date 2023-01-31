@@ -25,6 +25,7 @@ stages:
   - publish
   - pages
   - scan
+  - downstream
 
 include:
   # Python packages build,lint, test and publish
@@ -56,6 +57,7 @@ include:
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
 
 trigger_job:
+  stage: downstream
   trigger:
-    project: ska-telescope/mccs/ska-low-mccs
+    project: ska-telescope/mccs/ska-low-mccs/.gitlab-ci.yml
 

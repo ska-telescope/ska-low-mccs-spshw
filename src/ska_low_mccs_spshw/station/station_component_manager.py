@@ -378,9 +378,10 @@ class SpsStationComponentManager(MccsComponentManager):
     ) -> None:
         """
         Set the power_state of the component.
+
         :TODO: Power state should be set in the component mananger and then
             the device updated. Current design sets the component power state
-            from the device component_state_changed calbback. This must be
+            from the device component_state_changed callback. This should be
             corrected
 
         :param power_state: the value of PowerState to be set.

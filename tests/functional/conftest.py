@@ -5,61 +5,277 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module contains pytest-specific test harness for PaSD functional tests."""
-import unittest
-from typing import Any, Callable, Generator
+"""This module contains pytest-specific test harness for SPSHW functional tests."""
+from __future__ import annotations
 
+import os
+import socket
+import threading
+import time
+from contextlib import contextmanager
+from types import TracebackType
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Generator,
+    Literal,
+    Optional,
+    Type,
+    Union,
+    cast,
+)
+
+import _pytest
 import pytest
-from ska_low_mccs_common.testing.tango_harness import DevicesToLoadType, TangoHarness
+from ska_control_model import LoggingLevel
+from ska_tango_testing.context import (
+    TangoContextProtocol,
+    ThreadedTestTangoContextManager,
+    TrueTangoContextManager,
+)
+from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 
-@pytest.fixture(scope="module")
-def tango_config() -> dict[str, Any]:
+# TODO: https://github.com/pytest-dev/pytest-forked/issues/67
+# We're stuck on pytest 6.2 until this gets fixed, and this version of
+# pytest is not fully typehinted
+def pytest_addoption(
+    parser: _pytest.config.argparsing.Parser,  # type: ignore[name-defined]
+) -> None:
     """
-    Fixture that returns basic configuration information for a Tango test harness.
+    Add a command line option to pytest.
 
-    e.g. such as whether or not to run in a separate process.
+    This is a pytest hook, here implemented to add the `--true-context`
+    option, used to indicate that a true Tango subsystem is available,
+    so there is no need for the test harness to spin up a Tango test
+    context.
 
-    :return: a dictionary of configuration key-value pairs
+    :param parser: the command line options parser
     """
-    return {"process": True}
+    parser.addoption(
+        "--true-context",
+        action="store_true",
+        default=False,
+        help=(
+            "Tell pytest that you have a true Tango context and don't "
+            "need to spin up a Tango test context"
+        ),
+    )
 
 
-@pytest.fixture(scope="module")
-def tango_harness(
-    tango_harness_factory: Callable[
-        [
-            dict[str, Any],
-            DevicesToLoadType,
-            Callable[[], unittest.mock.Mock],
-            dict[str, unittest.mock.Mock],
-        ],
-        TangoHarness,
+@pytest.fixture(name="true_context", scope="session")
+def true_context_fixture(request: pytest.FixtureRequest) -> bool:
+    """
+    Return whether to test against an existing Tango deployment.
+
+    If True, then Tango is already deployed, and the tests will be run
+    against that deployment.
+
+    If False, then Tango is not deployed, so the test harness will stand
+    up a test context and run the tests against that.
+
+    :param request: A pytest object giving access to the requesting test
+        context.
+
+    :return: whether to test against an existing Tango deployment
+    """
+    if request.config.getoption("--true-context"):
+        return True
+    if os.getenv("TRUE_TANGO_CONTEXT", None):
+        return True
+    return False
+
+
+@pytest.fixture(name="subrack_address_context_manager_factory", scope="module")
+def subrack_address_context_manager_factory_fixture(
+    subrack_simulator_config: dict[str, Any],
+) -> Callable[[], ContextManager[tuple[str, int]]]:
+    """
+    Return the subrack address context manager factory.
+
+    That is, return a callable that, when called, provides a context
+    manager that, when entered, returns a subrack host and port, while
+    at the same time ensuring the validity of that host and port.
+
+    This fixture obtains the subrack address in one of two ways:
+
+    Firstly it checks for a `SUBRACK_ADDRESS` environment variable, of
+    the form "localhost:8081". If found, it is expected that a subrack
+    is already available at this host and port, so there is nothing more
+    for this fixture to do. The callable that it returns, will itself
+    return an empty context manager that, when entered, simply yields
+    the specified host and port.
+
+    Otherwise, the callable that this factory returns will be a context
+    manager for a subrack simulator server instance. When entered, that
+    context manager will launch the subrack simulator server, and then
+    yield the host and port on which it is running.
+
+    :param subrack_simulator_config: a keyword dictionary that specifies
+        the desired configuration of the simulator backend.
+
+    :return: a callable that returns a context manager that, when
+        entered, yields the host and port of a subrack server.
+    """
+    address_var = "SUBRACK_ADDRESS"
+    if address_var in os.environ:
+        [host, port_str] = os.environ[address_var].split(":")
+
+        @contextmanager
+        def _yield_address() -> Generator[tuple[str, int], None, None]:
+            yield host, int(port_str)
+
+        return _yield_address
+    else:
+
+        class _SubrackServerContextManager:
+            def __init__(self: _SubrackServerContextManager) -> None:
+                # Imports are deferred until now,
+                # so that we do not try to import from ska_low_mccs_spshw
+                # until we know that we need to.
+                # This allows us to runour functional tests
+                # against a real cluster
+                # from within a test runner pod
+                # that does not have ska_low_mccs_spshw installed.
+                import uvicorn
+
+                from ska_low_mccs_spshw.subrack import SubrackSimulator
+                from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
+                    configure_server,
+                )
+
+                class _ThreadableServer(uvicorn.Server):
+                    def install_signal_handlers(self: _ThreadableServer) -> None:
+                        pass
+
+                server_config = configure_server(
+                    SubrackSimulator(**subrack_simulator_config),
+                    host="127.0.0.1",
+                    port=0,
+                )
+                self._server = _ThreadableServer(config=server_config)
+                self._socket = socket.socket()
+                self._thread = threading.Thread(
+                    target=self._server.run, args=([self._socket],), daemon=True
+                )
+
+            def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
+                self._thread.start()
+                while not self._server.started:
+                    time.sleep(1e-3)
+                _, port = self._socket.getsockname()
+                return "127.0.0.1", port
+
+            def __exit__(
+                self: _SubrackServerContextManager,
+                exc_type: Optional[Type[BaseException]],
+                exception: Optional[BaseException],
+                trace: Optional[TracebackType],
+            ) -> Literal[False]:
+                """
+                Exit the context.
+
+                :param exc_type: the type of exception thrown in the with block
+                :param exception: the exception thrown in the with block
+                :param trace: a traceback
+
+                :returns: whether the exception (if any) has been fully handled
+                    by this method and should be swallowed i.e. not re-raised
+
+                :raises ImportError: if this context manager is running in an
+                    environment that does not have ska_low_mccs_spshw installed.
+                """
+                if exc_type is ImportError:
+                    raise ImportError(
+                        """Error: you must do one of the following:
+                        * use "--true-context" flag or TRUE_TANGO_CONTEXT environment
+                          variable to run these tests against a pre-deployed cluster in
+                          which the Tango device under test is already running.
+                        * use SUBRACK_ADDRESS environment variable to specify the host
+                          and port of a subrack server. The test harness will stand up
+                          the Tango device under test to monitor and control the subrack
+                          at that server address.
+                        * run these tests in an environment in which ska_low_mccs_spshw
+                          and its dependencies are installed. The test harness will
+                          stand up its own subrack simulator server, and then stand up
+                          the Tango device under test to monitor and control that
+                          subrack simulator server."""
+                    ) from exception
+
+                self._server.should_exit = True
+                self._thread.join()
+
+                return False
+
+        return _SubrackServerContextManager
+
+
+@pytest.fixture(name="tango_harness", scope="module")
+def tango_harness_fixture(
+    subrack_name: str,
+    subrack_address_context_manager_factory: Callable[
+        [], ContextManager[tuple[str, int]]
     ],
-    tango_config: dict[str, str],
-    devices_to_load: DevicesToLoadType,
-    mock_factory: Callable[[], unittest.mock.Mock],
-    initial_mocks: dict[str, unittest.mock.Mock],
-) -> Generator[TangoHarness, None, None]:
+    true_context: bool,
+) -> Generator[TangoContextProtocol, None, None]:
     """
-    Create a test harness for testing Tango devices.
+    Yield a Tango context containing the device/s under test.
 
-    (This overwrites the `tango_harness` fixture, in order to change the
-    fixture scope.)
+    :param subrack_name: name of the subrack Tango device.
+    :param subrack_address_context_manager_factory: a callable that
+         returns a context manager that, when entered, yields the host
+         and port of a subrack.
+    :param true_context: whether to test against an existing Tango
+        deployment
 
-    :param tango_harness_factory: a factory that provides a test harness
-        for testing tango devices
-    :param tango_config: basic configuration information for a tango
-        test harness
-    :param devices_to_load: fixture that provides a specification of the
-        devices that are to be included in the devices_info dictionary
-    :param mock_factory: the factory to be used to build mocks
-    :param initial_mocks: a pre-build dictionary of mocks to be used
-        for particular
-
-    :yields: the test harness
+    :yields: a Tango context containing the devices under test
     """
-    with tango_harness_factory(
-        tango_config, devices_to_load, mock_factory, initial_mocks
-    ) as harness:
-        yield harness
+    tango_context_manager: Union[
+        TrueTangoContextManager, ThreadedTestTangoContextManager
+    ]  # for the type checker
+    if true_context:
+        tango_context_manager = TrueTangoContextManager()
+        with tango_context_manager as context:
+            yield context
+    else:
+        with subrack_address_context_manager_factory() as (host, port):
+            tango_context_manager = ThreadedTestTangoContextManager()
+            cast(ThreadedTestTangoContextManager, tango_context_manager).add_device(
+                subrack_name,
+                "ska_low_mccs_spshw.MccsSubrack",
+                SubrackIp=host,
+                SubrackPort=port,
+                UpdateRate=1.0,
+                LoggingLevelDefault=int(LoggingLevel.DEBUG),
+            )
+            with tango_context_manager as context:
+                yield context
+
+
+@pytest.fixture(name="change_event_callbacks", scope="module")
+def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
+    """
+    Return a dictionary of callables to be used as Tango change event callbacks.
+
+    :return: a dictionary of callables to be used as tango change event
+        callbacks.
+    """
+    return MockTangoEventCallbackGroup(
+        "subrack_state",
+        "subrack_fan_mode",
+        "subrack_fan_speed",
+        "subrack_fan_speed_percent",
+        "subrack_tpm_power_state",
+        timeout=30.0,
+    )
+
+
+@pytest.fixture()
+def tpm_number() -> int:
+    """
+    Return the number of the TPM under test in the subrack under test.
+
+    :returns: the number of the TPM
+    """
+    return 2

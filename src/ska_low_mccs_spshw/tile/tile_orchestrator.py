@@ -306,7 +306,7 @@ class TileOrchestrator:
         if unique_id in self._subrack_lrc_callbacks:
             callback, lrc_name = self._subrack_lrc_callbacks.pop(unique_id)
             message = event_value[1]
-            if "task has completed" in message:
+            if "Command completed" in message:
                 callback(
                     status=TaskStatus.COMPLETED, result=f"Tile {lrc_name} completed"
                 )

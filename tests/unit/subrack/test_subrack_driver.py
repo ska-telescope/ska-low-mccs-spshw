@@ -9,19 +9,19 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
-    NewSubrackDriver,
     SubrackData,
+    SubrackDriver,
     SubrackSimulator,
 )
 
 
 def test_attribute_reads(
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -44,14 +44,24 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_next_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+    callbacks["component_state"].assert_next_call(fault=False)
     callbacks["component_state"].assert_next_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_not_called()
+
+    subrack_driver.stop_communicating()
+
+    callbacks["communication_status"].assert_next_call(CommunicationStatus.DISABLED)
+    callbacks["communication_status"].assert_not_called()
+
+    callbacks["component_state"].assert_next_call(
+        fault=None, **{name: None for name in subrack_simulator_attribute_values}
+    )
     callbacks["component_state"].assert_not_called()
 
 
 def test_attribute_updates(  # pylint: disable=too-many-locals
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -76,7 +86,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     callbacks["communication_status"].assert_next_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+    callbacks["component_state"].assert_next_call(fault=False)
     callbacks["component_state"].assert_next_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
@@ -88,7 +98,8 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     for (name, values) in [
         ("backplane_temperatures", [45.0, 46.0]),
         ("board_temperatures", [47.0, 48.0]),
-        ("tpm_temperatures", [41.1, 41.2, 41.3, 41.4, 41.5, 41.6, 41.7, 41.8]),
+        # Not implemented on SMB
+        # ("tpm_temperatures", [41.1, 41.2, 41.3, 41.4, 41.5, 41.6, 41.7, 41.8]),
     ]:
         subrack_simulator.simulate_attribute(name, values)
         callbacks["component_state"].assert_next_call(
@@ -103,13 +114,17 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
         power_supply_fan_speeds=[pytest.approx(s) for s in new_power_supply_fan_speeds],
     )
 
-    new_subrack_fan_speeds = [3999.0, 4000.0, 4001.0, 4002.0]
-    subrack_simulator.simulate_attribute("subrack_fan_speeds", new_subrack_fan_speeds)
+    new_subrack_fan_speed_percent = [82.0, 83.0, 84.0, 85.0]
+    subrack_simulator.simulate_attribute(
+        "subrack_fan_speed_percent", new_subrack_fan_speed_percent
+    )
     callbacks["component_state"].assert_next_call(
-        subrack_fan_speeds=[pytest.approx(s) for s in new_subrack_fan_speeds],
-        subrack_fan_speeds_percent=[
-            pytest.approx(s * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED)
-            for s in new_subrack_fan_speeds
+        subrack_fan_speed_percent=[
+            pytest.approx(s) for s in new_subrack_fan_speed_percent
+        ],
+        subrack_fan_speed=[
+            pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
+            for p in new_subrack_fan_speed_percent
         ],
     )
 
@@ -164,7 +179,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
 
 def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -189,7 +204,7 @@ def test_tpm_power_commands(
     callbacks["communication_status"].assert_next_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+    callbacks["component_state"].assert_next_call(fault=False)
     callbacks["component_state"].assert_next_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
@@ -223,7 +238,7 @@ def test_tpm_power_commands(
 
 def test_other_commands(
     subrack_simulator: SubrackSimulator,
-    subrack_driver: NewSubrackDriver,
+    subrack_driver: SubrackDriver,
     subrack_simulator_attribute_values: dict[str, Any],
     callbacks: dict[str, MockCallable],
 ) -> None:
@@ -248,38 +263,40 @@ def test_other_commands(
     callbacks["communication_status"].assert_next_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_next_call(fault=False, power=PowerState.ON)
+    callbacks["component_state"].assert_next_call(fault=False)
     callbacks["component_state"].assert_next_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
-    subrack_fan_speeds = subrack_simulator.get_attribute("subrack_fan_speeds")
+    subrack_fan_speed_percent = subrack_simulator.get_attribute(
+        "subrack_fan_speed_percent"
+    )
 
     fan_to_set = 1  # one-based
-    fan_speed_setting = 4500.0
-    subrack_driver.set_subrack_fan_speed(fan_to_set, fan_speed_setting)
+    fan_speed_percent_setting = 51.0
+    subrack_driver.set_subrack_fan_speed(fan_to_set, fan_speed_percent_setting)
 
-    subrack_fan_speeds[fan_to_set - 1] = fan_speed_setting
+    subrack_fan_speed_percent[fan_to_set - 1] = fan_speed_percent_setting
     callbacks["component_state"].assert_next_call(
-        subrack_fan_speeds=[pytest.approx(s) for s in subrack_fan_speeds],
-        subrack_fan_speeds_percent=[
-            pytest.approx(s * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED)
-            for s in subrack_fan_speeds
+        subrack_fan_speed_percent=[pytest.approx(s) for s in subrack_fan_speed_percent],
+        subrack_fan_speed=[
+            pytest.approx(s * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
+            for s in subrack_fan_speed_percent
         ],
     )
 
-    subrack_fan_modes = subrack_simulator.get_attribute("subrack_fan_modes")
+    subrack_fan_mode = subrack_simulator.get_attribute("subrack_fan_mode")
 
     fan_to_set = 1  # one-based
     fan_speed_mode = (
         FanMode.AUTO
-        if subrack_fan_modes[fan_to_set - 1] == FanMode.MANUAL
+        if subrack_fan_mode[fan_to_set - 1] == FanMode.MANUAL
         else FanMode.MANUAL
     )
     subrack_driver.set_subrack_fan_mode(fan_to_set, fan_speed_mode)
 
-    subrack_fan_modes[fan_to_set - 1] = fan_speed_mode
+    subrack_fan_mode[fan_to_set - 1] = fan_speed_mode
     callbacks["component_state"].assert_next_call(
-        subrack_fan_modes=subrack_fan_modes,
+        subrack_fan_mode=subrack_fan_mode,
     )
 
     power_supply_fan_speeds = subrack_simulator.get_attribute("power_supply_fan_speeds")

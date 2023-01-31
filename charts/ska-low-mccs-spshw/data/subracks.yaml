@@ -8,9 +8,7 @@ instances:
   - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-entrypoints:
-  - name: "subrack.MccsSubrack"
-    path: "/app/src/ska_low_mccs_spshw/subrack/subrack_device.py"
+command: MccsSubrack
 server: 
   name: "MccsSubrack"
   instances:
@@ -19,7 +17,7 @@ server:
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs-spshw/subrack/%04d" (int $key)}}
+        - name: {{printf "low-mccs/subrack/%04d" (int $key)}}
           properties:
           - name: "SubrackIp"
             values: 

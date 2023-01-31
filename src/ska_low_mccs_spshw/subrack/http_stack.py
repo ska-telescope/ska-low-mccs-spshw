@@ -86,6 +86,20 @@ class HttpPollRequest:
         """
         return list(self._commands)
 
+    def __bool__(self: HttpPollRequest) -> bool:
+        """
+        Return the boolean value of this request.
+
+        Returns True if this request is non-empty.
+
+        :return: the boolean value of this request.
+        """
+        return (
+            bool(self._getattributes)
+            or bool(self._setattributes)
+            or bool(self._commands)
+        )
+
 
 class HttpPollResponse:
     """

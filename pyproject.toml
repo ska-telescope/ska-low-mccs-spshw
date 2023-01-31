@@ -1,12 +1,11 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.2.0"
+version = "0.2.1"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
 readme = "README.md"
 documentation = "https://developer.skatelescope.org/projects/ska-low-mccs-spshw"
-include = ["./pyfabil-1.1-py3-none-any.whl","./aavs_system-1.1-py3-none-any.whl"]
 
 [[tool.poetry.source]]
 name = 'ska-nexus'
@@ -14,17 +13,17 @@ url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
 [tool.poetry.dependencies]
 python = "~3.10"
-aavs_system = {path = "./aavs_system-1.1-py3-none-any.whl"}
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "5502db425dd9939bd33d3932928d76730d8abe35", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "a82e19918145a7a1a6daec920d112ec27dd1ca99" }
 fire = "^0.4.0"
 numpy = "^1.23.0"
 pytango = "9.3.3"
-pyfabil = {path = "./pyfabil-1.1-py3-none-any.whl"}
 PyYAML = "^6.0"
 requests = "^2.28.1"
 scipy = "^1.9.3"
 ska-tango-base = "^0.14.0"
 ska-control-model = "0.1.2"
-ska-low-mccs-common = "^0.3.0"
+ska-low-mccs-common = "^0.4.0"
 fastapi = "^0.88.0"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 typing-extensions = "^4.4.0"
@@ -34,7 +33,7 @@ pre-commit = "^2.20.0"
 pylint = "^2.15.5"
 pylint-junit = "^0.3.2"
 pytest = "^6.2.5"
-pytest-bdd = "^6.0.1"
+pytest-bdd = "^6.1.1"
 pytest-cov = "^4.0.0"
 pytest-json-report = "^1.5.0"
 pytest-mock = "^3.10.0"
@@ -58,6 +57,7 @@ types-requests = "^2.28.11.2"
 types-pyyaml = "^6.0.12"
 isort = "^5.10.1"
 httpx = "^0.23.1"
+ska-tango-testing = "^0.5.3"
 
 [tool.poetry.scripts]
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"

@@ -1,6 +1,7 @@
 """A simple subrack simulator."""
 from __future__ import annotations
 
+import copy
 import threading
 from typing import Any, Final, Optional, TypedDict, cast
 
@@ -49,7 +50,7 @@ class SubrackSimulator(SubrackProtocol):
         },
         "power_supply_fan_speeds": {
             "length": 2,
-            "default": [6500.0, 6600.0],
+            "default": [93.0, 94.0],
             "writable": False,
         },
         "power_supply_currents": {
@@ -62,12 +63,12 @@ class SubrackSimulator(SubrackProtocol):
             "default": [12.0, 12.1],
             "writable": False,
         },
-        "subrack_fan_speeds": {
+        "subrack_fan_speed_percent": {
             "length": 4,
-            "default": [4999.0, 5000.0, 5001.0, 5002.0],
+            "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
         },
-        "subrack_fan_modes": {
+        "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
             "writable": False,
@@ -77,11 +78,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": [0.4] * 8,
             "writable": False,
         },
-        "tpm_temperatures": {
-            "length": 8,
-            "default": [40.0] * 8,
-            "writable": False,
-        },
+        # "tpm_temperatures": {  # Not implemented on SMB
+        #     "length": 8,
+        #     "default": [40.0] * 8,
+        #     "writable": False,
+        # },
         "tpm_voltages": {
             "length": 8,
             "default": [12.0] * 8,
@@ -102,13 +103,13 @@ class SubrackSimulator(SubrackProtocol):
         if unknown_names:
             raise AttributeError(f"Unknown attributes: {','.join(unknown_names)}.")
 
-        self._attribute_values: dict[str, JsonSerializable] = dict(kwargs)
+        self._attribute_values: dict[str, JsonSerializable] = copy.deepcopy(kwargs)
         for attribute, metadata in self.ATTRIBUTE_METADATA.items():
             self._attribute_values.setdefault(attribute, metadata["default"])
 
         self._aborted_event = threading.Event()
         self._command_is_running = False
-        self._command_duration: Final = 0.2
+        self._command_duration: Final = 0.05
 
     def set_attribute(
         self: SubrackSimulator, name: str, value: JsonSerializable
@@ -231,9 +232,6 @@ class SubrackSimulator(SubrackProtocol):
 
         raise AttributeError(f"Unknown command {name}.")
 
-    def _get_attribute_tpm_count(self: SubrackSimulator) -> int:
-        return self._attribute_values["tpm_present"].count(True)
-
     def _get_attribute_tpm_powers(self: SubrackSimulator) -> list[float]:
         return [
             current * voltage
@@ -252,12 +250,12 @@ class SubrackSimulator(SubrackProtocol):
             )
         ]
 
-    def _get_attribute_subrack_fan_speeds_percent(
+    def _get_attribute_subrack_fan_speed(
         self: SubrackSimulator,
     ) -> list[float]:
         return [
-            speed * 100.0 / SubrackData.MAX_SUBRACK_FAN_SPEED
-            for speed in self._attribute_values["subrack_fan_speeds"]
+            percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
+            for percent in self._attribute_values["subrack_fan_speed_percent"]
         ]
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
@@ -285,13 +283,13 @@ class SubrackSimulator(SubrackProtocol):
         (fan_str, speed_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         speed = float(speed_str)
-        self._attribute_values["subrack_fan_speeds"][fan_index] = speed
+        self._attribute_values["subrack_fan_speed_percent"][fan_index] = speed
 
     def _set_subrack_fan_mode(self: SubrackSimulator, arg: str) -> None:
         (fan_str, mode_str) = arg.split(",")
         fan_index = int(fan_str)  # input is 0-based, so no need for an offset
         mode = FanMode[mode_str]
-        self._attribute_values["subrack_fan_modes"][fan_index] = mode
+        self._attribute_values["subrack_fan_mode"][fan_index] = mode
 
     def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")

@@ -66,19 +66,18 @@ ska-taranta-auth:
     nginx: true
     hostname: test-taranta.k8s.stfc.skao.int
 
+# Jupyterhub is a large image and you may experience a kubelet timeout MCCS-1238.
+# Error: UPGRADE FAILED: pre-upgrade hooks failed: timed out waiting for the condition
+# You can perform a manual pull using: 
+# minikube image pull registry.gitlab.com/ska-telescope/sdi/ska-cicd-deploy-low-itf/tango-notebook:0.1.1
 jupyterhub:
   hub:
-    db:
-      type: sqlite-pvc
-      upgrade:
-      pvc:
-        annotations: {}
-        selector: {}
-        accessModes:
-          - ReadWriteOnce
-        storage: 2Gi
-        subPath:
-        storageClassName:
+    baseUrl: /jupyterhub/
+  ingress:
+    pathType: Prefix
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
   singleuser:
     image:
       name: registry.gitlab.com/ska-telescope/sdi/ska-cicd-deploy-low-itf/tango-notebook
@@ -86,8 +85,9 @@ jupyterhub:
     extraEnv:
       TANGO_HOST: "databaseds-tango-base-test.ska-low-mccs:10000"
   proxy:
-    secretToken: 'e82efa842447ef9ca43722e382de46efaaec82a20df059dfaed6b0351d39a6d6'
-      
+    service:
+      type: ClusterIP
+
 # example overrides
 # ska-low-mccs:
 #   deviceServers:

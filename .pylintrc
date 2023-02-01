@@ -22,4 +22,4 @@ ignored-classes = socket
 # W0613 unused-argument
 # W0612 unused variable
 # W0223 abstract-method
-disable = W0212, W0613, W0612, W0223
+disable = W0212, W0613, W0612, W0223, R0401

@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -18,7 +16,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from tango.server import Device, command
 
-from ska_low_mccs_spshw.tile.tile_device import MccsTile
+from ska_low_mccs_spshw.tile import MccsTile
 
 __all__ = ["DemoTile"]
 
@@ -51,7 +49,7 @@ class DemoTile(MccsTile, _FaultSimulatingDevice):
         Overridden here to log the fact that this is a demo tile.
         """
         super().init_device()
-        self.logger.warn("I am a DEMO tile!")
+        self.logger.warning("I am a DEMO tile!")
 
 
 # ----------

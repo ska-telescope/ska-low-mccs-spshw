@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -80,9 +78,9 @@ class CliMeta(type):
             try:
                 return method(*args, **kwargs)
             except tango.DevFailed as ptex:
-                raise FireError(ptex.args[0].desc)
+                raise FireError(ptex.args[0].desc) from ptex
             except Exception as ex:
-                raise FireError(str(ex))
+                raise FireError(str(ex)) from ex
 
         return _wrapper
 
@@ -184,6 +182,7 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendBeamData", jstr)
 
+    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedDataContinuous(
         self: MccsTileCli,
@@ -218,9 +217,12 @@ class MccsTileCli(metaclass=CliMeta):
             }
             jstr = json.dumps(args)
             return self._dp.command_inout("SendChannelisedDataContinuous", jstr)
-        except tango.DevFailed:
-            raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
+        except tango.DevFailed as exc:
+            raise RuntimeError(
+                "ChannelID mandatory argument...cannot be a NULL value"
+            ) from exc
 
+    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedData(
         self: MccsTileCli,

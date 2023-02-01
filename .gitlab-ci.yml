@@ -21,11 +21,11 @@ cache:
 stages:
   - lint
   - build
+  - downstream
   - test
   - publish
   - pages
   - scan
-  - downstream
 
 include:
   # Python packages build,lint, test and publish
@@ -60,4 +60,4 @@ trigger_job:
   stage: downstream
   trigger:
     project: ska-telescope/mccs/ska-low-mccs/.gitlab-ci.yml
-
+    token: $DEPLOY_TOKEN

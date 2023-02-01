@@ -59,4 +59,4 @@ include:
 bridge:
   stage: downstream
   trigger:
-    project: ska-telescope/mccs/ska-low-mccs/
+    project: ska-telescope/mccs/ska-low-mccs

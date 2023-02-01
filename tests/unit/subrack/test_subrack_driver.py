@@ -114,17 +114,17 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
         power_supply_fan_speeds=[pytest.approx(s) for s in new_power_supply_fan_speeds],
     )
 
-    new_subrack_fan_speed_percent = [82.0, 83.0, 84.0, 85.0]
+    new_subrack_fan_speeds_percent = [82.0, 83.0, 84.0, 85.0]
     subrack_simulator.simulate_attribute(
-        "subrack_fan_speed_percent", new_subrack_fan_speed_percent
+        "subrack_fan_speeds_percent", new_subrack_fan_speeds_percent
     )
     callbacks["component_state"].assert_next_call(
-        subrack_fan_speed_percent=[
-            pytest.approx(s) for s in new_subrack_fan_speed_percent
+        subrack_fan_speeds_percent=[
+            pytest.approx(s) for s in new_subrack_fan_speeds_percent
         ],
-        subrack_fan_speed=[
+        subrack_fan_speeds=[
             pytest.approx(p * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-            for p in new_subrack_fan_speed_percent
+            for p in new_subrack_fan_speeds_percent
         ],
     )
 
@@ -267,20 +267,22 @@ def test_other_commands(
     callbacks["component_state"].assert_next_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
-    subrack_fan_speed_percent = subrack_simulator.get_attribute(
-        "subrack_fan_speed_percent"
+    subrack_fan_speeds_percent = subrack_simulator.get_attribute(
+        "subrack_fan_speeds_percent"
     )
 
     fan_to_set = 1  # one-based
     fan_speed_percent_setting = 51.0
     subrack_driver.set_subrack_fan_speed(fan_to_set, fan_speed_percent_setting)
 
-    subrack_fan_speed_percent[fan_to_set - 1] = fan_speed_percent_setting
+    subrack_fan_speeds_percent[fan_to_set - 1] = fan_speed_percent_setting
     callbacks["component_state"].assert_next_call(
-        subrack_fan_speed_percent=[pytest.approx(s) for s in subrack_fan_speed_percent],
-        subrack_fan_speed=[
+        subrack_fan_speeds_percent=[
+            pytest.approx(s) for s in subrack_fan_speeds_percent
+        ],
+        subrack_fan_speeds=[
             pytest.approx(s * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0)
-            for s in subrack_fan_speed_percent
+            for s in subrack_fan_speeds_percent
         ],
     )
 

@@ -63,7 +63,7 @@ class SubrackSimulator(SubrackProtocol):
             "default": [12.0, 12.1],
             "writable": False,
         },
-        "subrack_fan_speed_percent": {
+        "subrack_fan_speeds_percent": {
             "length": 4,
             "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
@@ -250,12 +250,12 @@ class SubrackSimulator(SubrackProtocol):
             )
         ]
 
-    def _get_attribute_subrack_fan_speed(
+    def _get_attribute_subrack_fan_speeds(
         self: SubrackSimulator,
     ) -> list[float]:
         return [
             percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
-            for percent in self._attribute_values["subrack_fan_speed_percent"]
+            for percent in self._attribute_values["subrack_fan_speeds_percent"]
         ]
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
@@ -281,19 +281,19 @@ class SubrackSimulator(SubrackProtocol):
 
     def _set_subrack_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")
-        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
-        self._attribute_values["subrack_fan_speed_percent"][fan_index] = speed
+        self._attribute_values["subrack_fan_speeds_percent"][fan_index] = speed
 
-    def _set_subrack_fan_mode(self: SubrackSimulator, arg: str) -> None:
+    def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
         (fan_str, mode_str) = arg.split(",")
-        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
-        mode = FanMode[mode_str]
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
+        mode = mode_str  # FanMode[mode_str]
         self._attribute_values["subrack_fan_mode"][fan_index] = mode
 
     def _set_power_supply_fan_speed(self: SubrackSimulator, arg: str) -> None:
         (fan_str, speed_str) = arg.split(",")
-        fan_index = int(fan_str)  # input is 0-based, so no need for an offset
+        fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
         self._attribute_values["power_supply_fan_speeds"][fan_index] = speed
 
@@ -303,7 +303,7 @@ class SubrackSimulator(SubrackProtocol):
 
         :param arg: number of the TPM to be turned off (in string form).
         """
-        tpm_number = int(arg)  # input is 0-based, so no need for an offset
+        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = False
 
     def _async_turn_on_tpm(self: SubrackSimulator, arg: str) -> None:
@@ -312,7 +312,7 @@ class SubrackSimulator(SubrackProtocol):
 
         :param arg: number of the TPM to be turned on (in string form).
         """
-        tpm_number = int(arg)  # input is 0-based, so no need for an offset
+        tpm_number = int(arg) - 1  # input is 1-based, so need for an offset
         cast(list[bool], self._attribute_values["tpm_on_off"])[tpm_number] = True
 
     def _async_turn_off_tpms(self: SubrackSimulator, _not_used: Optional[str]) -> None:

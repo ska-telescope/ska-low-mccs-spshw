@@ -97,8 +97,8 @@ class SubrackDriver(
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            subrack_fan_speed=None,
-            subrack_fan_speed_percent=None,
+            subrack_fan_speeds=None,
+            subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,
@@ -257,7 +257,7 @@ class SubrackDriver(
             else:
                 keys = [f"tpm_{tpm_number}_on_off"]
                 command_name = "turn_on_tpm" if is_turn_on else "turn_off_tpm"
-                command_arg = str(tpm_number - 1)
+                command_arg = str(tpm_number)
 
             for key in keys:
                 if key in self._commands_to_execute:
@@ -270,7 +270,7 @@ class SubrackDriver(
                     if prior_callback is not None:
                         prior_callback(
                             status=TaskStatus.ABORTED,
-                            message="Superseded by later command.",
+                            # message="Superseded by later command.",
                         )
 
             self._commands_to_execute[f"tpm_{tpm_number}_on_off"] = (
@@ -316,11 +316,11 @@ class SubrackDriver(
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
-                        message="Superseded by later command.",
+                        # message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
                 "set_subrack_fan_speed",
-                f"{fan_number-1},{speed}",
+                f"{fan_number},{speed}",
                 task_callback,
             )
         if task_callback is not None:
@@ -356,11 +356,11 @@ class SubrackDriver(
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
-                        message="Superseded by later command.",
+                        # message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
-                "set_subrack_fan_mode",
-                f"{fan_number-1},{mode.name}",
+                "set_fan_mode",
+                f"{fan_number},{mode.value}",
                 task_callback,
             )
         if task_callback is not None:
@@ -397,11 +397,11 @@ class SubrackDriver(
                 if prior_callback is not None:
                     prior_callback(
                         status=TaskStatus.ABORTED,
-                        message="Superseded by later command.",
+                        # message="Superseded by later command.",
                     )
             self._commands_to_execute[key] = (
                 "set_power_supply_fan_speed",
-                f"{fan_number-1},{speed}",
+                f"{fan_number},{speed}",
                 task_callback,
             )
         if task_callback is not None:
@@ -473,8 +473,8 @@ class SubrackDriver(
                 "power_supply_fan_speeds",
                 "power_supply_powers",
                 "power_supply_voltages",
-                "subrack_fan_speed",
-                "subrack_fan_speed_percent",
+                "subrack_fan_speeds",
+                "subrack_fan_speeds_percent",
                 "subrack_fan_mode",
                 "tpm_currents",
                 "tpm_powers",
@@ -500,17 +500,26 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
-        self.logger.debug("Poller is initiating next poll.")
+        self.logger.info(
+            "Poller is initiating next poll. "
+            f"{len(poll_request.commands)} commands, "
+            f"{len(poll_request.getattributes)} getattributes, "
+            f"{len(poll_request.setattributes)} setattributes"
+        )
         poll_response = HttpPollResponse()
 
         for command, args in poll_request.commands:
             command_response = self._client.execute_command(
                 command, " ".join(str(arg) for arg in args)
             )
+            self.logger.debug(f"Response: {command_response}")
             if command_response["status"] == "ERROR":
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
+                self.logger.error(f"Command error: Info {command_response['info']}")
+                if self._active_callback is not None:
+                    self._active_callback(status=TaskStatus.FAILED)
                 raise ConnectionError(f"Received ERROR response from command {command}")
             if command_response["status"] == "STARTED":
                 self._board_is_busy = True
@@ -528,16 +537,17 @@ class SubrackDriver(
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
+                self.logger.error(f"Command error: Info {command_response['info']}")
                 raise ConnectionError(
                     f"Received ERROR response from setattribute {name}"
                 )
-
         for attribute in poll_request.getattributes:
             attribute_response = self._client.get_attribute(attribute)
             if attribute_response["status"] == "ERROR":
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
+                self.logger.error(f"Command error: Info {command_response['info']}")
                 raise ConnectionError(
                     f"Received ERROR response from getattribute {attribute}"
                 )
@@ -555,7 +565,11 @@ class SubrackDriver(
         :param poll_response: response to the pool, including any values
             read.
         """
-        self.logger.debug("Handing results of successful poll.")
+        self.logger.info(
+            "Handing results of successful poll. "
+            f"{len(poll_response.command_responses)} command responses, "
+            f"{len(poll_response.query_responses)} query responses"
+        )
         super().poll_succeeded(poll_response)
 
         # TODO: We should be deciding on the fault state of this device,
@@ -608,8 +622,8 @@ class SubrackDriver(
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            subrack_fan_speed=None,
-            subrack_fan_speed_percent=None,
+            subrack_fan_speeds=None,
+            subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,

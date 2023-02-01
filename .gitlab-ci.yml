@@ -56,8 +56,7 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
 
-trigger_job:
+bridge:
   stage: downstream
   trigger:
-    project: ska-telescope/mccs/ska-low-mccs/.gitlab-ci.yml
-    token: $DEPLOY_TOKEN
+    project: ska-telescope/mccs/ska-low-mccs/

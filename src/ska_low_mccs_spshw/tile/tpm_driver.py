@@ -363,7 +363,7 @@ class TpmDriver(MccsComponentManager):
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
         self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        self.update_component_state()  # {"fault": False})
+        self.update_component_state({"fault": False})
         self.logger.debug("Tpm connected to tile.")
         self._is_programmed = False
         # pylint: disable=pointless-statement
@@ -1847,7 +1847,7 @@ class TpmDriver(MccsComponentManager):
         if current_frame == 0:
             self.logger.error("Cannot send data before StartAcquisition")
             raise ValueError("Cannot send data before StartAcquisition")
-        elif timestamp < (current_frame + 20):
+        if timestamp < (current_frame + 20):
             self.logger.error("Time is too early")
             raise ValueError("Time is too early")
 

@@ -28,8 +28,9 @@ from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs_spshw.tile import TileComponentManager, TileHealthModel
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from .tile_component_manager import TileComponentManager
+from .tile_health_model import TileHealthModel
+from .tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
 
@@ -429,6 +430,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.SimulationConfig
 
+    # pylint: disable=arguments-differ
     @simulationMode.write  # type: ignore[no-redef]
     def simulationMode(self: MccsTile, value: SimulationMode) -> None:
         """

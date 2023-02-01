@@ -16,7 +16,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from tango.server import Device, command
 
-from ska_low_mccs_spshw.tile import MccsTile
+from .tile_device import MccsTile
 
 __all__ = ["DemoTile"]
 

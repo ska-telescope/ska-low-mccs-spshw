@@ -33,15 +33,13 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 
-from ska_low_mccs_spshw.tile import (
-    BaseTpmSimulator,
-    DynamicTpmSimulator,
-    StaticTpmSimulator,
-    TpmDriver,
-)
-from ska_low_mccs_spshw.tile.tile_orchestrator import TileOrchestrator
-from ska_low_mccs_spshw.tile.time_util import TileTime
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from .base_tpm_simulator import BaseTpmSimulator
+from .dynamic_tpm_simulator import DynamicTpmSimulator
+from .static_tpm_simulator import StaticTpmSimulator
+from .tile_orchestrator import TileOrchestrator
+from .time_util import TileTime
+from .tpm_driver import TpmDriver
+from .tpm_status import TpmStatus
 
 __all__ = [
     "DynamicTpmSimulatorComponentManager",

@@ -26,6 +26,8 @@ stages:
   - publish
   - pages
   - scan
+  - .post
+  - test-psi-low
 
 include:
   # Python packages build,lint, test and publish

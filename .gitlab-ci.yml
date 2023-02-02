@@ -56,7 +56,6 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
 
-
 bridge:
   stage: downstream
   trigger:

@@ -517,19 +517,24 @@ class SubrackDriver(
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
-                self.logger.error(f"Command error: Info {command_response['info']}")
+                self.logger.error(
+                    f"Command error for {command}: Info {command_response['info']}"
+                )
                 if self._active_callback is not None:
                     self._active_callback(status=TaskStatus.FAILED)
+                    self._active_callback = None
                 raise ConnectionError(f"Received ERROR response from command {command}")
-            if command_response["status"] == "STARTED":
+            elif command_response["status"] == "STARTED":
                 self._board_is_busy = True
-            elif (
-                command_response["status"] == "OK"
-                and command_response["retvalue"] != ""
-            ):
+            elif command_response["status"] == "OK":
+                # command has been completed,
                 poll_response.add_command_response(
                     command, command_response["retvalue"]
                 )
+            else:
+                if self._active_callback is not None:
+                    self._active_callback(status=TaskStatus.FAILED)
+                    self._active_callback = None
 
         for name, value in poll_request.setattributes:
             attribute_response = self._client.set_attribute(name, value)
@@ -537,7 +542,9 @@ class SubrackDriver(
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
-                self.logger.error(f"Command error: Info {command_response['info']}")
+                self.logger.error(
+                    f"setattribute error for{name}: Info {command_response['info']}"
+                )
                 raise ConnectionError(
                     f"Received ERROR response from setattribute {name}"
                 )
@@ -547,7 +554,10 @@ class SubrackDriver(
                 # TODO: [MCCS-1329] Only raise connection errors
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
-                self.logger.error(f"Command error: Info {command_response['info']}")
+                self.logger.error(
+                    f"getattribute error for {attribute}: "
+                    f"Info {command_response['info']}"
+                )
                 raise ConnectionError(
                     f"Received ERROR response from getattribute {attribute}"
                 )
@@ -582,12 +592,15 @@ class SubrackDriver(
         if "command_completed" in retvalues and not retvalues["command_completed"]:
             # A command that is asynchronous on the SMB is still running,
             # So there's nothing to do here.
+            self.logger.debug("Command still running")
             pass
         elif retvalues:
             # The presence of any other retvalues indicate
             # that the active command has completed.
+            # This is true also for normal completion of fast commands
             self._board_is_busy = False
             if self._active_callback is not None:
+                self.logger.debug("Command completed")
                 self._active_callback(
                     status=TaskStatus.COMPLETED,
                     result=(ResultCode.OK, "Command completed."),

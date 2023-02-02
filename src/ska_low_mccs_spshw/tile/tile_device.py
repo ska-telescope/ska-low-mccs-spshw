@@ -1719,7 +1719,7 @@ class MccsTile(SKABaseDevice):
 
             :return: a JSON-encoded dictionary of coreId and populated arpID table
             """
-            return json.dumps(self._component_manager.get_arp_table())
+            return json.dumps(self._component_manager.arp_table)
 
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:

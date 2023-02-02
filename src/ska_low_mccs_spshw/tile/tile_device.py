@@ -1744,9 +1744,7 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        return_code, unique_id = handler()
-        # TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
-        return ([return_code], [unique_id])
+        return handler()
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""

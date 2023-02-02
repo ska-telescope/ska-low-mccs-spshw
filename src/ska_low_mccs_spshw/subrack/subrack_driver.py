@@ -524,7 +524,7 @@ class SubrackDriver(
                     self._active_callback(status=TaskStatus.FAILED)
                     self._active_callback = None
                 raise ConnectionError(f"Received ERROR response from command {command}")
-            elif command_response["status"] == "STARTED":
+            if command_response["status"] == "STARTED":
                 self._board_is_busy = True
             elif command_response["status"] == "OK":
                 # command has been completed,
@@ -593,7 +593,6 @@ class SubrackDriver(
             # A command that is asynchronous on the SMB is still running,
             # So there's nothing to do here.
             self.logger.debug("Command still running")
-            pass
         elif retvalues:
             # The presence of any other retvalues indicate
             # that the active command has completed.

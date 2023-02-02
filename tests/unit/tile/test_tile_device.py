@@ -1351,17 +1351,13 @@ class TestMccsTileCommands:
     def test_get_arp_table(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
-        device_admin_mode_changed_callback: MockChangeEventCallback,
     ) -> None:
         """
-        Test that GetArpTable works.
+        Test that GetArpTable returns a result.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param device_admin_mode_changed_callback: a callback that
-            we can use to subscribe to admin mode changes on the tile
-            device
         """
         result = tile_device.GetArpTable()
         json.loads(result)

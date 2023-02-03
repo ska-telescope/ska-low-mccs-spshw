@@ -33,9 +33,11 @@ python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 
 
-# THIS IS SPECIFIC TO THIS REPO
+K8S_FACILITY ?= k8s-test
+K8S_CHART_PARAMS += --values charts/ska-low-mccs-spshw/values-$(K8S_FACILITY).yaml
+
 ifdef CI_REGISTRY_IMAGE
-K8S_CHART_PARAMS = \
+K8S_CHART_PARAMS += \
 	--set low_mccs_spshw.image.registry=$(CI_REGISTRY_IMAGE) \
 	--set low_mccs_spshw.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
@@ -45,12 +47,25 @@ K8S_TEST_RUNNER_PYTEST_OPTIONS = -v -x --true-context --junitxml=build/reports/f
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
 K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
-# ALL THIS SHOULD BE UPSTREAMED
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal
 K8S_TEST_RUNNER_CHART_NAME ?= ska-low-mccs-k8s-test-runner
-K8S_TEST_RUNNER_CHART_TAG ?= 0.2.0
+K8S_TEST_RUNNER_CHART_TAG ?= 0.4.2
 
 K8S_TEST_RUNNER_CHART_OVERRIDES =
+
+ifdef PASS_PROXY_CONFIG
+FACILITY_HTTP_PROXY ?= $(http_proxy)
+FACILITY_HTTPS_PROXY ?= $(https_proxy)
+endif
+
+ifdef FACILITY_HTTP_PROXY
+K8S_TEST_RUNNER_CHART_OVERRIDES += --set global.http_proxy=$(FACILITY_HTTP_PROXY)
+endif
+
+ifdef FACILITY_HTTPS_PROXY
+K8S_TEST_RUNNER_CHART_OVERRIDES += --set global.https_proxy=$(FACILITY_HTTPS_PROXY)
+endif
+
 ifdef K8S_TEST_RUNNER_IMAGE_REGISTRY
 K8S_TEST_RUNNER_CHART_OVERRIDES += --set image.registry=$(K8S_TEST_RUNNER_IMAGE_REGISTRY)
 endif

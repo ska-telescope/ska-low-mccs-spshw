@@ -1381,5 +1381,4 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         result = tile_device.GetArpTable()
-        json.loads(result)
-        assert result == {"0": [0, 1], "1": [1]}
+        assert json.loads(result) == {"0": [0, 1], "1": [1]}

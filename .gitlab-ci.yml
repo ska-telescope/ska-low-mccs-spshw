@@ -54,3 +54,9 @@ include:
   # k8s
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
+
+python-test:
+    image: artefact.skao.int/ska-tango-images-pytango-builder:9.3.32
+
+python-lint:
+    image: artefact.skao.int/ska-tango-images-pytango-builder:9.3.32

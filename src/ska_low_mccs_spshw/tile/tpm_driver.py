@@ -1003,7 +1003,7 @@ class TpmDriver(MccsComponentManager):
                 )
                 try:
                     values = self.tile.read_address(current_address, nvalues)
-                    # pylint: disable=broad-except
+                # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
@@ -1025,6 +1025,7 @@ class TpmDriver(MccsComponentManager):
             if acquired:
                 try:
                     self.tile.write_address(current_address, values)
+                # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed {e}")
             else:

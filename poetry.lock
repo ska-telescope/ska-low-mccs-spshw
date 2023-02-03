@@ -723,7 +723,7 @@ toml = ["tomli (>=1.2.3)"]
 [[package]]
 name = "pyfabil"
 version = "1.1"
-description = ""
+description = "A general Python package for interfacing with FPGA boards"
 category = "main"
 optional = false
 python-versions = "*"
@@ -1069,7 +1069,7 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.4.1"
+version = "0.4.2"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 category = "main"
 optional = false
@@ -1375,7 +1375,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "50eb698d522d940e60286ca39d2c1503285675fdab00c3773f3b3b819befa523"
+content-hash = "c4da35abd1f8f9089de9401259bbf0c171adfcd975c9ee8558ca362fc90eeeec"
 
 [metadata.files]
 aavs-system = []
@@ -2078,8 +2078,8 @@ ska-control-model = [
     {file = "ska_control_model-0.3.1.tar.gz", hash = "sha256:fa3dea88421f6d159a6c86f55be8b79750b93932ff9f67779fb67a91c85351ed"},
 ]
 ska-low-mccs-common = [
-    {file = "ska_low_mccs_common-0.4.1-py3-none-any.whl", hash = "sha256:7a9b4e5f58b791bdab208eba6efb46bf07895006dbd64ff3f7313cdaca0062a1"},
-    {file = "ska_low_mccs_common-0.4.1.tar.gz", hash = "sha256:2f229c7d5530762b7736ccc98ccf99d0d0ffebe828e3a8a4e21704568dc6ad06"},
+    {file = "ska_low_mccs_common-0.4.2-py3-none-any.whl", hash = "sha256:4c1306749fda36f8466a7605e56c6e2fb5486698d3b3c042fd3ce3589d033d12"},
+    {file = "ska_low_mccs_common-0.4.2.tar.gz", hash = "sha256:1e0dd120aedcb1781fe578727e94159337ce9964094f5b6b82eb40c1c25254fa"},
 ]
 ska-ser-logging = [
     {file = "ska_ser_logging-0.4.1+0a677a67-py3-none-any.whl", hash = "sha256:8b2bf14e9981966c22503b6b6477b6386dec1def1f71295579f0686d55b83841"},

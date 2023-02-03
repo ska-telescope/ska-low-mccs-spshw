@@ -345,6 +345,7 @@ class StaticTileSimulator(StaticTpmSimulator):
         assert self.tpm  # for the type checker
         return self.tpm._pps_delay
 
+    @property
     def is_programmed(self: StaticTileSimulator) -> bool:
         """
         Return whether the mock has been implemented.

@@ -169,7 +169,7 @@ def choose_a_tpm() -> int:
 
     :return: a TPM number.
     """
-    return 5
+    return 2
 
 
 @given("the fan mode is manual")

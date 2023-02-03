@@ -68,6 +68,7 @@ class BaseTpmSimulator(ObjectComponent):
         "10.0.99.3": 0x10FEED080A58,
         "10.0.99.4": 0x10FEED080A56,
     }
+    # Matches tests.unit.tile.test_tile_device.TestMccsTileCommands.test_get_arp_table
     ARP_TABLE = {0: [0, 1], 1: [1]}
     # TPM version: "tpm_v1_2" or "tpm_v1_6"
     TPM_VERSION = 120

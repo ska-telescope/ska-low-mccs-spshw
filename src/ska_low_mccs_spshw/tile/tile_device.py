@@ -1719,7 +1719,7 @@ class MccsTile(SKABaseDevice):
 
             :return: a JSON-encoded dictionary of coreId and populated arpID table
             """
-            return json.dumps(self._component_manager.get_arp_table())
+            return json.dumps(self._component_manager.arp_table)
 
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
@@ -1744,9 +1744,7 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        return_code, unique_id = handler()
-        # TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
-        return ([return_code], [unique_id])
+        return handler()
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""

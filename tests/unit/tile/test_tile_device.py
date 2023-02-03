@@ -1347,3 +1347,38 @@ class TestMccsTileCommands:
             tile_device.loggingLevel = 3
         with pytest.raises(DevFailed, match="pulse_frequency must be between 0 and 7"):
             tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))
+
+    def test_get_arp_table(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        device_admin_mode_changed_callback: MockChangeEventCallback,
+    ) -> None:
+        """
+        Test that GetArpTable returns a result.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param device_admin_mode_changed_callback: a callback that
+            we can use to subscribe to admin mode changes on the tile
+            device
+        """
+        tile_device.add_change_event_callback(
+            "adminMode",
+            device_admin_mode_changed_callback,
+        )
+        device_admin_mode_changed_callback.assert_next_change_event(AdminMode.OFFLINE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
+        assert tile_device.adminMode == AdminMode.ONLINE
+
+        time.sleep(0.1)
+
+        tile_device.MockTpmOff()
+        time.sleep(0.1)
+        tile_device.MockTpmOn()
+
+        result = tile_device.GetArpTable()
+        assert json.loads(result) == {"0": [0, 1], "1": [1]}

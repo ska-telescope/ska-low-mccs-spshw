@@ -59,6 +59,7 @@ include:
 
 bridge:
   stage: downstream
-  trigger:
-    project: ska-telescope/mccs/ska-low-mccs
-    token: $CI_JOB_TOKEN
+  script:
+  - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/ska-telescope/mccs/ska-low-mccs/.gitlab-ci.yml
+  only:
+  - tags

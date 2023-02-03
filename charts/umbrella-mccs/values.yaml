@@ -55,11 +55,13 @@ ska-taranta:
       limits:
         memory: 1024Mi # 1024Mi = 1 GB mem
 
+
 ska-taranta-dashboard:
   ingress:
     enabled: true
     nginx: true
     hostname: test-taranta.k8s.stfc.skao.int
+    
 ska-taranta-auth:
   ingress:
     enabled: true

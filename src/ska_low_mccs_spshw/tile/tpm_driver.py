@@ -937,12 +937,11 @@ class TpmDriver(MccsComponentManager):
         assert self.tile.tpm is not None  # for the type checker
         if len(self.tile.tpm.find_register(register_name)) == 0:
             self.logger.error("Register '" + register_name + "' not present")
-            value = None
             return []
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
-                    value = cast(int, self.tile[register_name])
+                    value = self.tile.read_register(register_name)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -952,10 +951,10 @@ class TpmDriver(MccsComponentManager):
                 return []
 
         if isinstance(value, list):
-            lvalue = [value]
-        else:
             lvalue = cast(list, value)
-        self.logger.debug(f"Read value: {value} = {hex(value)}")
+        else:
+            lvalue = [value]
+        # self.logger.debug(f"Read value: {value} = {hex(value)}")
         return lvalue
 
     def write_register(self: TpmDriver, register_name: str, values: list[Any]) -> None:
@@ -965,6 +964,8 @@ class TpmDriver(MccsComponentManager):
         :param register_name: name of the register
         :param values: values to write
         """
+        if isinstance(values, int):
+            values = [values]
         devname = ""
         regname = devname + register_name
         assert self.tile.tpm is not None  # for the type checker
@@ -974,10 +975,7 @@ class TpmDriver(MccsComponentManager):
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     try:
-                        if isinstance(len, list) and len(values) == 1:
-                            self.tile.setitem[register_name] = values[0]
-                        else:
-                            self.tile.setitem[register_name] = values
+                        self.tile.write_register(register_name, values)
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -994,28 +992,23 @@ class TpmDriver(MccsComponentManager):
         :return: values at the address
         """
         values = []
-        # this is inefficient
-        # TODO use list write method for tile
-        #
         current_address = int(address & 0xFFFFFFFC)
-        for _i in range(nvalues):
-            self.logger.debug(
-                "Reading address "
-                + str(current_address)
-                + "of type "
-                + str(type(current_address))
-            )
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
-                if acquired:
-                    try:
-                        values.append(cast(int, self.tile[current_address]))
+        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            if acquired:
+                self.logger.debug(
+                    "Reading address "
+                    + str(current_address)
+                    + "of type "
+                    + str(type(current_address))
+                )
+                try:
+                    values = self.tile.read_address(current_address, nvalues)
                     # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                else:
-                    self.logger.warning("Failed to acquire hardware lock")
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
 
-            current_address = current_address + 4
         return values
 
     def write_address(self: TpmDriver, address: int, values: list[int]) -> None:
@@ -1025,22 +1018,15 @@ class TpmDriver(MccsComponentManager):
         :param address: address of start of read
         :param values: values to write
         """
-        # this is inefficient
-        # TODO use list write method for tile
-        #
         current_address = int(address & 0xFFFFFFFC)
         if isinstance(values, int):
             values = [values]
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
-                for value in values:
-                    try:
-                        self.tile.setitem[current_address] = value
-                    # pylint: disable=broad-except
-                    except Exception:
-                        self.logger.warning("TpmDriver: Tile access failed")
-                        break
-                    current_address = current_address + 4
+                try:
+                    self.tile.write_address(current_address, values)
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
@@ -1187,7 +1173,7 @@ class TpmDriver(MccsComponentManager):
         """
         if isinstance(truncation, int):
             self._channeliser_truncation = [truncation] * 512
-        elif type(truncation) == list:
+        elif isinstance(truncation, list):
             if len(truncation) == 1:
                 self._channeliser_truncation = truncation * 512
             else:

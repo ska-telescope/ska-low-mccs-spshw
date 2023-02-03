@@ -1792,9 +1792,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(
-            self: MccsTile.GetArpTableCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
+        def do(self: MccsTile.GetArpTableCommand, *args: Any, **kwargs: Any) -> str:
             """
             Implement :py:meth:`.MccsTile.GetArpTable` commands.
 

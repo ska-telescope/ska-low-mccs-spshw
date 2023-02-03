@@ -345,7 +345,6 @@ class StaticTileSimulator(StaticTpmSimulator):
         assert self.tpm  # for the type checker
         return self.tpm._pps_delay
 
-    @property
     def is_programmed(self: StaticTileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
@@ -394,8 +393,9 @@ class StaticTileSimulator(StaticTpmSimulator):
 
     def connect(self: StaticTileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
-        assert self.tpm  # for the type checker
-        self.tpm = StaticTpmSimulatorPatchedReadWrite(self.logger)
+        self.tpm = StaticTpmSimulatorPatchedReadWrite(
+            self.logger
+        )  # type: ignore[assignment]
         self[int(0x30000000)] = [3, 7]
 
     def __getitem__(self: StaticTileSimulator, key: int | str) -> Any:

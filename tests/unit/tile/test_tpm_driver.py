@@ -423,7 +423,7 @@ class TestTPMDriver:
         tpm_driver._start_polling_event.set()
 
         # give sufficient time to give up an connecting and return fault
-        time.sleep(1)
+        time.sleep(2)
 
         # assert tpm_driver._faulty
         assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
@@ -611,7 +611,7 @@ class TestTPMDriver:
         time.sleep(1)
         assert static_tile_simulator.tpm
 
-        expected_read = [2, 3, 3]
+        expected_read = [2, 3, 3, 4]
         tpm_driver.write_address(4, expected_read)
         assert tpm_driver.read_address(4, len(expected_read)) == expected_read
 

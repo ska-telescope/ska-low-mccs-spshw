@@ -81,13 +81,12 @@ def _handle_getattribute(
             "attribute": name,
             "value": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "attribute": name,
-            "value": value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "attribute": name,
+        "value": value,
+    }
 
 
 def _handle_setattribute(
@@ -115,13 +114,12 @@ def _handle_setattribute(
             "attribute": name,
             "value": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "attribute": name,
-            "value": set_value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "attribute": name,
+        "value": set_value,
+    }
 
 
 def _handle_command(
@@ -149,13 +147,12 @@ def _handle_command(
             "command": name,
             "retvalue": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "command": name,
-            "retvalue": return_value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "command": name,
+        "retvalue": return_value,
+    }
 
 
 @router.get("/get/json.htm")

@@ -337,11 +337,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
+        if result is not None and isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
 
     def desire_off(
         self: TileOrchestrator,
@@ -366,11 +365,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
+        if result is not None and isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
 
     def desire_standby(
         self: TileOrchestrator,
@@ -396,11 +394,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
+        if result is not None and isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
 
     def update_subrack_communication_state(
         self: TileOrchestrator,

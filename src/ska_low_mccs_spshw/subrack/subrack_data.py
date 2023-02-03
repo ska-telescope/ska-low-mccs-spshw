@@ -36,6 +36,6 @@ class SubrackData:  # pylint: disable=too-few-public-methods
 class FanMode(enum.IntEnum):
     """Python enumerated type for ``FanMode`` attribute."""
 
-    MANUAL = 1
+    MANUAL = 0
     """Tango Device accepts commands from all clients."""
-    AUTO = 2
+    AUTO = 1

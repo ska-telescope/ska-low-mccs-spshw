@@ -1,0 +1,52 @@
+@startuml
+class SpsHwController #lightgray {
+  controllerIp
+  PduFQDN
+  PduPort
+  SwitchFQDNs
+}
+note left: Controls the CMB and all elements in the SPS cabinet
+class SpsStation {
+  StationId
+  CabinetNetworkAddress
+  SubrackFQDNs
+  TileFQDNs
+}
+note right: Controls elements (subrack, tile) for a single station
+class Sps100GbSwitch #lightgray {
+  ManagementIp
+  CabinetNetworkAddress
+}
+note right
+  Switch is managed by the
+  network infrastructure
+  One switch every 3 cabinets
+  is L3, others are L2
+end note
+
+class SpsPdu #lightgray {
+  PduIp
+} 
+note right: PDU provides power to all SPS elements
+class MccsSubrack {
+  PduFQDN
+  PduPort
+  SubrackIp
+  SubrackPort
+}
+class MccsTile {
+  SubrackFQDN
+  SubrackBay
+  TpmIp
+  TpmPort
+}
+SpsHwController "2" o-- SpsStation
+SpsHwController "2" o-- Sps100GbSwitch
+SpsStation "2" o-- MccsSubrack
+SpsStation "16" o-- MccsTile
+MccsTile o-- MccsSubrack : < powers 
+MccsSubrack o-- SpsPdu : < powers
+Sps100GbSwitch o-- SpsPdu : < powers
+SpsHwController o-- SpsPdu : < powers
+MccsTile -- Sps100GbSwitch: uses >
+@enduml

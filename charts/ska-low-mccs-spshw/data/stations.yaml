@@ -19,17 +19,17 @@ server:
       classes:
         - name: "SpsStation"
           devices:
-            - name: {{printf "low-mccs-spshw/station/%03d" (int $key)}}
+            - name: {{printf "low-mccs/station/%03d" (int $key)}}
               properties:
                 - name: "SubrackFQDNs"
                   values:
 {{- range $subrack := $this_station.subracks}}
-                    - {{printf "low-mccs-spshw/subrack/%04d" (int $subrack)}}
+                    - {{printf "low-mccs/subrack/%04d" (int $subrack)}}
 {{- end}}
                 - name: "TileFQDNs"
                   values:
 {{- range $tpm := $this_station.tpms}}
-                    - {{printf "low-mccs-spshw/tile/%04d" (int $tpm)}}
+                    - {{printf "low-mccs/tile/%04d" (int $tpm)}}
 {{- end}}
                 - name: "LoggingLevelDefault"
                   values:

@@ -87,7 +87,6 @@ jupyterhub:
       TANGO_HOST: "databaseds-tango-base-test.ska-low-mccs-spshw:10000"
   proxy:
     secretToken: 'e82efa842447ef9ca43722e382de46efaaec82a20df059dfaed6b0351d39a6d6'
-      
 
 # example overrides
 # ska-low-mccs:

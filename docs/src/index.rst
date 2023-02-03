@@ -23,6 +23,7 @@ prototype for the `Square Kilometre Array`_.
    reference/tile_test_generator.rst
    reference/subrack_driver.rst
    reference/pointing.rst
+   reference/station.rst
 
 
 Indices and tables

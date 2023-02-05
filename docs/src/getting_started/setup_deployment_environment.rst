@@ -220,6 +220,9 @@ The basic steps to deploying MCCS are:
      automatically restarted. After several minutes, the cluster should
      stabilise and you will see that all devices are `Running` (except
      for the configuration pod, which will be `Completed`).
+     If the k9s screen opens successfully but is completely empty there
+     is a chance that you're experiencing a namespace issue, try
+     pressing 0, and you should see all the pods appear.
 
       .. code-block:: shell-session
 
@@ -229,6 +232,18 @@ The basic steps to deploying MCCS are:
 
         $ make k8s-install-chart
         $ k9s # watch the cluster yourself using the k9s GUI application and exit when it is ready
+
+     To use the deployed tango database with external tools from the
+     cluster like jive or itango, it may be necessary to forward the
+     port of the database. This can be done from the k9s screen.
+     Navigate over the database pod and press
+
+      .. code-block:: shell-session
+
+         shift-f
+
+     And press ok on the dialog box that appears. This should forward
+     ports and allow the tango service to be used from outside
 
 Using the MCCS Deployment
 -------------------------

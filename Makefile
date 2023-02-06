@@ -22,6 +22,7 @@ include .make/raw.mk
 include .make/base.mk
 include .make/docs.mk
 include .make/helm.mk
+include .make/xray.mk
 
 # define private overrides for above variables in here
 -include PrivateRules.mak
@@ -43,7 +44,15 @@ K8S_CHART_PARAMS += \
 endif
 
 
-K8S_TEST_RUNNER_PYTEST_OPTIONS = -v -x --true-context --junitxml=build/reports/functional-tests.xml
+JUNITXML_REPORT_PATH ?= build/reports/functional-tests.xml
+CUCUMBER_JSON_PATH ?= build/reports/cucumber.json
+JSON_REPORT_PATH ?= build/reports/report.json
+
+K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
+    --junitxml=$(JUNITXML_REPORT_PATH) \
+    --cucumberjson=$(CUCUMBER_JSON_PATH) \
+	--json-report --json-report-file=$(JSON_REPORT_PATH)
+
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
 K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 

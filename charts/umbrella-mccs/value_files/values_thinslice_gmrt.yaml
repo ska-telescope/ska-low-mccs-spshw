@@ -1,0 +1,52 @@
+#This values file takes precedence over values.yaml
+#to use in deployment K8S_CHART_PARAMS="-f charts/umbrella-mccs/value_files/values_thinslice_gmrt.yaml"
+
+ska-low-mccs-spshw:
+  facility: gmrt 
+  ska-tango-base:
+    enabled: false
+  simulators:
+    subracks:
+      1:
+        host: subrack-simulator-1
+    #   2:
+    #     host: subrack-simulator-2
+  deviceServers:
+    tpms:
+      instances:
+  #     1:
+  #       enabled: true
+  #     2:
+  #       enabled: true
+  #       simulation_config: false
+  #     3:
+  #       enabled: false
+  #     4:
+  #       enabled: false
+      logging_level_default: 5
+      resources:
+        requests:
+          memory: 512Mi
+
+ska-low-mccs-daq:
+  ska-tango-base:
+    enabled: false
+  low_mccs_daq:
+    enabled: true
+    image:
+      registry: artefact.skao.int
+      image: ska-low-mccs-daq
+      tag: 0.1.2 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+      pullPolicy: IfNotPresent
+  securityContext:
+    capabilities:
+      add: ["NET_RAW", "IPC_LOCK", "SYS_NICE", "SYS_ADMIN", "KILL", "SYS_TIME"]
+  deviceServers:
+    daqreceiver:
+      devices:
+        # - name: daqreceiver-001
+        #   device_name: low-mccs-daq/daqreceiver/001  # mandatory
+        #   daq_id: 1  # optional: defaults to position in this list
+        #   receiver_interface: eth0  # optional: defaults to "eth0"
+        #   receiver_ip: "10.0.10.150"  # mandatory
+        #   receiver_port: 4660  # optional: defaults to 4660

@@ -295,7 +295,7 @@ class TpmDriver(MccsComponentManager):
         time_interval_1 = 5.0
         time_interval_2 = 30.0
         try:
-            self._is_programmed = self.tile.is_programmed()
+            self._is_programmed = self.tile.is_programmed
             if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
                 self._adc_rms = self.tile.get_adc_rms()
@@ -368,7 +368,9 @@ class TpmDriver(MccsComponentManager):
         self._is_programmed = False
         # pylint: disable=pointless-statement
         self._update_tpm_status  # generates a callback if status changed
-        status = self._tpm_status
+        status = self.tpm_status
+        msg = f"tpm status {status}"
+        self.logger.debug(msg)
         if status in [TpmStatus.UNPROGRAMMED, TpmStatus.PROGRAMMED]:
             # if self._check_programmed():
             #    self._tpm_status = TpmStatus.PROGRAMMED
@@ -381,16 +383,17 @@ class TpmDriver(MccsComponentManager):
 
     def tpm_disconnected(self: TpmDriver) -> None:
         """Tile disconnected to tpm."""
+        self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
-        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         while True:
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     self.tile.tpm = None
-                    self._hardware_lock.release()
                     break
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
+        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         self.logger.debug("Tile disconnected from tpm.")
 
     @property
@@ -431,7 +434,7 @@ class TpmDriver(MccsComponentManager):
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     try:
-                        self._is_programmed = self.tile.is_programmed()
+                        self._is_programmed = self.tile.is_programmed
                         if self._is_programmed is False:
                             new_status = TpmStatus.UNPROGRAMMED
                         elif self._tile_id != self.tile.get_tile_id():
@@ -559,7 +562,7 @@ class TpmDriver(MccsComponentManager):
             return False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            self._is_programmed = self.tile.is_programmed()
+            self._is_programmed = self.tile.is_programmed
         self.logger.debug("Lock released")
         return self._is_programmed
 
@@ -655,10 +658,10 @@ class TpmDriver(MccsComponentManager):
         prog_status = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            if self.tile.is_programmed() is False:
+            if self.tile.is_programmed is False:
                 self._set_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
-            prog_status = self.tile.is_programmed()
+            prog_status = self.tile.is_programmed
         self.logger.debug("Lock released")
         #
         # Initialisation after programming the FPGA
@@ -957,7 +960,9 @@ class TpmDriver(MccsComponentManager):
         # self.logger.debug(f"Read value: {value} = {hex(value)}")
         return lvalue
 
-    def write_register(self: TpmDriver, register_name: str, values: list[Any]) -> None:
+    def write_register(
+        self: TpmDriver, register_name: str, values: list[Any] | int
+    ) -> None:
         """
         Read the values in a register.
 
@@ -1520,8 +1525,8 @@ class TpmDriver(MccsComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
-                    self.tile.initialise_beamformer(128, 8)
-                    self.tile.set_first_last_tile(False, False)
+                    self.tile.initialise_beamformer(128, 8, False, False)
+                    # self.tile.set_first_last_tile(False, False)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

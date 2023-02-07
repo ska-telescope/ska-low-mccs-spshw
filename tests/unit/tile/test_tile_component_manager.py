@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -32,6 +31,7 @@ from ska_low_mccs_spshw.tile import (
 )
 
 
+# pylint: disable=too-many-lines
 class TestTileComponentManager:
     """
     Class for testing the tile component manager.
@@ -196,6 +196,7 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
         tile_component_manager._tpm_power_state_changed(PowerState.OFF)
 
+    # pylint: disable=too-many-arguments
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
@@ -287,6 +288,10 @@ class TestStaticSimulatorCommon:
       on)
     """
 
+    def __init__(self: TestStaticSimulatorCommon):
+        """Define a constructor."""
+        self.tile_name: str
+
     @pytest.fixture()
     def initial_tpm_power_state(
         self: TestStaticSimulatorCommon,
@@ -309,6 +314,7 @@ class TestStaticSimulatorCommon:
             "tile_component_manager",
         ]
     )
+    # pylint: disable=too-many-arguments
     def tile(
         self: TestStaticSimulatorCommon,
         static_tpm_simulator: StaticTpmSimulator,
@@ -355,10 +361,10 @@ class TestStaticSimulatorCommon:
         self.tile_name = request.param
         if request.param == "static_tpm_simulator":
             return static_tpm_simulator
-        elif request.param == "static_tpm_simulator_component_manager":
+        if request.param == "static_tpm_simulator_component_manager":
             static_tpm_simulator_component_manager.start_communicating()
             return static_tpm_simulator_component_manager
-        elif request.param == "tile_component_manager":
+        if request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             communication_state_changed_callback.assert_next_call(
                 CommunicationStatus.NOT_ESTABLISHED
@@ -773,6 +779,7 @@ class TestStaticSimulatorCommon:
         tile.write_register(register, write_values)
         assert tile.read_register(register) == expected_read
 
+    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         "write_address",
         [
@@ -1038,7 +1045,7 @@ class TestDynamicSimulatorCommon:
         if request.param == "dynamic_tpm_simulator_component_manager":
             dynamic_tpm_simulator_component_manager.start_communicating()
             return dynamic_tpm_simulator_component_manager
-        elif request.param == "tile_component_manager":
+        if request.param == "tile_component_manager":
             tile_component_manager.start_communicating()
             time.sleep(0.1)
             # With the update to v0.13 of the base classes the logic to change
@@ -1149,6 +1156,7 @@ class TestTpmDriver:
         """
         return unittest.mock.Mock()
 
+    # pylint: disable=too-many-arguments
     @pytest.fixture()
     def tpm_driver_with_mocked_tile(
         self: TestTpmDriver,

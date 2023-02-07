@@ -1,5 +1,4 @@
 # type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -13,6 +12,7 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
+from typing import Any
 
 import pytest
 from pyfabil.base.definitions import LibraryError
@@ -25,8 +25,9 @@ from ska_low_mccs_spshw.tile import StaticTileSimulator, TpmDriver
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 
-@pytest.fixture()
-def tpm_driver(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="tpm_driver")
+def tpm_driver_fixture(
     logger: logging.Logger,
     max_workers: int,
     tile_id: int,
@@ -418,15 +419,13 @@ class TestTPMDriver:
         # However the connection is now lost
         assert not static_tile_simulator.tpm
         # restart polling loop
-        tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
+        # tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
         tpm_driver._stop_polling_event.clear()
         tpm_driver._start_polling_event.set()
-
-        # give sufficient time to give up an connecting and return fault
-        time.sleep(2)
+        comm_state = tpm_driver.communication_state
 
         # assert tpm_driver._faulty
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
+        assert comm_state == CommunicationStatus.NOT_ESTABLISHED
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
         # the connection should attempt to restart given enough time
@@ -634,7 +633,7 @@ class TestTPMDriver:
         static_tile_simulator.connect()
 
         # core_id must be 0,1
-        core_dict = {
+        core_dict: dict[str, Any] = {
             "core_id": 2,
             "arp_table_entry": 1,
             "src_mac": 0x14109FD4041A,
@@ -644,7 +643,7 @@ class TestTPMDriver:
             "dst_port": 9000,
         }
         # arp_table_entry must be 0-7
-        core_dict2 = {
+        core_dict2: dict[str, Any] = {
             "core_id": 1,
             "arp_table_entry": 8,
             "src_mac": 0x14109FD4041A,
@@ -683,7 +682,7 @@ class TestTPMDriver:
         # mocked connection to the TPM simuator.
         static_tile_simulator.connect()
 
-        core_dict = {
+        core_dict: dict[str, Any] = {
             "core_id": 0,
             "arp_table_entry": 1,
             "src_mac": 0x14109FD4041A,
@@ -692,7 +691,7 @@ class TestTPMDriver:
             "dst_ip": "3221226219",
             "dst_port": 9000,
         }
-        core_dict2 = {
+        core_dict2: dict[str, Any] = {
             "core_id": 1,
             "arp_table_entry": 1,
             "src_mac": 0x14109FD4041A,
@@ -770,7 +769,7 @@ class TestTPMDriver:
         # establish connection to the TPM
         static_tile_simulator.connect()
         initialise_task_callback = MockCallable()
-        assert static_tile_simulator.is_programmed() is False
+        assert static_tile_simulator.is_programmed is False
         tpm_driver.initialise(task_callback=initialise_task_callback)
 
         time.sleep(0.1)
@@ -781,7 +780,7 @@ class TestTPMDriver:
         _, kwargs = initialise_task_callback.get_next_call()
         assert kwargs["status"] == TaskStatus.IN_PROGRESS
 
-        assert static_tile_simulator.is_programmed() is True
+        assert static_tile_simulator.is_programmed is True
         assert tpm_driver._is_programmed is True
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
         static_tile_simulator.tpm._tpm_status = TpmStatus.PROGRAMMED

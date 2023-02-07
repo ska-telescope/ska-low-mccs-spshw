@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -28,8 +26,8 @@ from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import StaticTpmSimulator
 
 
-@pytest.fixture()
-def device_to_load(
+@pytest.fixture(name="device_to_load")
+def device_to_load_fixture(
     patched_tile_device_class: type[MccsTile],
 ) -> DeviceToLoadType:
     """
@@ -49,8 +47,8 @@ def device_to_load(
     }
 
 
-@pytest.fixture()
-def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
+@pytest.fixture(name="tile_device")
+def tile_device_fixture(tango_harness: TangoHarness) -> MccsDeviceProxy:
     """
     Fixture that returns the tile device under test.
 
@@ -61,6 +59,7 @@ def tile_device(tango_harness: TangoHarness) -> MccsDeviceProxy:
     return tango_harness.get_device("low-mccs/tile/0001")
 
 
+# pylint: disable=too-many-lines
 class TestMccsTile:
     """
     Test class for MccsTile tests.
@@ -202,6 +201,7 @@ class TestMccsTile:
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 
+    # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [
@@ -237,7 +237,7 @@ class TestMccsTile:
                 StaticTpmSimulator.CHANNELISER_TRUNCATION,
                 [2] * 512,
             ),
-            ("preaduLevels", pytest.approx(StaticTpmSimulator.PREADU_LEVELS), [5] * 32),
+            ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
             ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
             ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
@@ -305,7 +305,7 @@ class TestMccsTile:
         time.sleep(0.1)
         device_state_changed_callback.assert_last_change_event(DevState.ON)
 
-        if type(initial_value) == list:
+        if isinstance(initial_value, list):
             initial_value = np.array(initial_value)
             assert (getattr(tile_device, attribute) == initial_value).all()
         else:
@@ -313,7 +313,7 @@ class TestMccsTile:
 
         if write_value is not None:
             tile_device.write_attribute(attribute, write_value)
-            if type(write_value) == list:
+            if isinstance(write_value, list):
                 write_value = np.array(write_value)
                 assert (getattr(tile_device, attribute) == write_value).all()
             else:
@@ -1320,6 +1320,13 @@ class TestMccsTileCommands:
         tile_device.MockTpmOff()
         time.sleep(0.1)
         tile_device.MockTpmOn()
+
+        # How did this work before adding this?
+        tile_device.adminMode = AdminMode.MAINTENANCE
+        device_admin_mode_changed_callback.assert_last_change_event(
+            AdminMode.MAINTENANCE
+        )
+        assert tile_device.adminMode == AdminMode.MAINTENANCE
 
         args = [
             {

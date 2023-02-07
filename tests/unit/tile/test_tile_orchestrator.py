@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -32,8 +30,8 @@ from ska_low_mccs_spshw.tile.tile_orchestrator import (
 class TestTileOrchestrator:
     """Class for testing the tile orchestrator."""
 
-    @pytest.fixture(scope="session")
-    def rules(
+    @pytest.fixture(scope="session", name="rules")
+    def rules_fixture(
         self: TestTileOrchestrator,
     ) -> Mapping[StateStimulusTupleType, list[str]]:
         """
@@ -206,8 +204,8 @@ class TestTileOrchestrator:
             "turn_tpm_on": ({}, {"turn_tpm_on": []}, None),
         }
 
-    @pytest.fixture()
-    def callbacks(
+    @pytest.fixture(name="callbacks")
+    def callbacks_fixture(
         self: TestTileOrchestrator,
         mocker: pytest_mock.MockerFixture,
     ) -> Mapping[str, unittest.mock.Mock]:
@@ -222,6 +220,7 @@ class TestTileOrchestrator:
 
     @pytest.fixture(
         scope="session",
+        name="state",
         params=[
             (CommunicationStatus.DISABLED,),
             (
@@ -456,7 +455,7 @@ class TestTileOrchestrator:
             "ESTABLISHED_DESIRED_ON_UNKNOWN_ESTABLISHED",
         ],
     )
-    def state(
+    def state_fixture(
         self: TestTileOrchestrator, request: SubRequest
     ) -> Union[
         Tuple[CommunicationStatus],
@@ -598,6 +597,7 @@ class TestTileOrchestrator:
 
         return (changed, called, context)
 
+    # pylint: disable=too-many-arguments
     def test_orchestrator_action(
         self: TestTileOrchestrator,
         tile_orchestrator: TileOrchestrator,
@@ -626,7 +626,7 @@ class TestTileOrchestrator:
             that the tile orchestrator took the right action in
             response to the stimulus.
         """
-
+        # pylint: disable=line-too-long
         def stimulate() -> None:
             """Apply the specified stimulus on the orchestrator."""
             {

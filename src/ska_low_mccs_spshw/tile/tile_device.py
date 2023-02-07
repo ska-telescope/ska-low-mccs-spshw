@@ -14,6 +14,7 @@ import logging
 import os.path
 from typing import Any, Optional, cast
 
+import numpy as np
 import tango
 from ska_control_model import (
     AdminMode,
@@ -84,6 +85,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._tile_programming_state = TpmStatus.UNKNOWN
+        self._max_workers = 1
         super().init_device()
 
         message = (
@@ -930,7 +932,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.preadu_levels
+        result = self.component_manager.preadu_levels
+        return np.asarray(result)
 
     @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: list[int]) -> None:
@@ -3011,7 +3014,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :returns: whether the command is allowed
         """
-        return self.admin_mode == AdminMode.MAINTENANCE
+        return self.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

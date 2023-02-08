@@ -288,10 +288,6 @@ class TestStaticSimulatorCommon:
       on)
     """
 
-    def __init__(self: TestStaticSimulatorCommon):
-        """Define a constructor."""
-        self.tile_name: str
-
     @pytest.fixture()
     def initial_tpm_power_state(
         self: TestStaticSimulatorCommon,
@@ -358,6 +354,7 @@ class TestStaticSimulatorCommon:
 
         :return: the tile class object under test
         """
+        # pylint: disable=attribute-defined-outside-init
         self.tile_name = request.param
         if request.param == "static_tpm_simulator":
             return static_tpm_simulator

@@ -28,8 +28,8 @@ from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsComponentManager
 
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
-from ska_low_mccs_spshw.tile.utils import _int2ip, acquire_timeout
+from .tpm_status import TpmStatus
+from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
@@ -295,7 +295,7 @@ class TpmDriver(MccsComponentManager):
         time_interval_1 = 5.0
         time_interval_2 = 30.0
         try:
-            self._is_programmed = self.tile.is_programmed
+            self._is_programmed = self.tile.is_programmed()
             if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
                 self._adc_rms = self.tile.get_adc_rms()
@@ -366,8 +366,7 @@ class TpmDriver(MccsComponentManager):
         self.update_component_state({"fault": False})
         self.logger.debug("Tpm connected to tile.")
         self._is_programmed = False
-        # pylint: disable=pointless-statement
-        self._update_tpm_status  # generates a callback if status changed
+        self._update_tpm_status()  # generates a callback if status changed
         status = self.tpm_status
         msg = f"tpm status {status}"
         self.logger.debug(msg)
@@ -385,6 +384,8 @@ class TpmDriver(MccsComponentManager):
         """Tile disconnected to tpm."""
         self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
+        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         while True:
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
@@ -392,8 +393,6 @@ class TpmDriver(MccsComponentManager):
                     break
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
-        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         self.logger.debug("Tile disconnected from tpm.")
 
     @property
@@ -1107,8 +1106,8 @@ class TpmDriver(MccsComponentManager):
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
-            core["src_ip"] = _int2ip(core["src_ip"])
-            core["dst_ip"] = _int2ip(core["dst_ip"])
+            core["src_ip"] = int2ip(core["src_ip"])
+            core["dst_ip"] = int2ip(core["dst_ip"])
         return self._forty_gb_core_list
 
     @property

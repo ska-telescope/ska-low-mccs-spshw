@@ -337,7 +337,7 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        if result is not None and isinstance(result, tuple):
+        if isinstance(result, tuple):
             unique_id = result[1]
             if task_callback:
                 self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
@@ -365,7 +365,7 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        if result is not None and isinstance(result, tuple):
+        if isinstance(result, tuple):
             unique_id = result[1]
             if task_callback:
                 self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
@@ -394,7 +394,7 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        if result is not None and isinstance(result, tuple):
+        if isinstance(result, tuple):
             unique_id = result[1]
             if task_callback:
                 self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"

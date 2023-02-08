@@ -15,7 +15,7 @@ from contextlib import contextmanager
 
 __all__ = [
     "acquire_timeout",
-    "_int2ip",
+    "int2ip",
 ]
 
 
@@ -39,7 +39,7 @@ def acquire_timeout(
             lock.release()
 
 
-def _int2ip(addr: int) -> str:
+def int2ip(addr: int) -> str:
     """
     Convert integer IPV4 into formatted dot address.
 

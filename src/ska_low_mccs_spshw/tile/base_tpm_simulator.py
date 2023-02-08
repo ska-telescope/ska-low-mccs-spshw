@@ -523,7 +523,6 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: values read from the register
         """
-        print(f"base tpm read_register {self._register_map}")
         values = self._register_map.get(register_name)
         return values
 
@@ -540,7 +539,6 @@ class BaseTpmSimulator(ObjectComponent):
         """
         if register_name != "" or register_name != "unknown":
             self._register_map.update({register_name: values})
-        print(f"base tpm write_register {self._register_map}")
 
     def read_address(
         self: BaseTpmSimulator, address: int, nvalues: int = 1
@@ -553,7 +551,6 @@ class BaseTpmSimulator(ObjectComponent):
 
         :return: values at the address
         """
-        print(f"base tpm read_address {self._address_map}")
         values = []
         for i in range(nvalues):
             key = str(address + i)
@@ -570,7 +567,6 @@ class BaseTpmSimulator(ObjectComponent):
         for i, value in enumerate(values):
             key = str(address + i)
             self._address_map.update({key: value})
-        print(f"base tpm write_address {self._address_map}")
 
     # pylint: disable=too-many-arguments
     def configure_40g_core(

@@ -207,7 +207,7 @@ class MccsTileCli(metaclass=CliMeta):
             message indicating status. The message is for
             information purpose only.
 
-        :raises RuntimeError: if a general failure occurred in device
+        :raises ValueError: if a general failure occurred in device
         """
         try:
             args = {
@@ -220,7 +220,7 @@ class MccsTileCli(metaclass=CliMeta):
             jstr = json.dumps(args)
             return self._dp.command_inout("SendChannelisedDataContinuous", jstr)
         except tango.DevFailed as exc:
-            raise RuntimeError(
+            raise ValueError(
                 "ChannelID mandatory argument...cannot be a NULL value"
             ) from exc
 

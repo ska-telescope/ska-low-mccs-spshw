@@ -153,7 +153,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         return self._register_map.get(str(address), [])
 
     def find_register(
-        self: StaticTpmSimulatorPatchedReadWrite, address: int
+        self: StaticTpmSimulatorPatchedReadWrite, address: int | str
     ) -> list[Any]:
         """
         Find a item in a dictionary.
@@ -174,7 +174,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         return matches
 
     def __getitem__(
-        self: StaticTpmSimulatorPatchedReadWrite, key: int
+        self: StaticTpmSimulatorPatchedReadWrite, key: int | str
     ) -> Any | LibraryError:
         """
         Check if the specified key is a memory address or register name.
@@ -192,8 +192,6 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
             # Check if a device is specified in the register name
             return self.read_register(key)
         raise LibraryError("must be register name, memory address or SPI device tuple")
-        # Register not found
-        # raise LibraryError(f"Register {key} not found")
 
     def __setitem__(
         self: StaticTpmSimulatorPatchedReadWrite, key: int | str, value: Any

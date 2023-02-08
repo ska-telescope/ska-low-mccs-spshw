@@ -32,13 +32,13 @@ __all__ = [
     # "plugins",
 ]
 
-from ska_low_mccs_spshw.tile.tile_component_manager import (
+from .tile_component_manager import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
 )
-from ska_low_mccs_spshw.tile.tile_device import MccsTile
-from ska_low_mccs_spshw.tile.demo_tile_device import DemoTile
+from .tile_device import MccsTile
+from .demo_tile_device import DemoTile
 from .tpm_status import TpmStatus
 from .tile_health_model import TileHealthModel
 from .tile_data import TileData

@@ -2,9 +2,10 @@ name: "station-{{.Release.Name}}"
 function: ska-low-mccs-station
 domain: ska-low-mccs
 instances: ["station-001", "station-002"]
-entrypoints:
-  - name: "station.MccsStation"
-    path: "/app/src/ska_low_mccs/station/station_device.py"
+#entrypoints:
+#  - name: "station.MccsStation"
+#    path: "/app/src/ska_low_mccs/station/station_device.py"
+command: MccsStation
 server: 
   name: "MccsStation"
   instances:

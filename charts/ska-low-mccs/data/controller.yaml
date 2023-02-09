@@ -2,9 +2,10 @@ name: "controller-{{.Release.Name}}"
 function: ska-low-mccs-controller
 domain: ska-low-mccs
 instances: ["controller"]
-entrypoints:
-  - name: "controller.MccsController"
-    path: "/app/src/ska_low_mccs/controller/controller_device.py"
+#entrypoints:
+#  - name: "controller.MccsController"
+#    path: "/app/src/ska_low_mccs/controller/controller_device.py"
+command: MccsController
 server: 
   name: "MccsController"
   instances:

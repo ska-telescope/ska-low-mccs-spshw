@@ -2,9 +2,10 @@ name: "subarraybeam-{{.Release.Name}}"
 function: ska-low-mccs-subarraybeam
 domain: ska-low-mccs
 instances: ["subarraybeam-01", "subarraybeam-02", "subarraybeam-03", "subarraybeam-04"]
-entrypoints:
-  - name: "subarraybeam.MccsSubarrayBeam"
-    path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
+#entrypoints:
+#  - name: "subarraybeam.MccsSubarrayBeam"
+#    path: "/app/src/ska_low_mccs/subarray_beam/subarray_beam_device.py"
+command: MccsSubarrayBeam
 server: 
   name: "MccsSubarrayBeam"
   instances:

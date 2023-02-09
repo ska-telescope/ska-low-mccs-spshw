@@ -2,9 +2,10 @@ name: "subarray-{{.Release.Name}}"
 function: ska-low-mccs-subarray
 domain: ska-low-mccs
 instances: ["subarray-01", "subarray-02"]
-entrypoints:
-  - name: "subarray.MccsSubarray"
-    path: "/app/src/ska_low_mccs/subarray/subarray_device.py"
+#entrypoints:
+#  - name: "subarray.MccsSubarray"
+#    path: "/app/src/ska_low_mccs/subarray/subarray_device.py"
+command: MccsSubarray
 server: 
   name: "MccsSubarray"
   instances:

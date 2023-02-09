@@ -61,7 +61,7 @@ ska-taranta-dashboard:
     enabled: true
     nginx: true
     hostname: test-taranta.k8s.stfc.skao.int
-
+    
 ska-taranta-auth:
   ingress:
     enabled: true

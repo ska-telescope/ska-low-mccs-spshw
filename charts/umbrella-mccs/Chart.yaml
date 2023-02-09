@@ -19,6 +19,9 @@ dependencies:
 - name: ska-low-mccs
   version: 0.10.2 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
   repository: file://../ska-low-mccs
+- name: ska-low-mccs-spshw
+  version: 0.2.1 
+  repository: https://artefact.skao.int/repository/helm-internal
 - name: ska-tango-taranta-dashboard
   version: 1.3.0
   repository: https://artefact.skao.int/repository/helm-internal
@@ -43,4 +46,6 @@ dependencies:
 - name: ska-tango-util
   version: 0.3.23
   repository: https://artefact.skao.int/repository/helm-internal
-
+- name: ska-low-mccs-daq
+  version: 0.1.2
+  repository: https://artefact.skao.int/repository/helm-internal

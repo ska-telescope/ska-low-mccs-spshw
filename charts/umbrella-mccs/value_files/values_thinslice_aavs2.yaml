@@ -1,0 +1,155 @@
+#This values file takes precedence over values.yaml
+#to use in deployment K8S_CHART_PARAMS="-f charts/umbrella-mccs/value_files/values_thinslice_aavs.yaml"
+
+ska-low-mccs-spshw:
+  facility: aavs2 #make sure this matches a facility in the spshw/data yaml files
+  ska-tango-base:
+    enabled: false
+  simulators:
+    subracks:
+      1:
+        host: subrack-simulator-1
+      2:
+        host: subrack-simulator-2
+  deviceServers:
+    tpms:
+      instances: #By default all devices at site are deployed
+        1:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.17
+          subrack: "1"
+          subrack_bay: 1
+          simulation_config: false
+        2:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.18
+          subrack: "1"
+          subrack_bay: 2
+          simulation_config: false
+        3:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.19
+          subrack: "1"
+          subrack_bay: 3
+          simulation_config: false
+        4:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.20
+          subrack: "1"
+          subrack_bay: 4
+          simulation_config: false
+        5:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.21
+          subrack: "1"
+          subrack_bay: 5
+          simulation_config: false
+        6:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.22
+          subrack: "1"
+          subrack_bay: 6
+          simulation_config: false
+        7:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.23
+          subrack: "1"
+          subrack_bay: 7
+          simulation_config: false
+        8:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.24
+          subrack: "1"
+          subrack_bay: 8
+          simulation_config: false
+        9:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.25
+          subrack: "2"
+          subrack_bay: 1
+          simulation_config: false
+        10:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.26
+          subrack: "2"
+          subrack_bay: 2
+          simulation_config: false
+        11:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.27
+          subrack: "2"
+          subrack_bay: 3
+          simulation_config: false
+        12:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.28
+          subrack: "2"
+          subrack_bay: 4
+          simulation_config: false
+        13:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.29
+          subrack: "2"
+          subrack_bay: 5
+          simulation_config: false
+        14:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.30
+          subrack: "2"
+          subrack_bay: 6
+          simulation_config: false
+        15:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.31
+          subrack: "2"
+          subrack_bay: 7
+          simulation_config: false
+        16:
+          enabled: true
+          version: tpm_v1_2
+          host: 10.0.10.32
+          subrack: "2"
+          subrack_bay: 8
+          simulation_config: false
+      logging_level_default: 5
+      resources:
+        requests:
+          memory: 512Mi
+
+ska-low-mccs-daq:
+  ska-tango-base:
+    enabled: false
+  low_mccs_daq:
+    enabled: true
+    image:
+      registry: artefact.skao.int
+      image: ska-low-mccs-daq
+      tag: 0.1.2 #VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+      pullPolicy: IfNotPresent
+  securityContext:
+    capabilities:
+      add: ["NET_RAW", "IPC_LOCK", "SYS_NICE", "SYS_ADMIN", "KILL", "SYS_TIME"]
+  deviceServers:
+    daqreceiver:
+      devices:
+        # - name: daqreceiver-001
+        #   device_name: low-mccs-daq/daqreceiver/001  # mandatory
+        #   daq_id: 1  # optional: defaults to position in this list
+        #   receiver_interface: eth0  # optional: defaults to "eth0"
+        #   receiver_ip: "10.0.10.150"  # mandatory
+        #   receiver_port: 4660  # optional: defaults to 4660

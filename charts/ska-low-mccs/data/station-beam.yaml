@@ -2,9 +2,10 @@ name: "station-beam-{{.Release.Name}}"
 function: ska-low-mccs-beam
 domain: ska-low-mccs
 instances: ["beam-01", "beam-02", "beam-03", "beam-04"]
-entrypoints:
-  - name: "stationbeam.MccsStationBeam"
-    path: "/app/src/ska_low_mccs/station_beam/station_beam_device.py"
+#entrypoints:
+#  - name: "stationbeam.MccsStationBeam"
+#    path: "/app/src/ska_low_mccs/station_beam/station_beam_device.py"
+command: MccsStationBeam
 server: 
   name: "MccsStationBeam"
   instances:

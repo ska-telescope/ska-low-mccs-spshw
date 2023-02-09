@@ -2,9 +2,10 @@ name: "apiu-{{.Release.Name}}"
 function: ska-low-mccs-apiu
 domain: ska-low-mccs
 instances: ["apiu-001", "apiu-002"]
-entrypoints:
-  - name: "apiu.MccsAPIU"
-    path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
+#entrypoints:
+#  - name: "apiu.MccsAPIU"
+#    path: "/app/src/ska_low_mccs/apiu/apiu_device.py"
+command: MccsAPIU
 server: 
   name: "MccsAPIU"
   instances:

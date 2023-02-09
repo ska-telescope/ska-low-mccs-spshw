@@ -3,9 +3,10 @@ function: ska-low-mccs-antenna
 domain: ska-low-mccs
 instances: ["antenna-000001", "antenna-000002", "antenna-000003", "antenna-000004",
             "antenna-000005", "antenna-000006", "antenna-000007", "antenna-000008"]
-entrypoints:
-  - name: "antenna.MccsAntenna"
-    path: "/app/src/ska_low_mccs/antenna/antenna_device.py"
+#entrypoints:
+#  - name: "antenna.MccsAntenna"
+#    path: "/app/src/ska_low_mccs/antenna/antenna_device.py"
+command: MccsAntenna
 server: 
   name: "MccsAntenna"
   instances:

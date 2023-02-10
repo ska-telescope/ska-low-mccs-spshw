@@ -600,7 +600,7 @@ class TpmDriver(MccsComponentManager):
             self.logger.debug("Lock acquired")
             self.logger.debug("TpmDriver: download_firmware")
             self.tile.program_fpgas(bitfile)
-            is_programmed = self.tile.is_programmed()
+            is_programmed = self.tile.is_programmed
         self.logger.debug("Lock released")
         self._is_programmed = is_programmed
         if is_programmed:

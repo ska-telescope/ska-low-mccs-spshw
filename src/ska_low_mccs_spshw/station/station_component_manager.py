@@ -22,13 +22,21 @@ from typing import Any, Callable, Optional, Sequence
 
 import tango
 from pyfabil.base.utils import ip2long
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.component import (  # check_on,
-    DeviceComponentManager,
-    MccsComponentManager,
+    MccsBaseComponentManager,
     check_communicating,
 )
 from ska_low_mccs_common.utils import threadsafe
+from ska_tango_base.executor import TaskExecutorComponentManager
+
+from ..base.component import DeviceComponentManager
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -153,7 +161,9 @@ class _TileProxy(DeviceComponentManager):
 
 
 # pylint: disable=too-many-instance-attributes
-class SpsStationComponentManager(MccsComponentManager):
+class SpsStationComponentManager(
+    MccsBaseComponentManager, TaskExecutorComponentManager
+):
     """A component manager for a station."""
 
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
@@ -168,7 +178,7 @@ class SpsStationComponentManager(MccsComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -192,12 +202,13 @@ class SpsStationComponentManager(MccsComponentManager):
         self._is_configured = False
         self._on_called = False
 
-        self._communication_state_lock = threading.Lock()
+        self._device_communication_state_lock = threading.Lock()
         self._communication_states = {
             fqdn: CommunicationStatus.DISABLED
             for fqdn in list(subrack_fqdns) + list(tile_fqdns)
         }
 
+        self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
@@ -212,7 +223,7 @@ class SpsStationComponentManager(MccsComponentManager):
                 logger,
                 max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
-                functools.partial(component_state_changed_callback, fqdn=tile_fqdn),
+                functools.partial(self._tile_state_changed, tile_fqdn),
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
@@ -225,7 +236,7 @@ class SpsStationComponentManager(MccsComponentManager):
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
-                functools.partial(component_state_changed_callback, fqdn=subrack_fqdn),
+                functools.partial(self._subrack_state_changed, subrack_fqdn),
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
@@ -260,14 +271,19 @@ class SpsStationComponentManager(MccsComponentManager):
 
         super().__init__(
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
+            max_workers=1,
+            power=PowerState.UNKNOWN,
+            fault=None,
+            is_configured=None,
         )
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
-        super().start_communicating()
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            return
+        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.start_communicating()
@@ -276,12 +292,16 @@ class SpsStationComponentManager(MccsComponentManager):
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
-        super().stop_communicating()
+        if self.communication_state == CommunicationStatus.DISABLED:
+            return
 
         for tile_proxy in self._tile_proxies.values():
             tile_proxy.stop_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.stop_communicating()
+
+        self._update_communication_state(CommunicationStatus.DISABLED)
+        self._update_component_state(power=None, fault=None)
 
     def _device_communication_state_changed(
         self: SpsStationComponentManager,
@@ -292,23 +312,23 @@ class SpsStationComponentManager(MccsComponentManager):
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
         # of order, which breaks tests. Therefore we need to serialise access.
-        with self._communication_state_lock:
+        with self._device_communication_state_lock:
             self._communication_states[fqdn] = communication_state
 
             if self.communication_state == CommunicationStatus.DISABLED:
                 return
 
             if CommunicationStatus.DISABLED in self._communication_states.values():
-                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             elif (
                 CommunicationStatus.NOT_ESTABLISHED
                 in self._communication_states.values()
             ):
-                self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
-                self.update_communication_state(CommunicationStatus.ESTABLISHED)
+                self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
-    def update_communication_state(
+    def _update_communication_state(
         self: SpsStationComponentManager,
         communication_state: CommunicationStatus,
     ) -> None:
@@ -321,45 +341,47 @@ class SpsStationComponentManager(MccsComponentManager):
         :param communication_state: the status of communication with
             the component
         """
-        super().update_communication_state(communication_state)
-
+        super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(
-                    {"is_configured": self.is_configured}
-                )
+            self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe
-    def _tile_power_state_changed(
+    def _tile_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power_state: PowerState,
+        power: Optional[PowerState] = None,
+        health: Optional[HealthState] = None,
     ) -> None:
-        with self._power_state_lock:
-            self._tile_power_states[fqdn] = power_state
-            self._evaluate_power_state()
+        if power is not None:
+            with self._power_state_lock:
+                self._tile_power_states[fqdn] = power
+                self._evaluate_power_state()
 
     @threadsafe
-    def _subrack_power_state_changed(
+    def _subrack_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
-        power_state: PowerState,
+        power: Optional[PowerState] = None,
+        health: Optional[HealthState] = None,
     ) -> None:
-        with self._power_state_lock:
-            self._subrack_power_states[fqdn] = power_state
-            self._evaluate_power_state()
+        if power is not None:
+            with self._power_state_lock:
+                self._subrack_power_states[fqdn] = power
+                self._evaluate_power_state()
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
     ) -> None:
         with self._power_state_lock:
-            power_states = list(self._subrack_power_states.values()) + list(
-                self._tile_power_states.values()
-            )
+            power_states = list(self._tile_power_states.values())
             if all(power_state == PowerState.ON for power_state in power_states):
                 evaluated_power_state = PowerState.ON
-            elif all(power_state == PowerState.OFF for power_state in power_states):
+            elif all(
+                power_state == PowerState.NO_SUPPLY for power_state in power_states
+            ):
                 evaluated_power_state = PowerState.OFF
+            elif all(power_state == PowerState.OFF for power_state in power_states):
+                evaluated_power_state = PowerState.STANDBY
             else:
                 evaluated_power_state = PowerState.UNKNOWN
 
@@ -369,7 +391,7 @@ class SpsStationComponentManager(MccsComponentManager):
                 f"\tiles: {self._tile_power_states}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
-            self.update_component_state({"power_state": evaluated_power_state})
+            self._update_component_state(power=evaluated_power_state)
 
     def set_power_state(
         self: SpsStationComponentManager,
@@ -393,25 +415,17 @@ class SpsStationComponentManager(MccsComponentManager):
         # MccsComponentManager.update_component_power_mode
         with self._power_state_lock:
             if fqdn is None:
+                # pylint: disable-next=attribute-defined-outside-init
                 self.power_state = power_state
             elif fqdn in self._subrack_proxies.keys():
-                self._subrack_proxies[fqdn].power_state = power_state
+                self._subrack_proxies[fqdn]._power_state = power_state
             elif fqdn in self._tile_proxies.keys():
-                self._tile_proxies[fqdn].power_state = power_state
+                self._tile_proxies[fqdn]._power_state = power_state
             else:
                 raise ValueError(
                     f"unknown fqdn '{fqdn}', should be None or belong to subrack "
                     "or tile"
                 )
-
-    @property
-    def power_state_lock(self: MccsComponentManager) -> threading.RLock:
-        """
-        Return the power state lock of this component manager.
-
-        :return: the power state lock of this component manager.
-        """
-        return self._power_state_lock
 
     def off(
         self: SpsStationComponentManager,

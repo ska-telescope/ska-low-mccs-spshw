@@ -16,10 +16,12 @@ __all__ = [
     # devices
     "MccsSubrack",
     "MccsTile",
+    "SpsStation",
     # device subpackages
     "subrack",
     "tile",
 ]
 
+from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile

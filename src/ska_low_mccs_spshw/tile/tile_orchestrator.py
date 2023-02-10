@@ -166,7 +166,7 @@ class TileOrchestrator:
         turn_tpm_off_callback: Callable[[], Any],
         turn_tpm_on_callback: Callable[[], Any],
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_power_changed_callback: Callable[[PowerState], None],
         logger: logging.Logger,
         _initial_state: Optional[StateTupleType] = None,
     ) -> None:
@@ -188,8 +188,8 @@ class TileOrchestrator:
         :param communication_state_changed_callback: callback to be
             called in order to indicate a change in the status of
             communication between the component manager and its TPM
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_power_changed_callback: callback to be
+            called when the component power state changes
         :param logger: a logger to be used by this orchestrator.
         :param _initial_state: set the initial state of this tile
             orchestrator. This is provided for unit testing purposes
@@ -216,7 +216,7 @@ class TileOrchestrator:
         self._communication_state_changed_callback = (
             communication_state_changed_callback
         )
-        self._component_state_changed_callback = component_state_changed_callback
+        self._component_power_changed_callback = component_power_changed_callback
 
         self._logger = logger
 
@@ -527,19 +527,19 @@ class TileOrchestrator:
         self: TileOrchestrator,
     ) -> None:
         self._tpm_power_state = PowerState.NO_SUPPLY
-        self._component_state_changed_callback({"power_state": PowerState.OFF})
+        self._component_power_changed_callback(PowerState.OFF)
 
     def _report_tpm_off(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.OFF
-        self._component_state_changed_callback({"power_state": PowerState.OFF})
+        self._component_power_changed_callback(PowerState.OFF)
 
     def _report_tpm_on(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.ON
-        self._component_state_changed_callback({"power_state": PowerState.ON})
+        self._component_power_changed_callback(PowerState.ON)
 
     def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.UNKNOWN
-        self._component_state_changed_callback({"power_state": PowerState.UNKNOWN})
+        self._component_power_changed_callback(PowerState.UNKNOWN)
 
     def _set_desired_off(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = False

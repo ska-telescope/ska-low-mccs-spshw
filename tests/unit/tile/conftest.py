@@ -8,34 +8,16 @@
 """This module defined a pytest test harness for testing the MCCS tile module."""
 from __future__ import annotations
 
-import functools
 import logging
 import unittest.mock
-from typing import Any, Callable, Generator
+from typing import Callable
 
 import pytest
-from ska_control_model import (
-    CommunicationStatus,
-    PowerState,
-    ResultCode,
-    SimulationMode,
-    TestMode,
-)
+from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing.mock import (
-    MockCallable,
-    MockChangeEventCallback,
-    MockDeviceBuilder,
-)
-from ska_low_mccs_common.testing.tango_harness import (
-    ClientProxyTangoHarness,
-    DevicesToLoadType,
-    MccsDeviceInfo,
-    MockingTangoHarness,
-    StartingStateTangoHarness,
-    TangoHarness,
-    TestContextTangoHarness,
-)
+from ska_low_mccs_common.testing.mock import MockDeviceBuilder
+from ska_tango_testing.context import TangoContextProtocol
+from ska_tango_testing.mock import MockCallableGroup
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
@@ -61,175 +43,6 @@ def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     :return: a factory for device proxy mocks
     """
     return MockDeviceBuilder()
-
-
-@pytest.fixture(scope="session", name="tango_harness_factory")
-def tango_harness_factory_fixture(
-    logger: logging.Logger,
-) -> Callable[
-    [
-        dict[str, Any],
-        DevicesToLoadType,
-        Callable[[], unittest.mock.Mock],
-        dict[str, unittest.mock.Mock],
-    ],
-    TangoHarness,
-]:
-    """
-    Return a factory for creating a test harness for testing Tango devices.
-
-    :param logger: the logger to be used by this object.
-
-    :return: a tango harness factory
-    """
-
-    class _CPTCTangoHarness(ClientProxyTangoHarness, TestContextTangoHarness):
-        """
-        A Tango test harness.
-
-        With the client proxy functionality of
-        :py:class:`~ska_low_mccs_common.testing.tango_harness.ClientProxyTangoHarness`
-        within the lightweight test context provided by
-        :py:class:`~ska_low_mccs_common.testing.tango_harness.TestContextTangoHarness`.
-        """
-
-    def build_harness(
-        tango_config: dict[str, Any],
-        devices_to_load: DevicesToLoadType,
-        mock_factory: Callable[[], unittest.mock.Mock],
-        initial_mocks: dict[str, unittest.mock.Mock],
-    ) -> TangoHarness:
-        """
-        Build the Tango test harness.
-
-        :param tango_config: basic configuration information for a tango
-            test harness
-        :param devices_to_load: fixture that provides a specification of the
-            devices that are to be included in the devices_info dictionary
-        :param mock_factory: the factory to be used to build mocks
-        :param initial_mocks: a pre-build dictionary of mocks to be used
-            for particular
-
-        :return: a tango test harness
-        """
-        if devices_to_load is None:
-            device_info = None
-        else:
-            device_info = MccsDeviceInfo(**devices_to_load)
-
-        tango_harness = _CPTCTangoHarness(device_info, logger, **tango_config)
-        starting_state_harness = StartingStateTangoHarness(tango_harness)
-        mocking_harness = MockingTangoHarness(
-            starting_state_harness, mock_factory, initial_mocks
-        )
-
-        return mocking_harness
-
-    return build_harness
-
-
-@pytest.fixture(name="tango_config")
-def tango_config_fixture() -> dict[str, Any]:
-    """
-    Fixture that returns basic configuration information for a Tango test harness.
-
-    For example whether or not to run in a separate process.
-
-    :return: a dictionary of configuration key-value pairs
-    """
-    return {"process": False}
-
-
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    tango_harness_factory: Callable[
-        [
-            dict[str, Any],
-            DevicesToLoadType,
-            Callable[[], unittest.mock.Mock],
-            dict[str, unittest.mock.Mock],
-        ],
-        TangoHarness,
-    ],
-    tango_config: dict[str, str],
-    devices_to_load: DevicesToLoadType,
-    mock_factory: Callable[[], unittest.mock.Mock],
-    initial_mocks: dict[str, unittest.mock.Mock],
-) -> Generator[TangoHarness, None, None]:
-    """
-    Create a test harness for testing Tango devices.
-
-    :param tango_harness_factory: a factory that provides a test harness
-        for testing tango devices
-    :param tango_config: basic configuration information for a tango
-        test harness
-    :param devices_to_load: fixture that provides a specification of the
-        devices that are to be included in the devices_info dictionary
-    :param mock_factory: the factory to be used to build mocks
-    :param initial_mocks: a pre-build dictionary of mocks to be used
-        for particular
-
-    :yields: a tango test harness
-    """
-    with tango_harness_factory(
-        tango_config, devices_to_load, mock_factory, initial_mocks
-    ) as harness:
-        yield harness
-
-
-@pytest.fixture(name="mock_callback_called_timeout")
-def mock_callback_called_timeout_fixture() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is expected.
-
-    This is a high value because calls will usually arrive much much
-    sooner, but we should be prepared to wait plenty of time before
-    giving up and failing a test.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is asserted.
-    """
-    return 7.5
-
-
-@pytest.fixture(name="mock_callback_not_called_timeout")
-def mock_callback_not_called_timeout_fixture() -> float:
-    """
-    Return the time to wait for a mock callback to be called when a call is unexpected.
-
-    An assertion that a callback has not been called can only be passed
-    once we have waited the full timeout period without a call being
-    received. Thus, having a high value for this timeout will make such
-    assertions very slow. It is better to keep this value fairly low,
-    and accept the risk of an assertion passing prematurely.
-
-    :return: the time to wait for a mock callback to be called when a
-        call is unexpected.
-    """
-    return 0.5
-
-
-@pytest.fixture(name="mock_change_event_callback_factory")
-def mock_change_event_callback_factory_fixture(
-    mock_callback_called_timeout: float,
-    mock_callback_not_called_timeout: float,
-) -> Callable[[str], MockChangeEventCallback]:
-    """
-    Return a factory that returns a new mock change event callback each call.
-
-    :param mock_callback_called_timeout: the time to wait for a mock
-        callback to be called when a call is expected
-    :param mock_callback_not_called_timeout: the time to wait for a mock
-        callback to be called when a call is unexpected
-
-    :return: a factory that returns a new mock change event callback
-        each time it is called with the name of a device attribute.
-    """
-    return functools.partial(
-        MockChangeEventCallback,
-        called_timeout=mock_callback_called_timeout,
-        not_called_timeout=mock_callback_not_called_timeout,
-    )
 
 
 @pytest.fixture(name="simulation_mode")
@@ -262,16 +75,6 @@ def unique_id_fixture() -> str:
     :return: a unique ID
     """
     return "a unique id"
-
-
-@pytest.fixture(name="subrack_fqdn")
-def subrack_fqdn_fixture() -> str:
-    """
-    Return the FQDN of the subrack that powers the tile.
-
-    :return: the FQDN of the subrack that powers the tile.
-    """
-    return "low-mccs/subrack/0001"
 
 
 @pytest.fixture(name="subrack_tpm_id")
@@ -314,84 +117,34 @@ def mock_subrack_fixture(
     return builder()
 
 
-@pytest.fixture(name="initial_mocks")
-def initial_mocks_fixture(
-    subrack_fqdn: str,
-    mock_subrack: unittest.mock.Mock,
-) -> dict[str, unittest.mock.Mock]:
-    """
-    Return a dictionary of pre-registered device proxy mocks.
-
-    The default fixture is overridden here to provide an MccsSubrack mock
-    and an MccsTile mock..
-
-    :param subrack_fqdn: FQDN of the subrack device
-    :param mock_subrack: the mock subrack device to be provided when a device
-        proxy to the subrack FQDN is requested.
-
-    :return: a dictionary of mocks, keyed by FQDN
-    """
-    return {
-        subrack_fqdn: mock_subrack,
-    }
-
-
 @pytest.fixture(name="mock_subrack_device_proxy")
 def mock_subrack_device_proxy_fixture(
-    subrack_fqdn: str, logger: logging.Logger
+    subrack_name: str, logger: logging.Logger
 ) -> MccsDeviceProxy:
     """
     Return a mock device proxy to an subrack device.
 
-    :param subrack_fqdn: FQDN of the subrack device.
+    :param subrack_name: name of the subrack device.
     :param logger: a logger for the device proxy to use.
 
     :return: a mock device proxy to an subrack device.
     """
-    return MccsDeviceProxy(subrack_fqdn, logger)
+    return MccsDeviceProxy(subrack_name, logger)
 
 
-@pytest.fixture(name="mock_task_callback")
-def mock_task_callback_fixture() -> MockCallable:
+@pytest.fixture(name="callbacks")
+def callbacks_fixture() -> MockCallableGroup:
     """
-    Return a MockCallable for use as a task_callback.
+    Return a dictionary of callables to be used as callbacks.
 
-    :return: a mock callable to be called when the state of a task changes.
+    :return: a dictionary of callables to be used as callbacks.
     """
-    return MockCallable()
-
-
-@pytest.fixture(name="component_state_changed_callback")
-def component_state_changed_callback_fixture(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for when the state of a component changes.
-
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the state of a
-        component changes.
-    """
-    return mock_callback_deque_factory()
-
-
-@pytest.fixture(name="tile_power_state_changed_callback")
-def tile_power_state_changed_callback_fixture(
-    subrack_tpm_id: int,
-) -> MockChangeEventCallback:
-    """
-    Return a mock callback for tile power mode change.
-
-    :param subrack_tpm_id: This tile's position in its subrack
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the tile device health state changes.
-    """
-    return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerState")
+    return MockCallableGroup(
+        "communication_status",
+        "component_state",
+        "task",
+        timeout=5.0,
+    )
 
 
 @pytest.fixture(name="max_workers")
@@ -494,9 +247,7 @@ def dynamic_tpm_simulator_fixture(logger: logging.Logger) -> DynamicTpmSimulator
 @pytest.fixture(name="static_tpm_simulator_component_manager")
 def static_tpm_simulator_component_manager_fixture(
     logger: logging.Logger,
-    max_workers: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> StaticTpmSimulatorComponentManager:
     """
     Return an static TPM simulator component manager.
@@ -504,29 +255,21 @@ def static_tpm_simulator_component_manager_fixture(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a static TPM simulator component manager.
     """
     return StaticTpmSimulatorComponentManager(
         logger,
-        max_workers,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
 @pytest.fixture(name="dynamic_tpm_simulator_component_manager")
 def dynamic_tpm_simulator_component_manager_fixture(
     logger: logging.Logger,
-    max_workers: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> DynamicTpmSimulatorComponentManager:
     """
     Return an dynamic TPM simulator component manager.
@@ -534,27 +277,21 @@ def dynamic_tpm_simulator_component_manager_fixture(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param max_workers: nos of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a static TPM simulator component manager.
     """
     return DynamicTpmSimulatorComponentManager(
         logger,
-        max_workers,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(
-    tango_harness: TangoHarness,
+    tango_harness: TangoContextProtocol,
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -563,10 +300,9 @@ def tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_fqdn: str,
+    subrack_name: str,
     subrack_tpm_id: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -582,15 +318,11 @@ def tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_fqdn: FQDN of the subrack that controls power to
+    :param subrack_name: FQDN of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -603,10 +335,10 @@ def tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_fqdn,
+        subrack_name,
         subrack_tpm_id,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
@@ -621,10 +353,9 @@ def mock_tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_fqdn: str,
+    subrack_name: str,
     subrack_tpm_id: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -639,15 +370,11 @@ def mock_tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_fqdn: FQDN of the subrack that controls power to
+    :param subrack_name: name of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -660,10 +387,10 @@ def mock_tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_fqdn,
+        subrack_name,
         subrack_tpm_id,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
@@ -703,20 +430,13 @@ def patched_tile_device_class_fixture(
 
             :return: a mock component manager
             """
-            # self._communication_state: Optional[CommunicationStatus] = None
-            mock_tile_component_manager._communication_state_changed_callback = (
-                self._component_communication_state_changed
+            mock_tile_component_manager.set_communication_state_callback(
+                self._communication_state_changed,
             )
-            mock_tile_component_manager._component_state_changed_callback = (
-                self.component_state_changed_callback
+            mock_tile_component_manager.set_component_state_callback(
+                self._component_state_changed,
             )
-            orchestrator = mock_tile_component_manager._tile_orchestrator
-            orchestrator._component_state_changed_callback = (
-                self.component_state_changed_callback
-            )
-            orchestrator._communication_state_changed_callback = (
-                self._component_communication_state_changed
-            )
+
             return mock_tile_component_manager
 
         @command()

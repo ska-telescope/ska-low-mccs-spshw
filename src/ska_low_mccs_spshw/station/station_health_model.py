@@ -8,7 +8,7 @@
 """An implementation of a health model for a station."""
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Sequence
+from typing import Callable, Optional, Sequence
 
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthModel
@@ -23,7 +23,7 @@ class SpsStationHealthModel(HealthModel):
         self: SpsStationHealthModel,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.

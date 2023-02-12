@@ -1832,9 +1832,7 @@ class TpmDriver(MccsComponentManager):
         # Check for type of data to be sent to LMC
 
         current_frame = self.fpga_current_frame
-        tstamp: Optional[int] = timestamp
-        if tstamp == 0:
-            tstamp = None
+        tstamp: Optional[int] = timestamp or None
         if current_frame == 0:
             self.logger.error("Cannot send data before StartAcquisition")
             raise ValueError("Cannot send data before StartAcquisition")

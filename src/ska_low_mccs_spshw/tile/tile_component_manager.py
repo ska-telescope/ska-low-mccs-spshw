@@ -1145,8 +1145,8 @@ class TileComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._tpm_component_manager.download_firmware(argin)
-        except NotImplementedError as exc:
-            raise NotImplementedError from exc
+        except NotImplementedError:
+            raise
         # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
@@ -1224,8 +1224,8 @@ class TileComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             success = self._tpm_component_manager.start_acquisition(start_time, delay)
-        except NotImplementedError as exc:
-            raise NotImplementedError from exc
+        except NotImplementedError:
+            raise
         # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
@@ -1286,8 +1286,8 @@ class TileComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._tpm_component_manager.post_synchronisation()
-        except NotImplementedError as exc:
-            raise NotImplementedError from exc
+        except NotImplementedError:
+            raise
         # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")

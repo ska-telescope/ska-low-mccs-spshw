@@ -1321,7 +1321,6 @@ class TestMccsTileCommands:
         time.sleep(0.1)
         tile_device.MockTpmOn()
 
-        # How did this work before adding this?
         tile_device.adminMode = AdminMode.MAINTENANCE
         device_admin_mode_changed_callback.assert_last_change_event(
             AdminMode.MAINTENANCE

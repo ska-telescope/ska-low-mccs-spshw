@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -14,7 +12,7 @@ import enum
 import importlib.resources
 import logging
 import threading
-from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
+from typing import Any, Callable, NoReturn, Optional, Union, cast
 
 import tango
 import yaml
@@ -78,13 +76,13 @@ class Stimulus(enum.IntEnum):
 
 
 StateTupleType = Union[
-    Tuple[CommunicationStatus],
-    Tuple[
+    tuple[CommunicationStatus],
+    tuple[
         CommunicationStatus,
         Optional[bool],
         PowerState,
     ],
-    Tuple[
+    tuple[
         CommunicationStatus,
         Optional[bool],
         PowerState,
@@ -94,14 +92,14 @@ StateTupleType = Union[
 
 
 StateStimulusTupleType = Union[
-    Tuple[Stimulus, CommunicationStatus],
-    Tuple[
+    tuple[Stimulus, CommunicationStatus],
+    tuple[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
         PowerState,
     ],
-    Tuple[
+    tuple[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
@@ -111,6 +109,7 @@ StateStimulusTupleType = Union[
 ]
 
 
+# pylint: disable=too-many-instance-attributes
 class TileOrchestrator:
     """
     A orchestrator for the Tile component manager.
@@ -157,6 +156,7 @@ class TileOrchestrator:
             # we've no logger so there's no point catching any exceptions.
         return cls.RULES
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileOrchestrator,
         start_communicating_with_subrack_callback: Callable[[], None],
@@ -197,7 +197,7 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
-        self._subrack_lrc_callbacks = {}
+        self._subrack_lrc_callbacks: dict[str, tuple] = {}
 
         self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
@@ -286,7 +286,7 @@ class TileOrchestrator:
     def propogate_subrack_lrc(
         self: TileOrchestrator,
         event_name: str,
-        event_value: Tuple[str, str],
+        event_value: tuple[str, str],
         event_quality: tango.AttrQuality,
     ) -> None:
         """
@@ -337,11 +337,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
 
     def desire_off(
         self: TileOrchestrator,
@@ -366,11 +365,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
 
     def desire_standby(
         self: TileOrchestrator,
@@ -396,11 +394,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
 
     def update_subrack_communication_state(
         self: TileOrchestrator,

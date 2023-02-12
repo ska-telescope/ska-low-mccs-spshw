@@ -253,13 +253,13 @@ class TestOff:
                 },
             )
         else:
-            assert call_kwargs == dict(
-                fault=None,
+            assert call_kwargs == {
+                "fault": None,
                 **{
                     attribute_name: None
                     for attribute_name in subrack_simulator_attribute_values
                 },
-            )
+            }
             callbacks["component_state"].assert_next_call(power=PowerState.OFF)
 
         callbacks["component_state"].assert_not_called()
@@ -444,13 +444,13 @@ class TestOn:
                 },
             )
         else:
-            assert call_kwargs == dict(
-                fault=None,
+            assert call_kwargs == {
+                "fault": None,
                 **{
                     attribute_name: None
                     for attribute_name in subrack_simulator_attribute_values
                 },
-            )
+            }
             callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
         callbacks["component_state"].assert_not_called()
 

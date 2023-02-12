@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -21,7 +19,7 @@ __all__ = [
 ]
 
 
-class TileTime(object):
+class TileTime:
     """
     Library to convert from rfc3339 strings to internal Tile time and back.
 

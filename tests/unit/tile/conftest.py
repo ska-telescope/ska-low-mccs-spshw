@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -51,8 +49,8 @@ from ska_low_mccs_spshw.tile import (
 )
 
 
-@pytest.fixture()
-def mock_factory() -> Callable[[], unittest.mock.Mock]:
+@pytest.fixture(name="mock_factory")
+def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """
     Fixture that provides a mock factory for device proxy mocks.
 
@@ -65,8 +63,8 @@ def mock_factory() -> Callable[[], unittest.mock.Mock]:
     return MockDeviceBuilder()
 
 
-@pytest.fixture(scope="session")
-def tango_harness_factory(
+@pytest.fixture(scope="session", name="tango_harness_factory")
+def tango_harness_factory_fixture(
     logger: logging.Logger,
 ) -> Callable[
     [
@@ -94,8 +92,6 @@ def tango_harness_factory(
         within the lightweight test context provided by
         :py:class:`~ska_low_mccs_common.testing.tango_harness.TestContextTangoHarness`.
         """
-
-        pass
 
     def build_harness(
         tango_config: dict[str, Any],
@@ -132,8 +128,8 @@ def tango_harness_factory(
     return build_harness
 
 
-@pytest.fixture()
-def tango_config() -> dict[str, Any]:
+@pytest.fixture(name="tango_config")
+def tango_config_fixture() -> dict[str, Any]:
     """
     Fixture that returns basic configuration information for a Tango test harness.
 
@@ -144,8 +140,8 @@ def tango_config() -> dict[str, Any]:
     return {"process": False}
 
 
-@pytest.fixture()
-def tango_harness(
+@pytest.fixture(name="tango_harness")
+def tango_harness_fixture(
     tango_harness_factory: Callable[
         [
             dict[str, Any],
@@ -181,8 +177,8 @@ def tango_harness(
         yield harness
 
 
-@pytest.fixture()
-def mock_callback_called_timeout() -> float:
+@pytest.fixture(name="mock_callback_called_timeout")
+def mock_callback_called_timeout_fixture() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is expected.
 
@@ -196,8 +192,8 @@ def mock_callback_called_timeout() -> float:
     return 7.5
 
 
-@pytest.fixture()
-def mock_callback_not_called_timeout() -> float:
+@pytest.fixture(name="mock_callback_not_called_timeout")
+def mock_callback_not_called_timeout_fixture() -> float:
     """
     Return the time to wait for a mock callback to be called when a call is unexpected.
 
@@ -213,8 +209,8 @@ def mock_callback_not_called_timeout() -> float:
     return 0.5
 
 
-@pytest.fixture()
-def mock_change_event_callback_factory(
+@pytest.fixture(name="mock_change_event_callback_factory")
+def mock_change_event_callback_factory_fixture(
     mock_callback_called_timeout: float,
     mock_callback_not_called_timeout: float,
 ) -> Callable[[str], MockChangeEventCallback]:
@@ -236,8 +232,8 @@ def mock_change_event_callback_factory(
     )
 
 
-@pytest.fixture()
-def simulation_mode() -> SimulationMode:
+@pytest.fixture(name="simulation_mode")
+def simulation_mode_fixture() -> SimulationMode:
     """
     Return the simulation mode to be used when initialising the tile class object.
 
@@ -247,8 +243,8 @@ def simulation_mode() -> SimulationMode:
     return SimulationMode.TRUE
 
 
-@pytest.fixture()
-def test_mode() -> TestMode:
+@pytest.fixture(name="test_mode")
+def test_mode_fixture() -> TestMode:
     """
     Return the test mode to be used when initialising the tile class object.
 
@@ -258,8 +254,8 @@ def test_mode() -> TestMode:
     return TestMode.TEST
 
 
-@pytest.fixture
-def unique_id() -> str:
+@pytest.fixture(name="unique_id")
+def unique_id_fixture() -> str:
     """
     Return a unique ID used to test Tango layer infrastructure.
 
@@ -268,8 +264,8 @@ def unique_id() -> str:
     return "a unique id"
 
 
-@pytest.fixture()
-def subrack_fqdn() -> str:
+@pytest.fixture(name="subrack_fqdn")
+def subrack_fqdn_fixture() -> str:
     """
     Return the FQDN of the subrack that powers the tile.
 
@@ -278,8 +274,8 @@ def subrack_fqdn() -> str:
     return "low-mccs/subrack/0001"
 
 
-@pytest.fixture()
-def subrack_tpm_id() -> int:
+@pytest.fixture(name="subrack_tpm_id")
+def subrack_tpm_id_fixture() -> int:
     """
     Return the tile's position in the subrack.
 
@@ -288,8 +284,8 @@ def subrack_tpm_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def initial_tpm_power_state() -> PowerState:
+@pytest.fixture(name="initial_tpm_power_state")
+def initial_tpm_power_state_fixture() -> PowerState:
     """
     Return the initial power mode of the TPM.
 
@@ -298,8 +294,8 @@ def initial_tpm_power_state() -> PowerState:
     return PowerState.OFF
 
 
-@pytest.fixture()
-def mock_subrack(
+@pytest.fixture(name="mock_subrack")
+def mock_subrack_fixture(
     subrack_tpm_id: int, initial_tpm_power_state: PowerState
 ) -> unittest.mock.Mock:
     """
@@ -318,8 +314,8 @@ def mock_subrack(
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
+@pytest.fixture(name="initial_mocks")
+def initial_mocks_fixture(
     subrack_fqdn: str,
     mock_subrack: unittest.mock.Mock,
 ) -> dict[str, unittest.mock.Mock]:
@@ -340,8 +336,8 @@ def initial_mocks(
     }
 
 
-@pytest.fixture()
-def mock_subrack_device_proxy(
+@pytest.fixture(name="mock_subrack_device_proxy")
+def mock_subrack_device_proxy_fixture(
     subrack_fqdn: str, logger: logging.Logger
 ) -> MccsDeviceProxy:
     """
@@ -355,8 +351,8 @@ def mock_subrack_device_proxy(
     return MccsDeviceProxy(subrack_fqdn, logger)
 
 
-@pytest.fixture()
-def mock_task_callback() -> MockCallable:
+@pytest.fixture(name="mock_task_callback")
+def mock_task_callback_fixture() -> MockCallable:
     """
     Return a MockCallable for use as a task_callback.
 
@@ -365,8 +361,8 @@ def mock_task_callback() -> MockCallable:
     return MockCallable()
 
 
-@pytest.fixture()
-def component_state_changed_callback(
+@pytest.fixture(name="component_state_changed_callback")
+def component_state_changed_callback_fixture(
     mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
 ) -> unittest.mock.Mock:
     """
@@ -382,8 +378,8 @@ def component_state_changed_callback(
     return mock_callback_deque_factory()
 
 
-@pytest.fixture()
-def tile_power_state_changed_callback(
+@pytest.fixture(name="tile_power_state_changed_callback")
+def tile_power_state_changed_callback_fixture(
     subrack_tpm_id: int,
 ) -> MockChangeEventCallback:
     """
@@ -398,8 +394,8 @@ def tile_power_state_changed_callback(
     return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerState")
 
 
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
@@ -410,8 +406,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def tpm_ip() -> str:
+@pytest.fixture(name="tpm_ip")
+def tpm_ip_fixture() -> str:
     """
     Return the IP address of the TPM.
 
@@ -420,8 +416,8 @@ def tpm_ip() -> str:
     return "0.0.0.0"
 
 
-@pytest.fixture()
-def tpm_cpld_port() -> int:
+@pytest.fixture(name="tpm_cpld_port")
+def tpm_cpld_port_fixture() -> int:
     """
     Return the port at which the TPM can be controlled.
 
@@ -430,8 +426,8 @@ def tpm_cpld_port() -> int:
     return 10000
 
 
-@pytest.fixture()
-def tpm_version() -> str:
+@pytest.fixture(name="tpm_version")
+def tpm_version_fixture() -> str:
     """
     Return the TPM version.
 
@@ -440,8 +436,8 @@ def tpm_version() -> str:
     return "tpm_v1_6"
 
 
-@pytest.fixture()
-def tile_id() -> int:
+@pytest.fixture(name="tile_id")
+def tile_id_fixture() -> int:
     """
     Return the tile id.
 
@@ -450,8 +446,8 @@ def tile_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
+@pytest.fixture(name="static_tpm_simulator")
+def static_tpm_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
     """
     Return a static TPM simulator.
 
@@ -465,8 +461,8 @@ def static_tpm_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     return StaticTpmSimulator(logger)
 
 
-@pytest.fixture()
-def static_tile_simulator(logger: logging.Logger) -> StaticTpmSimulator:
+@pytest.fixture(name="static_tile_simulator")
+def static_tile_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
     """
     Return a static TPM simulator.
 
@@ -480,8 +476,8 @@ def static_tile_simulator(logger: logging.Logger) -> StaticTpmSimulator:
     return StaticTileSimulator(logger)
 
 
-@pytest.fixture()
-def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
+@pytest.fixture(name="dynamic_tpm_simulator")
+def dynamic_tpm_simulator_fixture(logger: logging.Logger) -> DynamicTpmSimulator:
     """
     Return a dynamic TPM simulator.
 
@@ -495,8 +491,8 @@ def dynamic_tpm_simulator(logger: logging.Logger) -> DynamicTpmSimulator:
     return DynamicTpmSimulator(logger)
 
 
-@pytest.fixture()
-def static_tpm_simulator_component_manager(
+@pytest.fixture(name="static_tpm_simulator_component_manager")
+def static_tpm_simulator_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -525,8 +521,8 @@ def static_tpm_simulator_component_manager(
     )
 
 
-@pytest.fixture()
-def dynamic_tpm_simulator_component_manager(
+@pytest.fixture(name="dynamic_tpm_simulator_component_manager")
+def dynamic_tpm_simulator_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -555,8 +551,9 @@ def dynamic_tpm_simulator_component_manager(
     )
 
 
-@pytest.fixture()
-def tile_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="tile_component_manager")
+def tile_component_manager_fixture(
     tango_harness: TangoHarness,
     simulation_mode: SimulationMode,
     test_mode: TestMode,
@@ -613,8 +610,9 @@ def tile_component_manager(
     )
 
 
-@pytest.fixture()
-def mock_tile_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="mock_tile_component_manager")
+def mock_tile_component_manager_fixture(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -669,8 +667,8 @@ def mock_tile_component_manager(
     )
 
 
-@pytest.fixture()
-def patched_tile_device_class(
+@pytest.fixture(name="patched_tile_device_class")
+def patched_tile_device_class_fixture(
     mock_tile_component_manager: TileComponentManager,
 ) -> type[MccsTile]:
     """
@@ -744,6 +742,7 @@ def patched_tile_device_class(
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
+            """Mock power on the tpm."""
             self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

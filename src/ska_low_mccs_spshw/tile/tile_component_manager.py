@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -35,15 +33,13 @@ from ska_low_mccs_common.component import (
     check_on,
 )
 
-from ska_low_mccs_spshw.tile import (
-    BaseTpmSimulator,
-    DynamicTpmSimulator,
-    StaticTpmSimulator,
-    TpmDriver,
-)
-from ska_low_mccs_spshw.tile.tile_orchestrator import TileOrchestrator
-from ska_low_mccs_spshw.tile.time_util import TileTime
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from .base_tpm_simulator import BaseTpmSimulator
+from .dynamic_tpm_simulator import DynamicTpmSimulator
+from .static_tpm_simulator import StaticTpmSimulator
+from .tile_orchestrator import TileOrchestrator
+from .time_util import TileTime
+from .tpm_driver import TpmDriver
+from .tpm_status import TpmStatus
 
 __all__ = [
     "DynamicTpmSimulatorComponentManager",
@@ -52,6 +48,7 @@ __all__ = [
 ]
 
 
+# pylint: disable=too-many-lines
 class _TpmSimulatorComponentManager(ObjectComponentManager):
     """
     A component manager for a TPM simulator.
@@ -60,6 +57,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
     classes for static and dynamic TPM simulators.
     """
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: _TpmSimulatorComponentManager,
         tpm_simulator: BaseTpmSimulator,
@@ -226,7 +224,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
 
         :param status: the new TPM status
         """
-        self._component._set_tpm_status(status)
+        cast(BaseTpmSimulator, self._component)._set_tpm_status(status)
 
 
 class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
@@ -291,9 +289,11 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         )
 
 
+# pylint: disable=too-many-public-methods,too-many-instance-attributes
 class TileComponentManager(MccsComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -357,7 +357,7 @@ class TileComponentManager(MccsComponentManager):
                 + tpm_version
                 + " not valid. Trying to read version from board, which must be on"
             )
-            tpm_version = None
+            tpm_version = ""
 
         tile = cast(
             Tile12,
@@ -377,18 +377,24 @@ class TileComponentManager(MccsComponentManager):
                 component_state_changed_callback,
             )
         elif test_mode == TestMode.TEST:  # and SimulationMode.TRUE
-            self._tpm_component_manager = StaticTpmSimulatorComponentManager(
-                logger,
-                max_workers,
-                self._tpm_communication_state_changed,
-                component_state_changed_callback,
+            self._tpm_component_manager = cast(
+                TpmDriver,
+                StaticTpmSimulatorComponentManager(
+                    logger,
+                    max_workers,
+                    self._tpm_communication_state_changed,
+                    component_state_changed_callback,
+                ),
             )
         else:  # SimulationMode.TRUE and TestMode.NONE
-            self._tpm_component_manager = DynamicTpmSimulatorComponentManager(
-                logger,
-                max_workers,
-                self._tpm_communication_state_changed,
-                component_state_changed_callback,
+            self._tpm_component_manager = cast(
+                TpmDriver,
+                DynamicTpmSimulatorComponentManager(
+                    logger,
+                    max_workers,
+                    self._tpm_communication_state_changed,
+                    component_state_changed_callback,
+                ),
             )
 
         self._tile_orchestrator = TileOrchestrator(
@@ -570,7 +576,7 @@ class TileComponentManager(MccsComponentManager):
 
     # Converted to a LRC, in subrack
     # This code only tells you if the command was submitted NOT the result
-    def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
+    def _turn_off_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [unique_id]) = self._subrack_proxy.PowerOffTpm(
             self._subrack_tpm_id
@@ -584,7 +590,7 @@ class TileComponentManager(MccsComponentManager):
 
     # Converted to a LRC, in subrack
     # This code only tells you if the command was submitted NOT the result
-    def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
+    def _turn_on_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [unique_id]) = self._subrack_proxy.PowerOnTpm(
             self._subrack_tpm_id
@@ -712,9 +718,7 @@ class TileComponentManager(MccsComponentManager):
     # Timed commands. Convert time to frame number
     #
     @check_communicating
-    def apply_calibration(
-        self: TileComponentManager, load_time: Optional[str] = ""
-    ) -> None:
+    def apply_calibration(self: TileComponentManager, load_time: str = "") -> None:
         """
         Load the calibration coefficients at the specified time delay.
 
@@ -724,7 +728,7 @@ class TileComponentManager(MccsComponentManager):
         """
         if load_time == "":
             load_frame = 0
-        elif type(load_time) == int:  # added for backward compatibility
+        elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
@@ -737,9 +741,7 @@ class TileComponentManager(MccsComponentManager):
         self._tpm_component_manager.apply_calibration(load_frame)
 
     @check_communicating
-    def apply_pointing_delays(
-        self: TileComponentManager, load_time: Optional[str] = ""
-    ) -> None:
+    def apply_pointing_delays(self: TileComponentManager, load_time: str = "") -> None:
         """
         Load the pointing delays at the specified time delay.
 
@@ -749,7 +751,7 @@ class TileComponentManager(MccsComponentManager):
         """
         if load_time == "":
             load_frame = 0
-        elif type(load_time) == int:  # added for backward compatibility
+        elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
@@ -767,9 +769,9 @@ class TileComponentManager(MccsComponentManager):
     def start_beamformer(
         self: TileComponentManager,
         start_time: Optional[str] = None,
-        duration: Optional[int] = -1,
-        subarray_beam_id: Optional[int] = -1,
-        scan_id: Optional[int] = 0,
+        duration: int = -1,
+        subarray_beam_id: int = -1,
+        scan_id: int = 0,
     ) -> None:
         """
         Start beamforming on a specific subset of the beamformed channels.
@@ -787,8 +789,8 @@ class TileComponentManager(MccsComponentManager):
         :raises ValueError: invalid time specified
         """
         if start_time is None:
-            start_frame = 0
-        elif type(start_time) == int:  # added for backward compatibility
+            start_frame: int = 0
+        elif isinstance(start_time, int):  # added for backward compatibility
             start_frame = start_time
         else:
             start_frame = self._tile_time.frame_from_utc_time(start_time)
@@ -802,6 +804,7 @@ class TileComponentManager(MccsComponentManager):
             start_frame, duration, subarray_beam_id, scan_id
         )
 
+    # pylint: disable=too-many-arguments
     @check_communicating
     def configure_test_generator(
         self: TileComponentManager,
@@ -812,7 +815,7 @@ class TileComponentManager(MccsComponentManager):
         amplitude_noise: float,
         pulse_code: int,
         amplitude_pulse: float,
-        load_time: str = None,
+        load_time: Optional[str] = None,
     ) -> None:
         """
         Test generator setting.
@@ -856,11 +859,12 @@ class TileComponentManager(MccsComponentManager):
             load_frame,
         )
 
+    # pylint: disable=too-many-arguments
     @check_communicating
     def send_data_samples(
-        self: TpmDriver,
+        self: TileComponentManager,
         data_type: str = "",
-        start_time: str = None,
+        start_time: Optional[str] = None,
         seconds: float = 0.2,
         n_samples: int = 1024,
         sync: bool = False,
@@ -1081,6 +1085,7 @@ class TileComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._tpm_component_manager.initialise()
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1141,7 +1146,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             self._tpm_component_manager.download_firmware(argin)
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1219,7 +1225,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             success = self._tpm_component_manager.start_acquisition(start_time, delay)
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1280,7 +1287,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             self._tpm_component_manager.post_synchronisation()
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:

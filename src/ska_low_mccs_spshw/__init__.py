@@ -22,4 +22,4 @@ __all__ = [
 ]
 
 from .subrack import MccsSubrack
-from .tile import MccsTile  # type: ignore[attr-defined]
+from .tile import MccsTile

@@ -26,14 +26,15 @@ from typing import Any, Callable, Optional, cast
 from pyaavs.tile_wrapper import Tile as HwTile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
-from ska_low_mccs_common.component import MccsComponentManager
+from ska_low_mccs_common.component import MccsBaseComponentManager
+from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsComponentManager):
+class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -99,18 +100,16 @@ class TpmDriver(MccsComponentManager):
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
-        max_workers: int,
         tile_id: int,
         tile: HwTile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new TPM driver instance passing in the Tile object.
 
         :param logger: a logger for this simulator to use
-        :param max_workers: Nos. of worker threads for async commands.
         :param tile_id: the unique ID for the tile
         :param tile: the tile driven by this TpmDriver
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -164,9 +163,11 @@ class TpmDriver(MccsComponentManager):
 
         super().__init__(
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
+            max_workers=1,
+            fault=None,
+            programming_state=TpmStatus.UNKNOWN,
         )
 
         self._poll_rate = 2.0
@@ -185,8 +186,7 @@ class TpmDriver(MccsComponentManager):
         self.logger.debug("Start communication with the TPM...")
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
-        if self.communication_state == CommunicationStatus.DISABLED:
-            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self._start_polling_event.set()
 
     def stop_communicating(self: TpmDriver) -> None:
@@ -283,8 +283,6 @@ class TpmDriver(MccsComponentManager):
                 f"Connection to tile failed after {timeout*3} seconds. Waiting for "
                 f"connection..."
             )
-            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            # self.update_component_state({"fault": True})
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
@@ -362,8 +360,8 @@ class TpmDriver(MccsComponentManager):
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
-        self.update_communication_state(CommunicationStatus.ESTABLISHED)
-        self.update_component_state({"fault": False})
+        self._update_communication_state(CommunicationStatus.ESTABLISHED)
+        self._update_component_state(fault=False)
         self.logger.debug("Tpm connected to tile.")
         self._is_programmed = False
         self._update_tpm_status()  # generates a callback if status changed
@@ -384,16 +382,15 @@ class TpmDriver(MccsComponentManager):
         """Tile disconnected to tpm."""
         self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
-        self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
-        while True:
+        while self.tile.tpm is not None:
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     self.tile.tpm = None
-                    break
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
+        self._update_communication_state(CommunicationStatus.DISABLED)
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -419,10 +416,7 @@ class TpmDriver(MccsComponentManager):
         """
         if new_status != self._tpm_status:
             self._tpm_status = new_status
-            if self._component_state_changed_callback:
-                self._component_state_changed_callback(
-                    {"programming_state": new_status}
-                )
+            self._update_component_state(programming_state=new_status)
 
     def _update_tpm_status(self: TpmDriver) -> None:
         """Update the value of _tpm_status according to hardware state."""

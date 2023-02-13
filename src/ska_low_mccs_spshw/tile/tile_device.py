@@ -105,7 +105,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self.component_state_changed_callback)
+        self._health_model = TileHealthModel(self._component_state_changed)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -127,8 +127,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.TpmVersion,
             self.SubrackFQDN,
             self.SubrackBay,
-            self._component_communication_state_changed,
-            self.component_state_changed_callback,
+            self._communication_state_changed,
+            self._component_state_changed,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -271,7 +271,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_state_changed(
+    def _communication_state_changed(
         self: MccsTile, communication_state: CommunicationStatus
     ) -> None:
         """
@@ -284,50 +284,20 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param communication_state: the status of communications
             between the component manager and its component.
         """
-        # TODO: The following 2 lines might need some attention/tidying up.
-        self.component_manager._tpm_communication_state = communication_state
-        self.component_manager._communication_state = communication_state
-        action_map = {
-            CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: None,
-            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
-        }
-
-        # TODO: This admin mode stuff is commented out in main also, why?
-        # action_map_established = {
-        #     AdminMode.ONLINE: "component_connected",
-        #     AdminMode.OFFLINE: "component_disconnected",
-        #     AdminMode.MAINTENANCE: "component_connected",
-        #     AdminMode.NOT_FITTED: "component_disconnected",
-        #     AdminMode.RESERVED: "component_disconnected",
-        # }
-
-        admin_mode = self.admin_mode_model.admin_mode
-        power_state = self.component_manager.power_state
-        message = (
-            f"communication_state: {communication_state}, adminMode: {admin_mode}, "
-            f"powerMode: {power_state}"
-        )
-        self.logger.debug(message)
-        # admin mode stuff here
-        action = action_map[communication_state]
-        # See TODO above.
-        # if communication_state == CommunicationStatus.ESTABLISHED:
-        #     action = action_map_established[admin_mode]
-        if action is not None:
-            self.op_state_model.perform_action(action)
-        # if communication has been established, update power mode
-        if (communication_state == CommunicationStatus.ESTABLISHED) and (
-            admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
-        ):
-            self.component_state_changed_callback({"power_state": power_state})
+        super()._communication_state_changed(communication_state)
 
         self._health_model.is_communicating(
             communication_state == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(
-        self: MccsTile, state_change: dict[str, Any]
+    # TODO: Upstream this interface change to SKABaseDevice
+    # pylint: disable-next=arguments-differ
+    def _component_state_changed(  # type: ignore[override]
+        self: MccsTile,
+        *,
+        fault: Optional[bool] = None,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -335,40 +305,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param state_change: the state change of the component
+        :param fault: whether the component is in fault or not
+        :param power: the power state of the component
+        :param state_change: other state updates
         """
-        action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
-        }
-
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            self.component_manager.update_tpm_power_state(power_state)
-            if power_state is not None:
-                self.op_state_model.perform_action(action_map[power_state])
-
-        if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
-            if is_fault:
-                self.op_state_model.perform_action("component_fault")
-                self._health_model.component_fault(True)
-            else:
-                if self.component_manager.power_state is not None:
-                    self.op_state_model.perform_action(
-                        action_map[self.component_manager.power_state]
-                    )
-                self._health_model.component_fault(False)
-
-        if "health_state" in state_change.keys():
+        super()._component_state_changed(fault=fault, power=power)
+        if "health_state" in state_change:
             health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "programming_state" in state_change.keys():
+        if "programming_state" in state_change:
             tile_programming_state = cast(
                 TpmStatus, state_change.get("programming_state")
             )
@@ -432,9 +380,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.SimulationConfig
 
-    # pylint: disable=arguments-differ
     @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(self: MccsTile, value: SimulationMode) -> None:
+    def simulationMode(  # pylint: disable=arguments-differ
+        self: MccsTile, value: SimulationMode
+    ) -> None:
         """
         Set the simulation mode.
 

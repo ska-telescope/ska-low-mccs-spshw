@@ -42,16 +42,6 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker("forked")
 
 
-@pytest.fixture(name="tile_name")
-def tile_name_fixture() -> str:
-    """
-    Return the name of the subrack Tango device.
-
-    :return: the name of the subrack Tango device.
-    """
-    return "low-mccs/tile/0001"
-
-
 @pytest.fixture(name="subrack_simulator_factory", scope="session")
 def subrack_simulator_factory_fixture(
     subrack_simulator_config: dict[str, Any],

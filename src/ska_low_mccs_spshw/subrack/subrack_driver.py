@@ -543,7 +543,7 @@ class SubrackDriver(
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
                 self.logger.error(
-                    f"setattribute error for{name}: Info {command_response['info']}"
+                    f"setattribute error for{name}: Info {attribute_response['info']}"
                 )
                 raise ConnectionError(
                     f"Received ERROR response from setattribute {name}"
@@ -556,7 +556,7 @@ class SubrackDriver(
                 # Otherwise return error details through the query response.
                 self.logger.error(
                     f"getattribute error for {attribute}: "
-                    f"Info {command_response['info']}"
+                    f"Info {attribute_response['info']}"
                 )
                 raise ConnectionError(
                     f"Received ERROR response from getattribute {attribute}"

@@ -17,11 +17,9 @@ from typing import Any
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
-from ska_low_mccs_common.testing.mock import MockCallable
+from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.tile import StaticTileSimulator, TpmDriver
-
-# from .static_tile_simulator import StaticTileSimulator
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 
@@ -29,11 +27,9 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 @pytest.fixture(name="tpm_driver")
 def tpm_driver_fixture(
     logger: logging.Logger,
-    max_workers: int,
     tile_id: int,
     tpm_version: str,
-    communication_state_changed_callback: MockCallable,
-    component_state_changed_callback: MockCallable,
+    callbacks: MockCallableGroup,
     static_tile_simulator: StaticTileSimulator,
 ) -> TpmDriver:
     """
@@ -41,37 +37,31 @@ def tpm_driver_fixture(
 
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
-    :param max_workers: nos. of worker threads
     :param tile_id: the unique ID for the tile
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
+    :param callbacks: dictionary of driver callbacks.
     :param static_tile_simulator: The tile used by the TpmDriver.
 
     :return: a TpmDriver driving a simulated tile
     """
     return TpmDriver(
         logger,
-        max_workers,
         tile_id,
         static_tile_simulator,
         tpm_version,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
-class TestTPMDriver:
+class TestTpmDriver:
     """Class for testing the TPMDriver."""
 
     def test_communication(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
-        mock_task_callback: MockCallable,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test we can create the driver and start communication with the component.
@@ -79,59 +69,45 @@ class TestTPMDriver:
         We can create the tile class object under test, and we will mock
         the underlying component.
 
-        :param mock_task_callback: A mocked callable
         :param tpm_driver: the tpm driver under test.
         :param static_tile_simulator: An hardware tile mock
+        :param callbacks: dictionary of driver callbacks.
         """
         assert tpm_driver.communication_state == CommunicationStatus.DISABLED
         tpm_driver.start_communicating()
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-        # Wait for the message to execute
-        time.sleep(1)
         assert static_tile_simulator.tpm
 
-        # assert "_ConnectToTile" in tpm_driver._queue_manager._task_result[0]
-        # assert tpm_driver._queue_manager._task_result[1] == str(
-        #    ResultCode.OK.value
-        # )
-
-        # assert tpm_driver._queue_manager._task_result[2] ==
-        # "Connected to Tile"
-        assert tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
-
-        # call again to check None returns
-        assert tpm_driver.start_communicating() is None
-
         tpm_driver.stop_communicating()
-        assert tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
 
-        time.sleep(1)
+        callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
+        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
+
+        time.sleep(3)  # TODO: need to wait for next poll
         assert static_tile_simulator.tpm is None
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
 
-        # check that when we call stop communicating with communication disabled
-        tpm_driver.update_communication_state(CommunicationStatus.DISABLED)
-        assert tpm_driver.stop_communicating() is None
-
-        # check start communicate where connect raises failure
-        assert not static_tile_simulator.tpm
-
-        mock_task_callback.side_effect = LibraryError("attribute mocked to fail")
-        static_tile_simulator.connect = mock_task_callback
+        static_tile_simulator.connect = unittest.mock.Mock(
+            side_effect=LibraryError("attribute mocked to fail")
+        )
 
         # start communicating unblocks the polling loop therefore starting it
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
         tpm_driver.start_communicating()
+
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_not_called()
         assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
-        # allow time to run a few poll loops
-        time.sleep(8)
+
         assert not tpm_driver.tile.tpm
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
-        # assert tpm_driver._faulty
 
     def test_write_read_registers(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -195,7 +171,7 @@ class TestTPMDriver:
         assert read_value == []
 
     def test_write_read_address(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -221,15 +197,13 @@ class TestTPMDriver:
 
     @pytest.mark.xfail
     def test_update_attributes(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: unittest.mock.Mock,
-        mock_task_callback: MockCallable,
     ) -> None:
         """
         Test we can update attributes.
 
-        :param mock_task_callback: A mocked callable
         :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
         """
@@ -261,16 +235,16 @@ class TestTPMDriver:
 
         # Check value not updated if we have a failure
         static_tile_simulator.tpm._voltage = 2.2
-
-        mock_task_callback.side_effect = LibraryError("attribute mocked to fail")
-        static_tile_simulator.get_voltage = mock_task_callback
+        static_tile_simulator.get_voltage = unittest.mock.Mock(
+            side_effect=LibraryError("attribute mocked to fail")
+        )
 
         tpm_driver.updating_attributes()
         assert tpm_driver._voltage != static_tile_simulator.tpm._voltage
 
     @pytest.mark.xfail
     def test_read_tile_attributes(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -307,7 +281,7 @@ class TestTPMDriver:
         assert get_fpgs_sync_time == 0.4
 
     def test_dumb_read_tile_attributes(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -331,7 +305,7 @@ class TestTPMDriver:
         _ = tpm_driver.pll_locked
 
     def test_dumb_write_tile_attributes(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -356,7 +330,7 @@ class TestTPMDriver:
         _ = tpm_driver.preadu_levels
 
     def test_set_beamformer_regions(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -374,67 +348,8 @@ class TestTPMDriver:
             [[64, 32, 1, 0, 0, 0, 0, 0], [128, 8, 0, 2, 32, 1, 1, 1]]
         )
 
-    def test_polling_loop(
-        self: TestTPMDriver,
-        tpm_driver: TpmDriver,
-        static_tile_simulator: StaticTileSimulator,
-    ) -> None:
-        """
-        Test the polling loop works as expected.
-
-        The polling loop is run on a thread so to unit test here is tricky.
-        The start communicating function unblocks the polling loop, allows the polling
-        loop to be tested.
-
-        :param tpm_driver: The tpm driver under test.
-        :param static_tile_simulator: The mocked tile
-        """
-        # No UDP connection are used here. The static_tile_simulator
-        # constructs a mocked TPM
-        # Therefore the tile will have access to the TPM after connect().
-        assert not static_tile_simulator.tpm
-        static_tile_simulator.connect()
-        assert static_tile_simulator.tpm
-
-        # start communicating unblocks the polling loop therefore starting it
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
-        tpm_driver.start_communicating()
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
-        # allow time to run a few poll loops
-        time.sleep(0.1)
-
-        # trigger the stop polling loop should disconnect the tpm and
-        # set communication state to NOT_ESTABLISHED
-        tpm_driver._stop_polling_event.set()
-        # allow time to poll complete poll
-        time.sleep(0.1)
-        assert tpm_driver._is_programmed is False
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
-        assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
-        assert static_tile_simulator.tpm is None
-
-        # restart the polling loop. Since the connection state
-        # is ESTABLISHED the loop will
-        # attempt to poll the tpm to check communication.
-        # However the connection is now lost
-        assert not static_tile_simulator.tpm
-        # restart polling loop
-        # tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
-        tpm_driver._stop_polling_event.clear()
-        tpm_driver._start_polling_event.set()
-        comm_state = tpm_driver.communication_state
-
-        # assert tpm_driver._faulty
-        assert comm_state == CommunicationStatus.NOT_ESTABLISHED
-        assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
-
-        # the connection should attempt to restart given enough time
-        time.sleep(6)
-        assert static_tile_simulator.tpm
-        assert tpm_driver.communication_state == CommunicationStatus.ESTABLISHED
-
     def test_tpm_status(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -450,7 +365,7 @@ class TestTPMDriver:
         assert tpm_driver.tpm_status == TpmStatus.UNCONNECTED
 
         static_tile_simulator.connect()
-        tpm_driver.update_communication_state(CommunicationStatus.ESTABLISHED)
+        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
 
         assert tpm_driver.tpm_status == TpmStatus.UNPROGRAMMED
 
@@ -461,7 +376,7 @@ class TestTPMDriver:
         assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
     def test_get_tile_id(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -490,7 +405,7 @@ class TestTPMDriver:
         assert tpm_driver.get_tile_id() == 0
 
     def test_start_acquisition(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -528,7 +443,7 @@ class TestTPMDriver:
         assert tpm_driver._tpm_status == TpmStatus.SYNCHRONISED
 
     def test_load_time_delays(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -584,7 +499,7 @@ class TestTPMDriver:
         )
 
     def test_read_write_address(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -616,7 +531,7 @@ class TestTPMDriver:
 
     @pytest.mark.xfail
     def test_error_configure_40g_core(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -665,7 +580,7 @@ class TestTPMDriver:
             tpm_driver.configure_40g_core(**core_dict2)
 
     def test_configure_40g_core(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -716,7 +631,7 @@ class TestTPMDriver:
         assert configurations == [core_dict, core_dict2]
 
     def test_firmware_avaliable(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -733,7 +648,7 @@ class TestTPMDriver:
         assert firmware_version == "Ver.1.2 build 0:"
 
     def test_check_programmed(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
@@ -752,15 +667,17 @@ class TestTPMDriver:
         assert tpm_driver._check_programmed() is True
 
     def test_initialise(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_driver: TpmDriver,
         static_tile_simulator: StaticTileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         When we initialise the tpm_driver the mockedTPM gets the correct calls.
 
         :param tpm_driver: The tpm driver under test.
         :param static_tile_simulator: The mocked tile
+        :param callbacks: dictionary of mock callbacks
 
         Test cases:
         * programfpga succeeds to programm the fpga
@@ -768,17 +685,14 @@ class TestTPMDriver:
         """
         # establish connection to the TPM
         static_tile_simulator.connect()
-        initialise_task_callback = MockCallable()
         assert static_tile_simulator.is_programmed is False
-        tpm_driver.initialise(task_callback=initialise_task_callback)
+        tpm_driver.initialise(task_callback=callbacks["task"])
 
-        time.sleep(0.1)
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.QUEUED
-
-        time.sleep(0.1)
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.IN_PROGRESS
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
+        )
 
         assert static_tile_simulator.is_programmed is True
         assert tpm_driver._is_programmed is True
@@ -788,42 +702,32 @@ class TestTPMDriver:
         # assert static_tile_simulator["fpga1.dsp_regfile.config_id.station_id"] == 0
         # assert static_tile_simulator["fpga1.dsp_regfile.config_id.tile_id"] == 0
 
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.COMPLETED
-        assert kwargs["result"] == "The initialisation task has completed"
-
         # The FPGA is mocked to not be programmed after the program_fpga command.
         # check that the initialisation process has failed.
         static_tile_simulator.tpm._is_programmed = False
         static_tile_simulator.program_fpgas = unittest.mock.MagicMock(
             return_value=False
         )
-        tpm_driver.initialise(task_callback=initialise_task_callback)
+        tpm_driver.initialise(task_callback=callbacks["task"])
         time.sleep(0.1)
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.QUEUED
-
-        time.sleep(0.1)
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.IN_PROGRESS
-        time.sleep(0.1)
-        _, kwargs = initialise_task_callback.get_next_call()
-        assert kwargs["status"] == TaskStatus.COMPLETED
-        assert kwargs["result"] == "The initialisation task has failed"
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has failed",
+        )
 
     @pytest.mark.parametrize(
         "tpm_version_to_test, expected_firmware_name",
         [("tpm_v1_2", "itpm_v1_2.bit"), ("tpm_v1_6", "itpm_v1_6.bit")],
     )
     def test_firmware_version(
-        self: TestTPMDriver,
+        self: TestTpmDriver,
         tpm_version_to_test: str,
         expected_firmware_name: str,
         logger: logging.Logger,
-        max_workers: int,
         tile_id: int,
-        communication_state_changed_callback: MockCallable,
-        component_state_changed_callback: MockCallable,
+        callbacks: MockCallableGroup,
         static_tile_simulator: StaticTileSimulator,
     ) -> None:
         """
@@ -833,22 +737,16 @@ class TestTPMDriver:
         :param expected_firmware_name: the expected value of firmware_name
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
-        :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param callbacks: dictionary of driver callbacks.
         :param static_tile_simulator: The tile used by the TpmDriver.
         """
         driver = TpmDriver(
             logger,
-            max_workers,
             tile_id,
             static_tile_simulator,
             tpm_version_to_test,
-            communication_state_changed_callback,
-            component_state_changed_callback,
+            callbacks["communication_status"],
+            callbacks["component_state"],
         )
         assert driver.firmware_name == expected_firmware_name

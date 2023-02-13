@@ -12,7 +12,7 @@ from typing import Any, Literal
 
 import pytest
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
-from ska_low_mccs_common.testing.mock import MockCallable
+from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
     FanMode,
@@ -43,7 +43,7 @@ class TestNoSupply:
     def test_communication(
         self: TestNoSupply,
         subrack_component_manager: SubrackComponentManager,
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test communication.
@@ -57,22 +57,20 @@ class TestNoSupply:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.NO_SUPPLY)
+        callbacks["component_state"].assert_call(power=PowerState.NO_SUPPLY)
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.on(task_callback=callbacks["task"])
 
-        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_next_call(
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
             status=TaskStatus.FAILED,
             message="Poll failed: This power supply simulator has no power supply.",
         )
@@ -86,7 +84,7 @@ class TestNoSupply:
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.stop_communicating()
-        callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
         callbacks["component_state"].assert_not_called()
 
 
@@ -112,7 +110,7 @@ class TestUnknown:
     def test_communication(
         self: TestUnknown,
         subrack_component_manager: SubrackComponentManager,
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test communication.
@@ -126,12 +124,10 @@ class TestUnknown:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         # no component state change will be pushed here,
@@ -141,10 +137,10 @@ class TestUnknown:
 
         subrack_component_manager.on(task_callback=callbacks["task"])
 
-        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
 
-        callbacks["task"].assert_next_call(
+        callbacks["task"].assert_call(
             status=TaskStatus.FAILED,
             message="Poll failed: No communication with power supply.",
         )
@@ -182,7 +178,7 @@ class TestOff:
         self: TestOff,
         subrack_component_manager: SubrackComponentManager,
         subrack_simulator_attribute_values: dict[str, Any],
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test communication.
@@ -198,33 +194,29 @@ class TestOff:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.OFF)
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.on(task_callback=callbacks["task"])
 
-        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_next_call(
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command completed"),
         )
         callbacks["task"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.ON)
-        callbacks["component_state"].assert_next_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False)
 
-        callbacks["component_state"].assert_next_call(
-            **subrack_simulator_attribute_values
-        )
+        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
         # Now that the subrack is on,
@@ -233,39 +225,27 @@ class TestOff:
 
         subrack_component_manager.off(task_callback=callbacks["task"])
 
-        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_next_call(
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command completed"),
         )
         callbacks["task"].assert_not_called()
 
-        # TODO: When we change over to ska-tango-testing,
-        # we can just use lookahead=2 here.
-        call_kwargs = callbacks["component_state"].get_next_call()[1]
-        if call_kwargs == {"power": PowerState.OFF}:
-            callbacks["component_state"].assert_next_call(
-                fault=None,
-                **{
-                    attribute_name: None
-                    for attribute_name in subrack_simulator_attribute_values
-                },
-            )
-        else:
-            assert call_kwargs == {
-                "fault": None,
-                **{
-                    attribute_name: None
-                    for attribute_name in subrack_simulator_attribute_values
-                },
-            }
-            callbacks["component_state"].assert_next_call(power=PowerState.OFF)
+        callbacks["component_state"].assert_call(power=PowerState.OFF, lookahead=2)
+        callbacks["component_state"].assert_call(
+            fault=None,
+            **{
+                attribute_name: None
+                for attribute_name in subrack_simulator_attribute_values
+            },
+        )
 
         callbacks["component_state"].assert_not_called()
 
         subrack_component_manager.stop_communicating()
-        callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
         callbacks["component_state"].assert_not_called()
 
 
@@ -294,7 +274,7 @@ class TestOn:
         subrack_simulator: SubrackSimulator,
         subrack_component_manager: SubrackComponentManager,
         subrack_simulator_attribute_values: dict[str, Any],
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the subrack driver receives updated values.
@@ -314,36 +294,30 @@ class TestOn:
 
         # Try to establish communication with the subrack's upstream power supply
         # (which is currently simulated).
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Successful in establishing communication with the upstream power supply
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
         # Upstream power supply sends an event advising that the subrack is on.
         # Try to establish communication with the subrack management board.
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
         # Successful in establishing communication with the subrack management board.
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.ON)
-        callbacks["component_state"].assert_next_call(fault=False)
-        callbacks["component_state"].assert_next_call(
-            **subrack_simulator_attribute_values
-        )
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
         subrack_simulator.simulate_attribute("board_current", 0.7)
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             board_current=pytest.approx(0.7),
         )
 
@@ -354,7 +328,7 @@ class TestOn:
             # ("tpm_temperatures", [41.1, 41.2, 41.3, 41.4, 41.5, 41.6, 41.7, 41.8]),
         ]:
             subrack_simulator.simulate_attribute(name, values)
-            callbacks["component_state"].assert_next_call(
+            callbacks["component_state"].assert_call(
                 **{name: [pytest.approx(v) for v in values]},
             )
 
@@ -362,7 +336,7 @@ class TestOn:
         subrack_simulator.simulate_attribute(
             "power_supply_fan_speeds", new_power_supply_fan_speeds
         )
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             power_supply_fan_speeds=[
                 pytest.approx(s) for s in new_power_supply_fan_speeds
             ],
@@ -372,7 +346,7 @@ class TestOn:
         subrack_simulator.simulate_attribute(
             "subrack_fan_speeds_percent", new_subrack_fan_speeds_percent
         )
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             subrack_fan_speeds_percent=[
                 pytest.approx(p) for p in new_subrack_fan_speeds_percent
             ],
@@ -391,7 +365,7 @@ class TestOn:
         subrack_simulator.simulate_attribute(
             "power_supply_voltages", new_power_supply_voltages
         )
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             power_supply_voltages=[pytest.approx(v) for v in new_power_supply_voltages],
             power_supply_powers=expected_power_supply_powers,
         )
@@ -404,7 +378,7 @@ class TestOn:
         subrack_simulator.simulate_attribute(
             "power_supply_currents", new_power_supply_currents
         )
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             power_supply_currents=[pytest.approx(i) for i in new_power_supply_currents],
             power_supply_powers=expected_power_supply_powers,
         )
@@ -415,7 +389,7 @@ class TestOn:
             pytest.approx(i * v) for i, v in zip(tpm_currents, new_tpm_voltages)
         ]
         subrack_simulator.simulate_attribute("tpm_voltages", new_tpm_voltages)
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             tpm_voltages=[pytest.approx(v) for v in new_tpm_voltages],
             tpm_powers=expected_tpm_powers,
         )
@@ -425,33 +399,21 @@ class TestOn:
             pytest.approx(i * v) for i, v in zip(new_tpm_currents, new_tpm_voltages)
         ]
         subrack_simulator.simulate_attribute("tpm_currents", new_tpm_currents)
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             tpm_currents=[pytest.approx(i) for i in new_tpm_currents],
             tpm_powers=expected_tpm_powers,
         )
 
         subrack_component_manager.stop_communicating()
 
-        # TODO: When we change over to ska-tango-testing,
-        # we can just use lookahead=2 here.
-        call_kwargs = callbacks["component_state"].get_next_call()[1]
-        if call_kwargs == {"power": PowerState.UNKNOWN}:
-            callbacks["component_state"].assert_next_call(
-                fault=None,
-                **{
-                    attribute_name: None
-                    for attribute_name in subrack_simulator_attribute_values
-                },
-            )
-        else:
-            assert call_kwargs == {
-                "fault": None,
-                **{
-                    attribute_name: None
-                    for attribute_name in subrack_simulator_attribute_values
-                },
-            }
-            callbacks["component_state"].assert_next_call(power=PowerState.UNKNOWN)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
+        callbacks["component_state"].assert_call(
+            fault=None,
+            **{
+                attribute_name: None
+                for attribute_name in subrack_simulator_attribute_values
+            },
+        )
         callbacks["component_state"].assert_not_called()
 
     def test_tpm_power_commands(
@@ -459,7 +421,7 @@ class TestOn:
         subrack_simulator: SubrackSimulator,
         subrack_component_manager: SubrackComponentManager,
         subrack_simulator_attribute_values: dict[str, Any],
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the subrack driver pushes a full set of attribute values.
@@ -477,25 +439,19 @@ class TestOn:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.ON)
-        callbacks["component_state"].assert_next_call(fault=False)
-        callbacks["component_state"].assert_next_call(
-            **subrack_simulator_attribute_values
-        )
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
         tpm_on_off = subrack_simulator.get_attribute("tpm_on_off")
@@ -506,32 +462,32 @@ class TestOn:
         subrack_component_manager.turn_on_tpms(callbacks["task"])
         tpm_on_off = [True for _ in tpm_on_off]
 
-        callbacks["task"].assert_next_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_next_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
-        callbacks["task"].assert_next_call(
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
+        callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command completed."),
         )
 
         subrack_component_manager.turn_off_tpm(tpm_to_power)
         tpm_on_off[tpm_to_power - 1] = False
-        callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
+        callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
         subrack_component_manager.turn_off_tpms()
         tpm_on_off = [False for _ in tpm_on_off]
-        callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
+        callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
         subrack_component_manager.turn_on_tpm(tpm_to_power)
         tpm_on_off[tpm_to_power - 1] = True
-        callbacks["component_state"].assert_next_call(tpm_on_off=tpm_on_off)
+        callbacks["component_state"].assert_call(tpm_on_off=tpm_on_off)
 
     def test_other_commands(
         self: TestOn,
         subrack_simulator: SubrackSimulator,
         subrack_component_manager: SubrackComponentManager,
         subrack_simulator_attribute_values: dict[str, Any],
-        callbacks: dict[str, MockCallable],
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the subrack driver pushes a full set of attribute values.
@@ -549,25 +505,19 @@ class TestOn:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
-        callbacks["communication_status"].assert_next_call(
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_next_call(
-            CommunicationStatus.ESTABLISHED
-        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_next_call(power=PowerState.ON)
-        callbacks["component_state"].assert_next_call(fault=False)
-        callbacks["component_state"].assert_next_call(
-            **subrack_simulator_attribute_values
-        )
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
         subrack_fan_speeds_percent = subrack_simulator.get_attribute(
@@ -581,7 +531,7 @@ class TestOn:
         )
 
         subrack_fan_speeds_percent[fan_to_set - 1] = fan_speed_percent_setting
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             subrack_fan_speeds_percent=[
                 pytest.approx(p) for p in subrack_fan_speeds_percent
             ],
@@ -602,7 +552,7 @@ class TestOn:
         subrack_component_manager.set_subrack_fan_mode(fan_to_set, fan_speed_mode)
 
         subrack_fan_mode[fan_to_set - 1] = fan_speed_mode
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             subrack_fan_mode=subrack_fan_mode,
         )
 
@@ -617,6 +567,6 @@ class TestOn:
         )
 
         power_supply_fan_speeds[fan_to_set - 1] = fan_speed_setting
-        callbacks["component_state"].assert_next_call(
+        callbacks["component_state"].assert_call(
             power_supply_fan_speeds=[pytest.approx(s) for s in power_supply_fan_speeds],
         )

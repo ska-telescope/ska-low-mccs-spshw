@@ -95,9 +95,7 @@ class BaseTpmSimulator(ObjectComponent):
     def __init__(
         self: BaseTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None,
+        component_state_changed_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
@@ -1184,6 +1182,4 @@ class BaseTpmSimulator(ObjectComponent):
         if new_status != self._tpm_status:
             self._tpm_status = new_status
             if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(
-                    {"programming_state": new_status}
-                )
+                self._component_state_changed_callback(programming_state=new_status)

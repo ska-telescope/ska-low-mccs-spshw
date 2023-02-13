@@ -27,7 +27,8 @@ class CliMeta(type):
     They get turned into `fire.core.FireError` exceptions.
     """
 
-    # pylint: disable=bad-mcs-classmethod-argument
+    # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
+    # pylint: disable-next=bad-mcs-classmethod-argument
     def __new__(
         cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
     ) -> CliMeta:
@@ -45,8 +46,8 @@ class CliMeta(type):
                 attrs[attr_name] = cls.fire_except(attr_value)
         return super(CliMeta, cls).__new__(cls, name, bases, attrs)
 
-    # pylint: disable=bad-mcs-classmethod-argument
-    @classmethod
+    # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
+    @classmethod  # pylint: disable-next=bad-mcs-classmethod-argument
     def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
         """
         Wrap the method to handle exceptions.

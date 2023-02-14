@@ -682,12 +682,16 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_lmc_download")
-        raise NotImplementedError
+        for core in (0, 1):
+            self.configure_40g_core(
+                core,
+                1,
+                dst_ip = dst_ip,
+                src_port = src_port,
+                dst_port = dst_port,
+            )
 
     def send_data_samples(
         self: BaseTpmSimulator,
@@ -823,12 +827,8 @@ class BaseTpmSimulator(ObjectComponent):
         :param antenna: the antenna to which the coefficients apply
         :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
-        raise NotImplementedError
 
     def apply_calibration(self: BaseTpmSimulator, switch_time: int = 0) -> None:
         """
@@ -839,12 +839,9 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param switch_time: an optional time at which to perform the
             switch
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: apply_calibration")
-        raise NotImplementedError
+        # raise NotImplementedError
 
     def load_pointing_delays(
         self: BaseTpmSimulator, delay_array: list[float], beam_index: int

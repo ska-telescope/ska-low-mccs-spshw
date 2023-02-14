@@ -188,6 +188,20 @@ class SpsStation(SKAObsDevice):
             tango.DevState.FAULT,
         ]
 
+    def is_Standby_allowed(self: SpsStation) -> bool:
+        """
+        Check if command `Standby` is allowed in the current device state.
+
+        :return: ``True`` if the command is allowed
+        """
+        return self.get_state() in [
+            tango.DevState.OFF,
+            tango.DevState.STANDBY,
+            tango.DevState.ON,
+            tango.DevState.UNKNOWN,
+            tango.DevState.FAULT,
+        ]
+
     # ----------
     # Callbacks
     # ----------
@@ -451,6 +465,27 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.preadu_levels = levels
 
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=16,
+    )
+    def ppsDelays(self: SpsStation) -> list[int]:
+        """
+        Get PPS delay correction, one per tile.
+
+        :return: Array of PPS delay correction in 625ps units, one value per tile
+        """
+        return self.component_manager.pps_delays
+
+    @ppsDelays.write  # type: ignore[no-redef]
+    def ppsDelays(self: SpsStation, delays: list[int]) -> None:
+        """
+        Set PPS delay correction, one per tile.
+
+        :param delays: PPS delay correction in 625ps units
+        """
+        self.component_manager.pps_delays = delays
+
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:
         """
@@ -473,7 +508,7 @@ class SpsStation(SKAObsDevice):
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevString")
     def fortyGbNetworkAddress(self: SpsStation) -> str:
         """
         Get 40Gb network address for cabinet subnet.
@@ -482,7 +517,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.forty_gb_network_address
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevString")
     def cspIngestAddress(self: SpsStation) -> str:
         """
         Get CSP ingest IP address.
@@ -493,7 +528,7 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.csp_ingest_address
 
-    @attribute(dtype="DevBoolean")
+    @attribute(dtype="DevLong")
     def cspIngestPort(self: SpsStation) -> int:
         """
         Get CSP ingest port.
@@ -727,7 +762,7 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def SetLmIntegratedcDownload(
+    def SetLmcIntegratedDownload(
         self: SpsStation, argin: str
     ) -> DevVarLongStringArrayType:
         """

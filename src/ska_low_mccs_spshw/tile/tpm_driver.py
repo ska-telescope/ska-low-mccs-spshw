@@ -62,8 +62,6 @@ class TpmDriver(MccsComponentManager):
     ADC_RMS = [0] * 32
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
-    PPS_DELAY = 0
-    PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = {"tpm_v1_2": "itpm_v1_2.bit", "tpm_v1_6": "itpm_v1_6.bit"}
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -74,8 +72,8 @@ class TpmDriver(MccsComponentManager):
     BEAMFORMER_TABLE: list[list[int]] = [
         [0, 0, 0, 0, 0, 0, 0]
     ] * 48  # empty beamformer table
-    CHANNELISER_TRUNCATION: list[int] = [0] * 512
-    CSP_ROUNDING: list[int] = [0] * 384
+    CHANNELISER_TRUNCATION: list[int] = [3] * 512
+    CSP_ROUNDING: list[int] = [2] * 384
 
     PREADU_SIGNAL_MAP = {
         0: {"preadu_id": 1, "channel": 14},
@@ -155,20 +153,20 @@ class TpmDriver(MccsComponentManager):
         self._is_programmed = False
         self._is_beamformer_running = False
         self._pending_data_requests = False
-        self._voltage = self.VOLTAGE
+        self._voltage = 5.0
         self._board_temperature = self.BOARD_TEMPERATURE
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
-        self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
-        self._pps_delay = self.PPS_DELAY
+        self._current_frame = 0
+        self._pps_delay = 0
         self._test_generator_active = False
         self._arp_table: dict[int, list[int]] = {}
-        self._fpgas_time = self.FPGAS_TIME
+        self._fpgas_time = [0, 0]
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
-        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._phase_terminal_count = 0
         self._pps_present = True
         self._clock_present = True
         self._sysref_present = True
@@ -289,7 +287,7 @@ class TpmDriver(MccsComponentManager):
                 else:
                     self.logger.debug("Failed to acquire lock")
                 if self.tile.tpm is None:
-                    self._set_tpm_status(TpmStatus.UNCONNECTED)
+                    self._push_tpm_status(TpmStatus.UNCONNECTED)
                 else:
                     self.tpm_connected()
                     return
@@ -353,11 +351,11 @@ class TpmDriver(MccsComponentManager):
         if not self._is_programmed:
             self._pps_delay = 0
             self._fpga_reference_time = 0
-            self._beamformer_table = self.BEAMFORMER_TABLE
-            self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-            self._csp_rounding = self.CSP_ROUNDING
-            self._preadu_levels = [0] * 32
-            self._static_delays = [0.0] * 32
+            #self._beamformer_table = self.BEAMFORMER_TABLE
+            #self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+            #self._csp_rounding = self.CSP_ROUNDING
+            #self._preadu_levels = [0] * 32
+            #self._static_delays = [0.0] * 32
             self._is_programmed = False
             self._is_beamformer_running = False
             self._test_generator_active = False
@@ -367,7 +365,6 @@ class TpmDriver(MccsComponentManager):
             self._fpga_current_frame = 0
             self._current_tile_beamformer_frame = 0
             self._fpga_reference_time = 0
-            self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
             self._pps_present = True
             self._clock_present = True
             self._sysref_present = True
@@ -394,7 +391,7 @@ class TpmDriver(MccsComponentManager):
 
     def tpm_disconnected(self: TpmDriver) -> None:
         """Tile disconnected to tpm."""
-        self._set_tpm_status(TpmStatus.UNCONNECTED)
+        self._push_tpm_status(TpmStatus.UNCONNECTED)
         self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         while True:
             if self._hardware_lock.acquire(timeout=0.2):
@@ -422,7 +419,7 @@ class TpmDriver(MccsComponentManager):
             self._update_tpm_status()
         return self._tpm_status
 
-    def _set_tpm_status(self: TpmDriver, new_status: TpmStatus) -> None:
+    def _push_tpm_status(self: TpmDriver, new_status: TpmStatus) -> None:
         """
         Set the TPM status local attribute and call the callback if changed.
 
@@ -456,7 +453,7 @@ class TpmDriver(MccsComponentManager):
                 self._hardware_lock.release()
             else:
                 self.logger.debug("tpm_driver: tpm_status uses current value")
-        self._set_tpm_status(new_status)
+        self._push_tpm_status(new_status)
 
     @property
     def hardware_version(self: TpmDriver) -> int:
@@ -610,7 +607,7 @@ class TpmDriver(MccsComponentManager):
         self._is_programmed = is_programmed
         if is_programmed:
             self._firmware_name = bitfile
-            self._set_tpm_status(TpmStatus.PROGRAMMED)
+            self._push_tpm_status(TpmStatus.PROGRAMMED)
 
         if task_callback:
             if is_programmed:
@@ -638,7 +635,7 @@ class TpmDriver(MccsComponentManager):
             self._hardware_lock.release()
         else:
             self.logger.warning("Failed to acquire hardware lock")
-        self._set_tpm_status(status)
+        self._push_tpm_status(status)
 
     def _initialise(
         self: TpmDriver,
@@ -662,7 +659,7 @@ class TpmDriver(MccsComponentManager):
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
             if self.tile.is_programmed() is False:
-                self._set_tpm_status(TpmStatus.UNPROGRAMMED)
+                self._push_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
             prog_status = self.tile.is_programmed()
         self.logger.debug("Lock released")
@@ -671,13 +668,16 @@ class TpmDriver(MccsComponentManager):
         #
         if prog_status:
             self._is_programmed = True
-            self._set_tpm_status(TpmStatus.PROGRAMMED)
+            self._push_tpm_status(TpmStatus.PROGRAMMED)
             #
             # Base initialisation
             #
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                self.tile.initialise()
+                self.tile.initialise(
+                    tile_id=self._tile_id,
+                    pps_delay=self._pps_delay,
+                )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
             #
@@ -689,7 +689,7 @@ class TpmDriver(MccsComponentManager):
                 # self.tile.post_synchronisation()
                 self.tile.set_station_id(self._station_id, self._tile_id)
             self.logger.debug("Lock released")
-            self._set_tpm_status(TpmStatus.INITIALISED)
+            self._push_tpm_status(TpmStatus.INITIALISED)
             self.logger.debug("TpmDriver: initialisation completed")
             if task_callback:
                 task_callback(
@@ -697,7 +697,7 @@ class TpmDriver(MccsComponentManager):
                     result="The initialisation task has completed",
                 )
         else:
-            self._set_tpm_status(TpmStatus.UNPROGRAMMED)
+            self._push_tpm_status(TpmStatus.UNPROGRAMMED)
             self.logger.error("TpmDriver: Cannot initialise board")
             if task_callback:
                 task_callback(
@@ -896,9 +896,21 @@ class TpmDriver(MccsComponentManager):
         """
         Return the last measured PPS delay of the TPM.
 
-        :return: PPS delay
+        :return: PPS delay correction in 625ps units
         """
         return self._pps_delay
+
+    @pps_delay.setter  # type: ignore[no-redef]
+    def pps_delay(self: TpmDriver, value: int) -> None:
+        """
+        Set PPS delay.
+
+        PPS delay correction, applied during initialisation.
+        Must be set before initialise()
+
+        :param value: PPS delay correction in 625ps units
+        """
+        self._tile_id = value
 
     @property
     def register_list(self: TpmDriver) -> list[str]:
@@ -2042,7 +2054,7 @@ class TpmDriver(MccsComponentManager):
         if not started:
             return False
         self.logger.info("Waiting for start acquisition")
-        max_timeout = 30  # Maximum delay, in 0.1 seconds
+        max_timeout = 60  # Maximum delay, in 0.1 seconds
         started = False
         for i in range(max_timeout):
             time.sleep(0.1)
@@ -2056,7 +2068,7 @@ class TpmDriver(MccsComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
             if started:
-                self._set_tpm_status(TpmStatus.SYNCHRONISED)
+                self._push_tpm_status(TpmStatus.SYNCHRONISED)
                 break
         if not started:
             self.logger.warning(

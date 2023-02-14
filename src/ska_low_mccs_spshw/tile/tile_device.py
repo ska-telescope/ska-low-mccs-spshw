@@ -244,6 +244,20 @@ class MccsTile(SKABaseDevice):
             tango.DevState.FAULT,
         ]
 
+    def is_Off_allowed(self: MccsTile) -> bool:
+        """
+        Check if command `On` is allowed in the current device state.
+
+        :return: ``True`` if the command is allowed
+        """
+        return self.get_state() in [
+            tango.DevState.OFF,
+            tango.DevState.STANDBY,
+            tango.DevState.ON,
+            tango.DevState.UNKNOWN,
+            tango.DevState.FAULT,
+        ]
+
     # ----------
     # Callbacks
     # ----------
@@ -767,6 +781,15 @@ class MccsTile(SKABaseDevice):
         :return: Return the PPS delay
         """
         return self.component_manager.pps_delay
+
+    @ppsDelay.write  # type: ignore[no-redef]
+    def ppsDelay(self: MccsTile, delay: int) -> None:
+        """
+        Set PPS delay correction, one per tile.
+
+        :param delay: PPS delay correction in 625ps units
+        """
+        self.component_manager.pps_delays = delay
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:

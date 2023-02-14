@@ -1,4 +1,4 @@
-stations: 
+stations:
   1:
     cabinet_network_address: 10.0.0.0
     subracks: [1]
@@ -10,7 +10,7 @@ subracks:
     logging_level_default: 5
 tpms:
   1:
-    host: 10.0.10.201
+    host: 10.0.10.225
     port: 10000
     version: tpm_v1_6
     subrack: "1"
@@ -31,7 +31,7 @@ tpms:
     subrack_bay: 3
     simulation_config: 1
   4:
-    host: 10.0.10.214
+    host: 10.0.10.222
     port: 10000
     version: tpm_v1_6
     subrack: "1"

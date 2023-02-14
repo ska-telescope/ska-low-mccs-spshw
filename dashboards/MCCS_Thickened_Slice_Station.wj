@@ -1,0 +1,417 @@
+{
+  "id": "63e531f69e672300186e4499",
+  "name": "Thickened Slice Station",
+  "version": "1.3.6",
+  "user": "MCCS",
+  "insertTime": "2023-02-09T17:48:38.975Z",
+  "updateTime": "2023-02-14T12:15:07.675Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "MCCS",
+  "widget": [
+    {
+      "id": "5",
+      "x": 3,
+      "y": 4,
+      "canvas": "0",
+      "width": 32,
+      "height": 10,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#c7c7ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1.5,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 0,
+      "innerWidgets": [
+        {
+          "id": "1",
+          "x": 3.4,
+          "y": 5.2,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 8.8,
+          "type": "PARAMETRIC_WIDGET",
+          "inputs": {
+            "name": "Station Selector",
+            "variable": "stationID"
+          },
+          "valid": true,
+          "order": 1
+        }
+      ]
+    },
+    {
+      "id": "6",
+      "x": 3,
+      "y": 16,
+      "canvas": "0",
+      "width": 32,
+      "height": 47,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#f0f0ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 1,
+      "innerWidgets": [
+        {
+          "id": "8",
+          "x": 3.4,
+          "y": 20.16,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "LABEL",
+          "inputs": {
+            "text": "Attributes",
+            "textColor": "#000000",
+            "backgroundColor": "#c7c7ff",
+            "size": 2,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 2
+        },
+        {
+          "id": "2",
+          "x": 3.4,
+          "y": 25.46,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "stationID",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 6
+        },
+        {
+          "id": "3",
+          "x": 3.4,
+          "y": 30.76,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "adminmode",
+              "label": "adminMode"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 13
+        },
+        {
+          "id": "7",
+          "x": 3.4,
+          "y": 36.06,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 14
+        },
+        {
+          "id": "4",
+          "x": 3.4,
+          "y": 41.36,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "obsstate",
+              "label": "obsState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 15
+        },
+        {
+          "id": "14",
+          "x": 3.4,
+          "y": 46.660000000000004,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "obsmode",
+              "label": "obsMode"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 16
+        },
+        {
+          "id": "17",
+          "x": 3.4,
+          "y": 51.96,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "iscalibrated",
+              "label": "isCalibrated"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 20
+        },
+        {
+          "id": "18",
+          "x": 3.4,
+          "y": 57.26,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "isconfigured",
+              "label": "isConfigured"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 21
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "x": 40,
+      "y": 4,
+      "canvas": "0",
+      "width": 88,
+      "height": 41,
+      "type": "BOX",
+      "inputs": {
+        "title": "Board Temperature",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#c7c7ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 2,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 2,
+      "innerWidgets": [
+        {
+          "id": "9",
+          "x": 40.4,
+          "y": 11.68,
+          "canvas": "0",
+          "width": 87.2,
+          "height": 33.2,
+          "type": "ATTRIBUTE_PLOT",
+          "inputs": {
+            "timeWindow": 120,
+            "showZeroLine": true,
+            "logarithmic": false,
+            "attributes": [
+              {
+                "attribute": {
+                  "device": "stationID",
+                  "attribute": "configurationprogress",
+                  "label": "configurationProgress"
+                },
+                "showAttribute": "Name",
+                "yAxis": "left",
+                "lineColor": "#ff0000"
+              }
+            ],
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff"
+          },
+          "valid": true,
+          "order": 1
+        }
+      ]
+    },
+    {
+      "id": "12",
+      "x": 40,
+      "y": 48,
+      "canvas": "0",
+      "width": 88,
+      "height": 41,
+      "type": "BOX",
+      "inputs": {
+        "title": "Voltage",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#c7c7ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 2,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 3,
+      "innerWidgets": [
+        {
+          "id": "13",
+          "x": 40.4,
+          "y": 55.68,
+          "canvas": "0",
+          "width": 87.2,
+          "height": 33.2,
+          "type": "ATTRIBUTE_PLOT",
+          "inputs": {
+            "timeWindow": 120,
+            "showZeroLine": true,
+            "logarithmic": false,
+            "attributes": [
+              {
+                "attribute": {
+                  "device": "stationID",
+                  "attribute": "configurationdelayexpected",
+                  "label": "configurationDelayExpected"
+                },
+                "showAttribute": "Name",
+                "yAxis": "left",
+                "lineColor": "#ff0000"
+              }
+            ],
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff"
+          },
+          "valid": true,
+          "order": 17
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "_id": "63e5329a9e672300186e44cf",
+      "name": "stationID",
+      "class": "MccsStation",
+      "device": "low-mccs/station/002"
+    }
+  ]
+}

@@ -8,9 +8,10 @@ instances:
   - {{printf "station-%03d" (int $key)}}
 {{- end}}
 {{- end}}
-entrypoints:
-  - name: "station.SpsStation"
-    path: "/app/src/ska_low_mccs_spshw/station/station_device.py"
+#entrypoints:
+#  - name: "station.SpsStation"
+#    path: "/app/src/ska_low_mccs_spshw/station/station_device.py"
+command: SpsStation
 server:
   name: "SpsStation"
   instances:

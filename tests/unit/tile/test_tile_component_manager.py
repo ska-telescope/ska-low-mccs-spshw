@@ -632,9 +632,7 @@ class TestStaticSimulatorCommon:
             args = "2022-11-10T12:34:56.0Z"
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
             timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
-            # There is no fpga_sync_time method, so here:
-            # None = timestamp    and therefore having assigned timesamp to None
-            # its not surprising that timestamp = timestamp
+            # TODO: there is no fpga_sync_time method.
             # tile._tpm_component_manager.fpga_sync_time = timestamp
             # assert tile._tpm_component_manager.fpga_sync_time == timestamp
             tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]

@@ -123,12 +123,12 @@ class TestTpmDriver:
         # constructs a mocked TPM
         # Therefore the tile will have access to the TPM after connect().
         static_tile_simulator.connect()
-        if static_tile_simulator.tpm is not None:
-            static_tile_simulator.tpm.write_register("fpga1.1", 3)
-            static_tile_simulator.tpm.write_register("fpga2.2", 2)
-            static_tile_simulator.tpm.write_register(
-                "fpga1.dsp_regfile.stream_status.channelizer_vld", 2
-            )
+        assert static_tile_simulator.tpm is not None
+        static_tile_simulator.tpm.write_register("fpga1.1", 3)
+        static_tile_simulator.tpm.write_register("fpga2.2", 2)
+        static_tile_simulator.tpm.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", 2
+        )
 
         # write to fpga1
         # write_register(register_name, values, offset, device)
@@ -260,8 +260,8 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
-        if static_tile_simulator.tpm is not None:
-            static_tile_simulator.tpm._fpga_current_frame = 2
+        assert static_tile_simulator.tpm is not None
+        static_tile_simulator.tpm._fpga_current_frame = 2
 
         board_temperature = tpm_driver.board_temperature
         voltage = tpm_driver.voltage
@@ -295,8 +295,8 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
-        if static_tile_simulator.tpm is not None:
-            static_tile_simulator.tpm._fpga_current_frame = 2
+        assert static_tile_simulator.tpm is not None
+        static_tile_simulator.tpm._fpga_current_frame = 2
 
         _ = tpm_driver.register_list
         tpm_driver._get_register_list()
@@ -320,8 +320,8 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
-        if static_tile_simulator.tpm is not None:
-            static_tile_simulator.tpm._fpga_current_frame = 2
+        assert static_tile_simulator.tpm is not None
+        static_tile_simulator.tpm._fpga_current_frame = 2
 
         tpm_driver.channeliser_truncation = [4] * 512
         _ = tpm_driver.channeliser_truncation
@@ -484,25 +484,6 @@ class TestTpmDriver:
         assert (
             static_tile_simulator["fpga2.test_generator.delay_0"]
             == expected_delay_written[16:32]
-        )
-
-        # check set_time_delay failure
-        expected_delays_written = [43.0, 98.2]
-        # mock_error = unittest.mock.Mock(side_effect=Exception("mocked to fail"))
-        # No method in static tile simulator
-        # static_tile_simulator._set_time_delays = unittest.mock.MagicMock(
-        #     side_effect=mock_error
-        # )
-        # No method static_time_delays.
-        # tpm_driver.static_delays = programmed_delays
-
-        assert (
-            static_tile_simulator["fpga1.test_generator.delay_0"]
-            != expected_delays_written
-        )
-        assert (
-            static_tile_simulator["fpga2.test_generator.delay_0"]
-            != expected_delays_written
         )
 
     def test_read_write_address(

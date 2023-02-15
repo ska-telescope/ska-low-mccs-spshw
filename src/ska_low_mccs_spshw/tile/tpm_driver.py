@@ -1202,15 +1202,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
-    @property
-    def static_delays(self: TpmDriver) -> list[float]:
-        """
-        Read the cached value for the static delays, in sample.
-
-        :return: static delay, in samples one per TPM input
-        """
-        return copy.deepcopy(self._static_delays)
-
     def _get_static_delays(self: TpmDriver) -> list[float]:
         """
         Read from hardware the static delays, in nanoseconds.
@@ -1233,6 +1224,15 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         except Exception as e:
             self.logger.warning(f"TpmDriver: Tile access failed: {e}")
         return delays
+
+    @property
+    def static_delays(self: TpmDriver) -> list[float]:
+        """
+        Read the cached value for the static delays, in sample.
+
+        :return: static delay, in samples one per TPM input
+        """
+        return copy.deepcopy(self._static_delays)
 
     @static_delays.setter  # type: ignore[no-redef, attr-defined]
     def static_delays(self: TpmDriver, delays: list[float]) -> None:

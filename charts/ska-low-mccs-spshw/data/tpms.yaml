@@ -8,9 +8,10 @@ instances:
   - {{printf "tile-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-entrypoints:
-  - name: "tile.MccsTile"
-    path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
+#entrypoints:
+#  - name: "tile.MccsTile"
+#    path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
+command: MccsTile
 server: 
   name: "MccsTile"
   instances:

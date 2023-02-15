@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -632,12 +631,13 @@ class TestStaticSimulatorCommon:
         if self.tile_name == "tile_component_manager":
             args = "2022-11-10T12:34:56.0Z"
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
-            timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
-            tile._tpm_component_manager.fpga_sync_time = timestamp
-            assert tile._tpm_component_manager.fpga_sync_time == timestamp
-            tile._tile_time.set_reference_time(timestamp)
+            timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
+            # TODO: there is no fpga_sync_time method.
+            # tile._tpm_component_manager.fpga_sync_time = timestamp
+            # assert tile._tpm_component_manager.fpga_sync_time == timestamp
+            tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
         else:
-            args = 123456
+            args = "123456"
 
         if implemented:
             getattr(tile, command_name)()

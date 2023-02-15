@@ -21,7 +21,6 @@ cache:
 stages:
   - lint
   - build
-  - downstream
   - test
   - publish
   - pages
@@ -57,9 +56,3 @@ include:
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
 
 
-bridge:
-  stage: downstream
-  script:
-  - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/ska-telescope/mccs/ska-low-mccs/.gitlab-ci.yml
-  only:
-  - tags

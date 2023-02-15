@@ -8,7 +8,7 @@ instances:
   - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-command: MccsSubrack
+command: MccsSubrack # Entry point changed.
 server: 
   name: "MccsSubrack"
   instances:

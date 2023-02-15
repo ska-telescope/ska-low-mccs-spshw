@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.2.1"
+version = "0.3.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -27,6 +27,7 @@ ska-low-mccs-common = "^0.4.2"
 fastapi = "^0.88.0"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 typing-extensions = "^4.4.0"
+astroid = "2.14.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"

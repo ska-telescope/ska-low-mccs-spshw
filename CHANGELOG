@@ -1,6 +1,20 @@
 # Version History
 
 ## unrelease
+
+## 0.3.0
+
+* MCCS-1343 - Final static type check of tile tests post refactor
+* MCCS-1339 - use ska-tango-testing
+* MCCS-1324 - Static type checking of tile in ska-low-mccs-spshw
+* MCCS-1239 - xray upload
+* MCCS-1216 - Add Ingress to Jupyterhub
+* MCCS-1225 - k8s-test-psi-low
+* MCCS-1257 - Added skeleton SpshwStation device.
+* LOW-386  -  use correct component manager attr in GetArpTable
+* MCCS-1236 - Attach xray tickets to feature file
+* MCCS-1258 - new subrack device
+
 ## 0.2.1
 
 * MCCS-1318 - Fix pyfabil/aavs commit SHAs

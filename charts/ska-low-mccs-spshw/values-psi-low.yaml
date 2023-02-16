@@ -82,6 +82,12 @@ low_mccs_spshw:
 
 facility: psi-low
 
+deviceServers:
+  stations:
+    instances:
+      1:
+        enabled: false
+
 nodeSelector: {}
 
 affinity: {}

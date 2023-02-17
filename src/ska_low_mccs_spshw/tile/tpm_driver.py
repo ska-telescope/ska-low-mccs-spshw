@@ -311,51 +311,57 @@ class TpmDriver(MccsComponentManager):
             self._is_programmed = self.tile.is_programmed()
             if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
-                self._adc_rms = self.tile.get_adc_rms()
-                # self._fpgas_time =
-                # self._fpga_current_frame
-                # self._current_tile_beamformer_frame
-                self._is_beamformer_running = self.tile.beamformer_is_running()
-                self._pending_data_requests = self.tile.check_pending_data_requests()
                 self._voltage = self.tile.get_voltage()
                 # slow update parameters
                 if (current_time - self._last_update_time_1) > time_interval_1:
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
-                    self._pps_present = self._check_pps_present()
-                    self._pps_delay = self.tile.get_pps_delay()
-                    # self._sysref_present = method_to_be_written
                     self._fpga1_temperature = self.tile.get_fpga0_temperature()
                     self._fpga2_temperature = self.tile.get_fpga1_temperature()
                     self._board_temperature = self.tile.get_temperature()
-                # very slow update parameters. Should update by set commands
-                if (current_time - self._last_update_time_2) > time_interval_2:
-                    self._last_update_time_2 = current_time
-                    self._fpga_reference_time = self.tile[
-                        "fpga1.pps_manager.sync_time_val"
-                    ]
-                    self._phase_terminal_count = self.tile.get_phase_terminal_count()
-                    # self._channeliser_truncation = method_to_be_written
-                    # self._csp_rounding = method_to_be_written
-                    self._preadu_levels = self._get_preadu_levels()
-                    self._static_delays = self._get_static_delays()
-                    self._station_id = self.tile.get_station_id()
-                    self._tile_id = self.tile.get_tile_id()
-                    self._beamformer_table = self.tile.tpm.station_beamf[
-                        0
-                    ].get_channel_table()
+                # Commands checked only when initialised
+                # Potential crash if polled on a uninitialised board
+                if (
+                    self._tpm_status == TpmStatus.INITIALISED
+                    or self._tpm_status == TpmStatus.SYNCHRONISED
+                ):
+                    self._adc_rms = self.tile.get_adc_rms()
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+                    # very slow update parameters. Should update by set commands
+                    if (current_time - self._last_update_time_2) > time_interval_2:
+                        self._last_update_time_2 = current_time
+                        self._pps_delay = self.tile.get_pps_delay()
+                        self._pps_present = self._check_pps_present()
+                        self._is_beamformer_running = self.tile.beamformer_is_running()
+                        self._fpga_reference_time = self.tile[
+                            "fpga1.pps_manager.sync_time_val"
+                        ]
+                        self._phase_terminal_count = (
+                            self.tile.get_phase_terminal_count()
+                        )
+                        # self._channeliser_truncation = method_to_be_written
+                        # self._csp_rounding = method_to_be_written
+                        self._preadu_levels = self._get_preadu_levels()
+                        self._static_delays = self._get_static_delays()
+                        self._station_id = self.tile.get_station_id()
+                        self._tile_id = self.tile.get_tile_id()
+                        self._beamformer_table = self.tile.tpm.station_beamf[
+                            0
+                        ].get_channel_table()
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
 
         if not self._is_programmed:
             self._pps_delay = 0
             self._fpga_reference_time = 0
-            #self._beamformer_table = self.BEAMFORMER_TABLE
-            #self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-            #self._csp_rounding = self.CSP_ROUNDING
-            #self._preadu_levels = [0] * 32
-            #self._static_delays = [0.0] * 32
+            # self._beamformer_table = self.BEAMFORMER_TABLE
+            # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+            # self._csp_rounding = self.CSP_ROUNDING
+            # self._preadu_levels = [0] * 32
+            # self._static_delays = [0.0] * 32
             self._is_programmed = False
             self._is_beamformer_running = False
             self._test_generator_active = False
@@ -1116,20 +1122,47 @@ class TpmDriver(MccsComponentManager):
         if core_id == -1:
             for core in range(2):
                 for arp_table_entry_id in range(2):
-                    dict_to_append = self.tile.get_40g_core_configuration(
+                    dict_to_append = self._get_40g_core_configuration(
                         core, arp_table_entry_id
                     )
                     if dict_to_append is not None:
                         self._forty_gb_core_list.append(dict_to_append)
         else:
             self._forty_gb_core_list = [
-                self.tile.get_40g_core_configuration(core_id, arp_table_entry)
+                self._get_40g_core_configuration(core_id, arp_table_entry)
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
             core["src_ip"] = _int2ip(core["src_ip"])
             core["dst_ip"] = _int2ip(core["dst_ip"])
         return self._forty_gb_core_list
+
+    def _get_40g_core_configuration(
+        self: TpmDriver, core_id:int, arp_table_entry:int
+    ):
+        """
+        Return a 40G configuration.
+
+        :param core_id: id of the core for which a configuration is to
+            be return. Defaults to -1, in which case all cores
+            configurations are returned
+        :param arp_table_entry: ARP table entry to use
+
+        :return: core configuration or list of core configurations
+        """
+        return_value = {'core_id': core_id, 'arp_table_entry': arp_table_entry}
+        if self._hardware_lock.acquire(timeout=0.2):
+            try:
+                return_value = self.tile.get_40g_core_configuration(
+                    core_id,
+                    arp_table_entry,
+                )
+            except Exception as e:
+                self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            self._hardware_lock.release()
+        else:
+            self.logger.warning("Failed to acquire hardware lock")
+        return return_value
 
     @property
     def arp_table(self: TpmDriver) -> dict[int, list[int]]:
@@ -1165,7 +1198,7 @@ class TpmDriver(MccsComponentManager):
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         """
-        self.logger.debug("TpmDriver: set_lmc_download")
+        self.logger.debug(f"TpmDriver: set_lmc_download: mode {mode}, dst_ip: {dst_ip}")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_lmc_download(
@@ -1198,11 +1231,10 @@ class TpmDriver(MccsComponentManager):
         """
         if type(truncation) == int:
             self._channeliser_truncation = [truncation] * 512
-        elif type(truncation) == list:
-            if len(truncation) == 1:
-                self._channeliser_truncation = truncation * 512
-            else:
-                self._channeliser_truncation = truncation
+        elif len(truncation) == 1:
+            self._channeliser_truncation = [truncation[0]] * 512
+        else:
+            self._channeliser_truncation = truncation
         self._set_channeliser_truncation(self._channeliser_truncation)
 
     def _set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:
@@ -1213,7 +1245,7 @@ class TpmDriver(MccsComponentManager):
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         """
-        self.logger.debug("TpmDriver: set_channeliser_truncation")
+        self.logger.debug(f"TpmDriver: set_channeliser_truncation: {array[0]}")
         nb_freq = len(array)
         trunc = [0] * 512
         trunc[0:nb_freq] = array
@@ -1310,8 +1342,10 @@ class TpmDriver(MccsComponentManager):
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
-        if type(rounding) == int or len(rounding) == 1:
+        if type(rounding) == int:
             self._csp_rounding = [rounding] * 384
+        elif len(rounding) == 1:
+            self._csp_rounding = [rounding[0]] * 384
         else:
             self._csp_rounding = rounding
         self._set_csp_rounding(rounding)
@@ -2046,6 +2080,9 @@ class TpmDriver(MccsComponentManager):
                 # Start data acquisition on board
                 self.tile.start_acquisition(start_time, delay)
                 started = True
+                self._fpga_reference_time = self.tile[
+                    "fpga1.pps_manager.sync_time_val"
+                ]
             except Exception as e:
                 self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             self._hardware_lock.release()
@@ -2097,7 +2134,7 @@ class TpmDriver(MccsComponentManager):
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         """
-        self.logger.debug("TpmDriver: set_lmc_integrated_download")
+        self.logger.debug(f"TpmDriver: set_lmc_integrated_download: mode {mode}, dst_ip {dst_ip}")
         if self._hardware_lock.acquire(timeout=0.2):
             try:
                 self.tile.set_lmc_integrated_download(

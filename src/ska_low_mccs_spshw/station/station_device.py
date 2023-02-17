@@ -404,7 +404,7 @@ class SpsStation(SKAObsDevice):
 
         :returns: list of 512 values, one per channel.
         """
-        return self.component_manager.channeliser_truncation
+        return self.component_manager.channeliser_rounding
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: SpsStation, truncation: list[int]) -> None:
@@ -414,7 +414,7 @@ class SpsStation(SKAObsDevice):
         :param truncation: List with either a single value (applies to all channels)
             or a list of 512 values. Range 0 (no truncation) to 7
         """
-        self.component_manager.channeliser_truncation = truncation
+        self.component_manager.channeliser_rounding = truncation
 
     @attribute(
         dtype=("DevLong",),
@@ -852,6 +852,72 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevVarLongArray",
         dtype_out="DevVarLongStringArray",
     )
+    def SetBeamFormerTable(
+        self: SpsStation, argin: list[int]
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the beamformer table which are going to be beamformed into each beam.
+
+        region_array is defined as a flattened 2D array, for a maximum of 48 entries.
+        Each entry corresponds to 8 consecutive frequency channels.
+        This is equivalent to SetBeamformerRegions, with a different way
+        to specify the bandwidth of each spectral region.
+        Input is consistent with the beamformerTable attribute
+
+        :param argin: list of regions. Each region comprises:
+
+        * start_channel - (int) region starting channel, must be even in range 0 to 510
+        * beam_index - (int) beam used for this region with range 0 to 47
+        * subarray_id - (int) Subarray
+        * subarray_logical_channel - (int) logical channel # in the subarray
+        * subarray_beam_id - (int) ID of the subarray beam
+        * substation_id - (int) Substation
+        * aperture_id:  ID of the aperture (station*100+substation?)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :raises ValueError: if parameters are illegal or inconsistent
+
+        :example:
+
+        >>> regions = [[4, 0, 0, 0, 3, 1, 101], [26, 1, 0, 24, 4, 2, 102]]
+        >>> input = list(itertools.chain.from_iterable(regions))
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> dp.command_inout("SetBeamFormerRegions", input)
+        """
+        if len(argin) < 7:
+            self.logger.error("Insufficient parameters specified")
+            raise ValueError("Insufficient parameters specified")
+        if len(argin) > (48 * 7):
+            self.logger.error("Too many channel groups specified")
+            raise ValueError("Too many channel groups specified")
+        if len(argin) % 7 != 0:
+            self.logger.error(
+                "Incomplete specification of region. Groups specified by 7 values"
+            )
+            raise ValueError("Incomplete specification of channel group")
+        beamformer_table: list[list[int]] = []
+        for i in range(0, len(argin), 7):
+            group = argin[i : i + 7]  # noqa: E203
+            start_channel = group[0]
+            if start_channel % 2 != 0:
+                self.logger.error("Start channel in group must be even")
+                raise ValueError("Start channel in group must be even")
+            beam_index = group[1]
+            if beam_index < 0 or beam_index > 47:
+                self.logger.error("Beam_index is out side of range 0-47")
+                raise ValueError("Beam_index is out side of range 0-47")
+            beamformer_table.append(group)
+        self.component_manager.set_beamformer_table(beamformer_table)
+
+        return ([ResultCode.OK], ["SetBeamFormerTable command completed OK"])
+
+    @command(
+        dtype_in="DevVarLongArray",
+        dtype_out="DevVarLongStringArray",
+    )
     def SetBeamFormerRegions(
         self: SpsStation, argin: list[int]
     ) -> DevVarLongStringArrayType:
@@ -896,10 +962,10 @@ class SpsStation(SKAObsDevice):
                 "Incomplete specification of region. Regions specified by 8 values"
             )
             raise ValueError("Incomplete specification of region")
-        regions = []
+        beamformer_table: list[list[int]] = []
         total_chan = 0
         for i in range(0, len(argin), 8):
-            region = argin[i : i + 8]  # noqa: E203
+            region = list(argin[i : i + 8])  # noqa: E203
             start_channel = region[0]
             if start_channel % 2 != 0:
                 self.logger.error("Start channel in region must be even")
@@ -916,8 +982,13 @@ class SpsStation(SKAObsDevice):
             if total_chan > 384:
                 self.logger.error("Too many channels specified > 384")
                 raise ValueError("Too many channels specified > 384")
-            regions.append(region)
-        self.component_manager.set_beamformer_regions(argin)
+            subarray_logical_channel = region[4]
+            for channel_0 in range(start_channel, start_channel + nchannels, 8):
+                entry = [channel_0] + region[2:8]
+                entry[3] = subarray_logical_channel
+                subarray_logical_channel = subarray_logical_channel + 8
+                beamformer_table.append(entry)
+        self.component_manager.set_beamformer_table(beamformer_table)
         # handler = self.get_command_object("SetBeamformerRegions")
         # (return_code, message) = handler(argin)
         return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])

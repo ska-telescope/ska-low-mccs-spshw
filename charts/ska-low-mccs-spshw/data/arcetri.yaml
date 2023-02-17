@@ -2,7 +2,7 @@ stations:
   1:
     cabinet_network_address: 10.0.0.0
     subracks: [1]
-    tpms: [1, 2, 3, 4, 5, 6, 7, 8]
+    tpms: [1, 4,]
 subracks:
   1:
     host: 10.0.10.64

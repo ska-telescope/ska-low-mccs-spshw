@@ -252,7 +252,7 @@ class SpsStationComponentManager(MccsComponentManager):
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
         self._static_delays = [0] * 512
-        self._channeliser_truncation = [3] * 512
+        self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
         self._preadu_levels = [0] * 512
         self._source_port = 0xF0D0
@@ -508,7 +508,7 @@ class SpsStationComponentManager(MccsComponentManager):
             self.logger.debug("Starting on sequence on subracks")
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
-        self.logger.debug(f'Tile power states: {self._tile_power_states.values()}')
+        self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
         if any(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -657,6 +657,7 @@ class SpsStationComponentManager(MccsComponentManager):
             ):
                 results = []
                 for proxy in self._tile_proxies.values():
+                    self.logger.debug(f'Powering on tile {proxy._proxy.name()}')
                     result_code = proxy.on()
                     time.sleep(4)  # stagger power on by 4 seconds per tile
                     results.append(result_code)
@@ -696,34 +697,29 @@ class SpsStationComponentManager(MccsComponentManager):
         :return: a result code
         """
         tile_no = 0
+        last_tile = len(self._tile_proxies.values()) - 1
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
             assert tile is not None
             i1 = tile_no * 32  # indexes for parameters for individual signals
             i2 = i1 + 32
-            self.logger.debug(f'Initialising tile {tile_no}: {tile.name()}')
+            self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
             tile.preaduLevels = self._preadu_levels[i1:i2]
             tile.staticTimeDelays = self._static_delays[i1:i2]
-            tile.channeliserRounding = self._channeliser_truncation
-            tile.cspRounding = self.csp_rounding
+            tile.channeliserRounding = self._channeliser_rounding
+            tile.cspRounding = self._csp_rounding
             tile.ppsDelay = self._pps_delays[tile_no]
-            beamformer_regions: list[list[int]] = []
-            for entry in self._beamformer_table:
-                beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
-            tile.SetBeamformerRegions(
-                list(itertools.chain.from_iterable(beamformer_regions))
-            )
             tile.SetLmcDownload(json.dumps(self._lmc_param))
-            tile.SetLmcIntegratedDownload(
+            tile.ConfigureStationBeamformer(
                 json.dumps(
                     {
-                        "mode": self._lmc_integrated_mode,
-                        "channel_payload_length": self._lmc_channel_payload_length,
-                        "beam_payload_length": self._lmc_beam_payload_length,
+                        'is_first': (tile_no == 0),
+                        'is_last': (tile_no == last_tile)
                     }
                 )
             )
             tile_no = tile_no + 1
+        self._set_beamformer_table()
         return ResultCode.OK
 
     @check_communicating
@@ -756,8 +752,8 @@ class SpsStationComponentManager(MccsComponentManager):
             base_ip3 = 0x80
         else:
             base_ip3 = 0xC0
-        tile = 0
         last_tile = len(tiles) - 1
+        tile = 0
         for proxy in tiles:
             assert proxy._proxy is not None
             src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*tile}"
@@ -770,8 +766,8 @@ class SpsStationComponentManager(MccsComponentManager):
                 dst_ip1 = self._csp_ingest_address
                 dst_ip2 = self._csp_ingest_address
                 dst_port = self._csp_ingest_port
-            self.logger.debug(f'Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}')
-            self.logger.debug(f'Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}')
+            self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
+            self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
             proxy._proxy.Configure40GCore(
                 json.dumps(
                     {
@@ -788,7 +784,7 @@ class SpsStationComponentManager(MccsComponentManager):
             proxy._proxy.Configure40GCore(
                 json.dumps(
                     {
-                        "core_id": 0,
+                        "core_id": 1,
                         "arp_table_entry": 0,
                         "source_ip": src_ip2,
                         "source_mac": src_mac + 1,
@@ -798,9 +794,17 @@ class SpsStationComponentManager(MccsComponentManager):
                     }
                 )
             )
-            proxy._proxy.ConfigureStationBeamformer(
-                json.dumps({"is_first": tile == 0, "is_last": tile == last_tile})
-            )
+            proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
+            proxy._proxy.SetLmcIntegratedDownload(
+                    json.dumps(
+                        {
+                            "mode": self._lmc_integrated_mode,
+                            "destination_ip": self._lmc_param['destination_ip'],
+                            "channel_payload_length": self._lmc_channel_payload_length,
+                            "beam_payload_length": self._lmc_beam_payload_length,
+                        }
+                    )
+                )
             tile = tile + 1
         return ResultCode.OK
 
@@ -822,19 +826,21 @@ class SpsStationComponentManager(MccsComponentManager):
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
         assert tile0 is not None
-        time0 = tile0.fpgasUnixTime[0]
+        time0 = (tile0.fpgasUnixTime)[0]
         timeout = 15
-        while tile0.fpgasUnixTime[0] == time0:
+        while (tile0.fpgasUnixTime)[0] == time0:
             if timeout == 0:
                 self.logger.error("Timeout waiting for FPGA time second tick")
                 return ResultCode.FAILED
             time.sleep(0.1)
             timeout = timeout - 1
         result: list[int] = []
+        time.sleep(0.4)  # Wait till mid second
         for proxy in tiles:
             assert proxy._proxy is not None
-            result = result + proxy._proxy.fpgasUnixTime
-        if any(result[0] != time for time in result):
+            result = result + list(proxy._proxy.fpgasUnixTime)
+        self.logger.debug(f"Current FPGA times:{result}")
+        if any(result[0] != time_n for time_n in result):
             self.logger.error("FPGA time counters not synced")
             return ResultCode.FAILED
         return ResultCode.OK
@@ -909,7 +915,7 @@ class SpsStationComponentManager(MccsComponentManager):
             i = i + 32
 
     @property
-    def channeliser_truncation(self: SpsStationComponentManager) -> list[int]:
+    def channeliser_rounding(self: SpsStationComponentManager) -> list[int]:
         """
         Channeliser rounding.
 
@@ -919,10 +925,10 @@ class SpsStationComponentManager(MccsComponentManager):
 
         :returns: list of 512 values, one per channel.
         """
-        return copy.deepcopy(self._channeliser_truncation)
+        return copy.deepcopy(self._channeliser_rounding)
 
-    @channeliser_truncation.setter
-    def channeliser_truncation(
+    @channeliser_rounding.setter
+    def channeliser_rounding(
         self: SpsStationComponentManager, truncation: list[int]
     ) -> None:
         """
@@ -931,10 +937,13 @@ class SpsStationComponentManager(MccsComponentManager):
         :param truncation: List with either a single value (applies to all channels)
             or a list of 512 values. Range 0 (no truncation) to 7
         """
-        self._channeliser_truncation = copy.deepcopy(truncation)
+        self._channeliser_rounding = copy.deepcopy(truncation)
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(
+                    f"Writing truncation  {truncation[0]} in {proxy._proxy.name()}"
+                )
                 proxy._proxy.channeliserRoundings = truncation
 
     @property
@@ -963,6 +972,9 @@ class SpsStationComponentManager(MccsComponentManager):
         proxy = list(self._tile_proxies.values())[-1]
         assert proxy._proxy is not None  # for the type checker
         if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+            self.logger.debug(
+                f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
+            )
             proxy._proxy.cspRounding = truncation
 
     @property
@@ -1163,8 +1175,8 @@ class SpsStationComponentManager(MccsComponentManager):
         mode: str,
         payload_length: int,
         dst_ip: str,
-        src_port: int,
-        dst_port: int,
+        src_port: int=0xF0D0,
+        dst_port: int=4660,
     ) -> None:
         """
         Configure link and size of LMC channel.
@@ -1184,16 +1196,16 @@ class SpsStationComponentManager(MccsComponentManager):
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.set_lmc_download(json_param)
+                tile._proxy.SetLmcDownload(json_param)
 
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str,
-        src_port: int,
-        dst_port: int,
+        dst_ip: str=None,
+        src_port: int=0xF0D0,
+        dst_port: int=4660,
     ) -> None:
         """
         Configure link and size of integrated LMC channel.
@@ -1210,6 +1222,8 @@ class SpsStationComponentManager(MccsComponentManager):
         self._lmc_integrated_mode = mode
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
+        if dst_ip is None:
+            dst_ip = self._lmc_param["destination_ip"]
         json_param = json.dumps(
             {
                 "mode": mode,
@@ -1223,7 +1237,7 @@ class SpsStationComponentManager(MccsComponentManager):
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.set_lmc_download(json_param)
+                tile._proxy.SetLmcIntegratedDownload(json_param)
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -1242,8 +1256,8 @@ class SpsStationComponentManager(MccsComponentManager):
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
 
-    def set_beamformer_regions(
-        self: SpsStationComponentManager, beamformer_table: list[int]
+    def set_beamformer_table(
+        self: SpsStationComponentManager, beamformer_table: list[list[int]]
     ) -> None:
         """
         Set the frequency regions to be beamformed into a single beam.
@@ -1253,14 +1267,23 @@ class SpsStationComponentManager(MccsComponentManager):
             (which must be a multiple of 8), and a beam index (between 0 and 7)
             and a substation ID (not used)
         """
+        self._beamformer_table = beamformer_table
+        self._set_beamformer_table()
+
+    def _set_beamformer_table(
+        self: SpsStationComponentManager,
+    ) -> None:
+        """Set the frequency regions to be beamformed into a single beam."""
+        beamformer_regions = []
+        for entry in self._beamformer_table:
+            beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.set_beamformer_regions(beamformer_table)
-        proxies = list(self._tile_proxies.values())
-        proxy = proxies[0]._proxy
-        assert proxy is not None  # for the type checker
-        self._beamformer_table = proxy.beamformerTable.reshape(-1, 7)
+                self.logger.debug(f'Set beamformer table on tile {tile._proxy.name()}')
+                tile._proxy.SetBeamformerRegions(
+                    list(itertools.chain.from_iterable(beamformer_regions))
+                )
 
     def load_calibration_coefficients(
         self: SpsStationComponentManager, calibration_coefficients: list[float]

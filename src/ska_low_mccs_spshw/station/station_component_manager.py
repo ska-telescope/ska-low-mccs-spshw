@@ -18,7 +18,7 @@ import logging
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, cast
 
 import tango
 from pyfabil.base.utils import ip2long
@@ -657,6 +657,7 @@ class SpsStationComponentManager(MccsComponentManager):
             ):
                 results = []
                 for proxy in self._tile_proxies.values():
+                    assert proxy._proxy is not None
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
                     result_code = proxy.on()
                     time.sleep(4)  # stagger power on by 4 seconds per tile
@@ -1200,7 +1201,7 @@ class SpsStationComponentManager(MccsComponentManager):
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str = None,
+        dst_ip: str = "",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
     ) -> None:
@@ -1219,8 +1220,8 @@ class SpsStationComponentManager(MccsComponentManager):
         self._lmc_integrated_mode = mode
         self._lmc_channel_payload_length = channel_payload_length
         self._lmc_beam_payload_length = beam_payload_length
-        if dst_ip is None:
-            dst_ip = self._lmc_param["destination_ip"]
+        if dst_ip == "":
+            dst_ip = cast(str, self._lmc_param["destination_ip"])
         json_param = json.dumps(
             {
                 "mode": mode,

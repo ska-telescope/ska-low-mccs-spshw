@@ -231,13 +231,20 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
-    def initialise(self: BaseTpmSimulator) -> None:
+    def initialise(
+        self: BaseTpmSimulator, tile_id: int = 0, pps_delay: int = PPS_DELAY
+    ) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
+
+        :param tile_id: Initial value for tile ID (optional)
+        :param pps_delay: Initial value for pps_delay (optional)
         """
         self.logger.debug("TpmSimulator: initialise")
+        self._tile_id = tile_id
+        self._pps_delay = pps_delay
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)
         self._set_tpm_status(TpmStatus.INITIALISED)
@@ -592,7 +599,7 @@ class BaseTpmSimulator(ObjectComponent):
         self: BaseTpmSimulator,
         core_id: int,
         arp_table_entry: int,
-        src_mac: str,
+        src_mac: int,
         src_ip: str,
         src_port: int,
         dst_ip: str,
@@ -706,12 +713,14 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_port: destination port, defaults to 4660
         """
         self.logger.debug("TpmSimulator: set_lmc_download")
+        if dst_ip is None:
+            dst_ip = "0.0.0.0"
         for core in (0, 1):
             self.configure_40g_core(
                 core,
                 1,
-                src_ip=None,
-                src_mac=None,
+                src_ip="0.0.0.0",
+                src_mac=0x600001000000,
                 dst_ip=dst_ip,
                 src_port=src_port,
                 dst_port=dst_port,
@@ -852,8 +861,12 @@ class BaseTpmSimulator(ObjectComponent):
         :param antenna: the antenna to which the coefficients apply
         :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: load_calibration_coefficients")
+        raise NotImplementedError
 
     def apply_calibration(self: BaseTpmSimulator, switch_time: int = 0) -> None:
         """
@@ -864,9 +877,12 @@ class BaseTpmSimulator(ObjectComponent):
 
         :param switch_time: an optional time at which to perform the
             switch
+
+        :raises NotImplementedError: because this method is not yet
+            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: apply_calibration")
-        # raise NotImplementedError
+        raise NotImplementedError
 
     def load_pointing_delays(
         self: BaseTpmSimulator, delay_array: list[float], beam_index: int

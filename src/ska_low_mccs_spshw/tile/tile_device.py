@@ -305,7 +305,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
-    #
+    # pylint: disable-next=arguments-differ
     def _component_state_changed(  # type: ignore[override]
         self: MccsTile,
         *,
@@ -395,7 +395,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(self: MccsTile, value: SimulationMode) -> None:
+    def simulationMode(  # pylint: disable=arguments-differ
+        self: MccsTile, value: SimulationMode
+    ) -> None:
         """
         Set the simulation mode.
 

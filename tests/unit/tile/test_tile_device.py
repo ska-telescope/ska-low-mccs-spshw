@@ -360,12 +360,6 @@ class TestMccsTileCommands:
         ("device_command", "arg"),
         [
             (
-                "SetLmcDownload",
-                json.dumps(
-                    {"mode": "1G", "payload_length": 4, "destination_ip": "10.0.1.23"}
-                ),
-            ),
-            (
                 "LoadPointingDelays",
                 [3] + [1e-6, 2e-8] * 16,
             ),  # 2 * antennas_per_tile + 1
@@ -951,10 +945,15 @@ class TestMccsTileCommands:
             "arp_table_entry": 0,
         }
         json_arg = json.dumps(arg)
+
         with pytest.raises(
             DevFailed, match="Invalid core id or arp table id specified"
         ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
+
+        arg2 = {"mode": "10G", "payload_length": 102, "destination_ip": "10.0.1.23"}
+        json_arg = json.dumps(arg2)
+        tile_device.SetLmcDownload(json_arg)
 
     def test_LoadCalibrationCoefficients(
         self: TestMccsTileCommands,

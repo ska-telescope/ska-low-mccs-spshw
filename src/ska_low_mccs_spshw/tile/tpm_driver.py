@@ -659,7 +659,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         prog_status = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            if self.tile.is_programmed() is False:
+            if self.tile.is_programmed is False:
                 self._set_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
             prog_status = self.tile.is_programmed
@@ -1093,7 +1093,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def get_40g_configuration(
-        self: TpmDriver, core_id: Optional[int] = -1, arp_table_entry: int = 0
+        self: TpmDriver, core_id: int = -1, arp_table_entry: int = 0
     ) -> list[dict]:
         """
         Return a 40G configuration.
@@ -1112,7 +1112,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if core_id == -1:
             for icore in range(2):
                 for arp_table_entry_id in range(2):
-                    dict_to_append = self.tile.get_40g_core_configuration(
+                    dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )
                     if dict_to_append is not None:
@@ -1129,7 +1129,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
     def _get_40g_core_configuration(
         self: TpmDriver, core_id: int, arp_table_entry: int
-    ):
+    ) -> dict:
         """
         Return a 40G configuration.
 
@@ -1151,7 +1151,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                self._hardware_lock.release()
             else:
                 self.logger.warning("Failed to acquire hardware lock")
         return return_value

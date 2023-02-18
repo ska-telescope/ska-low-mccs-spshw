@@ -606,7 +606,7 @@ class TestTpmDriver:
         tpm_driver.configure_40g_core(**core_dict)
 
         configurations = tpm_driver.get_40g_configuration(
-            core_id=core_dict.get("core_id"),
+            core_id=cast(int, core_dict.get("core_id")),
             arp_table_entry=cast(int, core_dict.get("arp_table_entry")),
         )
 

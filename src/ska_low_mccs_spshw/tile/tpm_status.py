@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -43,7 +41,7 @@ class TpmStatus(enum.IntEnum):
     SYNCHRONISED = 6
     """Time has been synchronised with UTC, timestamp is valid."""
 
-    """ TODO: More status values to come, for complete configuration in station """
+    # TODO: More status values to come, for complete configuration in station
 
     def pretty_name(self: TpmStatus) -> str:
         """

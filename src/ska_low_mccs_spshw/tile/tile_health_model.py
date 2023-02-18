@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -13,7 +11,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-from typing import Any, Callable
+from typing import Callable
 
 from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.health import HealthModel
@@ -31,7 +29,7 @@ class TileHealthModel(HealthModel):
 
     def __init__(
         self: TileHealthModel,
-        health_changed_callback: Callable[[Any], None],
+        health_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -41,7 +39,10 @@ class TileHealthModel(HealthModel):
             health state.
         """
         self._power_mode = PowerState.UNKNOWN
-        super().__init__(health_changed_callback)
+
+        # TODO: fix healthModel in ska_low_mccs_common so that it expects
+        # kwargs rather than a dict
+        super().__init__(lambda state_change: health_changed_callback(**state_change))
 
     def evaluate_health(self: TileHealthModel) -> HealthState:
         """

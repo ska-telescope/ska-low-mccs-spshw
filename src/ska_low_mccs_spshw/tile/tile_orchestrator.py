@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -14,7 +12,7 @@ import enum
 import importlib.resources
 import logging
 import threading
-from typing import Any, Callable, NoReturn, Optional, Tuple, Union, cast
+from typing import Any, Callable, NoReturn, Optional, Union, cast
 
 import tango
 import yaml
@@ -78,13 +76,13 @@ class Stimulus(enum.IntEnum):
 
 
 StateTupleType = Union[
-    Tuple[CommunicationStatus],
-    Tuple[
+    tuple[CommunicationStatus],
+    tuple[
         CommunicationStatus,
         Optional[bool],
         PowerState,
     ],
-    Tuple[
+    tuple[
         CommunicationStatus,
         Optional[bool],
         PowerState,
@@ -94,14 +92,14 @@ StateTupleType = Union[
 
 
 StateStimulusTupleType = Union[
-    Tuple[Stimulus, CommunicationStatus],
-    Tuple[
+    tuple[Stimulus, CommunicationStatus],
+    tuple[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
         PowerState,
     ],
-    Tuple[
+    tuple[
         Stimulus,
         CommunicationStatus,
         Optional[bool],
@@ -111,6 +109,7 @@ StateStimulusTupleType = Union[
 ]
 
 
+# pylint: disable=too-many-instance-attributes
 class TileOrchestrator:
     """
     A orchestrator for the Tile component manager.
@@ -157,6 +156,7 @@ class TileOrchestrator:
             # we've no logger so there's no point catching any exceptions.
         return cls.RULES
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileOrchestrator,
         start_communicating_with_subrack_callback: Callable[[], None],
@@ -166,7 +166,7 @@ class TileOrchestrator:
         turn_tpm_off_callback: Callable[[], Any],
         turn_tpm_on_callback: Callable[[], Any],
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_power_changed_callback: Callable[[PowerState], None],
         logger: logging.Logger,
         _initial_state: Optional[StateTupleType] = None,
     ) -> None:
@@ -188,8 +188,8 @@ class TileOrchestrator:
         :param communication_state_changed_callback: callback to be
             called in order to indicate a change in the status of
             communication between the component manager and its TPM
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
+        :param component_power_changed_callback: callback to be
+            called when the component power state changes
         :param logger: a logger to be used by this orchestrator.
         :param _initial_state: set the initial state of this tile
             orchestrator. This is provided for unit testing purposes
@@ -197,7 +197,7 @@ class TileOrchestrator:
         """
         self.__lock = threading.RLock()
 
-        self._subrack_lrc_callbacks = {}
+        self._subrack_lrc_callbacks: dict[str, tuple] = {}
 
         self._start_communicating_with_subrack = (
             start_communicating_with_subrack_callback
@@ -216,7 +216,7 @@ class TileOrchestrator:
         self._communication_state_changed_callback = (
             communication_state_changed_callback
         )
-        self._component_state_changed_callback = component_state_changed_callback
+        self._component_power_changed_callback = component_power_changed_callback
 
         self._logger = logger
 
@@ -286,7 +286,7 @@ class TileOrchestrator:
     def propogate_subrack_lrc(
         self: TileOrchestrator,
         event_name: str,
-        event_value: Tuple[str, str],
+        event_value: tuple[str, str],
         event_quality: tango.AttrQuality,
     ) -> None:
         """
@@ -337,11 +337,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "on"
 
     def desire_off(
         self: TileOrchestrator,
@@ -366,11 +365,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "off"
 
     def desire_standby(
         self: TileOrchestrator,
@@ -396,11 +394,10 @@ class TileOrchestrator:
             if task_callback is not None:
                 task_callback(status=TaskStatus.FAILED, exception=exc)
             raise exc
-        else:
-            if result is not None and isinstance(result, Tuple):
-                unique_id = result[1]
-                if task_callback:
-                    self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
+        if isinstance(result, tuple):
+            unique_id = result[1]
+            if task_callback:
+                self._subrack_lrc_callbacks[unique_id] = task_callback, "standby"
 
     def update_subrack_communication_state(
         self: TileOrchestrator,
@@ -530,19 +527,19 @@ class TileOrchestrator:
         self: TileOrchestrator,
     ) -> None:
         self._tpm_power_state = PowerState.NO_SUPPLY
-        self._component_state_changed_callback({"power_state": PowerState.OFF})
+        self._component_power_changed_callback(PowerState.OFF)
 
     def _report_tpm_off(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.OFF
-        self._component_state_changed_callback({"power_state": PowerState.OFF})
+        self._component_power_changed_callback(PowerState.OFF)
 
     def _report_tpm_on(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.ON
-        self._component_state_changed_callback({"power_state": PowerState.ON})
+        self._component_power_changed_callback(PowerState.ON)
 
     def _report_tpm_power_unknown(self: TileOrchestrator) -> None:
         self._tpm_power_state = PowerState.UNKNOWN
-        self._component_state_changed_callback({"power_state": PowerState.UNKNOWN})
+        self._component_power_changed_callback(PowerState.UNKNOWN)
 
     def _set_desired_off(self: TileOrchestrator) -> ResultCode:
         self._operator_desire = False

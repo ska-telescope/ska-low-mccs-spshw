@@ -77,10 +77,27 @@ low_mccs_spshw:
   image:
     registry: artefact.skao.int
     image: ska-low-mccs-spshw
-    tag: 0.2.0  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag: 0.3.1  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
     pullPolicy: IfNotPresent
 
 facility: gmrt
+
+simulators:
+  subracks:
+    1:
+      host: subrack-simulator-1
+
+deviceServers:
+  stations:
+    instances:
+      1:
+        enabled: false  # suppress this Tango device
+  subracks:
+    logging_level_default: 5
+  tpms:
+    logging_level_default: 5
+    simulation_config: 1
+    test_config: 1
 
 nodeSelector: {}
 

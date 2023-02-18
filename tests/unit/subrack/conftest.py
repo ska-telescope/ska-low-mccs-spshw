@@ -28,7 +28,7 @@ from typing import (
 import pytest
 import uvicorn
 from ska_control_model import PowerState
-from ska_low_mccs_common.testing.mock import MockCallable
+from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
     SubrackComponentManager,
@@ -158,7 +158,7 @@ def subrack_address_fixture(
 def subrack_driver_fixture(
     subrack_address: tuple[str, int],
     logger: logging.Logger,
-    callbacks: dict[str, MockCallable],
+    callbacks: MockCallableGroup,
 ) -> SubrackDriver:
     """
     Return a subrack driver, configured to talk to a running subrack server.
@@ -188,7 +188,7 @@ def subrack_component_manager_fixture(
     subrack_address: tuple[str, int],
     subrack_driver: SubrackDriver,
     initial_power_state: PowerState,
-    callbacks: dict[str, MockCallable],
+    callbacks: MockCallableGroup,
 ) -> SubrackComponentManager:
     """
     Return an subrack component manager (in simulation mode as specified).
@@ -219,14 +219,15 @@ def subrack_component_manager_fixture(
 
 
 @pytest.fixture(name="callbacks")
-def callbacks_fixture() -> dict[str, MockCallable]:
+def callbacks_fixture() -> MockCallableGroup:
     """
     Return a dictionary of callables to be used as callbacks.
 
     :return: a dictionary of callables to be used as callbacks.
     """
-    return {
-        "communication_status": MockCallable(),
-        "component_state": MockCallable(),
-        "task": MockCallable(),
-    }
+    return MockCallableGroup(
+        "communication_status",
+        "component_state",
+        "task",
+        timeout=2.0,
+    )

@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -27,6 +25,7 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 __all__ = ["BaseTpmSimulator"]
 
 
+# pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
 class BaseTpmSimulator(ObjectComponent):
     """
     A simulator for a TPM.
@@ -75,7 +74,7 @@ class BaseTpmSimulator(ObjectComponent):
     CLOCK_SIGNALS_OK = True
     STATIC_DELAYS = [0.0] * 32
     CSP_ROUNDING = [3] * 384
-    PREADU_LEVELS = [16] * 32
+    PREADU_LEVELS = [16.0] * 32
     CHANNELISER_TRUNCATION = [4] * 512
 
     def _arp(self: BaseTpmSimulator, ip: str) -> str:
@@ -91,15 +90,12 @@ class BaseTpmSimulator(ObjectComponent):
             mac_str = f"{mac:012x}"
             arp = ":".join(mac_str[i : (i + 2)] for i in range(0, 12, 2))
             return arp
-        else:
-            return "ff:ff:ff:ff:ff:ff"
+        return "ff:ff:ff:ff:ff:ff"
 
     def __init__(
         self: BaseTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None,
+        component_state_changed_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
@@ -141,8 +137,10 @@ class BaseTpmSimulator(ObjectComponent):
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48  # empty beamformer table
         self._static_delays = self.STATIC_DELAYS
         self._csp_rounding = self.CSP_ROUNDING
-        self._preadu_levels = self.PREADU_LEVELS
+        self._preadu_levels: list[float] = self.PREADU_LEVELS
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+        self._is_last: bool
+        self._is_first: bool
 
     @property
     def firmware_available(
@@ -185,7 +183,7 @@ class BaseTpmSimulator(ObjectComponent):
         """
         self.logger.debug("TpmSimulator: firmware_version")
         firmware = self._firmware_available[self._firmware_name]
-        return "{major}.{minor}".format(**firmware)  # noqa: FS002
+        return f"{firmware['major']}.{firmware['minor']}"
 
     @property
     def is_programmed(self: BaseTpmSimulator) -> bool:
@@ -255,6 +253,27 @@ class BaseTpmSimulator(ObjectComponent):
         :return: tpm status
         """
         return self._tpm_status
+
+    @tpm_status.setter
+    def tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self._set_tpm_status(new_status)
+
+    def _set_tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
+        if new_status != self._tpm_status:
+            self._tpm_status = new_status
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(programming_state=new_status)
 
     @property
     def tile_id(self: BaseTpmSimulator) -> int:
@@ -433,7 +452,9 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._channeliser_truncation)
 
     @channeliser_truncation.setter
-    def channeliser_truncation(self: BaseTpmSimulator, truncation: int | list[int]):
+    def channeliser_truncation(
+        self: BaseTpmSimulator, truncation: int | list[int]
+    ) -> None:
         """
         Set the channeliser truncation.
 
@@ -442,7 +463,7 @@ class BaseTpmSimulator(ObjectComponent):
             0 means no bits discarded, up to 7. 3 is the correct value for a uniform
             white noise.
         """
-        if type(truncation) == int:
+        if isinstance(truncation, int):
             self._channeliser_truncation = [
                 truncation
             ] * TileData.NUM_FREQUENCY_CHANNELS
@@ -459,7 +480,7 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._static_delays)
 
     @static_delays.setter
-    def static_delays(self: BaseTpmSimulator, delays: list[float]):
+    def static_delays(self: BaseTpmSimulator, delays: list[float]) -> None:
         """
         Set the static delays.
 
@@ -481,13 +502,13 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._csp_rounding)
 
     @csp_rounding.setter
-    def csp_rounding(self: BaseTpmSimulator, rounding: list[int] | int):
+    def csp_rounding(self: BaseTpmSimulator, rounding: list[int] | int) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
-        if type(rounding) == int:
+        if isinstance(rounding, int):
             self._csp_rounding = [rounding] * TileData.NUM_BEAMFORMER_CHANNELS
         else:
             self._csp_rounding = rounding
@@ -502,7 +523,7 @@ class BaseTpmSimulator(ObjectComponent):
         return copy.deepcopy(self._preadu_levels)
 
     @preadu_levels.setter
-    def preadu_levels(self: BaseTpmSimulator, levels: list[float]):
+    def preadu_levels(self: BaseTpmSimulator, levels: list[float]) -> None:
         """
         Set preadu levels in dB.
 
@@ -513,7 +534,7 @@ class BaseTpmSimulator(ObjectComponent):
     def read_register(
         self: BaseTpmSimulator,
         register_name: str,
-    ) -> list[int]:
+    ) -> Optional[list[int]]:
         """
         Read the values in a register.
 
@@ -566,6 +587,7 @@ class BaseTpmSimulator(ObjectComponent):
             key = str(address + i)
             self._address_map.update({key: value})
 
+    # pylint: disable=too-many-arguments
     def configure_40g_core(
         self: BaseTpmSimulator,
         core_id: int,
@@ -659,12 +681,12 @@ class BaseTpmSimulator(ObjectComponent):
         """
         if self._fpga_reference_time == 0:
             return 0
-        else:
-            # return int(
-            #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
-            # TODO Modify testbenches to expect realistic time from the TPM
-            return 1000000
+        # return int(
+        #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
+        # TODO Modify testbenches to expect realistic time from the TPM
+        return 1000000
 
+    # pylint: disable=too-many-arguments
     def set_lmc_download(
         self: BaseTpmSimulator,
         mode: str,
@@ -688,11 +710,14 @@ class BaseTpmSimulator(ObjectComponent):
             self.configure_40g_core(
                 core,
                 1,
-                dst_ip = dst_ip,
-                src_port = src_port,
-                dst_port = dst_port,
+                src_ip=None,
+                src_mac=None,
+                dst_ip=dst_ip,
+                src_port=src_port,
+                dst_port=dst_port,
             )
 
+    # pylint: disable=too-many-arguments
     def send_data_samples(
         self: BaseTpmSimulator,
         data_type: str = "",
@@ -973,6 +998,7 @@ class BaseTpmSimulator(ObjectComponent):
         self._fpga_reference_time = int(time.time())
         raise NotImplementedError
 
+    # pylint: disable=too-many-arguments
     def set_lmc_integrated_download(
         self: BaseTpmSimulator,
         mode: str,
@@ -1070,6 +1096,7 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: sync_fpgas")
         raise NotImplementedError
 
+    # pylint: disable=too-many-arguments
     def configure_test_generator(
         self: BaseTpmSimulator,
         frequency0: float,
@@ -1164,17 +1191,3 @@ class BaseTpmSimulator(ObjectComponent):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
-
-    def _set_tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
-        """
-        Set the TPM status local attribute and call the callback if changed.
-
-        :param new_status: the new value for the _tpm_status
-        """
-        self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
-        if new_status != self._tpm_status:
-            self._tpm_status = new_status
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(
-                    {"programming_state": new_status}
-                )

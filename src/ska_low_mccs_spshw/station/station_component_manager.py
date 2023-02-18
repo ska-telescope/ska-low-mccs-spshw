@@ -657,7 +657,7 @@ class SpsStationComponentManager(MccsComponentManager):
             ):
                 results = []
                 for proxy in self._tile_proxies.values():
-                    self.logger.debug(f'Powering on tile {proxy._proxy.name()}')
+                    self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
                     result_code = proxy.on()
                     time.sleep(4)  # stagger power on by 4 seconds per tile
                     results.append(result_code)
@@ -712,10 +712,7 @@ class SpsStationComponentManager(MccsComponentManager):
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
                 json.dumps(
-                    {
-                        'is_first': (tile_no == 0),
-                        'is_last': (tile_no == last_tile)
-                    }
+                    {"is_first": (tile_no == 0), "is_last": (tile_no == last_tile)}
                 )
             )
             tile_no = tile_no + 1
@@ -796,15 +793,15 @@ class SpsStationComponentManager(MccsComponentManager):
             )
             proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
             proxy._proxy.SetLmcIntegratedDownload(
-                    json.dumps(
-                        {
-                            "mode": self._lmc_integrated_mode,
-                            "destination_ip": self._lmc_param['destination_ip'],
-                            "channel_payload_length": self._lmc_channel_payload_length,
-                            "beam_payload_length": self._lmc_beam_payload_length,
-                        }
-                    )
+                json.dumps(
+                    {
+                        "mode": self._lmc_integrated_mode,
+                        "destination_ip": self._lmc_param["destination_ip"],
+                        "channel_payload_length": self._lmc_channel_payload_length,
+                        "beam_payload_length": self._lmc_beam_payload_length,
+                    }
                 )
+            )
             tile = tile + 1
         return ResultCode.OK
 
@@ -1175,8 +1172,8 @@ class SpsStationComponentManager(MccsComponentManager):
         mode: str,
         payload_length: int,
         dst_ip: str,
-        src_port: int=0xF0D0,
-        dst_port: int=4660,
+        src_port: int = 0xF0D0,
+        dst_port: int = 4660,
     ) -> None:
         """
         Configure link and size of LMC channel.
@@ -1203,9 +1200,9 @@ class SpsStationComponentManager(MccsComponentManager):
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str=None,
-        src_port: int=0xF0D0,
-        dst_port: int=4660,
+        dst_ip: str = None,
+        src_port: int = 0xF0D0,
+        dst_port: int = 4660,
     ) -> None:
         """
         Configure link and size of integrated LMC channel.
@@ -1280,7 +1277,7 @@ class SpsStationComponentManager(MccsComponentManager):
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(f'Set beamformer table on tile {tile._proxy.name()}')
+                self.logger.debug(f"Set beamformer table on tile {tile._proxy.name()}")
                 tile._proxy.SetBeamformerRegions(
                     list(itertools.chain.from_iterable(beamformer_regions))
                 )

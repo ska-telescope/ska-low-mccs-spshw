@@ -97,8 +97,8 @@ class SubrackDriver(
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            subrack_fan_speeds=None,
-            subrack_fan_speeds_percent=None,
+            subrack_fan_speed=None,
+            subrack_fan_speed_percent=None,
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,
@@ -473,8 +473,8 @@ class SubrackDriver(
                 "power_supply_fan_speeds",
                 "power_supply_powers",
                 "power_supply_voltages",
-                "subrack_fan_speeds",
-                "subrack_fan_speeds_percent",
+                "subrack_fan_speed",
+                "subrack_fan_speed_percent",
                 "subrack_fan_mode",
                 "tpm_currents",
                 "tpm_powers",
@@ -543,7 +543,7 @@ class SubrackDriver(
                 # if the error indicates loss of communication.
                 # Otherwise return error details through the query response.
                 self.logger.error(
-                    f"setattribute error for{name}: Info {command_response['info']}"
+                    f"setattribute error for{name}: Info {attribute_response['info']}"
                 )
                 raise ConnectionError(
                     f"Received ERROR response from setattribute {name}"
@@ -556,7 +556,7 @@ class SubrackDriver(
                 # Otherwise return error details through the query response.
                 self.logger.error(
                     f"getattribute error for {attribute}: "
-                    f"Info {command_response['info']}"
+                    f"Info {attribute_response['info']}"
                 )
                 raise ConnectionError(
                     f"Received ERROR response from getattribute {attribute}"
@@ -634,8 +634,8 @@ class SubrackDriver(
             power_supply_fan_speeds=None,
             power_supply_powers=None,
             power_supply_voltages=None,
-            subrack_fan_speeds=None,
-            subrack_fan_speeds_percent=None,
+            subrack_fan_speed=None,
+            subrack_fan_speed_percent=None,
             subrack_fan_mode=None,
             tpm_currents=None,
             tpm_powers=None,

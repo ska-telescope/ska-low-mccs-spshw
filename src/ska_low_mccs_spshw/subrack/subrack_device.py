@@ -60,7 +60,8 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def do(  # type: ignore[override]
         self: _SetSubrackFanSpeedCommand,
         *args: Any,
         subrack_fan_id: int,
@@ -119,7 +120,8 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def do(  # type: ignore[override]
         self: _SetSubrackFanModeCommand,
         *args: Any,
         fan_id: int,
@@ -178,7 +180,8 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
-    def do(  # pylint: disable=arguments-differ
+    # pylint: disable=arguments-differ
+    def do(  # type: ignore[override]
         self: _SetPowerSupplyFanSpeedCommand,
         *args: Any,
         power_supply_fan_id: int,
@@ -206,7 +209,8 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
         return super().do(power_supply_fan_id, speed_percent)
 
 
-class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods
+class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of the PSI-Low subrack."""
 
     # A map from the compnent manager argument to the name of the Tango attribute.
@@ -222,8 +226,8 @@ class MccsSubrack(SKABaseDevice):  # pylint: disable=too-many-public-methods
         "power_supply_powers": "powerSupplyPowers",
         "power_supply_voltages": "powerSupplyVoltages",
         "power_supply_fan_speeds": "powerSupplyFanSpeeds",
-        "subrack_fan_speeds": "subrackFanSpeeds",
-        "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
+        "subrack_fan_speed": "subrackFanSpeeds",
+        "subrack_fan_speed_percent": "subrackFanSpeedsPercent",
         "subrack_fan_mode": "subrackFanModes",
         "tpm_currents": "tpmCurrents",
         "tpm_powers": "tpmPowers",

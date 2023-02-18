@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -24,6 +22,7 @@ import tango
 from ska_low_mccs_spshw.tile.base_tpm_simulator import BaseTpmSimulator
 
 
+# pylint: disable=too-few-public-methods
 class _DynamicValuesGenerator:
     """
     A generator of dynamic values with the following properties.
@@ -173,9 +172,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
     def __init__(
         self: DynamicTpmSimulator,
         logger: logging.Logger,
-        component_state_changed_callback: Optional[
-            Callable[[dict[str, Any]], None]
-        ] = None,
+        component_state_changed_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.

@@ -61,6 +61,7 @@ httpx = "^0.23.1"
 ska-tango-testing = "^0.5.3"
 
 [tool.poetry.scripts]
+SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
 Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"

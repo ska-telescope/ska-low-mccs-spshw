@@ -437,6 +437,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
+        self.set_power_state(PowerState.UNKNOWN)
 
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
         self._subrack_communication_state = CommunicationStatus.DISABLED

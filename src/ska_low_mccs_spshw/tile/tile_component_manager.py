@@ -486,7 +486,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             )
 
         def _update_component_power_state(power_state: PowerState) -> None:
-            self.set_power_state(power_state)
+            self.update_tpm_power_state(power_state)
             self._update_component_state(power=power_state)
 
         self._tile_orchestrator = TileOrchestrator(

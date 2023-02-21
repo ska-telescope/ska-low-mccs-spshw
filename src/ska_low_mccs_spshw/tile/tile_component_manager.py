@@ -486,8 +486,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             )
 
         def _update_component_power_state(power_state: PowerState) -> None:
-            self.set_power_state(power_state)
             self._update_component_state(power=power_state)
+            self.update_tpm_power_state(power_state)
 
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
@@ -1404,4 +1404,5 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param power_state: The desired power state
         """
         with self._power_state_lock:
+            # pylint: disable=attribute-defined-outside-init
             self.power_state = power_state

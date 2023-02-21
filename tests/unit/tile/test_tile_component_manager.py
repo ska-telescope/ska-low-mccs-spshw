@@ -32,6 +32,7 @@ from ska_low_mccs_spshw.tile import (
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
     TpmDriver,
+    TpmStatus,
 )
 
 
@@ -393,7 +394,13 @@ class TestStaticSimulatorCommon:
                 CommunicationStatus.ESTABLISHED
             )
             callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
+            callbacks["component_state"].assert_call(fault=False, lookahead=3)
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.PROGRAMMED
+            )
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.INITIALISED
+            )
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
@@ -1013,7 +1020,13 @@ class TestDynamicSimulatorCommon:
                 CommunicationStatus.ESTABLISHED
             )
             callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
+            callbacks["component_state"].assert_call(fault=False, lookahead=3)
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.PROGRAMMED
+            )
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.INITIALISED
+            )
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 

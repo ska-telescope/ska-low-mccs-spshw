@@ -8,7 +8,7 @@
 """
 An implementation of a Tile component manager that drives a real TPM.
 
-The class is basically a wrapper around the HwTile class, in order to
+The class is basically a wrapper around the Tile class, in order to
 have a consistent interface for driver and simulator. This is an initial
 version. Some methods are still simulated. A warning is issued in this
 case, or a NotImplementedError exception raised.
@@ -23,7 +23,7 @@ import time
 from typing import Any, Callable, Optional, cast
 
 # import numpy as np
-from pyaavs.tile_wrapper import Tile as HwTile
+from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
@@ -101,7 +101,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         tile_id: int,
-        tile: HwTile,
+        tile: Tile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -427,7 +427,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     try:
-                        self._is_programmed = self.tile.is_programmed
+                        self._is_programmed = self.tile.is_programmed()
                         if self._is_programmed is False:
                             new_status = TpmStatus.UNPROGRAMMED
                         elif self._tile_id != self.tile.get_tile_id():
@@ -555,7 +555,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             return False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            self._is_programmed = self.tile.is_programmed
+            self._is_programmed = self.tile.is_programmed()
         self.logger.debug("Lock released")
         return self._is_programmed
 
@@ -594,7 +594,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Lock acquired")
             self.logger.debug("TpmDriver: download_firmware")
             self.tile.program_fpgas(bitfile)
-            is_programmed = self.tile.is_programmed
+            is_programmed = self.tile.is_programmed()
         self.logger.debug("Lock released")
         self._is_programmed = is_programmed
         if is_programmed:
@@ -651,10 +651,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         prog_status = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            if self.tile.is_programmed is False:
+            if self.tile.is_programmed() is False:
                 self._set_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
-            prog_status = self.tile.is_programmed
+            prog_status = self.tile.is_programmed()
         self.logger.debug("Lock released")
         #
         # Initialisation after programming the FPGA
@@ -1518,8 +1518,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
-                    self.tile.initialise_beamformer(128, 8, False, False)
-                    # self.tile.set_first_last_tile(False, False)
+                    self.tile.initialise_beamformer(128, 8)
+                    self.tile.set_first_last_tile(False, False)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1702,7 +1702,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                self._hardware_lock.release()
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
@@ -1830,7 +1829,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if current_frame == 0:
             self.logger.error("Cannot send data before StartAcquisition")
             raise ValueError("Cannot send data before StartAcquisition")
-        if timestamp < (current_frame + 20):
+        if timestamp and timestamp < (current_frame + 20):
             self.logger.error("Time is too early")
             raise ValueError("Time is too early")
 

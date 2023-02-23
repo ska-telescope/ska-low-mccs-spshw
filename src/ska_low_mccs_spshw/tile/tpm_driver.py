@@ -427,7 +427,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
                 if acquired:
                     try:
-                        self._is_programmed = self.tile.is_programmed
+                        self._is_programmed = self.tile.is_programmed()
                         if self._is_programmed is False:
                             new_status = TpmStatus.UNPROGRAMMED
                         elif self._tile_id != self.tile.get_tile_id():
@@ -555,7 +555,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             return False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            self._is_programmed = self.tile.is_programmed
+            self._is_programmed = self.tile.is_programmed()
         self.logger.debug("Lock released")
         return self._is_programmed
 
@@ -594,7 +594,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Lock acquired")
             self.logger.debug("TpmDriver: download_firmware")
             self.tile.program_fpgas(bitfile)
-            is_programmed = self.tile.is_programmed
+            is_programmed = self.tile.is_programmed()
         self.logger.debug("Lock released")
         self._is_programmed = is_programmed
         if is_programmed:
@@ -651,10 +651,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         prog_status = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
-            if self.tile.is_programmed is False:
+            if self.tile.is_programmed() is False:
                 self._set_tpm_status(TpmStatus.UNPROGRAMMED)
                 self.tile.program_fpgas(self._firmware_name)
-            prog_status = self.tile.is_programmed
+            prog_status = self.tile.is_programmed()
         self.logger.debug("Lock released")
         #
         # Initialisation after programming the FPGA

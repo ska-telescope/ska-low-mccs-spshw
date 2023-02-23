@@ -23,7 +23,7 @@ import time
 from typing import Any, Callable, Optional, cast
 
 # import numpy as np
-from pyaavs.tile Tile as Tile
+from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager

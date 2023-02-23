@@ -352,7 +352,7 @@ class TestStaticSimulatorCommon:
         * a Tile component manager (in simulation and test mode and
           turned on)
 
-        So any test that relies on this fixture will be run four times:
+        So any test that relies on this fixture will be run three times:
         once for each of the above classes.
 
         :param static_tpm_simulator: the static TPM simulator to return
@@ -640,8 +640,8 @@ class TestStaticSimulatorCommon:
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
             timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
             # TODO: there is no fpga_sync_time method.
-            # tile._tpm_component_manager.fpga_sync_time = timestamp
-            # assert tile._tpm_component_manager.fpga_sync_time == timestamp
+            # tile._tpm_driver.fpga_sync_time = timestamp
+            # assert tile._tpm_driver.fpga_sync_time == timestamp
             tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
         else:
             args = "123456"

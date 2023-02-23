@@ -457,30 +457,31 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             ),
         )
 
-        self._tpm_component_manager: Union[
+        self._tpm_driver: Union[
             TpmDriver,
             StaticTpmSimulatorComponentManager,
             DynamicTpmSimulatorComponentManager,
         ]  # for the type checker
 
-        if simulation_mode == SimulationMode.FALSE:
-            self._tpm_component_manager = TpmDriver(
+        if simulation_mode == SimulationMode.TRUE:
+            if test_mode == TestMode.TEST:
+                self._tpm_driver = StaticTpmSimulatorComponentManager(
+                    logger,
+                    self._tpm_communication_state_changed,
+                    self._update_component_state,
+                )
+            else:
+                self._tpm_driver = DynamicTpmSimulatorComponentManager(
+                    logger,
+                    self._tpm_communication_state_changed,
+                    self._update_component_state,
+                )
+        else:
+            self._tpm_driver = TpmDriver(
                 logger,
                 tile_id,
                 tile,
                 tpm_version,
-                self._tpm_communication_state_changed,
-                self._update_component_state,
-            )
-        elif test_mode == TestMode.TEST:  # and SimulationMode.TRUE
-            self._tpm_component_manager = StaticTpmSimulatorComponentManager(
-                logger,
-                self._tpm_communication_state_changed,
-                self._update_component_state,
-            )
-        else:  # SimulationMode.TRUE and TestMode.NONE
-            self._tpm_component_manager = DynamicTpmSimulatorComponentManager(
-                logger,
                 self._tpm_communication_state_changed,
                 self._update_component_state,
             )
@@ -577,15 +578,15 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     def _start_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
-        # so that self._tpm_component_manager is resolved when the
+        # so that self._tpm_driver is resolved when the
         # callback is called, not when it is registered.
-        self._tpm_component_manager.start_communicating()
+        self._tpm_driver.start_communicating()
 
     def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
-        # so that self._tpm_component_manager is resolved when the
+        # so that self._tpm_driver is resolved when the
         # callback is called, not when it is registered.
-        self._tpm_component_manager.stop_communicating()
+        self._tpm_driver.stop_communicating()
 
     # TODO: Convert this to a LRC. This doesn't need to be done right now.
     #       This needs an instantiation of a new class derived from
@@ -748,7 +749,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         elif self.communication_state != CommunicationStatus.ESTABLISHED:
             status = TpmStatus.UNCONNECTED
         else:
-            status = self._tpm_component_manager.tpm_status
+            status = self._tpm_driver.tpm_status
         return status
 
     @property
@@ -780,7 +781,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: FPGA reference time
         """
-        reference_time = self._tpm_component_manager.fpga_reference_time
+        reference_time = self._tpm_driver.fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
@@ -795,7 +796,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: FPGA reference time
         """
-        reference_time = self._tpm_component_manager.fpga_reference_time
+        reference_time = self._tpm_driver.fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
@@ -823,7 +824,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             if (load_frame - self.fpga_current_frame) < 20:
                 self.logger.error("apply_calibration: time not enough in the future")
                 raise ValueError("Time too early")
-        self._tpm_component_manager.apply_calibration(load_frame)
+        self._tpm_driver.apply_calibration(load_frame)
 
     @check_communicating
     def apply_pointing_delays(self: TileComponentManager, load_time: str = "") -> None:
@@ -848,7 +849,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     "apply_pointing_delays: time not enough in the future"
                 )
                 raise ValueError("Time too early")
-        self._tpm_component_manager.apply_pointing_delays(load_frame)
+        self._tpm_driver.apply_pointing_delays(load_frame)
 
     @check_communicating
     def start_beamformer(
@@ -885,7 +886,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             if (start_frame - self.fpga_current_frame) < 20:
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
-        self._tpm_component_manager.start_beamformer(
+        self._tpm_driver.start_beamformer(
             start_frame, duration, subarray_beam_id, scan_id
         )
 
@@ -933,7 +934,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     "configure_test_generator: time not enough in the future"
                 )
                 raise ValueError("Time too early")
-        self._tpm_component_manager.configure_test_generator(
+        self._tpm_driver.configure_test_generator(
             frequency0,
             amplitude0,
             frequency1,
@@ -999,7 +1000,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 raise ValueError(f"Invalid time: {start_time}")
             seconds = 0.0
 
-        self._tpm_component_manager.send_data_samples(
+        self._tpm_driver.send_data_samples(
             data_type,
             timestamp,
             seconds,
@@ -1103,7 +1104,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :return: the attribute value
         """
         # This one-liner is only a method so that we can decorate it.
-        return getattr(self._tpm_component_manager, name)
+        return getattr(self._tpm_driver, name)
 
     def __setattr__(self: TileComponentManager, name: str, value: Any) -> None:
         """
@@ -1131,7 +1132,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param value: new value for the attribute
         """
         # This one-liner is only a method so that we can decorate it.
-        setattr(self._tpm_component_manager, name, value)
+        setattr(self._tpm_driver, name, value)
 
     #
     # Long running commands
@@ -1169,7 +1170,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._tpm_component_manager.initialise()
+            self._tpm_driver.initialise()
         # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
@@ -1229,7 +1230,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._tpm_component_manager.download_firmware(argin)
+            self._tpm_driver.download_firmware(argin)
         except NotImplementedError:
             raise
         # pylint: disable-next=broad-except
@@ -1308,7 +1309,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            success = self._tpm_component_manager.start_acquisition(start_time, delay)
+            success = self._tpm_driver.start_acquisition(start_time, delay)
         except NotImplementedError:
             raise
         # pylint: disable-next=broad-except
@@ -1370,7 +1371,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._tpm_component_manager.post_synchronisation()
+            self._tpm_driver.post_synchronisation()
         except NotImplementedError:
             raise
         # pylint: disable-next=broad-except

@@ -1702,7 +1702,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                self._hardware_lock.release()
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 

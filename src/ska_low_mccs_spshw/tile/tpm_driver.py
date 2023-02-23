@@ -8,7 +8,7 @@
 """
 An implementation of a Tile component manager that drives a real TPM.
 
-The class is basically a wrapper around the HwTile class, in order to
+The class is basically a wrapper around the Tile class, in order to
 have a consistent interface for driver and simulator. This is an initial
 version. Some methods are still simulated. A warning is issued in this
 case, or a NotImplementedError exception raised.
@@ -23,7 +23,7 @@ import time
 from typing import Any, Callable, Optional, cast
 
 # import numpy as np
-from pyaavs.tile_wrapper import Tile as HwTile
+from pyaavs.tile Tile as Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
@@ -101,7 +101,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         tile_id: int,
-        tile: HwTile,
+        tile: Tile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],

@@ -1518,8 +1518,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
-                    self.tile.initialise_beamformer(128, 8, False, False)
-                    # self.tile.set_first_last_tile(False, False)
+                    self.tile.initialise_beamformer(128, 8)
+                    self.tile.set_first_last_tile(False, False)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

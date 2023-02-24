@@ -2,6 +2,9 @@
 
 ## unreleased
 
+## 0.3.2
+
+* LOW-386 - UNKNOWN / OFF bugfix
 * MCCS-1351 - Revert subrack_fan_speeds change
 * MCCS-1346 - TPM initialisation bugfix
 

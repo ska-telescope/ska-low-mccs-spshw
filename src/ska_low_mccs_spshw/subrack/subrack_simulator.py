@@ -70,7 +70,7 @@ class SubrackSimulator(SubrackProtocol):
             "default": [12.0, 12.1],
             "writable": False,
         },
-        "subrack_fan_speed_percent": {
+        "subrack_fan_speeds_percent": {
             "length": 4,
             "default": [95.0, 96.0, 97.0, 98.0],
             "writable": False,
@@ -257,12 +257,12 @@ class SubrackSimulator(SubrackProtocol):
             )
         ]
 
-    def _get_attribute_subrack_fan_speed(
+    def _get_attribute_subrack_fan_speeds(
         self: SubrackSimulator,
     ) -> list[float]:
         return [
             percent * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
-            for percent in self._attribute_values["subrack_fan_speed_percent"]
+            for percent in self._attribute_values["subrack_fan_speeds_percent"]
         ]
 
     def _command_completed(self: SubrackSimulator, _not_used: Optional[str]) -> bool:
@@ -290,7 +290,7 @@ class SubrackSimulator(SubrackProtocol):
         (fan_str, speed_str) = arg.split(",")
         fan_index = int(fan_str) - 1  # input is 1-based, so need for an offset
         speed = float(speed_str)
-        self._attribute_values["subrack_fan_speed_percent"][fan_index] = speed
+        self._attribute_values["subrack_fan_speeds_percent"][fan_index] = speed
 
     def _set_fan_mode(self: SubrackSimulator, arg: str) -> None:
         (fan_str, mode_str) = arg.split(",")

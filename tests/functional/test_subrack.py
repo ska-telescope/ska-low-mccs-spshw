@@ -242,10 +242,10 @@ def ensure_subrack_fan_speed_percent(
     subrack_device.subscribe_event(
         "subrackFanSpeedsPercent",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_speed_percent"],
+        change_event_callbacks["subrack_fan_speeds_percent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speed_percent",
+        "subrack_fan_speeds_percent",
         expected_fan_speeds_percent,
     )
 
@@ -255,7 +255,7 @@ def ensure_subrack_fan_speed_percent(
         subrack_device.SetSubrackFanSpeed(encoded_arg)
         expected_fan_speeds_percent[fan_number - 1] = pytest.approx(90.0)
         change_event_callbacks.assert_change_event(
-            "subrack_fan_speed_percent", expected_fan_speeds_percent
+            "subrack_fan_speeds_percent", expected_fan_speeds_percent
         )
 
 
@@ -284,9 +284,11 @@ def ensure_subrack_fan_speed(
     subrack_device.subscribe_event(
         "subrackFanSpeeds",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_speed"],
+        change_event_callbacks["subrack_fan_speeds"],
     )
-    change_event_callbacks.assert_change_event("subrack_fan_speed", expected_fan_speeds)
+    change_event_callbacks.assert_change_event(
+        "subrack_fan_speeds", expected_fan_speeds
+    )
 
 
 @given(parsers.parse("the TPM is {target_power}"))
@@ -405,7 +407,7 @@ def check_subrack_fan_speed_setting(
     expected_fan_speeds_percent = [pytest.approx(p) for p in fan_speeds_percent]
     expected_fan_speeds_percent[fan_number - 1] = pytest.approx(100.0)
 
-    change_event_callbacks["subrack_fan_speed_percent"].assert_change_event(
+    change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
         expected_fan_speeds_percent
     )
 
@@ -431,7 +433,9 @@ def check_subrack_fan_speed(
     expected_fan_speeds = [
         pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
     ]
-    change_event_callbacks.assert_change_event("subrack_fan_speed", expected_fan_speeds)
+    change_event_callbacks.assert_change_event(
+        "subrack_fan_speeds", expected_fan_speeds
+    )
 
 
 @then(parsers.parse("the subrack reports that the TPM is {target_power}"))

@@ -8,8 +8,8 @@
 """
 An implementation of a Tile component manager that drives a real TPM.
 
-The class is basically a wrapper around the Tile class, in order to
-have a consistent interface for driver and simulator. This is an initial
+The class is basically a wrapper around the Tile class, in order to have
+a consistent interface for driver and simulator. This is an initial
 version. Some methods are still simulated. A warning is issued in this
 case, or a NotImplementedError exception raised.
 """

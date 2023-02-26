@@ -847,8 +847,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: fpgas_time")
         if not self._is_programmed:
-            self.logger.info('Trying to read time from an unprogrammed FPGA')
-            return 0
+            self.logger.info("Trying to read time from an unprogrammed FPGA")
+            return [0, 0]
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
@@ -891,7 +891,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: fpga_current_frame")
         if not self._is_programmed:
-            self.logger.info('Trying to read frame# from an unprogrammed FPGA')
+            self.logger.info("Trying to read frame# from an unprogrammed FPGA")
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:

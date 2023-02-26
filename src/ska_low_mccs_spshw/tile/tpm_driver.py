@@ -734,6 +734,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param value: assigned tile Id value
         """
+        if not self._is_programmed:
+            self._tile_id = value
+            return
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
@@ -765,6 +768,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param value: assigned station Id value
         """
+        if not self._is_programmed:
+            self._station_id = value
+            return
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
@@ -840,6 +846,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpgas_time")
+        if not self._is_programmed:
+            self.logger.info('Trying to read time from an unprogrammed FPGA')
+            return 0
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
@@ -881,6 +890,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga_current_frame")
+        if not self._is_programmed:
+            self.logger.info('Trying to read frame# from an unprogrammed FPGA')
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
@@ -916,7 +927,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param value: PPS delay correction in 625ps units
         """
-        self._tile_id = value
+        self._pps_delay = value
 
     @property
     def register_list(self: TpmDriver) -> list[str]:
@@ -2104,6 +2115,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     # Start data acquisition on board
                     self.tile.start_acquisition(start_time, delay)
                     started = True
+                    self._fpga_reference_time = self.tile[
+                        "fpga1.pps_manager.sync_time_val"
+                    ]
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

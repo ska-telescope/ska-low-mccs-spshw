@@ -436,12 +436,12 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
 
     fan_to_change = 2
     percent_to_set = 49.0
-    subrack_fan_speed_percent = subrack_device.subrackFanSpeedsPercent
-    expected_speeds_percent = [pytest.approx(i) for i in subrack_fan_speed_percent]
+    subrack_fan_speeds_percent = subrack_device.subrackFanSpeedsPercent
+    expected_speeds_percent = [pytest.approx(i) for i in subrack_fan_speeds_percent]
     expected_speeds_percent[fan_to_change - 1] = pytest.approx(percent_to_set)
 
-    subrack_fan_speed = subrack_device.subrackFanSpeeds
-    expected_speeds = [pytest.approx(i) for i in subrack_fan_speed]
+    subrack_fan_speeds = subrack_device.subrackFanSpeeds
+    expected_speeds = [pytest.approx(i) for i in subrack_fan_speeds]
     expected_speeds[fan_to_change - 1] = pytest.approx(
         percent_to_set * SubrackData.MAX_SUBRACK_FAN_SPEED / 100.0
     )

@@ -674,7 +674,7 @@ class TestTpmDriver:
         """
         # establish connection to the TPM
         static_tile_simulator.connect()
-        assert static_tile_simulator.is_programmed is False
+        assert not static_tile_simulator.is_programmed()
         tpm_driver.initialise(task_callback=callbacks["task"])
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -683,9 +683,11 @@ class TestTpmDriver:
             status=TaskStatus.COMPLETED, result="The initialisation task has completed"
         )
 
-        assert static_tile_simulator.is_programmed is True
+        assert static_tile_simulator.is_programmed()
         assert tpm_driver._is_programmed is True
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
+
+        assert static_tile_simulator.tpm is not None  # for the type checker
         static_tile_simulator.tpm._tpm_status = TpmStatus.PROGRAMMED
 
         # assert static_tile_simulator["fpga1.dsp_regfile.config_id.station_id"] == 0
@@ -693,6 +695,8 @@ class TestTpmDriver:
 
         # The FPGA is mocked to not be programmed after the program_fpga command.
         # check that the initialisation process has failed.
+
+        assert static_tile_simulator.tpm is not None  # for the type checker
         static_tile_simulator.tpm._is_programmed = False
         static_tile_simulator.program_fpgas = unittest.mock.MagicMock(
             return_value=False

@@ -202,7 +202,7 @@
 
 # SUBRACK COMMS ESTABLISHED, TPM IS OFF
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "OFF"]: [report_communication_disabled]
-!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, "OFF"]: [report_communication_not_established]  # already online
+!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, "OFF"]: []  # already online
 !!python/tuple [DESIRE_ON, ESTABLISHED, ~, "OFF"]: [turn_tpm_on]
 !!python/tuple [DESIRE_OFF, ESTABLISHED, ~, "OFF"]: []  # already off
 !!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "OFF"]: [set_subrack_communication_not_established]

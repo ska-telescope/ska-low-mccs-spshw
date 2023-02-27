@@ -13,6 +13,7 @@ url = "https://gitlab.com/ska-telescope/aavs-system.git"
 reference = "498662646fcbb50c4995a1246f207852e2430006"
 resolved_reference = "498662646fcbb50c4995a1246f207852e2430006"
 subdirectory = "python"
+
 [[package]]
 name = "anyio"
 version = "3.6.2"
@@ -1346,7 +1347,7 @@ python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,>=2.7"
 [metadata]
 lock-version = "1.1"
 python-versions = "~3.10"
-content-hash = "067ee8ca4f2e073ad19439375bf9620354a934d468550ada63f22a5720451442"
+content-hash = "d5f2620eb2e53f50f862cd325220c17f566e66bc65553767c21f169e1d3d4f07"
 
 [metadata.files]
 aavs-system = []

@@ -104,7 +104,7 @@
 #
 # DISABLED
 !!python/tuple [DESIRE_OFFLINE, DISABLED]: []  # already offline
-!!python/tuple [DESIRE_ONLINE, DISABLED]: [set_subrack_communication_not_established, start_communicating_with_subrack, report_communication_not_established]
+!!python/tuple [DESIRE_ONLINE, DISABLED]: [set_subrack_communication_not_established, report_communication_not_established, start_communicating_with_subrack]
 !!python/tuple [DESIRE_ON, DISABLED]: [raise_cannot_turn_off_on_when_offline]
 !!python/tuple [DESIRE_OFF, DISABLED]: [raise_cannot_turn_off_on_when_offline]
 !!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, DISABLED]: [set_subrack_communication_not_established]

@@ -14,7 +14,8 @@ from __future__ import annotations  # allow forward references in type hints
 from typing import Callable
 
 from ska_control_model import HealthState, PowerState
-from ska_low_mccs_common.health import HealthModel
+
+from ..base.health import HealthModel
 
 __all__ = ["TileHealthModel"]
 
@@ -40,9 +41,7 @@ class TileHealthModel(HealthModel):
         """
         self._power_mode = PowerState.UNKNOWN
 
-        # TODO: fix healthModel in ska_low_mccs_common so that it expects
-        # kwargs rather than a dict
-        super().__init__(lambda state_change: health_changed_callback(**state_change))
+        super().__init__(health_changed_callback)
 
     def evaluate_health(self: TileHealthModel) -> HealthState:
         """

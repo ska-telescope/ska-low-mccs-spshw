@@ -34,7 +34,7 @@ from ska_low_mccs_common.component import (
 )
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .base_tpm_simulator import BaseTpmSimulator
+from ..base.component import ObjectComponentManager
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator
 from .tile_orchestrator import TileOrchestrator
@@ -49,153 +49,14 @@ __all__ = [
 ]
 
 
-# TODO: Temporarily copying in contents of ObjectComponentManager,
-# which need to be modified to use callback kwargs,
-# and then we can again inherit from it here.
 # pylint: disable=too-many-lines
-class _TpmSimulatorComponentManager(MccsBaseComponentManager):
+class _TpmSimulatorComponentManager(ObjectComponentManager):
     """
     A component manager for a TPM simulator.
 
     This is a private class that supports the public component manager
     classes for static and dynamic TPM simulators.
     """
-
-    def __init__(
-        self: _TpmSimulatorComponentManager,
-        tpm_simulator: BaseTpmSimulator,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[..., None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param tpm_simulator: the TPM simulator component managed by
-            this component manager
-        :param logger: a logger for this object to use
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be called when the
-            component state changes.
-        """
-        self._component = tpm_simulator
-        self._fail_communicate = False
-
-        super().__init__(
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-            fault=None,
-            power=PowerState.UNKNOWN,
-        )
-
-    def start_communicating(self: _TpmSimulatorComponentManager) -> None:
-        """
-        Establish communication with the component, then start monitoring.
-
-        :raises ConnectionError: if the attempt to establish
-            communication with the channel fails.
-        """
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-
-        if self._fail_communicate:
-            raise ConnectionError("Failed to connect")
-
-        self._update_communication_state(CommunicationStatus.ESTABLISHED)
-
-        # TODO: Temporary patch until we can update -common
-        def _munge_and_update(state_dict: dict[str, Any]) -> None:
-            if "power_state" in state_dict:
-                state_dict["power"] = state_dict.pop("power_state")
-            return self._update_component_state(**state_dict)
-
-        self._component.set_power_mode_changed_callback(_munge_and_update)
-        self._component.set_fault_callback(_munge_and_update)
-
-    def stop_communicating(self: _TpmSimulatorComponentManager) -> None:
-        """Cease monitoring the component, and break off all communication with it."""
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
-
-        self._component.set_fault_callback(None)
-        self._component.set_power_mode_changed_callback(None)
-
-        self._update_communication_state(CommunicationStatus.DISABLED)
-        self._update_component_state(power=None, fault=None)
-
-    def simulate_communication_failure(
-        self: _TpmSimulatorComponentManager, fail_communicate: bool
-    ) -> None:
-        """
-        Simulate (or stop simulating) a failure to communicate with the component.
-
-        :param fail_communicate: whether the connection to the component
-            is failing
-        """
-        self._fail_communicate = fail_communicate
-        if (
-            fail_communicate
-            and self.communication_state == CommunicationStatus.ESTABLISHED
-        ):
-            self.update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-
-    @check_communicating
-    def off(
-        self: _TpmSimulatorComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Turn the component off.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a taskstatus and message.
-        """
-        # reset TPM status in driver
-        self._component.tpm_status = TpmStatus.OFF
-        return self._component.off(task_callback)
-
-    @check_communicating
-    def standby(
-        self: _TpmSimulatorComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Put the component into low-power standby mode.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a taskstatus and message
-        """
-        return self._component.standby(task_callback)
-
-    @check_communicating
-    def on(
-        self: _TpmSimulatorComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Turn the component on.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a taskstatus and message
-        """
-        return self._component.on(task_callback)
-
-    @check_communicating
-    def reset(
-        self: _TpmSimulatorComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Reset the component (from fault state).
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a taskstatus and message
-        """
-        return self._component.reset(task_callback)
 
     __PASSTHROUGH = [
         "adc_rms",

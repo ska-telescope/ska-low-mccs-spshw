@@ -243,6 +243,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # self.update_component_state({"fault": True})
             # wait for a polling_period
             return
+
         self.start_connection()
 
     def start_connection(self: TpmDriver) -> None:

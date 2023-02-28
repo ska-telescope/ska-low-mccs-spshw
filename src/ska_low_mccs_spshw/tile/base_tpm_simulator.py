@@ -17,10 +17,9 @@ from typing import Any, Callable, Final, Optional
 import numpy as np
 
 # from ska_control_model import CommunicationStatus
-from ska_low_mccs_common.component import ObjectComponent
-
-from ska_low_mccs_spshw.tile.tile_data import TileData
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from ..base.component import ObjectComponent
+from .tile_data import TileData
+from .tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
 

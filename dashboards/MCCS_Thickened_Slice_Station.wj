@@ -1,0 +1,2124 @@
+{
+  "id": "63f4e9c0ea725400186ff1e8",
+  "name": "Thickened Slice Station",
+  "version": "1.3.6",
+  "user": "MCCS",
+  "insertTime": "2023-02-21T15:56:48.660Z",
+  "updateTime": "2023-02-28T10:34:29.832Z",
+  "group": null,
+  "groupWriteAccess": false,
+  "lastUpdatedBy": "MCCS",
+  "widget": [
+    {
+      "id": "6",
+      "x": 3,
+      "y": 4,
+      "canvas": "0",
+      "width": 32,
+      "height": 47,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#f0f0ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 0,
+      "innerWidgets": [
+        {
+          "id": "8",
+          "x": 3.4,
+          "y": 8.16,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "LABEL",
+          "inputs": {
+            "text": "Station Attributes",
+            "textColor": "#000000",
+            "backgroundColor": "#c7c7ff",
+            "size": 2,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 2
+        },
+        {
+          "id": "2",
+          "x": 3.4,
+          "y": 13.46,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "stationID",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 7
+        },
+        {
+          "id": "3",
+          "x": 3.4,
+          "y": 18.76,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "adminmode",
+              "label": "adminMode"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 14
+        },
+        {
+          "id": "7",
+          "x": 3.4,
+          "y": 24.060000000000002,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 15
+        },
+        {
+          "id": "4",
+          "x": 3.4,
+          "y": 29.360000000000003,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "obsstate",
+              "label": "obsState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 16
+        },
+        {
+          "id": "14",
+          "x": 3.4,
+          "y": 34.660000000000004,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "obsmode",
+              "label": "obsMode"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 17
+        },
+        {
+          "id": "17",
+          "x": 3.4,
+          "y": 39.96,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "iscalibrated",
+              "label": "isCalibrated"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 22
+        },
+        {
+          "id": "18",
+          "x": 3.4,
+          "y": 45.26,
+          "canvas": "0",
+          "width": 31.2,
+          "height": 5.3,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "stationID",
+              "attribute": "isconfigured",
+              "label": "isConfigured"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 24
+        }
+      ]
+    },
+    {
+      "id": "11",
+      "x": 123,
+      "y": 4,
+      "canvas": "0",
+      "width": 65,
+      "height": 35,
+      "type": "BOX",
+      "inputs": {
+        "title": "Station Configuration Progress",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#c7c7ff",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 2,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 1,
+      "innerWidgets": [
+        {
+          "id": "9",
+          "x": 123.4,
+          "y": 11.2,
+          "canvas": "0",
+          "width": 64.2,
+          "height": 27.6,
+          "type": "ATTRIBUTE_PLOT",
+          "inputs": {
+            "timeWindow": 120,
+            "showZeroLine": true,
+            "logarithmic": false,
+            "attributes": [
+              {
+                "attribute": {
+                  "device": "stationID",
+                  "attribute": "configurationprogress",
+                  "label": "configurationProgress"
+                },
+                "showAttribute": "Name",
+                "yAxis": "left",
+                "lineColor": "#ff0000"
+              }
+            ],
+            "textColor": "#000000",
+            "backgroundColor": "#f0f0ff"
+          },
+          "valid": true,
+          "order": 3
+        }
+      ]
+    },
+    {
+      "id": "22",
+      "x": 36,
+      "y": 4,
+      "canvas": "0",
+      "width": 34,
+      "height": 87,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#fff0f0",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 2,
+      "innerWidgets": [
+        {
+          "id": "105",
+          "x": 36.4,
+          "y": 11.36,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "LABEL",
+          "inputs": {
+            "text": "Tile State",
+            "textColor": "#000000",
+            "backgroundColor": "#ffc7c7",
+            "size": 1.5,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 1
+        },
+        {
+          "id": "89",
+          "x": 36.4,
+          "y": 15.96,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0001",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 2
+        },
+        {
+          "id": "90",
+          "x": 36.4,
+          "y": 20.560000000000002,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0002",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 3
+        },
+        {
+          "id": "91",
+          "x": 36.4,
+          "y": 25.160000000000004,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0003",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 4
+        },
+        {
+          "id": "93",
+          "x": 36.4,
+          "y": 29.760000000000005,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0004",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 5
+        },
+        {
+          "id": "94",
+          "x": 36.4,
+          "y": 34.36000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0005",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 6
+        },
+        {
+          "id": "95",
+          "x": 36.4,
+          "y": 38.96000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0006",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 7
+        },
+        {
+          "id": "97",
+          "x": 36.4,
+          "y": 43.56000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0007",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 8
+        },
+        {
+          "id": "98",
+          "x": 36.4,
+          "y": 48.16000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0008",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 9
+        },
+        {
+          "id": "99",
+          "x": 36.4,
+          "y": 52.76000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0009",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 10
+        },
+        {
+          "id": "100",
+          "x": 36.4,
+          "y": 57.360000000000014,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0010",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 11
+        },
+        {
+          "id": "101",
+          "x": 36.4,
+          "y": 61.960000000000015,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0011",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 14
+        },
+        {
+          "id": "104",
+          "x": 36.4,
+          "y": 66.56000000000002,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0012",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 15
+        },
+        {
+          "id": "103",
+          "x": 36.4,
+          "y": 71.16000000000001,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0013",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 16
+        },
+        {
+          "id": "102",
+          "x": 36.4,
+          "y": 75.76,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0014",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 17
+        },
+        {
+          "id": "96",
+          "x": 36.4,
+          "y": 80.36,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0015",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 18
+        },
+        {
+          "id": "92",
+          "x": 36.4,
+          "y": 84.96,
+          "canvas": "0",
+          "width": 33.2,
+          "height": 4.6,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "low-mccs-spshw/tile/0016",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 20
+        }
+      ]
+    },
+    {
+      "id": "127",
+      "x": 71,
+      "y": 4,
+      "canvas": "0",
+      "width": 25,
+      "height": 87,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#fff0f0",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 3,
+      "innerWidgets": [
+        {
+          "id": "128",
+          "x": 71.4,
+          "y": 11.36,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "LABEL",
+          "inputs": {
+            "text": "Health",
+            "textColor": "#000000",
+            "backgroundColor": "#ffc7c7",
+            "size": 1.5,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 101
+        },
+        {
+          "id": "129",
+          "x": 71.4,
+          "y": 15.96,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0001",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 102
+        },
+        {
+          "id": "130",
+          "x": 71.4,
+          "y": 20.560000000000002,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0002",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 103
+        },
+        {
+          "id": "131",
+          "x": 71.4,
+          "y": 25.160000000000004,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0003",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 104
+        },
+        {
+          "id": "132",
+          "x": 71.4,
+          "y": 29.760000000000005,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0004",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 105
+        },
+        {
+          "id": "133",
+          "x": 71.4,
+          "y": 34.36000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0005",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 106
+        },
+        {
+          "id": "134",
+          "x": 71.4,
+          "y": 38.96000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0006",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 108
+        },
+        {
+          "id": "135",
+          "x": 71.4,
+          "y": 43.56000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0007",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 109
+        },
+        {
+          "id": "136",
+          "x": 71.4,
+          "y": 48.16000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0008",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 112
+        },
+        {
+          "id": "137",
+          "x": 71.4,
+          "y": 52.76000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0009",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 113
+        },
+        {
+          "id": "138",
+          "x": 71.4,
+          "y": 57.360000000000014,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0010",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 114
+        },
+        {
+          "id": "139",
+          "x": 71.4,
+          "y": 61.960000000000015,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0011",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 115
+        },
+        {
+          "id": "140",
+          "x": 71.4,
+          "y": 66.56000000000002,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0012",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 116
+        },
+        {
+          "id": "141",
+          "x": 71.4,
+          "y": 71.16000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0013",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 117
+        },
+        {
+          "id": "142",
+          "x": 71.4,
+          "y": 75.76,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0014",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 118
+        },
+        {
+          "id": "143",
+          "x": 71.4,
+          "y": 80.36,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0015",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 119
+        },
+        {
+          "id": "144",
+          "x": 71.4,
+          "y": 84.96,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0016",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 120
+        }
+      ]
+    },
+    {
+      "id": "145",
+      "x": 97,
+      "y": 4,
+      "canvas": "0",
+      "width": 25,
+      "height": 87,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#fff0f0",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 4,
+      "innerWidgets": [
+        {
+          "id": "146",
+          "x": 97.4,
+          "y": 11.36,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "LABEL",
+          "inputs": {
+            "text": "Board Temperature",
+            "textColor": "#000000",
+            "backgroundColor": "#ffc7c7",
+            "size": 1.5,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 122
+        },
+        {
+          "id": "147",
+          "x": 97.4,
+          "y": 15.96,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0001",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 123
+        },
+        {
+          "id": "148",
+          "x": 97.4,
+          "y": 20.560000000000002,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0002",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 124
+        },
+        {
+          "id": "149",
+          "x": 97.4,
+          "y": 25.160000000000004,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0003",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 125
+        },
+        {
+          "id": "150",
+          "x": 97.4,
+          "y": 29.760000000000005,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0004",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 126
+        },
+        {
+          "id": "151",
+          "x": 97.4,
+          "y": 34.36000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0005",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 127
+        },
+        {
+          "id": "152",
+          "x": 97.4,
+          "y": 38.96000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0006",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 128
+        },
+        {
+          "id": "153",
+          "x": 97.4,
+          "y": 43.56000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0007",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 129
+        },
+        {
+          "id": "154",
+          "x": 97.4,
+          "y": 48.16000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0008",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 130
+        },
+        {
+          "id": "155",
+          "x": 97.4,
+          "y": 52.76000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0009",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": false,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 131
+        },
+        {
+          "id": "156",
+          "x": 97.4,
+          "y": 57.360000000000014,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0010",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 135
+        },
+        {
+          "id": "157",
+          "x": 97.4,
+          "y": 61.960000000000015,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0011",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": false,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 136
+        },
+        {
+          "id": "158",
+          "x": 97.4,
+          "y": 66.56000000000002,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0012",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 137
+        },
+        {
+          "id": "159",
+          "x": 97.4,
+          "y": 71.16000000000001,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0013",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 138
+        },
+        {
+          "id": "160",
+          "x": 97.4,
+          "y": 75.76,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0014",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": false,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 139
+        },
+        {
+          "id": "161",
+          "x": 97.4,
+          "y": 80.36,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0015",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 140
+        },
+        {
+          "id": "162",
+          "x": 97.4,
+          "y": 84.96,
+          "canvas": "0",
+          "width": 24.2,
+          "height": 4.6,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "low-mccs-spshw/tile/0016",
+              "attribute": "boardtemperature",
+              "label": "boardTemperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#fff0f0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 141
+        }
+      ]
+    },
+    {
+      "id": "164",
+      "x": 144,
+      "y": 41,
+      "canvas": "0",
+      "width": 44,
+      "height": 51,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#dcfff0",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 6,
+      "innerWidgets": [
+        {
+          "id": "165",
+          "x": 144.4,
+          "y": 45.480000000000004,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "LABEL",
+          "inputs": {
+            "text": "APIU Attributes",
+            "textColor": "#000000",
+            "backgroundColor": "#8cffbe",
+            "size": 1.35,
+            "borderWidth": 0,
+            "borderColor": "#000000",
+            "font": "Helvetica",
+            "linkTo": "",
+            "customCss": ""
+          },
+          "valid": true,
+          "order": 145
+        },
+        {
+          "id": "166",
+          "x": 144.4,
+          "y": 49.28,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "DEVICE_STATUS",
+          "inputs": {
+            "device": "apiuID",
+            "state": {
+              "device": null,
+              "attribute": null
+            },
+            "showDeviceName": true,
+            "showStateString": true,
+            "showStateLED": true,
+            "LEDSize": 1,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "textSize": 1
+          },
+          "valid": true,
+          "order": 146
+        },
+        {
+          "id": "167",
+          "x": 144.4,
+          "y": 53.08,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "adminmode",
+              "label": "adminMode"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 147
+        },
+        {
+          "id": "168",
+          "x": 144.4,
+          "y": 56.88,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "healthstate",
+              "label": "healthState"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 149
+        },
+        {
+          "id": "175",
+          "x": 144.4,
+          "y": 60.68000000000001,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "isalive",
+              "label": "Is alive?"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 153
+        },
+        {
+          "id": "176",
+          "x": 144.4,
+          "y": 64.48,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "humidity",
+              "label": "Humidity"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 154
+        },
+        {
+          "id": "170",
+          "x": 144.4,
+          "y": 68.28,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "humiditythreshold",
+              "label": "Humidity threshold"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 155
+        },
+        {
+          "id": "172",
+          "x": 144.4,
+          "y": 72.08000000000001,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "temperature",
+              "label": "Temperature"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 158
+        },
+        {
+          "id": "169",
+          "x": 144.4,
+          "y": 75.88,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "voltage",
+              "label": "Voltage"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 163
+        },
+        {
+          "id": "173",
+          "x": 144.4,
+          "y": 79.68,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "overvoltagethreshold",
+              "label": "Over Voltage threshold"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 164
+        },
+        {
+          "id": "171",
+          "x": 144.4,
+          "y": 83.47999999999999,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "current",
+              "label": "Current"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 168
+        },
+        {
+          "id": "174",
+          "x": 144.4,
+          "y": 87.28,
+          "canvas": "0",
+          "width": 43.2,
+          "height": 3.8,
+          "type": "ATTRIBUTE_DISPLAY",
+          "inputs": {
+            "attribute": {
+              "device": "apiuID",
+              "attribute": "overcurrentthreshold",
+              "label": "Over current threshold"
+            },
+            "precision": 2,
+            "showDevice": false,
+            "showAttribute": "Label",
+            "scientificNotation": false,
+            "showEnumLabels": true,
+            "textColor": "#000000",
+            "backgroundColor": "#dcfff0",
+            "size": 1,
+            "font": "Helvetica"
+          },
+          "valid": true,
+          "order": 172
+        }
+      ]
+    },
+    {
+      "id": "177",
+      "x": 123,
+      "y": 41,
+      "canvas": "0",
+      "width": 20,
+      "height": 10,
+      "type": "BOX",
+      "inputs": {
+        "title": "",
+        "bigWidget": 4,
+        "smallWidget": 1,
+        "textColor": "#000000",
+        "backgroundColor": "#8cff13",
+        "borderColor": "",
+        "borderWidth": 0,
+        "borderStyle": "solid",
+        "textSize": 1.5,
+        "fontFamily": "Helvetica",
+        "layout": "vertical",
+        "alignment": "Center",
+        "padding": 0,
+        "customCss": ""
+      },
+      "order": 173,
+      "innerWidgets": [
+        {
+          "id": "163",
+          "x": 123.4,
+          "y": 42.2,
+          "canvas": "0",
+          "width": 19.2,
+          "height": 8.8,
+          "type": "PARAMETRIC_WIDGET",
+          "inputs": {
+            "name": "APIU Selector",
+            "variable": "apiuID"
+          },
+          "valid": true,
+          "order": 1
+        }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "_id": "63fc88a9ea72540018701994",
+      "name": "apiuID",
+      "class": "MccsAPIU",
+      "device": "low-mccs/apiu/002"
+    },
+    {
+      "_id": "63f4ea10ea725400186ff21e",
+      "name": "stationID",
+      "class": "MccsStation",
+      "device": "low-mccs/station/001"
+    }
+  ]
+}

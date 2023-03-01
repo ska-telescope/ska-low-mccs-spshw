@@ -43,3 +43,7 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- if (hasKey $subracks "reachable_from") }}
+nodeSelector:
+  kubernetes.io/hostname: {{ $subracks.reachable_from }}
+{{- end}}

@@ -1,25 +1,20 @@
 tpms:
-  1:
-    host: 10.0.10.3
-    port: 10000
-    version: tpm_v1_2
-    subrack: "1"
-    subrack_bay: 1
-  2:
-    host: 10.0.10.4
-    port: 10000
-    version: tpm_v1_2
-    subrack: "1"
-    subrack_bay: 2
-  3:
-    host: 10.0.10.5
-    port: 10000
-    version: tpm_v1_2
-    subrack: "1"
-    subrack_bay: 3
-  4:
-    host: 10.0.10.6
-    port: 10000
-    version: tpm_v1_2
-    subrack: "1"
-    subrack_bay: 4
+  version: tpm_v1_2
+  port: 10000
+  instances:
+    1:
+      host: 10.0.10.3
+      subrack: "1"
+      subrack_bay: 1
+    2:
+      host: 10.0.10.4
+      subrack: "1"
+      subrack_bay: 2
+    3:
+      host: 10.0.10.5
+      subrack: "1"
+      subrack_bay: 3
+    4:
+      host: 10.0.10.6
+      subrack: "1"
+      subrack_bay: 4

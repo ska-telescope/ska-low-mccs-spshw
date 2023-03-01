@@ -335,23 +335,27 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     # Attributes
     # ----------
 
-    @attribute(dtype="DevString",
-        label="getvoltages",)
-    def getvoltages(self:MccsTile) -> str:
+    @attribute(
+        dtype="DevString",
+        label="getvoltages",
+    )
+    def getvoltages(self: MccsTile) -> str:
         """
-        Return all the voltage values available
+        Return all the voltage values available.
 
         :return: voltages available
         """
         return json.dumps(self.component_manager.get_voltages)
-    
-    @attribute(dtype="DevString",
-        label="gettemperatures",)
-    def gettemperatures(self:MccsTile) -> str:
-        """
-        Return all the temperatures values available. 
 
-        :return: temperatures available 
+    @attribute(
+        dtype="DevString",
+        label="gettemperatures",
+    )
+    def gettemperatures(self: MccsTile) -> str:
+        """
+        Return all the temperatures values available.
+
+        :return: temperatures available
         """
         return json.dumps(self.component_manager.get_temperatures)
 

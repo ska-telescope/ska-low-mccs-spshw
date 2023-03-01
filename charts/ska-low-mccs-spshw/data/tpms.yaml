@@ -42,10 +42,10 @@ server:
             - {{$this_tile.host | quote}}
           - name: "TpmCpldPort"
             values:
-            - {{$this_tile.port | default 10000 | toString | quote}}
+            - {{pluck "port" $this_tile $tiles | default 10000 | toString | quote}}
           - name: "TpmVersion"
             values:
-            - {{$this_tile.version | quote | default "tpm_v1_6"}}
+            - {{pluck "version" $this_tile $tiles | quote | default "tpm_v1_6"}}
           - name: "SimulationConfig"
             values:
             - {{pluck "simulation_config" $this_tile $tiles | first | default 0 | toString | quote}}
@@ -66,3 +66,7 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- if (hasKey $tiles "reachable_from") }}
+nodeSelector:
+  kubernetes.io/hostname: {{ $tiles.reachable_from }}
+{{- end}}

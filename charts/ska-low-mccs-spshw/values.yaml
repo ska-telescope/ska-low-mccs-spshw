@@ -81,7 +81,6 @@ low_mccs_spshw:
     pullPolicy: IfNotPresent
 
 # facility: psi-low  # e.g. psi-low, aavs2, ...
-facility: arcetri
 # simulators:
 #   subracks:
 #     1:  # these keys overrides keys in facility file

@@ -1277,7 +1277,7 @@ class SpsStationComponentManager(
             (which must be a multiple of 8), and a beam index (between 0 and 7)
             and a substation ID (not used)
         """
-        self._beamformer_table = beamformer_table
+        self._beamformer_table = copy.deepcopy(beamformer_table)
         self._set_beamformer_table()
 
     def _set_beamformer_table(

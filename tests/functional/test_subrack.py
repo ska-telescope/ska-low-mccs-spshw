@@ -40,8 +40,8 @@ MAX_SUBRACK_FAN_SPEED = 8000.0
 class FanMode(enum.IntEnum):  # type: ignore[no-redef]
     """Redefinition of FanMode."""
 
-    MANUAL = 1
-    AUTO = 2
+    MANUAL = 0
+    AUTO = 1
 
 
 @pytest.fixture(name="subrack_device", scope="module")
@@ -210,7 +210,7 @@ def ensure_subrack_fan_mode(
 
     expected_fan_modes = list(fan_modes)
     if expected_fan_modes[fan_number - 1] == FanMode.AUTO:
-        expected_fan_modes[fan_number - 1] = FanMode.MANUAL
+        expected_fan_modes[fan_number - 1] = int(FanMode.MANUAL)
 
         encoded_arg = json.dumps({"fan_id": fan_number, "mode": int(FanMode.MANUAL)})
         subrack_device.SetSubrackFanMode(encoded_arg)
@@ -248,6 +248,12 @@ def ensure_subrack_fan_speed_percent(
         "subrack_fan_speeds_percent",
         expected_fan_speeds_percent,
     )
+
+    # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
+    # All we see is a HTTP timeout.
+    # And the fan speed setting is never updated.
+    # This scenario cannot be developed further until this bug is fixed.
+    pytest.xfail(reason="Server-side bug")
 
     speed_percent = fan_speeds_percent[fan_number - 1]
     if speed_percent != pytest.approx(90.0):

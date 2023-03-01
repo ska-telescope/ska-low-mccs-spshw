@@ -1,11 +1,6 @@
 {{ $localchart := . }}
 
-{{- $suts := dict}}
-
-{{- $hardware := .Files.Get (printf "data/%s.yaml" .Values.facility) | fromYaml}}
-{{- range $type, $specs := $hardware}}
-{{- $_ := set $suts $type (dict "instances" $specs)}}
-{{- end }}
+{{- $suts := .Files.Get (printf "data/%s.yaml" .Values.facility) | fromYaml}}
 
 {{- range $type, $specs := .Values.simulators}}
 {{- $_ := set $suts $type (default (dict "instances" dict) (index $suts $type))}}

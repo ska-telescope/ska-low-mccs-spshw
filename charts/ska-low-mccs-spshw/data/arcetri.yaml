@@ -1,67 +1,56 @@
 stations:
-  1:
-    cabinet_network_address: 10.0.0.0
-    subracks: [1]
-    tpms: [1, 4,]
+  instances:
+    1:
+      cabinet_network_address: 10.0.0.0
+      subracks: [1]
+      tpms: [1, 4,]
 subracks:
-  1:
-    host: 10.0.10.64
-    port: 8081
-    logging_level_default: 5
+  instances:
+    1:
+      host: 10.0.10.64
+      port: 8081
+      logging_level_default: 5
 tpms:
-  1:
-    host: 10.0.10.225
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 1
-    simulation_config: 0
-  2:
-    host: 10.0.10.202
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 2
-    simulation_config: 1
-  3:
-    host: 10.0.10.203
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 3
-    simulation_config: 1
-  4:
-    host: 10.0.10.222
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 4
-    simulation_config: 0
-  5:
-    host: 10.0.10.205
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 5
-    simulation_config: 1
-  6:
-    host: 10.0.10.206
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 6
-    simulation_config: 1
-  7:
-    host: 10.0.10.207
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 7
-    simulation_config: 1
-  8:
-    host: 10.0.10.208
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 8
-    simulation_config: 1
+  version: tpm_v1_6
+  port: 10000
+  instances:
+    1:
+      host: 10.0.10.225
+      subrack: "1"
+      subrack_bay: 1
+      simulation_config: 0
+    2:
+      host: 10.0.10.202
+      subrack: "1"
+      subrack_bay: 2
+      simulation_config: 1
+    3:
+      host: 10.0.10.203
+      subrack: "1"
+      subrack_bay: 3
+      simulation_config: 1
+    4:
+      host: 10.0.10.222
+      subrack: "1"
+      subrack_bay: 4
+      simulation_config: 0
+    5:
+      host: 10.0.10.205
+      subrack: "1"
+      subrack_bay: 5
+      simulation_config: 1
+    6:
+      host: 10.0.10.206
+      subrack: "1"
+      subrack_bay: 6
+      simulation_config: 1
+    7:
+      host: 10.0.10.207
+      subrack: "1"
+      subrack_bay: 7
+      simulation_config: 1
+    8:
+      host: 10.0.10.208
+      subrack: "1"
+      subrack_bay: 8
+      simulation_config: 1

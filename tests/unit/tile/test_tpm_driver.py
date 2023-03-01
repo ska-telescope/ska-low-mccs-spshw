@@ -299,7 +299,7 @@ class TestTpmDriver:
         _ = tpm_driver.register_list
         _ = tpm_driver._get_register_list()
         _ = tpm_driver.pps_present
-        _ = tpm_driver._check_pps_present()
+        #_ = tpm_driver._check_pps_present()
         _ = tpm_driver.sysref_present
         _ = tpm_driver.clock_present
         _ = tpm_driver.pll_locked

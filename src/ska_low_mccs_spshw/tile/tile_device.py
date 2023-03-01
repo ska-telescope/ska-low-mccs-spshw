@@ -354,40 +354,48 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: temperatures available 
         """
         return json.dumps(self.component_manager.get_temperatures)
-    
-    @attribute(dtype="DevString",
-        label="getcurrents",)
-    def getcurrents(self:MccsTile) -> str:
+
+    @attribute(
+        dtype="DevString",
+        label="getcurrents",
+    )
+    def getcurrents(self: MccsTile) -> str:
         """
         Return all the currents values available.
 
         :return: currents available
         """
         return json.dumps(self.component_manager.get_currents)
-    
-    @attribute(dtype="DevString",
-        label="gettiming",)
-    def gettiming(self:MccsTile) -> str:
+
+    @attribute(
+        dtype="DevString",
+        label="gettiming",
+    )
+    def gettiming(self: MccsTile) -> str:
         """
         Return a dictionary of the timing signals status.
 
-        :return: timing signals status 
+        :return: timing signals status
         """
         return json.dumps(self.component_manager.get_timing)
-    
-    @attribute(dtype="DevString",
-        label="getio",)
-    def getio(self:MccsTile) -> str:
+
+    @attribute(
+        dtype="DevString",
+        label="getio",
+    )
+    def getio(self: MccsTile) -> str:
         """
         Return a dictionary of I/O interfaces status available.
 
         :return: I/O interfaces status
         """
         return json.dumps(self.component_manager.get_io)
-    
-    @attribute(dtype="DevString",
-        label="getdsp",)
-    def getdsp(self:MccsTile) -> str:
+
+    @attribute(
+        dtype="DevString",
+        label="getdsp",
+    )
+    def getdsp(self: MccsTile) -> str:
         """
         Return the tile beamformer and station beamformer status.
 

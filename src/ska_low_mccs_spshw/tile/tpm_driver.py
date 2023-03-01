@@ -774,8 +774,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: voltages in the TPM
         """
         self.logger.debug(f"TpmDriver: get all voltages available in the TPM")
-        return  self._tile_health_structure["voltage"] 
-    
+        return self._tile_health_structure["voltage"]
+
     @property
     def get_temperatures(self: TpmDriver) -> dict[str, Any]:
         """
@@ -784,8 +784,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: temperatures in the TPM
         """
         self.logger.debug(f"TpmDriver: get all temperatures available in the TPM")
-        return  self._tile_health_structure["temperature"]
-    
+        return self._tile_health_structure["temperature"]
+
     @property
     def get_currents(self: TpmDriver) -> dict[str, Any]:
         """
@@ -794,8 +794,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: currents in the TPM
         """
         self.logger.debug(f"TpmDriver: get_currents")
-        return  self._tile_health_structure["current"]
-    
+        return self._tile_health_structure["current"]
+
     @property
     def get_timing(self: TpmDriver) -> dict[str, Any]:
         """
@@ -804,8 +804,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: timings in the TPM
         """
         self.logger.debug(f"TpmDriver: get_timing")
-        return  self._tile_health_structure["timing"]
-    
+        return self._tile_health_structure["timing"]
+
     @property
     def get_io(self: TpmDriver) -> dict[str, Any]:
         """
@@ -814,8 +814,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: io in the TPM
         """
         self.logger.debug(f"TpmDriver: get_io")
-        return  self._tile_health_structure["io"]
-    
+        return self._tile_health_structure["io"]
+
     @property
     def get_dsp(self: TpmDriver) -> dict[str, Any]:
         """
@@ -824,8 +824,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: dsp status in the TPM
         """
         self.logger.debug(f"TpmDriver: get_dsp")
-        return  self._tile_health_structure["dsp"]
-
+        return self._tile_health_structure["dsp"]
 
     @property
     def board_temperature(self: TpmDriver) -> float:
@@ -835,7 +834,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of the TPM
         """
         self.logger.debug("TpmDriver: board_temperature")
-        return self._tile_health_structure['temperature']['board']
+        return self._tile_health_structure["temperature"]["board"]
 
     @property
     def voltage(self: TpmDriver) -> float:
@@ -845,7 +844,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the internal 5V supply of the TPM
         """
         self.logger.debug("TpmDriver: internal 5V supply of the TPM")
-        return self._tile_health_structure['voltage']['MON_5V0']
+        return self._tile_health_structure["voltage"]["MON_5V0"]
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
@@ -855,7 +854,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 1
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        return self._tile_health_structure['temperature']['FPGA0']
+        return self._tile_health_structure["temperature"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: TpmDriver) -> float:
@@ -865,7 +864,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 2
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        return self._tile_health_structure['temperature']['FPGA1']
+        return self._tile_health_structure["temperature"]["FPGA1"]
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:
@@ -1445,7 +1444,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :return: True if PPS is present. Checked in poll loop, cached
         """
-        return self._tile_health_structure['timing']['pps']['status']
+        return self._tile_health_structure["timing"]["pps"]["status"]
 
     # def _check_pps_present(self: TpmDriver) -> bool:
     #     """

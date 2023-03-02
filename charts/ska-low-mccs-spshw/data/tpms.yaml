@@ -42,10 +42,10 @@ server:
             - {{$this_tile.host | quote}}
           - name: "TpmCpldPort"
             values:
-            - {{pluck "port" $this_tile $tiles | default 10000 | toString | quote}}
+            - {{pluck "port" $this_tile $tiles | first | default 10000 | toString | quote}}
           - name: "TpmVersion"
             values:
-            - {{pluck "version" $this_tile $tiles | quote | default "tpm_v1_6"}}
+            - {{pluck "version" $this_tile $tiles | first | quote | default "tpm_v1_6"}}
           - name: "SimulationConfig"
             values:
             - {{pluck "simulation_config" $this_tile $tiles | first | default 0 | toString | quote}}

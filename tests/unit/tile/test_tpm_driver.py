@@ -220,27 +220,40 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        static_tile_simulator.tpm._fpga1_temperature = fpga1_temp
-        static_tile_simulator.tpm._fpga2_temperature = fpga2_temp
-        static_tile_simulator.tpm._board_temperature = board_temp
-        static_tile_simulator.tpm._voltage = voltage
+        static_tile_simulator.tpm._tile_health_structure["temperature"][
+            "FPGA0"
+        ] = fpga1_temp
+        static_tile_simulator.tpm._tile_health_structure["temperature"][
+            "FPGA1"
+        ] = fpga2_temp
+        static_tile_simulator.tpm._tile_health_structure["temperature"][
+            "board"
+        ] = board_temp
+        static_tile_simulator.tpm._tile_health_structure["temperature"][
+            "MON_5V0"
+        ] = voltage
 
         tpm_driver._update_attributes()
 
         # check that they are updated
-        assert tpm_driver._fpga1_temperature == fpga1_temp
-        assert tpm_driver._fpga2_temperature == fpga2_temp
-        assert tpm_driver._board_temperature == board_temp
-        assert tpm_driver._voltage == voltage
+        assert tpm_driver._tile_health_structure["temperature"]["FPGA0"] == fpga1_temp
+        assert tpm_driver._tile_health_structure["temperature"]["FPGA1"] == fpga2_temp
+        assert tpm_driver._tile_health_structure["temperature"]["board"] == board_temp
+        assert tpm_driver._tile_health_structure["temperature"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        static_tile_simulator.tpm._voltage = 2.2
+        static_tile_simulator.tpm._tile_health_structure["temperature"]["MON_5V0"] = 2.2
         static_tile_simulator.get_voltage = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
 
         tpm_driver.updating_attributes()
-        assert tpm_driver._voltage != static_tile_simulator.tpm._voltage
+        assert (
+            tpm_driver._tile_health_structure["temperature"]["MON_5V0"]
+            != static_tile_simulator.tpm._tile_health_structure["temperature"][
+                "MON_5V0"
+            ]
+        )
 
     @pytest.mark.xfail
     def test_read_tile_attributes(

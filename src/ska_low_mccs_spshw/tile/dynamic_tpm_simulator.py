@@ -9,6 +9,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import copy
 import logging
 import math
 import random
@@ -181,10 +182,13 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        self._voltage: Optional[float] = None
-        self._board_temperature: Optional[float] = None
-        self._fpga1_temperature: Optional[float] = None
-        self._fpga2_temperature: Optional[float] = None
+        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
+            self.TILE_MONITORING_POINTS
+        )
+        self._tile_health_structure["voltage"]["MON_5V0"] = None
+        self._tile_health_structure["temperature"]["board"] = None
+        self._tile_health_structure["temperature"]["FPGA0"] = None
+        self._tile_health_structure["temperature"]["FPGA1"] = None
 
         self._updater = _DynamicValuesUpdater(1.0)
         self._updater.add_target(
@@ -217,8 +221,10 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of the TPM
         """
-        assert self._board_temperature is not None  # for the type checker
-        return self._board_temperature
+        assert (
+            self._tile_health_structure["temperature"]["board"] is not None
+        )  # for the type checker
+        return self._tile_health_structure["temperature"]["board"]
 
     def _board_temperature_changed(
         self: DynamicTpmSimulator, board_temperature: float
@@ -228,7 +234,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :param board_temperature: the new board temperature
         """
-        self._board_temperature = board_temperature
+        self._tile_health_structure["temperature"]["board"] = board_temperature
 
     @property
     def voltage(self: DynamicTpmSimulator) -> float:
@@ -237,8 +243,10 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the voltage of the TPM
         """
-        assert self._voltage is not None  # for the type checker
-        return self._voltage
+        assert (
+            self._tile_health_structure["voltage"]["MON_5V0"] is not None
+        )  # for the type checker
+        return self._tile_health_structure["voltage"]["MON_5V0"]
 
     def _voltage_changed(self: DynamicTpmSimulator, voltage: float) -> None:
         """
@@ -246,7 +254,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :param voltage: the new voltage
         """
-        self._voltage = voltage
+        self._tile_health_structure["voltage"]["MON_5V0"] = voltage
 
     @property
     def fpga1_temperature(self: DynamicTpmSimulator) -> float:
@@ -255,8 +263,10 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 1
         """
-        assert self._fpga1_temperature is not None  # for the type checker
-        return self._fpga1_temperature
+        assert (
+            self._tile_health_structure["temperature"]["FPGA0"] is not None
+        )  # for the type checker
+        return self._tile_health_structure["temperature"]["FPGA0"]
 
     def _fpga1_temperature_changed(
         self: DynamicTpmSimulator, fpga1_temperature: float
@@ -266,7 +276,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :param fpga1_temperature: the new FPGA1 temperature
         """
-        self._fpga1_temperature = fpga1_temperature
+        self._tile_health_structure["temperature"]["FPGA0"] = fpga1_temperature
 
     @property
     def fpga2_temperature(self: DynamicTpmSimulator) -> float:
@@ -275,8 +285,10 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 2
         """
-        assert self._fpga2_temperature is not None  # for the type checker
-        return self._fpga2_temperature
+        assert (
+            self._tile_health_structure["temperature"]["FPGA1"] is not None
+        )  # for the type checker
+        return self._tile_health_structure["temperature"]["FPGA1"]
 
     def _fpga2_temperature_changed(
         self: DynamicTpmSimulator, fpga2_temperature: float
@@ -286,4 +298,4 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
         :param fpga2_temperature: the new FPGA2 temperature
         """
-        self._fpga2_temperature = fpga2_temperature
+        self._tile_health_structure["temperature"]["FPGA1"] = fpga2_temperature

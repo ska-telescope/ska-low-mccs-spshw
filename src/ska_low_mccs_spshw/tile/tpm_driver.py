@@ -98,7 +98,46 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
     TILE_MONITORING_POINTS = {
         "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
-        "voltage": {"VREF_2V5": None, "MGT_AVCC": None, "VM_SW_AMP": None},
+        "voltage": {
+            "VREF_2V5": None,
+            "MGT_AVCC": None,
+            "VM_SW_AMP": None,
+            "MGT_AVTT": None,
+            "SW_AVDD1": None,
+            "SW_AVDD2": None,
+            "AVDD3": None,
+            "MAN_1V2": None,
+            "DDR0_VREF": None,
+            "DDR1_VREF": None,
+            "VM_DRVDD": None,
+            "VIN": None,
+            "MON_3V3": None,
+            "MON_1V8": None,
+            "MON_5V0": None,
+            "VM_FE0": None,
+            "VM_FE1": None,
+            "FE0_mVA": None,
+            "FE1_mVA": None,
+            "VM_DDR0_VTT": None,
+            "VM_AGP0": None,
+            "VM_AGP1": None,
+            "VM_AGP2": None,
+            "VM_AGP3": None,
+            "VM_AGP4": None,
+            "VM_AGP5": None,
+            "VM_AGP6": None,
+            "VM_AGP7": None,
+            "VM_CLK0B": None,
+            "VM_CLK1B": None,
+            "VM_MGT0_AUX": None,
+            "VM_MGT1_AUX": None,
+            "VM_ADA0": None,
+            "VM_ADA1": None,
+            "VM_PLL": None,
+            "VM_DDR1_VTT": None,
+            "VM_DDR1_VDD": None,
+            "VM_DVDD": None,
+        },
         "current": {"FE0_mVA": None, "FE1_mVA": None},
         "timing": {
             "clocks": {
@@ -177,10 +216,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             self.TILE_MONITORING_POINTS
         )
-        self._voltage = self.VOLTAGE
-        self._board_temperature = self.BOARD_TEMPERATURE
-        self._fpga1_temperature = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
@@ -191,7 +226,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
-        self._pps_present = True
         self._clock_present = True
         self._sysref_present = True
         self._pll_locked = True
@@ -325,7 +359,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
-    # pylint: disable=too-many-statements
     def _update_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
         current_time = time.time()
@@ -388,7 +421,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._current_tile_beamformer_frame = 0
             self._fpga_reference_time = 0
             self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
-            self._pps_present = True
+            self._tile_health_structure["timing"]["pps"]["status"] = True
             self._clock_present = True
             self._sysref_present = True
             self._pll_locked = True

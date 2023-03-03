@@ -757,16 +757,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the PPS delay.
 
-        :return: Return the PPS delay
+        :return: Return the PPS delay in nanoseconds
         """
         return self.component_manager.pps_delay
 
     @ppsDelay.write  # type: ignore[no-redef]
     def ppsDelay(self: MccsTile, delay: int) -> None:
         """
-        Set PPS delay correction, one per tile.
+        Set PPS delay correction.
 
-        :param delay: PPS delay correction in 625ps units
+        :param delay: PPS delay correction in nanoseconds. Value is
+            internally rounded to 1.25 ns units
         """
         self.component_manager.pps_delays = delay
 

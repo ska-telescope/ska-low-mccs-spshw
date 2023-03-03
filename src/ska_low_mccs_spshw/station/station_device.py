@@ -395,7 +395,7 @@ class SpsStation(SKAObsDevice):
         """
         Get PPS delay correction, one per tile.
 
-        :return: Array of PPS delay correction in 625ps units, one value per tile
+        :return: Array of PPS delay correction in nanoseconds, one value per tile.
         """
         return self.component_manager.pps_delays
 
@@ -404,7 +404,8 @@ class SpsStation(SKAObsDevice):
         """
         Set PPS delay correction, one per tile.
 
-        :param delays: PPS delay correction in 625ps units
+        :param delays: PPS delay correction in nanoseconds, one value per tile.
+            Values are internally rounded to 1.25 ns units.
         """
         self.component_manager.pps_delays = delays
 

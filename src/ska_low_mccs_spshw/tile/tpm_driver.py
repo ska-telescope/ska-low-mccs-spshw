@@ -914,7 +914,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Return the last measured PPS delay of the TPM.
 
-        :return: PPS delay correction in 625ps units
+        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
         return self._pps_delay
 
@@ -926,7 +926,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         PPS delay correction, applied during initialisation.
         Must be set before initialise()
 
-        :param value: PPS delay correction in 625ps units
+        :param value: PPS delay correction (nanoseconds). Rounded to 1.25 ns units
         """
         self._pps_delay = value
 

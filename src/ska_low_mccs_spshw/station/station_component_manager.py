@@ -480,6 +480,7 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=task_status)
 
+    @check_communicating
     def standby(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -875,9 +876,9 @@ class SpsStationComponentManager(
         Get PPS delay correction.
 
         Array of one value per tile. Defines PPS delay correction,
-        in 625 ps steps.
+        Values are internally rounded to 1.25 ns steps
 
-        :return: Array of one value per tile
+        :return: Array of one value per tile, in nanoseconds
         """
         return copy.deepcopy(self._pps_delays)
 
@@ -886,7 +887,8 @@ class SpsStationComponentManager(
         """
         Set PPS delay correction.
 
-        :param delays: Array of one value per tile, in 625 ps steps
+        :param delays: Array of one value per tile, in nanoseconds.
+            Values are internally rounded to 1.25 ns steps
         """
         self._pps_delays = copy.deepcopy(delays)
         i = 0

@@ -472,9 +472,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         # Check if it was already connected.
         unconnected = self._subrack_proxy is None
         if unconnected:
+            self.logger.debug("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
                 self._subrack_fqdn, self.logger, connect=False
             )
+            self.logger.debug("Connecting to the subrack")
             try:
                 self._subrack_proxy.connect()
             except tango.DevFailed as dev_failed:
@@ -482,11 +484,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 raise ConnectionError(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
-
+        self.logger.debug("Created subrack proxy")
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             "longRunningCommandResult",
             self._tile_orchestrator.propogate_subrack_lrc,
         )
+        self.logger.debug("Callback added for subrack longRunningCommandResult")
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_state_change_event_received,
@@ -927,7 +930,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
-        "tpm_status",
+        # "tpm_status",
         "voltage",
         "write_address",
         "write_register",

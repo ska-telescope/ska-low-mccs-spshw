@@ -560,7 +560,6 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("command_name", "num_args"),
         (
-            ("set_lmc_download", 1),
             ("load_pointing_delays", 2),
             ("configure_integrated_channel_data", 3),
             ("configure_integrated_beam_data", 3),
@@ -603,6 +602,26 @@ class TestStaticSimulatorCommon:
 
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
+
+    def test_set_lmc_download(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            TileComponentManager,
+        ],
+        mocker: pytest_mock.MockerFixture,
+    ) -> None:
+        """
+        Test of set_lmc_download command.
+
+        Since the commands don't really do
+        anything, these tests simply check that the command can be called.
+
+        :param mocker: fixture that wraps unittest.mock
+        :param tile: the tile class object under test.
+        """
+        tile.set_lmc_download("10g", 1024, "10.0.10.1")
 
     @pytest.mark.parametrize(
         ("command_name", "implemented"),
@@ -899,7 +918,7 @@ class TestStaticSimulatorCommon:
         tile.configure_40g_core(
             1,
             0,
-            "mock_src_mac",
+            0x123456,
             "mock_src_ip",
             8888,
             "mock_dst_ip",
@@ -909,7 +928,7 @@ class TestStaticSimulatorCommon:
         expected = {
             "core_id": 1,
             "arp_table_entry": 0,
-            "src_mac": "mock_src_mac",
+            "src_mac": 0x123456,
             "src_ip": "mock_src_ip",
             "src_port": 8888,
             "dst_ip": "mock_dst_ip",

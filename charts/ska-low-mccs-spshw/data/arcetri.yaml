@@ -1,9 +1,9 @@
-stations: 
+stations:
   instances:
     1:
       cabinet_network_address: 10.0.0.0
       subracks: [1]
-      tpms: [1, 2, 3, 4, 5, 6, 7, 8]
+      tpms: [1, 4,]
 subracks:
   instances:
     1:
@@ -15,7 +15,7 @@ tpms:
   port: 10000
   instances:
     1:
-      host: 10.0.10.201
+      host: 10.0.10.225
       subrack: "1"
       subrack_bay: 1
       simulation_config: 0
@@ -30,7 +30,7 @@ tpms:
       subrack_bay: 3
       simulation_config: 1
     4:
-      host: 10.0.10.214
+      host: 10.0.10.222
       subrack: "1"
       subrack_bay: 4
       simulation_config: 0

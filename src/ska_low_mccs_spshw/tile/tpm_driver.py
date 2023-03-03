@@ -46,8 +46,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     ADC_RMS = [0.0] * 32
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
-    PPS_DELAY = 0
-    PHASE_TERMINAL_COUNT = 0
     FIRMWARE_NAME = {"tpm_v1_2": "itpm_v1_2.bit", "tpm_v1_6": "itpm_v1_6.bit"}
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -58,8 +56,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     BEAMFORMER_TABLE: list[list[int]] = [
         [0, 0, 0, 0, 0, 0, 0]
     ] * 48  # empty beamformer table
-    CHANNELISER_TRUNCATION: list[int] = [0] * 512
-    CSP_ROUNDING: list[int] = [0] * 384
+    CHANNELISER_TRUNCATION: list[int] = [3] * 512
+    CSP_ROUNDING: list[int] = [2] * 384
 
     PREADU_SIGNAL_MAP = {
         0: {"preadu_id": 1, "channel": 14},
@@ -138,20 +136,20 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._is_programmed = False
         self._is_beamformer_running = False
         self._pending_data_requests = False
-        self._voltage = self.VOLTAGE
+        self._voltage = 5.0
         self._board_temperature = self.BOARD_TEMPERATURE
         self._fpga1_temperature = self.FPGA1_TEMPERATURE
         self._fpga2_temperature = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
-        self._current_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
-        self._pps_delay = self.PPS_DELAY
+        self._current_frame = 0
+        self._pps_delay = 0
         self._test_generator_active = False
         self._arp_table: dict[int, list[int]] = {}
-        self._fpgas_time = self.FPGAS_TIME
+        self._fpgas_time = [0, 0]
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
-        self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
+        self._phase_terminal_count = 0
         self._pps_present = True
         self._clock_present = True
         self._sysref_present = True
@@ -287,7 +285,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
 
-    # pylint: disable=too-many-statements
     def _update_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
         current_time = time.time()
@@ -297,40 +294,43 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._is_programmed = self.tile.is_programmed()
             if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
-                self._adc_rms = self.tile.get_adc_rms()
-                # self._fpgas_time =
-                # self._fpga_current_frame
-                # self._current_tile_beamformer_frame
-                self._is_beamformer_running = self.tile.beamformer_is_running()
-                self._pending_data_requests = self.tile.check_pending_data_requests()
                 self._voltage = self.tile.get_voltage()
                 # slow update parameters
                 if (current_time - self._last_update_time_1) > time_interval_1:
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
-                    self._pps_present = self._check_pps_present()
-                    self._pps_delay = self.tile.get_pps_delay()
-                    # self._sysref_present = method_to_be_written
                     self._fpga1_temperature = self.tile.get_fpga0_temperature()
                     self._fpga2_temperature = self.tile.get_fpga1_temperature()
                     self._board_temperature = self.tile.get_temperature()
-                # very slow update parameters. Should update by set commands
-                if (current_time - self._last_update_time_2) > time_interval_2:
-                    self._last_update_time_2 = current_time
-                    self._fpga_reference_time = self.tile[
-                        "fpga1.pps_manager.sync_time_val"
-                    ]
-                    self._phase_terminal_count = self.tile.get_phase_terminal_count()
-                    # self._channeliser_truncation = method_to_be_written
-                    # self._csp_rounding = method_to_be_written
-                    self._preadu_levels = self._get_preadu_levels()
-                    self._static_delays = self._get_static_delays()
-                    self._station_id = self.tile.get_station_id()
-                    self._tile_id = self.tile.get_tile_id()
-                    self._beamformer_table = self.tile.tpm.station_beamf[
-                        0
-                    ].get_channel_table()
+                # Commands checked only when initialised
+                # Potential crash if polled on a uninitialised board
+                if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
+                    self._adc_rms = self.tile.get_adc_rms()
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+                    # very slow update parameters. Should update by set commands
+                    if (current_time - self._last_update_time_2) > time_interval_2:
+                        self._last_update_time_2 = current_time
+                        self._pps_delay = self.tile.get_pps_delay()
+                        self._pps_present = self._check_pps_present()
+                        self._is_beamformer_running = self.tile.beamformer_is_running()
+                        self._fpga_reference_time = self.tile[
+                            "fpga1.pps_manager.sync_time_val"
+                        ]
+                        self._phase_terminal_count = (
+                            self.tile.get_phase_terminal_count()
+                        )
+                        # self._channeliser_truncation = method_to_be_written
+                        # self._csp_rounding = method_to_be_written
+                        self._preadu_levels = self._get_preadu_levels()
+                        self._static_delays = self._get_static_delays()
+                        self._station_id = self.tile.get_station_id()
+                        self._tile_id = self.tile.get_tile_id()
+                        self._beamformer_table = self.tile.tpm.station_beamf[
+                            0
+                        ].get_channel_table()
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -338,11 +338,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if not self._is_programmed:
             self._pps_delay = 0
             self._fpga_reference_time = 0
-            self._beamformer_table = self.BEAMFORMER_TABLE
-            self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-            self._csp_rounding = self.CSP_ROUNDING
-            self._preadu_levels = [0] * 32
-            self._static_delays = [0.0] * 32
+            # self._beamformer_table = self.BEAMFORMER_TABLE
+            # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+            # self._csp_rounding = self.CSP_ROUNDING
+            # self._preadu_levels = [0] * 32
+            # self._static_delays = [0.0] * 32
             self._is_programmed = False
             self._is_beamformer_running = False
             self._test_generator_active = False
@@ -352,7 +352,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._fpga_current_frame = 0
             self._current_tile_beamformer_frame = 0
             self._fpga_reference_time = 0
-            self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
             self._pps_present = True
             self._clock_present = True
             self._sysref_present = True
@@ -408,6 +407,15 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             #     self._tpm_status = TpmStatus.OFF
             self._update_tpm_status()
         return self._tpm_status
+
+    @tpm_status.setter
+    def tpm_status(self: TpmDriver, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self._set_tpm_status(new_status)
 
     def _set_tpm_status(self: TpmDriver, new_status: TpmStatus) -> None:
         """
@@ -668,7 +676,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             #
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                self.tile.initialise()
+                self.tile.initialise(
+                    tile_id=self._tile_id,
+                    pps_delay=self._pps_delay,
+                )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
             #
@@ -724,6 +735,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param value: assigned tile Id value
         """
+        if not self._is_programmed:
+            self._tile_id = value
+            return
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
@@ -755,6 +769,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param value: assigned station Id value
         """
+        if not self._is_programmed:
+            self._station_id = value
+            return
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
                 try:
@@ -830,6 +847,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpgas_time")
+        if not self._is_programmed:
+            self.logger.info("Trying to read time from an unprogrammed FPGA")
+            return [0, 0]
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
@@ -871,6 +891,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :raises ConnectionError: if communication with tile failed
         """
         self.logger.debug("TpmDriver: fpga_current_frame")
+        if not self._is_programmed:
+            self.logger.info("Trying to read frame# from an unprogrammed FPGA")
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
             if acquired:
@@ -892,9 +914,21 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Return the last measured PPS delay of the TPM.
 
-        :return: PPS delay
+        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
         return self._pps_delay
+
+    @pps_delay.setter  # type: ignore[no-redef]
+    def pps_delay(self: TpmDriver, value: int) -> None:
+        """
+        Set PPS delay.
+
+        PPS delay correction, applied during initialisation.
+        Must be set before initialise()
+
+        :param value: PPS delay correction (nanoseconds). Rounded to 1.25 ns units
+        """
+        self._pps_delay = value
 
     @property
     def register_list(self: TpmDriver) -> list[str]:
@@ -1071,7 +1105,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def get_40g_configuration(
-        self: TpmDriver, core_id: Optional[int] = -1, arp_table_entry: int = 0
+        self: TpmDriver, core_id: int = -1, arp_table_entry: int = 0
     ) -> list[dict]:
         """
         Return a 40G configuration.
@@ -1090,20 +1124,48 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if core_id == -1:
             for icore in range(2):
                 for arp_table_entry_id in range(2):
-                    dict_to_append = self.tile.get_40g_core_configuration(
+                    dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )
                     if dict_to_append is not None:
                         self._forty_gb_core_list.append(dict_to_append)
         else:
             self._forty_gb_core_list = [
-                self.tile.get_40g_core_configuration(core_id, arp_table_entry)
+                self._get_40g_core_configuration(core_id, arp_table_entry)
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
             core["src_ip"] = int2ip(core["src_ip"])
             core["dst_ip"] = int2ip(core["dst_ip"])
         return self._forty_gb_core_list
+
+    def _get_40g_core_configuration(
+        self: TpmDriver, core_id: int, arp_table_entry: int
+    ) -> dict:
+        """
+        Return a 40G configuration.
+
+        :param core_id: id of the core for which a configuration is to
+            be return. Defaults to -1, in which case all cores
+            configurations are returned
+        :param arp_table_entry: ARP table entry to use
+
+        :return: core configuration or list of core configurations
+        """
+        return_value = {"core_id": core_id, "arp_table_entry": arp_table_entry}
+        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            if acquired:
+                try:
+                    return_value = self.tile.get_40g_core_configuration(
+                        core_id,
+                        arp_table_entry,
+                    )
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
+        return return_value
 
     @property
     def arp_table(self: TpmDriver) -> dict[int, list[int]]:
@@ -1188,7 +1250,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         """
-        self.logger.debug("TpmDriver: set_channeliser_truncation")
+        self.logger.debug(f"TpmDriver: set_channeliser_truncation: {array[0]}")
         nb_freq = len(array)
         trunc = [0] * 512
         trunc[0:nb_freq] = array
@@ -1290,6 +1352,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         if isinstance(rounding, int):
             self._csp_rounding = [rounding] * 384
+        elif len(rounding) == 1:
+            self._csp_rounding = [rounding[0]] * 384
         else:
             self._csp_rounding = rounding
         self._set_csp_rounding(self._csp_rounding)
@@ -2052,6 +2116,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     # Start data acquisition on board
                     self.tile.start_acquisition(start_time, delay)
                     started = True
+                    self._fpga_reference_time = self.tile[
+                        "fpga1.pps_manager.sync_time_val"
+                    ]
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2061,7 +2128,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if not started:
             return False
         self.logger.info("Waiting for start acquisition")
-        max_timeout = 30  # Maximum delay, in 0.1 seconds
+        max_timeout = 60  # Maximum delay, in 0.1 seconds
         started = False
         for i in range(max_timeout):
             time.sleep(0.1)

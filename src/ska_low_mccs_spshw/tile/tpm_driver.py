@@ -214,10 +214,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             self.TILE_MONITORING_POINTS
         )
-        self._tile_health_structure['voltage']['MON_5V0'] = 5.0
-        self._tile_health_structure['temperature']['board'] = self.BOARD_TEMPERATURE 
-        self._tile_health_structure['temperature']['FPGA0'] = self.FPGA1_TEMPERATURE
-        self._tile_health_structure['temperature']['FPGA1'] = self.FPGA2_TEMPERATURE
+        self._tile_health_structure["voltage"]["MON_5V0"] = 5.0
+        self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = 0
@@ -228,7 +228,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
         self._phase_terminal_count = 0
-        self._tile_health_structure['timing']['pps']['status'] =  True
+        self._tile_health_structure["timing"]["pps"]["status"] = True
         self._clock_present = True
         self._sysref_present = True
         self._pll_locked = True
@@ -404,7 +404,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
-                        ].get_channel_table()                      
+                        ].get_channel_table()
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -426,7 +426,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._fpga_current_frame = 0
             self._current_tile_beamformer_frame = 0
             self._fpga_reference_time = 0
-            self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
             self._tile_health_structure["timing"]["pps"]["status"] = True
             self._clock_present = True
             self._sysref_present = True

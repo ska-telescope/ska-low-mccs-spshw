@@ -16,7 +16,7 @@ from typing import Any, Callable, Optional
 
 from pyfabil.base.definitions import LibraryError
 
-from ska_low_mccs_spshw.tile.base_tpm_simulator import BaseTpmSimulator
+from .base_tpm_simulator import BaseTpmSimulator
 
 
 class StaticTpmSimulator(BaseTpmSimulator):
@@ -348,8 +348,19 @@ class StaticTileSimulator(StaticTpmSimulator):
         assert self.tpm  # for the type checker
         return self.tpm._pps_delay
 
-    @property
-    def is_programmed(self: StaticTileSimulator) -> bool:
+    # TODO: This class inherits from StaticTpmSimulator,
+    # in which is_programmed is a property.
+    # But this class then changes the interface to make it match pyfabil,
+    # in which is_programmed is a method.
+    # Thus we have to override a property with a method,
+    # which mypy hates, and so do I.
+    # We should clean this mess up.
+    # One way to do so would be to make this class *use* StaticTpmSimulator
+    # rather than subclassing it.
+    # pylint: disable-next=invalid-overridden-method
+    def is_programmed(  # type: ignore[invalid-overridden-method]
+        self: StaticTileSimulator,
+    ) -> bool:
         """
         Return whether the mock has been implemented.
 

@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -33,6 +32,7 @@ from ska_low_mccs_spshw.tile import (
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
     TpmDriver,
+    TpmStatus,
 )
 
 
@@ -352,7 +352,7 @@ class TestStaticSimulatorCommon:
         * a Tile component manager (in simulation and test mode and
           turned on)
 
-        So any test that relies on this fixture will be run four times:
+        So any test that relies on this fixture will be run three times:
         once for each of the above classes.
 
         :param static_tpm_simulator: the static TPM simulator to return
@@ -394,7 +394,13 @@ class TestStaticSimulatorCommon:
                 CommunicationStatus.ESTABLISHED
             )
             callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
+            callbacks["component_state"].assert_call(fault=False, lookahead=3)
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.PROGRAMMED
+            )
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.INITIALISED
+            )
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 
@@ -553,7 +559,6 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("command_name", "num_args"),
         (
-            ("set_lmc_download", 1),
             ("load_pointing_delays", 2),
             ("configure_integrated_channel_data", 3),
             ("configure_integrated_beam_data", 3),
@@ -597,6 +602,26 @@ class TestStaticSimulatorCommon:
         with pytest.raises(NotImplementedError):
             getattr(tile, command_name)(*args)
 
+    def test_set_lmc_download(
+        self: TestStaticSimulatorCommon,
+        tile: Union[
+            StaticTpmSimulator,
+            StaticTpmSimulatorComponentManager,
+            TileComponentManager,
+        ],
+        mocker: pytest_mock.MockerFixture,
+    ) -> None:
+        """
+        Test of set_lmc_download command.
+
+        Since the commands don't really do
+        anything, these tests simply check that the command can be called.
+
+        :param mocker: fixture that wraps unittest.mock
+        :param tile: the tile class object under test.
+        """
+        tile.set_lmc_download("10g", 1024, "10.0.10.1")
+
     @pytest.mark.parametrize(
         ("command_name", "implemented"),
         (
@@ -631,12 +656,13 @@ class TestStaticSimulatorCommon:
         if self.tile_name == "tile_component_manager":
             args = "2022-11-10T12:34:56.0Z"
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
-            timestamp = dt.replace(tzinfo=timezone.utc).timestamp()
-            tile._tpm_component_manager.fpga_sync_time = timestamp
-            assert tile._tpm_component_manager.fpga_sync_time == timestamp
-            tile._tile_time.set_reference_time(timestamp)
+            timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
+            # TODO: there is no fpga_sync_time method.
+            # tile._tpm_driver.fpga_sync_time = timestamp
+            # assert tile._tpm_driver.fpga_sync_time == timestamp
+            tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
         else:
-            args = 123456
+            args = "123456"
 
         if implemented:
             getattr(tile, command_name)()
@@ -891,7 +917,7 @@ class TestStaticSimulatorCommon:
         tile.configure_40g_core(
             1,
             0,
-            "mock_src_mac",
+            0x123456,
             "mock_src_ip",
             8888,
             "mock_dst_ip",
@@ -901,7 +927,7 @@ class TestStaticSimulatorCommon:
         expected = {
             "core_id": 1,
             "arp_table_entry": 0,
-            "src_mac": "mock_src_mac",
+            "src_mac": 0x123456,
             "src_ip": "mock_src_ip",
             "src_port": 8888,
             "dst_ip": "mock_dst_ip",
@@ -1012,7 +1038,13 @@ class TestDynamicSimulatorCommon:
                 CommunicationStatus.ESTABLISHED
             )
             callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
+            callbacks["component_state"].assert_call(fault=False, lookahead=3)
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.PROGRAMMED
+            )
+            callbacks["component_state"].assert_call(
+                programming_state=TpmStatus.INITIALISED
+            )
             return tile_component_manager
         raise ValueError("Tile fixture parametrized with unrecognised option")
 

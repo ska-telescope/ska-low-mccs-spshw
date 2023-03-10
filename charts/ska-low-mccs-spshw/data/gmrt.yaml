@@ -1,23 +1,23 @@
 stations:
-  1:
-    cabinet_network_address: 10.0.0.0
-    subracks: [1]
-    tpms: [10, 13]
+  instances:
+    1:
+      cabinet_network_address: 10.0.0.0
+      subracks: [1]
+      tpms: [10, 13]
 subracks:
-  1:
-    host: 10.0.10.112
-    port: 8081
+  instances:
+    1:
+      host: 10.0.10.112
+      port: 8081
 tpms:
-  10:
-    host: 10.0.10.205
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 2
-  13:
-    host: 10.0.10.217
-    port: 10000
-    version: tpm_v1_6
-    subrack: "1"
-    subrack_bay: 5
-  
+  version: tpm_v1_6
+  port: 10000
+  instances:
+    10:
+      host: 10.0.10.205
+      subrack: "1"
+      subrack_bay: 2
+    13:
+      host: 10.0.10.217
+      subrack: "1"
+      subrack_bay: 5

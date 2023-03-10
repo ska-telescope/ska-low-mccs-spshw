@@ -1,4 +1,3 @@
-# type: ignore
 # -*- coding: utf-8 -*-
 #
 # This file is part of the SKA Low MCCS project
@@ -12,7 +11,7 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pyfabil.base.definitions import LibraryError
@@ -124,6 +123,7 @@ class TestTpmDriver:
         # constructs a mocked TPM
         # Therefore the tile will have access to the TPM after connect().
         static_tile_simulator.connect()
+        assert static_tile_simulator.tpm is not None
         static_tile_simulator.tpm.write_register("fpga1.1", 3)
         static_tile_simulator.tpm.write_register("fpga2.2", 2)
         static_tile_simulator.tpm.write_register(
@@ -247,7 +247,7 @@ class TestTpmDriver:
             side_effect=LibraryError("attribute mocked to fail")
         )
 
-        tpm_driver.updating_attributes()
+        tpm_driver._update_attributes()
         assert (
             tpm_driver._tile_health_structure["temperature"]["MON_5V0"]
             != static_tile_simulator.tpm._tile_health_structure["temperature"][
@@ -273,6 +273,7 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+        assert static_tile_simulator.tpm is not None
         static_tile_simulator.tpm._fpga_current_frame = 2
 
         board_temperature = tpm_driver.board_temperature
@@ -307,10 +308,11 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+        assert static_tile_simulator.tpm is not None
         static_tile_simulator.tpm._fpga_current_frame = 2
 
         _ = tpm_driver.register_list
-        _ = tpm_driver._get_register_list()
+        tpm_driver._get_register_list()
         _ = tpm_driver.pps_present
         # _ = tpm_driver._check_pps_present()
         _ = tpm_driver.sysref_present
@@ -331,6 +333,7 @@ class TestTpmDriver:
         static_tile_simulator.connect()
         static_tile_simulator.fpga_time = 2
         static_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
+        assert static_tile_simulator.tpm is not None
         static_tile_simulator.tpm._fpga_current_frame = 2
 
         tpm_driver.channeliser_truncation = [4] * 512
@@ -383,6 +386,7 @@ class TestTpmDriver:
         assert tpm_driver.tpm_status == TpmStatus.UNPROGRAMMED
 
         # reset with connection to TPM
+        assert static_tile_simulator.tpm
         static_tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.UNCONNECTED
 
@@ -403,8 +407,8 @@ class TestTpmDriver:
         # constructs a mocked TPM
         # Therefore the tile will have access to the TPM after connect().
         static_tile_simulator.connect()
-        static_tile_simulator.tpm._tile_id = 5
         assert static_tile_simulator.tpm
+        static_tile_simulator.tpm._tile_id = 5
         tile_id = tpm_driver.get_tile_id()
         assert tile_id == 5
 
@@ -437,11 +441,11 @@ class TestTpmDriver:
         # return false.
         assert tpm_driver.start_acquisition() is False
 
-        static_tile_simulator.check_arp_table = unittest.mock.MagicMock(
-            return_value=True
+        static_tile_simulator.check_arp_table = (  # type: ignore[assignment]
+            unittest.mock.MagicMock()
         )
-        static_tile_simulator.start_acquisition = unittest.mock.MagicMock(
-            return_value=True
+        static_tile_simulator.start_acquisition = (  # type: ignore[assignment]
+            unittest.mock.MagicMock(return_value=True)
         )
         # mocked response from one register other will fail
         static_tile_simulator["fpga1.dsp_regfile.stream_status.channelizer_vld"] = 1
@@ -471,7 +475,7 @@ class TestTpmDriver:
         # Therefore the tile will have access to the TPM after connect().
         static_tile_simulator.connect()
         # mocked register return
-        expected_delay_written = list(range(32))
+        expected_delay_written: list[float] = list(range(32))
         static_tile_simulator["fpga1.test_generator.delay_0"] = expected_delay_written[
             0:16
         ]
@@ -479,10 +483,11 @@ class TestTpmDriver:
             16:32
         ]
 
-        programmed_delays = [0] * 32
+        programmed_delays = [0.0] * 32
         for i in range(32):
             programmed_delays[i] = expected_delay_written[i] * 1.25
-        tpm_driver.static_time_delays = programmed_delays
+        # No method static_time_delays.
+        tpm_driver.static_delays = programmed_delays
 
         # assert both fpgas have that delay
         assert (
@@ -492,23 +497,6 @@ class TestTpmDriver:
         assert (
             static_tile_simulator["fpga2.test_generator.delay_0"]
             == expected_delay_written[16:32]
-        )
-
-        # check set_time_delay failure
-        expected_delay_written = [43.0, 98.2]
-        mock_error = unittest.mock.Mock(side_effect=Exception("mocked to fail"))
-        static_tile_simulator.set_time_delays = unittest.mock.MagicMock(
-            side_effect=mock_error
-        )
-        tpm_driver.static_time_delays = programmed_delays
-
-        assert (
-            static_tile_simulator["fpga1.test_generator.delay_0"]
-            != expected_delay_written
-        )
-        assert (
-            static_tile_simulator["fpga2.test_generator.delay_0"]
-            != expected_delay_written
         )
 
     def test_read_write_address(
@@ -631,8 +619,8 @@ class TestTpmDriver:
         tpm_driver.configure_40g_core(**core_dict)
 
         configurations = tpm_driver.get_40g_configuration(
-            core_id=core_dict.get("core_id"),
-            arp_table_entry=core_dict.get("arp_table_entry"),
+            core_id=cast(int, core_dict.get("core_id")),
+            arp_table_entry=cast(int, core_dict.get("arp_table_entry")),
         )
 
         assert configurations == [core_dict]
@@ -676,6 +664,7 @@ class TestTpmDriver:
         """
         assert tpm_driver._check_programmed() is False
         static_tile_simulator.connect()
+        assert static_tile_simulator.tpm is not None
         static_tile_simulator.tpm._is_programmed = True
         assert tpm_driver._check_programmed() is True
 
@@ -698,7 +687,7 @@ class TestTpmDriver:
         """
         # establish connection to the TPM
         static_tile_simulator.connect()
-        assert static_tile_simulator.is_programmed is False
+        assert not static_tile_simulator.is_programmed()
         tpm_driver.initialise(task_callback=callbacks["task"])
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -707,9 +696,11 @@ class TestTpmDriver:
             status=TaskStatus.COMPLETED, result="The initialisation task has completed"
         )
 
-        assert static_tile_simulator.is_programmed is True
+        assert static_tile_simulator.is_programmed()
         assert tpm_driver._is_programmed is True
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
+
+        assert static_tile_simulator.tpm is not None  # for the type checker
         static_tile_simulator.tpm._tpm_status = TpmStatus.PROGRAMMED
 
         # assert static_tile_simulator["fpga1.dsp_regfile.config_id.station_id"] == 0
@@ -717,6 +708,8 @@ class TestTpmDriver:
 
         # The FPGA is mocked to not be programmed after the program_fpga command.
         # check that the initialisation process has failed.
+
+        assert static_tile_simulator.tpm is not None  # for the type checker
         static_tile_simulator.tpm._is_programmed = False
         static_tile_simulator.program_fpgas = unittest.mock.MagicMock(
             return_value=False

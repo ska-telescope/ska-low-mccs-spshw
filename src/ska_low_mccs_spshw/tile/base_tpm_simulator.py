@@ -17,10 +17,9 @@ from typing import Any, Callable, Final, Optional
 import numpy as np
 
 # from ska_control_model import CommunicationStatus
-from ska_low_mccs_common.component import ObjectComponent
-
-from ska_low_mccs_spshw.tile.tile_data import TileData
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from ..base.component import ObjectComponent
+from .tile_data import TileData
+from .tpm_status import TpmStatus
 
 __all__ = ["BaseTpmSimulator"]
 
@@ -306,13 +305,20 @@ class BaseTpmSimulator(ObjectComponent):
         self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
-    def initialise(self: BaseTpmSimulator) -> None:
+    def initialise(
+        self: BaseTpmSimulator, tile_id: int = 0, pps_delay: int = PPS_DELAY
+    ) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
+
+        :param tile_id: Initial value for tile ID (optional)
+        :param pps_delay: Initial value for pps_delay (optional)
         """
         self.logger.debug("TpmSimulator: initialise")
+        self._tile_id = tile_id
+        self._pps_delay = pps_delay
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)
         self._set_tpm_status(TpmStatus.INITIALISED)
@@ -328,6 +334,27 @@ class BaseTpmSimulator(ObjectComponent):
         :return: tpm status
         """
         return self._tpm_status
+
+    @tpm_status.setter
+    def tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self._set_tpm_status(new_status)
+
+    def _set_tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
+        """
+        Set the TPM status local attribute and call the callback if changed.
+
+        :param new_status: the new value for the _tpm_status
+        """
+        self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
+        if new_status != self._tpm_status:
+            self._tpm_status = new_status
+            if self._component_state_changed_callback is not None:
+                self._component_state_changed_callback(programming_state=new_status)
 
     @property
     def tile_id(self: BaseTpmSimulator) -> int:
@@ -646,7 +673,7 @@ class BaseTpmSimulator(ObjectComponent):
         self: BaseTpmSimulator,
         core_id: int,
         arp_table_entry: int,
-        src_mac: str,
+        src_mac: int,
         src_ip: str,
         src_port: int,
         dst_ip: str,
@@ -758,12 +785,20 @@ class BaseTpmSimulator(ObjectComponent):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
         """
         self.logger.debug("TpmSimulator: set_lmc_download")
-        raise NotImplementedError
+        if dst_ip is None:
+            dst_ip = "0.0.0.0"
+        for core in (0, 1):
+            self.configure_40g_core(
+                core,
+                1,
+                src_ip="0.0.0.0",
+                src_mac=0x600001000000,
+                dst_ip=dst_ip,
+                src_port=src_port,
+                dst_port=dst_port,
+            )
 
     # pylint: disable=too-many-arguments
     def send_data_samples(
@@ -1246,15 +1281,3 @@ class BaseTpmSimulator(ObjectComponent):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
-
-    def _set_tpm_status(self: BaseTpmSimulator, new_status: TpmStatus) -> None:
-        """
-        Set the TPM status local attribute and call the callback if changed.
-
-        :param new_status: the new value for the _tpm_status
-        """
-        self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
-        if new_status != self._tpm_status:
-            self._tpm_status = new_status
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(programming_state=new_status)

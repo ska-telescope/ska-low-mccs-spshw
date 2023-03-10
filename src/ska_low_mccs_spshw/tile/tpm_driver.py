@@ -114,8 +114,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             "MON_5V0": None,
             "VM_FE0": None,
             "VM_FE1": None,
-            "FE0_mVA": None,
-            "FE1_mVA": None,
             "VM_DDR0_VTT": None,
             "VM_AGP0": None,
             "VM_AGP1": None,
@@ -284,6 +282,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
             # "start" event received; update state then poll until "stop" event received
             self._stop_polling_event.clear()
+            self.logger.debug("Enabling health monitoring")
+            self.tile.enable_health_monitoring()
+            self.logger.debug("Done!")
             while not self._stop_polling_event.is_set():
                 self._poll()
                 self._stop_polling_event.wait(self._poll_rate)
@@ -377,7 +378,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
-                    self._tile_health_structure = self.tile.get_health_status(self)
+                    self.logger.debug("Calling get_health_status...")
+                    self._tile_health_structure = self.tile.get_health_status()
+                    self.logger.debug("Done!")
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):

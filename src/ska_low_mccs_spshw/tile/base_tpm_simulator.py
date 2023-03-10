@@ -71,8 +71,6 @@ class BaseTpmSimulator(ObjectComponent):
             "MON_5V0": None,
             "VM_FE0": None,
             "VM_FE1": None,
-            "FE0_mVA": None,
-            "FE1_mVA": None,
             "VM_DDR0_VTT": None,
             "VM_AGP0": None,
             "VM_AGP1": None,

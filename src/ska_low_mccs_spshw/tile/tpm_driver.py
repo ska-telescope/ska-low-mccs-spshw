@@ -282,9 +282,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
             # "start" event received; update state then poll until "stop" event received
             self._stop_polling_event.clear()
-            self.logger.debug("Enabling health monitoring")
-            self.tile.enable_health_monitoring()
-            self.logger.debug("Done!")
+            # self.logger.debug("Enabling health monitoring")
+            # self.tile.enable_health_monitoring() # pragma: no cover
+            # self.logger.debug("Done!")
             while not self._stop_polling_event.is_set():
                 self._poll()
                 self._stop_polling_event.wait(self._poll_rate)

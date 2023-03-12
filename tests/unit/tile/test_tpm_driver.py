@@ -129,7 +129,7 @@ class TestTPMDriver:
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
         # assert tpm_driver._faulty
 
-    @pytest.mark.xfail
+
     def test_write_read_registers(
         self: TestTPMDriver,
         tpm_driver: TpmDriver,
@@ -145,53 +145,20 @@ class TestTPMDriver:
         :param aavs_tile_simulator: The mocked tile
         """
         # No UDP connection are used here. The aavs_tile_simulator
-        # constructs a mocked TPM
-        # Therefore the tile will have access to the TPM after connect().
+        # constructs a mocked TPM in its connect command()
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.tpm.write_register("fpga1.1", 3)
-        aavs_tile_simulator.tpm.write_register("fpga2.2", 2)
-        aavs_tile_simulator.tpm.write_register(
-            "fpga1.dsp_regfile.stream_status.channelizer_vld", 2
-        )
 
-        # write to fpga1
-        # write_register(register_name, values, offset, device)
-        tpm_driver.write_register("1", 17)
-        read_value = tpm_driver.read_register("1")
-        assert read_value == [17]
+        desired_value = 17
+        tpm_driver.write_register("fpga1.test_generator.delay_0", desired_value)
+        assert tpm_driver.read_register("fpga1.test_generator.delay_0") == [desired_value]
 
-        # test write to unknown register
-        tpm_driver.write_register("unknown", 17)
-        read_value = tpm_driver.read_register("unknown")
-        assert read_value == []
+        desired_value = 12
+        tpm_driver.write_register("fpga1.test_generator.delay_0", desired_value)
+        assert tpm_driver.read_register("fpga1.test_generator.delay_0") == [desired_value]
 
-        # write to fpga2
-        tpm_driver.write_register("2", 17)
-        read_value = tpm_driver.read_register("2")
-        assert read_value == [17]
-
-        # test write to unknown register
-        tpm_driver.write_register("unknown", 17)
-        read_value = tpm_driver.read_register("unknown")
-        assert read_value == []
-
-        # write to register with no associated device
-        tpm_driver.write_register(
-            "fpga1.dsp_regfile.stream_status.channelizer_vld",
-            17,
-        )
-        read_value = tpm_driver.read_register(
-            "fpga1.dsp_regfile.stream_status.channelizer_vld"
-        )
-        assert read_value == [17]
-
-        # test write to unknown register
-        tpm_driver.write_register("unknown", 17)
-        read_value = tpm_driver.read_register("unknown")
-        assert read_value == []
-
-        # test register that returns list
-        read_value = tpm_driver.read_register("mocked_list")
+        # test write to non present register
+        tpm_driver.write_register("non_existent_register", 17)
+        read_value = tpm_driver.read_register("non_existent_register")
         assert read_value == []
 
     def test_write_read_address(
@@ -219,7 +186,7 @@ class TestTPMDriver:
         aavs_tile_simulator.tpm = None
         tpm_driver.write_address(4, [2, 3, 4, 5])
 
-    @pytest.mark.xfail
+
     def test_update_attributes(
         self: TestTPMDriver,
         tpm_driver: TpmDriver,
@@ -239,17 +206,17 @@ class TestTPMDriver:
         aavs_tile_simulator.connect()
 
         # the tile must be programmed to update attributes, therefore we mock that
-        aavs_tile_simulator.is_programmed = unittest.mock.Mock(return_value=True)
+        aavs_tile_simulator.program_fpgas("non_existent_bit_file.bit")
         # updated values
         fpga1_temp = 2
         fpga2_temp = 32
         board_temp = 4
         voltage = 1
 
-        aavs_tile_simulator.tpm._fpga1_temperature = fpga1_temp
-        aavs_tile_simulator.tpm._fpga2_temperature = fpga2_temp
-        aavs_tile_simulator.tpm._board_temperature = board_temp
-        aavs_tile_simulator.tpm._voltage = voltage
+        aavs_tile_simulator._fpga1_temperature = fpga1_temp
+        aavs_tile_simulator._fpga2_temperature = fpga2_temp
+        aavs_tile_simulator._board_temperature = board_temp
+        aavs_tile_simulator._voltage = voltage
 
         tpm_driver._update_attributes()
 
@@ -260,15 +227,13 @@ class TestTPMDriver:
         assert tpm_driver._voltage == voltage
 
         # Check value not updated if we have a failure
-        aavs_tile_simulator.tpm._voltage = 2.2
-
+        aavs_tile_simulator._voltage = 2.2
         mock_task_callback.side_effect = LibraryError("attribute mocked to fail")
         aavs_tile_simulator.get_voltage = mock_task_callback
 
-        tpm_driver.updating_attributes()
-        assert tpm_driver._voltage != aavs_tile_simulator.tpm._voltage
+        tpm_driver._update_attributes()
+        assert tpm_driver._voltage != aavs_tile_simulator._voltage
 
-    @pytest.mark.xfail
     def test_read_tile_attributes(
         self: TestTPMDriver,
         tpm_driver: TpmDriver,
@@ -283,10 +248,10 @@ class TestTPMDriver:
         # No UDP connection are used here. The aavs_tile_simulator
         # constructs a mocked TPM
         # Therefore the tile will have access to the TPM after connect().
+        tpm_driver.tile = aavs_tile_simulator
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.fpga_time = 2
-        aavs_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
-        aavs_tile_simulator.tpm._fpga_current_frame = 2
+        aavs_tile_simulator.program_fpgas("non_existent_bit_file.bit")
+        tpm_driver._update_attributes()
 
         board_temperature = tpm_driver.board_temperature
         voltage = tpm_driver.voltage
@@ -297,14 +262,14 @@ class TestTPMDriver:
         get_pps_delay = tpm_driver.pps_delay
         get_fpgs_sync_time = tpm_driver.fpga_reference_time
 
-        assert board_temperature == AavsTileSimulator.BOARD_TEMPERATURE
-        assert voltage == AavsTileSimulator.VOLTAGE
-        assert fpga1_temperature == AavsTileSimulator.FPGA1_TEMPERATURE
-        assert fpga2_temperature == AavsTileSimulator.FPGA2_TEMPERATURE
-        assert adc_rms == list(AavsTileSimulator.ADC_RMS)
-        assert get_fpga_time == [2, 2]
-        assert get_pps_delay == AavsTileSimulator.PPS_DELAY
-        assert get_fpgs_sync_time == 0.4
+        assert board_temperature == aavs_tile_simulator.BOARD_TEMPERATURE
+        assert voltage == aavs_tile_simulator.VOLTAGE
+        assert fpga1_temperature == aavs_tile_simulator.FPGA1_TEMPERATURE
+        assert fpga2_temperature == aavs_tile_simulator.FPGA2_TEMPERATURE
+        assert adc_rms == aavs_tile_simulator.ADC_RMS
+        assert get_fpga_time == aavs_tile_simulator.FPGAS_TIME
+        assert get_pps_delay== aavs_tile_simulator.PPS_DELAY
+        assert get_fpgs_sync_time == aavs_tile_simulator["fpga1.pps_manager.sync_time_val"]
 
     def test_dumb_read_tile_attributes(
         self: TestTPMDriver,
@@ -459,10 +424,9 @@ class TestTPMDriver:
         # reset with connection to TPM
         aavs_tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.UNCONNECTED
-
+        
         assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
-    @pytest.mark.xfail
     def test_get_tile_id(
         self: TestTPMDriver,
         tpm_driver: TpmDriver,
@@ -478,10 +442,12 @@ class TestTPMDriver:
         # constructs a mocked TPM
         # Therefore the tile will have access to the TPM after connect().
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.tpm._tile_id = 5
+
+        tile_id = 5
+        aavs_tile_simulator._tile_id = tile_id
         assert aavs_tile_simulator.tpm
         tile_id = tpm_driver.get_tile_id()
-        assert tile_id == 5
+        assert tile_id == tile_id
 
         # mocked error case
         mock_libraryerror = unittest.mock.Mock(

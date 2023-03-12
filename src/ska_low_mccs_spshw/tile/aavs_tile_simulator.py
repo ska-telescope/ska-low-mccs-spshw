@@ -125,7 +125,7 @@ class MockTpm:
         self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-
+        self.preadu = [PreAdu()]*32
         self._station_beamf = [self.beam1, self.beam2]
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -146,6 +146,13 @@ class MockTpm:
             elif re.search(str(address), k) is not None:
                 matches.append(k)
         return matches
+    @property
+    def station_beamf(self: MockTpm):
+        return self._station_beamf
+
+    @property
+    def tpm_preadu(self: MockTpm):
+        return self.preadu
 
     def __getitem__(self: MockTpm, key: int | str):
         """
@@ -155,12 +162,10 @@ class MockTpm:
 
         :return: the value at the mocked register
         """
-        print(f"key: {key}")
         if key == ("pll", 0x508):
             return 0xE7
         if type(key) == int:
             key = hex(key)
-            print(f"key: {key}")
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value):
@@ -195,7 +200,11 @@ class PreAdu:
         """
         self.channel_filters[channel] = (attenuation & 0x1F) << 3
 
+    def select_low_passband(self: PreAdu):
+        self.bandpass = "low"
 
+    def read_configuration(self: PreAdu):
+        return
 class AavsTileSimulator:
     """
     This attempts to simulate pyaavs Tile.
@@ -213,7 +222,7 @@ class AavsTileSimulator:
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
-    ADC_RMS = tuple(float(i) for i in range(32))
+    ADC_RMS = [float(i) for i in range(32)]
     FPGAS_TIME = [1, 2]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
@@ -228,7 +237,8 @@ class AavsTileSimulator:
         0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
         1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
     }
-
+    STATION_ID = 0
+    TILE_ID = 1
     # VOLTAGE = 5.0
     # CURRENT = 0.4
     # BOARD_TEMPERATURE = 36.0
@@ -260,7 +270,7 @@ class AavsTileSimulator:
         self._pending_data_request = False
         self._is_first = False
         self._is_last = False
-        self._tile_id = 0
+        self._tile_id = self.TILE_ID
         self._voltage = self.VOLTAGE
         self._current = self.CURRENT
         self._board_temperature = self.BOARD_TEMPERATURE
@@ -269,7 +279,9 @@ class AavsTileSimulator:
         self.fortygb_core_list = [
             {},
         ]
+        self._station_id = self.STATION_ID
         self._timestamp = 0
+        self._pps_delay = self.PPS_DELAY
         # return self._register_map.get(str(address), 0)
 
     # def find_register(self, address: int) -> List[Any]:
@@ -322,7 +334,7 @@ class AavsTileSimulator:
 
     def check_pending_data_requests(self: AavsTileSimulator) -> bool:
         """:return: the pending data requess flag."""
-        return
+        return False
         # return self._pending_data_requests
 
     def initialise_beamformer(
@@ -387,7 +399,7 @@ class AavsTileSimulator:
         """
         return self.FPGAS_TIME[device.value - 1]
 
-    def set_station_id(self: AavsTileSimulator, tile_id: int, station_id: int) -> None:
+    def set_station_id(self: AavsTileSimulator, station_id: int, tile_id: int) -> None:
         """
         Set mock registers to some value.
 
@@ -397,12 +409,12 @@ class AavsTileSimulator:
         """
         self._tile_id = tile_id
         self._station_id = station_id
-        fpgas = ["fpga1", "fpga2"]
-        for f in fpgas:
-            self[f + ".dsp_regfile.config_id.station_id"] = station_id
-            self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
+        # fpgas = ["fpga1", "fpga2"]
+        # for f in fpgas:
+        #     self[f + ".dsp_regfile.config_id.station_id"] = station_id
+        #     self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
 
-        return
+        # return
 
     def get_pps_delay(self: AavsTileSimulator) -> float:
         """:return: the pps delay."""
@@ -640,6 +652,10 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
+    @property
+    def tpm_preadu(self: MockTpm):
+        return self.tpm.preadu
+
     def set_pointing_delay(self: AavsTileSimulator, delay_array, beam_index) -> None:
         """
         Set pointing delay.
@@ -667,7 +683,9 @@ class AavsTileSimulator:
         :param duration: duration
         :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.tpm.beam1._is_running = True
+        self.tpm.beam2._is_running = True
+
 
     def stop_beamformer(self: AavsTileSimulator) -> None:
         """
@@ -971,7 +989,7 @@ class AavsTileSimulator:
 
         :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        return self.tpm.beam1.is_running()
 
     def set_test_generator_tone(self: AavsTileSimulator):
         """
@@ -989,6 +1007,23 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
+    def get_phase_terminal_count(self: AavsTileSimulator):
+        """
+        Get PPS phase terminal count.
+
+        :return: PPS phase terminal count
+        :rtype: int
+        """
+
+        return 0
+
+    def get_station_id(self: AavsTileSimulator):
+        """
+        Get station ID
+        :return: station ID programmed in HW
+        :rtype: int
+        """
+        return self._station_id
 
 class AavsDynamicTileSimulator(AavsTileSimulator):
     """

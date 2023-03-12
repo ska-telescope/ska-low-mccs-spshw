@@ -27,6 +27,7 @@ from tango import DevFailed, DevState
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import TpmDriver
 
+from ska_low_mccs_spshw.tile import AavsTileSimulator
 
 @pytest.fixture()
 def device_to_load(
@@ -68,7 +69,6 @@ class TestMccsTile:
     The Tile device represents the TANGO interface to a Tile (TPM) unit.
     """
 
-    @pytest.mark.xfail
     @pytest.mark.parametrize(
         "config_in, expected_config",
         [
@@ -141,10 +141,10 @@ class TestMccsTile:
         tile_device.adminMode = AdminMode.ONLINE
         device_admin_mode_changed_callback.assert_last_change_event(AdminMode.ONLINE)
         assert tile_device.adminMode == AdminMode.ONLINE
-        time.sleep(0.1)
+ 
         tile_device.MockTpmOn()
-
-        init_value = getattr(tile_device, "staticTimeDelays")
+        time.sleep(0.1)
+        init_value = tile_device.staticTimeDelays
 
         tile_device.Configure(json.dumps(config_in))
 
@@ -203,27 +203,27 @@ class TestMccsTile:
         device_health_state_changed_callback.assert_next_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 
-    @pytest.mark.xfail
+
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [
-            ("logicalTileId", 0, 7),
-            ("stationId", 0, 5),
-            ("voltage", TpmDriver.VOLTAGE, None),
-            ("boardTemperature", TpmDriver.BOARD_TEMPERATURE, None),
-            ("fpga1Temperature", TpmDriver.FPGA1_TEMPERATURE, None),
-            ("fpga2Temperature", TpmDriver.FPGA2_TEMPERATURE, None),
-            ("fpgasUnixTime", pytest.approx(TpmDriver.FPGAS_TIME), None),
+            ("logicalTileId", AavsTileSimulator.TILE_ID, 7),
+            ("stationId", AavsTileSimulator.STATION_ID, 5),
+            ("voltage", AavsTileSimulator.VOLTAGE, None),
+            ("boardTemperature", AavsTileSimulator.BOARD_TEMPERATURE, None),
+            ("fpga1Temperature", AavsTileSimulator.FPGA1_TEMPERATURE, None),
+            ("fpga2Temperature", AavsTileSimulator.FPGA2_TEMPERATURE, None),
+            ("fpgasUnixTime", pytest.approx(AavsTileSimulator.FPGAS_TIME), None),
             ("fpgaTime", "1970-01-01T00:00:01.000000Z", None),
             (
                 "currentTileBeamformerFrame",
-                TpmDriver.CURRENT_TILE_BEAMFORMER_FRAME,
+                AavsTileSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
                 None,
             ),
             ("currentFrame", 0, None),
             (
                 "phaseTerminalCount",
-                TpmDriver.PHASE_TERMINAL_COUNT,
+                AavsTileSimulator.PHASE_TERMINAL_COUNT,
                 45,
             ),
             (
@@ -306,7 +306,7 @@ class TestMccsTile:
         tile_device.MockTpmOn()
         time.sleep(0.1)
         device_state_changed_callback.assert_last_change_event(DevState.ON)
-
+        time.sleep(2)
         if type(initial_value) == list:
             initial_value = np.array(initial_value)
             assert (getattr(tile_device, attribute) == initial_value).all()
@@ -436,7 +436,6 @@ class TestMccsTileCommands:
         # with pytest.raises(DevFailed, match="NotImplementedError"):
         _ = getattr(tile_device, device_command)(*args)
 
-    @pytest.mark.xfail
     def test_StartAcquisition(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -554,7 +553,6 @@ class TestMccsTileCommands:
     #     tile_device.MockTpmOn()
     #     assert tile_device.state() == DevState.ON
 
-    @pytest.mark.xfail
     def test_Initialise(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -712,7 +710,6 @@ class TestMccsTileCommands:
         assert tile_device.isProgrammed
         assert tile_device.firmwareName == bitfile
 
-    @pytest.mark.xfail
     def test_MissingDownloadFirmwareFile(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -919,7 +916,6 @@ class TestMccsTileCommands:
         expected = (0,)
         assert tile_device.ReadAddress([address]) == expected
 
-    @pytest.mark.xfail
     def test_WriteAddress(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,

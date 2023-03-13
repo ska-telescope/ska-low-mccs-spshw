@@ -170,17 +170,11 @@ class MccsSubarray(SKASubarray):
 
         if "configured_changed" in state_change.keys():
             is_configured = state_change.get("configured_changed")
-            if is_configured:
-                self.obs_state_model.perform_action("component_configured")
-            else:
-                self.obs_state_model.perform_action("component_unconfigured")
+            self._configuration_changed(is_configured)
 
         if "scanning_changed" in state_change.keys():
             is_scanning = state_change.get("scanning_changed")
-            if is_scanning:
-                self.obs_state_model.perform_action("component_scanning")
-            else:
-                self.obs_state_model.perform_action("component_not_scanning")
+            self._scanning_changed(is_scanning)
 
         simple_actions = [
             "assign_completed",
@@ -204,16 +198,13 @@ class MccsSubarray(SKASubarray):
 
         if "station_power_state" in state_change.keys():
             station_power = state_change.get("station_power_state")
-            if station_power and fqdn:
-                self.component_manager._station_power_state_changed(fqdn, station_power)
+            self._station_power_state_changed(station_power, fqdn)
 
         # This might need changing. Seems that "power_state" changes could come
         # from any subservient device too.
         if "power_state" in state_change.keys():
             power_state = state_change.get("power_state")
-            with self.component_manager._power_state_lock:
-                if power_state and power_state != self.component_manager.power_state:
-                    self.component_manager.power_state = power_state
+            self._power_state_changed(power_state)
 
     def _component_communication_state_changed(
         self: MccsSubarray,
@@ -277,6 +268,55 @@ class MccsSubarray(SKASubarray):
                     "which is not managed by this subarray."
                 )
                 self.logger.warning(msg)
+
+    def _power_state_changed(
+        self: MccsSubarray,
+        power_state: Any,
+    ) -> None:
+        """
+        Handle the power state change.
+
+        :param power_state: if the power state has changed
+        """
+        with self.component_manager._power_state_lock:
+            if power_state and power_state != self.component_manager.power_state:
+                self.component_manager.power_state = power_state
+
+    def _station_power_state_changed(
+        self: MccsSubarray,
+        station_power: Any,
+        fqdn: Optional[str],
+    ) -> None:
+        """
+        Handle the station power state change.
+
+        :param station_power: if the station power state has changed
+        :param fqdn: fully qualified domain name of the device
+        """
+        if station_power and fqdn:
+            self.component_manager._station_power_state_changed(fqdn, station_power)
+
+    def _configuration_changed(self: MccsSubarray, is_configured: Any) -> None:
+        """
+        Handle the configuration change.
+
+        :param is_configured: if the configuration has changed
+        """
+        if is_configured:
+            self.obs_state_model.perform_action("component_configured")
+        else:
+            self.obs_state_model.perform_action("component_unconfigured")
+
+    def _scanning_changed(self: MccsSubarray, is_scanning: Any) -> None:
+        """
+        Handle the configuration change.
+
+        :param is_scanning: if the scanning has changed
+        """
+        if is_scanning:
+            self.obs_state_model.perform_action("component_scanning")
+        else:
+            self.obs_state_model.perform_action("component_not_scanning")
 
     def _resources_changed(
         self: MccsSubarray,

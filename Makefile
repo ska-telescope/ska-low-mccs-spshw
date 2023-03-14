@@ -33,6 +33,12 @@ python-post-format:
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 
+# cache from the most recently-built dev image on Gitlab. This won't always
+# be the most recent build on the same branch, but this is simple to implement
+# and in most cases will be a win.
+ifneq ($(CI_JOB_ID),)
+OCI_BUILD_ADDITIONAL_ARGS = --cache-from $(CI_REGISTRY_IMAGE)/$(NAME):$(VERSION)
+endif
 
 K8S_FACILITY ?= k8s-test
 K8S_CHART_PARAMS += --values charts/ska-low-mccs-spshw/values-$(K8S_FACILITY).yaml

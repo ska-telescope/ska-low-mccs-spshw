@@ -6,6 +6,6 @@ COPY pyproject.toml poetry.lock* ./
 
 RUN poetry install --only main
 
-COPY --chown=tango:tango . .
+COPY --chown=tango:tango . /app
 
 USER tango

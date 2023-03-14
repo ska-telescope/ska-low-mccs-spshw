@@ -95,10 +95,8 @@ nitpick_ignore = [
     ("py:exc", "HTTPException"), # fastapi online docs are mkdocs-based
     ("py:class", "starlette.requests.Request"), # mkdocs-based
     ("py:class", "uvicorn.config.Config"), # mkdocs-based
-    # These last two come from ska-control-model so might be impossible
-    # to # factor out of the public interface.
-    ("py:class", "HealthState"),
-    ("py:class", "ResultCode"),
+    ("py:class", "ska_tango_base.base.BaseComponentManager"),
+    ("py:class", "ska_tango_base.base.CommandTracker"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.
@@ -288,7 +286,7 @@ intersphinx_mapping = {
         None,
     ),
     "ska-tango-base": (
-        "https://developer.skatelescope.org/projects/ska-tango-base/en/latest/",
+        "https://developer.skao.int/projects/ska-tango-base/en/latest/",
         None,
     ),
     "ska-low-mccs-common": (

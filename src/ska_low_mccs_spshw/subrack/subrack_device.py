@@ -9,15 +9,17 @@
 """This module provides a Tango device for a PSI-Low subrack."""
 from __future__ import annotations
 
+import importlib
 import json
 import logging
-from typing import Any, Optional
+from typing import Any, Final, Optional
 
 from ska_control_model import CommunicationStatus, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
+    JsonValidator,
     ResultCode,
     SubmittedSlowCommand,
 )
@@ -26,19 +28,30 @@ from tango.server import attribute, command, device_property
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
-__all__ = ["MccsSubrack", "main"]
 
-
-# pylint: disable-next=too-few-public-methods
-class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
+class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
+    # pylint: disable=line-too-long
     """
     Class for handling the SetSubrackFanSpeed command.
 
     This command sets the selected subrack fan speed.
-    """
+
+    This command takes as input a JSON string that conforms to the
+    following schema:
+
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetSubrackFanSpeed.json
+       :language: json
+    """  # noqa: E501
+
+    SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.subrack.schemas",
+            "MccsSubrack_SetSubrackFanSpeed.json",
+        )
+    )
 
     def __init__(
-        self: _SetSubrackFanSpeedCommand,
+        self: SetSubrackFanSpeedCommand,
         command_tracker: CommandTrackerProtocol,
         component_manager: BaseComponentManager,
         logger: Optional[logging.Logger] = None,
@@ -51,6 +64,7 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
             command acts.
         :param logger: a logger for this command to use.
         """
+        validator = JsonValidator("SetSubrackFanSpeed", self.SCHEMA, logger)
         super().__init__(
             "SetSubrackFanSpeed",
             command_tracker,
@@ -58,11 +72,12 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
             "set_subrack_fan_speed",
             callback=None,
             logger=logger,
+            validator=validator,
         )
 
     # pylint: disable=arguments-differ
     def do(  # type: ignore[override]
-        self: _SetSubrackFanSpeedCommand,
+        self: SetSubrackFanSpeedCommand,
         *args: Any,
         subrack_fan_id: int,
         speed_percent: float,
@@ -89,16 +104,29 @@ class _SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         return super().do(subrack_fan_id, speed_percent)
 
 
-# pylint: disable-next=too-few-public-methods
-class _SetSubrackFanModeCommand(SubmittedSlowCommand):
+class SetSubrackFanModeCommand(SubmittedSlowCommand):
+    # pylint: disable=line-too-long
     """
     Class for handling the SetSubrackFanMode command.
 
     This command set the selected subrack fan mode.
-    """
+
+    This command takes as input a JSON string that conforms to the
+    following schema:
+
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetSubrackFanMode.json
+       :language: json
+    """  # noqa: E501
+
+    SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.subrack.schemas",
+            "MccsSubrack_SetSubrackFanMode.json",
+        )
+    )
 
     def __init__(
-        self: _SetSubrackFanModeCommand,
+        self: SetSubrackFanModeCommand,
         command_tracker: CommandTrackerProtocol,
         component_manager: BaseComponentManager,
         logger: Optional[logging.Logger] = None,
@@ -111,6 +139,7 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
             command acts.
         :param logger: a logger for this command to use.
         """
+        validator = JsonValidator("SetSubrackFanMode", self.SCHEMA, logger)
         super().__init__(
             "SetSubrackFanMode",
             command_tracker,
@@ -118,11 +147,12 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
             "set_subrack_fan_mode",
             callback=None,
             logger=logger,
+            validator=validator,
         )
 
     # pylint: disable=arguments-differ
     def do(  # type: ignore[override]
-        self: _SetSubrackFanModeCommand,
+        self: SetSubrackFanModeCommand,
         *args: Any,
         fan_id: int,
         mode: int,
@@ -149,16 +179,29 @@ class _SetSubrackFanModeCommand(SubmittedSlowCommand):
         return super().do(fan_id, FanMode(mode))
 
 
-# pylint: disable-next=too-few-public-methods
-class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
+class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
+    # pylint: disable=line-too-long
     """
     Class for handling the SetPowerSupplyFanSpeed command.
 
     This command set the selected power supply fan speed.
-    """
+
+    This command takes as input a JSON string that conforms to the
+    following schema:
+
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetPowerSupplyFanSpeed.json
+       :language: json
+    """  # noqa: E501
+
+    SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.subrack.schemas",
+            "MccsSubrack_SetPowerSupplyFanSpeed.json",
+        )
+    )
 
     def __init__(
-        self: _SetPowerSupplyFanSpeedCommand,
+        self: SetPowerSupplyFanSpeedCommand,
         command_tracker: CommandTrackerProtocol,
         component_manager: BaseComponentManager,
         logger: Optional[logging.Logger] = None,
@@ -171,6 +214,7 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             command acts.
         :param logger: a logger for this command to use.
         """
+        validator = JsonValidator("SetPowerSupplyFanSpeed", self.SCHEMA, logger)
         super().__init__(
             "SetPowerSupplyFanSpeed",
             command_tracker,
@@ -178,11 +222,12 @@ class _SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
             "set_power_supply_fan_speed",
             callback=None,
             logger=logger,
+            validator=validator,
         )
 
     # pylint: disable=arguments-differ
     def do(  # type: ignore[override]
-        self: _SetPowerSupplyFanSpeedCommand,
+        self: SetPowerSupplyFanSpeedCommand,
         *args: Any,
         power_supply_fan_id: int,
         speed_percent: float,
@@ -263,7 +308,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
 
-    # pylint: disable-next=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Initialisation command class for this base device."""
 
@@ -338,9 +382,9 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                 ),
             )
         for (command_name, command_class) in [
-            ("SetSubrackFanSpeed", _SetSubrackFanSpeedCommand),
-            ("SetSubrackFanMode", _SetSubrackFanModeCommand),
-            ("SetPowerSupplyFanSpeed", _SetPowerSupplyFanSpeedCommand),
+            ("SetSubrackFanSpeed", SetSubrackFanSpeedCommand),
+            ("SetSubrackFanMode", SetSubrackFanModeCommand),
+            ("SetPowerSupplyFanSpeed", SetPowerSupplyFanSpeedCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -432,9 +476,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        kwargs = json.loads(argin)
         handler = self.get_command_object("SetSubrackFanSpeed")
-        result_code, message = handler(**kwargs)
+        result_code, message = handler(argin)
         return ([result_code], [message])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -453,9 +496,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        kwargs = json.loads(argin)
         handler = self.get_command_object("SetSubrackFanMode")
-        result_code, message = handler(**kwargs)
+        result_code, message = handler(argin)
         return ([result_code], [message])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -474,9 +516,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        kwargs = json.loads(argin)
         handler = self.get_command_object("SetPowerSupplyFanSpeed")
-        result_code, message = handler(**kwargs)
+        result_code, message = handler(argin)
         return ([result_code], [message])
 
     # ----------

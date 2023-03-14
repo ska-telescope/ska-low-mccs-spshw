@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsSubrack_SetSubrackFanMode.json",
+    "title": "MccsSubrack SetSubrackFanMode schema",
+    "description": "Schema for MccsSubrack's SetSubrackFanMode command",
+    "type": "object",
+    "properties": {
+        "fan_id": {
+            "description": "ID of the subrack fan",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+        },
+        "mode": {
+            "description": "Fan mode: 0 means MANUAL, 1 means AUTO",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1
+        }
+    },
+    "required": ["fan_id", "mode"]
+}

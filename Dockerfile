@@ -8,4 +8,6 @@ RUN poetry install --only main
 
 COPY --chown=tango:tango . /app
 
+RUN poetry install --only-root
+
 USER tango

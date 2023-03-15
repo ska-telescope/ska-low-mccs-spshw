@@ -2352,8 +2352,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_time)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
-                    self.tile.tpm['fpga1.test_generator.control.load_dds0'] = 1
-                    self.tile.tpm['fpga2.test_generator.control.load_dds0'] = 1
+                    self.tile.tpm["fpga1.test_generator.control.load_dds0"] = 1
+                    self.tile.tpm["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
                 # pylint: disable=broad-except
                 except Exception as e:

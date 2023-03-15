@@ -1,6 +1,39 @@
 # Version History
 
-## unrelease
+## unreleased
+
+## 0.3.2
+
+* LOW-386 - UNKNOWN / OFF bugfix
+* MCCS-1351 - Revert subrack_fan_speeds change
+* MCCS-1346 - TPM initialisation bugfix
+
+## 0.3.1
+
+* LOW-386   - subrack_fan_speeds -> subrack_fan_speed
+
+## 0.3.0
+
+* MCCS-1343 - Final static type check of tile tests post refactor
+* MCCS-1339 - use ska-tango-testing
+* MCCS-1324 - Static type checking of tile in ska-low-mccs-spshw
+* MCCS-1239 - xray upload
+* MCCS-1216 - Add Ingress to Jupyterhub
+* MCCS-1225 - k8s-test-psi-low
+* MCCS-1257 - Added skeleton SpshwStation device.
+* LOW-386   - use correct component manager attr in GetArpTable
+* MCCS-1236 - Attach xray tickets to feature file
+* MCCS-1258 - new subrack device
+
+## 0.2.1
+
+* MCCS-1318 - Fix pyfabil/aavs commit SHAs
+* MCCS-1316/ MCCS-1319 - add facility yaml files
+
+## 0.2.0
+
+* MCCS-1256 - External simulator
+* MCCS-1148 - Fix bug with incorrect reporting of Tile On/Off result
 
 ## 0.1.0
 

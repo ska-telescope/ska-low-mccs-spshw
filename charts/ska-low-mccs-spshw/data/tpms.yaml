@@ -5,34 +5,35 @@ domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_tile := $tiles.instances}}
 {{- if or $this_tile.enabled (not (hasKey $this_tile "enabled"))}}
-  - {{printf "tile-%s" $key}}
+  - {{printf "tile-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-entrypoints:
-  - name: "tile.MccsTile"
-    path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
+#entrypoints:
+#  - name: "tile.MccsTile"
+#    path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
+command: MccsTile
 server: 
   name: "MccsTile"
   instances:
 {{- range $key, $this_tile := $tiles.instances}}
-    - name: {{printf "tile-%s" $key}}
+    - name: {{printf "tile-%04d" (int $key)}}
       classes:
       - name: "MccsTile"
         devices:
-        - name: {{printf "low-mccs-spshw/tile/%s" $key}}
+        - name: {{printf "low-mccs/tile/%04d" (int $key)}}
           properties:
           - name: "TileId"
             values:
-            - "1"
+            - {{$key | toString | quote}}
           - name: "SubrackFQDN"
             values:
-            - {{printf "low-mccs-spshw/subrack/%s" $this_tile.subrack}}
+            - {{printf "low-mccs/subrack/%04d" (int $this_tile.subrack)}}
           - name: "SubrackBay"
             values:
             - {{$this_tile.subrack_bay | toString | quote}}
           - name: "AntennasPerTile"
             values:
-            - "8"
+            - "16"
           - name: "LoggingLevelDefault"
             values:
             - {{pluck "logging_level_default" $this_tile $tiles | first | default 3 | toString | quote}}
@@ -41,10 +42,10 @@ server:
             - {{$this_tile.host | quote}}
           - name: "TpmCpldPort"
             values:
-            - {{$this_tile.port | default 10000 | toString | quote}}
+            - {{pluck "port" $this_tile $tiles | first | default 10000 | toString | quote}}
           - name: "TpmVersion"
             values:
-            - {{$this_tile.version | quote | default "tpm_v1_6"}}
+            - {{pluck "version" $this_tile $tiles | first | quote | default "tpm_v1_6"}}
           - name: "SimulationConfig"
             values:
             - {{pluck "simulation_config" $this_tile $tiles | first | default 0 | toString | quote}}
@@ -65,3 +66,7 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- if (hasKey $tiles "reachable_from") }}
+nodeSelector:
+  kubernetes.io/hostname: {{ $tiles.reachable_from }}
+{{- end}}

@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -10,10 +8,18 @@
 """This module contains pytest-specific test harness for SPSHW integration tests."""
 from __future__ import annotations
 
-from typing import Callable
+import functools
+import socket
+import threading
+import time
+from types import TracebackType
+from typing import Any, Callable, ContextManager, Generator, Literal, Optional, Type
 
 import pytest
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback
+import uvicorn
+
+from ska_low_mccs_spshw.subrack import SubrackSimulator
+from ska_low_mccs_spshw.subrack.subrack_simulator_server import configure_server
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
@@ -30,170 +36,113 @@ def pytest_itemcollected(item: pytest.Item) -> None:
         item.add_marker("forked")
 
 
-@pytest.fixture()
-def state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
+@pytest.fixture(name="subrack_simulator_factory", scope="session")
+def subrack_simulator_factory_fixture(
+    subrack_simulator_config: dict[str, Any],
+) -> Callable[[], SubrackSimulator]:
     """
-    Return a mock change event callback factory for device state change.
+    Return a subrack simulator factory.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+    :param subrack_simulator_config: a keyword dictionary that specifies
+        the desired configuration of the simulator backend.
 
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
+    :return: a subrack simulator factory.
+    """
+    return functools.partial(SubrackSimulator, **subrack_simulator_config)
+
+
+@pytest.fixture(name="subrack_simulator")
+def subrack_simulator_fixture(
+    subrack_simulator_factory: Callable[[], SubrackSimulator],
+) -> SubrackSimulator:
+    """
+    Return a subrack simulator.
+
+    :param subrack_simulator_factory: a factory that returns a backend
+        simulator to which the server will provide an interface.
+
+    :return: a subrack simulator.
+    """
+    return subrack_simulator_factory()
+
+
+@pytest.fixture(name="subrack_server_launcher", scope="session")
+def subrack_server_launcher_fixture() -> Callable[
+    [SubrackSimulator], ContextManager[tuple[str, int]]
+]:
+    """
+    Return a subrack server launcher.
+
+    :return: a callable that, when called, launches a subrack server for
+        use in testing, yields it, and tears it down afterwards.
     """
 
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("state")
+    class _ThreadableServer(uvicorn.Server):
+        def install_signal_handlers(self: _ThreadableServer) -> None:
+            pass
 
-    return _factory
+    class _SubrackServerContextManager:
+        def __init__(
+            self: _SubrackServerContextManager,
+            subrack_simulator: SubrackSimulator,
+        ) -> None:
+            self._socket = socket.socket()
+            server_config = configure_server(
+                subrack_simulator, host="127.0.0.1", port=0
+            )
+            self._server = _ThreadableServer(config=server_config)
+            self._thread = threading.Thread(
+                target=self._server.run, args=([self._socket],), daemon=True
+            )
+
+        def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
+            self._thread.start()
+
+            while not self._server.started:
+                time.sleep(1e-3)
+            _, port = self._socket.getsockname()
+            return "127.0.0.1", port
+
+        def __exit__(
+            self,
+            exc_type: Optional[Type[BaseException]],
+            exception: Optional[BaseException],
+            trace: Optional[TracebackType],
+        ) -> Literal[False]:
+            """
+            Exit the context.
+
+            :param exc_type: the type of exception thrown in the with block
+            :param exception: the exception thrown in the with block
+            :param trace: a traceback
+
+            :returns: whether the exception (if any) has been fully handled
+                by this method and should be swallowed i.e. not re-raised
+            """
+            self._server.should_exit = True
+            self._thread.join()
+            return False
+
+    return _SubrackServerContextManager
 
 
-@pytest.fixture()
-def obs_state_changed_callback_factory(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> Callable[[], MockChangeEventCallback]:
+@pytest.fixture(name="subrack_address")
+def subrack_address_fixture(
+    subrack_server_launcher: Callable[
+        [SubrackSimulator], ContextManager[tuple[str, int]]
+    ],
+    subrack_simulator: SubrackSimulator,
+) -> Generator[tuple[str, int], None, None]:
     """
-    Return a mock change event callback factory for device obs state change.
+    Yield the host and port of a running subrack server.
 
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
+    :param subrack_server_launcher: a callable that, when called,
+        returns a context manager that spins up a subrack server, yields
+        it for use in testing, and then shuts its down afterwards.
+    :param subrack_simulator: the actual backend simulator to which this
+        server provides an interface.
 
-    :return: a mock change event callback factory to be registered with
-        a device via a change event subscription, so that it gets called
-        when the device state changes.
+    :yields: the host and port of a running subrack server.
     """
-
-    def _factory() -> MockChangeEventCallback:
-        return mock_change_event_callback_factory("obsState")
-
-    return _factory
-
-
-@pytest.fixture()
-def controller_device_state_changed_callback(
-    state_changed_callback_factory: Callable[[], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device state change.
-
-    :param state_changed_callback_factory: fixture that provides a mock
-        change event callback factory for state change events.
-
-    :return: a mock change event callback to be registered with the
-        controller device via a change event subscription, so that it
-        gets called when the device state changes.
-    """
-    return state_changed_callback_factory()
-
-
-@pytest.fixture()
-def controller_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for controller device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        controller via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def subarray_device_obs_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subarray device obs state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subarray device via a change event subscription, so that it gets
-        called when the device obs state changes.
-    """
-    return mock_change_event_callback_factory("obsState")
-
-
-@pytest.fixture()
-def subrack_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def subrack_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for subrack device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the
-        subrack via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
-
-
-@pytest.fixture()
-def tile_device_admin_mode_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device admin mode change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device admin mode changes.
-    """
-    return mock_change_event_callback_factory("adminMode")
-
-
-@pytest.fixture()
-def tile_device_state_changed_callback(
-    mock_change_event_callback_factory: Callable[[str], MockChangeEventCallback],
-) -> MockChangeEventCallback:
-    """
-    Return a mock change event callback for tile device state change.
-
-    :param mock_change_event_callback_factory: fixture that provides a
-        mock change event callback factory (i.e. an object that returns
-        mock callbacks when called).
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the device state changes.
-    """
-    return mock_change_event_callback_factory("state")
+    with subrack_server_launcher(subrack_simulator) as (host, port):
+        yield host, port

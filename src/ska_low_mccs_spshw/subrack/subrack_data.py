@@ -1,4 +1,3 @@
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -16,7 +15,7 @@ import enum
 __all__ = ["SubrackData", "FanMode"]
 
 
-class SubrackData:
+class SubrackData:  # pylint: disable=too-few-public-methods
     """
     This class contain data/facts about a subrack that are needed by multiple classes.
 
@@ -37,6 +36,6 @@ class SubrackData:
 class FanMode(enum.IntEnum):
     """Python enumerated type for ``FanMode`` attribute."""
 
-    MANUAL = 1
+    MANUAL = 0
     """Tango Device accepts commands from all clients."""
-    AUTO = 2
+    AUTO = 1

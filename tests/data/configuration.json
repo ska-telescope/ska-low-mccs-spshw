@@ -1,9 +1,9 @@
 {
     "servers": {
         "MccsSubrack": {
-            "subrack_01": {
+            "subrack_0001": {
                 "MccsSubrack": {
-                    "low-mccs/subrack/01": {
+                    "low-mccs/subrack/0001": {
                         "properties": {
                             "TileFQDNs": [
                                 "low-mccs/tile/0001",
@@ -40,7 +40,7 @@
                                 "1"
                             ],
                             "SubrackFQDN": [
-                                "low-mccs/subrack/01"
+                                "low-mccs/subrack/0001"
                             ],
                             "SubrackBay": [
                                 "1"
@@ -78,7 +78,7 @@
                                 "1"
                             ],
                             "SubrackFQDN": [
-                                "low-mccs/subrack/01"
+                                "low-mccs/subrack/0001"
                             ],
                             "SubrackBay": [
                                 "2"
@@ -116,7 +116,7 @@
                                 "1"
                             ],
                             "SubrackFQDN": [
-                                "low-mccs/subrack/01"
+                                "low-mccs/subrack/0001"
                             ],
                             "SubrackBay": [
                                 "3"
@@ -154,7 +154,7 @@
                                 "1"
                             ],
                             "SubrackFQDN": [
-                                "low-mccs/subrack/01"
+                                "low-mccs/subrack/0001"
                             ],
                             "SubrackBay": [
                                 "4"

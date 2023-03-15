@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -12,28 +10,36 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Any, Callable
+from typing import Callable
 
 import pytest
-from ska_control_model import (
-    CommunicationStatus,
-    PowerState,
-    ResultCode,
-    SimulationMode,
-    TestMode,
-)
+from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.testing import TangoHarness
-from ska_low_mccs_common.testing.mock import MockChangeEventCallback, MockDeviceBuilder
-from ska_low_mccs_common.testing.mock.mock_callable import MockCallable
+from ska_low_mccs_common.testing.mock import MockDeviceBuilder
+from ska_tango_testing.context import TangoContextProtocol
+from ska_tango_testing.mock import MockCallableGroup
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import AavsTileSimulator, TileComponentManager, TpmDriver
 
 
-@pytest.fixture()
-def simulation_mode() -> SimulationMode:
+@pytest.fixture(name="mock_factory")
+def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
+    """
+    Fixture that provides a mock factory for device proxy mocks.
+
+    This default factory
+    provides vanilla mocks, but this fixture can be overridden by test modules/classes
+    to provide mocks with specified behaviours.
+
+    :return: a factory for device proxy mocks
+    """
+    return MockDeviceBuilder()
+
+
+@pytest.fixture(name="simulation_mode")
+def simulation_mode_fixture() -> SimulationMode:
     """
     Return the simulation mode to be used when initialising the tile class object.
 
@@ -43,8 +49,8 @@ def simulation_mode() -> SimulationMode:
     return SimulationMode.TRUE
 
 
-@pytest.fixture()
-def test_mode() -> TestMode:
+@pytest.fixture(name="test_mode")
+def test_mode_fixture() -> TestMode:
     """
     Return the test mode to be used when initialising the tile class object.
 
@@ -54,8 +60,8 @@ def test_mode() -> TestMode:
     return TestMode.TEST
 
 
-@pytest.fixture
-def unique_id() -> str:
+@pytest.fixture(name="unique_id")
+def unique_id_fixture() -> str:
     """
     Return a unique ID used to test Tango layer infrastructure.
 
@@ -64,18 +70,8 @@ def unique_id() -> str:
     return "a unique id"
 
 
-@pytest.fixture()
-def subrack_fqdn() -> str:
-    """
-    Return the FQDN of the subrack that powers the tile.
-
-    :return: the FQDN of the subrack that powers the tile.
-    """
-    return "low-mccs/subrack/01"
-
-
-@pytest.fixture()
-def subrack_tpm_id() -> int:
+@pytest.fixture(name="subrack_tpm_id")
+def subrack_tpm_id_fixture() -> int:
     """
     Return the tile's position in the subrack.
 
@@ -84,8 +80,8 @@ def subrack_tpm_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def initial_tpm_power_state() -> PowerState:
+@pytest.fixture(name="initial_tpm_power_state")
+def initial_tpm_power_state_fixture() -> PowerState:
     """
     Return the initial power mode of the TPM.
 
@@ -94,8 +90,8 @@ def initial_tpm_power_state() -> PowerState:
     return PowerState.OFF
 
 
-@pytest.fixture()
-def mock_subrack(
+@pytest.fixture(name="mock_subrack")
+def mock_subrack_fixture(
     subrack_tpm_id: int, initial_tpm_power_state: PowerState
 ) -> unittest.mock.Mock:
     """
@@ -114,88 +110,38 @@ def mock_subrack(
     return builder()
 
 
-@pytest.fixture()
-def initial_mocks(
-    subrack_fqdn: str,
-    mock_subrack: unittest.mock.Mock,
-) -> dict[str, unittest.mock.Mock]:
-    """
-    Return a dictionary of pre-registered device proxy mocks.
-
-    The default fixture is overridden here to provide an MccsSubrack mock
-    and an MccsTile mock..
-
-    :param subrack_fqdn: FQDN of the subrack device
-    :param mock_subrack: the mock subrack device to be provided when a device
-        proxy to the subrack FQDN is requested.
-
-    :return: a dictionary of mocks, keyed by FQDN
-    """
-    return {
-        subrack_fqdn: mock_subrack,
-    }
-
-
-@pytest.fixture()
-def mock_subrack_device_proxy(
-    subrack_fqdn: str, logger: logging.Logger
+@pytest.fixture(name="mock_subrack_device_proxy")
+def mock_subrack_device_proxy_fixture(
+    subrack_name: str, logger: logging.Logger
 ) -> MccsDeviceProxy:
     """
     Return a mock device proxy to an subrack device.
 
-    :param subrack_fqdn: FQDN of the subrack device.
+    :param subrack_name: name of the subrack device.
     :param logger: a logger for the device proxy to use.
 
     :return: a mock device proxy to an subrack device.
     """
-    return MccsDeviceProxy(subrack_fqdn, logger)
+    return MccsDeviceProxy(subrack_name, logger)
 
 
-@pytest.fixture()
-def mock_task_callback() -> MockCallable:
+@pytest.fixture(name="callbacks")
+def callbacks_fixture() -> MockCallableGroup:
     """
-    Return a MockCallable for use as a task_callback.
+    Return a dictionary of callables to be used as callbacks.
 
-    :return: a mock callable to be called when the state of a task changes.
+    :return: a dictionary of callables to be used as callbacks.
     """
-    return MockCallable()
+    return MockCallableGroup(
+        "communication_status",
+        "component_state",
+        "task",
+        timeout=5.0,
+    )
 
 
-@pytest.fixture()
-def component_state_changed_callback(
-    mock_callback_deque_factory: Callable[[], unittest.mock.Mock],
-) -> unittest.mock.Mock:
-    """
-    Return a mock callback for when the state of a component changes.
-
-    :param mock_callback_deque_factory: fixture that provides a mock callback
-        factory (i.e. an object that returns mock callbacks when
-        called).
-
-    :return: a mock callback to be called when the state of a
-        component changes.
-    """
-    return mock_callback_deque_factory()
-
-
-@pytest.fixture()
-def tile_power_state_changed_callback(
-    subrack_tpm_id: int,
-) -> MockChangeEventCallback:
-    """
-    Return a mock callback for tile power mode change.
-
-    :param subrack_tpm_id: This tile's position in its subrack
-
-    :return: a mock change event callback to be registered with the tile
-        device via a change event subscription, so that it gets called
-        when the tile device health state changes.
-    """
-    return MockChangeEventCallback(f"tpm{subrack_tpm_id}PowerState")
-
-
-@pytest.fixture()
-def max_workers() -> int:
+@pytest.fixture(name="max_workers")
+def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
@@ -206,8 +152,8 @@ def max_workers() -> int:
     return 1
 
 
-@pytest.fixture()
-def tpm_ip() -> str:
+@pytest.fixture(name="tpm_ip")
+def tpm_ip_fixture() -> str:
     """
     Return the IP address of the TPM.
 
@@ -216,8 +162,8 @@ def tpm_ip() -> str:
     return "0.0.0.0"
 
 
-@pytest.fixture()
-def tpm_cpld_port() -> int:
+@pytest.fixture(name="tpm_cpld_port")
+def tpm_cpld_port_fixture() -> int:
     """
     Return the port at which the TPM can be controlled.
 
@@ -226,8 +172,8 @@ def tpm_cpld_port() -> int:
     return 10000
 
 
-@pytest.fixture()
-def tpm_version() -> str:
+@pytest.fixture(name="tpm_version")
+def tpm_version_fixture() -> str:
     """
     Return the TPM version.
 
@@ -236,8 +182,8 @@ def tpm_version() -> str:
     return "tpm_v1_6"
 
 
-@pytest.fixture()
-def tile_id() -> int:
+@pytest.fixture(name="tile_id")
+def tile_id_fixture() -> int:
     """
     Return the tile id.
 
@@ -246,8 +192,8 @@ def tile_id() -> int:
     return 1
 
 
-@pytest.fixture()
-def aavs_tile_simulator(logger: logging.Logger) -> TileComponentManager:
+@pytest.fixture(name="aavs_tile_simulator")
+def aavs_tile_simulator_fixture(logger: logging.Logger) -> TileComponentManager:
     """
     Return a AavsTileSimulator.
 
@@ -256,20 +202,16 @@ def aavs_tile_simulator(logger: logging.Logger) -> TileComponentManager:
     :param logger: logger
     :return: a AavsTileSimulator
     """
-    return AavsTileSimulator(
-        logger,
-    )
+    return AavsTileSimulator(logger)
 
 
 @pytest.fixture()
 def tpm_driver(
     logger: logging.Logger,
-    max_workers: int,
     tile_id: int,
     aavs_tile_simulator: AavsTileSimulator,
     tpm_version: str,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> TpmDriver:
     """
     Return a TpmDriver driving a AavsTileSimulator.
@@ -277,32 +219,27 @@ def tpm_driver(
     (This is a pytest fixture.)
 
     :param logger: the logger to be used by this object.
-    :param max_workers: nos. of worker threads
     :param tile_id: the unique ID for the tile
     :param aavs_tile_simulator: the aavs_tile_simulator
     :param tpm_version: the tpm_version
-    :param communication_state_changed_callback: callback  to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be called when the
-        component state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: Tpmdriver with simulated tile.
     """
     return TpmDriver(
         logger,
-        max_workers,
         tile_id,
         aavs_tile_simulator,
         tpm_version,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
-@pytest.fixture()
-def tile_component_manager(
-    tango_harness: TangoHarness,
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="tile_component_manager")
+def tile_component_manager_fixture(
+    tango_harness: TangoContextProtocol,
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -311,10 +248,9 @@ def tile_component_manager(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_fqdn: str,
+    subrack_name: str,
     subrack_tpm_id: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -330,15 +266,11 @@ def tile_component_manager(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_fqdn: FQDN of the subrack that controls power to
+    :param subrack_name: FQDN of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -351,15 +283,16 @@ def tile_component_manager(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_fqdn,
+        subrack_name,
         subrack_tpm_id,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
-@pytest.fixture()
-def mock_tile_component_manager(
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="mock_tile_component_manager")
+def mock_tile_component_manager_fixture(
     simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -368,10 +301,9 @@ def mock_tile_component_manager(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_fqdn: str,
+    subrack_name: str,
     subrack_tpm_id: int,
-    communication_state_changed_callback: Callable[[CommunicationStatus], None],
-    component_state_changed_callback: Callable[[dict[str, Any]], None],
+    callbacks: MockCallableGroup,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -386,15 +318,11 @@ def mock_tile_component_manager(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_fqdn: FQDN of the subrack that controls power to
+    :param subrack_name: name of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
-    :param communication_state_changed_callback: callback to be
-        called when the status of the communications channel between
-        the component manager and its component changes
-    :param component_state_changed_callback: callback to be
-        called when the component state changes
+    :param callbacks: dictionary of driver callbacks.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -407,15 +335,15 @@ def mock_tile_component_manager(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_fqdn,
+        subrack_name,
         subrack_tpm_id,
-        communication_state_changed_callback,
-        component_state_changed_callback,
+        callbacks["communication_status"],
+        callbacks["component_state"],
     )
 
 
-@pytest.fixture()
-def patched_tile_device_class(
+@pytest.fixture(name="patched_tile_device_class")
+def patched_tile_device_class_fixture(
     mock_tile_component_manager: TileComponentManager,
 ) -> type[MccsTile]:
     """
@@ -450,20 +378,13 @@ def patched_tile_device_class(
 
             :return: a mock component manager
             """
-            # self._communication_state: Optional[CommunicationStatus] = None
-            mock_tile_component_manager._communication_state_changed_callback = (
-                self._component_communication_state_changed
+            mock_tile_component_manager.set_communication_state_callback(
+                self._communication_state_changed,
             )
-            mock_tile_component_manager._component_state_changed_callback = (
-                self.component_state_changed_callback
+            mock_tile_component_manager.set_component_state_callback(
+                self._component_state_changed,
             )
-            orchestrator = mock_tile_component_manager._tile_orchestrator
-            orchestrator._component_state_changed_callback = (
-                self.component_state_changed_callback
-            )
-            orchestrator._communication_state_changed_callback = (
-                self._component_communication_state_changed
-            )
+
             return mock_tile_component_manager
 
         @command()
@@ -489,6 +410,7 @@ def patched_tile_device_class(
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
+            """Mock power on the tpm."""
             self.component_manager._tpm_power_state_changed(PowerState.ON)
 
     return PatchedTileDevice

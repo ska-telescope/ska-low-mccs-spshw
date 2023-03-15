@@ -5,21 +5,19 @@ domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_subrack := $subracks.instances}}
 {{- if or $this_subrack.enabled (not (hasKey $this_subrack "enabled"))}}
-  - {{printf "subrack-%s" $key}}
+  - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-entrypoints:
-  - name: "subrack.MccsSubrack"
-    path: "/app/src/ska_low_mccs_spshw/subrack/subrack_device.py"
+command: MccsSubrack # Entry point changed.
 server: 
   name: "MccsSubrack"
   instances:
 {{- range $key, $this_subrack := $subracks.instances}}
-    - name: {{printf "subrack-%s" $key}}
+    - name: {{printf "subrack-%04d" (int $key)}}
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs-spshw/subrack/%s" $key}}
+        - name: {{printf "low-mccs/subrack/%04d" (int $key)}}
           properties:
           - name: "SubrackIp"
             values: 
@@ -45,3 +43,7 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- if (hasKey $subracks "reachable_from") }}
+nodeSelector:
+  kubernetes.io/hostname: {{ $subracks.reachable_from }}
+{{- end}}

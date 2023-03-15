@@ -24,8 +24,6 @@ from ska_low_mccs_spshw.tile.dynamic_values_generator import (
     _DynamicValuesUpdater,
 )
 
-__all__ = ["AavsTileSimulator", "AavsDynamicTileSimulator"]
-
 
 class StationBeamformer:
     """Station beamformer."""
@@ -125,7 +123,7 @@ class MockTpm:
         self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-        self.preadu = [PreAdu()]*32
+        self.preadu = [PreAdu()] * 32
         self._station_beamf = [self.beam1, self.beam2]
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -146,13 +144,87 @@ class MockTpm:
             elif re.search(str(address), k) is not None:
                 matches.append(k)
         return matches
+
     @property
     def station_beamf(self: MockTpm):
+        """
+        Station beamf.
+
+        :return: the station_beamf
+        """
         return self._station_beamf
 
     @property
     def tpm_preadu(self: MockTpm):
+        """
+        Tpm pre adu.
+
+        :return: the preadu
+        """
         return self.preadu
+
+    def write_register(self, register, values, offset=0, retry=True):
+        """
+        Set register value.
+
+        :param register: Register name
+        :param values: Values to write
+        :param offset: Memory address offset to write to
+        :param retry: retry
+
+        :raises LibraryError:Attempting to set a register not in the memory address.
+        """
+        if isinstance(register, int):
+            register = hex(register)
+        if register == "" or register == "unknown":
+            raise LibraryError(f"Unknown register: {register}")
+        self._register_map[register] = values
+
+    def read_register(self: MockTpm, address, n=1):
+        """
+        Get register value.
+
+        :param address: Memory address to read from
+        :param n: Number of words to read
+
+        :return: Values
+        """
+        if address == ("pll", 0x508):
+            return 0xE7
+        if type(address) == int:
+            address = hex(address)
+        return self._register_map.get(address)
+
+    def read_address(self: MockTpm, address, n=1):
+        """
+        Get address value.
+
+        :param address: Memory address to read from
+        :param n: Number of words to read
+
+        :return: Values
+        """
+        if address == ("pll", 0x508):
+            return 0xE7
+        if type(address) == int:
+            address = hex(address)
+        return self._register_map.get(address)
+
+    def write_address(self: MockTpm, address, values, retry=True):
+        """
+        Write address value.
+
+        :param address: Memory address to read from
+        :param values: value to write
+        :param retry: retry
+
+        :raises LibraryError:Attempting to set a register not in the memory address.
+        """
+        if isinstance(address, int):
+            address = hex(address)
+        if address == "" or address == "unknown":
+            raise LibraryError(f"Unknown register: {address}")
+        self._register_map[address] = values
 
     def __getitem__(self: MockTpm, key: int | str):
         """
@@ -160,12 +232,13 @@ class MockTpm:
 
         :param key: the key to a register.
 
+        :raises LibraryError:Attempting to set a register not in the memory address.
         :return: the value at the mocked register
         """
-        if key == ("pll", 0x508):
-            return 0xE7
-        if type(key) == int:
+        if isinstance(key, int):
             key = hex(key)
+        if key == "" or key == "unknown":
+            raise LibraryError(f"Unknown register: {key}")
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value):
@@ -201,10 +274,18 @@ class PreAdu:
         self.channel_filters[channel] = (attenuation & 0x1F) << 3
 
     def select_low_passband(self: PreAdu):
+        """Select low pass band."""
         self.bandpass = "low"
 
     def read_configuration(self: PreAdu):
+        """
+        Read configuration.
+
+        :return: none
+        """
         return
+
+
 class AavsTileSimulator:
     """
     This attempts to simulate pyaavs Tile.
@@ -264,6 +345,7 @@ class AavsTileSimulator:
 
         :param logger: a logger for this simulator to use
         """
+        self.logger = logger
         self._forty_gb_core_list = []
         self.tpm: MockTpm = None
         self._is_programmed = False
@@ -365,6 +447,7 @@ class AavsTileSimulator:
     def initialise(
         self: AavsTileSimulator,
         station_id=0,
+        pps_delay=0,
         tile_id=0,
         is_first_tile=False,
         is_last_tile=False,
@@ -374,6 +457,7 @@ class AavsTileSimulator:
 
         :param station_id: station id
         :param tile_id: tile id
+        :param pps_delay: pps_delay
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
 
@@ -389,7 +473,7 @@ class AavsTileSimulator:
 
         self._tile_id = tile_id
         self._station_id = station_id
-        return
+        return True
 
     def get_fpga_time(self: AavsTileSimulator, device: Device = Device.FPGA_1) -> int:
         """
@@ -405,7 +489,6 @@ class AavsTileSimulator:
 
         :param tile_id: tile_id
         :param station_id: station_id
-        :return: none
         """
         self._tile_id = tile_id
         self._station_id = station_id
@@ -568,14 +651,12 @@ class AavsTileSimulator:
 
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
-        :raises NotImplementedError: if not overwritten
         """
         for i in range(16):
             self[f"fpga1.test_generator.delay_{i}"] = int(delays[i] / 1.25 + 0.5) + 128
             self[f"fpga2.test_generator.delay_{i}"] = (
                 int(delays[i + 16] / 1.25 + 0.5) + 128
             )
-        raise NotImplementedError
 
     def current_tile_beamformer_frame(self: AavsTileSimulator) -> int:
         """:return: beamformer frame."""
@@ -609,13 +690,11 @@ class AavsTileSimulator:
 
         :param is_first: true if first
         :param is_last: true if last
-        :raises NotImplementedError: if not overwritten.
         """
         self.tpm["fpga1.beamf_ring.control.first_tile"] = int(is_first)
         self.tpm["fpga2.beamf_ring.control.first_tile"] = int(is_first)
         self.tpm["fpga1.beamf_ring.control.last_tile"] = int(is_last)
         self.tpm["fpga2.beamf_ring.control.last_tile"] = int(is_last)
-        raise NotImplementedError
 
     def load_calibration_coefficients(
         self: AavsTileSimulator, antenna: int, coefs: list[float]
@@ -654,6 +733,11 @@ class AavsTileSimulator:
 
     @property
     def tpm_preadu(self: MockTpm):
+        """
+        Tpm pre adu.
+
+        :return: the preadu
+        """
         return self.tpm.preadu
 
     def set_pointing_delay(self: AavsTileSimulator, delay_array, beam_index) -> None:
@@ -681,11 +765,9 @@ class AavsTileSimulator:
 
         :param start_time: start time UTC
         :param duration: duration
-        :raises NotImplementedError: if not overwritten
         """
         self.tpm.beam1._is_running = True
         self.tpm.beam2._is_running = True
-
 
     def stop_beamformer(self: AavsTileSimulator) -> None:
         """
@@ -840,9 +922,8 @@ class AavsTileSimulator:
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        pass
 
     def set_lmc_integrated_download(
         self: AavsTileSimulator,
@@ -950,9 +1031,9 @@ class AavsTileSimulator:
         """
         Get arp table.
 
-        :raises NotImplementedError: if not overwritten.
+        :return: the app table
         """
-        raise NotImplementedError
+        return {"0": [0, 1], "1": [1]}
 
     def load_beam_angle(self: AavsTileSimulator, angle_coefficients: list[float]):
         """
@@ -987,7 +1068,7 @@ class AavsTileSimulator:
         """
         Beamformer is running.
 
-        :raises NotImplementedError: if not overwritten.
+        :return: is the beam is running
         """
         return self.tpm.beam1.is_running()
 
@@ -1014,16 +1095,35 @@ class AavsTileSimulator:
         :return: PPS phase terminal count
         :rtype: int
         """
-
         return 0
 
     def get_station_id(self: AavsTileSimulator):
         """
-        Get station ID
+        Get station ID.
+
         :return: station ID programmed in HW
         :rtype: int
         """
         return self._station_id
+
+    def __getattr__(self, name):
+        """
+        Get the attribute.
+
+        :param name: name of the requested attribute
+        :type name: str
+
+        :raises AttributeError: if neither this class nor the TPM has
+            the named attribute.
+
+        :return: the requested attribute
+        :rtype: object
+        """
+        if self.tpm:
+            return getattr(self.tpm, name)
+        else:
+            raise AttributeError("'Tile' or 'TPM' object have no attribute " + name)
+
 
 class AavsDynamicTileSimulator(AavsTileSimulator):
     """

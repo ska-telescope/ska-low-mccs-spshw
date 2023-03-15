@@ -1,12 +1,12 @@
 apiVersion: v2
 description: A Helm chart for deploying the MCCS spshw prototype on Kubernetes
 name: ska-low-mccs-spshw 
-version: "0.1.0"
-appVersion: "0.1.0"
+version: 0.3.2  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+appVersion: 0.3.2  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
 icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_2014.png
 dependencies:
   - name: ska-tango-util
-    version: 0.3.9
+    version: 0.3.23
     repository: https://artefact.skao.int/repository/helm-internal
   - name: ska-tango-base
     version: 0.3.10

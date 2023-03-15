@@ -1,4 +1,3 @@
-# type: ignore
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -17,10 +16,12 @@ __all__ = [
     # devices
     "MccsSubrack",
     "MccsTile",
+    "SpsStation",
     # device subpackages
     "subrack",
     "tile",
 ]
 
+from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile

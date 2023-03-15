@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -16,6 +14,7 @@ import logging
 import os.path
 from typing import Any, Optional, cast
 
+import numpy as np
 import tango
 from ska_control_model import (
     AdminMode,
@@ -27,20 +26,20 @@ from ska_control_model import (
     TestMode,
 )
 from ska_tango_base.base import SKABaseDevice
-
-# from ska_tango_base.base.op_state_model import OpStateModel
 from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
 from tango.server import attribute, command, device_property
 
-from ska_low_mccs_spshw.tile import TileComponentManager, TileHealthModel
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from .tile_component_manager import TileComponentManager
+from .tile_health_model import TileHealthModel
+from .tpm_status import TpmStatus
 
 __all__ = ["MccsTile", "main"]
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
+DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
-class MccsTile(SKABaseDevice):
+# pylint: disable=too-many-lines, too-many-public-methods
+class MccsTile(SKABaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     # -----------------
@@ -62,19 +61,34 @@ class MccsTile(SKABaseDevice):
     # ---------------
     # Initialisation
     # ---------------
-    def init_device(self: MccsTile) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
-        Initialise the device.
+        Initialise this device object.
 
-        This is overridden here to change the Tango serialisation model.
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
         """
-        util = tango.Util.instance()
-        util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1
+        # We aren't supposed to define initialisation methods for Tango
+        # devices; we are only supposed to define an `init_device` method. But
+        # we insist on doing so here, just so that we can define some
+        # attributes, thereby stopping the linters from complaining about
+        # "attribute-defined-outside-init" etc. We still need to make sure that
+        # `init_device` re-initialises any values defined in here.
+        super().__init__(*args, **kwargs)
+
+        self._health_state: HealthState = HealthState.UNKNOWN
+        self._health_model: TileHealthModel
+        self._tile_programming_state: TpmStatus
+        self._antenna_ids: list[int]
+        self._max_workers: int = 1
+
+    def init_device(self: MccsTile) -> None:
+        """Initialise the device."""
         self._tile_programming_state = TpmStatus.UNKNOWN
+        self._max_workers = 1
         super().init_device()
 
-        self.logger.info(
+        message = (
             "Initialised MccsTile device with properties:\n"
             f"\tSubrackFQDN: {self.SubrackFQDN}\n"
             f"\tSubrackBay: {self.SubrackBay}\n"
@@ -86,11 +100,12 @@ class MccsTile(SKABaseDevice):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
         )
+        self.logger.info(message)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self.component_state_changed_callback)
+        self._health_model = TileHealthModel(self._component_state_changed)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -112,8 +127,8 @@ class MccsTile(SKABaseDevice):
             self.TpmVersion,
             self.SubrackFQDN,
             self.SubrackBay,
-            self._component_communication_state_changed,
-            self.component_state_changed_callback,
+            self._communication_state_changed,
+            self._component_state_changed,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -174,19 +189,28 @@ class MccsTile(SKABaseDevice):
                 ),
             )
 
+    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
 
-        def do(  # type: ignore[override]
-            self: MccsTile.InitCommand,
+        def do(
+            self: MccsTile.InitCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Initialise the attributes and properties of the MCCS Tile device.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
+            assert (
+                not args and not kwargs
+            ), f"do method has unexpected arguments {args}, {kwargs}"
             self._device._health_state = HealthState.UNKNOWN
 
             self._device._csp_destination_ip = ""
@@ -244,10 +268,24 @@ class MccsTile(SKABaseDevice):
             tango.DevState.FAULT,
         ]
 
+    def is_Off_allowed(self: MccsTile) -> bool:
+        """
+        Check if command `On` is allowed in the current device state.
+
+        :return: ``True`` if the command is allowed
+        """
+        return self.get_state() in [
+            tango.DevState.OFF,
+            tango.DevState.STANDBY,
+            tango.DevState.ON,
+            tango.DevState.UNKNOWN,
+            tango.DevState.FAULT,
+        ]
+
     # ----------
     # Callbacks
     # ----------
-    def _component_communication_state_changed(
+    def _communication_state_changed(
         self: MccsTile, communication_state: CommunicationStatus
     ) -> None:
         """
@@ -260,49 +298,20 @@ class MccsTile(SKABaseDevice):
         :param communication_state: the status of communications
             between the component manager and its component.
         """
-        # TODO: The following 2 lines might need some attention/tidying up.
-        self.component_manager._tpm_communication_state = communication_state
-        self.component_manager._communication_state = communication_state
-        action_map = {
-            CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: None,
-            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
-        }
-
-        # TODO: This admin mode stuff is commented out in main also, why?
-        # action_map_established = {
-        #     AdminMode.ONLINE: "component_connected",
-        #     AdminMode.OFFLINE: "component_disconnected",
-        #     AdminMode.MAINTENANCE: "component_connected",
-        #     AdminMode.NOT_FITTED: "component_disconnected",
-        #     AdminMode.RESERVED: "component_disconnected",
-        # }
-
-        admin_mode = self.admin_mode_model.admin_mode
-        power_state = self.component_manager.power_state
-        self.logger.debug(
-            f"communication_state: {communication_state}, adminMode: {admin_mode}, "
-            f"powerMode: {power_state}"
-        )
-        # admin mode stuff here
-        action = action_map[communication_state]
-        # See TODO above.
-        # if communication_state == CommunicationStatus.ESTABLISHED:
-        #     action = action_map_established[admin_mode]
-        if action is not None:
-            self.op_state_model.perform_action(action)
-        # if communication has been established, update power mode
-        if (communication_state == CommunicationStatus.ESTABLISHED) and (
-            admin_mode in [AdminMode.ONLINE, AdminMode.MAINTENANCE]
-        ):
-            self.component_state_changed_callback({"power_state": power_state})
+        super()._communication_state_changed(communication_state)
 
         self._health_model.is_communicating(
             communication_state == CommunicationStatus.ESTABLISHED
         )
 
-    def component_state_changed_callback(
-        self: MccsTile, state_change: dict[str, Any]
+    # TODO: Upstream this interface change to SKABaseDevice
+    # pylint: disable-next=arguments-differ
+    def _component_state_changed(  # type: ignore[override]
+        self: MccsTile,
+        *,
+        fault: Optional[bool] = None,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
     ) -> None:
         """
         Handle change in the state of the component.
@@ -310,47 +319,26 @@ class MccsTile(SKABaseDevice):
         This is a callback hook, called by the component manager when
         the state of the component changes.
 
-        :param state_change: the state change of the component
+        :param fault: whether the component is in fault or not
+        :param power: the power state of the component
+        :param state_change: other state updates
         """
-        action_map = {
-            PowerState.OFF: "component_off",
-            PowerState.STANDBY: "component_standby",
-            PowerState.ON: "component_on",
-            PowerState.UNKNOWN: "component_unknown",
-        }
-
-        if "power_state" in state_change.keys():
-            power_state = state_change.get("power_state")
-            self.component_manager.update_tpm_power_state(power_state)
-            if power_state is not None:
-                self.op_state_model.perform_action(action_map[power_state])
-
-        if "fault" in state_change.keys():
-            is_fault = state_change.get("fault")
-            if is_fault:
-                self.op_state_model.perform_action("component_fault")
-                self._health_model.component_fault(True)
-            else:
-                if self.component_manager.power_state is not None:
-                    self.op_state_model.perform_action(
-                        action_map[self.component_manager.power_state]
-                    )
-                self._health_model.component_fault(False)
-
-        if "health_state" in state_change.keys():
+        super()._component_state_changed(fault=fault, power=power)
+        if "health_state" in state_change:
             health = cast(HealthState, state_change.get("health_state"))
             if self._health_state != health:
                 self._health_state = health
                 self.push_change_event("healthState", health)
 
-        if "programming_state" in state_change.keys():
+        if "programming_state" in state_change:
             tile_programming_state = cast(
                 TpmStatus, state_change.get("programming_state")
             )
-            self.logger.debug(
+            message = (
                 f"programming_state callback. Old: {self._tile_programming_state}"
                 f" -> {tile_programming_state}"
             )
+            self.logger.debug(message)
             if self._tile_programming_state != tile_programming_state:
                 self._tile_programming_state = tile_programming_state
                 self.push_change_event(
@@ -407,7 +395,9 @@ class MccsTile(SKABaseDevice):
         return self.component_manager.simulation_mode
 
     @simulationMode.write  # type: ignore[no-redef]
-    def simulationMode(self: MccsTile, value):
+    def simulationMode(  # pylint: disable=arguments-differ
+        self: MccsTile, value: SimulationMode
+    ) -> None:
         """
         Set the simulation mode.
 
@@ -428,6 +418,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.TestConfig
 
+    # pylint: disable=arguments-differ
     @testMode.write  # type: ignore[no-redef]
     def testMode(self: MccsTile, value: int) -> None:
         """
@@ -486,7 +477,8 @@ class MccsTile(SKABaseDevice):
         :return: the id of the station to which this tile is assigned
         """
         station = self.component_manager.station_id
-        self.logger.debug(f"stationId: read value = {station}")
+        message = f"stationId: read value = {station}"
+        self.logger.debug(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]
@@ -496,7 +488,8 @@ class MccsTile(SKABaseDevice):
 
         :param value: the station id
         """
-        self.logger.debug(f"stationId: write value = {value}")
+        message = f"stationId: write value = {value}"
+        self.logger.debug(message)
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
@@ -760,9 +753,19 @@ class MccsTile(SKABaseDevice):
         """
         Return the PPS delay.
 
-        :return: Return the PPS delay
+        :return: Return the PPS delay in nanoseconds
         """
         return self.component_manager.pps_delay
+
+    @ppsDelay.write  # type: ignore[no-redef]
+    def ppsDelay(self: MccsTile, delay: int) -> None:
+        """
+        Set PPS delay correction.
+
+        :param delay: PPS delay correction in nanoseconds. Value is
+            internally rounded to 1.25 ns units
+        """
+        self.component_manager.pps_delays = delay
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:
@@ -825,7 +828,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.component_manager.channeliser_truncation
 
-    @channeliserRounding.write
+    @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
         """
         Set channeliser rounding.
@@ -851,7 +854,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.component_manager.static_delays
 
-    @staticTimeDelays.write
+    @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
         """
         Set static time delay.
@@ -878,7 +881,7 @@ class MccsTile(SKABaseDevice):
         """
         return self.component_manager.csp_rounding
 
-    @cspRounding.write
+    @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: list[int]) -> None:
         """
         Set CSP formatter rounding.
@@ -898,9 +901,10 @@ class MccsTile(SKABaseDevice):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.preadu_levels
+        result = self.component_manager.preadu_levels
+        return np.asarray(result)
 
-    @preaduLevels.write
+    @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: list[int]) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
@@ -996,11 +1000,18 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsTile.GetFirmwareAvailableCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> str:
             """
             Implement :py:meth:`.MccsTile.GetFirmwareAvailable` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: json encoded string containing list of dictionaries
             """
@@ -1059,8 +1070,7 @@ class MccsTile(SKABaseDevice):
             handler = self.get_command_object("DownloadFirmware")
             (return_code, unique_id) = handler(argin)
             return ([return_code], [unique_id])
-        else:
-            return ([ResultCode.FAILED], [f"{argin} doesn't exist"])
+        return ([ResultCode.FAILED], [f"{argin} doesn't exist"])
 
     class GetRegisterListCommand(FastCommand):
         """Class for handling the GetRegisterList() command."""
@@ -1079,11 +1089,18 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(  # type: ignore[override]
+        def do(
             self: MccsTile.GetRegisterListCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> list[str]:
             """
             Implement :py:meth:`.MccsTile.GetRegisterList` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: a list of firmware & cpld registers
             """
@@ -1122,24 +1139,28 @@ class MccsTile(SKABaseDevice):
             super().__init__(logger)
 
         def do(
-            self: MccsTile.ReadRegisterCommand, name: str
-        ) -> list[int]:  # type: ignore[override]
+            self: MccsTile.ReadRegisterCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> list[int]:
             """
             Implement :py:meth:`.MccsTile.ReadRegister` command functionality.
 
-            :param name: the register name
+            :param args: the register name
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: list of register values
 
             :raises ValueError: if the name is invalid
             """
+            name = args[0]
             if name is None or name == "":
-                self._component_manager.logger.error(
-                    "register name is a mandatory parameter"
-                )
+                self.logger.error("register name is a mandatory parameter")
                 raise ValueError("register name is a mandatory parameter")
             value = self._component_manager.read_register(name)
-            self.logger.debug(f"Register {name} = {value}")
+            message = f"Register {name} = {value}"
+            self.logger.debug(message)
             return value
 
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")
@@ -1175,14 +1196,18 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(  # type: ignore[override]
-            self: MccsTile.WriteRegisterCommand, argin: str
+        def do(
+            self: MccsTile.WriteRegisterCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.WriteRegister` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
                 including RegisterName, Values, Offset, Device
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1194,16 +1219,14 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             name = params.get("register_name", None)
             if name is None:
-                self._component_manager.logger.error(
-                    "register_name is a mandatory parameter"
-                )
+                self.logger.error("register_name is a mandatory parameter")
                 raise ValueError("register_name is a mandatory parameter")
             values = params.get("values", None)
             if values is None:
-                self._component_manager.logger.error("Values is a mandatory parameter")
+                self.logger.error("Values is a mandatory parameter")
                 raise ValueError("values is a mandatory parameter")
 
             self._component_manager.write_register(name, values)
@@ -1253,13 +1276,20 @@ class MccsTile(SKABaseDevice):
             super().__init__(logger)
 
         def do(  # type: ignore[override]
-            self: MccsTile.ReadAddressCommand, argin: list[int]
+            self: MccsTile.ReadAddressCommand,
+            argin: list[int],
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ReadAddress` command functionality.
 
             :param argin: sequence of length two, containing an address and
                 a value
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: [values, ]
 
@@ -1267,9 +1297,7 @@ class MccsTile(SKABaseDevice):
                 or structure
             """
             if len(argin) < 1:
-                self._component_manager.logger.error(
-                    "At least one parameter is required"
-                )
+                self.logger.error("At least one parameter is required")
                 raise ValueError("One or two parameters are required")
             if len(argin) == 1:
                 nvalues = 1
@@ -1316,13 +1344,20 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "WriteAddress command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.WriteAddressCommand, argin: list[int]
+            self: MccsTile.WriteAddressCommand,
+            argin: list[int],
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.WriteAddress` command functionality.
 
             :param argin: sequence of length two, containing an address and
                 a value
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1331,9 +1366,7 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin has the wrong length/structure
             """
             if len(argin) < 2:
-                self._component_manager.logger.error(
-                    "A minimum of two parameters are required"
-                )
+                self.logger.error("A minimum of two parameters are required")
                 raise ValueError("A minium of two parameters are required")
             self._component_manager.write_address(argin[0], argin[1:])
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -1380,19 +1413,23 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.Configure40GCoreCommand, argin: str
+        def do(
+            self: MccsTile.Configure40GCoreCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.Configure40GCore` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
 
             core_id = params.get("core_id", None)
             arp_table_entry = params.get("arp_table_entry", None)
@@ -1457,18 +1494,22 @@ class MccsTile(SKABaseDevice):
             super().__init__(logger)
 
         def do(
-            self: MccsTile.Get40GCoreConfigurationCommand, argin: str
-        ) -> str:  # type: ignore[override]
+            self: MccsTile.Get40GCoreConfigurationCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> str:
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: json string with configuration
 
             :raises ValueError: if the argin is an invalid code id
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             core_id = params.get("core_id", None)
             arp_table_entry = params.get("arp_table_entry", 0)
 
@@ -1541,13 +1582,15 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.SetLmcDownloadCommand, argin: str
+        def do(
+            self: MccsTile.SetLmcDownloadCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetLmcDownload` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1558,16 +1601,16 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             mode = params.get("mode", None)
             if mode is None:
-                self._component_manager.logger.error("mode is a mandatory parameter")
+                self.logger.error("mode is a mandatory parameter")
                 raise ValueError("mode is a mandatory parameter")
-            if mode == "40g" or mode == "40G":
+            if mode in ["40g", "40G"]:
                 mode = "10g"
             payload_length = params.get("payload_length", None)
             if payload_length is None:
-                if mode == "10g" or mode == "10G":
+                if mode in ["10g", "10G"]:
                     payload_length = 8192
                 else:
                     payload_length = 1024
@@ -1613,7 +1656,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SetLmcIntegratedDownloadCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -1627,13 +1670,17 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.SetLmcIntegratedDownloadCommand, argin: str
+        def do(
+            self: MccsTile.SetLmcIntegratedDownloadCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1644,12 +1691,12 @@ class MccsTile(SKABaseDevice):
             :todo: Mandatory JSON parameters should be handled by validation
                 against a schema
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             mode = params.get("mode", None)
             if mode is None:
-                self._component_manager.logger.error("mode is a mandatory parameter")
+                self.logger.error("mode is a mandatory parameter")
                 raise ValueError("mode is a mandatory parameter")
-            if mode == "40g" or mode == "40G":
+            if mode in ["40g", "40G"]:
                 mode = "10g"
             channel_payload_length = params.get("channel_payload_lenth", 1024)
             beam_payload_length = params.get("beam_payload_length", 1024)
@@ -1717,13 +1764,18 @@ class MccsTile(SKABaseDevice):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        def do(self: MccsTile.GetArpTableCommand) -> str:  # type: ignore[override]
+        def do(self: MccsTile.GetArpTableCommand, *args: Any, **kwargs: Any) -> str:
             """
             Implement :py:meth:`.MccsTile.GetArpTable` commands.
 
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
             :return: a JSON-encoded dictionary of coreId and populated arpID table
             """
-            return json.dumps(self._component_manager.get_arp_table())
+            return json.dumps(self._component_manager.arp_table)
 
     @command(dtype_out="DevString")
     def GetArpTable(self: MccsTile) -> str:
@@ -1748,9 +1800,7 @@ class MccsTile(SKABaseDevice):
         >>>    }
         """
         handler = self.get_command_object("GetArpTable")
-        return_code, unique_id = handler()
-        # TODO If this returns DEVVARLONGSTRINGARRAY where's the Arp table?????
-        return ([return_code], [unique_id])
+        return handler()
 
     class SetBeamFormerRegionsCommand(FastCommand):
         """Class for handling the SetBeamFormerRegions(argin) command."""
@@ -1772,12 +1822,19 @@ class MccsTile(SKABaseDevice):
         SUCCEEDED_MESSAGE = "SetBeamFormerRegions command completed OK"
 
         def do(  # type: ignore[override]
-            self: MccsTile.SetBeamFormerRegionsCommand, argin: list[int]
+            self: MccsTile.SetBeamFormerRegionsCommand,
+            argin: list[int],
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SetBeamFormerRegions` command functionality.
 
             :param argin: a region array
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1787,15 +1844,13 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < 8:
-                self._component_manager.logger.error(
-                    "Insufficient parameters specified"
-                )
+                self.logger.error("Insufficient parameters specified")
                 raise ValueError("Insufficient parameters specified")
             if len(argin) > (48 * 8):
-                self._component_manager.logger.error("Too many regions specified")
+                self.logger.error("Too many regions specified")
                 raise ValueError("Too many regions specified")
             if len(argin) % 8 != 0:
-                self._component_manager.logger.error(
+                self.logger.error(
                     "Incomplete specification of region. Regions specified by 8 values"
                 )
                 raise ValueError("Incomplete specification of region")
@@ -1805,27 +1860,21 @@ class MccsTile(SKABaseDevice):
                 region = argin[i : i + 8]  # noqa: E203
                 start_channel = region[0]
                 if start_channel % 2 != 0:
-                    self._component_manager.logger.error(
-                        "Start channel in region must be even"
-                    )
+                    self.logger.error("Start channel in region must be even")
                     raise ValueError("Start channel in region must be even")
                 nchannels = region[1]
                 if nchannels % 8 != 0:
-                    self._component_manager.logger.error(
+                    self.logger.error(
                         "Nos. of channels in region must be multiple of 8"
                     )
                     raise ValueError("Nos. of channels in region must be multiple of 8")
                 beam_index = region[2]
                 if beam_index < 0 or beam_index > 47:
-                    self._component_manager.logger.error(
-                        "Beam_index is out side of range 0-47"
-                    )
+                    self.logger.error("Beam_index is out side of range 0-47")
                     raise ValueError("Beam_index is out side of range 0-47")
                 total_chan += nchannels
                 if total_chan > 384:
-                    self._component_manager.logger.error(
-                        "Too many channels specified > 384"
-                    )
+                    self.logger.error("Too many channels specified > 384")
                     raise ValueError("Too many channels specified > 384")
                 regions.append(region)
 
@@ -1887,13 +1936,17 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ConfigureStationBeamformerCommand, argin: str
+        def do(
+            self: MccsTile.ConfigureStationBeamformerCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureStationBeamformer` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1902,10 +1955,11 @@ class MccsTile(SKABaseDevice):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             start_channel = params.get("start_channel", 192)
             if start_channel < 2 or start_channel > 504:
-                self.logger.error
+                self.logger.error("Invalid sstart channel")
+                raise ValueError("Invalid sstart channel")
             n_channels = params.get("n_channels", 8)
             if start_channel < 2 or (start_channel + n_channels) > 511:
                 self.logger.error("Invalid specified observed region")
@@ -1977,11 +2031,17 @@ class MccsTile(SKABaseDevice):
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand,
             argin: list[float],
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadCalibrationCoefficients` commands.
 
             :param argin: calibration coefficients
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -1991,12 +2051,10 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < 9:
-                self._component_manager.logger.error(
-                    "Insufficient calibration coefficients"
-                )
+                self.logger.error("Insufficient calibration coefficients")
                 raise ValueError("Insufficient calibration coefficients")
             if len(argin[1:]) % 8 != 0:
-                self._component_manager.logger.error(
+                self.logger.error(
                     "Incomplete specification of coefficient. "
                     "Needs 8 values (4 complex Jones) per channel"
                 )
@@ -2072,7 +2130,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ApplyCalibrationCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2086,19 +2144,23 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ApplyCalibrationCommand, argin: str
+        def do(
+            self: MccsTile.ApplyCalibrationCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyCalibration` command functionality.
 
-            :param argin: switch time
+            :param args: switch time
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            switch_time = argin
+            switch_time = args[0]
 
             self._component_manager.apply_calibration(switch_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -2130,7 +2192,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.LoadPointingDelaysCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: logging.Logger,
         ) -> None:
             """
@@ -2145,13 +2207,20 @@ class MccsTile(SKABaseDevice):
             self._antennas_per_tile = 16
 
         def do(  # type: ignore[override]
-            self: MccsTile.LoadPointingDelaysCommand, argin: list[float]
+            self: MccsTile.LoadPointingDelaysCommand,
+            argin: list[float],
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
             :param argin: an array containing a beam index and antenna
                 delays
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2161,11 +2230,11 @@ class MccsTile(SKABaseDevice):
                 right length / structure
             """
             if len(argin) < self._antennas_per_tile * 2 + 1:
-                self._component_manager.logger.error("Insufficient parameters")
+                self.logger.error("Insufficient parameters")
                 raise ValueError("Insufficient parameters")
             beam_index = int(argin[0])
             if beam_index < 0 or beam_index > 7:
-                self._component_manager.logger.error("Invalid beam index")
+                self.logger.error("Invalid beam index")
                 raise ValueError("Invalid beam index")
             delay_array = []
             for i in range(self._antennas_per_tile):
@@ -2200,7 +2269,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.ApplyPointingDelaysCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2214,19 +2283,23 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ApplyPointingDelays command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ApplyPointingDelaysCommand, argin: str
+        def do(
+            self: MccsTile.ApplyPointingDelaysCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ApplyPointingDelays` command functionality.
 
-            :param argin: load time
+            :param args: load time
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            load_time = argin
+            load_time = args[0]
 
             self._component_manager.apply_pointing_delays(load_time)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -2270,20 +2343,22 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.StartBeamformerCommand, argin: str
+        def do(
+            self: MccsTile.StartBeamformerCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StartBeamformer` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
                 "StartTime" and "Duration"
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             start_time = params.get("start_time", None)
             duration = params.get("duration", -1)
             subarray_beam_id = params.get("subarray_beam_id", -1)
@@ -2342,11 +2417,16 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.StopBeamformerCommand,
+        def do(
+            self: MccsTile.StopBeamformerCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopBeamformer` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2392,20 +2472,24 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ConfigureIntegratedChannelDataCommand, argin: str
+        def do(
+            self: MccsTile.ConfigureIntegratedChannelDataCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedChannelData` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
                 "integration time", "first_channel", "last_channel"
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             integration_time = params.get("integration_time", 0.5)
             first_channel = params.get("first_channel", 0)
             last_channel = params.get("last_channel", 511)
@@ -2465,20 +2549,24 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ConfigureIntegratedBeamDataCommand, argin: str
+        def do(
+            self: MccsTile.ConfigureIntegratedBeamDataCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedBeamData` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
                 "integration time", "first_channel", "last_channel"
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             integration_time = params.get("integration_time", 0.5)
             first_channel = params.get("first_channel", 0)
             last_channel = params.get("last_channel", 191)
@@ -2538,11 +2626,16 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StopIntegratedData command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.StopIntegratedDataCommand,
+        def do(
+            self: MccsTile.StopIntegratedDataCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopIntegratedData` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2569,7 +2662,7 @@ class MccsTile(SKABaseDevice):
 
         def __init__(
             self: MccsTile.SendDataSamplesCommand,
-            component_manager,
+            component_manager: TileComponentManager,
             logger: Optional[logging.Logger] = None,
         ) -> None:
             """
@@ -2583,27 +2676,28 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "SendDataSamples command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.SendDataSamplesCommand, argin: str
+        # pylint: disable=too-many-branches
+        def do(
+            self: MccsTile.SendDataSamplesCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :raises ValueError: if mandatory parameters are missing
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
 
             # Check for mandatory parameters
             data_type = params.get("data_type", None)
             if data_type is None:
-                self._component_manager.logger.error(
-                    "data_type is a mandatory parameter"
-                )
+                self.logger.error("data_type is a mandatory parameter")
                 raise ValueError("data_type is a mandatory parameter")
             if data_type not in [
                 "raw",
@@ -2612,31 +2706,34 @@ class MccsTile(SKABaseDevice):
                 "narrowband",
                 "beam",
             ]:
-                self._component_manager.logger.error("Invalid data_type specified")
+                self.logger.error("Invalid data_type specified")
                 raise ValueError("Invalid data_type specified")
+            if data_type == "channel":
+                first_ch = params.get("first_channel", 0)
+                last_ch = params.get("last_channel", 511)
+                if not 0 <= first_ch <= last_ch <= 511:
+                    err = (
+                        f"first_channel ({first_ch}) and last_channel ({last_ch}) "
+                        f"must define a range within [0, 511]"
+                    )
+                    self.logger.error(err)
+                    raise ValueError(err)
+
             if data_type == "channel_continuous":
                 channel_id = params.get("channel_id", None)
                 if channel_id is None:
-                    self._component_manager.logger.error(
-                        "channel_id is a mandatory parameter"
-                    )
+                    self.logger.error("channel_id is a mandatory parameter")
                     raise ValueError("channel_id is a mandatory parameter")
                 if channel_id < 1 or channel_id > 511:
-                    self._component_manager.logger.error(
-                        "channel_id must be between 1 and 511"
-                    )
+                    self.logger.error("channel_id must be between 1 and 511")
                     raise ValueError("channel_id must be between 1 and 511")
             if data_type == "narrowband":
                 frequency = params.get("frequency", None)
                 if frequency is None:
-                    self._component_manager.logger.error(
-                        "frequency is a mandatory parameter"
-                    )
+                    self.logger.error("frequency is a mandatory parameter")
                     raise ValueError("frequency is a mandatory parameter")
                 if frequency < 1e6 or frequency > 399e6:
-                    self._component_manager.logger.error(
-                        "frequency must be between 1 and 390 MHz"
-                    )
+                    self.logger.error("frequency must be between 1 and 390 MHz")
                     raise ValueError("frequency must be between 1 and 390 MHz")
 
             n_samples = None
@@ -2719,11 +2816,16 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "StopDataTransmission command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.StopDataTransmissionCommand,
+        def do(
+            self: MccsTile.StopDataTransmissionCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.StopDataTransmission` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2794,13 +2896,18 @@ class MccsTile(SKABaseDevice):
 
         SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 
-        def do(  # type: ignore[override]
-            self: MccsTile.ConfigureTestGeneratorCommand, argin: str
+        # pylint: disable=too-many-branches,too-many-locals
+        def do(
+            self: MccsTile.ConfigureTestGeneratorCommand,
+            *args: Any,
+            **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.ConfigureTestGenerator` commands.
 
-            :param argin: a JSON-encoded dictionary of arguments
+            :param args: a JSON-encoded dictionary of arguments
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
 
             :raises ValueError: if the JSON input has invalid parameters
 
@@ -2810,7 +2917,7 @@ class MccsTile(SKABaseDevice):
                    message indicating status. The message is for
                    information purpose only.
             """
-            params = json.loads(argin)
+            params = json.loads(args[0])
             active = False
             set_time = params.get("set_time", None)
             if "tone_frequency" in params:
@@ -2868,17 +2975,15 @@ class MccsTile(SKABaseDevice):
             self._component_manager.test_generator_active = active
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
-        def check_allowed(
-            self: MccsTile.ConfigureTestGeneratorCommand,
-        ) -> bool:
-            """
-            Check if command is allowed.
+    def is_ConfigureTestGenerator_allowed(self: MccsTile) -> bool:
+        """
+        Check if command is allowed.
 
-            It is allowed only in maintenance mode.
+        It is allowed only in maintenance mode.
 
-            :returns: whether the command is allowed
-            """
-            return self.target.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
+        :returns: whether the command is allowed
+        """
+        return self.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

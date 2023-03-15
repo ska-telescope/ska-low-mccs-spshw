@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -19,7 +17,7 @@ from typing import Any, Callable, Optional, Type
 import tango
 from fire import Fire
 from fire.core import FireError
-from ska_tango_base.commands import ResultCode
+from ska_control_model import ResultCode
 
 
 class CliMeta(type):
@@ -29,6 +27,8 @@ class CliMeta(type):
     They get turned into `fire.core.FireError` exceptions.
     """
 
+    # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
+    # pylint: disable-next=bad-mcs-classmethod-argument
     def __new__(
         cls: Type[CliMeta], name: str, bases: tuple[CliMeta], attrs: dict
     ) -> CliMeta:
@@ -46,7 +46,8 @@ class CliMeta(type):
                 attrs[attr_name] = cls.fire_except(attr_value)
         return super(CliMeta, cls).__new__(cls, name, bases, attrs)
 
-    @classmethod
+    # pylint wants this to be "mcs" but the flake8 pep8-naming plugin disagrees.
+    @classmethod  # pylint: disable-next=bad-mcs-classmethod-argument
     def fire_except(cls: Type[CliMeta], method: Callable) -> Callable:
         """
         Wrap the method to handle exceptions.
@@ -80,9 +81,9 @@ class CliMeta(type):
             try:
                 return method(*args, **kwargs)
             except tango.DevFailed as ptex:
-                raise FireError(ptex.args[0].desc)
+                raise FireError(ptex.args[0].desc) from ptex
             except Exception as ex:
-                raise FireError(str(ex))
+                raise FireError(str(ex)) from ex
 
         return _wrapper
 
@@ -184,6 +185,7 @@ class MccsTileCli(metaclass=CliMeta):
         jstr = json.dumps(args)
         return self._dp.command_inout("SendBeamData", jstr)
 
+    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedDataContinuous(
         self: MccsTileCli,
@@ -206,7 +208,7 @@ class MccsTileCli(metaclass=CliMeta):
             message indicating status. The message is for
             information purpose only.
 
-        :raises RuntimeError: if a general failure occurred in device
+        :raises ValueError: if a general failure occurred in device
         """
         try:
             args = {
@@ -218,9 +220,12 @@ class MccsTileCli(metaclass=CliMeta):
             }
             jstr = json.dumps(args)
             return self._dp.command_inout("SendChannelisedDataContinuous", jstr)
-        except tango.DevFailed:
-            raise RuntimeError("ChannelID mandatory argument...cannot be a NULL value")
+        except tango.DevFailed as exc:
+            raise ValueError(
+                "ChannelID mandatory argument...cannot be a NULL value"
+            ) from exc
 
+    # pylint: disable=too-many-arguments
     @command_result_as_string
     def SendChannelisedData(
         self: MccsTileCli,

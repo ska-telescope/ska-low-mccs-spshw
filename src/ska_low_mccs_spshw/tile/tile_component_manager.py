@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -21,6 +19,7 @@ from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from ska_control_model import (
     CommunicationStatus,
+    HealthState,
     PowerState,
     ResultCode,
     SimulationMode,
@@ -29,28 +28,28 @@ from ska_control_model import (
 )
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import (
-    MccsComponentManager,
+    MccsBaseComponentManager,
     check_communicating,
     check_on,
 )
+from ska_tango_base.executor import TaskExecutorComponentManager
 
-from ska_low_mccs_spshw.tile import (
-    AavsDynamicTileSimulator,
-    AavsTileSimulator,
-    TpmDriver,
-)
-from ska_low_mccs_spshw.tile.tile_orchestrator import TileOrchestrator
-from ska_low_mccs_spshw.tile.time_util import TileTime
-from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+from .aavs_tile_simulator import AavsDynamicTileSimulator, AavsTileSimulator
+from .tile_orchestrator import TileOrchestrator
+from .time_util import TileTime
+from .tpm_driver import TpmDriver
+from .tpm_status import TpmStatus
 
 __all__ = [
     "TileComponentManager",
 ]
 
 
-class TileComponentManager(MccsComponentManager):
+# pylint: disable=too-many-public-methods,too-many-instance-attributes,too-many-lines
+class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -64,7 +63,7 @@ class TileComponentManager(MccsComponentManager):
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        component_state_changed_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -103,8 +102,8 @@ class TileComponentManager(MccsComponentManager):
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
+
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
-        self._component_state_changed_callback = component_state_changed_callback
         self._subrack_communication_state = CommunicationStatus.DISABLED
         self._tpm_communication_state = CommunicationStatus.DISABLED
 
@@ -114,8 +113,17 @@ class TileComponentManager(MccsComponentManager):
                 + tpm_version
                 + " not valid. Trying to read version from board, which must be on"
             )
-            tpm_version = None
-
+            tpm_version = ""
+        super().__init__(
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            max_workers=1,
+            fault=None,
+            power=PowerState.UNKNOWN,
+            health_state=HealthState.UNKNOWN,
+            programming_state=None,
+        )
         # Construct both the simulated and hw tiles.
         self.tile_sim = AavsTileSimulator(logger=logger)
         self.tile_sim_dynamic = AavsDynamicTileSimulator(logger=logger)
@@ -128,13 +136,16 @@ class TileComponentManager(MccsComponentManager):
         # start with a simulated tile
         self.tpm_driver = TpmDriver(
             logger,
-            max_workers,
             tile_id,
             self.tile_sim,
             tpm_version,
             self._tpm_communication_state_changed,
-            component_state_changed_callback,
+            self._update_component_state,
         )
+
+        def _update_component_power_state(power_state: PowerState) -> None:
+            self._update_component_state(power=power_state)
+            self.update_tpm_power_state(power_state)
 
         self._tile_orchestrator = TileOrchestrator(
             self._start_communicating_with_subrack,
@@ -143,19 +154,12 @@ class TileComponentManager(MccsComponentManager):
             self._stop_communicating_with_tpm,
             self._turn_off_tpm,
             self._turn_on_tpm,
-            self.update_communication_state,
-            component_state_changed_callback,
+            self._update_communication_state,
+            _update_component_power_state,
             logger,
         )
 
         self._tile_time = TileTime()
-
-        super().__init__(
-            logger,
-            max_workers,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
 
     def start_communicating(self: TileComponentManager) -> None:
         """Establish communication with the tpm and the upstream power supply."""
@@ -207,17 +211,6 @@ class TileComponentManager(MccsComponentManager):
             self._tile_orchestrator.desire_standby, args=[], task_callback=task_callback
         )
 
-    # def component_progress_changed(self: TileComponentManager, progress: int) -> None:
-    #     """
-    #     Handle notification that the component's progress value has changed.
-
-    #     This is a callback hook, to be passed to the managed component.
-
-    #     :param progress: The progress percentage of the long-running command
-    #     """
-    #     if self._component_progress_changed_callback is not None:
-    #         self._component_progress_changed_callback(progress)
-
     def _subrack_communication_state_changed(
         self: TileComponentManager, communication_state: CommunicationStatus
     ) -> None:
@@ -262,9 +255,11 @@ class TileComponentManager(MccsComponentManager):
         # Check if it was already connected.
         unconnected = self._subrack_proxy is None
         if unconnected:
+            self.logger.debug("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self._logger, connect=False
+                self._subrack_fqdn, self.logger, connect=False
             )
+            self.logger.debug("Connecting to the subrack")
             try:
                 self._subrack_proxy.connect()
             except tango.DevFailed as dev_failed:
@@ -272,11 +267,12 @@ class TileComponentManager(MccsComponentManager):
                 raise ConnectionError(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
-
+        self.logger.debug("Created subrack proxy")
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             "longRunningCommandResult",
             self._tile_orchestrator.propogate_subrack_lrc,
         )
+        self.logger.debug("Callback added for subrack longRunningCommandResult")
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
             self._tpm_power_state_change_event_received,
@@ -288,7 +284,7 @@ class TileComponentManager(MccsComponentManager):
             )
 
     @property
-    def simulation_mode(self: TileComponentManager) -> SimulationMode:
+    def simulation_mode(self: TileComponentManager) -> bool:
         """
         Return the simulation mode.
 
@@ -340,7 +336,7 @@ class TileComponentManager(MccsComponentManager):
 
     # Converted to a LRC, in subrack
     # This code only tells you if the command was submitted NOT the result
-    def _turn_off_tpm(self: TileComponentManager) -> ResultCode:
+    def _turn_off_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [unique_id]) = self._subrack_proxy.PowerOffTpm(
             self._subrack_tpm_id
@@ -354,7 +350,7 @@ class TileComponentManager(MccsComponentManager):
 
     # Converted to a LRC, in subrack
     # This code only tells you if the command was submitted NOT the result
-    def _turn_on_tpm(self: TileComponentManager) -> ResultCode:
+    def _turn_on_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
         assert self._subrack_proxy is not None  # for the type checker
         ([result_code], [unique_id]) = self._subrack_proxy.PowerOnTpm(
             self._subrack_tpm_id
@@ -482,9 +478,7 @@ class TileComponentManager(MccsComponentManager):
     # Timed commands. Convert time to frame number
     #
     @check_communicating
-    def apply_calibration(
-        self: TileComponentManager, load_time: Optional[str] = ""
-    ) -> None:
+    def apply_calibration(self: TileComponentManager, load_time: str = "") -> None:
         """
         Load the calibration coefficients at the specified time delay.
 
@@ -494,7 +488,7 @@ class TileComponentManager(MccsComponentManager):
         """
         if load_time == "":
             load_frame = 0
-        elif type(load_time) == int:  # added for backward compatibility
+        elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
@@ -507,9 +501,7 @@ class TileComponentManager(MccsComponentManager):
         self.tpm_driver.apply_calibration(load_frame)
 
     @check_communicating
-    def apply_pointing_delays(
-        self: TileComponentManager, load_time: Optional[str] = ""
-    ) -> None:
+    def apply_pointing_delays(self: TileComponentManager, load_time: str = "") -> None:
         """
         Load the pointing delays at the specified time delay.
 
@@ -519,7 +511,7 @@ class TileComponentManager(MccsComponentManager):
         """
         if load_time == "":
             load_frame = 0
-        elif type(load_time) == int:  # added for backward compatibility
+        elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
@@ -537,9 +529,9 @@ class TileComponentManager(MccsComponentManager):
     def start_beamformer(
         self: TileComponentManager,
         start_time: Optional[str] = None,
-        duration: Optional[int] = -1,
-        subarray_beam_id: Optional[int] = -1,
-        scan_id: Optional[int] = 0,
+        duration: int = -1,
+        subarray_beam_id: int = -1,
+        scan_id: int = 0,
     ) -> None:
         """
         Start beamforming on a specific subset of the beamformed channels.
@@ -557,8 +549,8 @@ class TileComponentManager(MccsComponentManager):
         :raises ValueError: invalid time specified
         """
         if start_time is None:
-            start_frame = 0
-        elif type(start_time) == int:  # added for backward compatibility
+            start_frame: int = 0
+        elif isinstance(start_time, int):  # added for backward compatibility
             start_frame = start_time
         else:
             start_frame = self._tile_time.frame_from_utc_time(start_time)
@@ -572,6 +564,7 @@ class TileComponentManager(MccsComponentManager):
             start_frame, duration, subarray_beam_id, scan_id
         )
 
+    # pylint: disable=too-many-arguments
     @check_communicating
     def configure_test_generator(
         self: TileComponentManager,
@@ -582,7 +575,7 @@ class TileComponentManager(MccsComponentManager):
         amplitude_noise: float,
         pulse_code: int,
         amplitude_pulse: float,
-        load_time: str = None,
+        load_time: Optional[str] = None,
     ) -> None:
         """
         Test generator setting.
@@ -626,16 +619,17 @@ class TileComponentManager(MccsComponentManager):
             load_frame,
         )
 
+    # pylint: disable=too-many-arguments
     @check_communicating
     def send_data_samples(
-        self: TpmDriver,
+        self: TileComponentManager,
         data_type: str = "",
-        start_time: str = None,
+        start_time: Optional[str] = None,
         seconds: float = 0.2,
         n_samples: int = 1024,
         sync: bool = False,
         first_channel: int = 0,
-        last_channel: int = 512,
+        last_channel: int = 511,
         channel_id: int = 128,
         frequency: float = 100.0,
         round_bits: int = 3,
@@ -744,7 +738,7 @@ class TileComponentManager(MccsComponentManager):
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
-        "tpm_status",
+        # "tpm_status",
         "voltage",
         "write_address",
         "write_register",
@@ -851,7 +845,7 @@ class TileComponentManager(MccsComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self.tpm_driver.initialise()
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self.logger.error(f"error {ex}")
             if task_callback:
                 task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
@@ -911,7 +905,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             self.tpm_driver.download_firmware(argin)
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -989,7 +984,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             success = self.tpm_driver.start_acquisition(start_time, delay)
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1050,7 +1046,8 @@ class TileComponentManager(MccsComponentManager):
         try:
             self.tpm_driver.post_synchronisation()
         except NotImplementedError:
-            raise NotImplementedError
+            raise
+        # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"error {ex}")
             if task_callback:
@@ -1081,4 +1078,5 @@ class TileComponentManager(MccsComponentManager):
         :param power_state: The desired power state
         """
         with self._power_state_lock:
+            # pylint: disable=attribute-defined-outside-init
             self.power_state = power_state

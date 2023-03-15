@@ -1,3 +1,10 @@
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
 """This module provides a HTTP server that acts as front end to a subrack."""
 from __future__ import annotations
 
@@ -74,13 +81,12 @@ def _handle_getattribute(
             "attribute": name,
             "value": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "attribute": name,
-            "value": value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "attribute": name,
+        "value": value,
+    }
 
 
 def _handle_setattribute(
@@ -108,13 +114,12 @@ def _handle_setattribute(
             "attribute": name,
             "value": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "attribute": name,
-            "value": set_value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "attribute": name,
+        "value": set_value,
+    }
 
 
 def _handle_command(
@@ -142,13 +147,12 @@ def _handle_command(
             "command": name,
             "retvalue": "",
         }
-    else:
-        return {
-            "status": "OK",
-            "info": "",
-            "command": name,
-            "retvalue": return_value,
-        }
+    return {
+        "status": "OK",
+        "info": "",
+        "command": name,
+        "retvalue": return_value,
+    }
 
 
 @router.get("/get/json.htm")

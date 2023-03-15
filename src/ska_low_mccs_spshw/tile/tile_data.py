@@ -1,5 +1,3 @@
-# type: ignore
-# pylint: skip-file
 #  -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -15,6 +13,7 @@ from __future__ import annotations  # allow forward references in type hints
 __all__ = ["TileData"]
 
 
+# pylint: disable=too-few-public-methods
 class TileData:
     """
     This class contain data/facts about a tile needed by multiple classes.

@@ -1192,6 +1192,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 )
             return
 
+        if success:
+            self._tile_time.set_reference_time(self.tile_reference_time)
+        else:
+            self._tile_time.set_reference_time(0)
+
         if task_callback:
             if success:
                 self._tile_time.set_reference_time(self.tile_reference_time)

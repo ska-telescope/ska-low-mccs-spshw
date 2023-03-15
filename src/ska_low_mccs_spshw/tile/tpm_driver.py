@@ -224,7 +224,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             error_flag = False
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     try:
                         self.tile[int(0x30000000)]
@@ -261,7 +261,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             max_time = 5  # 15 seconds
             self._is_programmed = False
             while timeout < max_time:
-                with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+                with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                     if acquired:
                         self.logger.debug("Lock acquired")
                         try:
@@ -384,7 +384,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         while self.tile.tpm is not None:
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     self.tile.tpm = None
             self.logger.warning("Failed to acquire hardware lock")
@@ -433,7 +433,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if self.communication_state != CommunicationStatus.ESTABLISHED:
             new_status = TpmStatus.UNCONNECTED
         else:
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     try:
                         self._is_programmed = self.tile.is_programmed()
@@ -483,7 +483,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :raises: LibraryError
         """
         tile_id = 0
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     tile_id = self.tile.get_tile_id()
@@ -502,7 +502,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the firmware list
         """
         self.logger.debug("TpmDriver: firmware_available")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._firmware_list = self.tile.get_firmware_list()
@@ -626,7 +626,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """Erase FPGA programming to reduce FPGA power consumption."""
         self.logger.debug("TpmDriver: erase_fpga")
         status = self._tpm_status
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.erase_fpga()
@@ -738,7 +738,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if not self._is_programmed:
             self._tile_id = value
             return
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._tile_id = value
@@ -772,7 +772,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if not self._is_programmed:
             self._station_id = value
             return
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._station_id = value
@@ -851,7 +851,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.info("Trying to read time from an unprogrammed FPGA")
             return [0, 0]
         failed = False
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._fpgas_time = [
@@ -894,7 +894,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if not self._is_programmed:
             self.logger.info("Trying to read frame# from an unprogrammed FPGA")
         failed = False
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()
@@ -944,7 +944,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         assert self.tile.tpm is not None  # for the type checker
         self.logger.warning("TpmDriver: register_list too big to be transmitted")
         reglist = []
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     regmap = self.tile.tpm.find_register("")
@@ -969,7 +969,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if len(self.tile.tpm.find_register(register_name)) == 0:
             self.logger.error("Register '" + register_name + "' not present")
             return []
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     value = self.tile.read_register(register_name)
@@ -1005,7 +1005,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if len(self.tile.tpm.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     try:
                         self.tile.write_register(register_name, values)
@@ -1026,7 +1026,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         values = []
         current_address = int(address & 0xFFFFFFFC)
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.logger.debug(
                     "Reading address "
@@ -1054,7 +1054,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         current_address = int(address & 0xFFFFFFFC)
         if isinstance(values, int):
             values = [values]
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.write_address(current_address, values)
@@ -1086,7 +1086,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param dst_port: port of the destination
         """
         self.logger.debug("TpmDriver: configure_40g_core")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.configure_40g_core(
@@ -1153,7 +1153,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: core configuration or list of core configurations
         """
         return_value = {"core_id": core_id, "arp_table_entry": arp_table_entry}
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     return_value = self.tile.get_40g_core_configuration(
@@ -1202,7 +1202,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param dst_port: destination port, defaults to 4660
         """
         self.logger.debug("TpmDriver: set_lmc_download")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_lmc_download(
@@ -1254,7 +1254,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         nb_freq = len(array)
         trunc = [0] * 512
         trunc[0:nb_freq] = array
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 for chan in range(32):
                     try:
@@ -1323,7 +1323,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         delays_float = []
         for d in delays:
             delays_float.append(float(d))
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_time_delays(delays_float)
@@ -1365,7 +1365,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         self.logger.debug("TpmDriver: set_csp_rounding")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_csp_rounding(rounding[0])
@@ -1391,7 +1391,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param levels: Preadu attenuation levels in dB
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._set_preadu_levels(levels)
@@ -1553,7 +1553,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 "Different subarrays or substations not supported. "
                 "Using only first defined"
             )
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_beamformer_regions(regions)
@@ -1580,7 +1580,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         and sets the beamformer to a default state.
         """
         self.logger.debug("TpmDriver: initialise_beamformer")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.initialise_beamformer(128, 8)
@@ -1607,7 +1607,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param is_last: whether this is the last (?)
         """
         self.logger.debug("TpmDriver: initialise_beamformer")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.tpm.station_beamf[0].define_channel_table(
@@ -1655,7 +1655,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             coefficients, flattened into a list
         """
         self.logger.debug("TpmDriver: load_calibration_coefficients")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.load_calibration_coefficients(
@@ -1678,7 +1678,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             switch
         """
         self.logger.debug("TpmDriver: switch_calibration_bank")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.switch_calibration_bank(switch_time=0)
@@ -1703,10 +1703,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: set_pointing_delay")
         nof_items = len(delay_array)
+        self.logger.debug(f"Beam: {beam_index} delays: {delay_array}")
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
             delay_array = delay_array + [[0.0, 0.0]] * (16 - nof_items)
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_pointing_delay(delay_array, beam_index)
@@ -1723,7 +1724,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param load_time: time at which to load the pointing delay
         """
         self.logger.debug("TpmDriver: load_pointing_delay")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.load_pointing_delay(load_time)
@@ -1759,7 +1760,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             )
         if scan_id != 0:
             self.logger.warning("start_beamformer: scan ID value ignored")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     if self.tile.start_beamformer(start_time, duration):
@@ -1773,7 +1774,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     def stop_beamformer(self: TpmDriver) -> None:
         """Stop the beamformer."""
         self.logger.debug("TpmDriver: Stop beamformer")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.stop_beamformer()
@@ -1802,7 +1803,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param last_channel: last channel
         """
         self.logger.debug("TpmDriver: configure_integrated_channel_data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.configure_integrated_channel_data(
@@ -1832,7 +1833,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param last_channel: last channel
         """
         self.logger.debug("TpmDriver: configure_integrated_beam_data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.configure_integrated_beam_data(
@@ -1847,7 +1848,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     def stop_integrated_data(self: TpmDriver) -> None:
         """Stop the integrated data."""
         self.logger.debug("TpmDriver: Stop integrated data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.stop_integrated_data()
@@ -1936,7 +1937,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param seconds: delay with respect to timestamp, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_raw_data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.send_raw_data(
@@ -1966,7 +1967,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.send_channelised_data(
@@ -2002,7 +2003,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data_continuous")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.send_channelised_data_continuous(
@@ -2040,7 +2041,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_channelised_data_narrowband")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.send_channelised_data_narrowband(
@@ -2067,7 +2068,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param seconds: when to synchronise, defaults to 0.2
         """
         self.logger.debug("TpmDriver: send_beam_data")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
@@ -2080,7 +2081,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     def stop_data_transmission(self: TpmDriver) -> None:
         """Stop data transmission for send_channelised_data_continuous."""
         self.logger.debug("TpmDriver: stop_data_transmission")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.stop_data_transmission()
@@ -2107,7 +2108,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self.logger.debug(
             f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
         )
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     # Check if ARP table is populated before starting
@@ -2132,7 +2133,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         started = False
         for i in range(max_timeout):
             time.sleep(0.1)
-            with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     try:
                         started = self._check_channeliser_started()
@@ -2173,7 +2174,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param dst_port: destination port, defaults to 4660
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_lmc_integrated_download(
@@ -2198,7 +2199,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: current tile beamformer frame
         """
         self.logger.debug("TpmDriver: current_tile_beamformer_frame")
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self._current_tile_beamformer_frame = (
@@ -2333,11 +2334,15 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         )
         # If load time not specified, is "now" + 30 ms
         end_time = 0
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        if load_time == 0:
+            load_time = self.tile.get_fpga_timestamp() + 180
+            self.logger.debug(f"tile generator uses asyncrhonous timestamp {load_time}")
+        else:
+            self.logger.debug(f"Test generator load time: {load_time}")
+
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    if load_time == 0:
-                        load_time = self.tile.get_fpga_timestamp() + 180
                     # Set everything at same time
                     self.tile.test_generator_set_tone(
                         0, frequency0, amplitude0, 0.0, load_time
@@ -2347,15 +2352,17 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_time)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+                    self.tile.tpm['fpga1.test_generator.control.load_dds0'] = 1
+                    self.tile.tpm['fpga2.test_generator.control.load_dds0'] = 1
                     end_time = self.tile.get_fpga_timestamp()
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-
-        if end_time < load_time:
-            self.logger.warning("Test generator failed to program in 50 ms")
+        self.logger.debug(f"Time after programming: {end_time}")
+        if end_time > load_time:
+            self.logger.warning("Test generator failed to program before start time")
 
     def test_generator_input_select(self: TpmDriver, inputs: int = 0) -> None:
         """
@@ -2366,7 +2373,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param inputs: Bit mask of inputs using test signal
         """
         self.logger.debug("Test generator: set inputs " + hex(inputs))
-        with acquire_timeout(self._hardware_lock, timeout=0.2) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.test_generator_input_select(inputs)

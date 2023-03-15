@@ -1031,7 +1031,7 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/station/01")
         >>> dp.command_inout("LoadPointingDelays", delay_list)
         """
-        if len(argin) < self._antennas_per_tile * 2 + 1:
+        if len(argin) < 513:  # self._antennas_per_tile * 2 + 1:
             self._component_manager.logger.error("Insufficient parameters")
             raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
@@ -1105,7 +1105,7 @@ class SpsStation(SKAObsDevice):
         duration = params.get("duration", -1)
         subarray_beam_id = params.get("subarray_beam_id", -1)
         scan_id = params.get("scan_id", 0)
-        self._component_manager.start_beamformer(
+        self.component_manager.start_beamformer(
             start_time, duration, subarray_beam_id, scan_id
         )
         return ([ResultCode.OK], ["StartBeamformer command completed OK"])
@@ -1339,6 +1339,59 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.stop_data_transmission()
         return ([ResultCode.OK], ["StopDataTransmission command completed OK"])
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def ConfigureTestGenerator(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the test signal generator.
+
+        :param argin: json dictionary with keywords:
+
+        * tone_frequency: first tone frequency, in Hz. The frequency
+            is rounded to the resolution of the generator. If this
+            is not specified, the tone generator is disabled.
+        * tone_amplitude: peak tone amplitude, normalized to 31.875 ADC
+            units. The amplitude is rounded to 1/8 ADC unit. Default
+            is 1.0. A value of -1.0 keeps the previously set value.
+        * tone_2_frequency: frequency for the second tone. Same
+            as ToneFrequency.
+        * tone_2_amplitude: peak tone amplitude for the second tone.
+            Same as ToneAmplitude.
+        * noise_amplitude: RMS amplitude of the pseudorandom Gaussian
+            white noise, normalized to 26.03 ADC units.
+        * pulse_frequency: frequency of the periodic pulse. A code
+            in the range 0 to 7, corresponding to (16, 12, 8, 6, 4, 3, 2)
+            times the ADC frame frequency.
+        * pulse_amplitude: peak amplitude of the periodic pulse, normalized
+            to 127 ADC units. Default is 1.0. A value of -1.0 keeps the
+            previously set value.
+        * set_time: time at which the generator is set, for synchronization
+            among different TPMs. In UTC ISO format (string)
+        * adc_channels: list of adc channels which will be substituted with
+            the generated signal. It is a 32 integer, with each bit representing
+            an input channel. Default: all if at least q source is specified,
+            none otherwises.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"tone_frequency": 150e6, "tone_amplitude": 0.1,
+                "noise_amplitude": 0.9, "pulse_frequency": 7,
+                "set_time": "2022-08-09T12:34:56.7Z"}
+        >>> jstr = json.dumps(dict)
+        >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
+        """
+        self.component_manager.configure_test_generator(argin)
+        return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
 
 # ----------

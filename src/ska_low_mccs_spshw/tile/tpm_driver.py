@@ -282,9 +282,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
             # "start" event received; update state then poll until "stop" event received
             self._stop_polling_event.clear()
-            # self.logger.debug("Enabling health monitoring")
-            # self.tile.enable_health_monitoring() # pragma: no cover
-            # self.logger.debug("Done!")
+
+            # Is it useful?
+            # self.tile.enable_health_monitoring()
+
             while not self._stop_polling_event.is_set():
                 self._poll()
                 self._stop_polling_event.wait(self._poll_rate)
@@ -378,9 +379,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
-                    self.logger.debug("Calling get_health_status...")
                     self._tile_health_structure = self.tile.get_health_status()
-                    self.logger.debug("Done!")
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):

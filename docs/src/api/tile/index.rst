@@ -19,8 +19,7 @@ Tile subpackage
   :caption: Drivers and simulators
   :maxdepth: 2
 
-  Base TPM simulator<base_tpm_simulator>
-  Dynamic TPM simulator<dynamic_tpm_simulator>
-  Static TPM simulator<static_tpm_simulator>
+  Aavs Tile simulator<aavs_tile_simulator>
+  Dynamic values simulator<dynamic_values_simulator>
   TPM driver<tpm_driver>
 

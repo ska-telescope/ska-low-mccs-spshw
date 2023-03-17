@@ -99,6 +99,8 @@ nitpick_ignore = [
     # to # factor out of the public interface.
     ("py:class", "HealthState"),
     ("py:class", "ResultCode"),
+    ("py:class", "pyfabil.base.definitions.Device"),
+
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

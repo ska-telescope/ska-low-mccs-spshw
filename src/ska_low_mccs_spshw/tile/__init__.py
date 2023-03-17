@@ -20,8 +20,6 @@ __all__ = [
     "TileComponentManager",
     "TileHealthModel",
     "DemoTile",
-    "_DynamicValuesGenerator",
-    "_DynamicValuesUpdater",
     "AavsTileSimulator",
     "AavsDynamicTileSimulator",
     "demo_tile_device",
@@ -29,14 +27,15 @@ __all__ = [
     "TpmStatus",
     "TpmDriver",
 ]
-from .aavs_tile_simulator import AavsTileSimulator, AavsDynamicTileSimulator
+
+from .aavs_tile_simulator import AavsTileSimulator  # type: ignore[attr-defined]
+from .aavs_tile_simulator import AavsDynamicTileSimulator  # type: ignore[attr-defined]
 from .tpm_status import TpmStatus
 from .tile_health_model import TileHealthModel
 from .tile_data import TileData
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 
-from .dynamic_values_generator import _DynamicValuesGenerator, _DynamicValuesUpdater
 
 from .tile_component_manager import (
     TileComponentManager,

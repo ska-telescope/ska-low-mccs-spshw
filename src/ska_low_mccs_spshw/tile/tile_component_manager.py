@@ -34,7 +34,8 @@ from ska_low_mccs_common.component import (
 )
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .aavs_tile_simulator import AavsDynamicTileSimulator, AavsTileSimulator
+from .aavs_tile_simulator import AavsDynamicTileSimulator  # type: ignore[attr-defined]
+from .aavs_tile_simulator import AavsTileSimulator  # type: ignore[attr-defined]
 from .tile_orchestrator import TileOrchestrator
 from .time_util import TileTime
 from .tpm_driver import TpmDriver

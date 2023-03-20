@@ -141,7 +141,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self.tile_sim,
             tpm_version,
             self._tpm_communication_state_changed,
-            self._update_component_state,
+            self._update_component_state
         )
 
         def _update_component_power_state(power_state: PowerState) -> None:

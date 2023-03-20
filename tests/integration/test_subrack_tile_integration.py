@@ -122,7 +122,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
 class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
     """Integration test cases for a SPS station with subservient subrack and tile."""
 
-    @pytest.mark.xfail
     def test_subrack_tile_integration(
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,

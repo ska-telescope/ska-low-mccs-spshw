@@ -79,7 +79,7 @@ class StationBeamformer:
 class MockTpm:
     """Simulator for a pyfabil::Tpm class."""
 
-    # Register map. RRequires only registers which are directly accessed from
+    # Register map. Requires only registers which are directly accessed from
     # the TpmDriver.
     _register_map: dict(str, list[int]) = {
         "0x30000000": [0x21033009],
@@ -318,10 +318,7 @@ class AavsTileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
-    REGISTER_MAP: dict[int, dict[str, dict]] = {
-        0: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-        1: {"test-reg1": {}, "test-reg2": {}, "test-reg3": {}, "test-reg4": {}},
-    }
+
     STATION_ID = 0
     TILE_ID = 1
     # VOLTAGE = 5.0
@@ -368,6 +365,8 @@ class AavsTileSimulator:
         self._station_id = self.STATION_ID
         self._timestamp = 0
         self._pps_delay = self.PPS_DELAY
+        self.delay_array = 0
+        self.beam_index = 0
         # return self._register_map.get(str(address), 0)
 
     # def find_register(self, address: int) -> List[Any]:
@@ -513,13 +512,6 @@ class AavsTileSimulator:
 
         :return: the mocked programmed state
         """
-        # to be programmed:
-        # must be connected (check the tpm exists)
-        # must have xml_loaded this is assumed to happen in connect
-        # address in fpga must be a magic number assumed correct
-        if not self.tpm:
-            return None
-
         return self.tpm._is_programmed
 
     def configure_40g_core(
@@ -770,8 +762,13 @@ class AavsTileSimulator:
         :param start_time: start time UTC
         :param duration: duration
         """
+        if self.beamformer_is_running():
+            return False
         self.tpm.beam1._is_running = True
         self.tpm.beam2._is_running = True
+
+
+        return True
 
     def stop_beamformer(self: AavsTileSimulator) -> None:
         """
@@ -779,7 +776,8 @@ class AavsTileSimulator:
 
         :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        self.tpm.beam1._is_running = False
+        self.tpm.beam2._is_running = False
 
     def configure_integrated_channel_data(
         self: AavsTileSimulator,
@@ -1132,13 +1130,11 @@ class AavsTileSimulator:
 class AavsDynamicTileSimulator(AavsTileSimulator):
     """
     A simulator for a TPM, with dynamic value updates to certain attributes.
-
-    This is useful for demoing.
     """
 
     def __init__(self: AavsDynamicTileSimulator, logger: logging.Logger) -> None:
         """
-        Initialise a new TPM simulator instance.
+        Initialise a new Dynamic Tile simulator instance.
 
         :param logger: a logger for this simulator to use
         """

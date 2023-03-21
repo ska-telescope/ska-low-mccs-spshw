@@ -229,9 +229,7 @@ class TestTpmDriver:
         static_tile_simulator.tpm._tile_health_structure["temperature"][
             "board"
         ] = board_temp
-        static_tile_simulator.tpm._tile_health_structure["temperature"][
-            "MON_5V0"
-        ] = voltage
+        static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = voltage
 
         tpm_driver._update_attributes()
 
@@ -239,20 +237,18 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["temperature"]["FPGA0"] == fpga1_temp
         assert tpm_driver._tile_health_structure["temperature"]["FPGA1"] == fpga2_temp
         assert tpm_driver._tile_health_structure["temperature"]["board"] == board_temp
-        assert tpm_driver._tile_health_structure["temperature"]["MON_5V0"] == voltage
+        assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        static_tile_simulator.tpm._tile_health_structure["temperature"]["MON_5V0"] = 2.2
+        static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = 2.2
         static_tile_simulator.get_voltage = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
 
         tpm_driver._update_attributes()
         assert (
-            tpm_driver._tile_health_structure["temperature"]["MON_5V0"]
-            != static_tile_simulator.tpm._tile_health_structure["temperature"][
-                "MON_5V0"
-            ]
+            tpm_driver._tile_health_structure["voltage"]["MON_5V0"]
+            != static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"]
         )
 
     @pytest.mark.xfail

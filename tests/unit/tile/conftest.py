@@ -193,7 +193,7 @@ def tile_id_fixture() -> int:
 
 
 @pytest.fixture(name="aavs_tile_simulator")
-def aavs_tile_simulator_fixture(logger: logging.Logger) -> TileComponentManager:
+def aavs_tile_simulator_fixture(logger: logging.Logger) -> AavsTileSimulator:
     """
     Return a AavsTileSimulator.
 

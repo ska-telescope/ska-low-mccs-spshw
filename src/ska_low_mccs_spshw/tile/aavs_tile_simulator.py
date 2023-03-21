@@ -1,4 +1,3 @@
-# type: ignore
 # pylint: skip-file
 #  -*- coding: utf-8 -*
 #
@@ -19,8 +18,7 @@ from __future__ import annotations  # allow forward references in type hints
 import copy
 import logging
 import re
-import time
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 from pyfabil.base.definitions import Device, LibraryError
 
@@ -79,9 +77,10 @@ class StationBeamformer:
 class MockTpm:
     """Simulator for a pyfabil::Tpm class."""
 
-    # Register map. Requires only registers which are directly accessed from
+    # Register map.
+    # Requires only registers which are directly accessed from
     # the TpmDriver.
-    _register_map: dict(str, list[int]) = {
+    _register_map: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -122,7 +121,7 @@ class MockTpm:
         "fpga1.pps_manager.sync_time_val": 0,
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialise the MockTPM."""
         self._is_programmed = False
         self.beam1 = StationBeamformer()
@@ -139,7 +138,7 @@ class MockTpm:
 
         :param address: address of start of read
 
-        :return: registers found at address
+        :return: registers found at address.
         """
         matches = []
         for k in self._register_map.keys():
@@ -150,24 +149,30 @@ class MockTpm:
         return matches
 
     @property
-    def station_beamf(self: MockTpm):
+    def station_beamf(self: MockTpm) -> List[StationBeamformer]:
         """
         Station beamf.
 
-        :return: the station_beamf
+        :return: the station_beamf.
         """
         return self._station_beamf
 
     @property
-    def tpm_preadu(self: MockTpm):
+    def tpm_preadu(self: MockTpm) -> List[PreAdu]:
         """
         Tpm pre adu.
 
-        :return: the preadu
+        :return: the preadu.
         """
         return self.preadu
 
-    def write_register(self, register, values, offset=0, retry=True):
+    def write_register(
+        self: MockTpm,
+        register: int | str,
+        values: int,
+        offset: int = 0,
+        retry: bool = True,
+    ) -> None:
         """
         Set register value.
 
@@ -184,7 +189,7 @@ class MockTpm:
             raise LibraryError(f"Unknown register: {register}")
         self._register_map[register] = values
 
-    def read_register(self: MockTpm, address, n=1):
+    def read_register(self: MockTpm, address: int | str, n: int = 1) -> Optional[Any]:
         """
         Get register value.
 
@@ -199,7 +204,7 @@ class MockTpm:
             address = hex(address)
         return self._register_map.get(address)
 
-    def read_address(self: MockTpm, address, n=1):
+    def read_address(self: MockTpm, address: int | str, n: int = 1) -> Optional[Any]:
         """
         Get address value.
 
@@ -214,7 +219,9 @@ class MockTpm:
             address = hex(address)
         return self._register_map.get(address)
 
-    def write_address(self: MockTpm, address, values, retry=True):
+    def write_address(
+        self: MockTpm, address: int | str, values: int, retry: bool = True
+    ) -> None:
         """
         Write address value.
 
@@ -230,7 +237,7 @@ class MockTpm:
             raise LibraryError(f"Unknown register: {address}")
         self._register_map[address] = values
 
-    def __getitem__(self: MockTpm, key: int | str):
+    def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
         """
         Check if the specified key is a memory address or register name.
 
@@ -245,7 +252,7 @@ class MockTpm:
             raise LibraryError(f"Unknown register: {key}")
         return self._register_map.get(key)
 
-    def __setitem__(self: MockTpm, key: int | str, value):
+    def __setitem__(self: MockTpm, key: int | str, value: Any) -> None:
         """
         Check if the specified key is a memory address or register name.
 
@@ -264,11 +271,11 @@ class MockTpm:
 class PreAdu:
     """Mock preadu plugin."""
 
-    def __init__(self: PreAdu):
+    def __init__(self: PreAdu) -> None:
         """Initialise mock plugin."""
         self.channel_filters: list[int] = [0] * 16
 
-    def set_attenuation(self: PreAdu, attenuation: int, channel: int):
+    def set_attenuation(self: PreAdu, attenuation: int, channel: int) -> None:
         """
         Set preadu channel attenuation.
 
@@ -277,11 +284,11 @@ class PreAdu:
         """
         self.channel_filters[channel] = (attenuation & 0x1F) << 3
 
-    def select_low_passband(self: PreAdu):
+    def select_low_passband(self: PreAdu) -> None:
         """Select low pass band."""
         self.bandpass = "low"
 
-    def read_configuration(self: PreAdu):
+    def read_configuration(self: PreAdu) -> None:
         """
         Read configuration.
 
@@ -346,20 +353,20 @@ class AavsTileSimulator:
 
         :param logger: a logger for this simulator to use
         """
-        self.logger = logger
-        self._forty_gb_core_list = []
-        self.tpm: MockTpm = None
-        self._is_programmed = False
+        self.logger: logging.Logger = logger
+        self._forty_gb_core_list: list[Any] = []
+        self.tpm: Optional[MockTpm] = None
+        self._is_programmed: bool = False
         self._pending_data_request = False
         self._is_first = False
         self._is_last = False
         self._tile_id = self.TILE_ID
-        self._voltage = self.VOLTAGE
-        self._current = self.CURRENT
-        self._board_temperature = self.BOARD_TEMPERATURE
-        self._fpga1_temperature = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature = self.FPGA2_TEMPERATURE
-        self.fortygb_core_list = [
+        self._voltage: Optional[float] = self.VOLTAGE
+        self._current: Optional[float] = self.CURRENT
+        self._board_temperature: Optional[float] = self.BOARD_TEMPERATURE
+        self._fpga1_temperature: Optional[float] = self.FPGA1_TEMPERATURE
+        self._fpga2_temperature: Optional[float] = self.FPGA2_TEMPERATURE
+        self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
         self._station_id = self.STATION_ID
@@ -388,23 +395,23 @@ class AavsTileSimulator:
     #             matches.append(v)
     #     return matches
 
-    def get_firmware_list(self: AavsTileSimulator):
+    def get_firmware_list(self: AavsTileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
-    def get_fpga0_temperature(self: AavsTileSimulator) -> float:
+    def get_fpga0_temperature(self: AavsTileSimulator) -> Optional[float]:
         """:return: the mocked fpga0 temperature."""
         return self._fpga1_temperature
 
-    def get_fpga1_temperature(self: AavsTileSimulator) -> float:
+    def get_fpga1_temperature(self: AavsTileSimulator) -> Optional[float]:
         """:return: the mocked fpga1 temperature."""
         return self._fpga2_temperature
 
-    def get_temperature(self: AavsTileSimulator) -> float:
+    def get_temperature(self: AavsTileSimulator) -> Optional[float]:
         """:return: the mocked board temperature."""
         return self._board_temperature
 
-    def get_voltage(self: AavsTileSimulator) -> float:
+    def get_voltage(self: AavsTileSimulator) -> Optional[float]:
         """:return: the mocked voltage."""
         return self._voltage
 
@@ -441,20 +448,24 @@ class AavsTileSimulator:
 
         :param firmware_name: firmware_name
         """
-        self.tpm._is_programmed = True
+        self.tpm._is_programmed = True  # type: ignore
 
-    def erase_fpga(self: AavsTileSimulator):
-        """:return: none."""
+    def erase_fpga(self: AavsTileSimulator) -> None:
+        """
+        Erase the fpga firmware.
+
+        :return: none.
+        """
         return
 
     def initialise(
         self: AavsTileSimulator,
-        station_id=0,
-        pps_delay=0,
-        tile_id=0,
-        is_first_tile=False,
-        is_last_tile=False,
-    ):
+        station_id: int = 0,
+        pps_delay: int = 0,
+        tile_id: int = 0,
+        is_first_tile: bool = False,
+        is_last_tile: bool = False,
+    ) -> bool:
         """
         Initialise tile.
 
@@ -506,13 +517,13 @@ class AavsTileSimulator:
         """:return: the pps delay."""
         return self._pps_delay
 
-    def is_programmed(self: AavsTileSimulator) -> bool:
+    def is_programmed(self: AavsTileSimulator) -> Union[MockTpm, bool]:
         """
         Return whether the mock has been implemented.
 
         :return: the mocked programmed state
         """
-        return self.tpm._is_programmed
+        return self.tpm._is_programmed  # type: ignore
 
     def configure_40g_core(
         self: AavsTileSimulator,
@@ -552,7 +563,7 @@ class AavsTileSimulator:
         self: AavsTileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict | list[dict] | None:
+    ) -> dict | Optional[list[dict]]:
         """
         Return a 40G configuration.
 
@@ -571,11 +582,11 @@ class AavsTileSimulator:
                 # TODO: improve this
                 if arp_table_entry == 1:
                     return item
-        return
+        return None
 
-    def check_arp_table(self: AavsTileSimulator) -> dict[str, list[int]]:
+    def check_arp_table(self: AavsTileSimulator) -> None:
         """Not Implemented."""
-        pass
+        return
         # raise NotImplementedError
 
     def set_lmc_download(
@@ -602,30 +613,30 @@ class AavsTileSimulator:
 
     def reset_eth_errors(self: AavsTileSimulator) -> None:
         """Not Implemented."""
-        pass
+        return
         # raise NotImplementedError
 
     def connect(self: AavsTileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
         self.tpm = MockTpm()
 
-    def __getitem__(self: AavsTileSimulator, key: int) -> Any:
+    def __getitem__(self: AavsTileSimulator, key: int | str) -> Any:
         """
         Get the register from the TPM.
 
         :param key: key
         :return: mocked item at address
         """
-        return self.tpm[key]
+        return self.tpm[key]  # type: ignore
 
-    def __setitem__(self: AavsTileSimulator, key: int, value: Any) -> None:
+    def __setitem__(self: AavsTileSimulator, key: int | str, value: Any) -> None:
         """
         Set a registers value in the TPM.
 
         :param key: key
         :param value: value
         """
-        self.tpm[key] = value
+        self.tpm[key] = value  # type: ignore
 
     def set_channeliser_truncation(
         self: AavsTileSimulator, trunc: list[int], chan: int
@@ -687,10 +698,15 @@ class AavsTileSimulator:
         :param is_first: true if first
         :param is_last: true if last
         """
-        self.tpm["fpga1.beamf_ring.control.first_tile"] = int(is_first)
-        self.tpm["fpga2.beamf_ring.control.first_tile"] = int(is_first)
-        self.tpm["fpga1.beamf_ring.control.last_tile"] = int(is_last)
-        self.tpm["fpga2.beamf_ring.control.last_tile"] = int(is_last)
+        registers_to_set = {
+            "fpga1.beamf_ring.control.first_tile": int(is_first),
+            "fpga2.beamf_ring.control.first_tile": int(is_first),
+            "fpga1.beamf_ring.control.last_tile": int(is_last),
+            "fpga2.beamf_ring.control.last_tile": int(is_last),
+        }
+
+        for register in registers_to_set:
+            self.tpm[register] = registers_to_set[register]  # type: ignore
 
     def load_calibration_coefficients(
         self: AavsTileSimulator, antenna: int, coefs: list[float]
@@ -728,15 +744,17 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     @property
-    def tpm_preadu(self: MockTpm):
+    def tpm_preadu(self: AavsTileSimulator) -> List[PreAdu]:
         """
         Tpm pre adu.
 
         :return: the preadu
         """
-        return self.tpm.preadu
+        return self.tpm.preadu  # type: ignore
 
-    def set_pointing_delay(self: AavsTileSimulator, delay_array, beam_index) -> None:
+    def set_pointing_delay(
+        self: AavsTileSimulator, delay_array: list[float], beam_index: int
+    ) -> None:
         """
         Set pointing delay.
 
@@ -746,7 +764,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def load_pointing_delay(self: AavsTileSimulator, load_time) -> None:
+    def load_pointing_delay(self: AavsTileSimulator, load_time: int) -> None:
         """
         Load pointing delay.
 
@@ -755,29 +773,28 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def start_beamformer(self: AavsTileSimulator, start_time, duration) -> None:
+    def start_beamformer(
+        self: AavsTileSimulator, start_time: int, duration: int
+    ) -> bool:
         """
         Start beamformer.
 
         :param start_time: start time UTC
         :param duration: duration
+
+        :return: true if the beamformer was started successfully.
         """
         if self.beamformer_is_running():
             return False
-        self.tpm.beam1._is_running = True
-        self.tpm.beam2._is_running = True
-
+        self.tpm.beam1._is_running = True  # type: ignore
+        self.tpm.beam2._is_running = True  # type: ignore
 
         return True
 
     def stop_beamformer(self: AavsTileSimulator) -> None:
-        """
-        Stop beamformer.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        self.tpm.beam1._is_running = False
-        self.tpm.beam2._is_running = False
+        """Stop beamformer."""
+        self.tpm.beam1._is_running = False  # type: ignore
+        self.tpm.beam2._is_running = False  # type: ignore
 
     def configure_integrated_channel_data(
         self: AavsTileSimulator,
@@ -834,11 +851,11 @@ class AavsTileSimulator:
 
     def send_channelised_data(
         self: AavsTileSimulator,
-        number_of_samples=1024,
-        first_channel=0,
-        last_channel=511,
-        timestamp=None,
-        seconds=0.2,
+        number_of_samples: int = 1024,
+        first_channel: int = 0,
+        last_channel: int = 511,
+        timestamp: Optional[int] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Send channelised data from the TPM.
@@ -854,11 +871,11 @@ class AavsTileSimulator:
 
     def send_channelised_data_continuous(
         self: AavsTileSimulator,
-        channel_id,
-        number_of_samples=128,
-        wait_seconds=0,
-        timestamp=None,
-        seconds=0.2,
+        channel_id: int,
+        number_of_samples: int = 128,
+        wait_seconds: int = 0,
+        timestamp: Optional[int] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Continuously send channelised data from a single channel.
@@ -874,12 +891,12 @@ class AavsTileSimulator:
 
     def send_channelised_data_narrowband(
         self: AavsTileSimulator,
-        frequency,
-        round_bits,
-        number_of_samples=128,
-        wait_seconds=0,
-        timestamp=None,
-        seconds=0.2,
+        frequency: int,
+        round_bits: int,
+        number_of_samples: int = 128,
+        wait_seconds: int = 0,
+        timestamp: Optional[int] = None,
+        seconds: float = 0.2,
     ) -> None:
         """
         Continuously send channelised data from a single channel.
@@ -899,7 +916,7 @@ class AavsTileSimulator:
         timeout: int = 0,
         timestamp: int = 0,
         seconds: float = 0.2,
-    ):
+    ) -> None:
         """
         Send beam data.
 
@@ -918,7 +935,9 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def start_acquisition(self: AavsTileSimulator, start_time, delay) -> None:
+    def start_acquisition(
+        self: AavsTileSimulator, start_time: int, delay: float
+    ) -> None:
         """
         Start data acquisition.
 
@@ -932,10 +951,10 @@ class AavsTileSimulator:
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: str = None,
+        dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ):
+    ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
 
@@ -964,7 +983,7 @@ class AavsTileSimulator:
         amplitude: float = 0.0,
         phase: float = 0.0,
         load_time: int = 0,
-    ):
+    ) -> None:
         """
         Test generator tone setting.
 
@@ -979,7 +998,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def test_generator_set_noise(
-        self: AavsTileSimulator, amplitude_noise, load_time
+        self: AavsTileSimulator, amplitude_noise: int, load_time: int
     ) -> None:
         """
         Set generator test noise.
@@ -991,7 +1010,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def set_test_generator_pulse(
-        self: AavsTileSimulator, pulse_code, amplitude_pulse
+        self: AavsTileSimulator, pulse_code: Any, amplitude_pulse: int
     ) -> None:
         """
         Set test generator pulse.
@@ -1006,7 +1025,7 @@ class AavsTileSimulator:
         """:return: timestamp."""
         return self._timestamp
 
-    def test_generator_input_select(self: AavsTileSimulator, inputs) -> None:
+    def test_generator_input_select(self: AavsTileSimulator, inputs: Any) -> None:
         """
         Test generator input select.
 
@@ -1015,21 +1034,21 @@ class AavsTileSimulator:
         """
         return
 
-    def _timed_thread(self: AavsTileSimulator):
-        """Thread."""
-        # should this be able to run for a infinite amount of time?
-        while True:
-            time_utc = time.time()
-            self._fpgatime = int(time_utc)
-            if self.sync_time > 0 and self.sync_time < time_utc:
-                self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
-                self.tpm["fpga1.dsp_regfile.stream_status.channelizer_vld"] = 1
-                self.tpm["fpga2.dsp_regfile.stream_status.channelizer_vld"] = 1
-            elif self._timestamp == 0:
-                self.tpm["fpga1.pps_manager.timestamp_read_val"] = self._timestamp
-                time.sleep(0.1)
+    # def _timed_thread(self: AavsTileSimulator) -> None:
+    #     """Thread."""
+    #     # should this be able to run for a infinite amount of time?
+    #     while True:
+    #         time_utc = time.time()
+    #         self._fpgatime = int(time_utc)
+    #         if self.sync_time > 0 and self.sync_time < time_utc:
+    #             self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
+    #             self.tpm["fpga1.dsp_regfile.stream_status.channelizer_vld"] = 1
+    #             self.tpm["fpga2.dsp_regfile.stream_status.channelizer_vld"] = 1
+    #         elif self._timestamp == 0:
+    #             self.tpm["fpga1.pps_manager.timestamp_read_val"] = self._timestamp
+    #             time.sleep(0.1)
 
-    def get_arp_table(self: AavsTileSimulator):
+    def get_arp_table(self: AavsTileSimulator) -> dict[str, Any]:
         """
         Get arp table.
 
@@ -1037,7 +1056,9 @@ class AavsTileSimulator:
         """
         return {"0": [0, 1], "1": [1]}
 
-    def load_beam_angle(self: AavsTileSimulator, angle_coefficients: list[float]):
+    def load_beam_angle(
+        self: AavsTileSimulator, angle_coefficients: list[float]
+    ) -> None:
         """
         Load beam angle.
 
@@ -1048,7 +1069,7 @@ class AavsTileSimulator:
 
     def load_antenna_tapering(
         self: AavsTileSimulator, beam: int, tapering_coefficients: list[float]
-    ):
+    ) -> None:
         """
         Load antenna tapering.
 
@@ -1058,7 +1079,7 @@ class AavsTileSimulator:
         """
         return
 
-    def compute_calibration_coefficients(self: AavsTileSimulator):
+    def compute_calibration_coefficients(self: AavsTileSimulator) -> None:
         """
         Compute calibration coefficients.
 
@@ -1066,15 +1087,15 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def beamformer_is_running(self: AavsTileSimulator):
+    def beamformer_is_running(self: AavsTileSimulator) -> bool:
         """
         Beamformer is running.
 
         :return: is the beam is running
         """
-        return self.tpm.beam1.is_running()
+        return self.tpm.beam1.is_running()  # type: ignore
 
-    def set_test_generator_tone(self: AavsTileSimulator):
+    def set_test_generator_tone(self: AavsTileSimulator) -> None:
         """
         Set test generator tone.
 
@@ -1082,7 +1103,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def set_test_generator_noise(self: AavsTileSimulator):
+    def set_test_generator_noise(self: AavsTileSimulator) -> None:
         """
         Set test generator noise.
 
@@ -1090,16 +1111,16 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def get_phase_terminal_count(self: AavsTileSimulator):
+    def get_phase_terminal_count(self: AavsTileSimulator) -> None:
         """
         Get PPS phase terminal count.
 
         :return: PPS phase terminal count
         :rtype: int
         """
-        return 0
+        return
 
-    def get_station_id(self: AavsTileSimulator):
+    def get_station_id(self: AavsTileSimulator) -> int:
         """
         Get station ID.
 
@@ -1108,7 +1129,7 @@ class AavsTileSimulator:
         """
         return self._station_id
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> object:
         """
         Get the attribute.
 
@@ -1128,9 +1149,7 @@ class AavsTileSimulator:
 
 
 class AavsDynamicTileSimulator(AavsTileSimulator):
-    """
-    A simulator for a TPM, with dynamic value updates to certain attributes.
-    """
+    """A simulator for a TPM, with dynamic value updates to certain attributes."""
 
     def __init__(self: AavsDynamicTileSimulator, logger: logging.Logger) -> None:
         """
@@ -1171,12 +1190,12 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """Garbage-collection hook."""
         self._updater.stop()
 
-    def get_board_temperature(self: AavsDynamicTileSimulator) -> float:
+    def get_board_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
         """:return: the mocked board temperature."""
         return self._board_temperature
 
     @property
-    def board_temperature(self: AavsDynamicTileSimulator) -> float:
+    def board_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
         """
         Return the temperature of the TPM.
 
@@ -1195,9 +1214,8 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._board_temperature = board_temperature
 
-    def get_voltage(self: AavsDynamicTileSimulator) -> float:
+    def get_voltage(self: AavsDynamicTileSimulator) -> Optional[float]:
         """:return: the mocked voltage."""
-        print("ofhidsf")
         return self._voltage
 
     @property
@@ -1218,7 +1236,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._voltage = voltage
 
-    def get_current(self: AavsDynamicTileSimulator) -> float:
+    def get_current(self: AavsDynamicTileSimulator) -> Optional[float]:
         """:return: the mocked current."""
         return self._current
 
@@ -1240,7 +1258,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._current = current
 
-    def get_fpga0_temperature(self: AavsDynamicTileSimulator) -> float:
+    def get_fpga0_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
         """:return: the mocked fpga0 temperature."""
         return self._fpga1_temperature
 
@@ -1264,7 +1282,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._fpga1_temperature = fpga1_temperature
 
-    def get_fpga1_temperature(self: AavsDynamicTileSimulator) -> float:
+    def get_fpga1_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
         """:return: the mocked fpga1 temperature."""
         return self._fpga2_temperature
 

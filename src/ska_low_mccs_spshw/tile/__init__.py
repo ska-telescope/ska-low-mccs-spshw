@@ -28,8 +28,8 @@ __all__ = [
     "TpmDriver",
 ]
 
-from .aavs_tile_simulator import AavsTileSimulator  # type: ignore[attr-defined]
-from .aavs_tile_simulator import AavsDynamicTileSimulator  # type: ignore[attr-defined]
+from .aavs_tile_simulator import AavsTileSimulator
+from .aavs_tile_simulator import AavsDynamicTileSimulator
 from .tpm_status import TpmStatus
 from .tile_health_model import TileHealthModel
 from .tile_data import TileData

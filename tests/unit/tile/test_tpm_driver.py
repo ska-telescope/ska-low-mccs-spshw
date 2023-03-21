@@ -235,10 +235,9 @@ class TestTpmDriver:
         # Therefore the tile will have access to the TPM after connect().
         aavs_tile_simulator.connect()
 
-        aavs_tile_simulator.fpga_time = 2
+        aavs_tile_simulator._timestamp = 2
         aavs_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
         assert aavs_tile_simulator.tpm is not None
-        aavs_tile_simulator.tpm._fpga_current_frame = 2
 
         # mock tpm as programmed so attributes can be updated
         tpm_driver._tpm_status = TpmStatus.INITIALISED
@@ -276,11 +275,9 @@ class TestTpmDriver:
         :param tpm_driver: The tpm driver under test.
         :param aavs_tile_simulator: The mocked tile
         """
+        # TODO: implement a meaningful test
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.fpga_time = 2
-        aavs_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
         assert aavs_tile_simulator.tpm is not None
-        aavs_tile_simulator.tpm._fpga_current_frame = 2
 
         _ = tpm_driver.register_list
         tpm_driver._get_register_list()
@@ -301,11 +298,9 @@ class TestTpmDriver:
         :param tpm_driver: The tpm driver under test.
         :param aavs_tile_simulator: The mocked tile
         """
+        # TODO: implement a meaningful test
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.fpga_time = 2
-        aavs_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
         assert aavs_tile_simulator.tpm is not None
-        aavs_tile_simulator.tpm._fpga_current_frame = 2
 
         tpm_driver.channeliser_truncation = [4] * 512
         _ = tpm_driver.channeliser_truncation
@@ -327,10 +322,8 @@ class TestTpmDriver:
         :param tpm_driver: The tpm driver under test.
         :param aavs_tile_simulator: The mocked tile
         """
+        # TODO: implement a meaningful test
         aavs_tile_simulator.connect()
-        aavs_tile_simulator.fpga_time = 2
-        aavs_tile_simulator["fpga1.pps_manager.sync_time_val"] = 0.4
-
         tpm_driver.set_beamformer_regions(
             [[64, 32, 1, 0, 0, 0, 0, 0], [128, 8, 0, 2, 32, 1, 1, 1]]
         )
@@ -352,9 +345,21 @@ class TestTpmDriver:
         assert tpm_driver.tpm_status == TpmStatus.UNCONNECTED
 
         aavs_tile_simulator.connect()
+        aavs_tile_simulator.tpm._is_programmed = False  # type: ignore
         tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
-
+        tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.UNPROGRAMMED
+
+        aavs_tile_simulator.connect()
+        aavs_tile_simulator.tpm._is_programmed = True  # type: ignore
+        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
+        tpm_driver._update_tpm_status()
+        assert tpm_driver.tpm_status == TpmStatus.INITIALISED
+
+        # aavs_tile_simulator.connect()
+        # tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
+
+        # assert tpm_driver.tpm_status == TpmStatus.UNPROGRAMMED
 
         # reset with connection to TPM
         assert aavs_tile_simulator.tpm
@@ -376,19 +381,14 @@ class TestTpmDriver:
         :param tpm_driver: The tpm driver under test.
         :param aavs_tile_simulator: The mocked tile
         """
-        # No UDP connection are used here. The aavs_tile_simulator
-        # constructs a mocked TPM
-        # Therefore the tile will have access to the TPM after connect().
-        aavs_tile_simulator.connect()
-        assert aavs_tile_simulator.tpm
-        aavs_tile_simulator.tpm._tile_id = 5
+        # TODO: implement a meaningful test
 
         # mocked error case
         mock_libraryerror = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
-        aavs_tile_simulator.get_tile_id = unittest.mock.MagicMock(
-            side_effect=mock_libraryerror
+        aavs_tile_simulator.get_tile_id = (  # type: ignore[assignment]
+            unittest.mock.MagicMock(side_effect=mock_libraryerror)
         )
         assert tpm_driver.get_tile_id() == 0
 
@@ -661,6 +661,7 @@ class TestTpmDriver:
         # establish connection to the TPM
         aavs_tile_simulator.connect()
         assert not aavs_tile_simulator.is_programmed()
+
         tpm_driver.initialise(task_callback=callbacks["task"])
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -673,8 +674,8 @@ class TestTpmDriver:
         assert tpm_driver._is_programmed is True
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
-        assert aavs_tile_simulator.tpm is not None  # for the type checker
-        aavs_tile_simulator.tpm._tpm_status = TpmStatus.PROGRAMMED
+        assert aavs_tile_simulator.tpm  # for the type checker
+        aavs_tile_simulator._tpm_status = TpmStatus.PROGRAMMED  # type: ignore
 
         # assert aavs_tile_simulator["fpga1.dsp_regfile.config_id.station_id"] == 0
         # assert aavs_tile_simulator["fpga1.dsp_regfile.config_id.tile_id"] == 0
@@ -684,7 +685,8 @@ class TestTpmDriver:
 
         assert aavs_tile_simulator.tpm is not None  # for the type checker
         aavs_tile_simulator.tpm._is_programmed = False
-        aavs_tile_simulator.program_fpgas = unittest.mock.MagicMock(return_value=False)
+        mocked_return = unittest.mock.MagicMock(return_value=False)
+        aavs_tile_simulator.program_fpgas = mocked_return  # type: ignore
         tpm_driver.initialise(task_callback=callbacks["task"])
         time.sleep(0.1)
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)

@@ -211,7 +211,7 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
         tile_component_manager._tpm_power_state_changed(PowerState.ON)
 
-        time.sleep(0.01) #TODO: why?
+        time.sleep(0.01)  # TODO: why?
         tile_component_manager.off()
         # TODO: This is still an old-school MockCallable because -common
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
@@ -381,7 +381,7 @@ class TestStaticSimulatorCommon:
             ("fpga_current_frame", 0),
             ("pps_delay", AavsTileSimulator.PPS_DELAY),
             # ("firmware_available", AavsTileSimulator.FIRMWARE_AVAILABLE),
-            #("register_list", list(AavsTileSimulator.REGISTER_MAP.keys())),
+            # ("register_list", list(AavsTileSimulator.REGISTER_MAP.keys())),
             # ("pps_present", AavsTileSimulator.CLOCK_SIGNALS_OK),
             # ("clock_present", AavsTileSimulator.CLOCK_SIGNALS_OK),
             # ("sysref_present", AavsTileSimulator.CLOCK_SIGNALS_OK),
@@ -673,8 +673,9 @@ class TestStaticSimulatorCommon:
         time.sleep(0.2)
         assert tile.is_programmed
 
-
-    @pytest.mark.parametrize("register", [f"fpga1.test_generator.delay_{i}" for i in (1, 4)])
+    @pytest.mark.parametrize(
+        "register", [f"fpga1.test_generator.delay_{i}" for i in (1, 4)]
+    )
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
@@ -751,7 +752,6 @@ class TestStaticSimulatorCommon:
 
         tile.write_address(write_address, write_values)
         assert tile.read_address(read_address, read_length) == expected_read
-
 
     def test_start_stop_beamformer(
         self: TestStaticSimulatorCommon,

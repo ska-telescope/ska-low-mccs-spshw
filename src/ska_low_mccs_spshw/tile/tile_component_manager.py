@@ -34,8 +34,7 @@ from ska_low_mccs_common.component import (
 )
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .aavs_tile_simulator import AavsDynamicTileSimulator  # type: ignore[attr-defined]
-from .aavs_tile_simulator import AavsTileSimulator  # type: ignore[attr-defined]
+from .aavs_tile_simulator import AavsDynamicTileSimulator, AavsTileSimulator
 from .tile_orchestrator import TileOrchestrator
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
@@ -141,7 +140,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self.tile_sim,
             tpm_version,
             self._tpm_communication_state_changed,
-            self._update_component_state
+            self._update_component_state,
         )
 
         def _update_component_power_state(power_state: PowerState) -> None:

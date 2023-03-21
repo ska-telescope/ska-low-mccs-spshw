@@ -4,11 +4,13 @@ function: ska-low-mccs-spshw-subrack
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_subrack := $subracks.instances}}
-{{- if or $this_subrack.enabled (not (hasKey $this_subrack "enabled"))}}
+# https://github.com/helm/helm/issues/3308#issuecomment-585349501
+{{- $raw_enabled := pluck "enabled" $this_subrack $subracks | first}}
+{{- if or $raw_enabled (eq ($raw_enabled | toString) "<nil>")}}
   - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-command: MccsSubrack # Entry point changed.
+command: MccsSubrack
 server: 
   name: "MccsSubrack"
   instances:

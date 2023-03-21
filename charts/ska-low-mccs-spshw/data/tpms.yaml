@@ -4,13 +4,12 @@ function: ska-low-mccs-spshw-tile
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_tile := $tiles.instances}}
-{{- if or $this_tile.enabled (not (hasKey $this_tile "enabled"))}}
+# https://github.com/helm/helm/issues/3308#issuecomment-585349501
+{{- $raw_enabled := pluck "enabled" $this_tile $tiles | first}}
+{{- if or $raw_enabled (eq ($raw_enabled | toString) "<nil>")}}
   - {{printf "tile-%04d" (int $key)}}
 {{- end}}
 {{- end}}
-#entrypoints:
-#  - name: "tile.MccsTile"
-#    path: "/app/src/ska_low_mccs_spshw/tile/tile_device.py"
 command: MccsTile
 server: 
   name: "MccsTile"

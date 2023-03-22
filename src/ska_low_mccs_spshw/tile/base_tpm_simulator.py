@@ -185,6 +185,9 @@ class BaseTpmSimulator(ObjectComponent):
         self._station_id = 0
         self._tile_id = 0
 
+        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
+            self.TILE_MONITORING_POINTS
+        )
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY

@@ -9,7 +9,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import copy
 import logging
 import math
 import random
@@ -182,9 +181,8 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            self.TILE_MONITORING_POINTS
-        )
+        super().__init__(logger, component_state_changed_callback)
+
         self._tile_health_structure["voltage"]["MON_5V0"] = None
         self._tile_health_structure["temperature"]["board"] = None
         self._tile_health_structure["temperature"]["FPGA0"] = None
@@ -207,8 +205,6 @@ class DynamicTpmSimulator(BaseTpmSimulator):
             self._fpga2_temperature_changed,
         )
         self._updater.start()
-
-        super().__init__(logger, component_state_changed_callback)
 
     def __del__(self: DynamicTpmSimulator) -> None:
         """Garbage-collection hook."""

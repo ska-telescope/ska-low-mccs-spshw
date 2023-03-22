@@ -9,7 +9,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import copy
 import logging
 import re
 from typing import Any, Callable, Optional
@@ -41,9 +40,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            self.TILE_MONITORING_POINTS
-        )
+        super().__init__(logger, component_state_changed_callback)
 
         self._tile_health_structure["voltage"]["MON_5V0"] = self.VOLTAGE
         self._tile_health_structure["current"]["FE0_mVA"] = self.CURRENT_FE0_mVA
@@ -51,7 +48,6 @@ class StaticTpmSimulator(BaseTpmSimulator):
         self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
         self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
         self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
-        super().__init__(logger, component_state_changed_callback)
 
     @property
     def board_temperature(self: StaticTpmSimulator) -> float:
@@ -127,9 +123,6 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            self.TILE_MONITORING_POINTS
-        )
         super().__init__(logger, component_state_changed_callback)
 
     # pylint: disable=arguments-renamed

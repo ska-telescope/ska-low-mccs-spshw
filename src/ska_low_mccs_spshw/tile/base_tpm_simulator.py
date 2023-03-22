@@ -404,15 +404,15 @@ class BaseTpmSimulator(ObjectComponent):
         )
 
     @property
-    def voltage(self: BaseTpmSimulator) -> float:
+    def voltage_mon(self: BaseTpmSimulator) -> float:
         """
-        Return the voltage of the TPM.
+        Return the internal 5V supply of the TPM.
 
         :raises NotImplementedError: if this method has not been
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'voltage' must be "
+            "BaseTpmSimulator is abstract; property 'voltage_mon' must be "
             "implemented in a subclass."
         )
 

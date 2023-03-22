@@ -863,7 +863,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def get_voltages(self: TpmDriver) -> dict[str, Any]:
+    def voltages(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all voltage values available in the TPM.
 
@@ -873,7 +873,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._tile_health_structure["voltage"]
 
     @property
-    def get_temperatures(self: TpmDriver) -> dict[str, Any]:
+    def temperatures(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all temperature values available in the TPM.
 
@@ -883,27 +883,27 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._tile_health_structure["temperature"]
 
     @property
-    def get_currents(self: TpmDriver) -> dict[str, Any]:
+    def currents(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all current values available in the TPM.
 
         :return: currents in the TPM
         """
-        self.logger.debug("TpmDriver: get_currents")
+        self.logger.debug("TpmDriver: get all currents available in the TPM")
         return self._tile_health_structure["current"]
 
     @property
-    def get_timing(self: TpmDriver) -> dict[str, Any]:
+    def timing(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of the Timing Signals status available in the TPM.
 
         :return: timings in the TPM
         """
-        self.logger.debug("TpmDriver: get_timing")
+        self.logger.debug("TpmDriver: timing")
         return self._tile_health_structure["timing"]
 
     @property
-    def get_io(self: TpmDriver) -> dict[str, Any]:
+    def io(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of I/O Interfaces status available in the TPM.
 
@@ -913,7 +913,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._tile_health_structure["io"]
 
     @property
-    def get_dsp(self: TpmDriver) -> dict[str, Any]:
+    def dsp(self: TpmDriver) -> dict[str, Any]:
         """
         Return the tile beamformer and station beamformer status in the TPM.
 
@@ -933,7 +933,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._tile_health_structure["temperature"]["board"]
 
     @property
-    def voltage(self: TpmDriver) -> float:
+    def voltage_mon(self: TpmDriver) -> float:
         """
         Return the internal 5V supply of the TPM.
 
@@ -1588,31 +1588,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: True if PPS is present. Checked in poll loop, cached
         """
         return self._tile_health_structure["timing"]["pps"]["status"]
-
-    # def _check_pps_present(self: TpmDriver) -> bool:
-    #     """
-    #     Check in hardware if PPS is present.
-
-    #     Requires to be run inside a thread protected code block
-    #     TODO To be moved in pyaavs.Tile
-    #     :return: True if PPS is present and internal PPS locked to it
-    #     """
-    #     if not self._is_programmed:
-    #         return False
-    #     # check PPS detection
-    #     pps_lock = True
-    #     if self.tile.tpm["fpga1.pps_manager.pps_detected"] == 0x1:
-    #         self.logger.debug("FPGA1 is locked to external PPS")
-    #     else:
-    #         self.logger.debug("FPGA1 is not locked to external PPS")
-    #         pps_lock = False
-    #     if self.tile.tpm["fpga2.pps_manager.pps_detected"] == 0x1:
-    #         self.logger.debug("FPGA2 is locked to external PPS")
-    #     else:
-    #         self.logger.debug("FPGA2 is not locked to external PPS")
-    #         pps_lock = False
-    #     self._pps_present = pps_lock
-    #     return pps_lock
 
     @property
     def clock_present(self: TpmDriver) -> bool:

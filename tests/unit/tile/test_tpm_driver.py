@@ -240,7 +240,9 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = 2.2
+        static_tile_simulator.tpm._tile_health_structure["voltage"][
+            "MON_5V0"
+        ] = pytest.approx(2.2)
         static_tile_simulator.get_voltage = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
@@ -273,7 +275,7 @@ class TestTpmDriver:
         static_tile_simulator.tpm._fpga_current_frame = 2
 
         board_temperature = tpm_driver.board_temperature
-        voltage = tpm_driver.voltage
+        voltage = tpm_driver.voltage_mon
         fpga1_temperature = tpm_driver.fpga1_temperature
         fpga2_temperature = tpm_driver.fpga2_temperature
         adc_rms = tpm_driver.adc_rms

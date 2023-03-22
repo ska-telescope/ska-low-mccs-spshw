@@ -63,7 +63,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         return self._tile_health_structure["temperature"]["board"]
 
     @property
-    def voltage(self: StaticTpmSimulator) -> float:
+    def voltage_mon(self: StaticTpmSimulator) -> float:
         """
         Return the internal 5V supply of the TPM.
 
@@ -272,9 +272,9 @@ class StaticTileSimulator(StaticTpmSimulator):
         return self.tpm.board_temperature
 
     def get_voltage(self: StaticTileSimulator) -> float:
-        """:return: the mocked voltage."""
+        """:return: the mocked voltage_mon."""
         assert self.tpm  # for the type checker
-        return self.tpm.voltage
+        return self.tpm.voltage_mon
 
     def get_tile_id(self: StaticTileSimulator) -> int:
         """:return: the mocked tile_id."""

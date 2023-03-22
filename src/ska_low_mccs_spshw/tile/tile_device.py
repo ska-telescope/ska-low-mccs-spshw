@@ -351,75 +351,75 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="getvoltages",
+        label="voltages",
     )
-    def getvoltages(self: MccsTile) -> str:
+    def voltages(self: MccsTile) -> str:
         """
         Return all the voltage values available.
 
         :return: voltages available
         """
-        return json.dumps(self.component_manager.get_voltages)
+        return json.dumps(self.component_manager.voltages)
 
     @attribute(
         dtype="DevString",
-        label="gettemperatures",
+        label="temperatures",
     )
-    def gettemperatures(self: MccsTile) -> str:
+    def temperatures(self: MccsTile) -> str:
         """
         Return all the temperatures values available.
 
         :return: temperatures available
         """
-        return json.dumps(self.component_manager.get_temperatures)
+        return json.dumps(self.component_manager.temperatures)
 
     @attribute(
         dtype="DevString",
-        label="getcurrents",
+        label="currents",
     )
-    def getcurrents(self: MccsTile) -> str:
+    def currents(self: MccsTile) -> str:
         """
         Return all the currents values available.
 
         :return: currents available
         """
-        return json.dumps(self.component_manager.get_currents)
+        return json.dumps(self.component_manager.currents)
 
     @attribute(
         dtype="DevString",
-        label="gettiming",
+        label="timing",
     )
-    def gettiming(self: MccsTile) -> str:
+    def timing(self: MccsTile) -> str:
         """
         Return a dictionary of the timing signals status.
 
         :return: timing signals status
         """
-        return json.dumps(self.component_manager.get_timing)
+        return json.dumps(self.component_manager.timing)
 
     @attribute(
         dtype="DevString",
-        label="getio",
+        label="io",
     )
-    def getio(self: MccsTile) -> str:
+    def io(self: MccsTile) -> str:
         """
         Return a dictionary of I/O interfaces status available.
 
         :return: I/O interfaces status
         """
-        return json.dumps(self.component_manager.get_io)
+        return json.dumps(self.component_manager.io)
 
     @attribute(
         dtype="DevString",
-        label="getdsp",
+        label="dsp",
     )
-    def getdsp(self: MccsTile) -> str:
+    def dsp(self: MccsTile) -> str:
         """
         Return the tile beamformer and station beamformer status.
 
         :return: the tile beamformer and station beamformer status
         """
-        return json.dumps(self.component_manager.get_dsp)
+        return json.dumps(self.component_manager.dsp)
 
     @attribute(
         dtype="DevString",
@@ -612,13 +612,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=4.55,
         max_alarm=5.45,
     )
-    def voltage(self: MccsTile) -> float:
+    def voltageMon(self: MccsTile) -> float:
         """
         Return the internal 5V supply of the TPM.
 
         :return: Internal supply of the TPM
         """
-        return self.component_manager.voltage
+        return self.component_manager.voltage_mon
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:

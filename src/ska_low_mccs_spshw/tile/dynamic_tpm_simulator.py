@@ -237,11 +237,11 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         self._tile_health_structure["temperature"]["board"] = board_temperature
 
     @property
-    def voltage(self: DynamicTpmSimulator) -> float:
+    def voltage_mon(self: DynamicTpmSimulator) -> float:
         """
-        Return the voltage of the TPM.
+        Return the internal 5V supply of the TPM.
 
-        :return: the voltage of the TPM
+        :return: the internal voltage of the TPM
         """
         assert (
             self._tile_health_structure["voltage"]["MON_5V0"] is not None
@@ -250,7 +250,7 @@ class DynamicTpmSimulator(BaseTpmSimulator):
 
     def _voltage_changed(self: DynamicTpmSimulator, voltage: float) -> None:
         """
-        Call this method when the voltage changes.
+        Call this method when the internal 5V supply of the TPM changes.
 
         :param voltage: the new voltage
         """

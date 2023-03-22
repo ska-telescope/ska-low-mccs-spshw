@@ -1,12 +1,11 @@
+{{- $defaults := dict "enabled" true "port" 8081 "logging_level_default" 3}}
 {{- $subracks := .Values.deviceServers.subracks}}
 name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-spshw-subrack
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_subrack := $subracks.instances}}
-# https://github.com/helm/helm/issues/3308#issuecomment-585349501
-{{- $raw_enabled := pluck "enabled" $this_subrack $subracks | first}}
-{{- if or $raw_enabled (eq ($raw_enabled | toString) "<nil>")}}
+{{- if (pluck "enabled" $this_subrack $subracks $defaults | first)}}
   - {{printf "subrack-%04d" (int $key)}}
 {{- end}}
 {{- end}}
@@ -26,10 +25,10 @@ server:
             - {{$this_subrack.host | quote}}
           - name: "SubrackPort"
             values: 
-            - {{$this_subrack.port | default 8081 | toString | quote}}
+            - {{pluck "port" $this_subrack $subracks $defaults | first | toString | quote}}
           - name: "LoggingLevelDefault"
             values: 
-            - {{pluck "logging_level_default" $this_subrack $subracks | first | default 3 | toString | quote}}
+            - {{pluck "logging_level_default" $this_subrack $subracks $defaults | first | toString | quote}}
 
 {{- end}}
 depends_on:

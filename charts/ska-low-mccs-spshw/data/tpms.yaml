@@ -1,12 +1,11 @@
+{{- $defaults := dict "enabled" true "logging_level_default" 3 "port" 10000 "version" "tpm_v1_6" "simulation_config" 0 "test_config" 0}}
 {{- $tiles := .Values.deviceServers.tpms}}
 name: "tile-{{.Release.Name}}"
 function: ska-low-mccs-spshw-tile
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_tile := $tiles.instances}}
-# https://github.com/helm/helm/issues/3308#issuecomment-585349501
-{{- $raw_enabled := pluck "enabled" $this_tile $tiles | first}}
-{{- if or $raw_enabled (eq ($raw_enabled | toString) "<nil>")}}
+{{- if (pluck "enabled" $this_tile $tiles $defaults | first)}}
   - {{printf "tile-%04d" (int $key)}}
 {{- end}}
 {{- end}}
@@ -35,22 +34,22 @@ server:
             - "16"
           - name: "LoggingLevelDefault"
             values:
-            - {{pluck "logging_level_default" $this_tile $tiles | first | default 3 | toString | quote}}
+            - {{pluck "logging_level_default" $this_tile $tiles $defaults | first | toString | quote}}
           - name: "TpmIp"
             values:
             - {{$this_tile.host | quote}}
           - name: "TpmCpldPort"
             values:
-            - {{pluck "port" $this_tile $tiles | first | default 10000 | toString | quote}}
+            - {{pluck "port" $this_tile $tiles $defaults | first | toString | quote}}
           - name: "TpmVersion"
             values:
-            - {{pluck "version" $this_tile $tiles | first | quote | default "tpm_v1_6"}}
+            - {{pluck "version" $this_tile $tiles $defaults | first | quote}}
           - name: "SimulationConfig"
             values:
-            - {{pluck "simulation_config" $this_tile $tiles | first | default 0 | toString | quote}}
+            - {{pluck "simulation_config" $this_tile $tiles $defaults | first | toString | quote}}
           - name: "TestConfig"
             values:
-            - {{pluck "test_config" $this_tile $tiles | first | default 0 | toString | quote}}
+            - {{pluck "test_config" $this_tile $tiles $defaults | first | toString | quote}}
 {{- end}}
 depends_on:
   - device: sys/database/2

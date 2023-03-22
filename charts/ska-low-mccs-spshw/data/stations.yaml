@@ -1,12 +1,11 @@
+{{- $defaults := dict "enabled" true "logging_level_default" 3}}
 {{- $stations := .Values.deviceServers.stations}}
 name: "station-{{.Release.Name}}"
 function: ska-low-mccs-spshw-station
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_station := $stations.instances}}
-# https://github.com/helm/helm/issues/3308#issuecomment-585349501
-{{- $raw_enabled := pluck "enabled" $this_station $stations | first}}
-{{- if or $raw_enabled (eq ($raw_enabled | toString) "<nil>")}}
+{{- if (pluck "enabled" $this_station $stations $defaults | first)}}
   - {{printf "station-%03d" (int $key)}}
 {{- end}}
 {{- end}}
@@ -33,7 +32,7 @@ server:
 {{- end}}
                 - name: "LoggingLevelDefault"
                   values:
-                    - {{pluck "logging_level_default" $this_station $stations | first | default 3 | toString | quote}}
+                    - {{pluck "logging_level_default" $this_station $stations $defaults | first | toString | quote}}
                 - name: "StationId"
                   values:
                     - {{$key | quote}}

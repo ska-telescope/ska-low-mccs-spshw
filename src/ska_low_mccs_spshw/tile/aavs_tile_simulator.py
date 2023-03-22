@@ -126,7 +126,7 @@ class MockTpm:
         self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-        self.preadu = [PreAdu()] * 32
+        self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -275,14 +275,22 @@ class PreAdu:
         """Initialise mock plugin."""
         self.channel_filters: list[int] = [0] * 16
 
-    def set_attenuation(self: PreAdu, attenuation: int, channel: int) -> None:
+    def set_attenuation(self: PreAdu, attenuation: int, channel: list[int]) -> None:
         """
         Set preadu channel attenuation.
 
         :param attenuation: the attenuation.
         :param channel: the channel.
         """
-        self.channel_filters[channel] = (attenuation & 0x1F) << 3
+        self.channel_filters[channel[0]] = (attenuation & 0x1F) << 3
+
+    def write_configuration(self: PreAdu) -> None:
+        """
+        Write configuration to preadu.
+
+        :return: None
+        """
+        return None
 
     def select_low_passband(self: PreAdu) -> None:
         """Select low pass band."""
@@ -517,13 +525,16 @@ class AavsTileSimulator:
         """:return: the pps delay."""
         return self._pps_delay
 
-    def is_programmed(self: AavsTileSimulator) -> Union[MockTpm, bool]:
+    def is_programmed(self: AavsTileSimulator) -> Optional[bool]:
         """
         Return whether the mock has been implemented.
 
         :return: the mocked programmed state
         """
-        return self.tpm._is_programmed  # type: ignore
+        if self.tpm:
+            return self.tpm._is_programmed
+        else:
+            return None
 
     def configure_40g_core(
         self: AavsTileSimulator,
@@ -742,15 +753,6 @@ class AavsTileSimulator:
         :raises NotImplementedError: if not overwritten
         """
         raise NotImplementedError
-
-    @property
-    def tpm_preadu(self: AavsTileSimulator) -> List[PreAdu]:
-        """
-        Tpm pre adu.
-
-        :return: the preadu
-        """
-        return self.tpm.preadu  # type: ignore
 
     def set_pointing_delay(
         self: AavsTileSimulator, delay_array: list[float], beam_index: int

@@ -287,6 +287,26 @@ class TestTpmDriver:
         _ = tpm_driver.clock_present
         _ = tpm_driver.pll_locked
 
+    def test_set_pre_adu_levels(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        aavs_tile_simulator: AavsTileSimulator,
+    ) -> None:
+        """
+        Test values can be written to preADU.
+
+        :param tpm_driver: The tpm driver under test.
+        :param aavs_tile_simulator: The mocked tile
+        """
+        aavs_tile_simulator.connect()
+
+        tpm_driver._update_attributes()
+        assert tpm_driver.preadu_levels == [0] * 32
+
+        expected_value = list(range(32))
+        tpm_driver.preadu_levels = expected_value
+        assert tpm_driver._preadu_levels == expected_value
+
     def test_dumb_write_tile_attributes(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -308,8 +328,8 @@ class TestTpmDriver:
         _ = tpm_driver.static_delays
         tpm_driver.csp_rounding = [2] * 384
         _ = tpm_driver.csp_rounding
-        tpm_driver.preadu_levels = list(range(32))
-        _ = tpm_driver.preadu_levels
+        # tpm_driver.preadu_levels = list(range(32))
+        # _ = tpm_driver.preadu_levels
 
     def test_set_beamformer_regions(
         self: TestTpmDriver,

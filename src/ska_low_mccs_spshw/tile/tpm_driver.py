@@ -1135,8 +1135,16 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
-            core["src_ip"] = int2ip(core["src_ip"])
-            core["dst_ip"] = int2ip(core["dst_ip"])
+            try:
+                core["src_ip"] = int2ip(core["src_ip"])
+                core["dst_ip"] = int2ip(core["dst_ip"])
+
+            except Exception:  # pylint: disable=broad-except
+                self.logger.info(
+                    f"No 40gcore configuration found for {core_id}: {arp_table_entry}"
+                )
+                return []
+
         return self._forty_gb_core_list
 
     def _get_40g_core_configuration(

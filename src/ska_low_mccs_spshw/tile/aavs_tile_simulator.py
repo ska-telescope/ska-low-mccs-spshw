@@ -589,9 +589,7 @@ class AavsTileSimulator:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
-                # This is just so we do not recount
-                # TODO: improve this
-                if arp_table_entry == 1:
+                if item.get("arp_table_entry") == arp_table_entry:
                     return item
         return None
 

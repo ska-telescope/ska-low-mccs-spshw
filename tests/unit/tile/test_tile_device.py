@@ -823,7 +823,6 @@ class TestMccsTileCommands:
         values = tile_device.ReadRegister("test-reg1")
         assert list(values) == [0] * num_values
 
-    @pytest.mark.xfail
     def test_WriteRegister(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -935,7 +934,6 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert "WriteAddress" in message.split("_")[-1]
 
-    @pytest.mark.xfail
     def test_Configure40GCore(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,

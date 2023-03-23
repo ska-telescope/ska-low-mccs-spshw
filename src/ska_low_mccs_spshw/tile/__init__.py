@@ -25,6 +25,8 @@ __all__ = [
     "StaticTpmSimulator",
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
+    "AavsTileSimulator",
+    "AavsDynamicTileSimulator",
     "StaticTileSimulator",
     "TpmDriver",
     "TpmStatus",
@@ -32,6 +34,8 @@ __all__ = [
     # "plugins",
 ]
 
+from .aavs_tile_simulator import AavsTileSimulator
+from .aavs_tile_simulator import AavsDynamicTileSimulator
 from .tile_component_manager import (
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulatorComponentManager,

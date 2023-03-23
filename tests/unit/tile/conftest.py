@@ -28,6 +28,7 @@ from ska_low_mccs_spshw.tile import (
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
+    AavsTileSimulator, 
 )
 
 
@@ -340,6 +341,18 @@ def tile_component_manager_fixture(
         callbacks["communication_status"],
         callbacks["component_state"],
     )
+
+@pytest.fixture(name="aavs_tile_simulator")
+def aavs_tile_simulator_fixture(logger: logging.Logger) -> AavsTileSimulator:
+    """
+    Return a AavsTileSimulator.
+
+    (This is a pytest fixture.)
+
+    :param logger: logger
+    :return: a AavsTileSimulator
+    """
+    return AavsTileSimulator(logger)
 
 
 # pylint: disable=too-many-arguments

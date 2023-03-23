@@ -594,7 +594,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
-                    self.initialise()
+                    self.initialise(program_fpga=False)
                 self._tile_time.set_reference_time(self.tile_reference_time)
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()
@@ -1005,7 +1005,9 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
     #
     @check_communicating
     def initialise(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        program_fpga: bool = True,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the initialise slow task.
@@ -1013,10 +1015,17 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param program_fpga: Force FPGA reprogramming, for complete initialisation
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        if program_fpga:
+            try:
+                self._tpm_driver.erase_fpga()
+            except ConnectionError as comm_err:
+                return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
+
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
         except ConnectionError as comm_err:

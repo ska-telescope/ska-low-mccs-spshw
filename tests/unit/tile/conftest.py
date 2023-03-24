@@ -22,12 +22,12 @@ from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
+    AavsTileSimulator,
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
-    AavsTileSimulator, 
 )
 
 
@@ -213,6 +213,7 @@ def static_tpm_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
     """
     return StaticTpmSimulator(logger)
 
+
 @pytest.fixture(name="dynamic_tpm_simulator")
 def dynamic_tpm_simulator_fixture(logger: logging.Logger) -> DynamicTpmSimulator:
     """
@@ -324,6 +325,7 @@ def tile_component_manager_fixture(
         callbacks["communication_status"],
         callbacks["component_state"],
     )
+
 
 @pytest.fixture(name="aavs_tile_simulator")
 def aavs_tile_simulator_fixture(logger: logging.Logger) -> AavsTileSimulator:

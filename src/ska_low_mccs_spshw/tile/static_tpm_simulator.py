@@ -214,5 +214,3 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
             self.write_register(key, value)
             return
         raise LibraryError(f"Unrecognised key type {key.__class__.__name__}")
-
-

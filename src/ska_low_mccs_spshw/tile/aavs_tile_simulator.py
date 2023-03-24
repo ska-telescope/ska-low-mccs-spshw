@@ -382,6 +382,7 @@ class AavsTileSimulator:
         self._pps_delay = self.PPS_DELAY
         self.delay_array = 0
         self.beam_index = 0
+        self.fpgas_time = self.FPGAS_TIME
         # return self._register_map.get(str(address), 0)
 
     def get_firmware_list(self: AavsTileSimulator) -> List[dict[str, Any]]:
@@ -484,7 +485,7 @@ class AavsTileSimulator:
 
         :return: the fpga_time.
         """
-        return self.FPGAS_TIME[device.value - 1]
+        return self.fpgas_time[device.value - 1]
 
     def set_station_id(self: AavsTileSimulator, station_id: int, tile_id: int) -> None:
         """

@@ -68,7 +68,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
         return self._tile_health_structure["voltage"]["MON_5V0"]
 
     @property
-    def get_currents(self: StaticTpmSimulator) -> dict[str, Any]:
+    def currents(self: StaticTpmSimulator) -> dict[str, Any]:
         """
         Return a dictionary of all current values available in the TPM.
 

@@ -283,14 +283,14 @@ class TestTpmDriver:
         get_pps_delay = tpm_driver.pps_delay
         get_fpgs_sync_time = tpm_driver.fpga_reference_time
 
-        assert board_temperature == StaticTileSimulator.BOARD_TEMPERATURE
-        assert voltage == StaticTileSimulator.VOLTAGE
-        assert fpga1_temperature == StaticTileSimulator.FPGA1_TEMPERATURE
-        assert fpga2_temperature == StaticTileSimulator.FPGA2_TEMPERATURE
+        assert board_temperature == pytest.approx(StaticTileSimulator.BOARD_TEMPERATURE)
+        assert voltage == pytest.approx(StaticTileSimulator.VOLTAGE)
+        assert fpga1_temperature == pytest.approx(StaticTileSimulator.FPGA1_TEMPERATURE)
+        assert fpga2_temperature == pytest.approx(StaticTileSimulator.FPGA2_TEMPERATURE)
         assert adc_rms == list(StaticTileSimulator.ADC_RMS)
         assert get_fpga_time == [2, 2]
         assert get_pps_delay == StaticTileSimulator.PPS_DELAY
-        assert get_fpgs_sync_time == 0.4
+        assert get_fpgs_sync_time == pytest.approx(0.4)
 
     def test_dumb_read_tile_attributes(
         self: TestTpmDriver,

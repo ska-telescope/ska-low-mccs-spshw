@@ -909,7 +909,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :return: io in the TPM
         """
-        self.logger.debug("TpmDriver: get_io")
+        self.logger.debug("TpmDriver: get io")
         return self._tile_health_structure["io"]
 
     @property
@@ -919,7 +919,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :return: dsp status in the TPM
         """
-        self.logger.debug("TpmDriver: get_dsp")
+        self.logger.debug("TpmDriver: get dsp")
         return self._tile_health_structure["dsp"]
 
     @property

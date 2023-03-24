@@ -22,7 +22,7 @@ from typing import Any, List, Optional, Union
 
 from pyfabil.base.definitions import Device, LibraryError
 
-from .dynamic_values_generator import _DynamicValuesGenerator, _DynamicValuesUpdater
+from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 
 __all__ = ["AavsDynamicTileSimulator", "AavsTileSimulator"]
 
@@ -1145,23 +1145,23 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         self._fpga1_temperature: Optional[float] = None
         self._fpga2_temperature: Optional[float] = None
 
-        self._updater = _DynamicValuesUpdater(1.0)
+        self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
-            _DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(0.05, 2.95), self._current_changed
+            DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._board_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._fpga2_temperature_changed,
         )
         self._updater.start()

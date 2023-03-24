@@ -22,6 +22,8 @@ __all__ = [
     "BaseTpmSimulator",
     "DemoTile",
     "DynamicTpmSimulator",
+    "DynamicValuesUpdater",
+    "DynamicValuesGenerator",
     "StaticTpmSimulator",
     "DynamicTpmSimulatorComponentManager",
     "StaticTpmSimulatorComponentManager",
@@ -49,5 +51,9 @@ from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .base_tpm_simulator import BaseTpmSimulator
 
-from .dynamic_tpm_simulator import DynamicTpmSimulator
+from .dynamic_tpm_simulator import (
+    DynamicTpmSimulator,
+    DynamicValuesUpdater,
+    DynamicValuesGenerator,
+)
 from .static_tpm_simulator import StaticTpmSimulator

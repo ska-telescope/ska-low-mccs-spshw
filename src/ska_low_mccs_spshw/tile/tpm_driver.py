@@ -94,6 +94,79 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         31: {"preadu_id": 0, "channel": 15},
     }
 
+    TILE_MONITORING_POINTS = {
+        "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
+        "voltage": {
+            "VREF_2V5": None,
+            "MGT_AVCC": None,
+            "VM_SW_AMP": None,
+            "MGT_AVTT": None,
+            "SW_AVDD1": None,
+            "SW_AVDD2": None,
+            "AVDD3": None,
+            "MAN_1V2": None,
+            "DDR0_VREF": None,
+            "DDR1_VREF": None,
+            "VM_DRVDD": None,
+            "VIN": None,
+            "MON_3V3": None,
+            "MON_1V8": None,
+            "MON_5V0": None,
+            "VM_FE0": None,
+            "VM_FE1": None,
+            "VM_DDR0_VTT": None,
+            "VM_AGP0": None,
+            "VM_AGP1": None,
+            "VM_AGP2": None,
+            "VM_AGP3": None,
+            "VM_AGP4": None,
+            "VM_AGP5": None,
+            "VM_AGP6": None,
+            "VM_AGP7": None,
+            "VM_CLK0B": None,
+            "VM_CLK1B": None,
+            "VM_MGT0_AUX": None,
+            "VM_MGT1_AUX": None,
+            "VM_ADA0": None,
+            "VM_ADA1": None,
+            "VM_PLL": None,
+            "VM_DDR1_VTT": None,
+            "VM_DDR1_VDD": None,
+            "VM_DVDD": None,
+        },
+        "current": {"FE0_mVA": None, "FE1_mVA": None},
+        "timing": {
+            "clocks": {
+                "FPGA0": {"JESD": None, "DDR": None, "UDP": None},
+                "FPGA1": {"JESD": None, "DDR": None, "UDP": None},
+            },
+            "clock_managers": {
+                "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
+                "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
+            },
+            "pps": {"status": None},
+        },
+        "io": {
+            "jesd_if": {
+                "lanes": None,
+                "error_count": None,
+                "resync_count": {"FPGA0": None, "FPGA1": None},
+                "qpll_lock_loss_count": {"FPGA0": None, "FPGA1": None},
+            },
+            "ddr_if": {
+                "initialisation": None,
+                "reset_counter": {"FPGA0": None, "FPGA1": None},
+            },
+            "f2f_if": {"pll_lock_loss_count": {"Core0": None}},
+            "udp_if": {
+                "arp": None,
+                "status": None,
+                "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
+            },
+        },
+        "dsp": {"tile_beamf": None, "station_beamf": None},
+    }
+
     # pylint: disable=too-many-arguments
     def __init__(
         self: TpmDriver,
@@ -136,10 +209,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._is_programmed = False
         self._is_beamformer_running = False
         self._pending_data_requests = False
-        self._voltage = 5.0
-        self._board_temperature = self.BOARD_TEMPERATURE
-        self._fpga1_temperature = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature = self.FPGA2_TEMPERATURE
+        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
+            self.TILE_MONITORING_POINTS
+        )
+        self._tile_health_structure["voltage"]["MON_5V0"] = 5.0
+        self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = 0
@@ -150,7 +226,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
         self._phase_terminal_count = 0
-        self._pps_present = True
+        self._tile_health_structure["timing"]["pps"]["status"] = True
         self._clock_present = True
         self._sysref_present = True
         self._pll_locked = True
@@ -206,6 +282,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
             # "start" event received; update state then poll until "stop" event received
             self._stop_polling_event.clear()
+
+            # Is it useful?
+            # self.tile.enable_health_monitoring()
+
             while not self._stop_polling_event.is_set():
                 self._poll()
                 self._stop_polling_event.wait(self._poll_rate)
@@ -294,15 +374,12 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._is_programmed = self.tile.is_programmed()
             if self._is_programmed:
                 self.logger.debug("Updating key hardware attributes...")
-                self._voltage = self.tile.get_voltage()
                 # slow update parameters
                 if (current_time - self._last_update_time_1) > time_interval_1:
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
-                    self._fpga1_temperature = self.tile.get_fpga0_temperature()
-                    self._fpga2_temperature = self.tile.get_fpga1_temperature()
-                    self._board_temperature = self.tile.get_temperature()
+                    self._tile_health_structure = self.tile.get_health_status()
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
@@ -314,7 +391,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     if (current_time - self._last_update_time_2) > time_interval_2:
                         self._last_update_time_2 = current_time
                         self._pps_delay = self.tile.get_pps_delay()
-                        self._pps_present = self._check_pps_present()
                         self._is_beamformer_running = self.tile.beamformer_is_running()
                         self._fpga_reference_time = self.tile[
                             "fpga1.pps_manager.sync_time_val"
@@ -352,7 +428,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._fpga_current_frame = 0
             self._current_tile_beamformer_frame = 0
             self._fpga_reference_time = 0
-            self._pps_present = True
+            self._tile_health_structure["timing"]["pps"]["status"] = True
             self._clock_present = True
             self._sysref_present = True
             self._pll_locked = True
@@ -787,6 +863,66 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
+    def voltages(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of all voltage values available in the TPM.
+
+        :return: voltages in the TPM
+        """
+        self.logger.debug("TpmDriver: get all voltages available in the TPM")
+        return self._tile_health_structure["voltage"]
+
+    @property
+    def temperatures(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of all temperature values available in the TPM.
+
+        :return: temperatures in the TPM
+        """
+        self.logger.debug("TpmDriver: get all temperatures available in the TPM")
+        return self._tile_health_structure["temperature"]
+
+    @property
+    def currents(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of all current values available in the TPM.
+
+        :return: currents in the TPM
+        """
+        self.logger.debug("TpmDriver: get all currents available in the TPM")
+        return self._tile_health_structure["current"]
+
+    @property
+    def timing(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of the Timing Signals status available in the TPM.
+
+        :return: timings in the TPM
+        """
+        self.logger.debug("TpmDriver: timing")
+        return self._tile_health_structure["timing"]
+
+    @property
+    def io(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of I/O Interfaces status available in the TPM.
+
+        :return: io in the TPM
+        """
+        self.logger.debug("TpmDriver: get io")
+        return self._tile_health_structure["io"]
+
+    @property
+    def dsp(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return the tile beamformer and station beamformer status in the TPM.
+
+        :return: dsp status in the TPM
+        """
+        self.logger.debug("TpmDriver: get dsp")
+        return self._tile_health_structure["dsp"]
+
+    @property
     def board_temperature(self: TpmDriver) -> float:
         """
         Return the temperature of the TPM.
@@ -794,17 +930,17 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of the TPM
         """
         self.logger.debug("TpmDriver: board_temperature")
-        return self._board_temperature
+        return self._tile_health_structure["temperature"]["board"]
 
     @property
-    def voltage(self: TpmDriver) -> float:
+    def voltage_mon(self: TpmDriver) -> float:
         """
-        Return the voltage of the TPM.
+        Return the internal 5V supply of the TPM.
 
-        :return: the voltage of the TPM
+        :return: the internal 5V supply of the TPM
         """
-        self.logger.debug("TpmDriver: voltage")
-        return self._voltage
+        self.logger.debug("TpmDriver: internal 5V supply of the TPM")
+        return self._tile_health_structure["voltage"]["MON_5V0"]
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
@@ -814,7 +950,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 1
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        return self._fpga1_temperature
+        return self._tile_health_structure["temperature"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: TpmDriver) -> float:
@@ -824,7 +960,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 2
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        return self._fpga2_temperature
+        return self._tile_health_structure["temperature"]["FPGA1"]
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:
@@ -1451,32 +1587,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :return: True if PPS is present. Checked in poll loop, cached
         """
-        return self._pps_present
-
-    def _check_pps_present(self: TpmDriver) -> bool:
-        """
-        Check in hardware if PPS is present.
-
-        Requires to be run inside a thread protected code block
-        TODO To be moved in pyaavs.Tile
-        :return: True if PPS is present and internal PPS locked to it
-        """
-        if not self._is_programmed:
-            return False
-        # check PPS detection
-        pps_lock = True
-        if self.tile.tpm["fpga1.pps_manager.pps_detected"] == 0x1:
-            self.logger.debug("FPGA1 is locked to external PPS")
-        else:
-            self.logger.debug("FPGA1 is not locked to external PPS")
-            pps_lock = False
-        if self.tile.tpm["fpga2.pps_manager.pps_detected"] == 0x1:
-            self.logger.debug("FPGA2 is locked to external PPS")
-        else:
-            self.logger.debug("FPGA2 is not locked to external PPS")
-            pps_lock = False
-        self._pps_present = pps_lock
-        return pps_lock
+        return self._tile_health_structure["timing"]["pps"]["status"]
 
     @property
     def clock_present(self: TpmDriver) -> bool:

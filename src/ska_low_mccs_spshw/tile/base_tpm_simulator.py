@@ -50,6 +50,79 @@ class BaseTpmSimulator(ObjectComponent):
         "itpm_v1_5.bit": {"design": "model2", "major": 3, "minor": 7},
         "itpm_v1_2.bit": {"design": "model3", "major": 2, "minor": 6},
     }
+
+    TILE_MONITORING_POINTS = {
+        "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
+        "voltage": {
+            "VREF_2V5": None,
+            "MGT_AVCC": None,
+            "VM_SW_AMP": None,
+            "MGT_AVTT": None,
+            "SW_AVDD1": None,
+            "SW_AVDD2": None,
+            "AVDD3": None,
+            "MAN_1V2": None,
+            "DDR0_VREF": None,
+            "DDR1_VREF": None,
+            "VM_DRVDD": None,
+            "VIN": None,
+            "MON_3V3": None,
+            "MON_1V8": None,
+            "MON_5V0": None,
+            "VM_FE0": None,
+            "VM_FE1": None,
+            "VM_DDR0_VTT": None,
+            "VM_AGP0": None,
+            "VM_AGP1": None,
+            "VM_AGP2": None,
+            "VM_AGP3": None,
+            "VM_AGP4": None,
+            "VM_AGP5": None,
+            "VM_AGP6": None,
+            "VM_AGP7": None,
+            "VM_CLK0B": None,
+            "VM_CLK1B": None,
+            "VM_MGT0_AUX": None,
+            "VM_MGT1_AUX": None,
+            "VM_ADA0": None,
+            "VM_ADA1": None,
+            "VM_PLL": None,
+            "VM_DDR1_VTT": None,
+            "VM_DDR1_VDD": None,
+        },
+        "current": {"FE0_mVA": None, "FE1_mVA": None},
+        "timing": {
+            "clocks": {
+                "FPGA0": {"JESD": None, "DDR": None, "UDP": None},
+                "FPGA1": {"JESD": None, "DDR": None, "UDP": None},
+            },
+            "clock_managers": {
+                "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
+                "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
+            },
+            "pps": {"status": None},
+        },
+        "io": {
+            "jesd_if": {
+                "lanes": None,
+                "error_count": None,
+                "resync_count": {"FPGA0": None, "FPGA1": None},
+                "qpll_lock_loss_count": {"FPGA0": None, "FPGA1": None},
+            },
+            "ddr_if": {
+                "initialisation": None,
+                "reset_counter": {"FPGA0": None, "FPGA1": None},
+            },
+            "f2f_if": {"pll_lock_loss_count": {"Core0": None}},
+            "udp_if": {
+                "arp": None,
+                "status": None,
+                "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
+            },
+        },
+        "dsp": {"tile_beamf": None, "station_beamf": None},
+    }
+
     REGISTER_MAP: dict[str, list[int]] = {
         "test-reg1": [0] * 4,
         "test-reg2": [0],
@@ -112,6 +185,9 @@ class BaseTpmSimulator(ObjectComponent):
         self._station_id = 0
         self._tile_id = 0
 
+        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
+            self.TILE_MONITORING_POINTS
+        )
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
@@ -331,15 +407,15 @@ class BaseTpmSimulator(ObjectComponent):
         )
 
     @property
-    def voltage(self: BaseTpmSimulator) -> float:
+    def voltage_mon(self: BaseTpmSimulator) -> float:
         """
-        Return the voltage of the TPM.
+        Return the internal 5V supply of the TPM.
 
         :raises NotImplementedError: if this method has not been
             implemented by a subclass
         """
         raise NotImplementedError(
-            "BaseTpmSimulator is abstract; property 'voltage' must be "
+            "BaseTpmSimulator is abstract; property 'voltage_mon' must be "
             "implemented in a subclass."
         )
 

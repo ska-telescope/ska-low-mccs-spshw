@@ -1339,13 +1339,20 @@ class SpsStationComponentManager(
         Specify the delay in seconds and the delay rate in seconds/second.
 
         The delay_array specifies the delay and delay rate for each antenna. beam_index
-        specifies which beam is desired (range 0-7)
+        specifies which beam is desired (range 0-47, limited to 7 in the current
+        firmware)
 
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """
+        beam_index = delay_list[0]
+        delays_for_tile = [beam_index] + [0.0] * 32
+        first_delay = 1
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            tile._proxy.LoadPointingDelay(delay_list)
+            last_delay = first_delay + 32
+            delays_for_tile[1:33] = delay_list[first_delay:last_delay]
+            tile._proxy.LoadPointingDelays(delays_for_tile)
+            first_delay = last_delay
 
     def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
         """
@@ -1355,7 +1362,7 @@ class SpsStationComponentManager(
         """
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyPointingDelay(load_time)
+            tile._proxy.ApplyPointingDelays(load_time)
 
     def start_beamformer(
         self: SpsStationComponentManager,
@@ -1466,6 +1473,16 @@ class SpsStationComponentManager(
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             tile._proxy.StopDataTransmission()
+
+    def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
+        """
+        Distribute to tiles command configure_test_generator.
+
+        :param argin: Json encoded parameter List
+        """
+        for tile in self._tile_proxies.values():
+            assert tile._proxy is not None  # for the type checker
+            tile._proxy.ConfigureTestGenerator(argin)
 
     def start_acquisition(
         self: SpsStationComponentManager,

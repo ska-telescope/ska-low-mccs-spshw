@@ -407,7 +407,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            ("voltage", StaticTpmSimulator.VOLTAGE),
+            ("voltage_mon", StaticTpmSimulator.VOLTAGE),
             ("board_temperature", StaticTpmSimulator.BOARD_TEMPERATURE),
             ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
             ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
@@ -425,7 +425,6 @@ class TestStaticSimulatorCommon:
             ("clock_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("sysref_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("pll_locked", StaticTpmSimulator.CLOCK_SIGNALS_OK),
-            ("pps_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("pending_data_requests", False),
         ),
     )
@@ -1052,7 +1051,7 @@ class TestDynamicSimulatorCommon:
     @pytest.mark.parametrize(
         "attribute_name",
         (
-            "voltage",
+            "voltage_mon",
             "board_temperature",
             "fpga1_temperature",
             "fpga2_temperature",

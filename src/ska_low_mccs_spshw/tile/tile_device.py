@@ -351,6 +351,78 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="voltages",
+    )
+    def voltages(self: MccsTile) -> str:
+        """
+        Return all the voltage values available.
+
+        :return: voltages available
+        """
+        return json.dumps(self.component_manager.voltages)
+
+    @attribute(
+        dtype="DevString",
+        label="temperatures",
+    )
+    def temperatures(self: MccsTile) -> str:
+        """
+        Return all the temperatures values available.
+
+        :return: temperatures available
+        """
+        return json.dumps(self.component_manager.temperatures)
+
+    @attribute(
+        dtype="DevString",
+        label="currents",
+    )
+    def currents(self: MccsTile) -> str:
+        """
+        Return all the currents values available.
+
+        :return: currents available
+        """
+        return json.dumps(self.component_manager.currents)
+
+    @attribute(
+        dtype="DevString",
+        label="timing",
+    )
+    def timing(self: MccsTile) -> str:
+        """
+        Return a dictionary of the timing signals status.
+
+        :return: timing signals status
+        """
+        return json.dumps(self.component_manager.timing)
+
+    @attribute(
+        dtype="DevString",
+        label="io",
+    )
+    def io(self: MccsTile) -> str:
+        """
+        Return a dictionary of I/O interfaces status available.
+
+        :return: I/O interfaces status
+        """
+        return json.dumps(self.component_manager.io)
+
+    @attribute(
+        dtype="DevString",
+        label="dsp",
+    )
+    def dsp(self: MccsTile) -> str:
+        """
+        Return the tile beamformer and station beamformer status.
+
+        :return: the tile beamformer and station beamformer status
+        """
+        return json.dumps(self.component_manager.dsp)
+
+    @attribute(
+        dtype="DevString",
         label="cspDestinationIp",
     )
     def cspDestinationIp(self: MccsTile) -> str:
@@ -540,13 +612,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=4.55,
         max_alarm=5.45,
     )
-    def voltage(self: MccsTile) -> float:
+    def voltageMon(self: MccsTile) -> float:
         """
-        Return the voltage.
+        Return the internal 5V supply of the TPM.
 
-        :return: voltage
+        :return: Internal supply of the TPM
         """
-        return self.component_manager.voltage
+        return self.component_manager.voltage_mon
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:

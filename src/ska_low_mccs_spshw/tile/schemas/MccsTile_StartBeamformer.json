@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_StartBeamformer.json",
+    "title": "MccsTile StartBeamformer schema",
+    "description": "Schema for MccsTile's StartBeamformer command",
+    "type": "object",
+    "properties": {
+        "start_time": {
+            "description": "",
+            "oneOf": [
+                {"type": "string", "format": "time"},
+                {"type": "null"}
+            ]
+        },
+        "duration": {
+            "description": "Duration in CSP frames (or -1 to run forever)",
+            "oneOf": [
+                {"type": "integer", "minimum": -1},
+                {"type": "null"}
+            ]
+        },
+        "subarray_beam_id": {
+            "description": "Subarray beam ID of the changes to be started.",
+            "type": "integer",
+            "minimum": -1
+        },
+        "scan_id": {
+            "description": "The unique ID for the started scan",
+            "type": "integer",
+            "minimum": 0
+        }
+    }
+}

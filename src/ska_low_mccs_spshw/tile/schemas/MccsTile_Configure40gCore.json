@@ -1,0 +1,41 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_Configure40gCore.json",
+    "title": "MccsTile Configure40gCore schema",
+    "description": "Schema for MccsTile's Configure40gCore command",
+    "type": "object",
+    "properties": {
+        "core_id": {
+            "description": "Core ID",
+            "type": "integer"
+        },
+        "arp_table_entry": {
+            "description": "ARP table entry",
+            "type": "integer"
+        },
+        "src_mac": {
+            "description": "Source MAC address",
+            "type": "integer"
+        },
+        "src_ip": {
+            "description": "Source IP address",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "src_port": {
+            "description": "Source port",
+            "type": "integer",
+            "minimum": 1
+        },
+        "dst_ip": {
+            "description": "Destinate IP address",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "dst_port": {
+            "description": "Destination port",
+            "type": "integer",
+            "minimum": 1
+        }
+    }
+}

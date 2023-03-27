@@ -131,7 +131,6 @@ class SpsStation(SKAObsDevice):
                 ),
             )
 
-    # pylint: disable=too-few-public-methods
     class InitCommand(SKAObsDevice.InitCommand):
         """
         A class for :py:class:`~.SpsStation`'s Init command.

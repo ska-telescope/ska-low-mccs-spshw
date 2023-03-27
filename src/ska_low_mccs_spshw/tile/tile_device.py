@@ -6,13 +6,14 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """This module implements the MCCS Tile device."""
-from __future__ import annotations  # allow forward references in type hints
+from __future__ import annotations
 
+import importlib  # allow forward references in type hints
 import itertools
 import json
 import logging
 import os.path
-from typing import Any, Optional, cast
+from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import tango
@@ -25,8 +26,13 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.base import SKABaseDevice
-from ska_tango_base.commands import DeviceInitCommand, FastCommand, SubmittedSlowCommand
+from ska_tango_base.base import CommandTracker, SKABaseDevice
+from ska_tango_base.commands import (
+    DeviceInitCommand,
+    FastCommand,
+    JsonValidator,
+    SubmittedSlowCommand,
+)
 from tango.server import attribute, command, device_property
 
 from .tile_component_manager import TileComponentManager
@@ -174,7 +180,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         for (command_name, method_name) in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
-            ("StartAcquisition", "start_acquisition"),
             ("Configure", "configure"),
         ]:
             self.register_command_object(
@@ -188,8 +193,16 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     logger=self.logger,
                 ),
             )
+        self.register_command_object(
+            "StartAcquisition",
+            MccsTile.StartAcquisitionCommand(
+                self._command_tracker,
+                self.component_manager,
+                callback=None,
+                logger=self.logger,
+            ),
+        )
 
-    # pylint: disable=too-few-public-methods
     class InitCommand(DeviceInitCommand):
         """Class that implements device initialisation for the MCCS Tile device."""
 
@@ -1256,7 +1269,22 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(register_name)
 
     class WriteRegisterCommand(FastCommand):
-        """Class for handling the WriteRegister(argin) command."""
+        """
+        Class for handling the WriteRegister() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_WriteRegister.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_WriteRegister.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.WriteRegisterCommand,
@@ -1270,7 +1298,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("WriteRegister", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         def do(
             self: MccsTile.WriteRegisterCommand,
@@ -1280,32 +1309,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.WriteRegister` command functionality.
 
-            :param args: a JSON-encoded dictionary of arguments
-                including RegisterName, Values, Offset, Device
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
-            :raises ValueError: if the JSON input lacks
-                mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
             """
-            params = json.loads(args[0])
-            name = params.get("register_name", None)
-            if name is None:
-                self.logger.error("register_name is a mandatory parameter")
-                raise ValueError("register_name is a mandatory parameter")
-            values = params.get("values", None)
-            if values is None:
-                self.logger.error("Values is a mandatory parameter")
-                raise ValueError("values is a mandatory parameter")
-
-            self._component_manager.write_register(name, values)
+            self._component_manager.write_register(
+                kwargs["register_name"], kwargs["values"]
+            )
             return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -1471,7 +1486,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class Configure40GCoreCommand(FastCommand):
-        """Class for handling the Configure40GCore(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the Configure40GCore() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_Configure40gCore.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_Configure40gCore.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.Configure40GCoreCommand,
@@ -1485,7 +1516,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("Configure40GCore", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "Configure40GCore command completed OK"
 
@@ -1497,23 +1529,22 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.Configure40GCore` command functionality.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(args[0])
-
-            core_id = params.get("core_id", None)
-            arp_table_entry = params.get("arp_table_entry", None)
-            src_mac = params.get("source_mac", None)
-            src_ip = params.get("source_ip", None)
-            src_port = params.get("source_port", None)
-            dst_ip = params.get("destination_ip", None)
-            dst_port = params.get("destination_port", None)
+            core_id = kwargs.get("core_id", None)
+            arp_table_entry = kwargs.get("arp_table_entry", None)
+            src_mac = kwargs.get("source_mac", None)
+            src_ip = kwargs.get("source_ip", None)
+            src_port = kwargs.get("source_port", None)
+            dst_ip = kwargs.get("destination_ip", None)
+            dst_port = kwargs.get("destination_port", None)
 
             self._component_manager.configure_40g_core(
                 core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
@@ -1553,7 +1584,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class Get40GCoreConfigurationCommand(FastCommand):
-        """Class for handling the Get40GCoreConfiguration(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the Get40GCoreConfiguration() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_Get40gCoreConfiguration.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_Get40gCoreConfiguration.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.Get40GCoreConfigurationCommand,
@@ -1567,7 +1614,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("Get40GCoreConfiguration", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         def do(
             self: MccsTile.Get40GCoreConfigurationCommand,
@@ -1577,17 +1625,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.Get40GCoreConfiguration` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: json string with configuration
 
             :raises ValueError: if the argin is an invalid code id
             """
-            params = json.loads(args[0])
-            core_id = params.get("core_id", None)
-            arp_table_entry = params.get("arp_table_entry", 0)
+            core_id = kwargs.get("core_id", None)
+            arp_table_entry = kwargs.get("arp_table_entry", 0)
 
             item_list = self._component_manager.get_40g_configuration(
                 core_id, arp_table_entry
@@ -1640,7 +1688,22 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(argin)
 
     class SetLmcDownloadCommand(FastCommand):
-        """Class for handling the SetLmcDownload(argin) command."""
+        """
+        Class for handling the SetLmcDownload() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SetLmcDownload.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_SetLmcDownload.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.SetLmcDownloadCommand,
@@ -1654,7 +1717,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("SetLmcDownload", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "SetLmcDownload command completed OK"
 
@@ -1664,35 +1728,25 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.SetLmcDownload` command functionality.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
             """
-            params = json.loads(args[0])
-            mode = params.get("mode", None)
-            if mode is None:
-                self.logger.error("mode is a mandatory parameter")
-                raise ValueError("mode is a mandatory parameter")
-            if mode in ["40g", "40G"]:
-                mode = "10g"
-            payload_length = params.get("payload_length", None)
+            mode = kwargs["mode"]
+            payload_length = kwargs.get("payload_length", None)
             if payload_length is None:
-                if mode in ["10g", "10G"]:
+                if mode == "10g":
                     payload_length = 8192
                 else:
                     payload_length = 1024
-            dst_ip = params.get("destination_ip", None)
-            src_port = params.get("source_port", 0xF0D0)
-            dst_port = params.get("destination_port", 4660)
+            dst_ip = kwargs.get("destination_ip", None)
+            src_port = kwargs.get("source_port", 0xF0D0)
+            dst_port = kwargs.get("destination_port", 4660)
 
             self._component_manager.set_lmc_download(
                 mode, payload_length, dst_ip, src_port, dst_port
@@ -1728,7 +1782,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class SetLmcIntegratedDownloadCommand(FastCommand):
-        """Class for handling the SetLmcIntegratedDownload(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the SetLmcIntegratedDownload() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SetLmcIntegratedDownload.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_SetLmcIntegratedDownload.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.SetLmcIntegratedDownloadCommand,
@@ -1742,7 +1812,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("SetLmcIntegratedDownload", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "SetLmcIntegratedDownload command completed OK"
 
@@ -1754,31 +1825,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.SetLmcIntegratedDownload` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
-
-            :raises ValueError: if the JSON input lacks mandatory parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                against a schema
             """
-            params = json.loads(args[0])
-            mode = params.get("mode", None)
-            if mode is None:
-                self.logger.error("mode is a mandatory parameter")
-                raise ValueError("mode is a mandatory parameter")
-            if mode in ["40g", "40G"]:
-                mode = "10g"
-            channel_payload_length = params.get("channel_payload_lenth", 1024)
-            beam_payload_length = params.get("beam_payload_length", 1024)
-            dst_ip = params.get("destination_ip", None)
-            src_port = params.get("source_port", 0xF0D0)
-            dst_port = params.get("destination_port", 4660)
+            mode = kwargs["mode"]
+            channel_payload_length = kwargs.get("channel_payload_lenth", 1024)
+            beam_payload_length = kwargs.get("beam_payload_length", 1024)
+            dst_ip = kwargs.get("destination_ip", None)
+            src_port = kwargs.get("source_port", 0xF0D0)
+            dst_port = kwargs.get("destination_port", 4660)
 
             self._component_manager.set_lmc_integrated_download(
                 mode,
@@ -1814,7 +1875,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"mode": "1G", "channel_payload_lenth":4,
+        >>> dict = {"mode": "1g", "channel_payload_lenth":4,
                     "beam_payload_length": 1024, "destination_ip"="10.0.1.23"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
@@ -1994,7 +2055,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class ConfigureStationBeamformerCommand(FastCommand):
-        """Class for handling the ConfigureStationBeamformer(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigureStationBeamformer() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureStationBeamformer.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigureStationBeamformer.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.ConfigureStationBeamformerCommand,
@@ -2008,7 +2085,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("ConfigureStationBeamformer", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "ConfigureStationBeamformer command completed OK"
 
@@ -2020,9 +2098,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.ConfigureStationBeamformer` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -2031,17 +2110,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :raises ValueError: if the argin argument does not have the
                 right length / structure
             """
-            params = json.loads(args[0])
-            start_channel = params.get("start_channel", 192)
-            if start_channel < 2 or start_channel > 504:
-                self.logger.error("Invalid sstart channel")
-                raise ValueError("Invalid sstart channel")
-            n_channels = params.get("n_channels", 8)
-            if start_channel < 2 or (start_channel + n_channels) > 511:
+            start_channel = kwargs.get("start_channel", 192)
+            n_channels = kwargs.get("n_channels", 8)
+            if start_channel + n_channels > 511:
                 self.logger.error("Invalid specified observed region")
                 raise ValueError("Invalid specified observed region")
-            is_first = params.get("is_first", False)
-            is_last = params.get("is_last", False)
+            is_first = kwargs.get("is_first", False)
+            is_last = kwargs.get("is_last", False)
             self._component_manager.initialise_beamformer(
                 start_channel, n_channels, is_first, is_last
             )
@@ -2401,7 +2476,22 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class StartBeamformerCommand(FastCommand):
-        """Class for handling the StartBeamformer(argin) command."""
+        """
+        Class for handling the StartBeamformer(argin) command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_StartBeamformer.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_StartBeamformer.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.StartBeamformerCommand,
@@ -2415,7 +2505,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("StartBeamformer", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
 
@@ -2425,20 +2516,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.StartBeamformer` command functionality.
 
-            :param args: a JSON-encoded dictionary of arguments
-                "StartTime" and "Duration"
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(args[0])
-            start_time = params.get("start_time", None)
-            duration = params.get("duration", -1)
-            subarray_beam_id = params.get("subarray_beam_id", -1)
-            scan_id = params.get("scan_id", 0)
+            start_time = kwargs.get("start_time", None)
+            duration = kwargs.get("duration", -1)
+            subarray_beam_id = kwargs.get("subarray_beam_id", -1)
+            scan_id = kwargs.get("scan_id", 0)
             self._component_manager.start_beamformer(
                 start_time, duration, subarray_beam_id, scan_id
             )
@@ -2530,7 +2620,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class ConfigureIntegratedChannelDataCommand(FastCommand):
-        """Class for handling the ConfigureIntegratedChannelData(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigureIntegratedChannelData(argin) command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureIntegratedChannelData.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigureIntegratedChannelData.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.ConfigureIntegratedChannelDataCommand,
@@ -2544,7 +2650,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator(
+                "ConfigureIntegratedChannelData", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedChannelData command completed OK"
 
@@ -2556,19 +2665,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedChannelData` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-                "integration time", "first_channel", "last_channel"
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(args[0])
-            integration_time = params.get("integration_time", 0.5)
-            first_channel = params.get("first_channel", 0)
-            last_channel = params.get("last_channel", 511)
+            integration_time = kwargs.get("integration_time", 0.5)
+            first_channel = kwargs.get("first_channel", 0)
+            last_channel = kwargs.get("last_channel", 511)
 
             self._component_manager.configure_integrated_channel_data(
                 integration_time, first_channel, last_channel
@@ -2607,7 +2715,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class ConfigureIntegratedBeamDataCommand(FastCommand):
-        """Class for handling the ConfigureIntegratedBeamData(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigureIntegratedBeamData() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureIntegratedBeamData.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigureIntegratedBeamData.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.ConfigureIntegratedBeamDataCommand,
@@ -2621,7 +2745,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator(
+                "ConfigureIntegratedBeamData", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "ConfigureIntegratedBeamData command completed OK"
 
@@ -2633,19 +2760,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.ConfigureIntegratedBeamData` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-                "integration time", "first_channel", "last_channel"
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             """
-            params = json.loads(args[0])
-            integration_time = params.get("integration_time", 0.5)
-            first_channel = params.get("first_channel", 0)
-            last_channel = params.get("last_channel", 191)
+            integration_time = kwargs.get("integration_time", 0.5)
+            first_channel = kwargs.get("first_channel", 0)
+            last_channel = kwargs.get("last_channel", 191)
 
             self._component_manager.configure_integrated_beam_data(
                 integration_time, first_channel, last_channel
@@ -2734,7 +2860,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class SendDataSamplesCommand(FastCommand):
-        """Class for handling the SendDataSamples(argin) command."""
+        """
+        Class for handling the SendDataSamples() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SendDataSamples.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas", "MccsTile_SendDataSamples.json"
+            )
+        )
 
         def __init__(
             self: MccsTile.SendDataSamplesCommand,
@@ -2748,79 +2888,47 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("SendDataSamples", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "SendDataSamples command completed OK"
 
-        # pylint: disable=too-many-branches
         def do(
             self: MccsTile.SendDataSamplesCommand, *args: Any, **kwargs: Any
         ) -> tuple[ResultCode, str]:
             """
             Implement :py:meth:`.MccsTile.SendDataSamples` command functionality.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
                 information purpose only.
             :raises ValueError: if mandatory parameters are missing
             """
-            params = json.loads(args[0])
-
-            # Check for mandatory parameters
-            data_type = params.get("data_type", None)
-            if data_type is None:
-                self.logger.error("data_type is a mandatory parameter")
-                raise ValueError("data_type is a mandatory parameter")
-            if data_type not in [
-                "raw",
-                "channel",
-                "channel_continuous",
-                "narrowband",
-                "beam",
-            ]:
-                self.logger.error("Invalid data_type specified")
-                raise ValueError("Invalid data_type specified")
+            data_type = kwargs["data_type"]
             if data_type == "channel":
-                first_ch = params.get("first_channel", 0)
-                last_ch = params.get("last_channel", 511)
-                if not 0 <= first_ch <= last_ch <= 511:
+                first_ch = kwargs.get("first_channel", 0)
+                last_ch = kwargs.get("last_channel", 511)
+                if last_ch < first_ch:
                     err = (
-                        f"first_channel ({first_ch}) and last_channel ({last_ch}) "
-                        f"must define a range within [0, 511]"
+                        f"last channel ({last_ch}) cannot be less than first "
+                        f"channel ({first_ch})."
                     )
                     self.logger.error(err)
                     raise ValueError(err)
 
-            if data_type == "channel_continuous":
-                channel_id = params.get("channel_id", None)
-                if channel_id is None:
-                    self.logger.error("channel_id is a mandatory parameter")
-                    raise ValueError("channel_id is a mandatory parameter")
-                if channel_id < 1 or channel_id > 511:
-                    self.logger.error("channel_id must be between 1 and 511")
-                    raise ValueError("channel_id must be between 1 and 511")
-            if data_type == "narrowband":
-                frequency = params.get("frequency", None)
-                if frequency is None:
-                    self.logger.error("frequency is a mandatory parameter")
-                    raise ValueError("frequency is a mandatory parameter")
-                if frequency < 1e6 or frequency > 399e6:
-                    self.logger.error("frequency must be between 1 and 390 MHz")
-                    raise ValueError("frequency must be between 1 and 390 MHz")
-
-            n_samples = None
-            if data_type == "channel":
-                n_samples = params.get("n_samples", 1024)
+            if data_type in ["channel", "narrowband"]:
+                kwargs.setdefault("n_samples", 1024)
             elif data_type == "channel_continuous":
-                n_samples = params.get("n_samples", 128)
-            elif data_type == "narrowband":
-                n_samples = params.get("n_samples", 1024)
-            params["n_samples"] = n_samples
-            self._component_manager.send_data_samples(**params)
+                kwargs.setdefault("n_samples", 128)
+            else:
+                kwargs.setdefault("n_samples", None)
+
+            self._component_manager.send_data_samples(**kwargs)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -2928,6 +3036,52 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         (return_code, message) = handler()
         return ([return_code], [message])
 
+    class StartAcquisitionCommand(SubmittedSlowCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the StartAcquisition() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_StartAcquisition.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_StartAcquisition.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.StartAcquisitionCommand,
+            command_tracker: CommandTracker,
+            component_manager: TileComponentManager,
+            callback: Optional[Callable] = None,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new instance.
+
+            :param command_tracker: the device's command tracker
+            :param component_manager: the device's component manager
+            :param callback: an optional callback to be called when this
+                command starts and finishes.
+            :param logger: a logger for this command to log with.
+            """
+            validator = JsonValidator("StartAcquisition", self.SCHEMA, logger)
+            super().__init__(
+                "StartAcquisition",
+                command_tracker,
+                component_manager,
+                "start_acquisition",
+                callback=callback,
+                logger=logger,
+                validator=validator,
+            )
+
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -2954,7 +3108,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [unique_id])
 
     class ConfigureTestGeneratorCommand(FastCommand):
-        """Class for handling the ConfigureTestGenerator(argin) command."""
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigureTestGenerator() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureTestGenerator.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigureTestGenerator.json",
+            )
+        )
 
         def __init__(
             self: MccsTile.ConfigureTestGeneratorCommand,
@@ -2968,11 +3138,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param logger: a logger for this command to use.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            validator = JsonValidator("ConfigureTestGenerator", self.SCHEMA, logger)
+            super().__init__(logger, validator)
 
         SUCCEEDED_MESSAGE = "ConfigureTestGenerator command completed OK"
 
-        # pylint: disable=too-many-branches,too-many-locals
         def do(
             self: MccsTile.ConfigureTestGeneratorCommand,
             *args: Any,
@@ -2981,48 +3151,42 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             Implement :py:meth:`.MccsTile.ConfigureTestGenerator` commands.
 
-            :param args: a JSON-encoded dictionary of arguments
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
 
-            :raises ValueError: if the JSON input has invalid parameters
-
-            :todo: Mandatory JSON parameters should be handled by validation
-                   against a schema
             :return: A tuple containing a return code and a string
                    message indicating status. The message is for
                    information purpose only.
             """
-            params = json.loads(args[0])
             active = False
-            set_time = params.get("set_time", None)
-            if "tone_frequency" in params:
-                frequency0 = params["tone_frequency"]
-                amplitude0 = params.get("tone_amplitude", 1.0)
+            set_time = kwargs.get("set_time", None)
+            if "tone_frequency" in kwargs:
+                frequency0 = kwargs["tone_frequency"]
+                amplitude0 = kwargs.get("tone_amplitude", 1.0)
                 active = True
             else:
                 frequency0 = 0.0
                 amplitude0 = 0.0
 
-            if "tone_2_frequency" in params:
-                frequency1 = params["tone_2_frequency"]
-                amplitude1 = params.get("tone_2_amplitude", 1.0)
+            if "tone_2_frequency" in kwargs:
+                frequency1 = kwargs["tone_2_frequency"]
+                amplitude1 = kwargs.get("tone_2_amplitude", 1.0)
                 active = True
             else:
                 frequency1 = 0.0
                 amplitude1 = 0.0
 
-            if "noise_amplitude" in params:
-                amplitude_noise = params.get("noise_amplitude", 1.0)
+            if "noise_amplitude" in kwargs:
+                amplitude_noise = kwargs["noise_amplitude"]
                 active = True
             else:
                 amplitude_noise = 0.0
 
-            if "pulse_frequency" in params:
-                pulse_code = params["pulse_frequency"]
-                if (pulse_code < 0) or (pulse_code > 7):
-                    raise ValueError("pulse_frequency must be between 0 and 7")
-                amplitude_pulse = params.get("pulse_amplitude", 1.0)
+            if "pulse_frequency" in kwargs:
+                pulse_code = kwargs["pulse_frequency"]
+                amplitude_pulse = kwargs.get("pulse_amplitude", 1.0)
                 active = True
             else:
                 pulse_code = 7
@@ -3039,7 +3203,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 set_time,
             )
 
-            chans = params.get("adc_channels")
+            chans = kwargs.get("adc_channels")
             inputs = 0
             if chans is None:
                 if active:

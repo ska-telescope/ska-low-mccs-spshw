@@ -8,7 +8,6 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
@@ -1144,26 +1143,24 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     @check_communicating
     def start_acquisition(
-        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        start_time: Optional[str] = None,
+        delay: int = 2,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the start_acquisition slow task.
 
-        :param argin: json dictionary with optional keywords
-
-        * start_time - (str) start time
-        * delay - (int) delay start
-
         :param task_callback: Update task state, defaults to None
+        :param start_time: the acquisition start time
+        :param delay: a delay to the acquisition start
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
-        params = json.loads(argin)
-        start_time = params.get("start_time", None)
         if start_time is None:
             start_frame = None
-            delay = params.get("delay", 2)
         else:
             start_frame = self._tile_time.timestamp_from_utc_time(start_time)
             if start_frame < 0:

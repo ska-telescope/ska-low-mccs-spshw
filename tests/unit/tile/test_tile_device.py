@@ -440,7 +440,7 @@ class TestMccsTileCommands:
                 "SetLmcIntegratedDownload",
                 json.dumps(
                     {
-                        "mode": "1G",
+                        "mode": "1g",
                         "channel_payload_length": 4,
                         "beam_payload_length": 6,
                         "destination_ip": "10.0.1.23",
@@ -524,7 +524,7 @@ class TestMccsTileCommands:
             DevFailed,
             match="is being attempted but has not been successfully established",
         ):
-            _ = tile_device.StartAcquisition(json.dumps({"StartTime": 5}))
+            _ = tile_device.StartAcquisition(json.dumps({"delay": 5}))
 
         time.sleep(0.1)
         tile_device.MockTpmOff()
@@ -533,7 +533,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"StartTime": 5})
+            json.dumps({"delay": 5})
         )
         assert result_code == ResultCode.QUEUED
         assert "StartAcquisition" in message.split("_")[-1]
@@ -856,7 +856,7 @@ class TestMccsTileCommands:
             bad_json_arg = json.dumps(bad_arg)
             with pytest.raises(
                 DevFailed,
-                match=f"{exclude_key} is a mandatory parameter",
+                match=f"'{exclude_key}' is a required property",
             ):
                 _ = tile_device.WriteRegister(bad_json_arg)
 
@@ -1004,7 +1004,7 @@ class TestMccsTileCommands:
         ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
-        arg2 = {"mode": "10G", "payload_length": 102, "destination_ip": "10.0.1.23"}
+        arg2 = {"mode": "10g", "payload_length": 102, "destination_ip": "10.0.1.23"}
         json_arg = json.dumps(arg2)
         tile_device.SetLmcDownload(json_arg)
 
@@ -1214,17 +1214,15 @@ class TestMccsTileCommands:
             {"data_type": "channel", "first_channel": -1, "last_channel": 511},
             {"data_type": "channel", "first_channel": 511, "last_channel": 0},
         ]
-        for arg in invalid_channel_range_args:
+        error_matches = [
+            "512 is greater than the maximum of 511",
+            "-1 is less than the minimum of 0",
+            r"last channel \(0\) cannot be less than first channel \(511\)",
+        ]
+        for arg, error_match in zip(invalid_channel_range_args, error_matches):
             time.sleep(0.1)
             json_arg = json.dumps(arg)
-            first_ch, last_ch = arg["first_channel"], arg["last_channel"]
-            with pytest.raises(
-                DevFailed,
-                match=(
-                    rf"first_channel \({first_ch}\) and last_channel \({last_ch}\) "
-                    r"must define a range within \[0, 511\]"
-                ),
-            ):
+            with pytest.raises(DevFailed, match=error_match):
                 tile_device.SendDataSamples(json_arg)
 
     def test_configure_test_generator(
@@ -1279,7 +1277,7 @@ class TestMccsTileCommands:
             tile_device.ConfigureTestGenerator("{}")
             assert tile_device.testGeneratorActive is False
             tile_device.loggingLevel = 3
-        with pytest.raises(DevFailed, match="pulse_frequency must be between 0 and 7"):
+        with pytest.raises(DevFailed, match="8 is greater than the maximum of 7"):
             tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))
 
     def test_get_arp_table(

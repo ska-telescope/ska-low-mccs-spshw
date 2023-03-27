@@ -1,0 +1,26 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_ConfigureIntegratedChannelData.json",
+    "title": "MccsTile ConfigureIntegratedChannelData schema",
+    "description": "Schema for MccsTile's ConfigureIntegratedChannelData command",
+    "type": "object",
+    "properties": {
+        "integration_time": {
+            "description": "Integration time in seconds",
+            "type": "number",
+            "minimum": 0.0
+        },
+        "first_channel": {
+            "description": "First channel",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+        },
+        "last_channel": {
+            "description": "Last channel",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+        }
+    }
+}

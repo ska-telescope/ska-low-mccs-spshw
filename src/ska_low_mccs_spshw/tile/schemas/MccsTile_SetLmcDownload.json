@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_SetLmcDownload.json",
+    "title": "MccsTile SetLmcDownload schema",
+    "description": "Schema for MccsTile's SetLmcDownload command",
+    "type": "object",
+    "properties": {
+        "mode": {
+            "description": "Mode: 1g or 10g",
+            "type": "string",
+            "enum": ["1g", "10g"]
+        },
+        "payload_length": {
+            "description": "SPEAD payload length for channel data",
+            "type": "integer",
+            "minimum": 0
+        },
+        "dst_ip": {
+            "description": "Destination IP address",
+            "type": "string",
+            "format": "ipv4"
+        },
+        "source_port": {
+            "description": "Source port for integrated data streams",
+            "type": "integer",
+            "minimum": 0
+        },
+        "destination_port": {
+            "description": "Destination port for integrated data streams",
+            "type": "integer",
+            "minimum": 0
+        }
+    },
+    "required": ["mode"]
+}

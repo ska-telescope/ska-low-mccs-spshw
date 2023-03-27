@@ -1,0 +1,18 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_StartAcquisition.json",
+    "title": "MccsTile StartAcquisition schema",
+    "description": "Schema for MccsTile's StartAcquisition command",
+    "type": "object",
+    "properties": {
+        "start_time": {
+            "description": "",
+            "type": "string",
+            "format": "time"
+        },
+        "delay": {
+            "description": "An acquisition start delay",
+            "type": "integer"
+        }
+    }
+}

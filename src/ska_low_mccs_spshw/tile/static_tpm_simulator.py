@@ -22,7 +22,8 @@ class StaticTpmSimulator(BaseTpmSimulator):
     """A simulator for a TPM."""
 
     VOLTAGE = 5.0
-    CURRENT = 0.4
+    CURRENT_FE0_mVA = 0.4
+    CURRENT_FE1_mVA = 0.45
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
@@ -39,13 +40,14 @@ class StaticTpmSimulator(BaseTpmSimulator):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
-        self._voltage: float = self.VOLTAGE
-        self._current: float = self.CURRENT
-        self._board_temperature: float = self.BOARD_TEMPERATURE
-        self._fpga1_temperature: float = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature: float = self.FPGA2_TEMPERATURE
-
         super().__init__(logger, component_state_changed_callback)
+
+        self._tile_health_structure["voltage"]["MON_5V0"] = self.VOLTAGE
+        self._tile_health_structure["current"]["FE0_mVA"] = self.CURRENT_FE0_mVA
+        self._tile_health_structure["current"]["FE1_mVA"] = self.CURRENT_FE1_mVA
+        self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
 
     @property
     def board_temperature(self: StaticTpmSimulator) -> float:
@@ -54,25 +56,25 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of the TPM
         """
-        return self._board_temperature
+        return self._tile_health_structure["temperature"]["board"]
 
     @property
-    def voltage(self: StaticTpmSimulator) -> float:
+    def voltage_mon(self: StaticTpmSimulator) -> float:
         """
-        Return the voltage of the TPM.
+        Return the internal 5V supply of the TPM.
 
-        :return: the voltage of the TPM
+        :return: the internal 5V supply of the TPM
         """
-        return self._voltage
+        return self._tile_health_structure["voltage"]["MON_5V0"]
 
     @property
-    def current(self: StaticTpmSimulator) -> float:
+    def currents(self: StaticTpmSimulator) -> dict[str, Any]:
         """
-        Return the current of the TPM.
+        Return a dictionary of all current values available in the TPM.
 
-        :return: the current of the TPM
+        :return: currents in the TPM
         """
-        return self._current
+        return self._tile_health_structure["current"]
 
     @property
     def fpga1_temperature(self: StaticTpmSimulator) -> float:
@@ -81,7 +83,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 1
         """
-        return self._fpga1_temperature
+        return self._tile_health_structure["temperature"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: StaticTpmSimulator) -> float:
@@ -90,7 +92,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 2
         """
-        return self._fpga2_temperature
+        return self._tile_health_structure["temperature"]["FPGA1"]
 
 
 class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):

@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsSubrack_SetSubrackFanSpeed.json",
+    "title": "MccsSubrack SetSubrackFanSpeed schema",
+    "description": "Schema for MccsSubrack's SetSubrackFanSpeed command",
+    "type": "object",
+    "properties": {
+        "subrack_fan_id": {
+            "description": "ID of the subrack fan",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4
+        },
+        "speed_percent": {
+            "description": "Fan speed in percent",
+            "type": "number",
+            "minimum": 0.0,
+            "maximum": 100.0
+        }
+    },
+    "required": ["subrack_fan_id", "speed_percent"]
+}

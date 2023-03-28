@@ -8,7 +8,6 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import json
 import logging
 import threading
 import time
@@ -84,6 +83,12 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "fpgas_time",
         "fpga_reference_time",
         "get_40g_configuration",
+        "voltages",
+        "temperatures",
+        "currents",
+        "timing",
+        "io",
+        "dsp",
         "tpm_version",
         "initialise_beamformer",
         "initialise",
@@ -119,7 +124,7 @@ class _TpmSimulatorComponentManager(ObjectComponentManager):
         "tile_id",
         "tpm_status",
         "tpm_version",
-        "voltage",
+        "voltage_mon",
         "write_address",
         "write_register",
     ]
@@ -594,7 +599,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
-                    self.initialise()
+                    self.initialise(program_fpga=False)
                 self._tile_time.set_reference_time(self.tile_reference_time)
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()
@@ -902,6 +907,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "fpgas_time",
         "fpga_current_frame",
         "get_40g_configuration",
+        "voltages",
+        "temperatures",
+        "currents",
+        "timing",
+        "io",
+        "dsp",
         "hardware_version",
         "initialise_beamformer",
         "is_beamformer_running",
@@ -931,7 +942,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "test_generator_input_select",
         "tile_id",
         # "tpm_status",
-        "voltage",
+        "voltage_mon",
         "write_address",
         "write_register",
     ]
@@ -1005,7 +1016,9 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
     #
     @check_communicating
     def initialise(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        program_fpga: bool = True,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the initialise slow task.
@@ -1013,10 +1026,17 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         This method returns immediately after it is submitted for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param program_fpga: Force FPGA reprogramming, for complete initialisation
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        if program_fpga:
+            try:
+                self._tpm_driver.erase_fpga()
+            except ConnectionError as comm_err:
+                return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
+
         try:
             return self.submit_task(self._initialise, task_callback=task_callback)
         except ConnectionError as comm_err:
@@ -1123,26 +1143,24 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     @check_communicating
     def start_acquisition(
-        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        start_time: Optional[str] = None,
+        delay: int = 2,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the start_acquisition slow task.
 
-        :param argin: json dictionary with optional keywords
-
-        * start_time - (str) start time
-        * delay - (int) delay start
-
         :param task_callback: Update task state, defaults to None
+        :param start_time: the acquisition start time
+        :param delay: a delay to the acquisition start
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
-        params = json.loads(argin)
-        start_time = params.get("start_time", None)
         if start_time is None:
             start_frame = None
-            delay = params.get("delay", 2)
         else:
             start_frame = self._tile_time.timestamp_from_utc_time(start_time)
             if start_frame < 0:
@@ -1191,6 +1209,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     status=TaskStatus.ABORTED, result="Start acquisition task aborted"
                 )
             return
+
+        if success:
+            self._tile_time.set_reference_time(self.tile_reference_time)
+        else:
+            self._tile_time.set_reference_time(0)
 
         if task_callback:
             if success:

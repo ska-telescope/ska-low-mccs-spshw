@@ -17,17 +17,18 @@ aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = 
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1aa0dc954fb701fd2a7fed03df21639fc4c50560" }
 fire = "^0.4.0"
 numpy = "^1.23.0"
-pytango = "9.3.3"
+pytango = "9.3.6"
 PyYAML = "^6.0"
 requests = "^2.28.1"
 scipy = "^1.9.3"
-ska-tango-base = "^0.16.1"
+ska-tango-base = "^0.18.0"
 ska-control-model = "0.3.1"
-ska-low-mccs-common = "^0.4.2"
+ska-low-mccs-common = "0.5.0"
 fastapi = "^0.88.0"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 typing-extensions = "^4.4.0"
 astroid = "2.14.1"
+future = "^0.18.3"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^2.20.0"

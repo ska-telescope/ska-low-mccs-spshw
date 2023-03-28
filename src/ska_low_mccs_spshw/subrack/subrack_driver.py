@@ -597,6 +597,10 @@ class SubrackDriver(
             # The presence of any other retvalues indicate
             # that the active command has completed.
             # This is true also for normal completion of fast commands
+            if self._board_is_busy:
+                # This means that an attribute  poll is likely overdue and anyway
+                # useful, as the hardware status could have been changed. Force it
+                self._tick = self._max_tick + 1
             self._board_is_busy = False
             if self._active_callback is not None:
                 self.logger.debug("Command completed")

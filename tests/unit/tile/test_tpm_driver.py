@@ -220,16 +220,16 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        static_tile_simulator.tpm._tile_health_structure["temperature"][
+        aavs_tile_simulator.tpm._tile_health_structure["temperature"][
             "FPGA0"
         ] = fpga1_temp
-        static_tile_simulator.tpm._tile_health_structure["temperature"][
+        aavs_tile_simulator.tpm._tile_health_structure["temperature"][
             "FPGA1"
         ] = fpga2_temp
-        static_tile_simulator.tpm._tile_health_structure["temperature"][
+        aavs_tile_simulator.tpm._tile_health_structure["temperature"][
             "board"
         ] = board_temp
-        static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = voltage
+        aavs_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = voltage
 
         tpm_driver._update_attributes()
 
@@ -240,17 +240,17 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        static_tile_simulator.tpm._tile_health_structure["voltage"][
+        aavs_tile_simulator.tpm._tile_health_structure["voltage"][
             "MON_5V0"
         ] = pytest.approx(2.2)
-        static_tile_simulator.get_voltage = unittest.mock.Mock(
+        aavs_tile_simulator.get_voltage = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
 
         tpm_driver._update_attributes()
         assert (
             tpm_driver._tile_health_structure["voltage"]["MON_5V0"]
-            != static_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"]
+            != aavs_tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"]
         )
 
     @pytest.mark.xfail
@@ -283,13 +283,13 @@ class TestTpmDriver:
         get_pps_delay = tpm_driver.pps_delay
         get_fpgs_sync_time = tpm_driver.fpga_reference_time
 
-        assert board_temperature == pytest.approx(StaticTileSimulator.BOARD_TEMPERATURE)
-        assert voltage == pytest.approx(StaticTileSimulator.VOLTAGE)
-        assert fpga1_temperature == pytest.approx(StaticTileSimulator.FPGA1_TEMPERATURE)
-        assert fpga2_temperature == pytest.approx(StaticTileSimulator.FPGA2_TEMPERATURE)
-        assert adc_rms == list(StaticTileSimulator.ADC_RMS)
+        assert board_temperature == pytest.approx(AavsTileSimulator.BOARD_TEMPERATURE)
+        assert voltage == pytest.approx(AavsTileSimulator.VOLTAGE)
+        assert fpga1_temperature == pytest.approx(AavsTileSimulator.FPGA1_TEMPERATURE)
+        assert fpga2_temperature == pytest.approx(AavsTileSimulator.FPGA2_TEMPERATURE)
+        assert adc_rms == list(AavsTileSimulator.ADC_RMS)
         assert get_fpga_time == [2, 2]
-        assert get_pps_delay == StaticTileSimulator.PPS_DELAY
+        assert get_pps_delay == AavsTileSimulator.PPS_DELAY
         assert get_fpgs_sync_time == pytest.approx(0.4)
 
     def test_dumb_read_tile_attributes(

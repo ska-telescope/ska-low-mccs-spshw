@@ -24,7 +24,7 @@ from pyfabil.base.definitions import Device, LibraryError
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 
-__all__ = ["AavsDynamicTileSimulator", "AavsTileSimulator"]
+__all__ = ["DynamicTileSimulator", "TileSimulator"]
 
 
 class StationBeamformer:
@@ -305,9 +305,9 @@ class PreAdu:
         return
 
 
-class AavsTileSimulator:
+class TileSimulator:
     """
-    This attempts to simulate pyaavs Tile.
+    Simulate the pyaavs Tile class.
 
     This is used for testing the tpm_driver, it implements __getitem__,
     __setitem__ so that the TileSimulator can interface with the
@@ -333,28 +333,12 @@ class AavsTileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
-
     STATION_ID = 0
     TILE_ID = 1
-    # VOLTAGE = 5.0
-    # CURRENT = 0.4
-    # BOARD_TEMPERATURE = 36.0
-    # FPGA1_TEMPERATURE = 38.0
-    # FPGA2_TEMPERATURE = 37.5
-    # # this is just mocked with some dummy information.
-    # FIRMWARE_LIST = [
-    #     {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
-    #     {"design": "tpm_test1", "major": 2, "minor": 1, "build": 1, "time": "4"},
-    # ]
 
     def __init__(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         logger: logging.Logger,
-        # ip="10.0.10.2",
-        # port=10000,
-        # lmc_ip="10.0.10.1",
-        # lmc_port=4660,
-        # sampling_rate=800e6,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
@@ -385,42 +369,42 @@ class AavsTileSimulator:
         self.fpgas_time = self.FPGAS_TIME
         # return self._register_map.get(str(address), 0)
 
-    def get_firmware_list(self: AavsTileSimulator) -> List[dict[str, Any]]:
+    def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
-    def get_fpga0_temperature(self: AavsTileSimulator) -> Optional[float]:
+    def get_fpga0_temperature(self: TileSimulator) -> Optional[float]:
         """:return: the mocked fpga0 temperature."""
         return self._fpga1_temperature
 
-    def get_fpga1_temperature(self: AavsTileSimulator) -> Optional[float]:
+    def get_fpga1_temperature(self: TileSimulator) -> Optional[float]:
         """:return: the mocked fpga1 temperature."""
         return self._fpga2_temperature
 
-    def get_temperature(self: AavsTileSimulator) -> Optional[float]:
+    def get_temperature(self: TileSimulator) -> Optional[float]:
         """:return: the mocked board temperature."""
         return self._board_temperature
 
-    def get_voltage(self: AavsTileSimulator) -> Optional[float]:
+    def get_voltage(self: TileSimulator) -> Optional[float]:
         """:return: the mocked voltage."""
         return self._voltage
 
-    def get_tile_id(self: AavsTileSimulator) -> int:
+    def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
         # this is set in the initialise
         return self._tile_id
 
-    def get_adc_rms(self: AavsTileSimulator) -> list[float]:
+    def get_adc_rms(self: TileSimulator) -> list[float]:
         """:return: the mock ADC rms values."""
         return self.ADC_RMS
 
-    def check_pending_data_requests(self: AavsTileSimulator) -> bool:
+    def check_pending_data_requests(self: TileSimulator) -> bool:
         """:return: the pending data requess flag."""
         return False
         # return self._pending_data_requests
 
     def initialise_beamformer(
-        self: AavsTileSimulator, start_channel: float, nof_channels: int
+        self: TileSimulator, start_channel: float, nof_channels: int
     ) -> None:
         """
         Mock set the beamformer parameters.
@@ -432,7 +416,7 @@ class AavsTileSimulator:
         # self.attributes.update({"nof_channels": nof_channels})
         pass
 
-    def program_fpgas(self: AavsTileSimulator, firmware_name: str) -> None:
+    def program_fpgas(self: TileSimulator, firmware_name: str) -> None:
         """
         Mock programmed state to True.
 
@@ -440,7 +424,7 @@ class AavsTileSimulator:
         """
         self.tpm._is_programmed = True  # type: ignore
 
-    def erase_fpga(self: AavsTileSimulator) -> None:
+    def erase_fpga(self: TileSimulator) -> None:
         """
         Erase the fpga firmware.
 
@@ -449,7 +433,7 @@ class AavsTileSimulator:
         return
 
     def initialise(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         station_id: int = 0,
         pps_delay: int = 0,
         tile_id: int = 0,
@@ -479,7 +463,7 @@ class AavsTileSimulator:
         self._station_id = station_id
         return True
 
-    def get_fpga_time(self: AavsTileSimulator, device: Device = Device.FPGA_1) -> int:
+    def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
         """
         :param device: device.
 
@@ -487,7 +471,7 @@ class AavsTileSimulator:
         """
         return self.fpgas_time[device.value - 1]
 
-    def set_station_id(self: AavsTileSimulator, station_id: int, tile_id: int) -> None:
+    def set_station_id(self: TileSimulator, station_id: int, tile_id: int) -> None:
         """
         Set mock registers to some value.
 
@@ -503,11 +487,11 @@ class AavsTileSimulator:
 
         # return
 
-    def get_pps_delay(self: AavsTileSimulator) -> float:
+    def get_pps_delay(self: TileSimulator) -> float:
         """:return: the pps delay."""
         return self._pps_delay
 
-    def is_programmed(self: AavsTileSimulator) -> Optional[bool]:
+    def is_programmed(self: TileSimulator) -> Optional[bool]:
         """
         Return whether the mock has been implemented.
 
@@ -519,7 +503,7 @@ class AavsTileSimulator:
             return None
 
     def configure_40g_core(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         core_id: int,
         arp_table_entry: int,
         src_mac: str,
@@ -553,7 +537,7 @@ class AavsTileSimulator:
         self._forty_gb_core_list.append(core_dict)
 
     def get_40g_core_configuration(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
     ) -> dict | Optional[list[dict]]:
@@ -575,13 +559,13 @@ class AavsTileSimulator:
                     return item
         return None
 
-    def check_arp_table(self: AavsTileSimulator) -> None:
+    def check_arp_table(self: TileSimulator) -> None:
         """Not Implemented."""
         return
         # raise NotImplementedError
 
     def set_lmc_download(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         mode: str,
         payload_length: int = 1024,
         dst_ip: Optional[str] = None,
@@ -602,16 +586,16 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def reset_eth_errors(self: AavsTileSimulator) -> None:
+    def reset_eth_errors(self: TileSimulator) -> None:
         """Not Implemented."""
         return
         # raise NotImplementedError
 
-    def connect(self: AavsTileSimulator) -> None:
+    def connect(self: TileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
         self.tpm = MockTpm()
 
-    def __getitem__(self: AavsTileSimulator, key: int | str) -> Any:
+    def __getitem__(self: TileSimulator, key: int | str) -> Any:
         """
         Get the register from the TPM.
 
@@ -620,7 +604,7 @@ class AavsTileSimulator:
         """
         return self.tpm[key]  # type: ignore
 
-    def __setitem__(self: AavsTileSimulator, key: int | str, value: Any) -> None:
+    def __setitem__(self: TileSimulator, key: int | str, value: Any) -> None:
         """
         Set a registers value in the TPM.
 
@@ -630,7 +614,7 @@ class AavsTileSimulator:
         self.tpm[key] = value  # type: ignore
 
     def set_channeliser_truncation(
-        self: AavsTileSimulator, trunc: list[int], chan: int
+        self: TileSimulator, trunc: list[int], chan: int
     ) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
@@ -643,7 +627,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def set_time_delays(self: AavsTileSimulator, delays: list[float]) -> None:
+    def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -656,11 +640,11 @@ class AavsTileSimulator:
                 int(delays[i + 16] / 1.25 + 0.5) + 128
             )
 
-    def current_tile_beamformer_frame(self: AavsTileSimulator) -> int:
+    def current_tile_beamformer_frame(self: TileSimulator) -> int:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
 
-    def set_csp_rounding(self: AavsTileSimulator, rounding: int) -> None:
+    def set_csp_rounding(self: TileSimulator, rounding: int) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
@@ -670,7 +654,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def set_beamformer_regions(
-        self: AavsTileSimulator, regions: list[list[int]]
+        self: TileSimulator, regions: list[list[int]]
     ) -> None:
         """
         Set beamformer regions.
@@ -681,7 +665,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def set_first_last_tile(
-        self: AavsTileSimulator, is_first: bool, is_last: bool
+        self: TileSimulator, is_first: bool, is_last: bool
     ) -> None:
         """
         Set first last tile in chain.
@@ -700,7 +684,7 @@ class AavsTileSimulator:
             self.tpm[register] = registers_to_set[register]  # type: ignore
 
     def load_calibration_coefficients(
-        self: AavsTileSimulator, antenna: int, coefs: list[float]
+        self: TileSimulator, antenna: int, coefs: list[float]
     ) -> None:
         """
         Load calibration coefficients.
@@ -725,7 +709,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def switch_calibration_bank(self: AavsTileSimulator, switch_time: int = 0) -> None:
+    def switch_calibration_bank(self: TileSimulator, switch_time: int = 0) -> None:
         """
         Switch calibration bank.
 
@@ -735,7 +719,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def set_pointing_delay(
-        self: AavsTileSimulator, delay_array: list[float], beam_index: int
+        self: TileSimulator, delay_array: list[float], beam_index: int
     ) -> None:
         """
         Set pointing delay.
@@ -746,7 +730,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def load_pointing_delay(self: AavsTileSimulator, load_time: int) -> None:
+    def load_pointing_delay(self: TileSimulator, load_time: int) -> None:
         """
         Load pointing delay.
 
@@ -756,7 +740,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def start_beamformer(
-        self: AavsTileSimulator, start_time: int, duration: int
+        self: TileSimulator, start_time: int, duration: int
     ) -> bool:
         """
         Start beamformer.
@@ -773,13 +757,13 @@ class AavsTileSimulator:
 
         return True
 
-    def stop_beamformer(self: AavsTileSimulator) -> None:
+    def stop_beamformer(self: TileSimulator) -> None:
         """Stop beamformer."""
         self.tpm.beam1._is_running = False  # type: ignore
         self.tpm.beam2._is_running = False  # type: ignore
 
     def configure_integrated_channel_data(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 512,
@@ -795,7 +779,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def configure_integrated_beam_data(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
         last_channel: int = 512,
@@ -810,7 +794,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def stop_integrated_data(self: AavsTileSimulator) -> None:
+    def stop_integrated_data(self: TileSimulator) -> None:
         """
         Stop integrated data.
 
@@ -819,7 +803,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def send_raw_data(
-        self: AavsTileSimulator, sync: bool, timestamp: int, seconds: int
+        self: TileSimulator, sync: bool, timestamp: int, seconds: int
     ) -> None:
         """
         Send raw data.
@@ -832,7 +816,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def send_channelised_data(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         number_of_samples: int = 1024,
         first_channel: int = 0,
         last_channel: int = 511,
@@ -852,7 +836,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def send_channelised_data_continuous(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         channel_id: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
@@ -872,7 +856,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def send_channelised_data_narrowband(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         frequency: int,
         round_bits: int,
         number_of_samples: int = 128,
@@ -894,7 +878,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def send_beam_data(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         timeout: int = 0,
         timestamp: int = 0,
         seconds: float = 0.2,
@@ -909,7 +893,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def stop_data_transmission(self: AavsTileSimulator) -> None:
+    def stop_data_transmission(self: TileSimulator) -> None:
         """
         Stop data transmission.
 
@@ -918,7 +902,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def start_acquisition(
-        self: AavsTileSimulator, start_time: int, delay: float
+        self: TileSimulator, start_time: int, delay: float
     ) -> None:
         """
         Start data acquisition.
@@ -929,7 +913,7 @@ class AavsTileSimulator:
         pass
 
     def set_lmc_integrated_download(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
@@ -950,7 +934,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def sync_fpgas(self: AavsTileSimulator) -> None:
+    def sync_fpgas(self: TileSimulator) -> None:
         """
         Sync FPGA's.
 
@@ -959,7 +943,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def test_generator_set_tone(
-        self: AavsTileSimulator,
+        self: TileSimulator,
         generator: int,
         frequency: float = 100e6,
         amplitude: float = 0.0,
@@ -980,7 +964,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def test_generator_set_noise(
-        self: AavsTileSimulator, amplitude_noise: int, load_time: int
+        self: TileSimulator, amplitude_noise: int, load_time: int
     ) -> None:
         """
         Set generator test noise.
@@ -992,7 +976,7 @@ class AavsTileSimulator:
         raise NotImplementedError
 
     def set_test_generator_pulse(
-        self: AavsTileSimulator, pulse_code: Any, amplitude_pulse: int
+        self: TileSimulator, pulse_code: Any, amplitude_pulse: int
     ) -> None:
         """
         Set test generator pulse.
@@ -1003,11 +987,11 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def get_fpga_timestamp(self: AavsTileSimulator) -> int:
+    def get_fpga_timestamp(self: TileSimulator) -> int:
         """:return: timestamp."""
         return self._timestamp
 
-    def test_generator_input_select(self: AavsTileSimulator, inputs: Any) -> None:
+    def test_generator_input_select(self: TileSimulator, inputs: Any) -> None:
         """
         Test generator input select.
 
@@ -1016,7 +1000,7 @@ class AavsTileSimulator:
         """
         return
 
-    # def _timed_thread(self: AavsTileSimulator) -> None:
+    # def _timed_thread(self: TileSimulator) -> None:
     #     """Thread."""
     #     # should this be able to run for a infinite amount of time?
     #     while True:
@@ -1030,7 +1014,7 @@ class AavsTileSimulator:
     #             self.tpm["fpga1.pps_manager.timestamp_read_val"] = self._timestamp
     #             time.sleep(0.1)
 
-    def get_arp_table(self: AavsTileSimulator) -> dict[str, Any]:
+    def get_arp_table(self: TileSimulator) -> dict[str, Any]:
         """
         Get arp table.
 
@@ -1039,7 +1023,7 @@ class AavsTileSimulator:
         return {"0": [0, 1], "1": [1]}
 
     def load_beam_angle(
-        self: AavsTileSimulator, angle_coefficients: list[float]
+        self: TileSimulator, angle_coefficients: list[float]
     ) -> None:
         """
         Load beam angle.
@@ -1050,7 +1034,7 @@ class AavsTileSimulator:
         return
 
     def load_antenna_tapering(
-        self: AavsTileSimulator, beam: int, tapering_coefficients: list[float]
+        self: TileSimulator, beam: int, tapering_coefficients: list[float]
     ) -> None:
         """
         Load antenna tapering.
@@ -1061,7 +1045,7 @@ class AavsTileSimulator:
         """
         return
 
-    def compute_calibration_coefficients(self: AavsTileSimulator) -> None:
+    def compute_calibration_coefficients(self: TileSimulator) -> None:
         """
         Compute calibration coefficients.
 
@@ -1069,7 +1053,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def beamformer_is_running(self: AavsTileSimulator) -> bool:
+    def beamformer_is_running(self: TileSimulator) -> bool:
         """
         Beamformer is running.
 
@@ -1077,7 +1061,7 @@ class AavsTileSimulator:
         """
         return self.tpm.beam1.is_running()  # type: ignore
 
-    def set_test_generator_tone(self: AavsTileSimulator) -> None:
+    def set_test_generator_tone(self: TileSimulator) -> None:
         """
         Set test generator tone.
 
@@ -1085,7 +1069,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def set_test_generator_noise(self: AavsTileSimulator) -> None:
+    def set_test_generator_noise(self: TileSimulator) -> None:
         """
         Set test generator noise.
 
@@ -1093,7 +1077,7 @@ class AavsTileSimulator:
         """
         raise NotImplementedError
 
-    def get_phase_terminal_count(self: AavsTileSimulator) -> None:
+    def get_phase_terminal_count(self: TileSimulator) -> None:
         """
         Get PPS phase terminal count.
 
@@ -1102,7 +1086,7 @@ class AavsTileSimulator:
         """
         return
 
-    def get_station_id(self: AavsTileSimulator) -> int:
+    def get_station_id(self: TileSimulator) -> int:
         """
         Get station ID.
 
@@ -1130,10 +1114,10 @@ class AavsTileSimulator:
             raise AttributeError("'Tile' or 'TPM' object have no attribute " + name)
 
 
-class AavsDynamicTileSimulator(AavsTileSimulator):
+class DynamicTileSimulator(TileSimulator):
     """A simulator for a TPM, with dynamic value updates to certain attributes."""
 
-    def __init__(self: AavsDynamicTileSimulator, logger: logging.Logger) -> None:
+    def __init__(self: DynamicTileSimulator, logger: logging.Logger) -> None:
         """
         Initialise a new Dynamic Tile simulator instance.
 
@@ -1168,16 +1152,16 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
 
         super().__init__(logger)
 
-    def __del__(self: AavsDynamicTileSimulator) -> None:
+    def __del__(self: DynamicTileSimulator) -> None:
         """Garbage-collection hook."""
         self._updater.stop()
 
-    def get_board_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def get_board_temperature(self: DynamicTileSimulator) -> Optional[float]:
         """:return: the mocked board temperature."""
         return self._board_temperature
 
     @property
-    def board_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def board_temperature(self: DynamicTileSimulator) -> Optional[float]:
         """
         Return the temperature of the TPM.
 
@@ -1187,7 +1171,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         return self._board_temperature
 
     def _board_temperature_changed(
-        self: AavsDynamicTileSimulator, board_temperature: float
+        self: DynamicTileSimulator, board_temperature: float
     ) -> None:
         """
         Call this method when the board temperature changes.
@@ -1196,12 +1180,12 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._board_temperature = board_temperature
 
-    def get_voltage(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def get_voltage(self: DynamicTileSimulator) -> Optional[float]:
         """:return: the mocked voltage."""
         return self._voltage
 
     @property
-    def voltage(self: AavsDynamicTileSimulator) -> float:
+    def voltage(self: DynamicTileSimulator) -> float:
         """
         Return the voltage of the TPM.
 
@@ -1210,7 +1194,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         assert self._voltage is not None  # for the type checker
         return self._voltage
 
-    def _voltage_changed(self: AavsDynamicTileSimulator, voltage: float) -> None:
+    def _voltage_changed(self: DynamicTileSimulator, voltage: float) -> None:
         """
         Call this method when the voltage changes.
 
@@ -1218,12 +1202,12 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._voltage = voltage
 
-    def get_current(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def get_current(self: DynamicTileSimulator) -> Optional[float]:
         """:return: the mocked current."""
         return self._current
 
     @property
-    def current(self: AavsDynamicTileSimulator) -> float:
+    def current(self: DynamicTileSimulator) -> float:
         """
         Return the current of the TPM.
 
@@ -1232,7 +1216,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         assert self._current is not None  # for the type checker
         return self._current
 
-    def _current_changed(self: AavsDynamicTileSimulator, current: float) -> None:
+    def _current_changed(self: DynamicTileSimulator, current: float) -> None:
         """
         Call this method when the current changes.
 
@@ -1240,12 +1224,12 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._current = current
 
-    def get_fpga0_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def get_fpga0_temperature(self: DynamicTileSimulator) -> Optional[float]:
         """:return: the mocked fpga0 temperature."""
         return self._fpga1_temperature
 
     @property
-    def fpga1_temperature(self: AavsDynamicTileSimulator) -> float:
+    def fpga1_temperature(self: DynamicTileSimulator) -> float:
         """
         Return the temperature of FPGA 1.
 
@@ -1255,7 +1239,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         return self._fpga1_temperature
 
     def _fpga1_temperature_changed(
-        self: AavsDynamicTileSimulator, fpga1_temperature: float
+        self: DynamicTileSimulator, fpga1_temperature: float
     ) -> None:
         """
         Call this method when the FPGA1 temperature changes.
@@ -1264,12 +1248,12 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         """
         self._fpga1_temperature = fpga1_temperature
 
-    def get_fpga1_temperature(self: AavsDynamicTileSimulator) -> Optional[float]:
+    def get_fpga1_temperature(self: DynamicTileSimulator) -> Optional[float]:
         """:return: the mocked fpga1 temperature."""
         return self._fpga2_temperature
 
     @property
-    def fpga2_temperature(self: AavsDynamicTileSimulator) -> float:
+    def fpga2_temperature(self: DynamicTileSimulator) -> float:
         """
         Return the temperature of FPGA 2.
 
@@ -1279,7 +1263,7 @@ class AavsDynamicTileSimulator(AavsTileSimulator):
         return self._fpga2_temperature
 
     def _fpga2_temperature_changed(
-        self: AavsDynamicTileSimulator, fpga2_temperature: float
+        self: DynamicTileSimulator, fpga2_temperature: float
     ) -> None:
         """
         Call this method when the FPGA2 temperature changes.

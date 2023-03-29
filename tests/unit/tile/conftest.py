@@ -22,7 +22,7 @@ from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
-    AavsTileSimulator,
+    TileSimulator,
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
@@ -327,17 +327,17 @@ def tile_component_manager_fixture(
     )
 
 
-@pytest.fixture(name="aavs_tile_simulator")
-def aavs_tile_simulator_fixture(logger: logging.Logger) -> AavsTileSimulator:
+@pytest.fixture(name="tile_simulator")
+def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     """
-    Return a AavsTileSimulator.
+    Return a TileSimulator.
 
     (This is a pytest fixture.)
 
     :param logger: logger
-    :return: a AavsTileSimulator
+    :return: a TileSimulator
     """
-    return AavsTileSimulator(logger)
+    return TileSimulator(logger)
 
 
 # pylint: disable=too-many-arguments

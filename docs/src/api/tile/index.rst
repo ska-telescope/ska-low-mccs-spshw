@@ -23,4 +23,4 @@ Tile subpackage
   Dynamic TPM simulator<dynamic_tpm_simulator>
   Static TPM simulator<static_tpm_simulator>
   TPM driver<tpm_driver>
-  Aavs Tile simulator<aavs_tile_simulator>
+  Aavs Tile simulator<tile_simulator>

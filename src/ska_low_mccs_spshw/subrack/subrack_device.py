@@ -14,7 +14,7 @@ import json
 import logging
 from typing import Any, Final, Optional
 
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
@@ -24,6 +24,8 @@ from ska_tango_base.commands import (
     SubmittedSlowCommand,
 )
 from tango.server import attribute, command, device_property
+
+from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
@@ -295,6 +297,9 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
+        self._health_model: SubrackHealthModel
+        self._health_state: HealthState
+
         self._tpm_present: list[bool] = []
         self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
@@ -345,6 +350,12 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     # --------------
     # Initialization
     # --------------
+    def _init_state_model(self: MccsSubrack) -> None:
+        super()._init_state_model()
+        self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
+        self._health_model = SubrackHealthModel(self._health_changed)
+        self.set_change_event("healthState", True, False)
+
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
         """
         Create and return a component manager for this device.
@@ -837,6 +848,9 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             self._clear_hardware_attributes()
 
         super()._communication_state_changed(communication_state)
+        self._health_model.update_state(
+            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
+        )
 
     def _component_state_changed(
         self: MccsSubrack,
@@ -845,6 +859,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         **kwargs: Any,
     ) -> None:
         super()._component_state_changed(fault=fault, power=power)
+        self._health_model.update_state(fault=fault, power=power)
 
         for key, value in kwargs.items():
             special_update_method = getattr(self, f"_update_{key}", None)
@@ -863,6 +878,21 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
+
+    def _health_changed(self: MccsSubrack, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state != health:
+            self._health_state = health
+            self.push_change_event("healthState", health)
 
     def _update_board_current(self: MccsSubrack, board_current: float) -> None:
         if board_current is None:

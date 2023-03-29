@@ -111,7 +111,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self._component_state_changed)
+        self._health_model = TileHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(
@@ -312,9 +312,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             between the component manager and its component.
         """
         super()._communication_state_changed(communication_state)
-
-        self._health_model.is_communicating(
-            communication_state == CommunicationStatus.ESTABLISHED
+        self._health_model.update_state(
+            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
@@ -337,11 +336,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param state_change: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
-        if "health_state" in state_change:
-            health = cast(HealthState, state_change.get("health_state"))
-            if self._health_state != health:
-                self._health_state = health
-                self.push_change_event("healthState", health)
+        self._health_model.update_state(fault=fault, power=power)
 
         if "programming_state" in state_change:
             tile_programming_state = cast(
@@ -357,6 +352,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.push_change_event(
                     "tileProgrammingState", tile_programming_state.pretty_name()
                 )
+
+    def _health_changed(self: MccsTile, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state != health:
+            self._health_state = health
+            self.push_change_event("healthState", health)
 
     # ----------
     # Attributes

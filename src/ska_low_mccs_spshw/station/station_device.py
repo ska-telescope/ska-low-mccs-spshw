@@ -85,7 +85,7 @@ class SpsStation(SKAObsDevice):
         self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs,
             self.TileFQDNs,
-            self._component_state_changed,
+            self._health_changed,
         )
         self.set_change_event("healthState", True, False)
 
@@ -216,9 +216,8 @@ class SpsStation(SKAObsDevice):
             between the component manager and its component.
         """
         super()._communication_state_changed(communication_state)
-
-        self._health_model.is_communicating(
-            communication_state == CommunicationStatus.ESTABLISHED
+        self._health_model.update_state(
+            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
@@ -241,11 +240,13 @@ class SpsStation(SKAObsDevice):
         :param state_change: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
+        self._health_model.update_state(fault=fault, power=power)
+
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
 
-    def health_changed(self: SpsStation, health: HealthState) -> None:
+    def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
         Handle change in this device's health state.
 

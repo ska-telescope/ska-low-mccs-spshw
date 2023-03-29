@@ -18,7 +18,6 @@ from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
 from ska_control_model import (
     CommunicationStatus,
-    HealthState,
     PowerState,
     ResultCode,
     SimulationMode,
@@ -379,7 +378,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             max_workers=1,
             fault=None,
             power=PowerState.UNKNOWN,
-            health_state=HealthState.UNKNOWN,
             programming_state=None,
         )
 

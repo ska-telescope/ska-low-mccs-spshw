@@ -8,32 +8,31 @@
 """An implementation of a health model for a station."""
 from __future__ import annotations
 
-from typing import Callable, Optional, Sequence
+from typing import Optional, Sequence
 
 from ska_control_model import HealthState
-
-from ..base.health import HealthModel
+from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 __all__ = ["SpsStationHealthModel"]
 
 
-class SpsStationHealthModel(HealthModel):
+class SpsStationHealthModel(BaseHealthModel):
     """A health model for a Sps station."""
 
     def __init__(
         self: SpsStationHealthModel,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        component_state_changed_callback: Callable[..., None],
+        health_changed_callback: HealthChangedCallbackProtocol,
     ) -> None:
         """
         Initialise a new instance.
 
-        :param tile_fqdns: the FQDNs of this station's tiles
         :param subrack_fqdns: the FQDNs of this station's subracks
-        :param component_state_changed_callback: callback to be called whenever
-            there is a change to this component's state, including the health
-            model's evaluated health state.
+        :param tile_fqdns: the FQDNs of this station's tiles
+        :param health_changed_callback: callback to be called whenever
+            there is a change to this this health model's evaluated
+            health state.
         """
         self._tile_health: dict[str, Optional[HealthState]] = {
             tile_fqdn: HealthState.UNKNOWN for tile_fqdn in tile_fqdns
@@ -41,7 +40,7 @@ class SpsStationHealthModel(HealthModel):
         self._subrack_health: dict[str, Optional[HealthState]] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
-        super().__init__(component_state_changed_callback)
+        super().__init__(health_changed_callback)
 
     def subrack_health_changed(
         self: SpsStationHealthModel,

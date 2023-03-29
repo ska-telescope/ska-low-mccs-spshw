@@ -22,12 +22,12 @@ from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
-    TileSimulator,
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
+    TileSimulator,
 )
 
 

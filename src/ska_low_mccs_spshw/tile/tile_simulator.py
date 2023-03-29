@@ -7,7 +7,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-An implementation of a aavs Tile simulator.
+An implementation of a Tile simulator.
 
 #TODO:
  - Fill in this skeleton code.
@@ -311,7 +311,7 @@ class TileSimulator:
 
     This is used for testing the tpm_driver, it implements __getitem__,
     __setitem__ so that the TileSimulator can interface with the
-    TPMSimulator in the same way as the AAVS Tile interfaces with the
+    TPMSimulator in the same way as the pyaavs Tile interfaces with the
     pyfabil TPM. Instead of writing to a register we write to a
     dictionary. It overwrite read_address, write_address, read_register,
     write_register for simplicity.
@@ -653,9 +653,7 @@ class TileSimulator:
         """
         raise NotImplementedError
 
-    def set_beamformer_regions(
-        self: TileSimulator, regions: list[list[int]]
-    ) -> None:
+    def set_beamformer_regions(self: TileSimulator, regions: list[list[int]]) -> None:
         """
         Set beamformer regions.
 
@@ -664,9 +662,7 @@ class TileSimulator:
         """
         raise NotImplementedError
 
-    def set_first_last_tile(
-        self: TileSimulator, is_first: bool, is_last: bool
-    ) -> None:
+    def set_first_last_tile(self: TileSimulator, is_first: bool, is_last: bool) -> None:
         """
         Set first last tile in chain.
 
@@ -739,9 +735,7 @@ class TileSimulator:
         """
         raise NotImplementedError
 
-    def start_beamformer(
-        self: TileSimulator, start_time: int, duration: int
-    ) -> bool:
+    def start_beamformer(self: TileSimulator, start_time: int, duration: int) -> bool:
         """
         Start beamformer.
 
@@ -901,9 +895,7 @@ class TileSimulator:
         """
         raise NotImplementedError
 
-    def start_acquisition(
-        self: TileSimulator, start_time: int, delay: float
-    ) -> None:
+    def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
         """
         Start data acquisition.
 
@@ -1022,9 +1014,7 @@ class TileSimulator:
         """
         return {"0": [0, 1], "1": [1]}
 
-    def load_beam_angle(
-        self: TileSimulator, angle_coefficients: list[float]
-    ) -> None:
+    def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:
         """
         Load beam angle.
 

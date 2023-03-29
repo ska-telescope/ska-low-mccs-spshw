@@ -220,15 +220,9 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        tile_simulator.tpm._tile_health_structure["temperature"][
-            "FPGA0"
-        ] = fpga1_temp
-        tile_simulator.tpm._tile_health_structure["temperature"][
-            "FPGA1"
-        ] = fpga2_temp
-        tile_simulator.tpm._tile_health_structure["temperature"][
-            "board"
-        ] = board_temp
+        tile_simulator.tpm._tile_health_structure["temperature"]["FPGA0"] = fpga1_temp
+        tile_simulator.tpm._tile_health_structure["temperature"]["FPGA1"] = fpga2_temp
+        tile_simulator.tpm._tile_health_structure["temperature"]["board"] = board_temp
         tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = voltage
 
         tpm_driver._update_attributes()
@@ -240,9 +234,9 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        tile_simulator.tpm._tile_health_structure["voltage"][
-            "MON_5V0"
-        ] = pytest.approx(2.2)
+        tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = pytest.approx(
+            2.2
+        )
         tile_simulator.get_voltage = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
@@ -471,12 +465,8 @@ class TestTpmDriver:
         tile_simulator.connect()
         # mocked register return
         expected_delay_written: list[float] = list(range(32))
-        tile_simulator["fpga1.test_generator.delay_0"] = expected_delay_written[
-            0:16
-        ]
-        tile_simulator["fpga2.test_generator.delay_0"] = expected_delay_written[
-            16:32
-        ]
+        tile_simulator["fpga1.test_generator.delay_0"] = expected_delay_written[0:16]
+        tile_simulator["fpga2.test_generator.delay_0"] = expected_delay_written[16:32]
 
         programmed_delays = [0.0] * 32
         for i in range(32):

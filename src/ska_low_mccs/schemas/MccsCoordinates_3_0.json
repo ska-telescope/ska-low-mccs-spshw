@@ -1,0 +1,42 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schema.skao.int/ska-low-mccs-coordinates/2.0",
+    "title": "ska-low-mccs astronomic coordinates schema",
+    "description": "Schema for MccsSubarray's Allocate command",
+    "type": "object",
+    "properties": {
+      "timestamp": { 
+        "type": "string",
+        "description": "UTC time for begin of drift"
+      },
+      "reference_frame": { 
+        "type": "enum",
+        "enum": ["topocentric", "ICRS", "galactic"]
+      },
+      "c1": { 
+        "description": "first coordinate, in degrees",
+        "type": "number",
+        "minimum": 0.0,
+        "maximum": 360.0
+      },
+      "c1_rate": { 
+        "description": "Drift rate for first coordinate, in degrees/second",
+        "type": "number",
+        "minimum": -0.016,
+        "maximum": 0.016
+      },
+      "c2": {
+        "description": "second coordinate, in degrees",
+        "type": "number",
+        "minimum": -90.0,
+        "maximum": 90.0
+      },
+      "c2_rate": {
+        "description": "Drift rate for second coordinate, in degrees/second",
+        "type": "number",
+        "minimum": -0.016,
+        "maximum": 0.016
+      }
+    },
+    "required": ["reference_frame", "c1", "c2"]
+}

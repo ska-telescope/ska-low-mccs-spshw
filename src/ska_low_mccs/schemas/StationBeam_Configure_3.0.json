@@ -1,0 +1,58 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schema.skao.int/ska-low-mccs-stationbeam-configure/3.0",
+    "title": "StationBeam Configure schema",
+    "description": "Schema for StationBeam's Configure command",
+    "type": "object",
+    "required": ["subarray_id", "subarray_beam_id", "logical_bands", "sky_coordinates"],
+    "properties": {
+      "subarray_id": {
+        "description": "The ID of the subarray to which resources are allocated",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 16
+      },
+      "subarray_beam_id": {
+        "description": "The ID of the subarray beam to which resources are allocated",
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 768
+      },
+      "update_rate": {
+        "type": "number",
+        "minimum": 0.0
+      },
+      "logical_bands": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "start_channel": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 504
+            },
+            "number_of_channels": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 384
+            }
+          },
+          "required": ["start_channel", "number_of_channels"]
+        },
+          "maxItems": 48
+      },
+      "aperture_id": {
+        "description": "Aperture ID, of the form station.substation",
+        "type": "string"
+      },
+      "weighting_key_ref": {
+        "description": "descriptive ID for the aperture weights in the aperture database",
+        "type": "string"
+      },
+      "sky_coordinates": {
+        "description": "Pointed direction, including drift rate",
+	"$ref": "https://schema.skao.int/ska-low-mccs.coordinates/2.0"
+      }
+    }
+}

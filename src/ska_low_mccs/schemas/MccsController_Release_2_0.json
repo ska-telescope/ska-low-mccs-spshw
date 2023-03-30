@@ -1,0 +1,20 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schema.skao.int/ska-low-mccs-controller-release/2.0",
+    "title": "MccsController Release schema",
+    "description": "Schema for MccsController's Release command",
+    "type": "object",
+    "required": ["subarray_id"],
+    "properties": {
+      "subarray_id": {
+        "description": "The ID of the subarray to which resources are allocated",
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 16
+      },
+      "release_all": {
+	 "type": "bool",
+	 "description": "If True, release resources for all subarrays"
+      }
+    }
+}

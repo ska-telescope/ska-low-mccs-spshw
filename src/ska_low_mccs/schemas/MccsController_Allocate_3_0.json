@@ -1,0 +1,59 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schema.skao.int/ska-low-mccs-controller-allocate/3.0",
+    "title": "MccsController Allocate schema",
+    "description": "Schema for MccsController's Allocate command",
+    "type": "object",
+    "required": ["subarray_id"],
+    "properties": {
+      "subarray_id": {
+        "description": "The ID of the subarray to which resources are allocated",
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 16
+      },
+      "subarray_beams": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "subarray_beam_id": {
+              "description": "The ID of the subarray beam to which resources are allocated",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 768
+            },
+            "apertures": {
+              "type": "array",
+              "items": {
+                "description": "Station and aperture IDs contributing to the beam",
+                "type": "object",
+                "properties": {
+                  "station_id": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 512
+                  },
+                  "aperture_id": {
+                    "description": "Aperture ID, of the form station.substation",
+                    "type": "string"
+                  }
+                },
+                "required": ["station_id", "aperture_id"]
+              },
+              "maxItems": 512
+            },
+            "number_of_channels": {
+              "description": "The allocated number of SPS channels",
+              "type": "integer",
+              "minimum": 8,
+              "maximum": 384,
+	      "multipleOf": 8
+            }
+	  },
+          "required": ["subarray_beam_id", "apertures", "number_of_channels"]
+        },
+        "maxItems": 48
+      }
+    }
+}

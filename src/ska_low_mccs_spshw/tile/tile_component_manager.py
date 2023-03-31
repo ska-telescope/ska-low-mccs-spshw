@@ -600,7 +600,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise(program_fpga=False)
-                self._tile_time.set_reference_time(self.tile_reference_time)
+                self._tile_time.set_reference_time(self.fpga_reference_time)
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()
                 self._tile_time.set_reference_time(0)
@@ -850,7 +850,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :raises ValueError: error in time specification
         """
-        self.logger.debug(f"send_data_samples: {params}")
+        self.logger.debug(f"send_data_samples: {data_type}")
         # Check if another operation is pending. Wait at most 0.2 seconds
         if self.pending_data_requests:
             time.sleep(0.2)
@@ -1211,13 +1211,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             return
 
         if success:
-            self._tile_time.set_reference_time(self.tile_reference_time)
+            self._tile_time.set_reference_time(self.fpga_reference_time)
         else:
             self._tile_time.set_reference_time(0)
 
         if task_callback:
             if success:
-                self._tile_time.set_reference_time(self.tile_reference_time)
+                self._tile_time.set_reference_time(self.fpga_reference_time)
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="Start acquisition has completed",

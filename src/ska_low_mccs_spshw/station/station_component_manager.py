@@ -956,7 +956,7 @@ class SpsStationComponentManager(
                 self.logger.debug(
                     f"Writing truncation  {truncation[0]} in {proxy._proxy.name()}"
                 )
-                proxy._proxy.channeliserRoundings = truncation
+                proxy._proxy.channeliserRounding = truncation
 
     @property
     def csp_rounding(self: SpsStationComponentManager) -> list[int]:
@@ -1010,7 +1010,7 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.preaduLeves = levels[i : i + 32]
+                proxy._proxy.preaduLevels = levels[i : i + 32]
             i = i + 32
 
     @property

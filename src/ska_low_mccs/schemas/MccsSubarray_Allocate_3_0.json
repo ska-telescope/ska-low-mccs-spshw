@@ -35,8 +35,9 @@
                     "maximum": 512
                   },
                   "aperture_id": {
-                    "description": "Aperture ID, of the form station.substation",
-                    "type": "string"
+                    "description": "Aperture ID, of the form APx.y x=station y=substation",
+                    "type": "string",
+                    "pattern": "^AP[1-9][0-9]*\.[0-9][0-9]*$"
                   },
                   "station_beam_fqdn": {
                     "description": "FQDN of the Tango station beam device allocated to the aperture",
@@ -50,7 +51,7 @@
                       "maximum": 47
                     },
                     "maxItems": 48,
-		    "uniqueItems": true
+                    "uniqueItems": true
                   },
                   "hardware_beam": {
                     "type": "integer",
@@ -66,13 +67,15 @@
               "description": "First SPS subarray channel ID",
               "type": "integer",
               "minimum": 0,
-              "maximum": 383
+              "maximum": 376,
+              "multipleOf": 8
             },
             "number_of_channels": {
               "description": "The allocated number of SPS channels",
               "type": "integer",
               "minimum": 8,
-              "maximum": 384
+              "maximum": 384,
+              "multipleOf": 8
             }
           },
           "required": ["subarray_beam_id", "apertures", "first_subarray_channel", "number_of_channels"]

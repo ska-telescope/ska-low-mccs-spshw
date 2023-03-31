@@ -24,8 +24,9 @@
           "maximum": 512
         },
       "aperture_id": {
-        "description": "Aperture ID, of the form station.substation",
-        "type": "string"
+        "description": "Aperture ID, of the form APx.y x=station y=substation",
+        "type": "string",
+        "pattern": "^AP[1-9][0-9]*\.[0-9][0-9]*$"
       },
       "channel_blocks": {
         "description": "SPS channel blocks allocated to this station beam",
@@ -35,7 +36,7 @@
             "minimum": 0,
             "maximum": 47
          },
-	 "maxItems": 48
+         "maxItems": 48
        },
        "hardware_beam": {
         "type": "integer",
@@ -46,13 +47,15 @@
         "description": "First SPS subarray channel ID",
         "type": "integer",
         "minimum": 0,
-        "maximum": 383
+        "maximum": 376,
+        "multipleof": 8
       },
       "number_of_channels": {
         "description": "The allocated number of SPS channels",
         "type": "integer",
         "minimum": 8,
-        "maximum": 384
+        "maximum": 384,
+        "multipleof": 8
       }
     }
 }

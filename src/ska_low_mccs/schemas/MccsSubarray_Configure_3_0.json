@@ -34,13 +34,15 @@
                 "properties": {
                   "start_channel": {
                     "type": "integer",
-                    "minimum": 1,
-                    "maximum": 504
+                    "minimum": 2,
+                    "maximum": 504,
+                    "multipleOf": 2
                   },
                   "number_of_channels": {
                     "type": "integer",
-                    "minimum": 1,
-                    "maximum": 384
+                    "minimum": 8,
+                    "maximum": 384,
+                    "multipleOf": 8
                   }
                 },
                 "required": ["start_channel", "number_of_channels"]
@@ -54,8 +56,9 @@
                 "type": "object",
                 "properties": {
                   "aperture_id": {
-                    "description": "Aperture ID, of the form station.substation",
-                    "type": "string"
+                    "description": "Aperture ID, of the form APx.y station.substation",
+                    "type": "string",
+                    "pattern": "^AP[1-9][0-9]*\.[1-9][0-9]*$"
                   },
                   "weighting_key_ref": {
                     "description": "descriptive ID for the aperture weights in the aperture database",
@@ -70,7 +73,7 @@
               "description": "Pointed direction, including drift rate",
               "$ref": "https://schema.skao.int/ska-low-mccs-coordinates/3.0"
             }
-	  },
+          },
           "required": ["logical_bands", "sky_coordinates"]
         },
         "maxItems": 48

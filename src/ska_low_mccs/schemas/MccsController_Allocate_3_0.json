@@ -35,8 +35,9 @@
                     "maximum": 512
                   },
                   "aperture_id": {
-                    "description": "Aperture ID, of the form station.substation",
-                    "type": "string"
+                    "description": "Aperture ID, of the form APx.y x=station y=substation",
+                    "type": "string",
+                    "pattern": "^AP[1-9][0-9]*\.[0-9][0-9]*$"
                   }
                 },
                 "required": ["station_id", "aperture_id"]
@@ -48,9 +49,9 @@
               "type": "integer",
               "minimum": 8,
               "maximum": 384,
-	      "multipleOf": 8
+              "multipleOf": 8
             }
-	  },
+          },
           "required": ["subarray_beam_id", "apertures", "number_of_channels"]
         },
         "maxItems": 48

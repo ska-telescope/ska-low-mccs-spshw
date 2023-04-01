@@ -600,7 +600,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
                     self.initialise(program_fpga=False)
-                self._tile_time.set_reference_time(self.fpga_reference_time)
+                self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()
                 self._tile_time.set_reference_time(0)
@@ -1211,13 +1211,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             return
 
         if success:
-            self._tile_time.set_reference_time(self.fpga_reference_time)
+            self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
         else:
             self._tile_time.set_reference_time(0)
 
         if task_callback:
             if success:
-                self._tile_time.set_reference_time(self.fpga_reference_time)
+                self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
                 task_callback(
                     status=TaskStatus.COMPLETED,
                     result="Start acquisition has completed",

@@ -1271,7 +1271,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
-            self.logger.debug(f'{core}')
+            self.logger.debug(f"{core}")
             core["src_ip"] = int2ip(core["src_ip"])
             core["dst_ip"] = int2ip(core["dst_ip"])
         return self._forty_gb_core_list

@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://schema.skao.int/ska-low-mccs-subarraybeam-allocate/3.0",
-    "title": "SubarrayBeam Allocate schema",
-    "description": "Schema for SubarrayBeam's Allocate command",
+    "$id": "https://schema.skao.int/ska-low-mccs-subarraybeam-assignresources/3.0",
+    "title": "SubarrayBeam AssignResources schema",
+    "description": "Schema for SubarrayBeam's AssignResources command",
     "type": "object",
     "required": ["subarray_id", "subarray_beams"],
     "properties": {

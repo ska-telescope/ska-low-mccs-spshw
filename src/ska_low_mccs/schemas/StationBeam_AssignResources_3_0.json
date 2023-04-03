@@ -1,8 +1,8 @@
 {
     "$schema": "https://json-schema.org/draft/2020-12/schema",
-    "$id": "https://schema.skao.int/ska-low-mccs-stationbeam-allocate/3.0",
-    "title": "StationBeam Allocate schema",
-    "description": "Schema for StationBeam's Allocate command",
+    "$id": "https://schema.skao.int/ska-low-mccs-stationbeam-assignresources/3.0",
+    "title": "StationBeam AssignResources schema",
+    "description": "Schema for StationBeam's AssignResources command",
     "type": "object",
     "required": ["subarray_id", "subarray_beams"],
     "properties": {

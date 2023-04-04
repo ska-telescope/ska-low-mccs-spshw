@@ -382,13 +382,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     self._tile_health_structure = self.tile.get_health_status()
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
-                print("dsodu")
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
                     )
-                    print("dsodu")
                     # very slow update parameters. Should update by set commands
                     if (current_time - self._last_update_time_2) > time_interval_2:
                         self._last_update_time_2 = current_time
@@ -406,13 +404,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         self._static_delays = self._get_static_delays()
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
-
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
                         ].get_channel_table()
         # pylint: disable=broad-except
         except Exception as e:
-            print("dsds")
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
 
         if not self._is_programmed:

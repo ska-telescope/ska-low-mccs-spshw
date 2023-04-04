@@ -192,7 +192,7 @@ class MockTpm:
         },
         "dsp": {"tile_beamf": None, "station_beamf": None},
     }
-    
+
     def __init__(self) -> None:
         """Initialise the MockTPM."""
         self._is_programmed = False
@@ -442,10 +442,11 @@ class TileSimulator:
         self.fpgas_time = self.FPGAS_TIME
         # return self._register_map.get(str(address), 0)
 
-    def get_health_status(self: TileSimulator) -> dict:
-        if self.tpm != None:
+    def get_health_status(self: TileSimulator) -> dict[str, Any]:
+        """:return: a deep copy of the health."""
+        if self.tpm is not None:
             return copy.deepcopy(self.tpm._tile_health_structure)
-
+        return {}
 
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""

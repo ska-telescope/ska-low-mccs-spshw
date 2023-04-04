@@ -206,8 +206,6 @@ class TestTpmDriver:
         :param tpm_driver: The tpm driver under test.
         :param tile_simulator: The mocked tile
         """
-        # TODO: this test tests nothing since we have a deep copy of _tile_health_structure
-
         # Mock a connection to the TPM.
         tile_simulator.connect()
 
@@ -242,7 +240,7 @@ class TestTpmDriver:
         tile_simulator.get_health_status = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
-        time.sleep(6) #time waited needs to br more than tpm_driver.time_interval_1
+        time.sleep(6)  # time waited needs to br more than tpm_driver.time_interval_1
         tpm_driver._update_attributes()
 
         assert (
@@ -344,16 +342,18 @@ class TestTpmDriver:
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.INITIALISED
 
-        tpm_driver._check_channeliser_started = unittest.mock.Mock(return_value=True)
+        tpm_driver._check_channeliser_started = (  # type: ignore[assignment]
+            unittest.mock.Mock(return_value=True)
+        )
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.SYNCHRONISED
 
-        tile_simulator._tile_id =8
+        tile_simulator._tile_id = 8
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
-        #mock to fail
-        tile_simulator.is_programmed = unittest.mock.Mock(
+        # mock to fail
+        tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]
             side_effect=LibraryError("attribute mocked to fail")
         )
         tpm_driver._update_tpm_status()
@@ -428,21 +428,20 @@ class TestTpmDriver:
         # Mocked to fail
         initial_tile_id = tpm_driver._tile_id
         initial_station_id = tpm_driver._station_id
-        tile_simulator.set_station_id = unittest.mock.Mock(
+        tile_simulator.set_station_id = unittest.mock.Mock(  # type: ignore[assignment]
             side_effect=LibraryError("attribute mocked to fail")
         )
-        #set station_id with mocked failure
-        tpm_driver._tile_id = initial_tile_id +1
-        tpm_driver.station_id = initial_station_id+1
+        # set station_id with mocked failure
+        tpm_driver._tile_id = initial_tile_id + 1
+        tpm_driver.station_id = initial_station_id + 1
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
-        #set tile_id with mocked failure
-        tpm_driver._station_id = initial_station_id+1
-        tpm_driver.tile_id = initial_tile_id +1
+        # set tile_id with mocked failure
+        tpm_driver._station_id = initial_station_id + 1
+        tpm_driver.tile_id = initial_tile_id + 1
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
-
 
     def test_start_acquisition(
         self: TestTpmDriver,
@@ -518,7 +517,6 @@ class TestTpmDriver:
                 tile_simulator[f"fpga2.test_generator.delay_{i}"]
                 == expected_delay_written[i + 16] + 128
             )
-
 
     def test_read_write_address(
         self: TestTpmDriver,

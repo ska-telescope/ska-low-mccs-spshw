@@ -406,7 +406,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         self._static_delays = self._get_static_delays()
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
-                        
+
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
                         ].get_channel_table()

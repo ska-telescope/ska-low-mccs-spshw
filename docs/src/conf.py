@@ -97,6 +97,7 @@ nitpick_ignore = [
     ("py:class", "uvicorn.config.Config"), # mkdocs-based
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
+    ("py:class", "pyfabil.base.definitions.Device"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

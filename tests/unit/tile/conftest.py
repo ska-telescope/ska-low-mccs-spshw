@@ -24,10 +24,10 @@ from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
     DynamicTpmSimulator,
     DynamicTpmSimulatorComponentManager,
-    StaticTileSimulator,
     StaticTpmSimulator,
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
+    TileSimulator,
 )
 
 
@@ -214,21 +214,6 @@ def static_tpm_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
     return StaticTpmSimulator(logger)
 
 
-@pytest.fixture(name="static_tile_simulator")
-def static_tile_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
-    """
-    Return a static TPM simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a static TPM simulator
-    """
-    return StaticTileSimulator(logger)
-
-
 @pytest.fixture(name="dynamic_tpm_simulator")
 def dynamic_tpm_simulator_fixture(logger: logging.Logger) -> DynamicTpmSimulator:
     """
@@ -340,6 +325,19 @@ def tile_component_manager_fixture(
         callbacks["communication_status"],
         callbacks["component_state"],
     )
+
+
+@pytest.fixture(name="tile_simulator")
+def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
+    """
+    Return a TileSimulator.
+
+    (This is a pytest fixture.)
+
+    :param logger: logger
+    :return: a TileSimulator
+    """
+    return TileSimulator(logger)
 
 
 # pylint: disable=too-many-arguments

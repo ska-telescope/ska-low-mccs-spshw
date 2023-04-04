@@ -17,7 +17,13 @@ from typing import Any, Generator, Optional
 
 import numpy as np
 import pytest
-from ska_control_model import AdminMode, HealthState, ResultCode
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_tango_testing.context import (
     TangoContextProtocol,
@@ -274,8 +280,12 @@ class TestMccsTile:
         tile_device.adminMode = AdminMode.ONLINE
         assert tile_device.adminMode == AdminMode.ONLINE
 
+        mock_tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
         mock_tile_component_manager._update_component_state(
-            health_state=HealthState.OK,
+            fault=False,
+            power=PowerState.ON,
         )
 
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)

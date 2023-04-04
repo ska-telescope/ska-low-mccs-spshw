@@ -23,7 +23,7 @@ from .base_tpm_simulator import BaseTpmSimulator
 
 
 # pylint: disable=too-few-public-methods
-class _DynamicValuesGenerator:
+class DynamicValuesGenerator:
     """
     A generator of dynamic values with the following properties.
 
@@ -42,7 +42,7 @@ class _DynamicValuesGenerator:
     """
 
     def __init__(
-        self: _DynamicValuesGenerator,
+        self: DynamicValuesGenerator,
         soft_min: float,
         soft_max: float,
         window_size: int = 20,
@@ -97,7 +97,7 @@ class _DynamicValuesGenerator:
         # Generate our initial window of values
         self._values = [0.0] + [self._uniform() for i in range(window_size - 1)]
 
-    def __next__(self: _DynamicValuesGenerator) -> float:
+    def __next__(self: DynamicValuesGenerator) -> float:
         """
         Get the next value from this generator.
 
@@ -107,10 +107,10 @@ class _DynamicValuesGenerator:
         return sum(self._values)
 
 
-class _DynamicValuesUpdater:
+class DynamicValuesUpdater:
     """An dynamic updater of values, for use in a dynamic simulator."""
 
-    def __init__(self: _DynamicValuesUpdater, update_rate: float = 1.0) -> None:
+    def __init__(self: DynamicValuesUpdater, update_rate: float = 1.0) -> None:
         """
         Create a new instance.
 
@@ -123,17 +123,17 @@ class _DynamicValuesUpdater:
         self._thread_is_running = False
         self._thread = threading.Thread(target=self._update, args=(), daemon=True)
 
-    def start(self: _DynamicValuesUpdater) -> None:
+    def start(self: DynamicValuesUpdater) -> None:
         """Start the updater thread."""
         if not self._thread_is_running:
             self._thread.start()
 
-    def stop(self: _DynamicValuesUpdater) -> None:
+    def stop(self: DynamicValuesUpdater) -> None:
         """Stop the updater thread."""
         self._thread_is_running = False
 
     def add_target(
-        self: _DynamicValuesUpdater,
+        self: DynamicValuesUpdater,
         generator: Any,  # type: ignore[no-untyped-def]
         callback: Callable,
     ) -> None:
@@ -148,7 +148,7 @@ class _DynamicValuesUpdater:
 
         self._targets.append((generator, callback))
 
-    def _update(self: _DynamicValuesUpdater) -> None:
+    def _update(self: DynamicValuesUpdater) -> None:
         """Thread target that loops over the update targets, pushing new values."""
         with tango.EnsureOmniThread():
             self._thread_is_running = True
@@ -157,7 +157,7 @@ class _DynamicValuesUpdater:
                     callback(next(generator))
                 time.sleep(self._update_rate)
 
-    def __del__(self: _DynamicValuesUpdater) -> None:
+    def __del__(self: DynamicValuesUpdater) -> None:
         """Things to do before this object is garbage collected."""
         self.stop()
 
@@ -188,20 +188,20 @@ class DynamicTpmSimulator(BaseTpmSimulator):
         self._tile_health_structure["temperature"]["FPGA0"] = None
         self._tile_health_structure["temperature"]["FPGA1"] = None
 
-        self._updater = _DynamicValuesUpdater(1.0)
+        self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
-            _DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._board_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            _DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(16.0, 47.0),
             self._fpga2_temperature_changed,
         )
         self._updater.start()

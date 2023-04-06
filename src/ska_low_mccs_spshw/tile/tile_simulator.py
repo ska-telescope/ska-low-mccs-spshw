@@ -80,7 +80,7 @@ class MockTpm:
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
-    _register_map: dict[Union[int, str], Any] = {
+    REGISTER_MAP: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -201,6 +201,7 @@ class MockTpm:
         self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
         self._tile_health_structure = self.TILE_MONITORING_POINTS
+        self._register_map = self.REGISTER_MAP
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
         """

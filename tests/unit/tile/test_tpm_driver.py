@@ -248,6 +248,53 @@ class TestTpmDriver:
             != tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"]
         )
 
+    def test_read_tile_attributes(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test that tpm_driver can read attributes from tile.
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: The mocked tile
+        """
+        # Mock a connection to the TPM.
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+
+        # Mock tile to be programmed and initialised.
+        # this allows for attributes to be read from simulator
+        tile_simulator.tpm._is_programmed = True
+        tpm_driver._tpm_status = TpmStatus.INITIALISED
+
+        # set the register map on simulator
+        mocked_sync_time = 2
+        tile_simulator.tpm._register_map[
+            "fpga1.pps_manager.sync_time_val"
+        ] = mocked_sync_time
+
+        # assert the tpm_driver has different values to the simulator
+        assert tpm_driver.adc_rms != list(TileSimulator.ADC_RMS)
+        assert tpm_driver.fpgas_time != TileSimulator.FPGAS_TIME
+        assert tpm_driver.pps_delay != TileSimulator.PPS_DELAY
+        assert tpm_driver.fpga_reference_time != pytest.approx(mocked_sync_time)
+
+        # update values to read from simulation.
+        tpm_driver._update_attributes()
+
+        # check that the values have been read from the simulator.
+        adc_rms = tpm_driver.adc_rms
+        get_fpga_time = tpm_driver.fpgas_time
+        get_pps_delay = tpm_driver.pps_delay
+        get_fpgs_sync_time = tpm_driver.fpga_reference_time
+
+        # check that the values of the TpmDriver are read from simulator.
+        assert adc_rms == list(TileSimulator.ADC_RMS)
+        assert get_fpga_time == TileSimulator.FPGAS_TIME
+        assert get_pps_delay == TileSimulator.PPS_DELAY
+        assert get_fpgs_sync_time == pytest.approx(mocked_sync_time)
+
     def test_dumb_read_tile_attributes(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,

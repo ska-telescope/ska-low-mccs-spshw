@@ -1549,7 +1549,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 information purpose only.
             """
             core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", None)
+            arp_table_entry = kwargs.get("arp_table_entry", 0)
             src_mac = kwargs.get("source_mac", None)
             src_ip = kwargs.get("source_ip", None)
             src_port = kwargs.get("source_port", None)

@@ -1256,7 +1256,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             f"TpmDriver: get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
         )
         self._forty_gb_core_list = []
-        if core_id == -1:
+        if core_id == -1 or core_id is None:
             for icore in range(2):
                 for arp_table_entry_id in range(2):
                     dict_to_append = self._get_40g_core_configuration(
@@ -1270,6 +1270,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
+            self.logger.debug(f"{core}")
             core["src_ip"] = int2ip(core["src_ip"])
             core["dst_ip"] = int2ip(core["dst_ip"])
         return self._forty_gb_core_list
@@ -1370,11 +1371,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         if isinstance(truncation, int):
             self._channeliser_truncation = [truncation] * 512
-        elif isinstance(truncation, list):
-            if len(truncation) == 1:
-                self._channeliser_truncation = truncation * 512
-            else:
-                self._channeliser_truncation = truncation
+
+        elif len(truncation) == 1:
+            self._channeliser_truncation = [truncation[0]] * 512
+        else:
+            self._channeliser_truncation = truncation
         self._set_channeliser_truncation(self._channeliser_truncation)
 
     def _set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:

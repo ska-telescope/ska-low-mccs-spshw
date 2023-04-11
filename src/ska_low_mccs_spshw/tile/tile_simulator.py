@@ -128,7 +128,7 @@ class MockTpm:
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
-        self._register_map = self.REGISTER_MAP
+        self._register_map = copy.deepcopy(self.REGISTER_MAP)
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
         """

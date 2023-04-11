@@ -218,10 +218,10 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        tile_simulator.tpm._tile_health_structure["temperature"]["FPGA0"] = fpga1_temp
-        tile_simulator.tpm._tile_health_structure["temperature"]["FPGA1"] = fpga2_temp
-        tile_simulator.tpm._tile_health_structure["temperature"]["board"] = board_temp
-        tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = voltage
+        tile_simulator._fpga1_temperature = fpga1_temp
+        tile_simulator._fpga2_temperature = fpga2_temp
+        tile_simulator._board_temperature = board_temp
+        tile_simulator._voltage = voltage
 
         # Mock a poll event by updating attributes manually.
         tpm_driver._update_attributes()
@@ -233,19 +233,17 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"] = pytest.approx(
-            2.6
-        )
+        tile_simulator._voltage = pytest.approx(2.6)
 
         tile_simulator.get_health_status = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
-        time.sleep(6)  # time waited needs to br more than tpm_driver.time_interval_1
+        time.sleep(6)  # time waited needs to be more than tpm_driver.time_interval_1
         tpm_driver._update_attributes()
 
         assert (
             tpm_driver._tile_health_structure["voltage"]["MON_5V0"]
-            != tile_simulator.tpm._tile_health_structure["voltage"]["MON_5V0"]
+            != tile_simulator._voltage
         )
 
     def test_read_tile_attributes(
@@ -545,8 +543,6 @@ class TestTpmDriver:
         tile_simulator.connect()
         # mocked register return
         expected_delay_written: list[float] = list(range(32))
-        tile_simulator["fpga1.test_generator.delay_0"] = expected_delay_written[0:16]
-        tile_simulator["fpga2.test_generator.delay_0"] = expected_delay_written[16:32]
 
         programmed_delays = [0.0] * 32
         for i in range(32):
@@ -554,16 +550,20 @@ class TestTpmDriver:
         # No method static_time_delays.
         tpm_driver.static_delays = programmed_delays
 
-        # assert both fpgas have that delay
-        for i in range(16):
-            assert (
-                tile_simulator[f"fpga1.test_generator.delay_{i}"]
-                == expected_delay_written[i] + 128
-            )
-            assert (
-                tile_simulator[f"fpga2.test_generator.delay_{i}"]
-                == expected_delay_written[i + 16] + 128
-            )
+        # assert both fpgas have the correct delay
+        def check_time_delay(index: int) -> bool:
+            if (
+                tile_simulator[f"fpga1.test_generator.delay_{index}"]
+                == expected_delay_written[index] + 128
+                and tile_simulator[f"fpga2.test_generator.delay_{index}"]
+                == expected_delay_written[index + 16] + 128
+            ):
+                return True
+
+            return False
+
+        indexes = list(range(16))
+        assert all(map(check_time_delay, indexes)) is True
 
     def test_read_write_address(
         self: TestTpmDriver,

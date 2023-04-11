@@ -121,78 +121,6 @@ class MockTpm:
         "fpga1.pps_manager.sync_time_val": 0,
     }
 
-    TILE_MONITORING_POINTS = {
-        "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
-        "voltage": {
-            "VREF_2V5": None,
-            "MGT_AVCC": None,
-            "VM_SW_AMP": None,
-            "MGT_AVTT": None,
-            "SW_AVDD1": None,
-            "SW_AVDD2": None,
-            "AVDD3": None,
-            "MAN_1V2": None,
-            "DDR0_VREF": None,
-            "DDR1_VREF": None,
-            "VM_DRVDD": None,
-            "VIN": None,
-            "MON_3V3": None,
-            "MON_1V8": None,
-            "MON_5V0": None,
-            "VM_FE0": None,
-            "VM_FE1": None,
-            "VM_DDR0_VTT": None,
-            "VM_AGP0": None,
-            "VM_AGP1": None,
-            "VM_AGP2": None,
-            "VM_AGP3": None,
-            "VM_AGP4": None,
-            "VM_AGP5": None,
-            "VM_AGP6": None,
-            "VM_AGP7": None,
-            "VM_CLK0B": None,
-            "VM_CLK1B": None,
-            "VM_MGT0_AUX": None,
-            "VM_MGT1_AUX": None,
-            "VM_ADA0": None,
-            "VM_ADA1": None,
-            "VM_PLL": None,
-            "VM_DDR1_VTT": None,
-            "VM_DDR1_VDD": None,
-        },
-        "current": {"FE0_mVA": None, "FE1_mVA": None},
-        "timing": {
-            "clocks": {
-                "FPGA0": {"JESD": None, "DDR": None, "UDP": None},
-                "FPGA1": {"JESD": None, "DDR": None, "UDP": None},
-            },
-            "clock_managers": {
-                "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
-                "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
-            },
-            "pps": {"status": None},
-        },
-        "io": {
-            "jesd_if": {
-                "lanes": None,
-                "error_count": None,
-                "resync_count": {"FPGA0": None, "FPGA1": None},
-                "qpll_lock_loss_count": {"FPGA0": None, "FPGA1": None},
-            },
-            "ddr_if": {
-                "initialisation": None,
-                "reset_counter": {"FPGA0": None, "FPGA1": None},
-            },
-            "f2f_if": {"pll_lock_loss_count": {"Core0": None}},
-            "udp_if": {
-                "arp": None,
-                "status": None,
-                "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
-            },
-        },
-        "dsp": {"tile_beamf": None, "station_beamf": None},
-    }
-
     def __init__(self) -> None:
         """Initialise the MockTPM."""
         self._is_programmed = False
@@ -200,7 +128,6 @@ class MockTpm:
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
-        self._tile_health_structure = self.TILE_MONITORING_POINTS
         self._register_map = self.REGISTER_MAP
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -444,30 +371,35 @@ class TileSimulator:
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
-        """:return: a deep copy of the health."""
-        if self.tpm is not None:
-            return copy.deepcopy(self.tpm._tile_health_structure)
-        return {}
+        """
+        Get the health state of the tile.
+
+        TODO: This is incomplete.
+        We are only tracking:
+        -temperature,
+        -current,
+        -voltage,
+
+        But there are many more monitoring points to track.
+
+        :return: mocked fetch of health.
+        """
+        health_dict = {
+            "temperature": {
+                "FPGA0": self._fpga1_temperature,
+                "FPGA1": self._fpga2_temperature,
+                "board": self._board_temperature,
+            },
+            "voltage": {
+                "MON_5V0": self._voltage
+            },  # TODO: there are many more voltages to simulate
+            "current": self._current,
+        }
+        return health_dict
 
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
-
-    def get_fpga0_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga0 temperature."""
-        return self._fpga1_temperature
-
-    def get_fpga1_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga1 temperature."""
-        return self._fpga2_temperature
-
-    def get_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked board temperature."""
-        return self._board_temperature
-
-    def get_voltage(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked voltage."""
-        return self._voltage
 
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
@@ -1250,10 +1182,6 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._board_temperature = board_temperature
 
-    def get_voltage(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked voltage."""
-        return self._voltage
-
     @property
     def voltage(self: DynamicTileSimulator) -> float:
         """
@@ -1294,10 +1222,6 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._current = current
 
-    def get_fpga0_temperature(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked fpga0 temperature."""
-        return self._fpga1_temperature
-
     @property
     def fpga1_temperature(self: DynamicTileSimulator) -> float:
         """
@@ -1317,10 +1241,6 @@ class DynamicTileSimulator(TileSimulator):
         :param fpga1_temperature: the new FPGA1 temperature
         """
         self._fpga1_temperature = fpga1_temperature
-
-    def get_fpga1_temperature(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked fpga1 temperature."""
-        return self._fpga2_temperature
 
     @property
     def fpga2_temperature(self: DynamicTileSimulator) -> float:

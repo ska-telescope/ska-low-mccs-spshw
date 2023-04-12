@@ -80,7 +80,7 @@ class MockTpm:
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
-    _register_map: dict[Union[int, str], Any] = {
+    REGISTER_MAP: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -128,6 +128,7 @@ class MockTpm:
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
+        self._register_map = copy.deepcopy(self.REGISTER_MAP)
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
         """
@@ -369,25 +370,36 @@ class TileSimulator:
         self.fpgas_time = self.FPGAS_TIME
         # return self._register_map.get(str(address), 0)
 
+    def get_health_status(self: TileSimulator) -> dict[str, Any]:
+        """
+        Get the health state of the tile.
+
+        TODO: This is incomplete.
+        We are only tracking:
+        -temperature,
+        -current,
+        -voltage,
+
+        But there are many more monitoring points to track.
+
+        :return: mocked fetch of health.
+        """
+        health_dict = {
+            "temperature": {
+                "FPGA0": self._fpga1_temperature,
+                "FPGA1": self._fpga2_temperature,
+                "board": self._board_temperature,
+            },
+            "voltage": {
+                "MON_5V0": self._voltage
+            },  # TODO: there are many more voltages to simulate
+            "current": self._current,
+        }
+        return health_dict
+
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
-
-    def get_fpga0_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga0 temperature."""
-        return self._fpga1_temperature
-
-    def get_fpga1_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga1 temperature."""
-        return self._fpga2_temperature
-
-    def get_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked board temperature."""
-        return self._board_temperature
-
-    def get_voltage(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked voltage."""
-        return self._voltage
 
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
@@ -1170,10 +1182,6 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._board_temperature = board_temperature
 
-    def get_voltage(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked voltage."""
-        return self._voltage
-
     @property
     def voltage(self: DynamicTileSimulator) -> float:
         """
@@ -1214,10 +1222,6 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._current = current
 
-    def get_fpga0_temperature(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked fpga0 temperature."""
-        return self._fpga1_temperature
-
     @property
     def fpga1_temperature(self: DynamicTileSimulator) -> float:
         """
@@ -1237,10 +1241,6 @@ class DynamicTileSimulator(TileSimulator):
         :param fpga1_temperature: the new FPGA1 temperature
         """
         self._fpga1_temperature = fpga1_temperature
-
-    def get_fpga1_temperature(self: DynamicTileSimulator) -> Optional[float]:
-        """:return: the mocked fpga1 temperature."""
-        return self._fpga2_temperature
 
     @property
     def fpga2_temperature(self: DynamicTileSimulator) -> float:

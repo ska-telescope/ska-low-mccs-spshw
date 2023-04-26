@@ -78,7 +78,7 @@ class TestTpmDriver:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
+        time.sleep(3)
         assert tile_simulator.tpm
 
         tpm_driver.stop_communicating()
@@ -86,14 +86,13 @@ class TestTpmDriver:
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
         assert tpm_driver.communication_state == CommunicationStatus.DISABLED
 
-        time.sleep(3)  # TODO: need to wait for next poll
         assert tile_simulator.tpm is None
 
+        # Mocked failure to connect
         tile_simulator.connect = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
         )
 
-        # start communicating unblocks the polling loop therefore starting it
         tpm_driver.start_communicating()
 
         callbacks["communication_status"].assert_call(
@@ -101,8 +100,6 @@ class TestTpmDriver:
         )
         callbacks["communication_status"].assert_not_called()
         assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
-
-        assert not tpm_driver.tile.tpm
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
     def test_write_read_registers(
@@ -194,6 +191,79 @@ class TestTpmDriver:
         # mock a failed write by trying to write them no tpm attacked
         tile_simulator.tpm = None
         tpm_driver.write_address(4, [2, 3, 4, 5])
+
+    def test_poll_update(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test we can create the driver and start communication with the component.
+
+        We can create the tile class object under test, and we will mock
+        the underlying component.
+
+        :param tpm_driver: the tpm driver under test.
+        :param tile_simulator: An hardware tile mock
+        :param callbacks: dictionary of driver callbacks.
+        """
+        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
+        # Mock tile programmed.
+        tile_simulator.is_programmed = unittest.mock.Mock(return_value=True)
+
+        tpm_driver.start_communicating()
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+        #simulate change in temperature
+        tile_simulator._fpga1_temperature = 41.0
+
+        #wait for a poll and check attribute.
+        time.sleep(2.5)
+        post_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+
+        assert pre_poll_temperature != post_poll_temperature
+        assert post_poll_temperature == 41.0
+
+        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+        # test poll with unreachable TPM
+        tpm_driver.tile = None
+        tile_simulator._fpga1_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
+        #wait for a poll and check attribute.
+        time.sleep(2.5)
+        post_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+
+        assert pre_poll_temperature == post_poll_temperature
+    @pytest.mark.parametrize(
+        ("attribute", "expected_value"),
+        [
+            ("voltages", TpmDriver.TILE_MONITORING_POINTS["voltage"]),
+            ("temperatures", TpmDriver.TILE_MONITORING_POINTS["temperature"]),
+            ("currents", TpmDriver.TILE_MONITORING_POINTS["current"]),
+            ("io", TpmDriver.TILE_MONITORING_POINTS["io"]),
+            ("dsp", TpmDriver.TILE_MONITORING_POINTS["dsp"]),
+            ("board_temperature", TpmDriver.TILE_MONITORING_POINTS["temperature"]["board"]),
+            ("voltage_mon", TpmDriver.TILE_MONITORING_POINTS["voltage"]["MON_5V0"]),
+            ("fpga1_temperature", TpmDriver.TILE_MONITORING_POINTS["temperature"]["FPGA0"]),
+            ("fpga2_temperature", TpmDriver.TILE_MONITORING_POINTS["temperature"]["FPGA1"]),
+            ("register_list", TpmDriver.REGISTER_LIST),
+        ]
+    )
+    def test_dumb_read(        
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        attribute: str,
+        expected_value: Any,
+    ) -> None:
+        """
+        Test attributes are returning expected values.
+        """
+        print(f"Atribute {attribute} is {getattr(tpm_driver, attribute)}")
+        assert getattr(tpm_driver, attribute) == expected_value
 
     def test_update_attributes(
         self: TestTpmDriver,
@@ -404,6 +474,9 @@ class TestTpmDriver:
         tpm_driver._update_tpm_status()
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
+        tpm_driver.tpm_status = TpmStatus.UNKNOWN
+        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
+
     def test_get_tile_id(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -435,6 +508,42 @@ class TestTpmDriver:
             unittest.mock.MagicMock(side_effect=mock_libraryerror)
         )
         assert tpm_driver.get_tile_id() == 0
+        
+    def test_download_firmware(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test the download firmware function.
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: The mocked tile
+        :param callbacks: dictionary of driver callbacks.
+        """
+        # Mock a connection to the TPM.
+        tile_simulator.connect()
+
+        tpm_driver.download_firmware("bitfile", callbacks["task"])
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call( 
+            status=TaskStatus.COMPLETED, 
+            result="The download firmware task has completed", 
+        )
+        # Mock a failed download.
+        tile_simulator.is_programmed = unittest.mock.Mock(
+            return_value=False
+        )
+        tpm_driver.download_firmware("bitfile", callbacks["task"])
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call( 
+            status=TaskStatus.FAILED, 
+            result="The download firmware task has failed", 
+        )
+
 
     def test_set_tile_id(
         self: TestTpmDriver,

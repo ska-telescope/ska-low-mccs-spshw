@@ -252,9 +252,9 @@ class SpsStationComponentManager(
         self._lmc_param = {
             "mode": "10g",
             "payload_length": 8192,
-            "dst_ip": "0.0.0.0",
-            "dst_port": 4660,
-            "src_port": 0xF0D0,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 0xF0D0,
         }
         self._lmc_integrated_mode = "10g"
         self._lmc_channel_payload_length = 8192
@@ -578,37 +578,42 @@ class SpsStationComponentManager(
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        if not all(
-            power_state == PowerState.ON for power_state in self._subrack_power_states
-        ):
-            self.logger.debug("Starting on sequence on subracks")
-            result_code = self._turn_on_subracks(task_callback, task_abort_event)
-        self.logger.debug("Subracks now on")
+        try:
+            if not all(
+                power_state == PowerState.ON
+                for power_state in self._subrack_power_states
+            ):
+                self.logger.debug("Starting on sequence on subracks")
+                result_code = self._turn_on_subracks(task_callback, task_abort_event)
+            self.logger.debug("Subracks now on")
 
-        if not all(
-            power_state == PowerState.ON for power_state in self._tile_power_states
-        ):
-            self.logger.debug("Starting on sequence on tiles")
-            result_code = self._turn_on_tiles(task_callback, task_abort_event)
+            if not all(
+                power_state == PowerState.ON for power_state in self._tile_power_states
+            ):
+                self.logger.debug("Starting on sequence on tiles")
+                result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
-        if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tiles")
-            result_code = self._initialise_tiles(task_callback, task_abort_event)
+            if result_code == ResultCode.OK:
+                self.logger.debug("Initialising tiles")
+                result_code = self._initialise_tiles(task_callback, task_abort_event)
 
-        if result_code == ResultCode.OK:
-            self.logger.debug("Initialising station")
-            result_code = self._initialise_station(task_callback, task_abort_event)
+            if result_code == ResultCode.OK:
+                self.logger.debug("Initialising station")
+                result_code = self._initialise_station(task_callback, task_abort_event)
 
-        if result_code == ResultCode.OK:
-            self.logger.debug("Checking synchronisation")
-            result_code = self._check_station_synchronisation(
-                task_callback, task_abort_event
-            )
+            if result_code == ResultCode.OK:
+                self.logger.debug("Checking synchronisation")
+                result_code = self._check_station_synchronisation(
+                    task_callback, task_abort_event
+                )
+        except Exception:  # pylint: disable=broad-exception-caught
+            result_code = ResultCode.FAILED
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("End initialisation")
+            self.logger.debug("Initialisation completed")
             task_status = TaskStatus.COMPLETED
         else:
+            self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
         if task_callback:
             task_callback(status=task_status)

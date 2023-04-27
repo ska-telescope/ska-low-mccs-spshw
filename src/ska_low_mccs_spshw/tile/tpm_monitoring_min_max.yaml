@@ -1,0 +1,169 @@
+tpm_monitoring_points:
+  temperature:
+    board:
+      min: 10
+      max: 65
+    FPGA0:
+      min: 10
+      max: 95
+    FPGA1:
+      min: 10
+      max: 95
+  voltage:
+    VREF_2V5: 
+      min: 2.37
+      max: 2.63
+    MGT_AVCC: 
+      min: 0.85
+      max: 0.95
+    MGT_AVTT: 
+      min: 1.14
+      max: 1.26
+    SW_AVDD1: 
+      min: 1.04
+      max: 1.16
+    SW_AVDD2: 
+      min: 2.18
+      max: 2.42
+    AVDD3: 
+      min: 2.37
+      max: 2.6
+    MAN_1V2: 
+      min: 1.14
+      max: 1.26
+    DDR0_VREF: 
+      min: 0.57
+      max: 0.63
+    DDR1_VREF: 
+      min: 0.57
+      max: 0.63
+    VM_DRVDD: 
+      min: 1.71
+      max: 1.89
+    VIN: 
+      min: 11.4
+      max: 12.6
+    MON_3V3: 
+      min: 3.13
+      max: 3.46
+    MON_1V8: 
+      min: 1.71
+      max: 1.89
+    MON_5V0: 
+      min: 4.69
+      max: 5.19
+    VM_AGP0: 
+      min: 0.84
+      max: 0.99
+    VM_AGP1: 
+      min: 0.84
+      max: 0.99
+    VM_AGP2: 
+      min: 0.84
+      max: 0.99
+    VM_AGP3: 
+      min: 0.84
+      max: 0.99
+    VM_CLK0B: 
+      min: 3.04
+      max: 3.56
+    VM_DDR0_VTT: 
+      min: 0.55
+      max: 0.65
+    VM_FE0: 
+      min: 3.22
+      max: 3.78
+    VM_MGT0_AUX: 
+      min: 1.66
+      max: 1.94
+    VM_PLL: 
+      min: 3.04
+      max: 3.56
+    VM_AGP4: 
+      min: 0.84
+      max: 0.99
+    VM_AGP5: 
+      min: 0.84
+      max: 0.99
+    VM_AGP6: 
+      min: 0.84
+      max: 0.99
+    VM_AGP7: 
+      min: 0.84
+      max: 0.99
+    VM_CLK1B: 
+      min: 3.04
+      max: 3.56
+    VM_DDR1_VDD: 
+      min: 1.1
+      max: 1.3
+    VM_DDR1_VTT: 
+      min: 0.55
+      max: 0.65
+    VM_DVDD: 
+      min: 1.01
+      max: 1.19
+    VM_FE1: 
+      min: 3.22
+      max: 3.78
+    VM_MGT1_AUX: 
+      min: 1.66
+      max: 1.94
+    VM_SW_AMP: 
+      min: 3.22
+      max: 3.78
+  current:
+    FE0_MVA:
+      min: 1.93
+      max: 2.27
+    FE1:MVA:
+      min: 2.02
+      max: 2.38
+  timing:
+    clocks:
+      FPGA0: 
+        JESD: 0
+        DDR: 0
+        UDP: 0
+      FPGA1:
+        JESD: 0
+        DDR: 0
+        UDP: 0
+    clock_managers:
+      FPGA0:
+        C2C_MMCM: 0
+        JESD_MMCM: 0
+        DSP_MMCM: 0
+      FPGA1:
+        C2C_MMCM: 0
+        JESD_MMCM: 0
+        DSP_MMCM: 0
+    pps:
+      status: 0
+  io:
+    jesd_if:
+      lanes: 0
+      error_count: 0
+      resync_count:
+        FPGA0: 0
+        FPGA1: 0
+      qpll_lock_loss_count:
+        FPGA0: 0
+        FPGA1: 0
+    ddr_if:
+      initialisation: 0
+      reset_counter:
+        FPGA0: 0
+        FPGA1: 0
+    f2f_if:
+      pll_lock_loss_count:
+        Core0: 0
+    udp_if:
+      arp: 0
+      status: 0
+      linkup_loss_count:
+        FPGA0: 0
+        FPGA1: 0
+  dsp:
+    tile_beamf: 0
+    station_beamf: 0

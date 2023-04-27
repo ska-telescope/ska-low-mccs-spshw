@@ -584,6 +584,27 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.forty_gb_network_errors()
 
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: SpsStation) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: SpsStation, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
+
     # -------------
     # Slow Commands
     # -------------

@@ -97,11 +97,13 @@ class SpsStationHealthModel(BaseHealthModel):
             HealthState.FAILED,
             HealthState.UNKNOWN,
             HealthState.DEGRADED,
+            HealthState.OK,
         ]:
-            if station_health == health:
+            if (
+                self._health_rules.rules[health](
+                    self._subrack_health, self._tile_health
+                )
+                or station_health == health
+            ):
                 return health
-            if health in self._subrack_health.values():
-                return health
-            if health in self._tile_health.values():
-                return health
-        return HealthState.OK
+        return HealthState.UNKNOWN

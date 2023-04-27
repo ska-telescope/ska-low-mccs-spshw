@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import gc
+import json
 from typing import Generator
 
 import pytest
@@ -186,3 +187,45 @@ def test_off(
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "COMPLETED")
     )
+
+
+@pytest.mark.parametrize(
+    ("expected_init_params", "new_params"),
+    [
+        pytest.param(
+            {
+                "antenna_degraded": 0.05,
+                "antenna_failed": 0.2,
+                "tile_degraded": 0.05,
+                "tile_failed": 0.2,
+            },
+            {
+                "antenna_degraded": 0.1,
+                "antenna_failed": 0.3,
+                "tile_degraded": 0.07,
+                "tile_failed": 0.2,
+            },
+            id="Check correct initial values, write new and "
+            "verify new values have been written",
+        )
+    ],
+)
+def test_healthParams(
+    device_under_test: DeviceProxy,
+    expected_init_params: dict[str, float],
+    new_params: dict[str, float],
+) -> None:
+    """
+    Test for healthParams attributes.
+
+    :param device_under_test: fixture that provides a
+        :py:class:`tango.DeviceProxy` to the device under test, in a
+        :py:class:`tango.test_context.DeviceTestContext`.
+    :param expected_init_params: the initial values which the health model is
+        expected to have initially
+    :param new_params: the new health rule params to pass to the health model
+    """
+    assert device_under_test.healthModelParams == json.dumps(expected_init_params)
+    new_params_json = json.dumps(new_params)
+    device_under_test.healthModelParams = new_params_json
+    assert device_under_test.healthModelParams == new_params_json

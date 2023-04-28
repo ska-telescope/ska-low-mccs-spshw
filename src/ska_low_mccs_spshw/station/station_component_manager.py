@@ -578,39 +578,35 @@ class SpsStationComponentManager(
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            if not all(
-                power_state == PowerState.ON
-                for power_state in self._subrack_power_states
-            ):
-                self.logger.debug("Starting on sequence on subracks")
-                result_code = self._turn_on_subracks(task_callback, task_abort_event)
-            self.logger.debug("Subracks now on")
+        if not all(
+            power_state == PowerState.ON for power_state in self._subrack_power_states
+        ):
+            self.logger.debug("Starting on sequence on subracks")
+            result_code = self._turn_on_subracks(task_callback, task_abort_event)
+        self.logger.debug("Subracks now on")
 
-            if not all(
-                power_state == PowerState.ON for power_state in self._tile_power_states
-            ):
-                self.logger.debug("Starting on sequence on tiles")
-                result_code = self._turn_on_tiles(task_callback, task_abort_event)
+        if not all(
+            power_state == PowerState.ON for power_state in self._tile_power_states
+        ):
+            self.logger.debug("Starting on sequence on tiles")
+            result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
-            if result_code == ResultCode.OK:
-                self.logger.debug("Initialising tiles")
-                result_code = self._initialise_tiles(task_callback, task_abort_event)
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising tiles")
+            result_code = self._initialise_tiles(task_callback, task_abort_event)
 
-            if result_code == ResultCode.OK:
-                self.logger.debug("Initialising station")
-                result_code = self._initialise_station(task_callback, task_abort_event)
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising station")
+            result_code = self._initialise_station(task_callback, task_abort_event)
 
-            if result_code == ResultCode.OK:
-                self.logger.debug("Checking synchronisation")
-                result_code = self._check_station_synchronisation(
-                    task_callback, task_abort_event
-                )
-        except Exception:  # pylint: disable=broad-exception-caught
-            result_code = ResultCode.FAILED
+        if result_code == ResultCode.OK:
+            self.logger.debug("Checking synchronisation")
+            result_code = self._check_station_synchronisation(
+                task_callback, task_abort_event
+            )
 
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("Initialisation completed")
+            self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
         else:
             self.logger.error("Initialisation failed")

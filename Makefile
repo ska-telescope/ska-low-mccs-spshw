@@ -35,7 +35,7 @@ python-post-lint:
 
 
 K8S_FACILITY ?= k8s-test
-K8S_CHART_PARAMS += --values charts/ska-low-mccs-spshw/values-$(K8S_FACILITY).yaml
+K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
 
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \

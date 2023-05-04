@@ -13,6 +13,8 @@ from typing import Optional, Sequence
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
+from ska_low_mccs_spshw.station.station_health_rules import SpsStationHealthRules
+
 __all__ = ["SpsStationHealthModel"]
 
 
@@ -24,6 +26,7 @@ class SpsStationHealthModel(BaseHealthModel):
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         health_changed_callback: HealthChangedCallbackProtocol,
+        thresholds: Optional[dict[str, float]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -33,6 +36,7 @@ class SpsStationHealthModel(BaseHealthModel):
         :param health_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
+        :param thresholds: the threshold parameters for the health rules
         """
         self._tile_health: dict[str, Optional[HealthState]] = {
             tile_fqdn: HealthState.UNKNOWN for tile_fqdn in tile_fqdns
@@ -40,6 +44,7 @@ class SpsStationHealthModel(BaseHealthModel):
         self._subrack_health: dict[str, Optional[HealthState]] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
+        self._health_rules = SpsStationHealthRules(thresholds)
         super().__init__(health_changed_callback)
 
     def subrack_health_changed(

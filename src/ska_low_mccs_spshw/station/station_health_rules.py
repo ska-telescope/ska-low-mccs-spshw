@@ -1,4 +1,5 @@
 #  -*- coding: utf-8 -*
+# pylint: disable=arguments-differ
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -8,69 +9,16 @@
 """A file to store health transition rules for station."""
 from __future__ import annotations
 
-from typing import Callable, FrozenSet
-
 from ska_control_model import HealthState
+from ska_low_mccs_common.health import HealthRules
 
 DEGRADED_STATES = frozenset({HealthState.DEGRADED, HealthState.FAILED, None})
 
 
-class SpsStationHealthRules:
+class SpsStationHealthRules(HealthRules):
     """A class to handle transition rules for station."""
 
-    def __init__(
-        self: SpsStationHealthRules,
-        subrack_degraded_threshold: float = 0.05,
-        subrack_failed_threshold: float = 0.2,
-        tile_degraded_threshold: float = 0.05,
-        tile_failed_threshold: float = 0.2,
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param subrack_degraded_threshold: the fraction of unhealthy subracks for
-            the station to be DEGRADED
-        :param subrack_failed_threshold: the fraction of unhealthy subracks for
-            the station to be FAILED
-        :param tile_degraded_threshold: the fraction of unhealthy tiles for
-            the station to be DEGRADED
-        :param tile_failed_threshold: the fraction of unhealthy tiles for
-            the station to be FAILED
-        """
-        self._subrack_degraded_threshold = subrack_degraded_threshold
-        self._subrack_failed_threshold = subrack_failed_threshold
-        self._tile_degraded_threshold = tile_degraded_threshold
-        self._tile_failed_threshold = tile_failed_threshold
-
-    def get_fraction_in_states(
-        self: SpsStationHealthRules,
-        device_dict: dict[str, HealthState | None],
-        states: FrozenSet[HealthState | None],
-    ) -> float:
-        """
-        Get the fraction of devices in a given list of states.
-
-        :param device_dict: dictionary of devices, key fqdn and value health
-        :param states: the states to check
-        :return: the fraction of the devices in the given states
-        """
-        return self.get_count_in_states(device_dict, states) / float(len(device_dict))
-
-    def get_count_in_states(
-        self: SpsStationHealthRules,
-        device_dict: dict[str, HealthState | None],
-        states: FrozenSet[HealthState | None],
-    ) -> int:
-        """
-        Get the number of devices in a given list of state.
-
-        :param device_dict: dictionary of devices, key fqdn and value health
-        :param states: the states to check
-        :return: the number of the devices in the given states
-        """
-        return sum(map(lambda s: s in states, device_dict.values()))
-
-    def unknown_rule(
+    def unknown_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
@@ -87,7 +35,7 @@ class SpsStationHealthRules:
             or HealthState.UNKNOWN in tile_healths.values()
         )
 
-    def failed_rule(
+    def failed_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
@@ -101,12 +49,12 @@ class SpsStationHealthRules:
         """
         return (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-            >= self._tile_failed_threshold
+            >= self._thresholds["tile_failed"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-            >= self._subrack_failed_threshold
+            >= self._thresholds["subrack_failed"]
         )
 
-    def degraded_rule(
+    def degraded_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
@@ -118,14 +66,15 @@ class SpsStationHealthRules:
         :param tile_healths: dictionary of tile healths
         :return: True if DEGRADED is a valid state
         """
+        print(self.get_fraction_in_states(subrack_healths, DEGRADED_STATES))
         return (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-            >= self._tile_degraded_threshold
+            >= self._thresholds["tile_degraded"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-            >= self._subrack_degraded_threshold
+            >= self._thresholds["subrack_degraded"]
         )
 
-    def healthy_rule(
+    def healthy_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
@@ -139,21 +88,21 @@ class SpsStationHealthRules:
         """
         return (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-            < self._tile_degraded_threshold
+            < self._thresholds["tile_degraded"]
             and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-            < self._subrack_degraded_threshold
+            < self._thresholds["subrack_degraded"]
         )
 
     @property
-    def rules(self: SpsStationHealthRules) -> dict[HealthState, Callable[..., bool]]:
+    def default_thresholds(self: HealthRules) -> dict[str, float]:
         """
-        Get the transition rules for the station.
+        Get the default thresholds for this device.
 
-        :return: the transition rules for the station
+        :return: the default thresholds
         """
         return {
-            HealthState.FAILED: self.failed_rule,
-            HealthState.DEGRADED: self.degraded_rule,
-            HealthState.OK: self.healthy_rule,
-            HealthState.UNKNOWN: self.unknown_rule,
+            "subrack_degraded": 0.05,
+            "subrack_failed": 0.2,
+            "tile_degraded": 0.05,
+            "tile_failed": 0.2,
         }

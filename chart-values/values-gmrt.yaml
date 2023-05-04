@@ -1,0 +1,41 @@
+facility:
+  stations:
+    instances:
+      1:
+        cabinet_network_address: 10.0.0.0
+        subracks: [1]
+        tpms: [10, 13]
+  subracks:
+    instances:
+      1:
+        host: 10.0.10.112
+        port: 8081
+  tpms:
+    version: tpm_v1_6
+    port: 10000
+    instances:
+      10:
+        host: 10.0.10.205
+        subrack: "1"
+        subrack_bay: 2
+      13:
+        host: 10.0.10.217
+        subrack: "1"
+        subrack_bay: 5
+
+simulators:
+  subracks:
+    1:
+      host: subrack-simulator-1
+
+deviceServers:
+  stations:
+    instances:
+      1:
+        enabled: false  # suppress this Tango device
+  subracks:
+    logging_level_default: 5
+  tpms:
+    logging_level_default: 5
+    simulation_config: 1
+    test_config: 1

@@ -2,6 +2,21 @@
 
 ## unreleased
 
+## 0.4.0
+
+* [MCCS-1495] Inline facility data
+* [MCCS-1418] Added notebook to generate a beam from a single TPM input.
+* [MCCS-1441] Update tile simulator
+* [MCCS-1449] Health cleanup
+* [MCCS-1267] Added Station commands to set pointing delays
+* [MCCS-1427] JSON validation
+* [MCCS-1081] Modify MCCS tile to support AAVS tile monitoring points
+* [MCCS-1438] support enable above instance level
+* [MCCS-1429] Update iTPM bitfiles to version sbf415
+* [MCCS-1257] Station initialisation.
+* [MCCS-1360] Fix bug in MccsTile config
+* [MCCS-1325] Station test harness
+
 ## 0.3.2
 
 * LOW-386 - UNKNOWN / OFF bugfix

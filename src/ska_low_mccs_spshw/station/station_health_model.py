@@ -13,7 +13,7 @@ from typing import Optional, Sequence
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
-from ska_low_mccs_spshw.station.station_health_rules import SpsStationHealthRules
+from .station_health_rules import SpsStationHealthRules
 
 __all__ = ["SpsStationHealthModel"]
 

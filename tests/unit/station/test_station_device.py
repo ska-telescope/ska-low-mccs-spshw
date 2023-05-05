@@ -211,21 +211,19 @@ def test_off(
     ],
 )
 def test_healthParams(
-    device_under_test: DeviceProxy,
+    station_device: SpsStation,
     expected_init_params: dict[str, float],
     new_params: dict[str, float],
 ) -> None:
     """
     Test for healthParams attributes.
 
-    :param device_under_test: fixture that provides a
-        :py:class:`tango.DeviceProxy` to the device under test, in a
-        :py:class:`tango.test_context.DeviceTestContext`.
+    :param station_device: the SPS station Tango device under test.
     :param expected_init_params: the initial values which the health model is
         expected to have initially
     :param new_params: the new health rule params to pass to the health model
     """
-    assert device_under_test.healthModelParams == json.dumps(expected_init_params)
+    assert station_device.healthModelParams == json.dumps(expected_init_params)
     new_params_json = json.dumps(new_params)
-    device_under_test.healthModelParams = new_params_json
-    assert device_under_test.healthModelParams == new_params_json
+    station_device.healthModelParams = new_params_json
+    assert station_device.healthModelParams == new_params_json

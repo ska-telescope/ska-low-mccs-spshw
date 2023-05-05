@@ -264,7 +264,8 @@ class TestSpsStationHealthModel:
                 },
                 HealthState.OK,
                 HealthState.DEGRADED,
-                id="All devices healthy, expect OK, then 1 subrack FAILED, expect DEGRADED",
+                id="All devices healthy, expect OK, then 1 subrack FAILED,"
+                "expect DEGRADED",
             ),
             pytest.param(
                 {

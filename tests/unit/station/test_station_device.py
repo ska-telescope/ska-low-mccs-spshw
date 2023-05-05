@@ -225,5 +225,5 @@ def test_healthParams(
     """
     assert station_device.healthModelParams == json.dumps(expected_init_params)
     new_params_json = json.dumps(new_params)
-    station_device.healthModelParams = new_params_json # type: ignore[assignment]
+    station_device.healthModelParams = new_params_json  # type: ignore[assignment]
     assert station_device.healthModelParams == new_params_json

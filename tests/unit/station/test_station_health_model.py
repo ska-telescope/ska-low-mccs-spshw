@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import pytest
 from ska_control_model import HealthState, PowerState
+from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.station.station_health_model import SpsStationHealthModel
 
@@ -25,11 +26,7 @@ class TestSpsStationHealthModel:
 
         :return: Health model to be used.
         """
-
-        def callback(health: HealthState) -> None:
-            pass
-
-        health_model = SpsStationHealthModel(["subrack"], ["tile"], callback)
+        health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model
@@ -432,5 +429,4 @@ class TestSpsStationHealthModel:
         assert health_model.evaluate_health() == expected_init_health
 
         health_model.health_params = final_thresholds
-        print(health_model._health_rules._thresholds)
         assert health_model.evaluate_health() == expected_final_health

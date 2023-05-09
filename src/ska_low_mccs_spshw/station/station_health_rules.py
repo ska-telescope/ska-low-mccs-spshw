@@ -66,7 +66,6 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if DEGRADED is a valid state
         """
-        print(self.get_fraction_in_states(subrack_healths, DEGRADED_STATES))
         return (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
             >= self._thresholds["tile_degraded"]

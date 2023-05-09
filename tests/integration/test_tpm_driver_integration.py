@@ -153,15 +153,17 @@ class TestTpmDriver:
     This class contains integration tests designed to validate the functionality
     of the TPMDriver in both hardware and software-facing environments. The tests
     are aimed at ensuring the correct interaction and integration between the
-    TPMDriver and its underlying components. These tests cover a wide range of
-    scenarios to ensure the robustness and reliability of the TPMDriver in
-    real-world usage.
+    TPMDriver and its underlying components (TileSimulator or HwTile).
+
 
     Note: These integration tests may require proper hardware setup or hardware
     simulation environments to run successfully. For example the tpm needs to
     have power, be routable, ....
     """
 
+    @pytest.mark.xfail(
+        reason="This test has not yet been validated to pass on physical hardware."
+    )
     def test_communication(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -209,7 +211,11 @@ class TestTpmDriver:
         # Any subsequent calls to stop communicating do not fire a change event
         tpm_driver.stop_communicating()
         callbacks["communication_status"].assert_not_called()
+        assert tile.tpm is None
 
+    @pytest.mark.xfail(
+        reason="This test has not yet been validated to pass on physical hardware."
+    )
     def test_poll_update(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -231,13 +237,13 @@ class TestTpmDriver:
         # start communicating initialises a polling loop that should.
         # - start_connection with the component under test.
         # - update attributes in a polling loop.
+        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+
         tpm_driver.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-
-        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
 
         # Simulate a temperature change (only necessary for simulation)
         tile._fpga1_temperature = 41.0
@@ -273,6 +279,9 @@ class TestTpmDriver:
         # Note: A pass in software is sufficient for this final assert.
         assert pre_poll_temperature == post_poll_temperature
 
+    @pytest.mark.xfail(
+        reason="This test has not yet been validated to pass on physical hardware."
+    )
     @pytest.mark.parametrize(
         ("attribute"),
         [
@@ -286,6 +295,35 @@ class TestTpmDriver:
             ("fpga1_temperature"),
             ("fpga2_temperature"),
             ("register_list"),
+            ("timing"),
+            ("station_id"),
+            ("tile_id"),
+            ("is_programmed"),
+            ("firmware_version"),
+            ("firmware_name"),
+            ("firmware_available"),
+            ("hardware_version"),
+            ("tpm_status"),
+            ("adc_rms"),
+            ("fpgas_time"),
+            ("fpga_reference_time"),
+            ("fpga_current_frame"),
+            ("pps_delay"),
+            ("arp_table"),
+            ("channeliser_truncation"),
+            ("static_delays"),
+            ("csp_rounding"),
+            ("preadu_levels"),
+            ("pps_present"),
+            ("clock_present"),
+            ("sysref_present"),
+            ("pll_locked"),
+            ("beamformer_table"),
+            ("current_tile_beamformer_frame"),
+            ("is_beamformer_running"),
+            ("pending_data_requests"),
+            ("phase_terminal_count"),
+            ("test_generator_active"),
         ],
     )
     def test_dumb_read(
@@ -296,14 +334,16 @@ class TestTpmDriver:
         """
         Test the dumb read functionality.
 
-        It reads the specified attribute and checks that the returned value matches the
-        expected value.
+        Validate that it can be called without error.
 
         :param tpm_driver: The TPM driver instance being tested.
         :param attribute: The attribute to be read.
         """
         _ = getattr(tpm_driver, attribute)
 
+    @pytest.mark.xfail(
+        reason="This test has not yet been validated to pass on physical hardware."
+    )
     def test_write_read_registers(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,

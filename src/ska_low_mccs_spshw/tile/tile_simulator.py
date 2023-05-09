@@ -26,6 +26,7 @@ from typing import Any, List, Optional, Union
 from pyfabil.base.definitions import Device, LibraryError
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
+from .integrated_channel_data_simulator import IntegratedChannelDataSimulator
 
 __all__ = ["DynamicTileSimulator", "TileSimulator"]
 
@@ -57,9 +58,8 @@ class StationBeamformer:
 
         :return: channel table
         """
-        nof_blocks = self._nof_channels // 8
         # TODO
-        return copy.deepcopy(self._channel_table[0:nof_blocks])
+        return copy.deepcopy(self._channel_table)
 
     def start(
         self: StationBeamformer,
@@ -378,6 +378,7 @@ class TileSimulator:
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
+        self.dst_ip: Optional[str] = None
         self.sync_time = 0
         # return self._register_map.get(str(address), 0)
 
@@ -627,16 +628,24 @@ class TileSimulator:
         dst_port: Optional[int] = 4660,
     ) -> None:
         """
-        Specify whether control data will be transmitted over 1G or 40G networks.
+        Specify where the control data will be transmitted.
+
+        With the simulator no traffic will leave the cluster.
+        To transmit data from the pod hosting the simulator
+        to the DAQ (data acquisition) receiver, a Kubernetes service is required.
+        Therefore dst_ip is the name of the service to use rather than the IP.
 
         :param mode: "1g" or "10g"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
-        :param dst_ip: destination IP, defaults to None
+        :param dst_ip: destination service.
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
         """
-        return
+        # This is required to work out where the Tile will send data to.
+        # In the Tile simulator we will not be using IP addresses but rather services
+        # to route data to the correct location.
+        self.dst_ip = dst_ip
 
     def reset_eth_errors(self: TileSimulator) -> None:
         """Not Implemented."""
@@ -645,6 +654,7 @@ class TileSimulator:
 
     def connect(self: TileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
+        self.logger.info("Connect called on the simulator")
         self.tpm = MockTpm()
         self._polling_thread.start()
 
@@ -867,9 +877,14 @@ class TileSimulator:
         :param sync: true to sync
         :param timestamp: timestamp
         :param seconds: When to synchronise
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        # TODO: This does not send raw SPEAD packets but sends Integrated channel data.
+        # Should we create a raw data SPEAD packet generator?
+        # Should the data created be meaningful? to what extent?
+        # (delay, attenuation, random)
+        assert self.dst_ip
+        spead_data_simulator = IntegratedChannelDataSimulator(self.dst_ip, 4660, 1)
+        spead_data_simulator.send_data(1)
 
     def send_channelised_data(
         self: TileSimulator,

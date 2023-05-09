@@ -99,16 +99,16 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     """
     This attempts to simulate pyfabil TPM.
 
-    This is used for testing the tpm_driver, it implements
-    __getitem__, __setitem__ so that the TileSimulator can
-    interface with the TPMSimulator in the same way as the
-    AAVS Tile interfaces with the pyfabil TPM. Instead of writing to
-    a register we write to a dictionary. It overwrite read_address,
-    write_address, read_register, write_register for simplicity.
+    This is used for testing the tpm_driver, it implements __getitem__,
+    __setitem__ so that the TileSimulator can interface with the
+    TPMSimulator in the same way as the AAVS Tile interfaces with the
+    pyfabil TPM. Instead of writing to a register we write to a
+    dictionary. It overwrite read_address, write_address, read_register,
+    write_register for simplicity.
 
-    The reason for this class is that the BaseTPMSimulator does not
-    have the same interface as the pyfabil TPM, so a subclass has
-    wrapped this to give that interface needed for testing tpm_driver.
+    The reason for this class is that the BaseTPMSimulator does not have
+    the same interface as the pyfabil TPM, so a subclass has wrapped
+    this to give that interface needed for testing tpm_driver.
     """
 
     def __init__(

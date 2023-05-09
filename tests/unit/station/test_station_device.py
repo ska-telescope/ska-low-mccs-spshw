@@ -194,14 +194,14 @@ def test_off(
     [
         pytest.param(
             {
-                "antenna_degraded": 0.05,
-                "antenna_failed": 0.2,
+                "subrack_degraded": 0.05,
+                "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
             },
             {
-                "antenna_degraded": 0.1,
-                "antenna_failed": 0.3,
+                "subrack_degraded": 0.1,
+                "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
             },

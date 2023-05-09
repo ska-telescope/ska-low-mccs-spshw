@@ -23,6 +23,7 @@ from typing import Any, List, Optional, Union
 from pyfabil.base.definitions import Device, LibraryError
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
+from .tile_data import TileData
 
 __all__ = ["DynamicTileSimulator", "TileSimulator"]
 
@@ -362,6 +363,9 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
+            TileData.TILE_MONITORING_POINTS
+        )
         self._station_id = self.STATION_ID
         self._timestamp = 0
         self._pps_delay = self.PPS_DELAY

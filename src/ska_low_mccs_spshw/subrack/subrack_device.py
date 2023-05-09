@@ -11,7 +11,7 @@ from __future__ import annotations
 import importlib
 import json
 import logging
-from typing import Any, Final, Optional
+from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
@@ -55,6 +55,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         self: SetSubrackFanSpeedCommand,
         command_tracker: CommandTrackerProtocol,
         component_manager: BaseComponentManager,
+        fan_speed_set: Callable,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         """
@@ -66,6 +67,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         :param logger: a logger for this command to use.
         """
         validator = JsonValidator("SetSubrackFanSpeed", self.SCHEMA, logger)
+        self._fan_speed_set = fan_speed_set
         super().__init__(
             "SetSubrackFanSpeed",
             command_tracker,
@@ -101,6 +103,8 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
+
+        self._fan_speed_set(subrack_fan_id, speed_percent)
 
         return super().do(subrack_fan_id, speed_percent)
 
@@ -305,6 +309,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         self._hardware_attributes: dict[str, Any] = {}
 
+        self._desired_fan_speeds: list[float] = []
+
     # ----------
     # Properties
     # ----------
@@ -392,7 +398,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                 ),
             )
         for (command_name, command_class) in [
-            ("SetSubrackFanSpeed", SetSubrackFanSpeedCommand),
             ("SetSubrackFanMode", SetSubrackFanModeCommand),
             ("SetPowerSupplyFanSpeed", SetPowerSupplyFanSpeedCommand),
         ]:
@@ -402,6 +407,19 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                     self._command_tracker, self.component_manager, logger=self.logger
                 ),
             )
+        self.register_command_object(
+            "SetSubrackFanSpeed",
+            SetSubrackFanSpeedCommand(
+                self._command_tracker,
+                self.component_manager,
+                self._fan_speed_set,
+                logger=self.logger,
+            ),
+        )
+
+    def _fan_speed_set(self: MccsSubrack, fan_id: int, fan_speed_set: float) -> None:
+        self._desired_fan_speeds[fan_id] = fan_speed_set
+        self._update_health_data()
 
     # ----------
     # Commands
@@ -533,6 +551,26 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     # ----------
     # Attributes
     # ----------
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: MccsSubrack) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: MccsSubrack, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
 
     @attribute(dtype=int, label="TPM count", abs_change=1)
     def tpmCount(self: MccsSubrack) -> int:
@@ -691,7 +729,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply currents.
 
-        :return: the power supply fan speeds.
+        :return: the power supply currents.
             When communication with the subrack is not established,
             this returns an empty list.
         """
@@ -877,6 +915,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
+        self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:
         """
@@ -900,6 +939,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         else:
             self._hardware_attributes["boardCurrent"] = [board_current]
             self.push_change_event("boardCurrent", [board_current])
+        self._update_health_data()
 
     def _update_tpm_present(
         self: MccsSubrack, tpm_present: Optional[list[bool]]
@@ -916,6 +956,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             return
         self._tpm_count = tpm_count
         self.push_change_event("tpmCount", tpm_count)
+        self._update_health_data()
 
     def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: Optional[list[bool]]) -> None:
         if tpm_on_off is None:
@@ -929,10 +970,29 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _update_tpm_power_states(
         self: MccsSubrack, tpm_power_states: list[PowerState]
     ) -> None:
+        changed = False
         for index, power_state in enumerate(tpm_power_states):
             if self._tpm_power_states[index] != power_state:
+                changed = True
                 self._tpm_power_states[index] = power_state
                 self.push_change_event(f"tpm{index+1}PowerState", power_state)
+        if changed:
+            self._update_health_data()
+
+    def _update_health_data(self: MccsSubrack) -> None:
+        """Updates the data points for the health model."""
+        self._health_model.update_data(
+            self.boardTemperatures,
+            self.backplaneTemperatures,
+            self.subrackFanSpeeds,
+            self.boardCurrent,
+            self.tpmCurrents,
+            self.powerSupplyCurrents,
+            self.tpmVoltages,
+            self.powerSupplyVoltages,
+            self._tpm_power_states,
+            self._desired_fan_speeds,
+        )
 
 
 # ----------

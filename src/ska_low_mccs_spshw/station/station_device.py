@@ -106,6 +106,8 @@ class SpsStation(SKAObsDevice):
             self._max_workers,
             self._communication_state_changed,
             self._component_state_changed,
+            self._health_model.tile_health_changed,
+            self._health_model.subrack_health_changed,
         )
 
     def init_command_objects(self: SpsStation) -> None:

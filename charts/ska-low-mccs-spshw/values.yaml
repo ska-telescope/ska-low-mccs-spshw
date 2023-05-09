@@ -77,15 +77,41 @@ low_mccs_spshw:
   image:
     registry: artefact.skao.int
     image: ska-low-mccs-spshw
-    tag: 0.3.2  # VERSION: Used to update tags on release - DO NOT REMOVE COMMENT
+    tag: 0.4.0
     pullPolicy: IfNotPresent
 
-# facility: psi-low  # e.g. psi-low, aavs2, ...
+# facility:
+#   stations:
+#     instances:
+#       1:
+#         cabinet_network_address: 10.0.0.0
+#         subracks: [1]
+#         tpms: [10, 13]
+#   subracks:
+#     reachable_from: psi-node3
+#     instances:
+#       1:
+#         host: 10.0.10.80
+#         port: 8081
+#   tpms:
+#     reachable_from: psi-node3
+#     version: tpm_v1_6
+#     port: 10000
+#     instances:
+#       10:
+#         host: 10.0.10.218
+#         subrack: "1"
+#         subrack_bay: 2
+#       13:
+#         host: 10.0.10.215
+#         subrack: "1"
+#         subrack_bay: 5
+
 # simulators:
 #   subracks:
-#     1:  # these keys overrides keys in facility file
-#       host: subrack-simulator-1  # mandatory
-#       # port: 8081  # optional, defaults to 8081
+#     1:
+#       host: subrack-simulator-1
+
 # deviceServers:  # e.g....
 #   stations:
 #     instances:
@@ -99,7 +125,7 @@ low_mccs_spshw:
 #     logging_level_default: 5
 #   tpms:
 #     instances:
-#       1:
+#       10:
 #         host: 10.0.10.201
 #         port: 10000
 #         version: tpm_v1_6

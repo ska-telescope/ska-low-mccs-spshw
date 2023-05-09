@@ -259,9 +259,9 @@ class SpsStationComponentManager(
         self._lmc_param = {
             "mode": "10g",
             "payload_length": 8192,
-            "dst_ip": "0.0.0.0",
-            "dst_port": 4660,
-            "src_port": 0xF0D0,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 0xF0D0,
         }
         self._lmc_integrated_mode = "10g"
         self._lmc_channel_payload_length = 8192
@@ -620,6 +620,7 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
         else:
+            self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
         if task_callback:
             task_callback(status=task_status)

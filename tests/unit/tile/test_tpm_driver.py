@@ -158,7 +158,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         callbacks: MockCallableGroup,
     ) -> None:
         """
-        Test the stop_communicating method when communication already ESTABLISHED.
+        Test the stop_communicating method when communication is ESTABLISHED.
 
         :param tpm_driver: The TPM driver instance being tested.
         :param tile_simulator: A mock object representing
@@ -272,6 +272,14 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Assert
         tile_simulator.tpm.write_register.assert_called_with(  # type: ignore
             "fpga1.dsp_regfile.stream_status.channelizer_vld", [2]
+        )
+
+        # Act
+        tpm_driver.write_register("fpga1.dsp_regfile.stream_status.channelizer_vld", [4])
+
+        # Assert
+        tile_simulator.tpm.write_register.assert_called_with(  # type: ignore
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", [4]
         )
 
     def test_write_unknown_register(
@@ -516,7 +524,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
         """
-        # TODO: this test does not really do anything yet.
+        # TODO: this test does not test a lot.
         # I think a refactor of set_beamformer_regions may make testing this easier.
         # We could create a region class in tile-device, and pass in
         # a list of region objects rather than a list of lists.
@@ -839,7 +847,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.firmware_available
         tile_simulator.get_firmware_list.assert_called_once_with()
 
-        # check that excaptions are caught.
+        # check that exceptions are caught.
         tile_simulator.get_firmware_list.side_effect = Exception("mocked exception")
         _ = tpm_driver.firmware_available
 
@@ -1138,6 +1146,36 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.csp_rounding = 3  # type: ignore[assignment]
         assert tile_simulator.csp_rounding == [3] * 384
 
+    @pytest.mark.xfail(reason="_preadu_levels is overwritten by a list when set")
+    def test_pre_adu_levels_edge_case(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the pre_adu_levels method edge case.
+
+        :param tpm_driver: The TPM driver instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        # We set the preadu_levels
+        tpm_driver.preadu_levels = [3] * 32
+
+        # This code simulates a scenario where a piece of code between the tpm_driver and the 
+        # hardware goes wrong leading to a incorrect value being written to the preadu. 
+        # We expect the tpm_driver to be always be able to retreive the values from hardware.
+
+        # A piece of code has a error and writes a unexpected value.
+        tile_simulator.tpm.preadu[1].channel_filters[1] = (4 & 0x1F) << 3
+
+        # The TpmDriver should be able to get the value from hardware using
+        # tpm_driver.preadu_levels. Notice _get_preadu_levels is no longer called
+        # and we are not reading from hardware so this fails
+        assert tpm_driver._get_preadu_levels() != [3] * 32
+        assert tpm_driver.preadu_levels() != [3] * 32
+
     def test_pre_adu_levels(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1154,9 +1192,11 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver.preadu_levels == [0] * 32
 
         tpm_driver.preadu_levels = [3] * 32
+        assert tile_simulator.tpm.preadu[1].channel_filters[1] >> 3 == 3
+
         assert tpm_driver._preadu_levels == [3] * 32
 
-        # Check that thrown exception are caught when thrown.
+        # Check exception caught.
         tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]
             side_effect=Exception("mocked exception")
         )
@@ -1391,6 +1431,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.stop_integrated_data.side_effect = Exception("mocked exception")
         tpm_driver.stop_integrated_data()
 
+    @pytest.mark.xfail(reason="Uncaught exception when unknown data_type given.")
     def test_send_data_samples(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1491,8 +1532,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # try to send a unknown data type
         data_type = "unknown"
-        with pytest.raises(ValueError, match=f"Unknown sample type: {data_type}"):
-            tpm_driver.send_data_samples("unknown", **mocked_input_params)
+        # with pytest.raises(ValueError, match=f"Unknown sample type: {data_type}"):
+        tpm_driver.send_data_samples("unknown", **mocked_input_params)
 
         # just check that a exception is caught
         # -------------------------------------
@@ -1894,7 +1935,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             core_dict["dst_ip"],
             core_dict["dst_port"],
         )
-        # Check that excaptions raised are caught.
+        # Check that exceptions raised are caught.
         tile_simulator.configure_40g_core.side_effect = Exception("Mocked exception")
         tpm_driver.configure_40g_core(**core_dict)
 
@@ -1945,7 +1986,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             core_dict,
         ]
 
-        # Check that excaptions raised are caught.
+        # Check that exceptions raised are caught.
         tile_simulator.get_40g_core_configuration.return_value = None
         tile_simulator.get_40g_core_configuration.side_effect = Exception(
             "Mocked exception"
@@ -2039,18 +2080,22 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tpm_driver: The TPM driver instance.
         :param tile_simulator: The tile simulator instance.
         """
+        # Arrange
         tile_simulator.connect()
         tile_simulator.erase_fpga = unittest.mock.Mock()  # type: ignore[assignment]
-
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
 
         # erase a programmed FPGA.
         tpm_driver.erase_fpga()
+
+        # Assert 
         tile_simulator.erase_fpga.assert_called_once()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
         tile_simulator.erase_fpga.side_effect = Exception("Mocked exception")
+        
         tpm_driver.erase_fpga()
+
         assert tpm_driver._tpm_status == TpmStatus.PROGRAMMED

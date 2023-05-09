@@ -1,0 +1,97 @@
+# SPSHW values for AAVS3.
+# All IP addresses are TBD.
+# All that is confirmed to date is
+# * The TPMs in subrack 1 will be on address range 10.137.100.0/24.
+# * The TPMs in subrack 1 will be on address range 10.137.101.0/24.
+facility:
+    subracks:
+      instances:
+        1:
+          host: 10.134.0.1  # TODO
+          port: 8081
+        2:
+          host: 10.134.0.2  # TODO
+          port: 8081
+    tpms:
+      version: tpm_v1_6
+      port: 10000
+      instances:
+        1:
+          host: 10.137.100.10  # TODO
+          subrack: "1"
+          subrack_bay: 1
+        2:
+          host: 10.137.100.11  # TODO
+          subrack: "1"
+          subrack_bay: 2
+        3:
+          host: 10.137.100.12  # TODO
+          subrack: "1"
+          subrack_bay: 3
+        4:
+          host: 10.137.100.13  # TODO
+          subrack: "1"
+          subrack_bay: 4
+        5:
+          host: 10.137.100.14  # TODO
+          subrack: "1"
+          subrack_bay: 5
+        6:
+          host: 10.137.100.15  # TODO
+          subrack: "1"
+          subrack_bay: 6
+        7:
+          host: 10.137.100.16  # TODO
+          subrack: "1"
+          subrack_bay: 7
+        8:
+          host: 10.137.100.17  # TODO
+          subrack: "1"
+          subrack_bay: 8
+        9:
+          host: 10.137.101.10  # TODO
+          subrack: "2"
+          subrack_bay: 1
+        10:
+          host: 10.137.101.11  # TODO
+          subrack: "2"
+          subrack_bay: 2
+        11:
+          host: 10.137.101.12  # TODO
+          subrack: "2"
+          subrack_bay: 3
+        12:
+          host: 10.137.101.13  # TODO
+          subrack: "2"
+          subrack_bay: 4
+        13:
+          host: 10.137.101.14  # TODO
+          subrack: "2"
+          subrack_bay: 5
+        14:
+          host: 10.137.101.15  # TODO
+          subrack: "2"
+          subrack_bay: 6
+        15:
+          host: 10.137.101.16  # TODO
+          subrack: "2"
+          subrack_bay: 7
+        16:
+          host: 10.137.101.17  # TODO
+          subrack: "2"
+          subrack_bay: 8
+
+simulators:
+  subracks:
+    1:
+      host: subrack-simulator-1
+    2:
+      host: subrack-simulator-2
+
+deviceServers:
+  subracks:
+    logging_level_default: 5
+  tpms:
+    logging_level_default: 5
+    simulation_config: 1
+    test_config: 1

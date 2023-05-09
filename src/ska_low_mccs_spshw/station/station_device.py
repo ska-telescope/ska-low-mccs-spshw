@@ -106,6 +106,8 @@ class SpsStation(SKAObsDevice):
             self._max_workers,
             self._communication_state_changed,
             self._component_state_changed,
+            self._health_model.tile_health_changed,
+            self._health_model.subrack_health_changed,
         )
 
     def init_command_objects(self: SpsStation) -> None:
@@ -583,6 +585,27 @@ class SpsStation(SKAObsDevice):
         :return: Total number of errors on each interface (2 per tile)
         """
         return self.component_manager.forty_gb_network_errors()
+
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: SpsStation) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: SpsStation, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
 
     # -------------
     # Slow Commands

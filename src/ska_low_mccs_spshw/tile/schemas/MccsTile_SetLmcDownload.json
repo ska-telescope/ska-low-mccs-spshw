@@ -15,7 +15,7 @@
             "type": "integer",
             "minimum": 0
         },
-        "dst_ip": {
+        "destination_ip": {
             "description": "Destination IP address",
             "type": "string",
             "format": "ipv4"

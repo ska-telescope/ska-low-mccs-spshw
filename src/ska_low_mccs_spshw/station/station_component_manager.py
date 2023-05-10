@@ -179,6 +179,8 @@ class SpsStationComponentManager(
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -197,6 +199,10 @@ class SpsStationComponentManager(
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param tile_health_changed_callback: callback to be
+            called when a tile's health changed
+        :param subrack_health_changed_callback: callback to be
+            called when a subrack's health changed
         """
         self._station_id = station_id
         self._is_configured = False
@@ -243,7 +249,8 @@ class SpsStationComponentManager(
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
-
+        self._tile_health_changed_callback = tile_health_changed_callback
+        self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = "0.0.0.0"
@@ -252,9 +259,9 @@ class SpsStationComponentManager(
         self._lmc_param = {
             "mode": "10g",
             "payload_length": 8192,
-            "dst_ip": "0.0.0.0",
-            "dst_port": 4660,
-            "src_port": 0xF0D0,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 0xF0D0,
         }
         self._lmc_integrated_mode = "10g"
         self._lmc_channel_payload_length = 8192
@@ -357,6 +364,8 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
                 self._evaluate_power_state()
+        if health is not None:
+            self._tile_health_changed_callback(fqdn, health)
 
     @threadsafe
     def _subrack_state_changed(
@@ -369,6 +378,8 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
+        if health is not None:
+            self._subrack_health_changed_callback(fqdn, health)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -609,6 +620,7 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
         else:
+            self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
         if task_callback:
             task_callback(status=task_status)

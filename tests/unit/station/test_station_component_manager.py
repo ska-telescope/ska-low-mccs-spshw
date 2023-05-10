@@ -66,6 +66,8 @@ def callbacks_fixture() -> MockCallableGroup:
         "communication_status",
         "component_state",
         "task",
+        "tile_health",
+        "subrack_health",
         timeout=5.0,
     )
 
@@ -99,6 +101,8 @@ def station_component_manager_fixture(
         1,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["tile_health"],
+        callbacks["subrack_health"],
     )
 
 

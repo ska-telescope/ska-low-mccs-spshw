@@ -330,7 +330,7 @@ class TileSimulator:
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = [float(i) for i in range(32)]
-    FPGAS_TIME = [0, 0]
+    FPGAS_TIME = [0.0, 0.0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
@@ -369,7 +369,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
-        self.fpgas_time = self.FPGAS_TIME
+        self.fpgas_time: list[float] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
         self._station_id = self.STATION_ID
         self._timestamp = 0
@@ -1077,7 +1077,7 @@ class TileSimulator:
         return
 
     def _timed_thread(self: TileSimulator) -> None:
-        """Timed thread to simulate the update of time related registers."""
+        """Thread to update time related registers."""
         while True:
             self._start_polling_event.wait()
             time_utc = time.time()

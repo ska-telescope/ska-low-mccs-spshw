@@ -161,9 +161,7 @@ class TestTpmDriver:
     have power, be routable, ....
     """
 
-    @pytest.mark.xfail(
-        reason="This test has not been tested with HwTile"
-    )
+    @pytest.mark.xfail(reason="This test has not been tested with HwTile")
     def test_communication(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -213,9 +211,7 @@ class TestTpmDriver:
         callbacks["communication_status"].assert_not_called()
         assert tile.tpm is None
 
-    @pytest.mark.xfail(
-        reason="This test has not been tested with HwTile"
-    )
+    @pytest.mark.xfail(reason="This test has not been tested with HwTile")
     def test_poll_update(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -279,9 +275,7 @@ class TestTpmDriver:
         # Note: A pass in software is sufficient for this final assert.
         assert pre_poll_temperature == post_poll_temperature
 
-    @pytest.mark.xfail(
-        reason="This test has not been tested with HwTile"
-    )
+    @pytest.mark.xfail(reason="This test has not been tested with HwTile")
     @pytest.mark.parametrize(
         ("attribute"),
         [
@@ -341,9 +335,7 @@ class TestTpmDriver:
         """
         _ = getattr(tpm_driver, attribute)
 
-    @pytest.mark.xfail(
-        reason="This test has not been tested with HwTile"
-    )
+    @pytest.mark.xfail(reason="This test has not been tested with HwTile")
     def test_write_read_registers(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,

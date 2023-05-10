@@ -62,11 +62,12 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     """
     Unit test class for the TPMDriver.
 
-    This class contains unit tests designed to validate the functionality of the
-    TPMDriver in software environments.
+    This class contains unit tests designed to validate the
+    functionality of the TPMDriver in software environments.
 
-    These unit tests do not require any hardware setup or interaction, making
-    them suitable for testing the TPMDriver purely in software-based scenarios.
+    These unit tests do not require any hardware setup or interaction,
+    making them suitable for testing the TPMDriver purely in software-
+    based scenarios.
     """
 
     def test_start_communicating_when_communication_already_established(

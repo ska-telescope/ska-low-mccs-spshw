@@ -964,10 +964,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Currently, when the TPM reports that it is not programmed,
         # certain values are reset, making it difficult for non-experts to
         # determine which attributes should be reset and which should not.
-        # One solution could be to group attributes into separate structures.
-        # This would enable us to more easily verify that
-        # the expected attributes have been reset in this test.
-        # For now we are just checking that the pps_delays are reset.
 
         # Arrange
         tile_simulator.tpm._is_programmed = False

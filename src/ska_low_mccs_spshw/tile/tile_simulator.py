@@ -123,19 +123,17 @@ class MockTpm:
         "fpga1.pps_manager.pps_detected": 1,
         "fpga2.pps_manager.pps_detected": 1,
         "fpga1.pps_manager.sync_time_val": 0,
-        "fpga1.pps_manager.timestamp_read_val": 0,
     }
 
     def __init__(self) -> None:
         """Initialise the MockTPM."""
-        # This object is contructed by the connect function
-        # In hardware this will initialise a sequence to bring the
-        # device into the programmed state. We do not care about these
+        # In hardware we will initialise a sequence to bring the
+        # device into the programmed state. We do not simulate these
         # low level details and just assume all went ok.
         self._is_programmed = True
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-        self.preadu = [PreAdu()] * 36
+        self.preadu = [PreAdu()] * 2
         self._station_beamf = [self.beam1, self.beam2]
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -332,7 +330,7 @@ class TileSimulator:
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = [float(i) for i in range(32)]
-    FPGAS_TIME = [1, 2]
+    FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
@@ -371,6 +369,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self.fpgas_time = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
         self._station_id = self.STATION_ID
         self._timestamp = 0
@@ -524,7 +523,7 @@ class TileSimulator:
 
         :return: the fpga_time.
         """
-        return self.tpm["fpga1.pps_manager.timestamp_read_val"]  # type: ignore
+        return self.fpgas_time[device.value - 1]
 
     def set_station_id(self: TileSimulator, station_id: int, tile_id: int) -> None:
         """
@@ -1078,8 +1077,7 @@ class TileSimulator:
         return
 
     def _timed_thread(self: TileSimulator) -> None:
-        """Thread."""
-        # should this be able to run for a infinite amount of time?
+        """Timed thread to simulate the update of time related registers."""
         while True:
             self._start_polling_event.wait()
             time_utc = time.time()
@@ -1091,7 +1089,8 @@ class TileSimulator:
                 self.tpm[reg1] = 1  # type: ignore
                 self.tpm[reg2] = 1  # type: ignore
 
-            self.tpm["fpga1.pps_manager.timestamp_read_val"] = time_utc  # type: ignore
+            self.fpgas_time[0] = time_utc
+            self.fpgas_time[1] = time_utc
             time.sleep(0.1)
 
     def get_arp_table(self: TileSimulator) -> dict[str, Any]:

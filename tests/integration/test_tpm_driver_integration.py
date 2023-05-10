@@ -162,7 +162,7 @@ class TestTpmDriver:
     """
 
     @pytest.mark.xfail(
-        reason="This test has not yet been validated to pass on physical hardware."
+        reason="This test has not been tested with HwTile"
     )
     def test_communication(
         self: TestTpmDriver,
@@ -214,7 +214,7 @@ class TestTpmDriver:
         assert tile.tpm is None
 
     @pytest.mark.xfail(
-        reason="This test has not yet been validated to pass on physical hardware."
+        reason="This test has not been tested with HwTile"
     )
     def test_poll_update(
         self: TestTpmDriver,
@@ -280,7 +280,7 @@ class TestTpmDriver:
         assert pre_poll_temperature == post_poll_temperature
 
     @pytest.mark.xfail(
-        reason="This test has not yet been validated to pass on physical hardware."
+        reason="This test has not been tested with HwTile"
     )
     @pytest.mark.parametrize(
         ("attribute"),
@@ -342,7 +342,7 @@ class TestTpmDriver:
         _ = getattr(tpm_driver, attribute)
 
     @pytest.mark.xfail(
-        reason="This test has not yet been validated to pass on physical hardware."
+        reason="This test has not been tested with HwTile"
     )
     def test_write_read_registers(
         self: TestTpmDriver,

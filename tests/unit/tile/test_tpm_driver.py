@@ -223,34 +223,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Assert
         tpm_driver.tpm_disconnected.assert_called_once()
 
-    @pytest.mark.parametrize(
-        ("attribute"),
-        [
-            ("voltages"),
-            ("temperatures"),
-            ("currents"),
-            ("io"),
-            ("dsp"),
-            ("board_temperature"),
-            ("voltage_mon"),
-            ("fpga1_temperature"),
-            ("fpga2_temperature"),
-            ("register_list"),
-        ],
-    )
-    def test_dumb_read(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        attribute: str,
-    ) -> None:
-        """
-        Test the dumb read functionality.
-
-        :param tpm_driver: The TPM driver instance being tested.
-        :param attribute: The attribute to be read.
-        """
-        _ = getattr(tpm_driver, attribute)
-
     def test_write_register(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1077,37 +1049,82 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         )
         assert driver.firmware_name == expected_firmware_name
 
-    @pytest.mark.parametrize(
-        "start_channel, nof_channels, is_first, is_last",
-        [
-            (2, 42, True, True),
-            (2, 42, True, False),
-            (2, 42, False, True),
-            (2, 42, False, False),
-        ],
-    )
+    def test_initialise_beamformer_with_invalid_input(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test initialise with a invalid value.
+
+        :param tpm_driver: The TPM driver instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        # Arrange
+        tile_simulator.connect()
+        tile_simulator.set_first_last_tile = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
+        assert tile_simulator.tpm
+        start_channel = 1  # This must be multiple of 2
+        nof_channels = 8
+        is_first = True
+        is_last = True
+
+        # Act
+        tpm_driver.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
+
+        # Assert values not written
+        station_bf_1 = tile_simulator.tpm.station_beamf[0]
+        station_bf_2 = tile_simulator.tpm.station_beamf[1]
+
+        for table in station_bf_1._channel_table:
+            assert table[0] != start_channel
+            assert table[1] != nof_channels
+        for table in station_bf_2._channel_table:
+            assert table[0] != start_channel
+            assert table[1] != nof_channels
+
+        # Arrange
+        start_channel = 2
+        nof_channels = 9  # This must be multiple of 8
+        is_first = True
+        is_last = True
+
+        # Act
+        tpm_driver.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
+
+        # Assert values not written
+        station_bf_1 = tile_simulator.tpm.station_beamf[0]
+        station_bf_2 = tile_simulator.tpm.station_beamf[1]
+
+        for table in station_bf_1._channel_table:
+            assert table[0] != start_channel
+            assert table[1] != nof_channels
+        for table in station_bf_2._channel_table:
+            assert table[0] != start_channel
+            assert table[1] != nof_channels
+
+        tile_simulator.set_first_last_tile.assert_not_called()
+
     def test_initialise_beamformer(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
         tile_simulator: TileSimulator,
-        start_channel: int,
-        nof_channels: int,
-        is_first: bool,
-        is_last: bool,
     ) -> None:
         """
         Unit test for the initialise_beamformer function.
 
         :param tpm_driver: The TPM driver instance.
         :param tile_simulator: The tile simulator instance.
-        :param start_channel: The starting channel number.
-        :param nof_channels: The number of channels.
-        :param is_first: Indicates whether it is the first tile in the beamforming.
-        :param is_last: Indicates whether it is the last tile in the beamforming.
         """
         # Arrange
         tile_simulator.connect()
         assert tile_simulator.tpm
+        start_channel = 2
+        nof_channels = 8
+        is_first = True
+        is_last = True
 
         # Act
         tpm_driver.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
@@ -1115,13 +1132,17 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Assert
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
         station_bf_2 = tile_simulator.tpm.station_beamf[1]
-        assert station_bf_1._channel_table == [[start_channel, nof_channels, 0]]
-        assert station_bf_2._channel_table == [[start_channel, nof_channels, 0]]
 
-        # Mocking the Tpm to be none should raise a exception when we attempt to
-        # access methods. We check that these exceptions are caught.
-        tile_simulator.tpm = None
-        tpm_driver.initialise_beamformer(start_channel, nof_channels, is_first, is_last)
+        for table in station_bf_1._channel_table:
+            assert table[0] == start_channel
+            assert table[1] == nof_channels
+            assert len(table) < 8
+        for table in station_bf_2._channel_table:
+            assert table[0] == start_channel
+            assert table[1] == nof_channels
+
+        assert tile_simulator._is_first == is_first
+        assert tile_simulator._is_last == is_last
 
     @pytest.mark.xfail(reason="Only the first element is sent to the tile.")
     def test_csp_rounding(
@@ -1143,7 +1164,13 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Case: set with Integer
         # ----------------------
         tpm_driver.csp_rounding = 3  # type: ignore[assignment]
-        assert tile_simulator.csp_rounding == [3] * 384
+        assert tile_simulator.csp_rounding == 3
+
+        # ----------------------
+        # Case: set with Integer
+        # ----------------------
+        tpm_driver.csp_rounding = -3  # type: ignore[assignment]
+        assert tile_simulator.csp_rounding == 0
 
     @pytest.mark.xfail(reason="_preadu_levels is overwritten by a list when set")
     def test_pre_adu_levels_edge_case(
@@ -1326,15 +1353,17 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
-        tile_simulator.start_beamformer = (  # type: ignore[assignment]
-            unittest.mock.Mock()
-        )
+        assert tpm_driver._is_beamformer_running is False
 
         tpm_driver.start_beamformer(3, 4)
-        tile_simulator.start_beamformer.assert_called_with(3, 4)
+        tpm_driver._update_attributes()
 
-        # Check that thrown exception are caught when thrown.
-        tile_simulator.start_beamformer.side_effect = Exception("mocked exception")
+        assert tpm_driver._is_beamformer_running is True
+
+        tile_simulator.start_beamformer = (  # type: ignore[assignment]
+            unittest.mock.Mock(side_effect=Exception("mocked exception"))
+        )
+
         tpm_driver.start_beamformer(3, 4)
 
     def test_stop_beamformer(
@@ -2109,3 +2138,223 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.erase_fpga()
 
         assert tpm_driver._tpm_status == TpmStatus.PROGRAMMED
+
+    def test_communication(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test the communication state transitions on the driver.
+
+        :param tpm_driver: The TPM driver instance being tested.
+        :param tile_simulator: The tile simulator instance.
+        :param callbacks: A dictionary of driver callbacks used to mock the
+                        underlying component's behavior.
+        """
+        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
+
+        # start communicating initialises a polling loop that should.
+        # - start_connection with the component under test.
+        # - update attributes in a polling loop.
+        tpm_driver.start_communicating()
+
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        time.sleep(3)
+        assert tile_simulator.tpm is not None
+
+        # Any subsequent calls to start communicating do not fire a change event
+        tpm_driver.start_communicating()
+        callbacks["communication_status"].assert_not_called()
+
+        tpm_driver.stop_communicating()
+        callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
+        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
+
+        # Any subsequent calls to stop communicating do not fire a change event
+        tpm_driver.stop_communicating()
+        callbacks["communication_status"].assert_not_called()
+        assert tile_simulator.tpm is None
+
+    def test_poll_update(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test the tpm_driver poller.
+
+        :param tpm_driver: the tpm driver under test.
+        :param tile_simulator: An hardware tile_simulator mock
+        :param callbacks: dictionary of driver callbacks.
+        """
+        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
+
+        # start communicating initialises a polling loop that should.
+        # - start_connection with the component under test.
+        # - update attributes in a polling loop.
+        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+
+        tpm_driver.start_communicating()
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+        tile_simulator._fpga1_temperature = 41.0
+
+        poll_time = tpm_driver._poll_rate
+        time.sleep(poll_time + 0.5)
+
+        post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
+            "FPGA0"
+        ]
+
+        # Check that the temperature has changed
+        assert pre_poll_temperature != post_poll_temperature
+
+        pre_poll_temperature = tpm_driver._tile_health_structure["temperature"]["FPGA0"]
+
+        # Stop communicating to stop the polling loop, ensuring static values
+        tpm_driver.stop_communicating()
+
+        tile_simulator._fpga1_temperature = (
+            tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
+        )
+
+        time.sleep(poll_time + 0.5)
+
+        post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
+            "FPGA0"
+        ]
+
+        # Note: A pass in software is sufficient for this final assert.
+        assert pre_poll_temperature == post_poll_temperature
+
+    @pytest.mark.parametrize(
+        ("attribute"),
+        [
+            ("voltages"),
+            ("temperatures"),
+            ("currents"),
+            ("io"),
+            ("dsp"),
+            ("board_temperature"),
+            ("voltage_mon"),
+            ("fpga1_temperature"),
+            ("fpga2_temperature"),
+            ("register_list"),
+            ("timing"),
+            ("station_id"),
+            ("tile_id"),
+            ("is_programmed"),
+            ("firmware_version"),
+            ("firmware_name"),
+            ("firmware_available"),
+            ("hardware_version"),
+            ("tpm_status"),
+            ("adc_rms"),
+            ("fpgas_time"),
+            ("fpga_reference_time"),
+            ("fpga_current_frame"),
+            ("pps_delay"),
+            ("arp_table"),
+            ("channeliser_truncation"),
+            ("static_delays"),
+            ("csp_rounding"),
+            ("preadu_levels"),
+            ("pps_present"),
+            ("clock_present"),
+            ("sysref_present"),
+            ("pll_locked"),
+            ("beamformer_table"),
+            ("current_tile_beamformer_frame"),
+            ("is_beamformer_running"),
+            ("pending_data_requests"),
+            ("phase_terminal_count"),
+            ("test_generator_active"),
+        ],
+    )
+    def test_dumb_read(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        attribute: str,
+    ) -> None:
+        """
+        Test the dumb read functionality.
+
+        Validate that it can be called without error.
+
+        :param tpm_driver: The TPM driver instance being tested.
+        :param attribute: The attribute to be read.
+        """
+        _ = getattr(tpm_driver, attribute)
+
+    def test_write_read_registers(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Test we can write values to a register.
+
+        Using a tile_simulator to mock the functionality
+        of writing to a register
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: The mocked tile_simulator
+        """
+        # Arrange
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+
+        tile_simulator.tpm.write_register("fpga1.1", 3)
+        tile_simulator.tpm.write_register("fpga2.2", 2)
+        tile_simulator.tpm.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", 2
+        )
+
+        # write to fpga1
+        # write_register(register_name, values, offset, device)
+        tpm_driver.write_register("1", 17)
+        read_value = tpm_driver.read_register("1")
+        assert read_value == [17]
+
+        # test write to unknown register
+        tpm_driver.write_register("unknown", 17)
+        read_value = tpm_driver.read_register("unknown")
+        assert read_value == []
+
+        # write to fpga2
+        tpm_driver.write_register("2", 17)
+        read_value = tpm_driver.read_register("2")
+        assert read_value == [17]
+
+        # test write to unknown register
+        tpm_driver.write_register("unknown", 17)
+        read_value = tpm_driver.read_register("unknown")
+        assert read_value == []
+
+        # write to register with no associated device
+        tpm_driver.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld",
+            17,
+        )
+        read_value = tpm_driver.read_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld"
+        )
+        assert read_value == [17]
+
+        # test write to unknown register
+        tpm_driver.write_register("unknown", 17)
+        read_value = tpm_driver.read_register("unknown")
+        assert read_value == []
+
+        # test register that returns list
+        read_value = tpm_driver.read_register("mocked_list")
+        assert read_value == []

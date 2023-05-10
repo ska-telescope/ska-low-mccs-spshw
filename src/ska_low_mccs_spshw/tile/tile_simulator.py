@@ -6,13 +6,8 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""
-An implementation of a Tile simulator.
+"""An implementation of a Tile simulator."""
 
-#TODO:
- - Fill in this skeleton code.
- - TypeHint file
-"""
 from __future__ import annotations  # allow forward references in type hints
 
 import copy
@@ -49,7 +44,19 @@ class StationBeamformer:
         Define station beamformer table.
 
         :param table: table
+
+        :raises ValueError: if wrong value passed.
         """
+        if len(table) >= 16:
+            raise ValueError("To many values")
+        for item in table:
+            if item[0] % 2 != 0:
+                raise ValueError("value passed for start_ch is not a multiple of 2")
+            if item[1] % 8 != 0:
+                raise ValueError("value passed for nof_ch is a multiple by 8")
+            if not item[2] in range(48):
+                raise ValueError("value passed for beam_index is not in range [0-48]")
+
         self._channel_table = table
 
     def get_channel_table(self: StationBeamformer) -> list[list[int]]:
@@ -58,20 +65,17 @@ class StationBeamformer:
 
         :return: channel table
         """
-        # TODO
         return copy.deepcopy(self._channel_table)
 
     def start(
         self: StationBeamformer,
     ) -> None:
         """Start."""
-        # TODO
-        pass
+        self._is_running = True
 
     def stop(self: StationBeamformer) -> None:
         """stop."""
-        # TODO
-        pass
+        self._is_running = False
 
     def is_running(self: StationBeamformer) -> bool:
         """:return: is running."""
@@ -379,6 +383,7 @@ class TileSimulator:
         )
         self.dst_ip: Optional[str] = None
         self.sync_time = 0
+        self.csp_rounding = None
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
@@ -817,6 +822,8 @@ class TileSimulator:
         """
         if self.beamformer_is_running():
             return False
+        self.tpm.beam1.start()  # type: ignore
+        self.tpm.beam2.start()  # type: ignore
         return True
 
     def stop_beamformer(self: TileSimulator) -> None:
@@ -1136,7 +1143,10 @@ class TileSimulator:
 
         :return: is the beam is running
         """
-        return self.tpm.beam1.is_running()  # type: ignore
+        return (
+            self.tpm.beam1.is_running()  # type: ignore
+            and self.tpm.beam2.is_running()  # type: ignore
+        )
 
     def set_test_generator_tone(self: TileSimulator) -> None:
         """

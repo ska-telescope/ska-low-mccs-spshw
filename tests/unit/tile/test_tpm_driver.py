@@ -275,7 +275,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         )
 
         # Act
-        tpm_driver.write_register("fpga1.dsp_regfile.stream_status.channelizer_vld", [4])
+        tpm_driver.write_register(
+            "fpga1.dsp_regfile.stream_status.channelizer_vld", [4]
+        )
 
         # Assert
         tile_simulator.tpm.write_register.assert_called_with(  # type: ignore
@@ -1159,13 +1161,16 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
+        assert tile_simulator.tpm
 
         # We set the preadu_levels
         tpm_driver.preadu_levels = [3] * 32
 
-        # This code simulates a scenario where a piece of code between the tpm_driver and the 
-        # hardware goes wrong leading to a incorrect value being written to the preadu. 
-        # We expect the tpm_driver to be always be able to retreive the values from hardware.
+        # This code simulates a scenario where a piece of code between
+        # the tpm_driver and the hardware goes wrong leading to an
+        # incorrect value being written to the preadu.
+        # We expect the tpm_driver to be always be able to
+        # retreive the values from hardware.
 
         # A piece of code has a error and writes a unexpected value.
         tile_simulator.tpm.preadu[1].channel_filters[1] = (4 & 0x1F) << 3
@@ -1174,7 +1179,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # tpm_driver.preadu_levels. Notice _get_preadu_levels is no longer called
         # and we are not reading from hardware so this fails
         assert tpm_driver._get_preadu_levels() != [3] * 32
-        assert tpm_driver.preadu_levels() != [3] * 32
+        assert tpm_driver.preadu_levels != [3] * 32
 
     def test_pre_adu_levels(
         self: TestTpmDriver,
@@ -1188,7 +1193,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
-
+        assert tile_simulator.tpm
         assert tpm_driver.preadu_levels == [0] * 32
 
         tpm_driver.preadu_levels = [3] * 32
@@ -1531,11 +1536,11 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         )
 
         # try to send a unknown data type
-        data_type = "unknown"
+        # data_type = "unknown"
         # with pytest.raises(ValueError, match=f"Unknown sample type: {data_type}"):
         tpm_driver.send_data_samples("unknown", **mocked_input_params)
 
-        # just check that a exception is caught
+        # Check that exceptions are caught.
         # -------------------------------------
         tile_simulator.send_raw_data.side_effect = Exception("mocked exception")
         tile_simulator.send_channelised_data.side_effect = Exception
@@ -1563,14 +1568,18 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tpm_driver: The TPM driver instance.
         :param tile_simulator: The tile simulator instance.
         """
+        # Arrange
         tile_simulator.connect()
         tile_simulator.stop_data_transmission = (  # type: ignore[assignment]
             unittest.mock.Mock()
         )
+        # Act
         tpm_driver.stop_data_transmission()
+
+        # Assert
         tile_simulator.stop_data_transmission.assert_called()
 
-        # check that there are no uncaught exception if this raises.
+        # Check that exceptions are caught.
         tile_simulator.stop_data_transmission.side_effect = Exception(
             "mocked exception"
         )
@@ -1587,6 +1596,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tpm_driver: The TPM driver instance.
         :param tile_simulator: The tile simulator instance.
         """
+        # Arrange
         tile_simulator.connect()
         tile_simulator.set_lmc_integrated_download = (  # type: ignore[assignment]
             unittest.mock.Mock()
@@ -1600,8 +1610,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "dst_port": 511,
         }
 
+        # Act
         tpm_driver.set_lmc_integrated_download(**mocked_input_params)
 
+        # Assert
         tile_simulator.set_lmc_integrated_download.assert_called_with(
             mocked_input_params["mode"],
             mocked_input_params["channel_payload_length"],
@@ -1611,6 +1623,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_port"],
         )
 
+        # Check that exceptions are caught.
         tile_simulator.set_lmc_integrated_download.side_effect = Exception(
             "mocked exception"
         )
@@ -2088,14 +2101,14 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # erase a programmed FPGA.
         tpm_driver.erase_fpga()
 
-        # Assert 
+        # Assert
         tile_simulator.erase_fpga.assert_called_once()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
         tile_simulator.erase_fpga.side_effect = Exception("Mocked exception")
-        
+
         tpm_driver.erase_fpga()
 
         assert tpm_driver._tpm_status == TpmStatus.PROGRAMMED

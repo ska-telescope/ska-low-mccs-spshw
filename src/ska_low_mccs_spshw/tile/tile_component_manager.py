@@ -379,6 +379,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             fault=None,
             power=PowerState.UNKNOWN,
             programming_state=None,
+            tile_health_structure=self._tpm_driver._tile_health_structure,
         )
 
     def start_communicating(self: TileComponentManager) -> None:

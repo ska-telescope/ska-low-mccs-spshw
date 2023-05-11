@@ -218,10 +218,10 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        tile_simulator._fpga1_temperature = fpga1_temp
-        tile_simulator._fpga2_temperature = fpga2_temp
-        tile_simulator._board_temperature = board_temp
-        tile_simulator._voltage = voltage
+        tile_simulator._tile_health_structure["temperature"]["FPGA0"] = fpga1_temp
+        tile_simulator._tile_health_structure["temperature"]["FPGA1"] = fpga2_temp
+        tile_simulator._tile_health_structure["temperature"]["board"] = board_temp
+        tile_simulator._tile_health_structure["voltage"]["MON_5V0"] = voltage
 
         # Mock a poll event by updating attributes manually.
         tpm_driver._update_attributes()
@@ -233,7 +233,7 @@ class TestTpmDriver:
         assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        tile_simulator._voltage = pytest.approx(2.6)
+        tile_simulator._tile_health_structure["voltage"]["MON_5V0"] = pytest.approx(2.6)
 
         tile_simulator.get_health_status = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
@@ -243,7 +243,7 @@ class TestTpmDriver:
 
         assert (
             tpm_driver._tile_health_structure["voltage"]["MON_5V0"]
-            != tile_simulator._voltage
+            != tile_simulator._tile_health_structure["voltage"]["MON_5V0"]
         )
 
     def test_read_tile_attributes(

@@ -29,8 +29,8 @@ from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .tpm_status import TpmStatus
 from .tile_data import TileData
+from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
 
 
@@ -170,6 +170,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             max_workers=1,
             fault=None,
             programming_state=TpmStatus.UNKNOWN,
+            tile_health_structure=self._tile_health_structure,
         )
 
         self._poll_rate = 2.0
@@ -308,6 +309,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
                     self._tile_health_structure = self.tile.get_health_status()
+                    self._update_component_state(
+                        tile_health_structure=self._tile_health_structure
+                    )
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):

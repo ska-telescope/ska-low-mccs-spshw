@@ -63,6 +63,12 @@ tpm_monitoring_points:
     MON_5V0: 
       min: 4.69
       max: 5.19
+    VM_ADA0:
+      min: 0
+      max: 0
+    VM_ADA1:
+      min: 0
+      max: 0
     VM_AGP0: 
       min: 0.84
       max: 0.99
@@ -124,10 +130,10 @@ tpm_monitoring_points:
       min: 3.22
       max: 3.78
   current:
-    FE0_MVA:
+    FE0_mVA:
       min: 1.93
       max: 2.27
-    FE1:MVA:
+    FE1_mVA:
       min: 2.02
       max: 2.38
   timing:

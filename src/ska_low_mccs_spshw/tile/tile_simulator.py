@@ -355,16 +355,11 @@ class TileSimulator:
         self._is_first = False
         self._is_last = False
         self._tile_id = self.TILE_ID
-        self._voltage: Optional[float] = self.VOLTAGE
-        self._current: Optional[float] = self.CURRENT
-        self._board_temperature: Optional[float] = self.BOARD_TEMPERATURE
-        self._fpga1_temperature: Optional[float] = self.FPGA1_TEMPERATURE
-        self._fpga2_temperature: Optional[float] = self.FPGA2_TEMPERATURE
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            TileData.TILE_MONITORING_POINTS
+            TileData.get_tile_defaults()
         )
         self._station_id = self.STATION_ID
         self._timestamp = 0
@@ -378,28 +373,9 @@ class TileSimulator:
         """
         Get the health state of the tile.
 
-        TODO: This is incomplete.
-        We are only tracking:
-        -temperature,
-        -current,
-        -voltage,
-
-        But there are many more monitoring points to track.
-
         :return: mocked fetch of health.
         """
-        health_dict = {
-            "temperature": {
-                "FPGA0": self._fpga1_temperature,
-                "FPGA1": self._fpga2_temperature,
-                "board": self._board_temperature,
-            },
-            "voltage": {
-                "MON_5V0": self._voltage
-            },  # TODO: there are many more voltages to simulate
-            "current": self._current,
-        }
-        return health_dict
+        return copy.deepcopy(self._tile_health_structure)
 
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""

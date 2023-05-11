@@ -352,6 +352,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.push_change_event(
                     "tileProgrammingState", tile_programming_state.pretty_name()
                 )
+        if "tile_health_structure" in state_change:
+            self._health_model.update_state(
+                tile_health_structure=state_change["tile_health_structure"]
+            )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -1033,6 +1037,27 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return list(
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
+
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: MccsTile) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: MccsTile, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
 
     # # --------
     # # Commands

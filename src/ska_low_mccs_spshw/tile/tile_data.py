@@ -10,13 +10,15 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import copy
 import importlib.resources
+from typing import Any
+
 import yaml
 
 __all__ = ["TileData"]
 
 
-# pylint: disable=too-few-public-methods
 class TileData:
     """
     This class contain data/facts about a tile needed by multiple classes.
@@ -36,7 +38,9 @@ class TileData:
     min_max_string = importlib.resources.read_text(
         __package__, "tpm_monitoring_min_max.yaml"
     )
-    MIN_MAX_MONITORING_POINTS = yaml.load(min_max_string, Loader=yaml.Loader) or {}
+    MIN_MAX_MONITORING_POINTS = (
+        yaml.load(min_max_string, Loader=yaml.Loader)["tpm_monitoring_points"] or {}
+    )
 
     TILE_MONITORING_POINTS = {
         "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
@@ -110,3 +114,50 @@ class TileData:
         },
         "dsp": {"tile_beamf": None, "station_beamf": None},
     }
+
+    _TILE_DEFAULTS = None
+
+    @classmethod
+    def get_tile_defaults(cls) -> dict[str, Any]:
+        """
+        Get the defaults for tile monitoring points.
+
+        If these have not been computed, compute them first.
+
+        :return: the defaults for tile monitoring points.
+        """
+        if cls._TILE_DEFAULTS is None:
+            cls._TILE_DEFAULTS = cls.generate_tile_defaults()
+        return cls._TILE_DEFAULTS
+
+    @classmethod
+    def generate_tile_defaults(cls) -> dict[str, Any]:
+        """
+        Compute the default values for tile monitoring points.
+
+        These are computed to be halfway between the minimum and maximum values.
+        In cases where there is a permitted value instead, the permitted value is used
+
+        :return: the default values for tile monitoring points
+        """
+        tile_structure = copy.deepcopy(cls.TILE_MONITORING_POINTS)
+        expected_values = copy.deepcopy(cls.MIN_MAX_MONITORING_POINTS)
+        return cls._generate_tile_defaults(tile_structure, expected_values)
+
+    @classmethod
+    def _generate_tile_defaults(
+        cls, tile_structure: dict, expected_values: dict
+    ) -> dict:
+        for p in tile_structure:
+            if isinstance(tile_structure[p], dict):
+                tile_structure[p] = cls._generate_tile_defaults(
+                    tile_structure[p], expected_values[p]
+                )
+            else:
+                if isinstance(expected_values[p], dict):
+                    tile_structure[p] = round(
+                        (expected_values[p]["min"] + expected_values[p]["max"]) / 2, 3
+                    )
+                else:
+                    tile_structure[p] = expected_values[p]
+        return tile_structure

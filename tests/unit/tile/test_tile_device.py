@@ -8,6 +8,7 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
+import copy
 import gc
 import itertools
 import json
@@ -32,7 +33,7 @@ from ska_tango_testing.context import (
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevFailed, DeviceProxy, DevState, EventType
 
-from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator
+from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator, TileData
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -286,6 +287,7 @@ class TestMccsTile:
         mock_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
+            tile_health_structure=TileData.get_tile_defaults(),
         )
 
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
@@ -414,6 +416,42 @@ class TestMccsTile:
         new_ids = tuple(range(8))
         tile_device.antennaIds = new_ids
         assert tuple(tile_device.antennaIds) == new_ids
+
+    @pytest.mark.parametrize(
+        ("expected_init_params", "new_params"),
+        [
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "temperature": {"board": {"max": 70}},
+                    "timing": {"clocks": {"FPGA0": {"JESD": 1}}},
+                },
+                id="Check correct initial values, write new and "
+                "verify new values have been written",
+            )
+        ],
+    )
+    def test_healthParams(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        expected_init_params: dict[str, Any],
+        new_params: dict[str, Any],
+    ) -> None:
+        """
+        Test for healthParams attributes.
+
+        :param tile_device: the Tile Tango device under test.
+        :param expected_init_params: the initial values which the health model is
+            expected to have initially
+        :param new_params: the new health rule params to pass to the health model
+        """
+        assert tile_device.healthModelParams == json.dumps(expected_init_params)
+        new_params_json = json.dumps(new_params)
+        tile_device.healthModelParams = new_params_json  # type: ignore[assignment]
+        expected_result = copy.deepcopy(expected_init_params)
+        expected_result["temperature"]["board"]["max"] = 70
+        expected_result["timing"]["clocks"]["FPGA0"]["JESD"] = 1
+        assert tile_device.healthModelParams == json.dumps(expected_result)
 
 
 class TestMccsTileCommands:

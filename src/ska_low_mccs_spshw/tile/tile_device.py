@@ -1059,6 +1059,84 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         self._health_model.health_params = json.loads(argin)
 
+    @attribute(dtype=HealthState)
+    def temperatureHealth(self: MccsTile) -> HealthState:
+        """
+        Read the temperature Health State of the device.
+
+        This is an aggregated quantity representing if any of the temperature
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: temperature Health State of the device
+        """
+        return self._health_model._intermediate_healths["temperature"]
+
+    @attribute(dtype=HealthState)
+    def voltageHealth(self: MccsTile) -> HealthState:
+        """
+        Read the voltage Health State of the device.
+
+        This is an aggregated quantity representing if any of the voltage
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: voltage Health State of the device
+        """
+        return self._health_model._intermediate_healths["voltage"]
+
+    @attribute(dtype=HealthState)
+    def currentHealth(self: MccsTile) -> HealthState:
+        """
+        Read the current Health State of the device.
+
+        This is an aggregated quantity representing if any of the current
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: current Health State of the device
+        """
+        return self._health_model._intermediate_healths["current"]
+
+    @attribute(dtype=HealthState)
+    def timingHealth(self: MccsTile) -> HealthState:
+        """
+        Read the timing Health State of the device.
+
+        This is an aggregated quantity representing if any of the timing
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: timing Health State of the device
+        """
+        return self._health_model._intermediate_healths["timing"]
+
+    @attribute(dtype=HealthState)
+    def ioHealth(self: MccsTile) -> HealthState:
+        """
+        Read the io Health State of the device.
+
+        This is an aggregated quantity representing if any of the io
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: io Health State of the device
+        """
+        return self._health_model._intermediate_healths["io"]
+
+    @attribute(dtype=HealthState)
+    def dspHealth(self: MccsTile) -> HealthState:
+        """
+        Read the dsp Health State of the device.
+
+        This is an aggregated quantity representing if any of the dsp
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: dsp Health State of the device
+        """
+        return self._health_model._intermediate_healths["dsp"]
+
     # # --------
     # # Commands
     # # --------

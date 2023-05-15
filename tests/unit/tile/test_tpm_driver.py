@@ -218,22 +218,24 @@ class TestTpmDriver:
         board_temp = 4
         voltage = 1
 
-        tile_simulator._tile_health_structure["temperature"]["FPGA0"] = fpga1_temp
-        tile_simulator._tile_health_structure["temperature"]["FPGA1"] = fpga2_temp
-        tile_simulator._tile_health_structure["temperature"]["board"] = board_temp
-        tile_simulator._tile_health_structure["voltage"]["MON_5V0"] = voltage
+        tile_simulator._tile_health_structure["temperatures"]["FPGA0"] = fpga1_temp
+        tile_simulator._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temp
+        tile_simulator._tile_health_structure["temperatures"]["board"] = board_temp
+        tile_simulator._tile_health_structure["voltages"]["MON_5V0"] = voltage
 
         # Mock a poll event by updating attributes manually.
         tpm_driver._update_attributes()
 
         # check that they are updated
-        assert tpm_driver._tile_health_structure["temperature"]["FPGA0"] == fpga1_temp
-        assert tpm_driver._tile_health_structure["temperature"]["FPGA1"] == fpga2_temp
-        assert tpm_driver._tile_health_structure["temperature"]["board"] == board_temp
-        assert tpm_driver._tile_health_structure["voltage"]["MON_5V0"] == voltage
+        assert tpm_driver._tile_health_structure["temperatures"]["FPGA0"] == fpga1_temp
+        assert tpm_driver._tile_health_structure["temperatures"]["FPGA1"] == fpga2_temp
+        assert tpm_driver._tile_health_structure["temperatures"]["board"] == board_temp
+        assert tpm_driver._tile_health_structure["voltages"]["MON_5V0"] == voltage
 
         # Check value not updated if we have a failure
-        tile_simulator._tile_health_structure["voltage"]["MON_5V0"] = pytest.approx(2.6)
+        tile_simulator._tile_health_structure["voltages"]["MON_5V0"] = pytest.approx(
+            2.6
+        )
 
         tile_simulator.get_health_status = unittest.mock.Mock(
             side_effect=LibraryError("attribute mocked to fail")
@@ -242,8 +244,8 @@ class TestTpmDriver:
         tpm_driver._update_attributes()
 
         assert (
-            tpm_driver._tile_health_structure["voltage"]["MON_5V0"]
-            != tile_simulator._tile_health_structure["voltage"]["MON_5V0"]
+            tpm_driver._tile_health_structure["voltages"]["MON_5V0"]
+            != tile_simulator._tile_health_structure["voltages"]["MON_5V0"]
         )
 
     def test_read_tile_attributes(

@@ -43,8 +43,8 @@ class TileData:
     )
 
     TILE_MONITORING_POINTS = {
-        "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
-        "voltage": {
+        "temperatures": {"board": None, "FPGA0": None, "FPGA1": None},
+        "voltages": {
             "VREF_2V5": None,
             "MGT_AVCC": None,
             "VM_SW_AMP": None,
@@ -82,7 +82,7 @@ class TileData:
             "VM_DDR1_VDD": None,
             "VM_DVDD": None,
         },
-        "current": {"FE0_mVA": None, "FE1_mVA": None},
+        "currents": {"FE0_mVA": None, "FE1_mVA": None},
         "alarms": {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
@@ -162,8 +162,8 @@ class TileData:
             "jesd_interface": {
                 "link_status": None,
                 "lane_error_count": {
-                    "FPGA0":{
-                        "Core0":{
+                    "FPGA0": {
+                        "Core0": {
                             "lane0": None,
                             "lane1": None,
                             "lane2": None,
@@ -173,7 +173,7 @@ class TileData:
                             "lane6": None,
                             "lane7": None,
                         },
-                        "Core1":{
+                        "Core1": {
                             "lane0": None,
                             "lane1": None,
                             "lane2": None,
@@ -184,8 +184,8 @@ class TileData:
                             "lane7": None,
                         },
                     },
-                    "FPGA1":{
-                        "Core0":{
+                    "FPGA1": {
+                        "Core0": {
                             "lane0": None,
                             "lane1": None,
                             "lane2": None,
@@ -195,7 +195,7 @@ class TileData:
                             "lane6": None,
                             "lane7": None,
                         },
-                        "Core1":{
+                        "Core1": {
                             "lane0": None,
                             "lane1": None,
                             "lane2": None,
@@ -215,20 +215,24 @@ class TileData:
                 "initialisation": None,
                 "reset_counter": {"FPGA0": None, "FPGA1": None},
             },
-            "f2f_interface": {"pll_status": None, "soft_error": None, "hard_error": None},
+            "f2f_interface": {
+                "pll_status": None,
+                "soft_error": None,
+                "hard_error": None,
+            },
             "udp_interface": {
                 "arp": None,
                 "status": None,
                 "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
                 "crc_loss_count": {"FPGA0": None, "FPGA1": None},
-                "bip_error_count":{
-                    "FPGA0":{
+                "bip_error_count": {
+                    "FPGA0": {
                         "lane0": None,
                         "lane1": None,
                         "lane2": None,
                         "lane3": None,
                     },
-                    "FPGA1":{
+                    "FPGA1": {
                         "lane0": None,
                         "lane1": None,
                         "lane2": None,
@@ -238,8 +242,8 @@ class TileData:
             },
         },
         "dsp": {
-            "tile_beamf": None, 
-            "station_beamf": { 
+            "tile_beamf": None,
+            "station_beamf": {
                 "status": None,
                 "ddr_parity_error_count": {
                     "FPGA0": 0,

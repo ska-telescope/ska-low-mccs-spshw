@@ -140,10 +140,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             TileData.TILE_MONITORING_POINTS
         )
-        self._tile_health_structure["voltage"]["MON_5V0"] = 5.0
-        self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
-        self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
-        self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
+        self._tile_health_structure["voltages"]["MON_5V0"] = 5.0
+        self._tile_health_structure["temperatures"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA1"] = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = 0
@@ -801,7 +801,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: voltages in the TPM
         """
         self.logger.debug("TpmDriver: get all voltages available in the TPM")
-        return self._tile_health_structure["voltage"]
+        return self._tile_health_structure["voltages"]
 
     @property
     def temperatures(self: TpmDriver) -> dict[str, Any]:
@@ -811,7 +811,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: temperatures in the TPM
         """
         self.logger.debug("TpmDriver: get all temperatures available in the TPM")
-        return self._tile_health_structure["temperature"]
+        return self._tile_health_structure["temperatures"]
 
     @property
     def currents(self: TpmDriver) -> dict[str, Any]:
@@ -821,7 +821,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: currents in the TPM
         """
         self.logger.debug("TpmDriver: get all currents available in the TPM")
-        return self._tile_health_structure["current"]
+        return self._tile_health_structure["currents"]
 
     @property
     def timing(self: TpmDriver) -> dict[str, Any]:
@@ -861,7 +861,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of the TPM
         """
         self.logger.debug("TpmDriver: board_temperature")
-        return self._tile_health_structure["temperature"]["board"]
+        return self._tile_health_structure["temperatures"]["board"]
 
     @property
     def voltage_mon(self: TpmDriver) -> float:
@@ -871,7 +871,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the internal 5V supply of the TPM
         """
         self.logger.debug("TpmDriver: internal 5V supply of the TPM")
-        return self._tile_health_structure["voltage"]["MON_5V0"]
+        return self._tile_health_structure["voltages"]["MON_5V0"]
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
@@ -881,7 +881,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 1
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        return self._tile_health_structure["temperature"]["FPGA0"]
+        return self._tile_health_structure["temperatures"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: TpmDriver) -> float:
@@ -891,7 +891,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 2
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        return self._tile_health_structure["temperature"]["FPGA1"]
+        return self._tile_health_structure["temperatures"]["FPGA1"]
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:

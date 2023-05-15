@@ -1070,7 +1070,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: temperature Health State of the device
         """
-        return self._health_model._intermediate_healths["temperature"]
+        return self._health_model._intermediate_healths["temperatures"]
 
     @attribute(dtype=HealthState)
     def voltageHealth(self: MccsTile) -> HealthState:
@@ -1083,7 +1083,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: voltage Health State of the device
         """
-        return self._health_model._intermediate_healths["voltage"]
+        return self._health_model._intermediate_healths["voltages"]
 
     @attribute(dtype=HealthState)
     def currentHealth(self: MccsTile) -> HealthState:
@@ -1096,7 +1096,33 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: current Health State of the device
         """
-        return self._health_model._intermediate_healths["current"]
+        return self._health_model._intermediate_healths["currents"]
+
+    @attribute(dtype=HealthState)
+    def alarmHealth(self: MccsTile) -> HealthState:
+        """
+        Read the alarm Health State of the device.
+
+        This is an aggregated quantity representing if any of the alarm
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: alarm Health State of the device
+        """
+        return self._health_model._intermediate_healths["alarms"]
+
+    @attribute(dtype=HealthState)
+    def adcHealth(self: MccsTile) -> HealthState:
+        """
+        Read the ADC Health State of the device.
+
+        This is an aggregated quantity representing if any of the ADC
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: ADC Health State of the device
+        """
+        return self._health_model._intermediate_healths["adcs"]
 
     @attribute(dtype=HealthState)
     def timingHealth(self: MccsTile) -> HealthState:

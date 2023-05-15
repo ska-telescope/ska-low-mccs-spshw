@@ -60,7 +60,7 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-        station_health = super().evaluate_health()
+        tile_health = super().evaluate_health()
         intermediate_healths = self._intermediate_healths
 
         for health in [
@@ -69,17 +69,12 @@ class TileHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if (
-                self._health_rules.rules[health](
-                    intermediate_healths,
-                )
-                or station_health == health
-            ):
+            if self._health_rules.rules[health](intermediate_healths, tile_health):
                 return health
         return HealthState.UNKNOWN
 
     @property
-    def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
+    def _intermediate_healths(self: TileHealthRules) -> dict[str, HealthState]:
         """
         Get the 6 intermediate health roll-up quantities.
 
@@ -87,9 +82,11 @@ class TileHealthModel(BaseHealthModel):
         """
         if "tile_health_structure" not in self._state:
             return {
-                "temperature": HealthState.UNKNOWN,
-                "voltage": HealthState.UNKNOWN,
-                "current": HealthState.UNKNOWN,
+                "temperatures": HealthState.UNKNOWN,
+                "voltages": HealthState.UNKNOWN,
+                "currents": HealthState.UNKNOWN,
+                "alarms": HealthState.UNKNOWN,
+                "adcs": HealthState.UNKNOWN,
                 "timing": HealthState.UNKNOWN,
                 "io": HealthState.UNKNOWN,
                 "dsp": HealthState.UNKNOWN,
@@ -98,50 +95,11 @@ class TileHealthModel(BaseHealthModel):
             "tile_health_structure"
         ]  # type: ignore[assignment]
         return {
-            state: self._compute_intermediate_state(
+            state: self._health_rules.compute_intermediate_state(
                 monitoring_points[state], self.health_params[state]
             )
             for state in monitoring_points
         }
-
-    def _compute_intermediate_state(
-        self: TileHealthModel,
-        monitoring_points: dict[str, Any],
-        min_max: dict[str, Any],
-    ) -> HealthState:
-        states = {}
-        for p in monitoring_points:
-            if isinstance(monitoring_points[p], dict):
-                states[p] = self._compute_intermediate_state(
-                    monitoring_points[p], min_max[p]
-                )
-            else:
-                if isinstance(min_max[p], dict):
-                    states[p] = (
-                        HealthState.OK
-                        if monitoring_points[p] >= min_max[p]["min"]
-                        and monitoring_points[p] <= min_max[p]["max"]
-                        else HealthState.FAILED
-                    )
-                else:
-                    states[p] = (
-                        HealthState.OK
-                        if monitoring_points[p] == min_max[p]
-                        else HealthState.FAILED
-                    )
-        return self._combine_states(*states.values())
-
-    def _combine_states(self: TileHealthModel, *args: HealthState) -> HealthState:
-        states = [
-            HealthState.FAILED,
-            HealthState.UNKNOWN,
-            HealthState.DEGRADED,
-            HealthState.OK,
-        ]
-        for state in states:
-            if state in args:
-                return state
-        return HealthState.UNKNOWN
 
     @property
     def health_params(self: TileHealthModel) -> dict[str, Any]:
@@ -171,6 +129,8 @@ class TileHealthModel(BaseHealthModel):
         Merge two nested dictionaries, taking values from b when available.
 
         This is necessary for nested dictionaries of thresholds
+
+        TODO: Move into common repo
 
         :param dict_a: the dictionary to take from if not in dictionary b
         :param dict_b: the dictionary to preferentially take from

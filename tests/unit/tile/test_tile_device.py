@@ -423,12 +423,32 @@ class TestMccsTile:
             pytest.param(
                 TileData.MIN_MAX_MONITORING_POINTS,
                 {
-                    "temperature": {"board": {"max": 70}},
-                    "timing": {"clocks": {"FPGA0": {"JESD": 1}}},
+                    "temperatures": {"board": {"max": 70}},
+                    "timing": {"clocks": {"FPGA0": {"JESD": False}}},
                 },
-                id="Check correct initial values, write new and "
-                "verify new values have been written",
-            )
+                id="Check temperature and timing values and check new values",
+            ),
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "currents": {"FE0_mVA": {"max": 25}},
+                    "io": {
+                        "jesd_interface": {
+                            "lane_error_count": {"FPGA0": {"Core0": {"lane3": 2}}}
+                        }
+                    },
+                },
+                id="Change current and io values and check new values",
+            ),
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "alarms": {"I2C_access_alm": 1},
+                    "adcs": {"pll_status": {"ADC0": (False, True)}},
+                    "dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA1": 1}}},
+                },
+                id="Change alarm, adc and dsp values and check new values",
+            ),
         ],
     )
     def test_healthParams(
@@ -445,12 +465,23 @@ class TestMccsTile:
             expected to have initially
         :param new_params: the new health rule params to pass to the health model
         """
+
+        def _merge_dicts(
+            dict_a: dict[str, Any], dict_b: dict[str, Any]
+        ) -> dict[str, Any]:
+            output = copy.deepcopy(dict_a)
+            for key in dict_b:
+                if isinstance(dict_b[key], dict):
+                    output[key] = _merge_dicts(dict_a[key], dict_b[key])
+                else:
+                    output[key] = dict_b[key]
+            return output
+
         assert tile_device.healthModelParams == json.dumps(expected_init_params)
         new_params_json = json.dumps(new_params)
         tile_device.healthModelParams = new_params_json  # type: ignore[assignment]
         expected_result = copy.deepcopy(expected_init_params)
-        expected_result["temperature"]["board"]["max"] = 70
-        expected_result["timing"]["clocks"]["FPGA0"]["JESD"] = 1
+        expected_result = _merge_dicts(expected_result, new_params)
         assert tile_device.healthModelParams == json.dumps(expected_result)
 
 

@@ -10,7 +10,7 @@
 #
 # This file provides min/max or expected values for TPM monitoring points
 tpm_monitoring_points:
-  temperature:
+  temperatures:
     board:
       min: 10
       max: 65
@@ -20,7 +20,7 @@ tpm_monitoring_points:
     FPGA1:
       min: 10
       max: 95
-  voltage:
+  voltages:
     VREF_2V5: 
       min: 2.37
       max: 2.63
@@ -129,7 +129,7 @@ tpm_monitoring_points:
     VM_SW_AMP: 
       min: 3.22
       max: 3.78
-  current:
+  currents:
     FE0_mVA:
       min: 1.93
       max: 2.27

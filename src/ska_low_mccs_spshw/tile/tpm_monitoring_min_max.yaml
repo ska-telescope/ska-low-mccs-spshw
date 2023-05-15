@@ -262,7 +262,7 @@ tpm_monitoring_points:
       resync_count:
         FPGA0: 0
         FPGA1: 0
-      qpll_lock_loss_count:
+      qpll_status:
         FPGA0: !!python/tuple [True, 0]
         FPGA1: !!python/tuple [True, 0]
     ddr_interface:

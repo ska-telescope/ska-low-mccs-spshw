@@ -224,7 +224,7 @@ class TileData:
                 "arp": None,
                 "status": None,
                 "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
-                "crc_loss_count": {"FPGA0": None, "FPGA1": None},
+                "crc_error_count": {"FPGA0": None, "FPGA1": None},
                 "bip_error_count": {
                     "FPGA0": {
                         "lane0": None,

@@ -136,51 +136,168 @@ tpm_monitoring_points:
     FE1_mVA:
       min: 2.02
       max: 2.38
+  alarms:
+    I2C_access_alm: 0
+    temperature_alm: 0
+    voltage_alm: 0
+    SEM_wd: 0
+    MCU_wd: 0
+  adcs:
+    pll_status:
+      ADC0: !!python/tuple [True, True]
+      ADC1: !!python/tuple [True, True]
+      ADC2: !!python/tuple [True, True]
+      ADC3: !!python/tuple [True, True]
+      ADC4: !!python/tuple [True, True]
+      ADC5: !!python/tuple [True, True]
+      ADC6: !!python/tuple [True, True]
+      ADC7: !!python/tuple [True, True]
+      ADC8: !!python/tuple [True, True]
+      ADC9: !!python/tuple [True, True]
+      ADC10: !!python/tuple [True, True]
+      ADC11: !!python/tuple [True, True]
+      ADC12: !!python/tuple [True, True]
+      ADC13: !!python/tuple [True, True]
+      ADC14: !!python/tuple [True, True]
+      ADC15: !!python/tuple [True, True]
+    sysref_timing_requirements:
+      ADC0: True
+      ADC1: True
+      ADC2: True
+      ADC3: True
+      ADC4: True
+      ADC5: True
+      ADC6: True
+      ADC7: True
+      ADC8: True
+      ADC9: True
+      ADC10: True
+      ADC11: True
+      ADC12: True
+      ADC13: True
+      ADC14: True
+      ADC15: True
+    sysref_counter:
+      ADC0: True
+      ADC1: True
+      ADC2: True
+      ADC3: True
+      ADC4: True
+      ADC5: True
+      ADC6: True
+      ADC7: True
+      ADC8: True
+      ADC9: True
+      ADC10: True
+      ADC11: True
+      ADC12: True
+      ADC13: True
+      ADC14: True
+      ADC15: True 
   timing:
     clocks:
       FPGA0: 
-        JESD: 0
-        DDR: 0
-        UDP: 0
+        JESD: True
+        DDR: True
+        UDP: True
       FPGA1:
-        JESD: 0
-        DDR: 0
-        UDP: 0
+        JESD: True
+        DDR: True
+        UDP: True
     clock_managers:
       FPGA0:
-        C2C_MMCM: 0
-        JESD_MMCM: 0
-        DSP_MMCM: 0
+        C2C_MMCM: !!python/tuple [True, 0]
+        JESD_MMCM: !!python/tuple [True, 0]
+        DSP_MMCM: !!python/tuple [True, 0]
       FPGA1:
-        C2C_MMCM: 0
-        JESD_MMCM: 0
-        DSP_MMCM: 0
+        C2C_MMCM: !!python/tuple [True, 0]
+        JESD_MMCM: !!python/tuple [True, 0]
+        DSP_MMCM: !!python/tuple [True, 0]
     pps:
-      status: 0
+      status: True
+    pll: !!python/tuple [True, 0]
   io:
-    jesd_if:
-      lanes: 0
-      error_count: 0
+    jesd_interface:
+      link_status: True
+      lane_error_count:
+        FPGA0:
+          Core0:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+          Core1:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+        FPGA1:
+          Core0:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+          Core1:
+            lane0: 0
+            lane1: 0
+            lane2: 0
+            lane3: 0
+            lane4: 0
+            lane5: 0
+            lane6: 0
+            lane7: 0
+      lane_status: True
       resync_count:
         FPGA0: 0
         FPGA1: 0
       qpll_lock_loss_count:
-        FPGA0: 0
-        FPGA1: 0
-    ddr_if:
-      initialisation: 0
+        FPGA0: !!python/tuple [True, 0]
+        FPGA1: !!python/tuple [True, 0]
+    ddr_interface:
+      initialisation: True
       reset_counter:
         FPGA0: 0
         FPGA1: 0
-    f2f_if:
-      pll_lock_loss_count:
-        Core0: 0
-    udp_if:
-      arp: 0
-      status: 0
+    f2f_interface:
+      pll_status: !!python/tuple [True, 0]
+      soft_error: 0
+      hard_error: 0
+    udp_interface:
+      arp: True
+      status: True
+      crc_error_count:
+        FPGA0: 0
+        FPGA1: 0
+      bip_error_count:
+        FPGA0:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+        FPGA1:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
       linkup_loss_count:
         FPGA0: 0
         FPGA1: 0
   dsp:
-    tile_beamf: 0
-    station_beamf: 0
+    tile_beamf: True
+    station_beamf:
+      status: True
+      ddr_parity_error_count:
+        FPGA0: 0
+        FPGA1: 0

@@ -94,7 +94,7 @@ class TileHealthModel(BaseHealthModel):
         monitoring_points: dict[str, Any] = self._state[
             "tile_health_structure"
         ]  # type: ignore[assignment]
-        assert isinstance(self._health_rules, TileHealthRules) #for the type-checker
+        assert isinstance(self._health_rules, TileHealthRules)  # for the type-checker
         return {
             state: self._health_rules.compute_intermediate_state(
                 monitoring_points[state], self.health_params[state]

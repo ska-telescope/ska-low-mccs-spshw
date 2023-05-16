@@ -106,7 +106,8 @@ class TileHealthRules(HealthRules):
         monitoring_points: dict[str, Any],
         min_max: dict[str, Any],
     ) -> HealthState:
-        """Compute the intermediate health state for the Tile.
+        """
+        Compute the intermediate health state for the Tile.
 
         This is computed for a particular category of monitoring points
         e.g. voltage, io etc.

@@ -45,15 +45,15 @@ class TestTileHealthModel:
             ({}, HealthState.OK, {}, HealthState.OK),
             ({}, HealthState.OK, {"voltages": {"AVDD3": 3.4}}, HealthState.FAILED),
             (
-                {"currents": {"FE0_mVA": 2.5}},
+                {"dsp": {"tile_beamf": False}},
                 HealthState.FAILED,
-                {"currents": {"FE0_mVA": 2.1}},
+                {"dsp": {"tile_beamf": True}},
                 HealthState.OK,
             ),
             (
-                {"dsp": {"tile_beamf": 1}},
+                {"currents": {"FE0_mVA": 2.5}},
                 HealthState.FAILED,
-                {"dsp": {"tile_beamf": 3}},
+                {"currents": {"FE0_mVA": 2.4}},
                 HealthState.FAILED,
             ),
             (
@@ -125,9 +125,9 @@ class TestTileHealthModel:
                 HealthState.FAILED,
             ),
             (
-                {"timing": {"clocks": {"FPGA1": {"UDP": 4}}}},
+                {"timing": {"clocks": {"FPGA1": {"UDP": False}}}},
                 HealthState.FAILED,
-                {"timing": {"clocks": {"FPGA1": {"UDP": 0}}}},
+                {"timing": {"clocks": {"FPGA1": {"UDP": True}}}},
                 HealthState.OK,
             ),
             (
@@ -155,9 +155,9 @@ class TestTileHealthModel:
                 HealthState.OK,
             ),
             (
-                {"dsp": {"station_beamf": {"ddr_parity_error_count": 2}}},
+                {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 2}}}},
                 HealthState.FAILED,
-                {"dsp": {"station_beamf": {"ddr_parity_error_count": 1}}},
+                {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 1}}}},
                 HealthState.FAILED,
             ),
         ],

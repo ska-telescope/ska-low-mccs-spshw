@@ -74,7 +74,7 @@ class TileHealthModel(BaseHealthModel):
         return HealthState.UNKNOWN
 
     @property
-    def _intermediate_healths(self: TileHealthRules) -> dict[str, HealthState]:
+    def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
         """
         Get the 6 intermediate health roll-up quantities.
 
@@ -94,6 +94,7 @@ class TileHealthModel(BaseHealthModel):
         monitoring_points: dict[str, Any] = self._state[
             "tile_health_structure"
         ]  # type: ignore[assignment]
+        assert isinstance(self._health_rules, TileHealthRules) #for the type-checker
         return {
             state: self._health_rules.compute_intermediate_state(
                 monitoring_points[state], self.health_params[state]

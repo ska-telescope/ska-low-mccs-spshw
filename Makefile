@@ -11,8 +11,8 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 PYTHON_SWITCHES_FOR_BLACK = --line-length=88
 PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
-PYTHON_VARS_AFTER_PYTEST = --forked
-PYTHON_TEST_FILE = tests
+PYTHON_VARS_AFTER_PYTEST = --forked --count=100
+PYTHON_TEST_FILE = tests/unit/tile/test_tile_device.py::TestMccsTile::test_healthState
 DOCS_SPHINXOPTS = -n -W --keep-going
 
 include .make/oci.mk

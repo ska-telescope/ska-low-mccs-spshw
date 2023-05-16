@@ -42,12 +42,12 @@ class StaticTpmSimulator(BaseTpmSimulator):
         """
         super().__init__(logger, component_state_changed_callback)
 
-        self._tile_health_structure["voltage"]["MON_5V0"] = self.VOLTAGE
-        self._tile_health_structure["current"]["FE0_mVA"] = self.CURRENT_FE0_mVA
-        self._tile_health_structure["current"]["FE1_mVA"] = self.CURRENT_FE1_mVA
-        self._tile_health_structure["temperature"]["board"] = self.BOARD_TEMPERATURE
-        self._tile_health_structure["temperature"]["FPGA0"] = self.FPGA1_TEMPERATURE
-        self._tile_health_structure["temperature"]["FPGA1"] = self.FPGA2_TEMPERATURE
+        self._tile_health_structure["voltages"]["MON_5V0"] = self.VOLTAGE
+        self._tile_health_structure["currents"]["FE0_mVA"] = self.CURRENT_FE0_mVA
+        self._tile_health_structure["currents"]["FE1_mVA"] = self.CURRENT_FE1_mVA
+        self._tile_health_structure["temperatures"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA1"] = self.FPGA2_TEMPERATURE
 
     @property
     def board_temperature(self: StaticTpmSimulator) -> float:
@@ -56,7 +56,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of the TPM
         """
-        return self._tile_health_structure["temperature"]["board"]
+        return self._tile_health_structure["temperatures"]["board"]
 
     @property
     def voltage_mon(self: StaticTpmSimulator) -> float:
@@ -65,7 +65,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the internal 5V supply of the TPM
         """
-        return self._tile_health_structure["voltage"]["MON_5V0"]
+        return self._tile_health_structure["voltages"]["MON_5V0"]
 
     @property
     def currents(self: StaticTpmSimulator) -> dict[str, Any]:
@@ -74,7 +74,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: currents in the TPM
         """
-        return self._tile_health_structure["current"]
+        return self._tile_health_structure["currents"]
 
     @property
     def fpga1_temperature(self: StaticTpmSimulator) -> float:
@@ -83,7 +83,7 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 1
         """
-        return self._tile_health_structure["temperature"]["FPGA0"]
+        return self._tile_health_structure["temperatures"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: StaticTpmSimulator) -> float:
@@ -92,23 +92,23 @@ class StaticTpmSimulator(BaseTpmSimulator):
 
         :return: the temperature of FPGA 2
         """
-        return self._tile_health_structure["temperature"]["FPGA1"]
+        return self._tile_health_structure["temperatures"]["FPGA1"]
 
 
 class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
     """
     This attempts to simulate pyfabil TPM.
 
-    This is used for testing the tpm_driver, it implements
-    __getitem__, __setitem__ so that the TileSimulator can
-    interface with the TPMSimulator in the same way as the
-    AAVS Tile interfaces with the pyfabil TPM. Instead of writing to
-    a register we write to a dictionary. It overwrite read_address,
-    write_address, read_register, write_register for simplicity.
+    This is used for testing the tpm_driver, it implements __getitem__,
+    __setitem__ so that the TileSimulator can interface with the
+    TPMSimulator in the same way as the AAVS Tile interfaces with the
+    pyfabil TPM. Instead of writing to a register we write to a
+    dictionary. It overwrite read_address, write_address, read_register,
+    write_register for simplicity.
 
-    The reason for this class is that the BaseTPMSimulator does not
-    have the same interface as the pyfabil TPM, so a subclass has
-    wrapped this to give that interface needed for testing tpm_driver.
+    The reason for this class is that the BaseTPMSimulator does not have
+    the same interface as the pyfabil TPM, so a subclass has wrapped
+    this to give that interface needed for testing tpm_driver.
     """
 
     def __init__(

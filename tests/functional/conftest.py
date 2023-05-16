@@ -28,7 +28,7 @@ from typing import (
 
 import _pytest
 import pytest
-from ska_control_model import LoggingLevel
+from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.context import (
     TangoContextProtocol,
     ThreadedTestTangoContextManager,
@@ -62,6 +62,26 @@ def pytest_addoption(
             "need to spin up a Tango test context"
         ),
     )
+
+
+@pytest.fixture(name="tile_name_1", scope="session")
+def tile_name_fixture_1() -> str:
+    """
+    Return the name of the tile Tango device no. 1.
+
+    :return: the name of the tile Tango device no. 1.
+    """
+    return "low-mccs/tile/0002"
+
+
+@pytest.fixture(name="tile_name_2", scope="session")
+def tile_name_fixture_2() -> str:
+    """
+    Return the name of the tile Tango device no. 2.
+
+    :return: the name of the tile Tango device no. 2.
+    """
+    return "low-mccs/tile/0003"
 
 
 @pytest.fixture(name="true_context", scope="session")
@@ -214,6 +234,9 @@ def subrack_address_context_manager_factory_fixture(
 @pytest.fixture(name="tango_harness", scope="module")
 def tango_harness_fixture(
     subrack_name: str,
+    tile_name_1: str,
+    tile_name_2: str,
+    station_name: str,
     subrack_address_context_manager_factory: Callable[
         [], ContextManager[tuple[str, int]]
     ],
@@ -249,6 +272,34 @@ def tango_harness_fixture(
                 UpdateRate=1.0,
                 LoggingLevelDefault=int(LoggingLevel.DEBUG),
             )
+            cast(ThreadedTestTangoContextManager, tango_context_manager).add_device(
+                tile_name_1,
+                "ska_low_mccs_spshw.MccsTile",
+                SimulationConfig=int(SimulationMode.TRUE),
+                LoggingLevelDefault=int(LoggingLevel.DEBUG),
+                SubrackFQDN = subrack_name,
+                TileId = 1,
+                TestConfig=int(TestMode.TEST),
+                SubrackBay=1,
+            )
+            cast(ThreadedTestTangoContextManager, tango_context_manager).add_device(
+                tile_name_2,
+                "ska_low_mccs_spshw.MccsTile",
+                SimulationConfig=int(SimulationMode.TRUE),
+                LoggingLevelDefault=int(LoggingLevel.DEBUG),
+                SubrackFQDN = subrack_name,
+                TileId = 2,
+                TestConfig=int(TestMode.TEST),
+                SubrackBay=1,
+            )
+            cast(ThreadedTestTangoContextManager, tango_context_manager).add_device(
+                station_name,
+                "ska_low_mccs_spshw.SpsStation",
+                LoggingLevelDefault=int(LoggingLevel.DEBUG),
+                TileFQDNs=[tile_name_1,tile_name_2],
+                SubrackFQDN=[subrack_name],
+                StationId=1,
+            )
             with tango_context_manager as context:
                 yield context
 
@@ -267,6 +318,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds",
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
+        #"tile_1_state",
+        #"tile_2_state",
         timeout=30.0,
     )
 

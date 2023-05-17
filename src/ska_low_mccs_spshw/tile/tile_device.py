@@ -233,6 +233,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
             self._device.set_change_event("tileProgrammingState", True, False)
+            self._device.set_change_event("adcPower", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 

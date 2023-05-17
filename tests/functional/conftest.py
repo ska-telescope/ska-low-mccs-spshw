@@ -71,7 +71,7 @@ def tile_name_fixture_1() -> str:
 
     :return: the name of the tile Tango device no. 1.
     """
-    return "low-mccs/tile/0002"
+    return "low-mccs/tile/0001"
 
 
 @pytest.fixture(name="tile_name_2", scope="session")
@@ -81,7 +81,7 @@ def tile_name_fixture_2() -> str:
 
     :return: the name of the tile Tango device no. 2.
     """
-    return "low-mccs/tile/0003"
+    return "low-mccs/tile/0002"
 
 
 @pytest.fixture(name="true_context", scope="session")

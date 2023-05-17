@@ -33,16 +33,7 @@ python-post-format:
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 
-PROJECT_NAME = low_mccs_daq
 
-_remote_tracking_branch = $(shell git status -sb | head -1 | sed 's/\.\.\./\n/' | tail -1)
-_gitlab_tag = $(VERSION)-dev.c$(shell git rev-parse --short=8 $(_remote_tracking_branch))
- 
-K8S_CHART_PARAMS = \
-  --set global.minikube=false \
-  --set $(PROJECT_NAME).image.registry=registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq \
-  --set $(PROJECT_NAME).image.tag=$(_gitlab_tag)
-  
 K8S_FACILITY ?= k8s-test
 K8S_CHART_PARAMS += --values charts/ska-low-mccs-spshw/values-$(K8S_FACILITY).yaml
 

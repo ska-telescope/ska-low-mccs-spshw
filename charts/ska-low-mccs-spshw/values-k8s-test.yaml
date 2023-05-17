@@ -94,12 +94,19 @@ deviceServers:  # e.g....
         version: tpm_v1_6
         subrack: "1"
         subrack_bay: 1
+      2:
+        host: 10.0.10.202
+        port: 10000
+        version: tpm_v1_6
+        subrack: "1"
+        subrack_bay: 2
     logging_level_default: 5
     simulation_config: 1
     test_config: 1
     resources:
       requests:
         memory: 512Mi
+
 
 nodeSelector: {}
 

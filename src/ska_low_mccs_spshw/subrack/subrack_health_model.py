@@ -8,10 +8,12 @@
 """An implementation of a health model for a subrack."""
 from __future__ import annotations
 
-from typing import Any, Callable
+from typing import Any, Optional
 
 from ska_control_model import HealthState
-from ska_low_mccs_common.health import BaseHealthModel
+from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
+
+from .subrack_health_rules import SubrackHealthRules
 
 __all__ = ["SubrackHealthModel"]
 
@@ -21,17 +23,8 @@ class SubrackHealthModel(BaseHealthModel):
 
     def __init__(
         self: SubrackHealthModel,
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-        board_temps: list[float],
-        backplane_temps: list[float],
-        subrack_fan_speeds: list[float],
-        board_currents: list[float],
-        tpm_currents: list[float],
-        power_supply_currents: list[float],
-        tpm_voltages: list[float],
-        power_supply_voltages: list[float],
-        tpm_power_states: list[float],
-        clock_reqs: set,
+        component_state_changed_callback: HealthChangedCallbackProtocol,
+        thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -39,65 +32,91 @@ class SubrackHealthModel(BaseHealthModel):
         :param component_state_changed_callback: callback to be called whenever
             there is a change to this this health model's evaluated
             health state.
-        :param station_fqdns: the FQDNs of this subrack's stations
+        :param thresholds: Thresholds for the subrack device.
         """
+        self._health_rules = SubrackHealthRules(thresholds)
         super().__init__(component_state_changed_callback)
 
-        self._board_temps = board_temps
-        self._backplane_temps = backplane_temps
-        self._subrack_fan_speeds = subrack_fan_speeds
+    def update_state(self: BaseHealthModel, **kwargs: Any) -> None:
+        """
+        Update this health model with state relevant to evaluating health.
 
-        self._new_board_currents = board_currents
-        self._new_tpm_currents = tpm_currents
-        self._new_power_supply_currents = power_supply_currents
+        :param kwargs: updated state
+        """
+        # linting
+        if "new_tpm_voltages" in self._state:
+            self._state["old_tpm_voltages"] = self._state["tpm_voltages"]
 
-        self._old_tpm_voltages = tpm_voltages
-        self._new_tpm_voltages = tpm_voltages
-        self._old_power_supply_voltages = power_supply_voltages
-        self._new_power_supply_voltages = power_supply_voltages
+        # linting
+        if "new_power_supply_voltages" in self._state:
+            self._state["old_power_supply_voltages"] = self._state[
+                "new_power_supply_voltages"
+            ]
+        # linting
+        if "new_tpm_power_states" in self._state:
+            self._state["old_tpm_power_states"] = self._state["tpm_power_states"]
 
-        self._old_tpm_power_states = tpm_power_states
-        self._new_tpm_power_states = tpm_power_states
+        super().update_state(**kwargs)
 
-        self._desired_fan_speeds = []
+    # def update_data(
+    #     self: SubrackHealthModel,
+    #     board_temps: list[float],
+    #     backplane_temps: list[float],
+    #     subrack_fan_speeds: list[float],
+    #     board_currents: list[float],
+    #     tpm_currents: list[float],
+    #     power_supply_currents: list[float],
+    #     tpm_voltages: list[float],
+    #     power_supply_voltages: list[float],
+    #     tpm_power_states: list[float],
+    #     clock_reqs: set,
+    #     desired_fan_speeds: list[float],
+    # ) -> None:
+    #     """
+    #     Update the state of the subrack device.
 
-        self._clock_reqs = clock_reqs
+    #     :param board_temps: The board temperatures.
+    #     :param backplane_temps: Backplane temperatures.
+    #     :param subrack_fan_speeds: Subrack fan speeds
+    #     :param board_currents: Currents drawn by all of the boards.
+    #     :param tpm_currents: Currents drawn by all of the TPMs.
+    #     :param power_supply_currents: Currents drawn by all of the power supplys.
+    #     :param tpm_voltages: Voltage used by all TPMs.
+    #     :param power_supply_voltages: Voltage used by all power supplies.
+    #     :param tpm_power_states: If all the TPMs are on, off or some other state.
+    #     :param clock_reqs: Set containing clock requirements.
+    #     :param desired_fan_speeds: What the user wants the fan speeds to be.
+    #     """
+    #     self._state.board_temps = board_temps
+    #     self._state.backplane_temps = backplane_temps
+    #     self._state.subrack_fan_speeds = subrack_fan_speeds
 
-    def update_data(
-        self: SubrackHealthModel,
-        board_temps: list[float],
-        backplane_temps: list[float],
-        subrack_fan_speeds: list[float],
-        board_currents: list[float],
-        tpm_currents: list[float],
-        power_supply_currents: list[float],
-        tpm_voltages: list[float],
-        power_supply_voltages: list[float],
-        tpm_power_states: list[float],
-        clock_reqs: set,
-        desired_fan_speeds: list[float],
-    ) -> None:
-        self._board_temps = board_temps
-        self._backplane_temps = backplane_temps
-        self._subrack_fan_speeds = subrack_fan_speeds
+    #     self._state.new_board_currents = board_currents
+    #     self._state.new_tpm_currents = tpm_currents
+    #     self._state.new_power_supply_currents = power_supply_currents
 
-        self._new_board_currents = board_currents
-        self._new_tpm_currents = tpm_currents
-        self._new_power_supply_currents = power_supply_currents
+    #     # linting
+    #     if "new_tpm_voltages" in self._state:
+    #         self._state.old_tpm_voltages = self._state.new_tpm_voltages
+    #     self._state.new_tpm_voltages = tpm_voltages
 
-        self._old_tpm_voltages = self._new_tpm_voltages
-        self._new_tpm_voltages = tpm_voltages
-        self._old_power_supply_voltages = self._new_power_supply_voltages
-        self._new_power_supply_voltages = power_supply_voltages
+    #     # linting
+    #     if "new_power_supply_voltages" in self._state:
+    #         self._state.old_power_supply_voltages = (
+    #             self._state.new_power_supply_voltages
+    #         )
+    #     self._state.new_power_supply_voltages = power_supply_voltages
 
-        self._old_tpm_power_states = self._new_tpm_power_states
-        self._new_tpm_power_states = tpm_power_states
+    #     # linting
+    #     if "new_tpm_power_states" in self._state:
+    #         self._state.old_tpm_power_states = self._state.new_tpm_power_states
+    #     self._state.new_tpm_power_states = tpm_power_states
 
-        self._clock_reqs = clock_reqs
+    #     self._state.clock_reqs = clock_reqs
 
-        self._desired_fan_speeds = desired_fan_speeds
+    #     self._state.desired_fan_speeds = desired_fan_speeds
 
-        self.evaluate_health()
+    #     self.evaluate_health()
 
     def evaluate_health(
         self: SubrackHealthModel,
@@ -122,24 +141,6 @@ class SubrackHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if (
-                self._health_rules.rules[health](
-                    self._board_temps,
-                    self._backplane_temps,
-                    self._subrack_fan_speeds,
-                    self._new_board_currents,
-                    self._new_tpm_currents,
-                    self._new_power_supply_currents,
-                    self._old_tpm_voltages,
-                    self._new_tpm_voltages,
-                    self._old_power_supply_voltages,
-                    self._new_power_supply_voltages,
-                    self._old_tpm_power_states,
-                    self._new_tpm_power_states,
-                    self._clock_reqs,
-                    self._desired_fan_speeds,
-                )
-                or subrack_health == health
-            ):
+            if self._health_rules.rules[health](self._state, subrack_health):
                 return health
         return HealthState.UNKNOWN

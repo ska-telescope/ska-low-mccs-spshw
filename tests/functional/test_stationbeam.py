@@ -14,12 +14,13 @@ from datetime import datetime  # , timezone
 
 # import enum
 from functools import wraps
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 import pytest
 import tango
-from mypy_extensions import KwArg, VarArg
+
+# from mypy_extensions import KwArg, VarArg
 from pytest_bdd import given, scenario, then, when
 
 # from ska_tango_base.commands import ResultCode
@@ -89,10 +90,7 @@ def tile_device_fixture(
 
 def skip_if_tiles_simulated(
     test_function: Callable[[None], None],
-) -> Callable[
-    [VarArg(None), KwArg(pytest.FixtureRequest)],
-    Optional[Callable[[dict[str, pytest.FixtureRequest]], None]],
-]:
+) -> Callable[..., Callable[..., None]]:
     """
     Skip test if tiles are simulated.
 
@@ -108,7 +106,7 @@ def skip_if_tiles_simulated(
     def wrapper(
         *args: None,
         **kwargs: pytest.FixtureRequest,
-    ) -> Optional[Callable[[dict[str, pytest.FixtureRequest]], None]]:
+    ) -> Callable[..., None]:
         tile_device_list_fixture = kwargs.get("request")
         if tile_device_list_fixture is None:
             raise ValueError("Tile_device_list fixture does not exist")
@@ -124,7 +122,7 @@ def skip_if_tiles_simulated(
         # assert tile_device_list[0].adminMode == AdminMode.ONLINE
         if SimulationMode.TRUE in (tile_1.SimulationMode, tile_2.SimulationMode):
             pytest.skip("Skipping station beam test with simulated tiles.")
-        return test_function(*args, **kwargs)
+        return test_function
 
     return wrapper
 

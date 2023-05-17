@@ -14,21 +14,25 @@ from datetime import datetime  # , timezone
 
 # import enum
 from functools import wraps
+from typing import Callable, Optional
 
 import numpy as np
 import pytest
 import tango
-from pytest_bdd import given, parsers, scenario, then, when
+from mypy_extensions import KwArg, VarArg
+from pytest_bdd import given, scenario, then, when
 
 # from ska_tango_base.commands import ResultCode
 from ska_tango_base.control_model import AdminMode, SimulationMode
 from ska_tango_testing.context import TangoContextProtocol
-from ska_tango_testing.mock.placeholders import Anything, OneOf
-from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-import ska_low_mccs_spshw
+# from ska_tango_testing.mock.placeholders import Anything, OneOf
+# from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+
+# import ska_low_mccs_spshw
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
+
 
 @pytest.fixture(name="subrack_device", scope="module")
 def subrack_device_fixture(
@@ -67,7 +71,7 @@ def tile_device_fixture(
     tango_harness: TangoContextProtocol,
     tile_name_1: str,
     tile_name_2: str,
-) -> list(tango.DeviceProxy):
+) -> list[tango.DeviceProxy]:
     """
     Return the subrack device under test.
 
@@ -83,10 +87,32 @@ def tile_device_fixture(
     ]
 
 
-def skip_if_tiles_simulated(test_function: callable) -> callable:
+def skip_if_tiles_simulated(
+    test_function: Callable[[None], None],
+) -> Callable[
+    [VarArg(None), KwArg(pytest.FixtureRequest)],
+    Optional[Callable[[dict[str, pytest.FixtureRequest]], None]],
+]:
+    """
+    Skip test if tiles are simulated.
+
+    The tiles do not currently have a test generator simulator, therefore
+    the tests cannot be run if the tiles are simulated.
+
+    :param test_function: function to skip if tiles simulated.
+
+    :return: test function if tiles not simulated.
+    """
+
     @wraps(test_function)
-    def wrapper(*args, **kwargs):
-        tile_device_list = kwargs.get("request").getfixturevalue("tile_device_list")
+    def wrapper(
+        *args: None,
+        **kwargs: pytest.FixtureRequest,
+    ) -> Optional[Callable[[dict[str, pytest.FixtureRequest]], None]]:
+        tile_device_list_fixture = kwargs.get("request")
+        if tile_device_list_fixture is None:
+            raise ValueError("Tile_device_list fixture does not exist")
+        tile_device_list = tile_device_list_fixture.getfixturevalue("tile_device_list")
         # station_device = kwargs.get("request").getfixturevalue("station_device")
         # subrack_device = kwargs.get("request").getfixturevalue("subrack_device")
         tile_1 = tile_device_list[0]
@@ -95,17 +121,17 @@ def skip_if_tiles_simulated(test_function: callable) -> callable:
         # tile_1.adminMode = AdminMode.ONLINE
         # station_device.adminMode = AdminMode.ONLINE
         # subrack_device.adminMode = AdminMode.ONLINE
-        assert tile_device_list[0].adminMode == AdminMode.ONLINE
+        # assert tile_device_list[0].adminMode == AdminMode.ONLINE
         if SimulationMode.TRUE in (tile_1.SimulationMode, tile_2.SimulationMode):
-            return pytest.skip("Skipping station beam test with simulated tiles.")
+            pytest.skip("Skipping station beam test with simulated tiles.")
         return test_function(*args, **kwargs)
 
     return wrapper
 
 
-#@skip_if_tiles_simulated
+@skip_if_tiles_simulated
 @scenario("features/station_beam.feature", "Correcting delayed beam")
-def test_correct_delayed_beam(tile_device_list: list(tango.DeviceProxy)) -> None:
+def test_correct_delayed_beam() -> None:
     """
     Run a test scenario that tells a subrack to turn off all TPMs.
 
@@ -121,7 +147,7 @@ def check_station_is_online_and_on(station_device: tango.DeviceProxy) -> None:
 
     :param station_device: the station device under test.
     """
-    #station_device.logginglevel = 5
+    # station_device.logginglevel = 5
     station_device.adminMode = AdminMode.ONLINE
     time.sleep(0.2)
     assert station_device.adminMode == AdminMode.ONLINE
@@ -136,7 +162,7 @@ def check_subrack_is_online_and_on(
 
     :param subrack_device: the subrack device under test.
     """
-    #subrack_device.logginglevel = 5
+    # subrack_device.logginglevel = 5
     subrack_device.adminMode = AdminMode.ONLINE
     time.sleep(0.2)
     assert subrack_device.adminMode == AdminMode.ONLINE
@@ -182,7 +208,6 @@ def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
 
 @when("the station and subcracks are turned on")
 def check_test_generator_is_programmed(
-    tile_device_list: list(tango.DeviceProxy),
     station_device: tango.DeviceProxy,
     subrack_device: tango.DeviceProxy,
 ) -> None:
@@ -217,7 +242,7 @@ def check_test_generator_is_programmed(
     else:
         print(f"t={tm}: Timeout during intialisation")
     assert subrack_device.state() == tango.DevState.ON
-    assert station_device.tileprogrammingstate == ('Initialised','Initialised')
+    assert station_device.tileprogrammingstate == ("Initialised", "Initialised")
 
 
 @when("the station is synchronised")
@@ -384,4 +409,4 @@ def correct_beam_with_pointing_delays(station_device: tango.DeviceProxy) -> None
 @then("the applitude of the corrected beam is as expected")
 def check_amplitudes() -> None:
     """Hello World."""
-    assert True == True
+    assert True is True

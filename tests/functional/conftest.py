@@ -246,6 +246,9 @@ def tango_harness_fixture(
     Yield a Tango context containing the device/s under test.
 
     :param subrack_name: name of the subrack Tango device.
+    :param tile_name_1: name of the first tile Tango device.
+    :param tile_name_2: name of the second tile Tango device.
+    :param station_name: name of the station Tango device.
     :param subrack_address_context_manager_factory: a callable that
          returns a context manager that, when entered, yields the host
          and port of a subrack.
@@ -277,8 +280,8 @@ def tango_harness_fixture(
                 "ska_low_mccs_spshw.MccsTile",
                 SimulationConfig=int(SimulationMode.TRUE),
                 LoggingLevelDefault=int(LoggingLevel.DEBUG),
-                SubrackFQDN = subrack_name,
-                TileId = 1,
+                SubrackFQDN=subrack_name,
+                TileId=1,
                 TestConfig=int(TestMode.TEST),
                 SubrackBay=1,
             )
@@ -287,8 +290,8 @@ def tango_harness_fixture(
                 "ska_low_mccs_spshw.MccsTile",
                 SimulationConfig=int(SimulationMode.TRUE),
                 LoggingLevelDefault=int(LoggingLevel.DEBUG),
-                SubrackFQDN = subrack_name,
-                TileId = 2,
+                SubrackFQDN=subrack_name,
+                TileId=2,
                 TestConfig=int(TestMode.TEST),
                 SubrackBay=1,
             )
@@ -296,7 +299,7 @@ def tango_harness_fixture(
                 station_name,
                 "ska_low_mccs_spshw.SpsStation",
                 LoggingLevelDefault=int(LoggingLevel.DEBUG),
-                TileFQDNs=[tile_name_1,tile_name_2],
+                TileFQDNs=[tile_name_1, tile_name_2],
                 SubrackFQDN=[subrack_name],
                 StationId=1,
             )
@@ -318,8 +321,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds",
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
-        #"tile_1_state",
-        #"tile_2_state",
+        # "tile_1_state",
+        # "tile_2_state",
         timeout=30.0,
     )
 

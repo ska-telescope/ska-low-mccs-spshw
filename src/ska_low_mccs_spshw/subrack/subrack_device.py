@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -64,6 +65,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         :param command_tracker: the device's command tracker
         :param component_manager: the component manager on which this
             command acts.
+        :param fan_speed_set: callback to be called when fan speed is set.
         :param logger: a logger for this command to use.
         """
         validator = JsonValidator("SetSubrackFanSpeed", self.SCHEMA, logger)
@@ -359,6 +361,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubrackHealthModel(self._health_changed)
+        self._update_health_data()
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
@@ -980,19 +983,35 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             self._update_health_data()
 
     def _update_health_data(self: MccsSubrack) -> None:
-        """Updates the data points for the health model."""
-        self._health_model.update_data(
-            self.boardTemperatures,
-            self.backplaneTemperatures,
-            self.subrackFanSpeeds,
-            self.boardCurrent,
-            self.tpmCurrents,
-            self.powerSupplyCurrents,
-            self.tpmVoltages,
-            self.powerSupplyVoltages,
-            self._tpm_power_states,
-            self._desired_fan_speeds,
-        )
+        """Update the data points for the health model."""
+        kwargs = {
+            "board_temps": self.boardTemperatures,
+            "backplane_temps": self.backplaneTemperatures,
+            "subrack_fan_speeds": self.subrackFanSpeeds,
+            "board_currents": self.boardCurrent,
+            "tpm_currents": self.tpmCurrents,
+            "power_supply_currents": self.powerSupplyCurrents,
+            "tpm_voltages": self.tpmVoltages,
+            "power_supply_voltages": self.powerSupplyVoltages,
+            "tpm_power_states": self._tpm_power_states,
+            "desired_fan_speeds": self._desired_fan_speeds,
+        }
+        self._health_model.update_state(**kwargs)
+
+        # board_temps: list[float],
+        # backplane_temps: list[float],
+        # subrack_fan_speeds: list[float],
+        # board_currents: list[float],
+        # tpm_currents: list[float],
+        # power_supply_currents: list[float],
+        # old_tpm_voltages: list[float],
+        # tpm_voltages: list[float],
+        # old_power_supply_voltages: list[float],
+        # power_supply_voltages: list[float],
+        # old_tpm_power_states: list[float],
+        # tpm_power_states: list[float],
+        # clocks_reqs: set,
+        # desired_fan_speeds: list[float],
 
 
 # ----------

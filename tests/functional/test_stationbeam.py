@@ -122,6 +122,8 @@ def skip_if_tiles_simulated(
         # assert tile_device_list[0].adminMode == AdminMode.ONLINE
         if SimulationMode.TRUE in (tile_1.SimulationMode, tile_2.SimulationMode):
             pytest.skip("Skipping station beam test with simulated tiles.")
+        else:
+            assert True is False
         return test_function
 
     return wrapper

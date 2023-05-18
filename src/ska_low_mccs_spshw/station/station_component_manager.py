@@ -257,13 +257,13 @@ class SpsStationComponentManager(
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
         self._lmc_param = {
-            "mode": "10g",
+            "mode": "10G",
             "payload_length": 8192,
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 0xF0D0,
         }
-        self._lmc_integrated_mode = "10g"
+        self._lmc_integrated_mode = "10G"
         self._lmc_channel_payload_length = 8192
         self._lmc_beam_payload_length = 8192
         self._fortygb_network_address = station_network_address
@@ -1205,7 +1205,7 @@ class SpsStationComponentManager(
         """
         Configure link and size of LMC channel.
 
-        :param mode: '1g' or '10g'
+        :param mode: '1G' or '10G'
         :param payload_length: SPEAD payload length for LMC packets
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
@@ -1234,7 +1234,7 @@ class SpsStationComponentManager(
         """
         Configure link and size of integrated LMC channel.
 
-        :param mode: '1g' or '10g'
+        :param mode: '1G' or '10G'
         :param channel_payload_length: SPEAD payload length for
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated

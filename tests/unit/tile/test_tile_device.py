@@ -519,7 +519,7 @@ class TestMccsTileCommands:
                 "SetLmcIntegratedDownload",
                 json.dumps(
                     {
-                        "mode": "1g",
+                        "mode": "1G",
                         "channel_payload_length": 4,
                         "beam_payload_length": 6,
                         "destination_ip": "10.0.1.23",
@@ -1083,7 +1083,7 @@ class TestMccsTileCommands:
         ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
-        arg2 = {"mode": "10g", "payload_length": 102, "destination_ip": "10.0.1.23"}
+        arg2 = {"mode": "10G", "payload_length": 102, "destination_ip": "10.0.1.23"}
         json_arg = json.dumps(arg2)
         tile_device.SetLmcDownload(json_arg)
 

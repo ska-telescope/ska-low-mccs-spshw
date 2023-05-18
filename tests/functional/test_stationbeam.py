@@ -151,7 +151,7 @@ def check_station_is_online_and_on(station_device: tango.DeviceProxy) -> None:
     station_device.adminMode = AdminMode.ONLINE
     time.sleep(0.2)
     assert station_device.adminMode == AdminMode.ONLINE
-
+    assert True is False
 
 @given("a subrack that is online")
 def check_subrack_is_online_and_on(
@@ -166,7 +166,7 @@ def check_subrack_is_online_and_on(
     subrack_device.adminMode = AdminMode.ONLINE
     time.sleep(0.2)
     assert subrack_device.adminMode == AdminMode.ONLINE
-
+    assert True is False
 
 @given("a set of tiles that are in maintenance")
 def check_tiles_are_in_maintenance_and_on(
@@ -182,7 +182,7 @@ def check_tiles_are_in_maintenance_and_on(
         time.sleep(0.2)
     for t in tile_device_list:
         assert t.adminMode == AdminMode.MAINTENANCE
-
+    assert True is False
 
 @given("the station is configured")
 def check_station_is_configured(station_device: tango.DeviceProxy) -> None:

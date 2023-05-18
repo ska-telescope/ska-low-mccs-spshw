@@ -128,3 +128,6 @@ k8s-test:
 
 python-test:
     when: manual
+
+python-lint:
+    when: manual

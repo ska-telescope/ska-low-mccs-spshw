@@ -129,7 +129,7 @@ def skip_if_tiles_simulated(
     return wrapper
 
 
-@skip_if_tiles_simulated
+#@skip_if_tiles_simulated
 @scenario("features/station_beam.feature", "Correcting delayed beam")
 def test_correct_delayed_beam() -> None:
     """

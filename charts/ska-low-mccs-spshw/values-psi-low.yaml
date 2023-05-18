@@ -86,7 +86,7 @@ deviceServers:
   stations:
     instances:
       1:
-        enabled: false
+        enabled: true
 
 nodeSelector: {}
 

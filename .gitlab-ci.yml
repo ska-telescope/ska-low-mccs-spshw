@@ -62,7 +62,7 @@ include:
 
 psi-low-k8s-test:
   stage: test-psi-low
-  when: manual
+  #when: manual
   tags:
     - k8srunner-psi-low
   environment:
@@ -122,3 +122,9 @@ psi-low-stop-k8s:
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
     - make k8s-delete-namespace
   allow_failure: true
+
+  k8s-test:
+      when: manual
+
+  python-test:
+      when: manual

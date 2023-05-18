@@ -654,7 +654,7 @@ class TestTpmDriver:
         tile_simulator: TileSimulator,
     ) -> None:
         """
-        Test that we can configure the 40g core.
+        Test that we can configure the 40G core.
 
         :param tpm_driver: The tpm driver under test.
         :param tile_simulator: The mocked tile

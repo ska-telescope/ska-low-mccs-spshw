@@ -9,9 +9,6 @@ telescope: SKA-low
 
 labels:
   app: ska-low-mccs-spshw
-annotations:
-  app.gitlab.com/app: CI_PROJECT_PATH_SLUG
-  app.gitlab.com/env: CI_ENVIRONMENT_SLUG
 
 global:
   sub-system:
@@ -21,9 +18,6 @@ global:
       enabled: false
     archiver:
       enabled: false
-  annotations:
-    app.gitlab.com/app: taranta
-    app.gitlab.com/env: taranta
   minikube: true
   tango_host: databaseds-tango-base-test:10000
 
@@ -53,7 +47,6 @@ ska-taranta:
         cpu: 600m  # 600m = 0.6 CPU
         memory: 512Mi  # 512Mi = 0.5 GB mem
 
-
 ska-taranta-dashboard:
   ingress:
     enabled: true
@@ -74,7 +67,7 @@ ska-taranta-auth:
 # e.g 192.168.49.2/jupyterhub/
 jupyterhub:
   hub:
-    baseUrl: /jupyterhub/
+    baseUrl: /jupyterhub
   ingress:
     pathType: Prefix
     enabled: true
@@ -90,13 +83,24 @@ jupyterhub:
     service:
       type: ClusterIP
 
+ska-low-mccs-spshw:
+  simulators:
+    subracks:
+      1:
+        host: subrack-simulator-1
 
-# example overrides
-# ska-low-mccs:
-#   deviceServers:
-#     # no tiles
-#     tiles:
-#       instances: []
-#     # change controller command
-#     controller:
-#       command: "SimController"
+  deviceServers:  # e.g....
+    tpms:
+      instances:
+        1:
+          host: 10.0.10.201
+          port: 10000
+          version: tpm_v1_6
+          subrack: "1"
+          subrack_bay: 1
+      logging_level_default: 5
+      simulation_config: 1
+      test_config: 1
+      resources:
+        requests:
+          memory: 512Mi

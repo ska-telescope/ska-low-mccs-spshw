@@ -35,7 +35,9 @@ spec:
     spec:
       containers:
       - name: simulator-{{$key}}
-        image: {{$.Values.low_mccs_spshw.image.registry}}/{{$.Values.low_mccs_spshw.image.image}}:{{$.Values.low_mccs_spshw.image.tag}}
+{{- with $.Values.image}}
+        image: {{.registry}}/{{.name}}:{{.tag}}
+{{- end}}
         imagePullPolicy: IfNotPresent
         command:
           - "SubrackSimulator"

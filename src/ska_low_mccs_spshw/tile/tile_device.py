@@ -1884,10 +1884,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            mode = kwargs["mode"]
+            mode: str = kwargs["mode"]
             payload_length = kwargs.get("payload_length", None)
             if payload_length is None:
-                if mode == "10g":
+                if mode.upper() == "10G":
                     payload_length = 8192
                 else:
                     payload_length = 1024
@@ -1907,7 +1907,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+            * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
             * payload_length - (int) SPEAD payload length for channel data
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
@@ -1920,7 +1920,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :example:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dict = {"mode": "1g", "payload_length":4,"destination_ip"="10.0.1.23"}
+        >> dict = {"mode": "1G", "payload_length": 4, "destination_ip": "10.0.1.23"}
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
@@ -1982,7 +1982,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 information purpose only.
             """
             mode = kwargs["mode"]
-            channel_payload_length = kwargs.get("channel_payload_lenth", 1024)
+            channel_payload_length = kwargs.get("channel_payload_length", 1024)
             beam_payload_length = kwargs.get("beam_payload_length", 1024)
             dst_ip = kwargs.get("destination_ip", None)
             src_port = kwargs.get("source_port", 0xF0D0)
@@ -2007,8 +2007,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' or '10g' (Mandatory)
-            * channel_payload_lenth - (int) SPEAD payload length for integrated
+            * mode - (string) '1G' or '10G' (Mandatory)
+            * channel_payload_length - (int) SPEAD payload length for integrated
                  channel data
             * beam_payload_length - (int) SPEAD payload length for integrated beam data
             * destination_ip - (string) Destination IP
@@ -2022,8 +2022,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"mode": "1g", "channel_payload_lenth":4,
-                    "beam_payload_length": 1024, "destination_ip"="10.0.1.23"}
+        >>> dict = {"mode": "1G", "channel_payload_length":4,
+                    "beam_payload_length": 1024, "destination_ip": "10.0.1.23"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """

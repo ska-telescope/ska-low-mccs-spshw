@@ -667,7 +667,7 @@ class SpsStation(SKAObsDevice):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+            * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
             * payload_length - (int) SPEAD payload length for channel data
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
@@ -680,15 +680,15 @@ class SpsStation(SKAObsDevice):
         :example:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dict = {"mode": "1g", "payload_length":1024,"destination_ip"="10.0.1.23"}
+        >> dict = {"mode": "1G", "payload_length": 1024, "destination_ip": "10.0.1.23"}
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
         params = json.loads(argin)
         mode = params.get("mode", "40G")
 
-        if mode in ("40g", "40G"):
-            mode = "10g"
+        if mode.upper == "40G":
+            mode = "10G"
         payload_length = params.get("payload_length", None)
         if payload_length is None:
             if mode in ("10g", "10G"):
@@ -716,8 +716,8 @@ class SpsStation(SKAObsDevice):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' '10g' '40g' - default 40g
-            * channel_payload_lenth - (int) SPEAD payload length for integrated
+            * mode - (string) '1G' '10G' '40G' - default 40G
+            * channel_payload_length - (int) SPEAD payload length for integrated
                  channel data
             * beam_payload_length - (int) SPEAD payload length for integrated beam data
             * destination_ip - (string) Destination IP
@@ -731,17 +731,17 @@ class SpsStation(SKAObsDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"mode": "1G", "channel_payload_lenth":4,
+        >>> dict = {"mode": "1G", "channel_payload_length":4,
                     "beam_payload_length": 1024, "destination_ip"="10.0.1.23"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """
         params = json.loads(argin)
-        mode = params.get("mode", "40G")
+        mode: str = params.get("mode", "40G")
 
-        if mode in ("40g", "40G"):
-            mode = "10g"
-        channel_payload_length = params.get("channel_payload_lenth", 1024)
+        if mode.upper() == "40G":
+            mode = "10G"
+        channel_payload_length = params.get("channel_payload_length", 1024)
         beam_payload_length = params.get("beam_payload_length", 1024)
         dst_ip = params.get("destination_ip", None)
         src_port = params.get("source_port", 0xF0D0)

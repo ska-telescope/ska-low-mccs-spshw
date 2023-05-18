@@ -1264,7 +1264,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
-        :param mode: "1g" or "10g"
+        :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination IP, defaults to None
@@ -2209,7 +2209,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Configure link and size of control data.
 
-        :param mode: '1g' or '10g'
+        :param mode: '1G' or '10G'
         :param channel_payload_length: SPEAD payload length for
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated

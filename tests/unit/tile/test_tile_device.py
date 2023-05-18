@@ -310,6 +310,25 @@ class TestMccsTile:
             callbacks with asynchrony support.
         :param mock_tile_component_manager: A mock component manager.
         """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        tile_device.MockTpmOn()
+
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
         tile_device.subscribe_event(
             "adcPower",
             EventType.CHANGE_EVENT,
@@ -324,12 +343,10 @@ class TestMccsTile:
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),
-            adc_rms=list(range(32))
+            adc_rms=list(range(32)),
         )
 
-        print(change_event_callbacks["adc_power"]._callable._call_queue.get())
-        change_event_callbacks["adc_power"].assert_change_event(list(range(32)), lookahead=3)
-        assert False
+        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(

@@ -123,7 +123,7 @@ def skip_if_tiles_simulated(
         if SimulationMode.TRUE in (tile_1.SimulationMode, tile_2.SimulationMode):
             pytest.skip("Skipping station beam test with simulated tiles.")
         else:
-            assert True is False
+            assert True is True
         return test_function
 
     return wrapper
@@ -204,6 +204,7 @@ def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
     )
     station_device.SetCspIngest('{"destination_ip": "10.0.0.98"}')
     assert station_device.state() == tango.DevState.STANDBY
+    assert True is False
 
 
 @when("the station and subcracks are turned on")

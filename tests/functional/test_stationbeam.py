@@ -405,5 +405,5 @@ def correct_beam_with_pointing_delays(station_device: tango.DeviceProxy) -> None
 
 @then("the applitude of the corrected beam is as expected")
 def check_amplitudes() -> None:
-    """Hello World."""
+    """Placeholder for final check."""
     assert True is True

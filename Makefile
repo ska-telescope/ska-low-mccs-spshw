@@ -39,8 +39,8 @@ K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
 
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
-	--set low_mccs_spshw.image.registry=$(CI_REGISTRY_IMAGE) \
-	--set low_mccs_spshw.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
+	--set image.registry=$(CI_REGISTRY_IMAGE) \
+	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
 
 

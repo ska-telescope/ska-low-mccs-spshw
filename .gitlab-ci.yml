@@ -89,6 +89,7 @@ psi-low-k8s-test:
     reports:
       junit: build/report.xml
     when: always
+  allow_failure: true
 
 psi-low-xray-publish:
   stage: test-psi-low

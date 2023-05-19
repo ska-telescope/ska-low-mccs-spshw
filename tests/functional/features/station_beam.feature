@@ -10,16 +10,16 @@ Feature: Test station pointing
         And the station is synchronised
         And the test generator is programmed to generate a white noise
         And the beamformer is configured
-        And the delays are set to <delay_type>
+        And the static delays are set to <delay_type>
 
         When the station and subcrack are turned on
         And the scan is run
-        And the beam is corrected with <correction_type>
+        And the beam is corrected for <correction_type>
 
-        Then the applitude of the corrected beam is as expected
+        Then the applitude of the beam is <amplitude>
 
         Examples:
-            | delay type   | correction type |
-            | zero delay   | no correction   |
-            | static delay | no correction   |
-            | static delay | beam corrected  |
+            | delay type   | correction type | amplitude |
+            | 0            | 0               | 100       |
+            | 1            | 0               | 1         |
+            | 1            | 1               | 100       |

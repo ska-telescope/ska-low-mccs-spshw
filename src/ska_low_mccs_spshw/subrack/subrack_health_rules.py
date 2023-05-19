@@ -99,7 +99,6 @@ class SubrackHealthRules(HealthRules):
         :param old_power_supply_volts: The old voltages of the power supplies.
         :param power_supply_volts: The voltages of the power supplies.
         :param rule_str: The type of error threshold to be checking against.
-
         :return: True if any of the thresholds are breached.
         """
         tpm_vol_drop = sum(np.subtract(old_tpm_volts, tpm_volts))
@@ -176,17 +175,23 @@ class SubrackHealthRules(HealthRules):
 
     def unknown_rule(  # type: ignore[override]
         self: SubrackHealthRules,
-        state: dict[str, Any],
+        state_dict: dict[str, Any],
         subrack_health: HealthState,
     ) -> bool:
         """
         Test whether UNKNOWN is valid for the subrack.
 
-        :param state: The current state of the subrack.
+        :param state_dict: The current state of the subrack.
         :param subrack_health: The health state of the subrack.
 
         :return: True if UNKNOWN is a valid state
         """
+        if state_dict.get("subrack_state_points") is None:
+            return True
+
+        state = state_dict.get("subrack_state_points")
+        assert isinstance(state, dict)
+
         if subrack_health == HealthState.UNKNOWN:
             return True
         for i, power_state in enumerate(state["tpm_power_states"]):
@@ -197,18 +202,23 @@ class SubrackHealthRules(HealthRules):
     # pylint: disable=too-many-boolean-expressions
     def failed_rule(  # type: ignore[override]
         self: SubrackHealthRules,
-        state: dict[str, Any],
+        state_dict: dict[str, Any],
         subrack_health: HealthState,
     ) -> bool:
         """
         Test whether FAILED is valid for the subrack.
 
-        :param state: The current state of the subrack.
+        :param state_dict: The current state of the subrack.
         :param subrack_health: The health state of the subrack.
 
         :return: True if FAILED is a valid state
         """
         fail_str = "failed_"
+
+        if state_dict.get("subrack_state_points") is None:
+            return False
+        state = state_dict.get("subrack_state_points")
+        assert isinstance(state, dict)
 
         if (
             subrack_health == HealthState.FAILED
@@ -244,7 +254,7 @@ class SubrackHealthRules(HealthRules):
             return True
 
         if not all(
-            x in state["clocks_reqs"] for x in ["10MHz", "1PPS", "10_MHz_PLL_lock"]
+            x in state["clock_reqs"] for x in ["10MHz", "1PPS", "10_MHz_PLL_lock"]
         ):
             return True
 
@@ -253,18 +263,23 @@ class SubrackHealthRules(HealthRules):
     # pylint: disable=too-many-boolean-expressions
     def degraded_rule(  # type: ignore[override]
         self: SubrackHealthRules,
-        state: dict[str, Any],
+        state_dict: dict[str, Any],
         subrack_health: HealthState,
     ) -> bool:
         """
         Test whether DEGRADED is valid for the subrack.
 
-        :param state: The current state of the subrack.
+        :param state_dict: The current state of the subrack.
         :param subrack_health: The health state of the subrack.
 
         :return: True if DEGRADED is a valid state
         """
         fail_str = "degraded_"
+
+        if state_dict.get("subrack_state_points") is None:
+            return False
+        state = state_dict.get("subrack_state_points")
+        assert isinstance(state, dict)
 
         if (
             subrack_health == HealthState.DEGRADED
@@ -303,13 +318,13 @@ class SubrackHealthRules(HealthRules):
 
     def healthy_rule(  # type: ignore[override]
         self: SubrackHealthRules,
-        state: dict[str, Any],
+        state_dict: dict[str, Any],
         subrack_health: HealthState,
     ) -> bool:
         """
         Test whether OK is valid for the subrack.
 
-        :param state: The current state of the subrack.
+        :param state_dict: The current state of the subrack.
         :param subrack_health: The health state of the subrack.
 
         :return: True if OK is a valid state
@@ -325,29 +340,30 @@ class SubrackHealthRules(HealthRules):
         :return: the default thresholds
         """
         # no idea where to get these values from lol
+        # TODO NEED to get these actual values from somewhere
         return {
-            "failed_max_board_temp": 0.0,
-            "failed_min_board_temp": 0.0,
-            "degraded_max_board_temp": 0.0,
-            "degraded_min_board_temp": 0.0,
-            "failed_max_backplane_temp": 0.0,
-            "degraded_max_backplane_temp": 0.0,
-            "failed_min_backplane_temp": 0.0,
-            "degraded_min_backplane_temp": 0.0,
-            "failed_fan_speed_diff": 0.0,
-            "failed_min_fan_speed": 0.0,
-            "degraded_fan_speed_diff": 0.0,
-            "degraded_min_fan_speed": 0.0,
-            "failed_voltage_drop": 0.0,
-            "degraded_voltage_drop": 0.0,
-            "failed_max_current_diff": 0.0,
-            "degraded_max_current_diff": 0.0,
-            "failed_tpm_voltage_on": 0.0,
-            "degraded_tpm_voltage_on": 0.0,
-            "failed_tpm_current_on": 0.0,
-            "degraded_tpm_current_on": 0.0,
-            "failed_tpm_voltage_standby": 0.0,
-            "degraded_tpm_voltage_standby": 0.0,
-            "failed_tpm_current_standby": 0.0,
-            "degraded_tpm_current_standby": 0.0,
+            "failed_max_board_temp": 70.0,
+            "degraded_max_board_temp": 60.0,
+            "failed_min_board_temp": 10.0,
+            "degraded_min_board_temp": 20.0,
+            "failed_max_backplane_temp": 70.0,
+            "degraded_max_backplane_temp": 60.0,
+            "failed_min_backplane_temp": 10.0,
+            "degraded_min_backplane_temp": 20.0,
+            "failed_fan_speed_diff": 10.0,
+            "degraded_fan_speed_diff": 5.0,
+            "failed_min_fan_speed": 20.0,
+            "degraded_min_fan_speed": 30.0,
+            "failed_voltage_drop": 5.0,
+            "degraded_voltage_drop": 3.0,
+            "failed_max_current_diff": 2.0,
+            "degraded_max_current_diff": 1.0,
+            "failed_tpm_voltage_on": 8.0,
+            "degraded_tpm_voltage_on": 6.0,
+            "failed_tpm_current_on": 6.0,
+            "degraded_tpm_current_on": 5.0,
+            "failed_tpm_voltage_standby": 5.0,
+            "degraded_tpm_voltage_standby": 4.0,
+            "failed_tpm_current_standby": 4.0,
+            "degraded_tpm_current_standby": 3.0,
         }

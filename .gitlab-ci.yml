@@ -62,7 +62,7 @@ include:
 
 psi-low-k8s-test:
   stage: test-psi-low
-  #when: manual
+  when: manual
   tags:
     - k8srunner-psi-low
   environment:
@@ -89,7 +89,6 @@ psi-low-k8s-test:
     reports:
       junit: build/report.xml
     when: always
-  allow_failure: true
 
 psi-low-xray-publish:
   stage: test-psi-low
@@ -108,9 +107,8 @@ psi-low-xray-publish:
 
 psi-low-stop-k8s:
   stage: test-psi-low
-  when: manual
-  #needs:
-  #  - psi-low-k8s-test
+  needs:
+    - psi-low-k8s-test
   tags:
     - k8srunner-psi-low
   environment:

@@ -313,6 +313,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         self._desired_fan_speeds: list[float] = []
 
+        self._update_health_data()
+
     # ----------
     # Properties
     # ----------
@@ -332,7 +334,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
             :param args: additional positional arguments; unused here
             :param kwargs: additional keyword arguments; unused here
-
             :return: a resultcode, message tuple
             """
             self._device._tpm_present = None
@@ -361,7 +362,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubrackHealthModel(self._health_changed)
-        self._update_health_data()
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
@@ -984,7 +984,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
     def _update_health_data(self: MccsSubrack) -> None:
         """Update the data points for the health model."""
-        kwargs = {
+        data = {
             "board_temps": self.boardTemperatures,
             "backplane_temps": self.backplaneTemperatures,
             "subrack_fan_speeds": self.subrackFanSpeeds,
@@ -996,7 +996,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             "tpm_power_states": self._tpm_power_states,
             "desired_fan_speeds": self._desired_fan_speeds,
         }
-        self._health_model.update_state(**kwargs)
+        self._health_model.update_data(data)
 
         # board_temps: list[float],
         # backplane_temps: list[float],

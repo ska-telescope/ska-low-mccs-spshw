@@ -37,86 +37,51 @@ class SubrackHealthModel(BaseHealthModel):
         self._health_rules = SubrackHealthRules(thresholds)
         super().__init__(component_state_changed_callback)
 
-    def update_state(self: BaseHealthModel, **kwargs: Any) -> None:
+    def update_data(self: BaseHealthModel, new_states: dict) -> None:
         """
         Update this health model with state relevant to evaluating health.
 
-        :param kwargs: updated state
+        :param new_states: New states of the data points.
         """
+        if "subrack_state_points" not in self._state:
+            self._state["subrack_state_points"] = {}  # type: ignore
+
+        assert isinstance(self._state["subrack_state_points"], dict)
+
+        state_points = self._state.get("subrack_state_points")
         # linting
-        if "new_tpm_voltages" in self._state:
-            self._state["old_tpm_voltages"] = self._state["tpm_voltages"]
+        if state_points.get("tpm_voltages"):
+            self._state["subrack_state_points"]["old_tpm_voltages"] = state_points.get(
+                "tpm_voltages"
+            )
+        else:
+            self._state["subrack_state_points"]["old_tpm_voltages"] = new_states.get(
+                "tpm_voltages"
+            )
 
         # linting
-        if "new_power_supply_voltages" in self._state:
-            self._state["old_power_supply_voltages"] = self._state[
-                "new_power_supply_voltages"
-            ]
+        if state_points.get("power_supply_voltages"):
+            self._state["subrack_state_points"][
+                "old_power_supply_voltages"
+            ] = state_points.get("power_supply_voltages")
+        else:
+            self._state["subrack_state_points"][
+                "old_power_supply_voltages"
+            ] = new_states.get("power_supply_voltages")
+
         # linting
-        if "new_tpm_power_states" in self._state:
-            self._state["old_tpm_power_states"] = self._state["tpm_power_states"]
+        if state_points.get("tpm_power_states"):
+            self._state["subrack_state_points"][
+                "old_tpm_power_states"
+            ] = state_points.get("tpm_power_states")
+        else:
+            self._state["subrack_state_points"][
+                "old_tpm_power_states"
+            ] = new_states.get("tpm_power_states")
 
-        super().update_state(**kwargs)
-
-    # def update_data(
-    #     self: SubrackHealthModel,
-    #     board_temps: list[float],
-    #     backplane_temps: list[float],
-    #     subrack_fan_speeds: list[float],
-    #     board_currents: list[float],
-    #     tpm_currents: list[float],
-    #     power_supply_currents: list[float],
-    #     tpm_voltages: list[float],
-    #     power_supply_voltages: list[float],
-    #     tpm_power_states: list[float],
-    #     clock_reqs: set,
-    #     desired_fan_speeds: list[float],
-    # ) -> None:
-    #     """
-    #     Update the state of the subrack device.
-
-    #     :param board_temps: The board temperatures.
-    #     :param backplane_temps: Backplane temperatures.
-    #     :param subrack_fan_speeds: Subrack fan speeds
-    #     :param board_currents: Currents drawn by all of the boards.
-    #     :param tpm_currents: Currents drawn by all of the TPMs.
-    #     :param power_supply_currents: Currents drawn by all of the power supplys.
-    #     :param tpm_voltages: Voltage used by all TPMs.
-    #     :param power_supply_voltages: Voltage used by all power supplies.
-    #     :param tpm_power_states: If all the TPMs are on, off or some other state.
-    #     :param clock_reqs: Set containing clock requirements.
-    #     :param desired_fan_speeds: What the user wants the fan speeds to be.
-    #     """
-    #     self._state.board_temps = board_temps
-    #     self._state.backplane_temps = backplane_temps
-    #     self._state.subrack_fan_speeds = subrack_fan_speeds
-
-    #     self._state.new_board_currents = board_currents
-    #     self._state.new_tpm_currents = tpm_currents
-    #     self._state.new_power_supply_currents = power_supply_currents
-
-    #     # linting
-    #     if "new_tpm_voltages" in self._state:
-    #         self._state.old_tpm_voltages = self._state.new_tpm_voltages
-    #     self._state.new_tpm_voltages = tpm_voltages
-
-    #     # linting
-    #     if "new_power_supply_voltages" in self._state:
-    #         self._state.old_power_supply_voltages = (
-    #             self._state.new_power_supply_voltages
-    #         )
-    #     self._state.new_power_supply_voltages = power_supply_voltages
-
-    #     # linting
-    #     if "new_tpm_power_states" in self._state:
-    #         self._state.old_tpm_power_states = self._state.new_tpm_power_states
-    #     self._state.new_tpm_power_states = tpm_power_states
-
-    #     self._state.clock_reqs = clock_reqs
-
-    #     self._state.desired_fan_speeds = desired_fan_speeds
-
-    #     self.evaluate_health()
+        self._state["subrack_state_points"] = (
+            self._state["subrack_state_points"] | new_states
+        )
 
     def evaluate_health(
         self: SubrackHealthModel,

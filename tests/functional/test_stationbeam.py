@@ -239,7 +239,7 @@ def check_test_generator_is_programmed(
     else:
         print(f"t={tm}: Timeout during intialisation")
     assert subrack_device.state() == tango.DevState.ON
-    assert station_device.tileprogrammingstate == ("Initialised", "Initialised")
+    assert station_device.tileprogrammingstate == ("Programmed", "Programmed")
 
 
 @when("the station is synchronised")
@@ -287,6 +287,7 @@ def synchronise_the_station(
     tm3 = t1.fpgaframetime
     print(f"time:{tm1} pps time:{tm2} frame time:{tm3}")
     # print(f"t={tm}: state = {station_device.tileprogrammingstate}")
+    assert station_device.tileprogrammingstate == ("Synchronised","Synchronised")
 
 
 @when("the test generator is programmed")

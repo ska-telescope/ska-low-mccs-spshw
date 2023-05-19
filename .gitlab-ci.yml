@@ -107,8 +107,9 @@ psi-low-xray-publish:
 
 psi-low-stop-k8s:
   stage: test-psi-low
-  needs:
-    - psi-low-k8s-test
+  when: manual
+  #needs:
+  #  - psi-low-k8s-test
   tags:
     - k8srunner-psi-low
   environment:

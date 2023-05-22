@@ -239,7 +239,7 @@ def check_test_generator_is_programmed(
     else:
         print(f"t={tm}: Timeout during intialisation")
     assert subrack_device.state() == tango.DevState.ON
-    assert station_device.tileprogrammingstate == ("Programmed", "Programmed")
+    assert station_device.tileprogrammingstate == ("Initialised", "Initialised")
 
 
 @when("the station is synchronised")

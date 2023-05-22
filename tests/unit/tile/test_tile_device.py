@@ -52,6 +52,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "health_state",
         "state",
         "tile_programming_state",
+        "adc_power",
         timeout=2.0,
     )
 
@@ -292,6 +293,60 @@ class TestMccsTile:
 
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
+
+    def test_adcPower(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        mock_tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for adcPower.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param mock_tile_component_manager: A mock component manager.
+        """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        tile_device.MockTpmOn()
+
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        tile_device.subscribe_event(
+            "adcPower",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["adc_power"],
+        )
+
+        mock_tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
+        mock_tile_component_manager._adc_rms = list(range(32))
+        mock_tile_component_manager._update_component_state(
+            fault=False,
+            power=PowerState.ON,
+            tile_health_structure=TileData.get_tile_defaults(),
+            adc_rms=list(range(32)),
+        )
+
+        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(

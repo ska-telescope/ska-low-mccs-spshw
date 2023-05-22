@@ -171,6 +171,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             fault=None,
             programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tile_health_structure,
+            adc_rms=self._adc_rms,
         )
 
         self._poll_rate = 2.0
@@ -316,6 +317,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
+                    self._update_component_state(adc_rms=self._adc_rms)
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
                     )

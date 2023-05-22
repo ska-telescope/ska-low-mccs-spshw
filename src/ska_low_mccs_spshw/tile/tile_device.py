@@ -85,12 +85,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
         self._tile_programming_state: TpmStatus
+        self._adc_rms: list[float]
         self._antenna_ids: list[int]
         self._max_workers: int = 1
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._tile_programming_state = TpmStatus.UNKNOWN
+        self._adc_rms = [0.0] * 32
         self._max_workers = 1
         super().init_device()
 
@@ -231,6 +233,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
             self._device.set_change_event("tileProgrammingState", True, False)
+            self._device.set_change_event("adcPower", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -356,6 +359,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._health_model.update_state(
                 tile_health_structure=state_change["tile_health_structure"]
             )
+        if "adc_rms" in state_change:
+            adc_rms = state_change["adc_rms"]
+            if self._adc_rms != adc_rms:
+                self._adc_rms = adc_rms
+                self.push_change_event("adcPower", adc_rms)
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """

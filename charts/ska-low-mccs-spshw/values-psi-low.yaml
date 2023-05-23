@@ -88,6 +88,14 @@ deviceServers:
       1:
         enabled: true
 
+ska-low-mccs-daq:
+  receivers:
+    1:
+      receiver_interface: enp216s0f0
+      receiver_ip: ""
+      grpc_ip: "10.128.16.50"
+      grpc_port: 50051
+
 nodeSelector: {}
 
 affinity: {}

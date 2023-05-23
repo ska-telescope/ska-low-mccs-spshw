@@ -368,7 +368,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self._health_changed)
+        self._health_model = SubrackHealthModel(self._health_changed, self.logger)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:

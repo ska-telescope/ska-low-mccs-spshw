@@ -24,6 +24,7 @@ class SubrackHealthModel(BaseHealthModel):
     def __init__(
         self: SubrackHealthModel,
         component_state_changed_callback: HealthChangedCallbackProtocol,
+        logger,
         thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
         """
@@ -35,6 +36,8 @@ class SubrackHealthModel(BaseHealthModel):
         :param thresholds: Thresholds for the subrack device.
         """
         self._health_rules = SubrackHealthRules(thresholds)
+        self.logger = logger
+        self._my_state = {"subrack_state_points": {}}
         super().__init__(component_state_changed_callback)
 
     def update_data(self: BaseHealthModel, new_states: dict) -> None:
@@ -43,45 +46,51 @@ class SubrackHealthModel(BaseHealthModel):
 
         :param new_states: New states of the data points.
         """
-        if "subrack_state_points" not in self._state:
-            self._state["subrack_state_points"] = {}  # type: ignore
+        self.logger.error('UPDATE DATA 1')
+        if "subrack_state_points" not in self._my_state:
+            self._my_state["subrack_state_points"] = {}  # type: ignore
+        self.logger.error('UPDATE DATA 2')
 
-        assert isinstance(self._state["subrack_state_points"], dict)
+        assert isinstance(self._my_state["subrack_state_points"], dict)
 
-        state_points = self._state.get("subrack_state_points")
+        state_points = self._my_state.get("subrack_state_points")
         # linting
         if state_points.get("tpm_voltages"):
-            self._state["subrack_state_points"]["old_tpm_voltages"] = state_points.get(
+            self._my_state["subrack_state_points"]["old_tpm_voltages"] = state_points.get(
                 "tpm_voltages"
             )
         else:
-            self._state["subrack_state_points"]["old_tpm_voltages"] = new_states.get(
+            self._my_state["subrack_state_points"]["old_tpm_voltages"] = new_states.get(
                 "tpm_voltages"
             )
+        self.logger.error('UPDATE DATA 5')
 
         # linting
         if state_points.get("power_supply_voltages"):
-            self._state["subrack_state_points"][
+            self._my_state["subrack_state_points"][
                 "old_power_supply_voltages"
             ] = state_points.get("power_supply_voltages")
         else:
-            self._state["subrack_state_points"][
+            self._my_state["subrack_state_points"][
                 "old_power_supply_voltages"
             ] = new_states.get("power_supply_voltages")
+        self.logger.error('UPDATE DATA 6')
 
         # linting
         if state_points.get("tpm_power_states"):
-            self._state["subrack_state_points"][
+            self._my_state["subrack_state_points"][
                 "old_tpm_power_states"
             ] = state_points.get("tpm_power_states")
         else:
-            self._state["subrack_state_points"][
+            self._my_state["subrack_state_points"][
                 "old_tpm_power_states"
             ] = new_states.get("tpm_power_states")
+        self.logger.error('UPDATE DATA 7')
 
-        self._state["subrack_state_points"] = (
-            self._state["subrack_state_points"] | new_states
+        self._my_state["subrack_state_points"] = (
+            self._my_state["subrack_state_points"] | new_states
         )
+        self.logger.error('UPDATE DATA END')
 
     def evaluate_health(
         self: SubrackHealthModel,
@@ -98,7 +107,12 @@ class SubrackHealthModel(BaseHealthModel):
 
         :return: an overall health of the subrack
         """
+        import pytest
+        self.logger.error('EVALUATE HEALTH START')
         subrack_health = super().evaluate_health()
+        self.logger.error('EVALUATE HEALTH 1')
+        self.logger.error(self._state)
+        self.logger.error(self._my_state)
 
         for health in [
             HealthState.FAILED,
@@ -106,6 +120,8 @@ class SubrackHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if self._health_rules.rules[health](self._state, subrack_health):
+            if self._health_rules.rules[health](self._my_state, subrack_health):
+                self.logger.error('EVALUATE HEALTH BIT')
                 return health
+        self.logger.error('EVALUATE HEALTH END')
         return HealthState.UNKNOWN

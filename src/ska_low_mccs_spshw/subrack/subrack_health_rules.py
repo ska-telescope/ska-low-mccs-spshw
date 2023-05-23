@@ -14,7 +14,7 @@ from typing import Any
 import numpy as np
 from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.health import HealthRules
-
+import pytest
 DEGRADED_STATES = frozenset({HealthState.DEGRADED, HealthState.FAILED, None})
 
 
@@ -186,7 +186,7 @@ class SubrackHealthRules(HealthRules):
 
         :return: True if UNKNOWN is a valid state
         """
-        if state_dict.get("subrack_state_points") is None:
+        if state_dict.get("subrack_state_points") == {}:
             return True
 
         state = state_dict.get("subrack_state_points")
@@ -213,50 +213,54 @@ class SubrackHealthRules(HealthRules):
 
         :return: True if FAILED is a valid state
         """
-        fail_str = "failed_"
+        try:
+            fail_str = "failed_"
 
-        if state_dict.get("subrack_state_points") is None:
-            return False
-        state = state_dict.get("subrack_state_points")
-        assert isinstance(state, dict)
+            if state_dict.get("subrack_state_points") == {}:
+                return False
+            state = state_dict.get("subrack_state_points")
+            assert isinstance(state, dict)
 
-        if (
-            subrack_health == HealthState.FAILED
-            or (
-                state["old_tpm_power_states"] != state["tpm_power_states"]
-                and self._check_voltage_drops(
-                    state["old_tpm_voltages"],
+            if (
+                subrack_health == HealthState.FAILED
+                or (
+                    state["old_tpm_power_states"] != state["tpm_power_states"]
+                    and self._check_voltage_drops(
+                        state["old_tpm_voltages"],
+                        state["tpm_voltages"],
+                        state["old_power_supply_voltages"],
+                        state["power_supply_voltages"],
+                        fail_str,
+                    )
+                )
+                or self._check_powers(
+                    state["tpm_power_states"],
                     state["tpm_voltages"],
-                    state["old_power_supply_voltages"],
-                    state["power_supply_voltages"],
+                    state["tpm_currents"],
                     fail_str,
                 )
-            )
-            or self._check_powers(
-                state["tpm_power_states"],
-                state["tpm_voltages"],
-                state["tpm_currents"],
-                fail_str,
-            )
-            or self._check_basic_thresholds(
-                state["board_temps"], state["backplane_temps"], fail_str
-            )
-            or self._check_fan_speeds(
-                state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-            )
-            or self._check_current_diff(
-                state["tpm_currents"],
-                state["board_currents"],
-                state["power_supply_currents"],
-                fail_str,
-            )
-        ):
-            return True
+                or self._check_basic_thresholds(
+                    state["board_temps"], state["backplane_temps"], fail_str
+                )
+                or self._check_fan_speeds(
+                    state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+                )
+                or self._check_current_diff(
+                    state["tpm_currents"],
+                    state["board_currents"],
+                    state["power_supply_currents"],
+                    fail_str,
+                )
+            ):
+                return True
 
-        if not all(
-            x in state["clock_reqs"] for x in ["10MHz", "1PPS", "10_MHz_PLL_lock"]
-        ):
-            return True
+            if not all(
+                x in state["clock_reqs"] for x in ["10MHz", "1PPS", "10_MHz_PLL_lock"]
+            ):
+                return True
+            
+        except Exception as err:
+            pytest.fail(f"exception was {err} {state_dict}")
 
         return False
 
@@ -274,45 +278,48 @@ class SubrackHealthRules(HealthRules):
 
         :return: True if DEGRADED is a valid state
         """
-        fail_str = "degraded_"
+        try:
+            fail_str = "degraded_"
 
-        if state_dict.get("subrack_state_points") is None:
-            return False
-        state = state_dict.get("subrack_state_points")
-        assert isinstance(state, dict)
+            if state_dict.get("subrack_state_points") == {}:
+                return False
+            state = state_dict.get("subrack_state_points")
+            assert isinstance(state, dict)
 
-        if (
-            subrack_health == HealthState.DEGRADED
-            or (
-                state["old_tpm_power_states"] != state["tpm_power_states"]
-                and self._check_voltage_drops(
-                    state["old_tpm_voltages"],
+            if (
+                subrack_health == HealthState.DEGRADED
+                or (
+                    state["old_tpm_power_states"] != state["tpm_power_states"]
+                    and self._check_voltage_drops(
+                        state["old_tpm_voltages"],
+                        state["tpm_voltages"],
+                        state["old_power_supply_voltages"],
+                        state["power_supply_voltages"],
+                        fail_str,
+                    )
+                )
+                or self._check_powers(
+                    state["tpm_power_states"],
                     state["tpm_voltages"],
-                    state["old_power_supply_voltages"],
-                    state["power_supply_voltages"],
+                    state["tpm_currents"],
                     fail_str,
                 )
-            )
-            or self._check_powers(
-                state["tpm_power_states"],
-                state["tpm_voltages"],
-                state["tpm_currents"],
-                fail_str,
-            )
-            or self._check_basic_thresholds(
-                state["board_temps"], state["backplane_temps"], fail_str
-            )
-            or self._check_fan_speeds(
-                state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-            )
-            or self._check_current_diff(
-                state["tpm_currents"],
-                state["board_currents"],
-                state["power_supply_currents"],
-                fail_str,
-            )
-        ):
-            return True
+                or self._check_basic_thresholds(
+                    state["board_temps"], state["backplane_temps"], fail_str
+                )
+                or self._check_fan_speeds(
+                    state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+                )
+                or self._check_current_diff(
+                    state["tpm_currents"],
+                    state["board_currents"],
+                    state["power_supply_currents"],
+                    fail_str,
+                )
+            ):
+                return True
+        except Exception as err:
+            pytest.fail(f"exception was {err}")
 
         return False
 
@@ -329,6 +336,7 @@ class SubrackHealthRules(HealthRules):
 
         :return: True if OK is a valid state
         """
+        pytest.fail("healthy")
         # Not sure what I should be measuring against here...
         return True
 

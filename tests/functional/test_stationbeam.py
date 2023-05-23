@@ -269,7 +269,7 @@ def synchronise_the_station(
         tm2 = t1.fpgatime
         tm3 = t1.fpgaframetime
         print(f"time:{tm1} pps time:{tm2} frame time:{tm3}")
-        # time.sleep(2)
+        time.sleep(2)
     for i in range(30):
         # tm = tm + 1
         print(t1.ReadRegister("fpga1.pps_manager.curr_time_read_val"))

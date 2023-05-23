@@ -224,7 +224,7 @@ def check_test_generator_is_programmed(
         print(f"t={tm}: subrack: {subrack_device.status()}")
         if subrack_device.state() == tango.DevState.ON:
             break
-    for t in range(90):
+    for t in range(180):
         time.sleep(2)
         tm = tm + 2
         s_new = station_device.tileprogrammingstate

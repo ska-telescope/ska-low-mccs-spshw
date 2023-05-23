@@ -16,6 +16,7 @@ from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
+from logging import Logger
 
 
 class TestSubrackHealthModel:
@@ -28,7 +29,7 @@ class TestSubrackHealthModel:
 
         :return: Health model to be used.
         """
-        health_model = SubrackHealthModel(MockCallable())
+        health_model = SubrackHealthModel(MockCallable(), Logger("test"))
         health_model.update_state(communicating=True, power=PowerState.ON)
 
         return health_model

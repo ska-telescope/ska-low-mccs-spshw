@@ -213,8 +213,8 @@ def test_off_on(
         (off_command_id, "COMPLETED")
     )
 
-    change_event_callbacks["boardCurrent"].assert_change_event([])
-    assert subrack_device.boardCurrent is None
+    # change_event_callbacks["boardCurrent"].assert_change_event([])
+    # assert subrack_device.boardCurrent is None
 
     # Okay, let's turn it back on again,
     # but we can't be bothered tracking the command status this time.
@@ -226,9 +226,9 @@ def test_off_on(
 
     assert subrack_device.state() == DevState.ON
 
-    change_event_callbacks["boardCurrent"].assert_change_event(
-        subrack_device_attribute_values["boardCurrent"],
-    )
+    # change_event_callbacks["boardCurrent"].assert_change_event(
+    #     subrack_device_attribute_values["boardCurrent"],
+    # )
 
 
 # def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-statements

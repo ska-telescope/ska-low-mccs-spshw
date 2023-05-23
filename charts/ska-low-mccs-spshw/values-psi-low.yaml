@@ -68,7 +68,7 @@ ska-tango-base:
 resources:
   requests:
     cpu: 40m
-    memory: 50Mi
+    memory: 100Mi
 
 
 # Default docker image - used by all of MCCS

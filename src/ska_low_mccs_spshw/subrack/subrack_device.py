@@ -301,6 +301,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
+        self.logger.error('init real 1')
 
         self._health_model: SubrackHealthModel
         self._health_state: HealthState
@@ -313,7 +314,10 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         self._desired_fan_speeds: list[float] = []
 
+        self.logger.error('init real 2')
+
         self._update_health_data()
+        self.logger.error('init real 3')
 
     # ----------
     # Properties
@@ -336,6 +340,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             :param kwargs: additional keyword arguments; unused here
             :return: a resultcode, message tuple
             """
+            self.logger.error('init do 1')
             self._device._tpm_present = None
             self._device._tpm_count = 0
             self._device._tpm_power_states = [
@@ -349,10 +354,12 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                 self._device.set_change_event(f"tpm{tpm_number}PowerState", True)
             for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
                 self._device.set_change_event(attribute_name, True)
+            self.logger.error('init do 2')
 
             message = "MccsSubrack init complete."
             self._device.logger.info(message)
             self._completed()
+            self.logger.error('init do 3')
             return (ResultCode.OK, message)
 
     # --------------
@@ -370,6 +377,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         :return: a component manager for this device.
         """
+        self.logger.error('creating component manager')
         return SubrackComponentManager(
             self.SubrackIp,
             self.SubrackPort,
@@ -898,8 +906,13 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         power: Optional[PowerState] = None,
         **kwargs: Any,
     ) -> None:
+        self.logger.error('component state changed 1')
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
+
+        
+        self.logger.error('component state changed 2')
+        
 
         for key, value in kwargs.items():
             special_update_method = getattr(self, f"_update_{key}", None)
@@ -918,7 +931,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
-        self._update_health_data()
+        self.logger.error('component state changed 3')
+        # self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:
         """
@@ -984,19 +998,23 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
     def _update_health_data(self: MccsSubrack) -> None:
         """Update the data points for the health model."""
+        self.logger.error('updating health 1')
         data = {
-            "board_temps": self.boardTemperatures,
-            "backplane_temps": self.backplaneTemperatures,
-            "subrack_fan_speeds": self.subrackFanSpeeds,
-            "board_currents": self.boardCurrent,
-            "tpm_currents": self.tpmCurrents,
-            "power_supply_currents": self.powerSupplyCurrents,
-            "tpm_voltages": self.tpmVoltages,
-            "power_supply_voltages": self.powerSupplyVoltages,
+            "board_temps": self._hardware_attributes.get('boardTemperatures', None) or [],
+            "backplane_temps": self._hardware_attributes.get('backplaneTemps', None) or [],
+            "subrack_fan_speeds": self._hardware_attributes.get('self.subrackFanSpeeds', None) or [],
+            "board_currents": self._hardware_attributes.get('self.boardCurrent,', None) or [],
+            "tpm_currents": self._hardware_attributes.get('self.tpmCurrents,', None) or [],
+            "power_supply_currents": self._hardware_attributes.get('self.powerSupplyCurrents,', None) or [],
+            "tpm_voltages": self._hardware_attributes.get('self.tpmVoltages,', None) or [],
+            "power_supply_voltages": self._hardware_attributes.get('self.powerSupplyVoltages,', None) or [],
             "tpm_power_states": self._tpm_power_states,
             "desired_fan_speeds": self._desired_fan_speeds,
+            "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
         }
+        self.logger.error('updating health 2')
         self._health_model.update_data(data)
+        self.logger.error('updating health 3')
 
         # board_temps: list[float],
         # backplane_temps: list[float],

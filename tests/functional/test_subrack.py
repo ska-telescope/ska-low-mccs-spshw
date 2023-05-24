@@ -163,13 +163,16 @@ def choose_a_fan() -> int:
 
 
 @given("a choice of TPM", target_fixture="tpm_number")
-def choose_a_tpm() -> int:
+def choose_a_tpm(subrack_device: tango.DeviceProxy) -> int:
     """
     Return a TPM number.
 
+    :param subrack_device: the subrack Tango device under test.
+
     :return: a TPM number.
     """
-    return 2
+    tpms_present = list(subrack_device.tpmPresent)
+    return 1 + tpms_present.index(True)
 
 
 @given("the fan mode is manual")

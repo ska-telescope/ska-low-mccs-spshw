@@ -267,5 +267,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds",
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
+        "subrack_tpm_present",
         timeout=30.0,
     )

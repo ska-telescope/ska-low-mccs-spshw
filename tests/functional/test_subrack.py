@@ -163,16 +163,39 @@ def choose_a_fan() -> int:
 
 
 @given("a choice of TPM", target_fixture="tpm_number")
-def choose_a_tpm(subrack_device: tango.DeviceProxy) -> int:
+def choose_a_tpm(
+    subrack_device: tango.DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> int:
     """
     Return a TPM number.
 
     :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
 
     :return: a TPM number.
     """
-    tpms_present = list(subrack_device.tpmPresent)
-    return 1 + tpms_present.index(True)
+    subrack_device.subscribe_event(
+        "tpmPresent",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["subrack_tpm_present"],
+    )
+    change_event_callbacks.assert_change_event(
+        "subrack_tpm_present",
+        Anything,
+    )
+    tpms_present = subrack_device.tpmPresent
+    if tpms_present is None:
+        change_event_callbacks.assert_change_event(
+            "subrack_tpm_present",
+            Anything,
+        )
+        tpms_present = subrack_device.tpmPresent
+
+    assert tpms_present is not None
+
+    return 1 + list(tpms_present).index(True)
 
 
 @given("the fan mode is manual")

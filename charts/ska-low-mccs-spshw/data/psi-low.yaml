@@ -5,13 +5,13 @@ stations:
       subracks: [1]
       tpms: [10, 13]
 subracks:
-  reachable_from: psi-node2
+  reachable_from: psi-node3
   instances:
     1:
       host: 10.0.10.80
       port: 8081
 tpms:
-  reachable_from: psi-node2
+  reachable_from: psi-node3
   version: tpm_v1_6
   port: 10000
   instances:

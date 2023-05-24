@@ -28,6 +28,7 @@ Feature: Test always-on subrack
     @XTP-17876 @XTP-17871
     Scenario: Turn off all TPMs
         Given a subrack that is online and on
+        And a choice of TPM
         And the TPM is on
 
         When I tell the subrack to turn off all TPMs

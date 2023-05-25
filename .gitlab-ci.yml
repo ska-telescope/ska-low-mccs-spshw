@@ -19,10 +19,10 @@ cache:
 # It is also specified that only the master branch will be subject of this job.
 
 stages:
+  - test-psi-low
   - lint
   - build
   - test
-  - test-psi-low
   - publish
   - pages
   - scan

@@ -267,15 +267,6 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds",
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
+        "subrack_tpm_present",
         timeout=30.0,
     )
-
-
-@pytest.fixture()
-def tpm_number() -> int:
-    """
-    Return the number of the TPM under test in the subrack under test.
-
-    :returns: the number of the TPM
-    """
-    return 2

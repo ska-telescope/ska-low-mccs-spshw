@@ -39,7 +39,7 @@ dependencies:
 
   # base
   - name: ska-tango-util
-    version: 0.4.5
+    version: 0.3.23
     repository: https://artefact.skao.int/repository/helm-internal  
   - name: ska-tango-base
     version: 0.3.10

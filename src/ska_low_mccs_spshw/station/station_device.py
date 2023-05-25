@@ -1055,11 +1055,11 @@ class SpsStation(SKAObsDevice):
         >>> dp.command_inout("LoadPointingDelays", delay_list)
         """
         if len(argin) < 513:  # self._antennas_per_tile * 2 + 1:
-            self._component_manager.logger.error("Insufficient parameters")
+            self.component_manager.logger.error("Insufficient parameters")
             raise ValueError("Insufficient parameters")
         beam_index = int(argin[0])
         if beam_index < 0 or beam_index > 7:
-            self._component_manager.logger.error("Invalid beam index")
+            self.component_manager.logger.error("Invalid beam index")
             raise ValueError("Invalid beam index")
 
         self.component_manager.load_pointing_delays(argin)
@@ -1306,7 +1306,7 @@ class SpsStation(SKAObsDevice):
         # argin is left as is and forwarded to tiles
         data_type = params.get("data_type", None)
         if data_type is None:
-            self._component_manager.logger.error("data_type is a mandatory parameter")
+            self.component_manager.logger.error("data_type is a mandatory parameter")
             raise ValueError("data_type is a mandatory parameter")
         if data_type not in [
             "raw",
@@ -1315,29 +1315,29 @@ class SpsStation(SKAObsDevice):
             "narrowband",
             "beam",
         ]:
-            self._component_manager.logger.error("Invalid data_type specified")
+            self.component_manager.logger.error("Invalid data_type specified")
             raise ValueError("Invalid data_type specified")
         if data_type == "channel_continuous":
             channel_id = params.get("channel_id", None)
             if channel_id is None:
-                self._component_manager.logger.error(
+                self.component_manager.logger.error(
                     "channel_id is a mandatory parameter"
                 )
                 raise ValueError("channel_id is a mandatory parameter")
             if channel_id < 1 or channel_id > 511:
-                self._component_manager.logger.error(
+                self.component_manager.logger.error(
                     "channel_id must be between 1 and 511"
                 )
                 raise ValueError("channel_id must be between 1 and 511")
         if data_type == "narrowband":
             frequency = params.get("frequency", None)
             if frequency is None:
-                self._component_manager.logger.error(
+                self.component_manager.logger.error(
                     "frequency is a mandatory parameter"
                 )
                 raise ValueError("frequency is a mandatory parameter")
             if frequency < 1e6 or frequency > 390e6:
-                self._component_manager.logger.error(
+                self.component_manager.logger.error(
                     "frequency must be between 1 and 390 MHz"
                 )
                 raise ValueError("frequency must be between 1 and 390 MHz")

@@ -32,16 +32,64 @@ def mock_subrack_fixture() -> unittest.mock.Mock:
     return builder()
 
 
-@pytest.fixture(name="mock_tile")
-def mock_tile_fixture() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_tile_builder")
+def mock_tile_builder_fixture() -> MockDeviceBuilder:
     """
-    Fixture that provides a mock MccsSubrack device.
+    Fixture that provides a builder for a mock MccsTile device.
 
-    :return: a mock MccsSubrack device.
+    :return: a mock MccsSubrack device builder.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
-    return builder()
+    return builder
+
+
+@pytest.fixture(name="mock_tile")
+def mock_tile_fixture(mock_tile_builder: MockDeviceBuilder) -> unittest.mock.Mock:
+    """
+    Fixture that provides a mock MccsTile device.
+
+    :param mock_tile_builder: builder for mock Tiles
+
+    :return: a mock MccsTile device.
+    """
+    return mock_tile_builder()
+
+
+@pytest.fixture(name="num_tiles")
+def num_tiles_fixture() -> int:
+    """
+    Get the number of tiles to use in multi-mock-tile tests.
+
+    :return: the number of tiles
+    """
+    return 16
+
+
+@pytest.fixture(name="tile_names")
+def tile_names_fixture(num_tiles: int) -> list[str]:
+    """
+    Fixture that provides a list of mock MccsTile fqdns.
+
+    :param num_tiles: the number of tiles to use
+    :return: list of tile fqdns
+    """
+    return [f"low-mccs/tile/{str.zfill(str(i), 4)}" for i in range(num_tiles)]
+
+
+@pytest.fixture(name="mock_tiles")
+def mock_tiles_fixture(
+    mock_tile_builder: MockDeviceBuilder, num_tiles: int
+) -> list[unittest.mock.Mock]:
+    """
+    Fixture that provides a list of mock MccsTile devices.
+
+    :param mock_tile_builder: builder for mock Tiles
+    :param num_tiles: the number of tiles to make mocks of
+
+    :return: a list of mock MccsTile devices.
+    """
+    return [mock_tile_builder() for _ in range(num_tiles)]
 
 
 @pytest.fixture(name="patched_station_device_class")

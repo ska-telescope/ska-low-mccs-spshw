@@ -993,13 +993,13 @@ class SpsStationComponentManager(
             Current hardware supports only a single value, thus oly 1st value is used
         """
         self._csp_rounding = copy.deepcopy(truncation)
-        proxy = list(self._tile_proxies.values())[-1]
-        assert proxy._proxy is not None  # for the type checker
-        if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-            self.logger.debug(
-                f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
-            )
-            proxy._proxy.cspRounding = truncation
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(
+                    f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
+                )
+                proxy._proxy.cspRounding = truncation
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[int]:
@@ -1342,7 +1342,7 @@ class SpsStationComponentManager(
         """
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyCalibration()
+            tile._proxy.ApplyCalibration(switch_time)
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]

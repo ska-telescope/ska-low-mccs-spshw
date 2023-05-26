@@ -232,41 +232,41 @@ class SubrackHealthRules(HealthRules):
         state = state_dict.get("subrack_state_points")
         assert isinstance(state, dict)
 
-        if (
-            subrack_health == HealthState.FAILED
-            or (
-                state["old_tpm_power_states"] != state["tpm_power_states"]
-                and self._check_voltage_drops(
-                    state["old_tpm_voltages"],
+        if any([
+                subrack_health == HealthState.FAILED,
+                (
+                    state["old_tpm_power_states"] != state["tpm_power_states"]
+                    and self._check_voltage_drops(
+                        state["old_tpm_voltages"],
+                        state["tpm_voltages"],
+                        state["old_power_supply_voltages"],
+                        state["power_supply_voltages"],
+                        fail_str,
+                    )
+                ),
+                self._check_powers(
+                    state["tpm_power_states"],
                     state["tpm_voltages"],
-                    state["old_power_supply_voltages"],
-                    state["power_supply_voltages"],
+                    state["tpm_currents"],
+                    fail_str,
+                ),
+                self._check_basic_thresholds(
+                    state["board_temps"], state["backplane_temps"], fail_str
+                ),
+                self._check_fan_speeds(
+                    state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+                ),
+                self._check_current_diff(
+                    state["tpm_currents"],
+                    state["board_currents"],
+                    state["power_supply_currents"],
                     fail_str,
                 )
-            )
-            or self._check_powers(
-                state["tpm_power_states"],
-                state["tpm_voltages"],
-                state["tpm_currents"],
-                fail_str,
-            )
-            or self._check_basic_thresholds(
-                state["board_temps"], state["backplane_temps"], fail_str
-            )
-            or self._check_fan_speeds(
-                state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-            )
-            or self._check_current_diff(
-                state["tpm_currents"],
-                state["board_currents"],
-                state["power_supply_currents"],
-                fail_str,
-            )
-        ):
+            ]):
             return True
 
         if not all(
-            x in state["clock_reqs"] for x in ["10MHz", "1PPS", "10_MHz_PLL_lock"]
+            x in state["clock_reqs"] for x in self._thresholds["clock_presence"]
         ):
             return True
 
@@ -296,9 +296,9 @@ class SubrackHealthRules(HealthRules):
         state = state_dict.get("subrack_state_points")
         assert isinstance(state, dict)
 
-        if (
-            subrack_health == HealthState.DEGRADED
-            or (
+        if any([
+            subrack_health == HealthState.DEGRADED,
+            (
                 state["old_tpm_power_states"] != state["tpm_power_states"]
                 and self._check_voltage_drops(
                     state["old_tpm_voltages"],
@@ -307,26 +307,26 @@ class SubrackHealthRules(HealthRules):
                     state["power_supply_voltages"],
                     fail_str,
                 )
-            )
-            or self._check_powers(
+            ),
+            self._check_powers(
                 state["tpm_power_states"],
                 state["tpm_voltages"],
                 state["tpm_currents"],
                 fail_str,
-            )
-            or self._check_basic_thresholds(
+            ),
+            self._check_basic_thresholds(
                 state["board_temps"], state["backplane_temps"], fail_str
-            )
-            or self._check_fan_speeds(
+            ),
+            self._check_fan_speeds(
                 state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-            )
-            or self._check_current_diff(
+            ),
+            self._check_current_diff(
                 state["tpm_currents"],
                 state["board_currents"],
                 state["power_supply_currents"],
                 fail_str,
-            )
-        ):
+            ),
+        ]):
             return True
 
         return False
@@ -354,7 +354,8 @@ class SubrackHealthRules(HealthRules):
 
         :return: the default thresholds
         """
-        # no idea where to get these values from lol
+        # Not certain on these values just yet, so these are placeholders
+        # for now, will need to get input from stakeholders on actual values
         # TODO NEED to get these actual values from somewhere
         return {
             "failed_max_board_temp": 70.0,
@@ -381,4 +382,5 @@ class SubrackHealthRules(HealthRules):
             "degraded_tpm_voltage_standby": 4.0,
             "failed_tpm_current_standby": 4.0,
             "degraded_tpm_current_standby": 3.0,
+            "clock_presence": [],
         }

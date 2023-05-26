@@ -40,6 +40,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
     # TODO Remove all unnecessary variables and constants after
     # all methods are completed and tested
+    VOLTAGE = 5.0
+    BOARD_TEMPERATURE = 36.0
+    FPGA1_TEMPERATURE = 38.0
+    FPGA2_TEMPERATURE = 37.5
     ADC_RMS = [0.0] * 32
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0

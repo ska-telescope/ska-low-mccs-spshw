@@ -382,6 +382,7 @@ class TileSimulator:
         self.dst_ip: Optional[str] = None
         self.sync_time = 0
         self.csp_rounding = None
+        self._adc_rms: list[float] = list(self.ADC_RMS)
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:

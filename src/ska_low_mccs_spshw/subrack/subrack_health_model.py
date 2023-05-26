@@ -35,7 +35,6 @@ class SubrackHealthModel(BaseHealthModel):
         :param thresholds: Thresholds for the subrack device.
         """
         self._health_rules = SubrackHealthRules(thresholds)
-        # self._my_state: dict = {"subrack_state_points": {}}
         super().__init__(component_state_changed_callback)
 
     def update_data(self: BaseHealthModel, new_states: dict) -> None:
@@ -50,7 +49,7 @@ class SubrackHealthModel(BaseHealthModel):
         assert isinstance(self._state["subrack_state_points"], dict)
 
         state_points = self._state.get("subrack_state_points")
-        # linting
+        # set the old_value to the previous value if exists otherwise have it match new
         if state_points.get("tpm_voltages"):
             self._state["subrack_state_points"]["old_tpm_voltages"] = state_points.get(
                 "tpm_voltages"
@@ -60,7 +59,7 @@ class SubrackHealthModel(BaseHealthModel):
                 "tpm_voltages"
             )
 
-        # linting
+        # set the old_value to the previous value if exists otherwise have it match new
         if state_points.get("power_supply_voltages"):
             self._state["subrack_state_points"][
                 "old_power_supply_voltages"
@@ -70,7 +69,7 @@ class SubrackHealthModel(BaseHealthModel):
                 "old_power_supply_voltages"
             ] = new_states.get("power_supply_voltages")
 
-        # linting
+        # set the old_value to the previous value if exists otherwise have it match new
         if state_points.get("tpm_power_states"):
             self._state["subrack_state_points"][
                 "old_tpm_power_states"

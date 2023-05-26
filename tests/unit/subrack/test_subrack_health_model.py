@@ -9,7 +9,7 @@
 """This module contains the tests for MccsStation."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 import pytest
 from ska_control_model import HealthState, PowerState
@@ -171,7 +171,7 @@ class TestSubrackHealthModel:
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
-                id="All devices healthy, expect OK",
+                id="Health data is updated succesfully",
             ),
         ],
     )
@@ -199,9 +199,10 @@ class TestSubrackHealthModel:
         assert health_model._state.get("subrack_state_points") == expected_state_end
 
     @pytest.mark.parametrize(
-        ("thresholds", "init_expected_health", "end_expected_health"),
+        ("init_thresholds", "end_thresholds", "init_expected_health", "end_expected_health"),
         [
             pytest.param(
+                None,
                 {
                     "failed_max_board_temp": 30.0,
                     "degraded_max_board_temp": 20.0,
@@ -209,14 +210,49 @@ class TestSubrackHealthModel:
                 },
                 HealthState.OK,
                 HealthState.FAILED,
-                id="All devices healthy, expect OK",
+                id="Update thresholds so that now the device reports FAILED",
+            ),
+            pytest.param(
+                None,
+                {
+                    "failed_max_board_temp": 70.0,
+                    "degraded_max_board_temp": 40.0,
+                    "failed_min_board_temp": 10.0,
+                },
+                HealthState.OK,
+                HealthState.DEGRADED,
+                id="Update thresholds so that now the device reports DEGRADED",
+            ),
+            pytest.param(
+                None,
+                {"clock_presence": ["some_clock"]},
+                HealthState.OK,
+                HealthState.FAILED,
+                id="Update thresholds so that now the device requires clock locks which it doesnt have, report FAILED",
+            ),
+            pytest.param(
+                {
+                    "failed_max_board_temp": 30.0,
+                    "degraded_max_board_temp": 20.0,
+                    "failed_min_board_temp": 10.0,
+                },
+                {
+                    
+                    "failed_max_board_temp": 70.0,
+                    "degraded_max_board_temp": 60.0,
+                    "failed_min_board_temp": 10.0,
+                },
+                HealthState.FAILED,
+                HealthState.OK,
+                id="Thresholds start off FAILED, updated to OK",
             ),
         ],
     )
     def test_subrack_can_change_thresholds(
         self: TestSubrackHealthModel,
         health_model: SubrackHealthModel,
-        thresholds: dict[str, float],
+        init_thresholds: Optional[dict[str, float]],
+        end_thresholds: dict[str, float],
         init_expected_health: HealthState,
         end_expected_health: HealthState,
     ) -> None:
@@ -248,8 +284,11 @@ class TestSubrackHealthModel:
             "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
             "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
         }
+        if init_thresholds:
+            health_model.health_params = init_thresholds
+
         health_model.update_data(data)
         assert health_model.evaluate_health() == init_expected_health
 
-        health_model.health_params = thresholds
+        health_model.health_params = end_thresholds
         assert health_model.evaluate_health() == end_expected_health

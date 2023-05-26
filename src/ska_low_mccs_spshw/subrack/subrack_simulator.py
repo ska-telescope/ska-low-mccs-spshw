@@ -270,7 +270,6 @@ class SubrackSimulator(SubrackProtocol):
         Check if no command is currently running.
 
         :param _not_used: not used, should always be empty e.g. ""
-
         :return: False if a command is currently run; otherwise True.
         """
         assert not _not_used

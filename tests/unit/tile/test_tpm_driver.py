@@ -832,7 +832,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator: TileSimulator,
     ) -> None:
         """
-        Test to ensure the tpm_driver can check the TPM programmed state.
+        Test that we can configure the 40G core.
 
         Test to ensure the tpm_driver can read the _check_programmed() method
         correctly if the mocked TPM is programmed.

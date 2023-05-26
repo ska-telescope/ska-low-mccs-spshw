@@ -8,6 +8,7 @@
 """This module contains the tests for MccsTile."""
 from __future__ import annotations
 
+import copy
 import gc
 import itertools
 import json
@@ -32,7 +33,7 @@ from ska_tango_testing.context import (
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevFailed, DeviceProxy, DevState, EventType
 
-from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator
+from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator, TileData
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -51,6 +52,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "health_state",
         "state",
         "tile_programming_state",
+        "adc_power",
         timeout=2.0,
     )
 
@@ -286,10 +288,65 @@ class TestMccsTile:
         mock_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
+            tile_health_structure=TileData.get_tile_defaults(),
         )
 
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
+
+    def test_adcPower(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        mock_tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for adcPower.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param mock_tile_component_manager: A mock component manager.
+        """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        tile_device.MockTpmOn()
+
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        tile_device.subscribe_event(
+            "adcPower",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["adc_power"],
+        )
+
+        mock_tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
+        mock_tile_component_manager._adc_rms = list(range(32))
+        mock_tile_component_manager._update_component_state(
+            fault=False,
+            power=PowerState.ON,
+            tile_health_structure=TileData.get_tile_defaults(),
+            adc_rms=list(range(32)),
+        )
+
+        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -415,6 +472,73 @@ class TestMccsTile:
         tile_device.antennaIds = new_ids
         assert tuple(tile_device.antennaIds) == new_ids
 
+    @pytest.mark.parametrize(
+        ("expected_init_params", "new_params"),
+        [
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "temperatures": {"board": {"max": 70}},
+                    "timing": {"clocks": {"FPGA0": {"JESD": False}}},
+                },
+                id="Check temperature and timing values and check new values",
+            ),
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "currents": {"FE0_mVA": {"max": 25}},
+                    "io": {
+                        "jesd_interface": {
+                            "lane_error_count": {"FPGA0": {"Core0": {"lane3": 2}}}
+                        }
+                    },
+                },
+                id="Change current and io values and check new values",
+            ),
+            pytest.param(
+                TileData.MIN_MAX_MONITORING_POINTS,
+                {
+                    "alarms": {"I2C_access_alm": 1},
+                    "adcs": {"pll_status": {"ADC0": (False, True)}},
+                    "dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA1": 1}}},
+                },
+                id="Change alarm, adc and dsp values and check new values",
+            ),
+        ],
+    )
+    def test_healthParams(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        expected_init_params: dict[str, Any],
+        new_params: dict[str, Any],
+    ) -> None:
+        """
+        Test for healthParams attributes.
+
+        :param tile_device: the Tile Tango device under test.
+        :param expected_init_params: the initial values which the health model is
+            expected to have initially
+        :param new_params: the new health rule params to pass to the health model
+        """
+
+        def _merge_dicts(
+            dict_a: dict[str, Any], dict_b: dict[str, Any]
+        ) -> dict[str, Any]:
+            output = copy.deepcopy(dict_a)
+            for key in dict_b:
+                if isinstance(dict_b[key], dict):
+                    output[key] = _merge_dicts(dict_a[key], dict_b[key])
+                else:
+                    output[key] = dict_b[key]
+            return output
+
+        assert tile_device.healthModelParams == json.dumps(expected_init_params)
+        new_params_json = json.dumps(new_params)
+        tile_device.healthModelParams = new_params_json  # type: ignore[assignment]
+        expected_result = copy.deepcopy(expected_init_params)
+        expected_result = _merge_dicts(expected_result, new_params)
+        assert tile_device.healthModelParams == json.dumps(expected_result)
+
 
 class TestMccsTileCommands:
     """Tests of MccsTile device commands."""
@@ -450,7 +574,7 @@ class TestMccsTileCommands:
                 "SetLmcIntegratedDownload",
                 json.dumps(
                     {
-                        "mode": "1g",
+                        "mode": "1G",
                         "channel_payload_length": 4,
                         "beam_payload_length": 6,
                         "destination_ip": "10.0.1.23",
@@ -1014,7 +1138,7 @@ class TestMccsTileCommands:
         ):
             _ = tile_device.Get40GCoreConfiguration(json_arg)
 
-        arg2 = {"mode": "10g", "payload_length": 102, "destination_ip": "10.0.1.23"}
+        arg2 = {"mode": "10G", "payload_length": 102, "destination_ip": "10.0.1.23"}
         json_arg = json.dumps(arg2)
         tile_device.SetLmcDownload(json_arg)
 

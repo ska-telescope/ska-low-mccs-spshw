@@ -13,6 +13,7 @@ Tile subpackage
   Tile component manager<tile_component_manager>
   Tile device<tile_device>
   Tile health model<tile_health_model>
+  Tile health rules<tile_health_rules>
 
 
 .. toctree::

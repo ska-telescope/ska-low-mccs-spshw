@@ -229,7 +229,7 @@ Ethernet interface configuration
     40G networks, and the relavant link parameters. Parameter: a json dictionary with 
     optional keywords:
 
-    * mode - (string) ``1g`` or ``10g`` (Mandatory) (use ``10g`` for 40G link)
+    * mode - (string) ``1G`` or ``10G`` (Mandatory) (use ``10G`` for 40G link)
 
     * payload_length - (int) SPEAD payload length for channel data. Default 
 
@@ -243,7 +243,7 @@ Ethernet interface configuration
   * *SetLmcIntegratedDownload*: Configure link and size of integrated data.
     Parameter: a json dictionary with optional keywords:
 
-    * mode - (string) ``1g`` or ``10g`` (Mandatory)
+    * mode - (string) ``1G`` or ``10G`` (Mandatory)
 
     * channel_payload_length - (int) SPEAD payload length for integrated channel data
 

@@ -29,6 +29,7 @@ from ska_control_model import CommunicationStatus, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_tango_base.executor import TaskExecutorComponentManager
 
+from .tile_data import TileData
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
 
@@ -90,79 +91,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         31: {"preadu_id": 0, "channel": 15},
     }
 
-    TILE_MONITORING_POINTS = {
-        "temperature": {"board": None, "FPGA0": None, "FPGA1": None},
-        "voltage": {
-            "VREF_2V5": None,
-            "MGT_AVCC": None,
-            "VM_SW_AMP": None,
-            "MGT_AVTT": None,
-            "SW_AVDD1": None,
-            "SW_AVDD2": None,
-            "AVDD3": None,
-            "MAN_1V2": None,
-            "DDR0_VREF": None,
-            "DDR1_VREF": None,
-            "VM_DRVDD": None,
-            "VIN": None,
-            "MON_3V3": None,
-            "MON_1V8": None,
-            "MON_5V0": None,
-            "VM_FE0": None,
-            "VM_FE1": None,
-            "VM_DDR0_VTT": None,
-            "VM_AGP0": None,
-            "VM_AGP1": None,
-            "VM_AGP2": None,
-            "VM_AGP3": None,
-            "VM_AGP4": None,
-            "VM_AGP5": None,
-            "VM_AGP6": None,
-            "VM_AGP7": None,
-            "VM_CLK0B": None,
-            "VM_CLK1B": None,
-            "VM_MGT0_AUX": None,
-            "VM_MGT1_AUX": None,
-            "VM_ADA0": None,
-            "VM_ADA1": None,
-            "VM_PLL": None,
-            "VM_DDR1_VTT": None,
-            "VM_DDR1_VDD": None,
-            "VM_DVDD": None,
-        },
-        "current": {"FE0_mVA": None, "FE1_mVA": None},
-        "timing": {
-            "clocks": {
-                "FPGA0": {"JESD": None, "DDR": None, "UDP": None},
-                "FPGA1": {"JESD": None, "DDR": None, "UDP": None},
-            },
-            "clock_managers": {
-                "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
-                "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
-            },
-            "pps": {"status": None},
-        },
-        "io": {
-            "jesd_if": {
-                "lanes": None,
-                "error_count": None,
-                "resync_count": {"FPGA0": None, "FPGA1": None},
-                "qpll_lock_loss_count": {"FPGA0": None, "FPGA1": None},
-            },
-            "ddr_if": {
-                "initialisation": None,
-                "reset_counter": {"FPGA0": None, "FPGA1": None},
-            },
-            "f2f_if": {"pll_lock_loss_count": {"Core0": None}},
-            "udp_if": {
-                "arp": None,
-                "status": None,
-                "linkup_loss_count": {"FPGA0": None, "FPGA1": None},
-            },
-        },
-        "dsp": {"tile_beamf": None, "station_beamf": None},
-    }
-
     # pylint: disable=too-many-arguments
     def __init__(
         self: TpmDriver,
@@ -206,8 +134,12 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._is_beamformer_running = False
         self._pending_data_requests = False
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            self.TILE_MONITORING_POINTS
+            TileData.TILE_MONITORING_POINTS
         )
+        self._tile_health_structure["voltages"]["MON_5V0"] = 5.0
+        self._tile_health_structure["temperatures"]["board"] = self.BOARD_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA0"] = self.FPGA1_TEMPERATURE
+        self._tile_health_structure["temperatures"]["FPGA1"] = self.FPGA2_TEMPERATURE
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = 0
@@ -234,6 +166,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             max_workers=1,
             fault=None,
             programming_state=TpmStatus.UNKNOWN,
+            tile_health_structure=self._tile_health_structure,
+            adc_rms=self._adc_rms,
         )
 
         self._poll_rate = 2.0
@@ -372,10 +306,14 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self._check_pll_locked()
                     self._tile_health_structure = self.tile.get_health_status()
+                    self._update_component_state(
+                        tile_health_structure=self._tile_health_structure
+                    )
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
+                    self._update_component_state(adc_rms=self._adc_rms)
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
                     )
@@ -861,7 +799,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: voltages in the TPM
         """
         self.logger.debug("TpmDriver: get all voltages available in the TPM")
-        return self._tile_health_structure["voltage"]
+        return self._tile_health_structure["voltages"]
 
     @property
     def temperatures(self: TpmDriver) -> dict[str, Any]:
@@ -871,7 +809,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: temperatures in the TPM
         """
         self.logger.debug("TpmDriver: get all temperatures available in the TPM")
-        return self._tile_health_structure["temperature"]
+        return self._tile_health_structure["temperatures"]
 
     @property
     def currents(self: TpmDriver) -> dict[str, Any]:
@@ -881,7 +819,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: currents in the TPM
         """
         self.logger.debug("TpmDriver: get all currents available in the TPM")
-        return self._tile_health_structure["current"]
+        return self._tile_health_structure["currents"]
 
     @property
     def timing(self: TpmDriver) -> dict[str, Any]:
@@ -921,7 +859,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of the TPM
         """
         self.logger.debug("TpmDriver: board_temperature")
-        return self._tile_health_structure["temperature"]["board"]
+        return self._tile_health_structure["temperatures"]["board"]
 
     @property
     def voltage_mon(self: TpmDriver) -> float:
@@ -931,7 +869,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the internal 5V supply of the TPM
         """
         self.logger.debug("TpmDriver: internal 5V supply of the TPM")
-        return self._tile_health_structure["voltage"]["MON_5V0"]
+        return self._tile_health_structure["voltages"]["MON_5V0"]
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
@@ -941,7 +879,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 1
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        return self._tile_health_structure["temperature"]["FPGA0"]
+        return self._tile_health_structure["temperatures"]["FPGA0"]
 
     @property
     def fpga2_temperature(self: TpmDriver) -> float:
@@ -951,7 +889,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :return: the temperature of FPGA 2
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        return self._tile_health_structure["temperature"]["FPGA1"]
+        return self._tile_health_structure["temperatures"]["FPGA1"]
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:
@@ -1322,7 +1260,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
-        :param mode: "1g" or "10g"
+        :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination IP, defaults to None
@@ -2267,7 +2205,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         Configure link and size of control data.
 
-        :param mode: '1g' or '10g'
+        :param mode: '1G' or '10G'
         :param channel_payload_length: SPEAD payload length for
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated

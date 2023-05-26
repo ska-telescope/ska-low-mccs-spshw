@@ -85,12 +85,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
         self._tile_programming_state: TpmStatus
+        self._adc_rms: list[float]
         self._antenna_ids: list[int]
         self._max_workers: int = 1
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._tile_programming_state = TpmStatus.UNKNOWN
+        self._adc_rms = [0.0] * 32
         self._max_workers = 1
         super().init_device()
 
@@ -231,6 +233,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
             self._device.set_change_event("tileProgrammingState", True, False)
+            self._device.set_change_event("adcPower", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -352,6 +355,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.push_change_event(
                     "tileProgrammingState", tile_programming_state.pretty_name()
                 )
+        if "tile_health_structure" in state_change:
+            self._health_model.update_state(
+                tile_health_structure=state_change["tile_health_structure"]
+            )
+        if "adc_rms" in state_change:
+            adc_rms = state_change["adc_rms"]
+            if self._adc_rms != adc_rms:
+                self._adc_rms = adc_rms
+                self.push_change_event("adcPower", adc_rms)
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -1033,6 +1045,131 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return list(
             itertools.chain.from_iterable(self.component_manager.beamformer_table)
         )
+
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: MccsTile) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: MccsTile, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
+
+    @attribute(dtype=HealthState)
+    def temperatureHealth(self: MccsTile) -> HealthState:
+        """
+        Read the temperature Health State of the device.
+
+        This is an aggregated quantity representing if any of the temperature
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: temperature Health State of the device
+        """
+        return self._health_model._intermediate_healths["temperatures"]
+
+    @attribute(dtype=HealthState)
+    def voltageHealth(self: MccsTile) -> HealthState:
+        """
+        Read the voltage Health State of the device.
+
+        This is an aggregated quantity representing if any of the voltage
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: voltage Health State of the device
+        """
+        return self._health_model._intermediate_healths["voltages"]
+
+    @attribute(dtype=HealthState)
+    def currentHealth(self: MccsTile) -> HealthState:
+        """
+        Read the current Health State of the device.
+
+        This is an aggregated quantity representing if any of the current
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: current Health State of the device
+        """
+        return self._health_model._intermediate_healths["currents"]
+
+    @attribute(dtype=HealthState)
+    def alarmHealth(self: MccsTile) -> HealthState:
+        """
+        Read the alarm Health State of the device.
+
+        This is an aggregated quantity representing if any of the alarm
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: alarm Health State of the device
+        """
+        return self._health_model._intermediate_healths["alarms"]
+
+    @attribute(dtype=HealthState)
+    def adcHealth(self: MccsTile) -> HealthState:
+        """
+        Read the ADC Health State of the device.
+
+        This is an aggregated quantity representing if any of the ADC
+        monitoring points are outside of their thresholds. This is used to compute
+        the overall healthState of the tile.
+
+        :return: ADC Health State of the device
+        """
+        return self._health_model._intermediate_healths["adcs"]
+
+    @attribute(dtype=HealthState)
+    def timingHealth(self: MccsTile) -> HealthState:
+        """
+        Read the timing Health State of the device.
+
+        This is an aggregated quantity representing if any of the timing
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: timing Health State of the device
+        """
+        return self._health_model._intermediate_healths["timing"]
+
+    @attribute(dtype=HealthState)
+    def ioHealth(self: MccsTile) -> HealthState:
+        """
+        Read the io Health State of the device.
+
+        This is an aggregated quantity representing if any of the io
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: io Health State of the device
+        """
+        return self._health_model._intermediate_healths["io"]
+
+    @attribute(dtype=HealthState)
+    def dspHealth(self: MccsTile) -> HealthState:
+        """
+        Read the dsp Health State of the device.
+
+        This is an aggregated quantity representing if any of the dsp
+        monitoring points do not have a permitted value. This is used to compute
+        the overall healthState of the tile.
+
+        :return: dsp Health State of the device
+        """
+        return self._health_model._intermediate_healths["dsp"]
 
     # # --------
     # # Commands
@@ -1747,10 +1884,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            mode = kwargs["mode"]
+            mode: str = kwargs["mode"]
             payload_length = kwargs.get("payload_length", None)
             if payload_length is None:
-                if mode == "10g":
+                if mode.upper() == "10G":
                     payload_length = 8192
                 else:
                     payload_length = 1024
@@ -1770,7 +1907,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' or '10g' (Mandatory) (use '10g' for 40g also)
+            * mode - (string) '1G' or '10G' (Mandatory) (use '10G' for 40G also)
             * payload_length - (int) SPEAD payload length for channel data
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
@@ -1783,7 +1920,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :example:
 
         >> dp = tango.DeviceProxy("mccs/tile/01")
-        >> dict = {"mode": "1g", "payload_length":4,"destination_ip"="10.0.1.23"}
+        >> dict = {"mode": "1G", "payload_length": 4, "destination_ip": "10.0.1.23"}
         >> jstr = json.dumps(dict)
         >> dp.command_inout("SetLmcDownload", jstr)
         """
@@ -1845,7 +1982,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 information purpose only.
             """
             mode = kwargs["mode"]
-            channel_payload_length = kwargs.get("channel_payload_lenth", 1024)
+            channel_payload_length = kwargs.get("channel_payload_length", 1024)
             beam_payload_length = kwargs.get("beam_payload_length", 1024)
             dst_ip = kwargs.get("destination_ip", None)
             src_port = kwargs.get("source_port", 0xF0D0)
@@ -1870,8 +2007,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param argin: json dictionary with optional keywords:
 
-            * mode - (string) '1g' or '10g' (Mandatory)
-            * channel_payload_lenth - (int) SPEAD payload length for integrated
+            * mode - (string) '1G' or '10G' (Mandatory)
+            * channel_payload_length - (int) SPEAD payload length for integrated
                  channel data
             * beam_payload_length - (int) SPEAD payload length for integrated beam data
             * destination_ip - (string) Destination IP
@@ -1885,8 +2022,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"mode": "1g", "channel_payload_lenth":4,
-                    "beam_payload_length": 1024, "destination_ip"="10.0.1.23"}
+        >>> dict = {"mode": "1G", "channel_payload_length":4,
+                    "beam_payload_length": 1024, "destination_ip": "10.0.1.23"}
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SetLmcIntegratedDownload", jstr)
         """

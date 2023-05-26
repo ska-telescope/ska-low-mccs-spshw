@@ -879,7 +879,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator._tile_health_structure["temperatures"]["board"] = board_temp
         tile_simulator._tile_health_structure["voltages"]["MON_5V0"] = voltage
 
-
         # Check these values are different.
         assert initial_tile_health_structure["temperatures"]["FPGA0"] != fpga1_temp
         assert initial_tile_health_structure["temperatures"]["FPGA1"] != fpga2_temp
@@ -2176,7 +2175,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         callbacks["communication_status"].assert_not_called()
         assert tile_simulator.tpm is None
 
-    @pytest.mark.xfail(reason="polling mechanism on the TPMDriver is about to be refactored")
+    @pytest.mark.xfail(
+        reason="polling mechanism on the TPMDriver is about to be refactored"
+    )
     def test_poll_update(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -2203,7 +2204,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-        tile_simulator._fpga1_temperature = 41.0
+        tile_simulator._tile_health_structure["temperature"]["FPGA0"] = 41.0
 
         poll_time = tpm_driver._poll_rate
         time.sleep(poll_time + 0.5)
@@ -2220,7 +2221,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Stop communicating to stop the polling loop, ensuring static values
         tpm_driver.stop_communicating()
 
-        tile_simulator._fpga1_temperature = (
+        tile_simulator._tile_health_structure["temperature"][
+            "FPGA0"
+        ] = (
             tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
         )
 

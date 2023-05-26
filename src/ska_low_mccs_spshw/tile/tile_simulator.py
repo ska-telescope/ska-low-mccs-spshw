@@ -397,22 +397,6 @@ class TileSimulator:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
-    def get_fpga0_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga0 temperature."""
-        return self._fpga1_temperature
-
-    def get_fpga1_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked fpga1 temperature."""
-        return self._fpga2_temperature
-
-    def get_temperature(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked board temperature."""
-        return self._board_temperature
-
-    def get_voltage(self: TileSimulator) -> Optional[float]:
-        """:return: the mocked voltage."""
-        return self._voltage
-
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
         # this is set in the initialise

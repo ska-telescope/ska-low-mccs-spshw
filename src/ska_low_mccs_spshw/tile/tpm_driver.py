@@ -1726,7 +1726,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.switch_calibration_bank(switch_time=0)
+                    self.tile.switch_calibration_bank(switch_time=switch_time)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

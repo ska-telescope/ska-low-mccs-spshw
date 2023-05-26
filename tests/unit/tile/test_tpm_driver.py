@@ -2221,9 +2221,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Stop communicating to stop the polling loop, ensuring static values
         tpm_driver.stop_communicating()
 
-        tile_simulator._tile_health_structure["temperature"][
-            "FPGA0"
-        ] = (
+        tile_simulator._tile_health_structure["temperature"]["FPGA0"] = (
             tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
         )
 

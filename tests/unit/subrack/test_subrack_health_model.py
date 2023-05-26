@@ -199,7 +199,12 @@ class TestSubrackHealthModel:
         assert health_model._state.get("subrack_state_points") == expected_state_end
 
     @pytest.mark.parametrize(
-        ("init_thresholds", "end_thresholds", "init_expected_health", "end_expected_health"),
+        (
+            "init_thresholds",
+            "end_thresholds",
+            "init_expected_health",
+            "end_expected_health",
+        ),
         [
             pytest.param(
                 None,
@@ -228,7 +233,8 @@ class TestSubrackHealthModel:
                 {"clock_presence": ["some_clock"]},
                 HealthState.OK,
                 HealthState.FAILED,
-                id="Update thresholds so that now the device requires clock locks which it doesnt have, report FAILED",
+                id="""Update thresholds so that now the device requires clock
+                  locks which it doesnt have, report FAILED""",
             ),
             pytest.param(
                 {
@@ -237,7 +243,6 @@ class TestSubrackHealthModel:
                     "failed_min_board_temp": 10.0,
                 },
                 {
-                    
                     "failed_max_board_temp": 70.0,
                     "degraded_max_board_temp": 60.0,
                     "failed_min_board_temp": 10.0,
@@ -260,7 +265,8 @@ class TestSubrackHealthModel:
         Test subrack can change threshold values.
 
         :param health_model: Health model fixture.
-        :param thresholds: Thresholds to set it to.
+        :param init_thresholds: Initial thresholds to set it to.
+        :param end_thresholds: End thresholds to set it to.
         :param init_expected_health: Init expected health.
         :param end_expected_health: Final expected health.
         """

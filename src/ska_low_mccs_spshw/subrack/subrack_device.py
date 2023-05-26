@@ -312,7 +312,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         self._hardware_attributes: dict[str, Any] = {}
 
         self._desired_fan_speeds: list[float] = [0.0] * 4
-        self.clock_presence = []
+        self.clock_presence: list[str] = []
         self._update_health_data()
 
     # ----------

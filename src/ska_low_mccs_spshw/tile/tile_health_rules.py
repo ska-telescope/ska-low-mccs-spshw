@@ -127,7 +127,9 @@ class TileHealthRules(HealthRules):
                     monitoring_points[p], min_max[p]
                 )
             else:
-                if isinstance(min_max[p], dict):
+                if not isinstance(monitoring_points[p], (int, float)):
+                    states[p] = HealthState.UNKNOWN
+                elif isinstance(min_max[p], dict):
                     states[p] = (
                         HealthState.OK
                         if monitoring_points[p] >= min_max[p]["min"]

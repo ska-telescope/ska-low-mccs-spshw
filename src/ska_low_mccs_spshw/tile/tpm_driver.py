@@ -1575,29 +1575,29 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self.logger.debug("TpmDriver: set_beamformer_regions")
         # TODO: Remove when interface with station beamformer allows multiple
         # subarrays, stations and apertures
-        subarray_id = 0
-        substation_id = 0
-        aperture_id = 0
-        changed = False
-        if len(regions[0]) == 8:
-            subarray_id = regions[0][3]
-            substation_id = regions[0][6]
-            aperture_id = regions[0][7]
-            for region in regions[1:]:
-                if (
-                    region[3] != subarray_id
-                    or region[6] != substation_id
-                    or region[7] != aperture_id
-                ):
-                    changed = True
-                region[3] = subarray_id
-                region[6] = substation_id
-                region[7] = aperture_id
-        if changed:
-            self.logger.info(
-                "Different subarrays or substations not supported. "
-                "Using only first defined"
-            )
+        # subarray_id = 0
+        # substation_id = 0
+        # aperture_id = 0
+        # changed = False
+        # if len(regions[0]) == 8:
+        #     subarray_id = regions[0][3]
+        #     substation_id = regions[0][6]
+        #     aperture_id = regions[0][7]
+        #     for region in regions[1:]:
+        #         if (
+        #             region[3] != subarray_id
+        #             or region[6] != substation_id
+        #             or region[7] != aperture_id
+        #         ):
+        #             changed = True
+        #         region[3] = subarray_id
+        #         region[6] = substation_id
+        #         region[7] = aperture_id
+        # if changed:
+        #     self.logger.info(
+        #         "Different subarrays or substations not supported. "
+        #         "Using only first defined"
+        #     )
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:

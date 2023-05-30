@@ -144,7 +144,7 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
 
         self._timestamp += 1
 
-    def _transmit_packet(
+    def _transmit_packet(  # pylint: disable=too-many-locals
         self: IntegratedChannelDataSimulator,
         tpm_id: int,
         fpga_id: int,
@@ -165,7 +165,7 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
         heap_counter = 1 << 63 | 0x0001 << 48 | timestamp
         pkt_len = 1 << 63 | 0x0004 << 48 | self._packet_payload_length
         sync_time = 1 << 63 | 0x1027 << 48 | self._unix_epoch_time
-        timestamp = 1 << 63 | 0x1600 << 48 | timestamp & 0xFFFFFFFFFF
+        spead_timestamp = 1 << 63 | 0x1600 << 48 | timestamp & 0xFFFFFFFFFF
         lmc_capture_mode = 1 << 63 | 0x2004 << 48 | self._lmc_capture_mode
         lmc_info = (
             1 << 63
@@ -184,7 +184,7 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
                 heap_counter,
                 pkt_len,
                 sync_time,
-                timestamp,
+                spead_timestamp,
                 lmc_capture_mode,
                 lmc_info,
                 lmc_tpm_info,

@@ -15,7 +15,6 @@ import logging
 import re
 import threading
 import time
-from datetime import datetime
 from typing import Any, List, Optional, Union
 
 from pyfabil.base.definitions import Device, LibraryError
@@ -25,8 +24,6 @@ from .integrated_channel_data_simulator import IntegratedChannelDataSimulator
 from .tile_data import TileData
 
 __all__ = ["DynamicTileSimulator", "TileSimulator"]
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class StationBeamformer:
@@ -49,7 +46,7 @@ class StationBeamformer:
         :raises ValueError: if wrong value passed.
         """
         if len(table) >= 16:
-            raise ValueError("To many values")
+            raise ValueError("Too many values")
         for item in table:
             if item[0] % 2 != 0:
                 raise ValueError("value passed for start_ch is not a multiple of 2")
@@ -931,9 +928,7 @@ class TileSimulator:
         """
         raise NotImplementedError
 
-    def start_acquisition(
-        self: TileSimulator, start_time: Optional[str] = None, delay: float = 2.0
-    ) -> None:
+    def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
         """
         Start data acquisition.
 
@@ -941,12 +936,12 @@ class TileSimulator:
         :param delay: delay after start_time (frames)
         """
         if start_time is None:
-            t0 = time.time()
+            sync_time = time.time() + delay
         else:
-            t0 = datetime.timestamp(datetime.strptime(start_time, RFC_FORMAT))
+            sync_time = start_time + delay
 
-        self.sync_time = t0 + delay  # type: ignore
-        self.tpm["fpga1.pps_manager.sync_time_val"] = t0 + delay  # type: ignore
+        self.sync_time = sync_time  # type: ignore
+        self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
         self._start_polling_event.set()
 
     def set_lmc_integrated_download(

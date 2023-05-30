@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from datetime import datetime
 from typing import Any
 
 import pytest
@@ -23,8 +22,6 @@ from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.tile import TileSimulator, TpmDriver
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 # pylint: disable=too-many-arguments
@@ -181,7 +178,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.stop_communicating()
 
         # Assert
-        time.sleep(tpm_driver._poll_rate + 0.5)
+        time.sleep(tpm_driver._poll_rate * 2 + 0.5)
         tpm_driver._poll.assert_called_once()
 
     def test_poll_when_not_communicating(
@@ -710,10 +707,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time = tpm_driver.fpgas_time
         assert initial_time == final_time
 
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 4.0), RFC_FORMAT
-        )
-
+        start_time = int(time.time() + 4.0)
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
         tpm_driver.start_acquisition(start_time=start_time, delay=1)
 
@@ -1506,9 +1500,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         ):
             tpm_driver.send_data_samples("raw", **mocked_input_params)
 
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 3.0), RFC_FORMAT
-        )
+        start_time = int(time.time() + 3.0)
         tpm_driver.start_acquisition(start_time=start_time, delay=1)
 
         # we require timestamp to be in future

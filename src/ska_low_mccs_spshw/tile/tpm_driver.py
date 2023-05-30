@@ -2137,7 +2137,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
-        self: TpmDriver, start_time: Optional[str] = None, delay: Optional[int] = 2
+        self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
     ) -> bool:
         """
         Start data acquisition.

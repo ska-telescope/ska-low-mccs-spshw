@@ -36,7 +36,7 @@ from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingComponentManager[Callable, dict``]):
+class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingComponentManager[list, str]):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -135,6 +135,15 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
         # We'll count ticks upwards, but start at the maximum so that
         # our initial update request occurs as soon as possible.
         self._tick = self._max_tick
+        # Whether the board is busy running a command. Let's be
+        # extremely conservative here and assume that it is until we
+        # know that it isn't.
+        self._board_is_busy: Optional[bool] = True
+        self._active_callback: Optional[Callable] = None
+
+        self._attributes_to_write: dict[str, Any] = {}
+
+
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
         self._station_id = 0
@@ -199,7 +208,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
             f"Poll rate is {self._poll_rate}. "
             f"Attributes will be updated roughly each {self._max_tick} polls."
         )
-        self._polling_thread.start()  # doesn't start polling, only starts the thread
 
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
@@ -218,33 +226,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
         self._stop_polling_flag = True
         super.stop_communicating()
 
-    def _polling_loop(self: TpmDriver) -> None:
-        while True:
-            # block on "start" event
-            self._start_polling_event.wait()
-
-            # "start" event received; update state then poll until "stop" event received
-            self._stop_polling_event.clear()
-
-            # Is it useful?
-            # self.tile.enable_health_monitoring()
-
-            while not self._stop_polling_event.is_set():
-                self._poll()
-                self._stop_polling_event.wait(self._poll_rate)
-
-            # "stop" event received; update state, then back to top of loop i.e. block
-            # on "start" event
-            self.tpm_disconnected()
-            self._is_programmed = False
-            self._start_polling_event.clear()
-
     def polling_started(self:TpmDriver) -> Callable:
         if not(self.communication_state == CommunicationStatus.ESTABLISHED):
                 self.start_connection()
         return
-
-        self.start_connection()
 
     def start_connection(self: TpmDriver) -> None:
         """
@@ -304,7 +289,82 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
             # self._initialise()
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
-    def _update_attributes(self: TpmDriver) -> None:
+
+    def get_request(self: TpmDriver) -> dict:
+        """
+        Return the reads, writes and commands to be executed in the next poll.
+
+        :return: reads, writes and commands to be executed in the next
+            poll.
+        """
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            return None
+
+        self._tick += 1
+        self.logger.debug(f"Constructing request for next poll (tick {self._tick}).")
+
+        poll_request = list()
+
+        if self._tick > self._max_tick:
+            self.logger.debug(f"Tick {self._tick} >= {self._max_tick}.")
+            self.logger.debug("Adding queries.")
+            poll_request[1] = getattr(self,"_check_pll_locked")
+            poll_request[2] = getattr(self.tile,"get_health_status")
+            poll_request[3] = getattr(self.tile,"get_adc_rms")
+            poll_request[4] = getattr(self.tile,"check_pending_data_requests")
+            poll_request[5] = getattr(self.tile,"get_pps_delay")
+            poll_request[6] = getattr(self.tile,"beamformer_is_running")
+            poll_request[7] = getattr(self.tile,"get_phase_terminal_count")
+            poll_request[8] = getattr(self.tile,"get_adc_rms")
+            poll_request[9] = getattr(self,"_get_preadu_levels")
+            poll_request[10] = getattr(self,"_get_static_delays")
+            poll_request[11] = getattr(self.tile,"get_station_id")
+            poll_request[12] = getattr(self.tile,"get_tile_id")
+            poll_request[13] = getattr(self.tile.tpm.station_beamf[0],"get_channel_table")
+            self._tick = 0
+        self.logger.debug("Returning request for next poll.")
+        return poll_request
+
+    def poll(self: TpmDriver, poll_request: dict) -> dict:
+        """
+        Monitor tile connection to tpm.
+
+        :return: None
+        """
+        error_flag = False
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile[int(0x30000000)]
+                # pylint: disable=broad-except
+                except Exception as e:
+                    # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
+                # polling attempt succeeded
+                if not error_flag:
+                    self._update_attributes()
+            else:
+                self.logger.debug("Failed to acquire lock")
+        if error_flag:
+            self.tpm_disconnected()
+        return
+    
+    def tpm_disconnected(self: TpmDriver) -> None:
+        """Tile disconnected to tpm."""
+        self.logger.debug("Tile disconnecting from tpm.")
+        self._set_tpm_status(TpmStatus.UNCONNECTED)
+        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
+        while self.tile.tpm is not None:
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+                if acquired:
+                    self.tile.tpm = None
+            self.logger.warning("Failed to acquire hardware lock")
+            time.sleep(0.5)
+        self.logger.debug("Tile disconnected from tpm.")
+        self._update_communication_state(CommunicationStatus.DISABLED)
+
+    def _update_attributes(self: TpmDriver, poll_request: list) -> str:
         """Update key hardware attributes."""
         current_time = time.time()
         time_interval_1 = 5.0
@@ -317,43 +377,40 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
                 if (current_time - self._last_update_time_1) > time_interval_1:
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
-                    self._pll_locked = self._check_pll_locked()
-                    self._tile_health_structure = self.tile.get_health_status()
+                    self._pll_locked = poll_request[1]()
+                    self._tile_health_structure = poll_request[2]()
                     self._update_component_state(
                         tile_health_structure=self._tile_health_structure
                     )
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
-                    self._adc_rms = self.tile.get_adc_rms()
-                    self._pending_data_requests = (
-                        self.tile.check_pending_data_requests()
-                    )
+                    self._adc_rms = poll_request[3]()
+                    self._pending_data_requests = poll_request[4]()
                     # very slow update parameters. Should update by set commands
                     if (current_time - self._last_update_time_2) > time_interval_2:
                         self._last_update_time_2 = current_time
-                        self._pps_delay = self.tile.get_pps_delay()
-                        self._is_beamformer_running = self.tile.beamformer_is_running()
+                        self._pps_delay = poll_request[5]()
+                        self._is_beamformer_running = poll_request[6]()
                         self._fpga_reference_time = self.tile[
                             "fpga1.pps_manager.sync_time_val"
                         ]
-                        self._phase_terminal_count = (
-                            self.tile.get_phase_terminal_count()
-                        )
+                        self._phase_terminal_count = poll_request[7]()
                         # self._channeliser_truncation = method_to_be_written
                         # self._csp_rounding = method_to_be_written
-                        self._preadu_levels = self._get_preadu_levels()
-                        self._static_delays = self._get_static_delays()
-                        self._station_id = self.tile.get_station_id()
-                        self._tile_id = self.tile.get_tile_id()
-                        self._beamformer_table = self.tile.tpm.station_beamf[
-                            0
-                        ].get_channel_table()
+                        self._preadu_levels = poll_request[8]()
+                        self._static_delays = poll_request[10]()
+                        self._station_id = poll_request[11]()
+                        self._tile_id = poll_request[12]()
+                        self._beamformer_table = poll_request[13]()
+                        poll_response = "Polling successful"
+                        return poll_response
         # pylint: disable=broad-except
         except Exception as e:
-            self.logger.debug(f"Failed to update key hardware attributes: {e}")
+            self.logger.warning(f"Failed to update key hardware attributes: {e}")
 
         if not self._is_programmed:
+            poll_response = "Polling skipped: TPM is not programmed"
             self._pps_delay = 0
             self._fpga_reference_time = 0
             # self._beamformer_table = self.BEAMFORMER_TABLE
@@ -375,20 +432,54 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager, PollingC
             self._sysref_present = True
             self._pll_locked = True
             self._register_list = self.REGISTER_LIST
+            return poll_response
 
-    def tpm_disconnected(self: TpmDriver) -> None:
-        """Tile disconnected to tpm."""
-        self.logger.debug("Tile disconnecting from tpm.")
-        self._set_tpm_status(TpmStatus.UNCONNECTED)
-        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
-        while self.tile.tpm is not None:
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    self.tile.tpm = None
-            self.logger.warning("Failed to acquire hardware lock")
-            time.sleep(0.5)
-        self.logger.debug("Tile disconnected from tpm.")
-        self._update_communication_state(CommunicationStatus.DISABLED)
+    def poll_succeeded(self: TpmDriver, poll_response: str) -> None:
+        """
+        Handle the receipt of new polling values.
+
+        This is a hook called by the poller when values have been read
+        during a poll.
+
+        :param poll_response: response to the pool, including any values
+            read.
+        """
+        self.logger.info(
+            f"Handling results of successful poll: {poll_response}"
+        )
+        super().poll_succeeded(poll_response)
+
+        # TODO: We should be deciding on the fault state of this device,
+        # based on the values returned. For now, we just set it to
+        # False.
+        fault = False
+        self.logger.debug(f"Calculated fault status is {fault}.")
+        self.logger.debug("Pushing updates.")
+
+    def polling_stopped(self: TpmDriver) -> None:
+        """
+        Respond to polling having stopped.
+
+        This is a hook called by the poller when it stops polling.
+        """
+        self.logger.debug("Polling has stopped.")
+
+        # Set to max here so that if/when polling restarts, an update is
+        # requested as soon as possible.
+        self._tick = self._max_tick
+
+        self.tpm_disconnected()
+        self._is_programmed = False
+    
+    def poll_failed(self: TpmDriver, exc) -> None:
+        """
+        Respond to polling having stopped.
+
+        This is a hook called by the poller when it stops polling.
+        """
+        self.logger.warning(f"Polling has failed: {exc}")
+        self.tpm_disconnected()
+        
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:

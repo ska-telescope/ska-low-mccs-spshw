@@ -19,10 +19,12 @@ tpms:
       host: 10.0.10.218
       subrack: "1"
       subrack_bay: 2
+      test_config: 1
     13:
       host: 10.0.10.215
       subrack: "1"
       subrack_bay: 5
+      test_config: 1
 
 
 

@@ -95,7 +95,7 @@ affinity: {}
 
 ska-low-mccs-daq:
   storage:
-    name: daq-data
+  - name: daq-data
     size: "250Mi"
   receivers:
     1:

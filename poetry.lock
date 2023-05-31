@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "51637dc2b8fa6b60c5b24c7227627b8833bdca4a"
-resolved_reference = "51637dc2b8fa6b60c5b24c7227627b8833bdca4a"
+reference = "14712ee5d4ffe84e208476af70df03fdbb098dcb"
+resolved_reference = "14712ee5d4ffe84e208476af70df03fdbb098dcb"
 subdirectory = "python"
 [[package]]
 name = "anyio"
@@ -1322,8 +1322,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "7d2252937804f59b3bd647831ee0816e8736caef"
-resolved_reference = "7d2252937804f59b3bd647831ee0816e8736caef"
+reference = "67585a0fd8f72cac87f9d70d1f13113369e58a60"
+resolved_reference = "67585a0fd8f72cac87f9d70d1f13113369e58a60"
 
 [[package]]
 name = "pyflakes"
@@ -2430,4 +2430,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "51a77bc5468faed1d4a7bbfee4e4ce609792e922ae8886d5af63ba74b7231467"
+content-hash = "dd1f4977b40d8275949ee20f9fa7e5dec0faea3057af009c3f5a7b3336bcd305"

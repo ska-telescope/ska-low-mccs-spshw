@@ -273,7 +273,7 @@ def synchronise_the_station(
     for i in range(30):
         # tm = tm + 1
         print(t1.readregister("fpga1.pps_manager.curr_time_read_val"))
-        print(t1.readregister("fpga1.pps_manager.sync_time_val"))
+        print(t1.readregister("fpga1.pps_manager.sync_time_val123"))
         cur_time = int(t1.readregister("fpga1.pps_manager.curr_time_read_val")[0])
         start_time = int(t1.readregister("fpga1.pps_manager.sync_time_val")[0])
         print(

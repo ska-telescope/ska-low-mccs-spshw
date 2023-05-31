@@ -34,6 +34,16 @@ from ska_tango_testing.context import TangoContextProtocol
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
+@pytest.fixture(name="daq_name", scope="modle")
+def daq_name_fixture() -> str:
+    return "low-mccs/daqreceiver/001"
+
+@pytest.fixture(name="daq_device", scope="modle")
+def daq_device_fixture(
+    tango_harness: TangoContextProtocol,
+    daq_name: str,
+) -> tango.DeviceProxy:
+    return tango_harness.get_device(daq_name)
 
 @pytest.fixture(name="subrack_device", scope="module")
 def subrack_device_fixture(
@@ -181,6 +191,22 @@ def check_tiles_are_in_maintenance_and_on(
     for t in tile_device_list:
         assert t.adminMode == AdminMode.MAINTENANCE
 
+@given("a DAQ instance which is online")
+def check_daq_is_online(
+    daq_device: tango.DeviceProxy
+) -> None:
+    daq_device.adminMode = AdminMode.ONLINE
+    time.sleep(0.2)
+    assert daq_device.adminmode == AdminMode.ONLINE
+    daq_device.On()
+    x=0
+    while daq_device.state() != tango.DevState.ON:
+        x = x + 1
+        time.sleep(1)
+        if x > 60:
+            break
+    assert daq_device.state() == tango.DevState.ON
+    
 @given("the station is configured")
 def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
     """

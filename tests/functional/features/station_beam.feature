@@ -5,7 +5,7 @@ Feature: Test station pointing
         Given a station that is online
         And a subrack that is online
         And a set of tiles that are in maintenance
-        #And a DAQ instance which is online
+        And a DAQ instance which is online
         And the station is configured
         
         When the station and subcracks are turned on

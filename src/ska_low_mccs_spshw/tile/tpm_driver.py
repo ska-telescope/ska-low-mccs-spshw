@@ -227,7 +227,6 @@ class TpmDriver(
         """
         self.logger.debug("Stop communication with the TPM...")
         self._stop_polling_flag = True
-        super.stop_communicating()
 
     def polling_started(self: TpmDriver) -> None:
         """Check whether polling can be started."""
@@ -381,7 +380,30 @@ class TpmDriver(
         time_interval_2 = 30.0
         try:
             self._is_programmed = self.tile.is_programmed()
-            if self._is_programmed:
+            if not self._is_programmed:
+                self._pps_delay = 0
+                self._fpga_reference_time = 0
+                # self._beamformer_table = self.BEAMFORMER_TABLE
+                # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+                # self._csp_rounding = self.CSP_ROUNDING
+                # self._preadu_levels = [0] * 32
+                # self._static_delays = [0.0] * 32
+                self._is_programmed = False
+                self._is_beamformer_running = False
+                self._test_generator_active = False
+                self._pending_data_requests = False
+                self._arp_table = {}
+                self._fpgas_time = self.FPGAS_TIME
+                self._fpga_current_frame = 0
+                self._current_tile_beamformer_frame = 0
+                self._fpga_reference_time = 0
+                self._tile_health_structure["timing"]["pps"]["status"] = True
+                self._clock_present = True
+                self._sysref_present = True
+                self._pll_locked = True
+                self._register_list = self.REGISTER_LIST
+                poll_response = "Polling skipped: TPM is not programmed"
+            else:
                 self.logger.debug("Updating key hardware attributes...")
                 # slow update parameters
                 if (current_time - self._last_update_time_1) > time_interval_1:
@@ -413,36 +435,12 @@ class TpmDriver(
                         self._station_id = poll_request[11]()
                         self._tile_id = poll_request[12]()
                         self._beamformer_table = poll_request[13]()
-                        poll_response = "Polling successful"
-                        return poll_response
+                poll_response = "Polling successful"
+            return poll_response
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.warning(f"Failed to update key hardware attributes: {e}")
-
-        if not self._is_programmed:
-            poll_response = "Polling skipped: TPM is not programmed"
-            self._pps_delay = 0
-            self._fpga_reference_time = 0
-            # self._beamformer_table = self.BEAMFORMER_TABLE
-            # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-            # self._csp_rounding = self.CSP_ROUNDING
-            # self._preadu_levels = [0] * 32
-            # self._static_delays = [0.0] * 32
-            self._is_programmed = False
-            self._is_beamformer_running = False
-            self._test_generator_active = False
-            self._pending_data_requests = False
-            self._arp_table = {}
-            self._fpgas_time = self.FPGAS_TIME
-            self._fpga_current_frame = 0
-            self._current_tile_beamformer_frame = 0
-            self._fpga_reference_time = 0
-            self._tile_health_structure["timing"]["pps"]["status"] = True
-            self._clock_present = True
-            self._sysref_present = True
-            self._pll_locked = True
-            self._register_list = self.REGISTER_LIST
-            return poll_response
+            return e
 
     def poll_succeeded(self: TpmDriver, poll_response: str) -> None:
         """
@@ -479,13 +477,13 @@ class TpmDriver(
         self.tpm_disconnected()
         self._is_programmed = False
 
-    def poll_failed(self: TpmDriver, exc) -> None:
+    def poll_failed(self: TpmDriver, exc: Exception) -> None:
         """
         Respond to polling having failed.
 
         This is a hook called by the poller when it stops polling.
 
-        :param exc: exception that caused the failure.
+        :param exc: error that caused the failure.
         """
         self.logger.warning(f"Polling has failed: {exc}")
         self.tpm_disconnected()

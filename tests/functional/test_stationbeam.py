@@ -272,6 +272,7 @@ def check_test_generator_is_programmed(
 def synchronise_the_station(
     station_device: tango.DeviceProxy,
     tile_device_list: list[tango.DeviceProxy],
+    subrack_device: tango.DeviceProxy,
 ) -> None:
     """
     Synchronise the station.
@@ -300,6 +301,7 @@ def synchronise_the_station(
         # tm = tm + 1
         print(t1.GetRegisterList())
         print(t1.readregister("fpga1.pps_manager.sync_time_val"))
+        print(subrack_device.tpmPowers)
         cur_time = int(t1.readregister("fpga1.pps_manager.curr_time_read_val")[0])
         start_time = int(t1.readregister("fpga1.pps_manager.sync_time_val")[0])
         print(

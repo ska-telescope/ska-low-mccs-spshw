@@ -104,6 +104,8 @@ ska-low-mccs-daq:
       #grpc_ip: "10.128.16.50"
       #grpc_port: 50051
       storage: daq-data
-      server_node_selector: psi-node3
+      #server_node_selector: psi-node3
+  nodeSelector:
+    kubernetes.io/hostname: psi-node3
   
  

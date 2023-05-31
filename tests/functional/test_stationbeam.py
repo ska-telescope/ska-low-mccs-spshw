@@ -34,11 +34,11 @@ from ska_tango_testing.context import TangoContextProtocol
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-@pytest.fixture(name="daq_name", scope="modle")
+@pytest.fixture(name="daq_name", scope="module")
 def daq_name_fixture() -> str:
     return "low-mccs/daqreceiver/001"
 
-@pytest.fixture(name="daq_device", scope="modle")
+@pytest.fixture(name="daq_device", scope="module")
 def daq_device_fixture(
     tango_harness: TangoContextProtocol,
     daq_name: str,

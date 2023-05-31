@@ -198,6 +198,7 @@ class TpmDriver(
             fault=None,
             programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tile_health_structure,
+            adc_rms=self._adc_rms,
         )
 
         self._poll_rate = 2.0
@@ -271,6 +272,79 @@ class TpmDriver(
             )
             self.logger.debug("Tile disconnected from tpm.")
             time.sleep(10.0)
+
+    def _update_attributes(self: TpmDriver) -> None:
+        """Update key hardware attributes."""
+        current_time = time.time()
+        time_interval_1 = 5.0
+        time_interval_2 = 30.0
+        try:
+            self._is_programmed = self.tile.is_programmed()
+            if self._is_programmed:
+                self.logger.debug("Updating key hardware attributes...")
+                # slow update parameters
+                if (current_time - self._last_update_time_1) > time_interval_1:
+                    self._last_update_time_1 = current_time
+                    # self._clock_present = method_to_be_written
+                    self._pll_locked = self._check_pll_locked()
+                    self._tile_health_structure = self.tile.get_health_status()
+                    self._update_component_state(
+                        tile_health_structure=self._tile_health_structure
+                    )
+                # Commands checked only when initialised
+                # Potential crash if polled on a uninitialised board
+                if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
+                    self._adc_rms = self.tile.get_adc_rms()
+                    self._update_component_state(adc_rms=self._adc_rms)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+                    # very slow update parameters. Should update by set commands
+                    if (current_time - self._last_update_time_2) > time_interval_2:
+                        self._last_update_time_2 = current_time
+                        self._pps_delay = self.tile.get_pps_delay()
+                        self._is_beamformer_running = self.tile.beamformer_is_running()
+                        self._fpga_reference_time = self.tile[
+                            "fpga1.pps_manager.sync_time_val"
+                        ]
+                        self._phase_terminal_count = (
+                            self.tile.get_phase_terminal_count()
+                        )
+                        # self._channeliser_truncation = method_to_be_written
+                        # self._csp_rounding = method_to_be_written
+                        self._preadu_levels = self._get_preadu_levels()
+                        self._static_delays = self._get_static_delays()
+                        self._station_id = self.tile.get_station_id()
+                        self._tile_id = self.tile.get_tile_id()
+                        self._beamformer_table = self.tile.tpm.station_beamf[
+                            0
+                        ].get_channel_table()
+        # pylint: disable=broad-except
+        except Exception as e:
+            self.logger.debug(f"Failed to update key hardware attributes: {e}")
+
+        if not self._is_programmed:
+            self._pps_delay = 0
+            self._fpga_reference_time = 0
+            # self._beamformer_table = self.BEAMFORMER_TABLE
+            # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
+            # self._csp_rounding = self.CSP_ROUNDING
+            # self._preadu_levels = [0] * 32
+            # self._static_delays = [0.0] * 32
+            self._is_programmed = False
+            self._is_beamformer_running = False
+            self._test_generator_active = False
+            self._pending_data_requests = False
+            self._arp_table = {}
+            self._fpgas_time = self.FPGAS_TIME
+            self._fpga_current_frame = 0
+            self._current_tile_beamformer_frame = 0
+            self._fpga_reference_time = 0
+            self._tile_health_structure["timing"]["pps"]["status"] = True
+            self._clock_present = True
+            self._sysref_present = True
+            self._pll_locked = True
+            self._register_list = self.REGISTER_LIST
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
@@ -453,7 +527,6 @@ class TpmDriver(
             read.
         """
         self.logger.info(f"Handling results of successful poll: {poll_response}")
-        super().poll_succeeded(poll_response)
 
         # TODO: We should be deciding on the fault state of this device,
         # based on the values returned. For now, we just set it to
@@ -1350,7 +1423,7 @@ class TpmDriver(
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
 
-        :param mode: "1g" or "10g"
+        :param mode: "1G" or "10G"
         :param payload_length: SPEAD payload length for integrated
             channel data, defaults to 1024
         :param dst_ip: destination IP, defaults to None
@@ -2295,7 +2368,7 @@ class TpmDriver(
         """
         Configure link and size of control data.
 
-        :param mode: '1g' or '10g'
+        :param mode: '1G' or '10G'
         :param channel_payload_length: SPEAD payload length for
             integrated channel data
         :param beam_payload_length: SPEAD payload length for integrated

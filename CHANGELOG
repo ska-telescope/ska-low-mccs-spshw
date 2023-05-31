@@ -2,6 +2,15 @@
 
 ## unreleased
 
+## 0.5.0
+
+* [MCCS-1412] Chart fixes and improvements
+* [MCCS-1390] Add rules for Tile health
+* [MCCS-1388] Add rules for SpsStation Health
+* [MCCS-1493] Bugfix: correct lmc_param keys
+* [MCCS-1408] new AAVS3 and Low-ITF facility spec
+* [MCCS-1501] chart template bugfix
+
 ## 0.4.0
 
 * [MCCS-1495] Inline facility data

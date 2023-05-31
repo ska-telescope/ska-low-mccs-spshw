@@ -620,7 +620,7 @@ class TestStaticSimulatorCommon:
         :param mocker: fixture that wraps unittest.mock
         :param tile: the tile class object under test.
         """
-        tile.set_lmc_download("10g", 1024, "10.0.10.1")
+        tile.set_lmc_download("10G", 1024, "10.0.10.1")
 
     @pytest.mark.parametrize(
         ("command_name", "implemented"),

@@ -43,9 +43,9 @@ server:
 depends_on:
   - device: sys/database/2
 image:
-{{- with .Values.low_mccs_spshw.image}}
+{{- with .Values.image}}
   registry: {{.registry | quote}}
-  image: {{.image | quote}}
+  image: {{.name | quote}}
   tag: {{.tag | quote}}
   pullPolicy: {{.pullPolicy | quote}}
 {{- end}}

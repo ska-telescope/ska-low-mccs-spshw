@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -5,14 +6,13 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-
 """This module provides a Tango device for a PSI-Low subrack."""
 from __future__ import annotations
 
 import importlib
 import json
 import logging
-from typing import Any, Final, Optional
+from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
@@ -56,6 +56,7 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         self: SetSubrackFanSpeedCommand,
         command_tracker: CommandTrackerProtocol,
         component_manager: BaseComponentManager,
+        fan_speed_set: Callable,
         logger: Optional[logging.Logger] = None,
     ) -> None:
         """
@@ -64,9 +65,11 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         :param command_tracker: the device's command tracker
         :param component_manager: the component manager on which this
             command acts.
+        :param fan_speed_set: callback to be called when fan speed is set.
         :param logger: a logger for this command to use.
         """
         validator = JsonValidator("SetSubrackFanSpeed", self.SCHEMA, logger)
+        self._fan_speed_set = fan_speed_set
         super().__init__(
             "SetSubrackFanSpeed",
             command_tracker,
@@ -102,6 +105,8 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
+
+        self._fan_speed_set(subrack_fan_id, speed_percent)
 
         return super().do(subrack_fan_id, speed_percent)
 
@@ -256,7 +261,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
         return super().do(power_supply_fan_id, speed_percent)
 
 
-# pylint: disable=too-many-public-methods
+# pylint: disable=too-many-public-methods, too-many-instance-attributes
 class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of the PSI-Low subrack."""
 
@@ -306,6 +311,10 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         self._hardware_attributes: dict[str, Any] = {}
 
+        self._desired_fan_speeds: list[float] = [0.0] * 4
+        self.clock_presence: list[str] = []
+        self._update_health_data()
+
     # ----------
     # Properties
     # ----------
@@ -325,7 +334,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
             :param args: additional positional arguments; unused here
             :param kwargs: additional keyword arguments; unused here
-
             :return: a resultcode, message tuple
             """
             self._device._tpm_present = None
@@ -393,7 +401,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                 ),
             )
         for (command_name, command_class) in [
-            ("SetSubrackFanSpeed", SetSubrackFanSpeedCommand),
             ("SetSubrackFanMode", SetSubrackFanModeCommand),
             ("SetPowerSupplyFanSpeed", SetPowerSupplyFanSpeedCommand),
         ]:
@@ -403,6 +410,19 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                     self._command_tracker, self.component_manager, logger=self.logger
                 ),
             )
+        self.register_command_object(
+            "SetSubrackFanSpeed",
+            SetSubrackFanSpeedCommand(
+                self._command_tracker,
+                self.component_manager,
+                self._fan_speed_set,
+                logger=self.logger,
+            ),
+        )
+
+    def _fan_speed_set(self: MccsSubrack, fan_id: int, fan_speed_set: float) -> None:
+        self._desired_fan_speeds[fan_id] = fan_speed_set
+        self._update_health_data()
 
     # ----------
     # Commands
@@ -534,6 +554,26 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     # ----------
     # Attributes
     # ----------
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def healthModelParams(self: MccsSubrack) -> str:
+        """
+        Get the health params from the health model.
+
+        :return: the health params
+        """
+        return json.dumps(self._health_model.health_params)
+
+    @healthModelParams.write  # type: ignore[no-redef]
+    def healthModelParams(self: MccsSubrack, argin: str) -> None:
+        """
+        Set the params for health transition rules.
+
+        :param argin: JSON-string of dictionary of health states
+        """
+        self._health_model.health_params = json.loads(argin)
 
     @attribute(dtype=int, label="TPM count", abs_change=1)
     def tpmCount(self: MccsSubrack) -> int:
@@ -647,6 +687,19 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._backplane_temperatures()
+
+    def _backplane_temperatures(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the subrack backplane temperature.
+
+        Two values are returned, respectively for the first (bays 1-4)
+        and second (bays 5-8) halves of the backplane.
+
+        :return: the backplane temperatures.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("backplaneTemperatures", None) or []
 
     @attribute(
@@ -657,6 +710,18 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         abs_change=0.1,
     )
     def boardTemperatures(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the subrack board temperature.
+
+        Two values are returned.
+
+        :return: the board temperatures.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._board_temperatures()
+
+    def _board_temperatures(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack board temperature.
 
@@ -683,6 +748,18 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._board_current()
+
+    def _board_current(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of subrack management board current.
+
+        Total current provided by the two power supplies.
+
+        :return: total board current, in a list of length 1.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("boardCurrent", None) or []
 
     @attribute(
@@ -692,7 +769,17 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the power supply currents.
 
-        :return: the power supply fan speeds.
+        :return: the power supply currents.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._power_supply_currents()
+
+    def _power_supply_currents(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply currents.
+
+        :return: the power supply currents.
             When communication with the subrack is not established,
             this returns an empty list.
         """
@@ -702,6 +789,18 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         dtype=(float,), max_dim_x=3, label="power supply fan speeds", abs_change=0.1
     )
     def powerSupplyFanSpeeds(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply fan speeds.
+
+        Values expressed in percent of maximum.
+
+        :return: the power supply fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._powersupply_fan_speeds()
+
+    def _powersupply_fan_speeds(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the power supply fan speeds.
 
@@ -722,6 +821,16 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._power_supply_powers()
+
+    def _power_supply_powers(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply powers.
+
+        :return: the power supply powers.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("powerSupplyPowers", None) or []
 
     @attribute(
@@ -735,10 +844,30 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._power_supply_voltages()
+
+    def _power_supply_voltages(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the power supply voltages.
+
+        :return: the power supply voltages.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("powerSupplyVoltages", None) or []
 
     @attribute(dtype=(float,), max_dim_x=4, label="subrack fan speeds", abs_change=0.1)
     def subrackFanSpeeds(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in RPM.
+
+        :return: the subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._subrack_fan_speeds()
+
+    def _subrack_fan_speeds(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the subrack fan speeds, in RPM.
 
@@ -790,10 +919,30 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._tpm_currents()
+
+    def _tpm_currents(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the TPM currents.
+
+        :return: the TPM currents.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("tpmCurrents", None) or []
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM powers", abs_change=0.1)
     def tpmPowers(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the TPM powers.
+
+        :return: the TPM powers.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
+        return self._tpm_powers()
+
+    def _tpm_powers(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM powers.
 
@@ -817,6 +966,14 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM voltages", abs_change=0.1)
     def tpmVoltages(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the TPM voltages.
+
+        :return: the TPM voltages
+        """
+        return self._tpm_voltages()
+
+    def _tpm_voltages(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the TPM voltages.
 
@@ -878,6 +1035,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
+        self._update_health_data()
 
     def _health_changed(self: MccsSubrack, health: HealthState) -> None:
         """
@@ -901,6 +1059,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         else:
             self._hardware_attributes["boardCurrent"] = [board_current]
             self.push_change_event("boardCurrent", [board_current])
+        self._update_health_data()
 
     def _update_tpm_present(
         self: MccsSubrack, tpm_present: Optional[list[bool]]
@@ -917,6 +1076,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             return
         self._tpm_count = tpm_count
         self.push_change_event("tpmCount", tpm_count)
+        self._update_health_data()
 
     def _update_tpm_on_off(self: MccsSubrack, tpm_on_off: Optional[list[bool]]) -> None:
         if tpm_on_off is None:
@@ -930,10 +1090,31 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _update_tpm_power_states(
         self: MccsSubrack, tpm_power_states: list[PowerState]
     ) -> None:
+        changed = False
         for index, power_state in enumerate(tpm_power_states):
             if self._tpm_power_states[index] != power_state:
+                changed = True
                 self._tpm_power_states[index] = power_state
                 self.push_change_event(f"tpm{index+1}PowerState", power_state)
+        if changed:
+            self._update_health_data()
+
+    def _update_health_data(self: MccsSubrack) -> None:
+        """Update the data points for the health model."""
+        data = {
+            "board_temps": self._board_temperatures(),
+            "backplane_temps": self._backplane_temperatures(),
+            "subrack_fan_speeds": self._subrack_fan_speeds(),
+            "board_currents": self._board_current(),
+            "tpm_currents": self._tpm_currents(),
+            "power_supply_currents": self._power_supply_currents(),
+            "tpm_voltages": self._tpm_voltages(),
+            "power_supply_voltages": self._power_supply_voltages(),
+            "tpm_power_states": self._tpm_power_states,
+            "desired_fan_speeds": self._desired_fan_speeds,
+            "clock_reqs": self.clock_presence,
+        }
+        self._health_model.update_data(data)
 
 
 # ----------

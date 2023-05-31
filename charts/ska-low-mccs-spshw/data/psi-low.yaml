@@ -14,17 +14,17 @@ tpms:
   reachable_from: psi-node3
   version: tpm_v1_6
   port: 10000
+  test_config: 1
   instances:
     10:
       host: 10.0.10.218
       subrack: "1"
       subrack_bay: 2
-      test_config: 1
     13:
       host: 10.0.10.215
       subrack: "1"
       subrack_bay: 5
-      test_config: 1
+      
 
 
 

@@ -100,7 +100,7 @@ ska-low-mccs-daq:
   receivers:
     1:
       receiver_interface: eth0
-      receiver_ip: ""
+      receiver_ip: "10.0.0.98"
       #grpc_ip: "10.128.16.50"
       #grpc_port: 50051
       storage: daq-data

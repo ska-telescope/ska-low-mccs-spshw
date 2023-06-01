@@ -239,6 +239,20 @@ class TileData:
                         "lane3": None,
                     },
                 },
+                "decode_error_count": {
+                    "FPGA0": {
+                        "lane0": None,
+                        "lane1": None,
+                        "lane2": None,
+                        "lane3": None,
+                    },
+                    "FPGA1": {
+                        "lane0": None,
+                        "lane1": None,
+                        "lane2": None,
+                        "lane3": None,
+                    },
+                },
             },
         },
         "dsp": {

@@ -291,6 +291,17 @@ tpm_monitoring_points:
           lane1: 0
           lane2: 0
           lane3: 0
+      decode_error_count:
+        FPGA0:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
+        FPGA1:
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
       linkup_loss_count:
         FPGA0: 0
         FPGA1: 0

@@ -14,5 +14,6 @@ Subrack subpackage
   Subrack device<subrack_device>
   Subrack driver<subrack_driver>
   Subrack health model<subrack_health_model>
+  Subrack health rules<subrack_health_rules>
   Subrack simulator server<subrack_simulator_server>
   Subrack simulator<subrack_simulator>

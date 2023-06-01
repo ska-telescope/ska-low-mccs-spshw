@@ -873,7 +873,6 @@ class SpsStationComponentManager(
         """
         return self._is_configured
 
-    # :TODO: Most methods just return a dummy value
     # ----------
     # Attributes
     # ----------

@@ -18,6 +18,7 @@ import logging
 import threading
 import time
 from datetime import datetime, timezone
+from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
 import tango
@@ -402,12 +403,6 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.STANDBY
             else:
                 evaluated_power_state = PowerState.UNKNOWN
-            self.logger.info(
-                "In SpsStationComponentManager._evaluatePowerState with:\n"
-                f"\tsubracks: {self._subrack_power_states.values()}\n"
-                f"\ttiles: {self._tile_power_states.values()}\n"
-                f"\tresult: {str(evaluated_power_state)}"
-            )
             self._update_component_state(power=evaluated_power_state)
 
     def set_power_state(
@@ -1079,7 +1074,10 @@ class SpsStationComponentManager(
 
         :return: True if all TPMs are programmed
         """
-        return True
+        return all(
+            programming_state in {"Programmed", "Initialised", "Synchronised"}
+            for programming_state in self.tile_programming_state()
+        )
 
     @property
     def test_generator_active(self: SpsStationComponentManager) -> bool:
@@ -1088,7 +1086,10 @@ class SpsStationComponentManager(
 
         :return: True if at least one TPM uses test generator
         """
-        return False
+        return any(
+            tile._proxy is not None and tile._proxy.testGeneratorActive
+            for tile in self._tile_proxies.values()
+        )
 
     @property
     def is_beamformer_running(self: SpsStationComponentManager) -> bool:
@@ -1097,7 +1098,10 @@ class SpsStationComponentManager(
 
         :return: Get station beamformer state
         """
-        return False
+        return all(
+            tile._proxy is not None and tile._proxy.isBeamformerRunning
+            for tile in self._tile_proxies.values()
+        )
 
     def tile_programming_state(self: SpsStationComponentManager) -> list[str]:
         """
@@ -1120,7 +1124,7 @@ class SpsStationComponentManager(
         rms_values: list[float] = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            rms_values = rms_values + proxy._proxy.AdcPower
+            rms_values = rms_values + proxy._proxy.adcPower
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
@@ -1129,7 +1133,15 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of board temperatures
         """
-        return [35.0, 35.0, 35.0]
+        board_temperatures = list(
+            tile._proxy is not None and tile._proxy.boardTemperature
+            for tile in self._tile_proxies.values()
+        )
+        return [
+            min(board_temperatures),
+            mean(board_temperatures),
+            max(board_temperatures),
+        ]
 
     def fpga_temperature_summary(self: SpsStationComponentManager) -> list[float]:
         """
@@ -1137,7 +1149,11 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        return [35.0, 35.0, 35.0]
+        fpga_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpgaTemperature
+            for tile in self._tile_proxies.values()
+        )
+        return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
         """
@@ -1145,7 +1161,11 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of PPS delays
         """
-        return [0.0, 0.0, 0.0]
+        pps_delays = list(
+            tile._proxy is not None and tile._proxy.ppsDelay
+            for tile in self._tile_proxies.values()
+        )
+        return [min(pps_delays), mean(pps_delays), max(pps_delays)]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1153,15 +1173,21 @@ class SpsStationComponentManager(
 
         :return: TRUE if SYSREF is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.sysrefPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
         """
         Get summary of PLL lock state.
 
-        :return: TRUE if SYSREF is present in all tiles
+        :return: TRUE if PLL locked in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.pllLocked
+            for tile in self._tile_proxies.values()
+        )
 
     def pps_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1169,7 +1195,10 @@ class SpsStationComponentManager(
 
         :return: TRUE if PPS is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.ppsPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1177,7 +1206,10 @@ class SpsStationComponentManager(
 
         :return: TRUE if 10 MHz clock is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.clockPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
         """

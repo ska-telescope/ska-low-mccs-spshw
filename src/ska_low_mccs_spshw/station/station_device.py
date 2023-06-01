@@ -940,7 +940,7 @@ class SpsStation(SKAObsDevice):
         return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
 
     @command(
-        dtype_in="DevVarLongArray",
+        dtype_in="DevVarDoubleArray",
         dtype_out="DevVarLongStringArray",
     )
     def LoadCalibrationCoefficients(

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*
+# pylint: disable=too-many-arguments
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -14,6 +15,7 @@ import time
 from typing import Any, Callable, Generator
 from unittest.mock import PropertyMock
 
+import numpy as np
 import pytest
 from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.context import (
@@ -57,6 +59,16 @@ def station_name_fixture() -> str:
     return "low-mccs/sps_station/001"
 
 
+@pytest.fixture(name="station_cabinet_network_address", scope="session")
+def station_cabinet_network_address_fixture() -> str:
+    """
+    Return the station cabinet network address.
+
+    :return: the station cabinet network address
+    """
+    return "10.0.0.0"
+
+
 @pytest.fixture(name="tango_harness")
 def tango_harness_fixture(  # pylint: disable=too-many-arguments
     station_name: str,
@@ -65,6 +77,7 @@ def tango_harness_fixture(  # pylint: disable=too-many-arguments
     mock_subrack: DeviceProxy,
     tile_names: list[str],
     mock_tiles: list[DeviceProxy],
+    station_cabinet_network_address: str,
 ) -> Generator[TangoContextProtocol, None, None]:
     """
     Return a Tango harness against which to run tests of the deployment.
@@ -78,6 +91,8 @@ def tango_harness_fixture(  # pylint: disable=too-many-arguments
     :param tile_names: the names of the tile Tango devices
     :param mock_tiles: mock tile proxies that have been configured with
         the required tile behaviours.
+    :param station_cabinet_network_address: the station cabinet network
+        address
 
     :yields: a tango context.
     """
@@ -88,7 +103,7 @@ def tango_harness_fixture(  # pylint: disable=too-many-arguments
         StationId=0,
         TileFQDNs=tile_names,
         SubrackFQDNs=[subrack_name],
-        CabinetNetworkAddress="10.0.0.0",
+        CabinetNetworkAddress=station_cabinet_network_address,
     )
     context_manager.add_mock_device(subrack_name, mock_subrack)
     for i, name in enumerate(tile_names):
@@ -417,6 +432,13 @@ def test_healthParams(
             False,
         ),
         pytest.param(
+            "SetBeamFormerTable",
+            [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102],
+            "SetBeamformerRegions",
+            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102],
+            False,
+        ),
+        pytest.param(
             "SetLmcIntegratedDownload",
             json.dumps({"destination_ip": "127.0.0.1"}),
             "SetLmcIntegratedDownload",
@@ -447,6 +469,13 @@ def test_healthParams(
             ),
             True,
         ),
+        pytest.param(
+            "LoadCalibrationCoefficients",
+            [2, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4],
+            "LoadCalibrationCoefficients",
+            [3.2, 4.3, 6.1, 6.6, 10.2, 8.8, 4.4],
+            False,
+        ),
     ],
 )
 def test_station_tile_commands(
@@ -457,14 +486,14 @@ def test_station_tile_commands(
     tile_command: str,
     tile_command_args: Any,
     tile_command_args_json_dict: bool,
-):
+) -> None:
     """
     Tests of station commands calling the corresponding command on Tile.
 
     :param station_device: The station device to use
     :param command: The command to call on the station
     :param command_args: The arguments to call the command with
-    :param mock_tile: The mock for the tile to verify commands being called
+    :param mock_tiles: The mock for the tiles to verify commands being called
     :param tile_command: The expected command to be called on the tile
     :param tile_command_args: The expected arguments for the command on the tile
     :param tile_command_args_json_dict: True if the arguments for the tile command are
@@ -473,7 +502,7 @@ def test_station_tile_commands(
         cannot be directly compared, since Python dictionaries are not ordered. The
         expected arguments parameter should be a json dictionary.
     """
-    station_device.adminMode = AdminMode.ONLINE
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
 
     # Some commands require tile programming state to be Initialised or Synchronised
     mock_tiles[0].tileProgrammingState = "Synchronised"
@@ -504,8 +533,29 @@ def test_station_tile_commands(
         assert json.loads(tile_command_args) == json.loads(
             tile_command_mock.call_args[0][0]
         )
+    elif isinstance(tile_command_args, list):
+        assert tile_command_args == list(tile_command_mock.call_args[0][0])
     else:
         assert tile_command_args == tile_command_mock.call_args[0][0]
+
+
+def test_SetCspIngest(station_device: SpsStation) -> None:
+    """
+    Test of the SetCspIngest command.
+
+    :param station_device: The station device to use
+    """
+    station_device.SetCspIngest(
+        json.dumps(
+            {
+                "destination_ip": "123.123.234.234",
+                "destination_port": 1234,
+                "source_port": 2345,
+            }
+        )
+    )
+    assert station_device.cspIngestAddress == "123.123.234.234"
+    assert station_device.cspIngestPort == 1234
 
 
 def test_isCalibrated(station_device: SpsStation) -> None:
@@ -524,6 +574,18 @@ def test_isConfigured(station_device: SpsStation) -> None:
     :param station_device: The station device to use
     """
     assert not station_device.isConfigured
+
+
+def test_fortyGbNetworkAddress(
+    station_device: SpsStation, station_cabinet_network_address: str
+) -> None:
+    """
+    Test of the fortyGbNetworkAddress attribute.
+
+    :param station_device: The station device to use
+    :param station_cabinet_network_address: the station network cabinet address
+    """
+    assert station_device.fortyGbNetworkAddress == station_cabinet_network_address
 
 
 @pytest.mark.parametrize(
@@ -574,8 +636,13 @@ def test_rw_attributes(
     :param mock_tiles: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
+    :param attribute: the attribute on the station to use
+    :param data: the data to set to the station attribute, as a function of the number
+        of tiles
+    :param tile_data: the expected value for the attribute to take on the tile, as a
+        function of the tile number in the list of tile mocks.
     """
-    station_device.adminMode = AdminMode.ONLINE
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     rounding_mocks = [PropertyMock() for _ in range(num_tiles)]
     for i, tile in enumerate(mock_tiles):
         tile.tileProgrammingState = "Synchronised"
@@ -586,3 +653,181 @@ def test_rw_attributes(
     for i in range(num_tiles):
         assert all(rounding_mocks[i].call_args[0][0] == tile_data(i))
     assert all(getattr(station_device, attribute) == data(num_tiles))
+
+
+def test_beamformerTable(
+    station_device: SpsStation,
+) -> None:
+    """
+    Test the beamformerTable attribute.
+
+    :param station_device: The station device to use
+    """
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
+    assert np.all(
+        station_device.beamformerTable
+        == np.array([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
+    )
+
+
+@pytest.mark.parametrize(
+    [
+        "attribute_name",
+        "tile_attribute_name",
+        "init_tile_attribute_values",
+        "init_expected_value",
+        "final_tile_attribute_values",
+        "final_expected_value",
+    ],
+    [
+        pytest.param(
+            "isProgrammed",
+            "tileProgrammingState",
+            lambda i: "Unconnected" if i % 2 == 0 else "Off",
+            lambda _: False,
+            lambda i: "Synchronised" if i % 2 == 0 else "Programmed",
+            lambda _: True,
+        ),
+        pytest.param(
+            "testGeneratorActive",
+            "testGeneratorActive",
+            lambda _: False,
+            lambda _: False,
+            lambda i: i == 0,
+            lambda _: True,
+        ),
+        pytest.param(
+            "isBeamformerRunning",
+            "isBeamformerRunning",
+            lambda i: i % 2 == 0,
+            lambda _: False,
+            lambda _: True,
+            lambda _: True,
+        ),
+        pytest.param(
+            "tileProgrammingState",
+            "tileProgrammingState",
+            lambda i: "Unconnected" if i % 2 == 0 else "Off",
+            lambda n: ["Unconnected", "Off"] * int(n / 2)
+            + ([] if n % 2 == 0 else ["Unconnected"]),
+            lambda i: "Synchronised" if i % 2 == 0 else "Programmed",
+            lambda n: ["Synchronised", "Programmed"] * int(n / 2)
+            + ([] if n % 2 == 0 else ["Synchronised"]),
+        ),
+        pytest.param(
+            "adcPower",
+            "adcPower",
+            lambda i: [(32 * i) + m for m in range(32)],
+            lambda n: list(range(32 * n)),
+            lambda i: [-m - (32 * i) for m in range(32)],
+            lambda n: [-m for m in range(32 * n)],
+        ),
+        pytest.param(
+            "boardTemperaturesSummary",
+            "boardTemperature",
+            lambda i: i,
+            lambda n: [0, (n - 1) / 2, n - 1],
+            lambda i: 2 * i,
+            lambda n: [0, (2 * (n - 1)) / 2, 2 * (n - 1)],
+        ),
+        pytest.param(
+            "fpgaTemperaturesSummary",
+            "fpgaTemperature",
+            lambda i: 2 * i,
+            lambda n: [0, (2 * (n - 1)) / 2, 2 * (n - 1)],
+            lambda i: i,
+            lambda n: [0, (n - 1) / 2, n - 1],
+        ),
+        pytest.param(
+            "ppsDelaySummary",
+            "ppsDelay",
+            lambda i: i,
+            lambda n: [0, (n - 1) / 2, n - 1],
+            lambda i: 2 * i,
+            lambda n: [0, (2 * (n - 1)) / 2, 2 * (n - 1)],
+        ),
+        pytest.param(
+            "sysrefPresentSummary",
+            "sysrefPresent",
+            lambda i: not i % 2 == 0,
+            lambda _: False,
+            lambda _: True,
+            lambda _: True,
+        ),
+        pytest.param(
+            "pllLockedSummary",
+            "pllLocked",
+            lambda i: i % 2 == 0,
+            lambda _: False,
+            lambda _: True,
+            lambda _: True,
+        ),
+        pytest.param(
+            "ppsPresentSummary",
+            "ppsPresent",
+            lambda i: not i % 2 == 0,
+            lambda _: False,
+            lambda _: True,
+            lambda _: True,
+        ),
+        pytest.param(
+            "clockPresentSummary",
+            "clockPresent",
+            lambda i: i % 2 == 0,
+            lambda _: False,
+            lambda _: True,
+            lambda _: True,
+        ),
+        pytest.param(
+            "fortyGbNetworkErrors",
+            "fortyGbNetworkErrors",
+            lambda _: 0,
+            lambda n: [0] * 2 * n,
+            lambda _: 1,
+            lambda n: [0] * 2 * n,
+        ),
+    ],
+)
+def test_station_tile_attributes(
+    station_device: SpsStation,
+    mock_tiles: list[DeviceProxy],
+    num_tiles: int,
+    attribute_name: str,
+    tile_attribute_name: str,
+    init_tile_attribute_values: Callable[[int], Any],
+    init_expected_value: Callable[[int], Any],
+    final_tile_attribute_values: Callable[[int], Any],
+    final_expected_value: Callable[[int], Any],
+) -> None:
+    """
+    Test of attributes which aggregate tile attributes.
+
+    :param station_device: The station device to use
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    :param attribute_name: the attribute to access on the station
+    :param tile_attribute_name: the attribute on the tile that is accessed
+    :param init_tile_attribute_values: the initial value that the tile attributes
+        should take. This is a callable that takes in the number of the tile in the
+        list of tiles and returns the value, so that different tiles can take different
+        values.
+    :param init_expected_value: the initial expected value of the station attribute, as
+        a function of the number of tiles in the station.
+    :param final_tile_attribute_values: the final value that the tile attributes
+        should take.
+    :param final_expected_value: the final expected value of the station attribute, as
+        a function of the number of tiles in the station.
+    """
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    for i, tile in enumerate(mock_tiles):
+        setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
+    assert getattr(station_device, attribute_name) == pytest.approx(
+        init_expected_value(num_tiles)
+    )
+    for i, tile in enumerate(mock_tiles):
+        setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
+    assert getattr(station_device, attribute_name) == pytest.approx(
+        final_expected_value(num_tiles)
+    )

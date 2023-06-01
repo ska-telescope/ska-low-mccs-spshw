@@ -128,7 +128,7 @@ class TileHealthRules(HealthRules):
                 )
             else:
                 if monitoring_points[p] is None:
-                    states[p] = HealthState.OK
+                    states[p] = HealthState.UNKNOWN
                 elif isinstance(min_max[p], dict):
                     states[p] = (
                         HealthState.OK

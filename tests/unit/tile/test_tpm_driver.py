@@ -170,6 +170,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Act
         tpm_driver._start_polling_event.set()
+        time.sleep(tpm_driver._poll_rate / 1.1)
 
         # Assert
         tpm_driver._poll.assert_called_once()
@@ -177,8 +178,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Act
         tpm_driver.stop_communicating()
 
-        # Assert
-        time.sleep(tpm_driver._poll_rate * 2 + 0.5)
+        # Assert no more calls after the stop communicating
+        time.sleep(tpm_driver._poll_rate * 2 + 1.5)
         tpm_driver._poll.assert_called_once()
 
     def test_poll_when_not_communicating(
@@ -689,6 +690,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test the start acquisition function.
@@ -696,26 +698,54 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tpm_driver: The tpm driver under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
+        :param callbacks: dictionary of mock callbacks
         """
         # setup mocked tile.
         tile_simulator.connect()
         tpm_driver._is_programmed = True
 
+        # -------------------------
+        # First Initialse the Tile.
+        # -------------------------
         # check the fpga time is not moving
         initial_time = tpm_driver.fpgas_time
-        time.sleep(1)
+        time.sleep(1.5)
         final_time = tpm_driver.fpgas_time
         assert initial_time == final_time
 
-        start_time = int(time.time() + 4.0)
-        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
-        tpm_driver.start_acquisition(start_time=start_time, delay=1)
+        # Act
+        tpm_driver.initialise(task_callback=callbacks["task"])
+
+        # Assert
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
+        )
 
         # check the fpga time is moving
-        initial_time = tpm_driver.fpgas_time
-        time.sleep(1)
-        final_time = tpm_driver.fpgas_time
-        assert initial_time != final_time
+        initial_time1 = tpm_driver.fpgas_time
+        time.sleep(1.5)
+        final_time1 = tpm_driver.fpgas_time
+        assert initial_time1 != final_time1
+
+        # check the fpga timestamp is not moving
+        initial_time2 = tpm_driver.fpga_current_frame
+        time.sleep(1.5)
+        final_time2 = tpm_driver.fpga_current_frame
+        assert initial_time2 == final_time2
+        # ---------------------------------------------------------
+        # Call start_acquisition and check fpga_timestamp is moving
+        # ---------------------------------------------------------
+        start_time = int(time.time() + 4.0)
+        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
+        tpm_driver.start_acquisition(start_time=start_time, delay=1)
+
+        # check the fpga timestamp is moving
+        initial_time3 = tpm_driver.fpga_current_frame
+        time.sleep(1.5)
+        final_time3 = tpm_driver.fpga_current_frame
+        assert initial_time3 != final_time3
         assert tpm_driver._tpm_status == TpmStatus.SYNCHRONISED
 
         # Check that exceptions are handled.
@@ -957,16 +987,22 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         * Initialise called on a programmed TPM
         * Initialise called on a unprogrammed TPM
         """
-        # -------------------------------------
-        # Initialise called on a programmed TPM
-        # -------------------------------------
-
-        # Arrange
+        # setup mocked tile.
         tile_simulator.connect()
-        assert tile_simulator.tpm
-        assert tile_simulator.tpm._is_programmed is True
+        tpm_driver._is_programmed = True
 
-        # Act
+        # check the fpga time is not moving
+        initial_time = tpm_driver.fpgas_time
+        time.sleep(1.5)
+        final_time = tpm_driver.fpgas_time
+        assert initial_time == final_time
+
+        # check the fpga timestamp is not moving
+        initial_time1 = tpm_driver.fpga_current_frame
+        time.sleep(1)
+        final_time1 = tpm_driver.fpga_current_frame
+        assert initial_time1 == final_time1
+
         tpm_driver.initialise(task_callback=callbacks["task"])
 
         # Assert
@@ -975,11 +1011,18 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         callbacks["task"].assert_call(
             status=TaskStatus.COMPLETED, result="The initialisation task has completed"
         )
-        assert tile_simulator.is_programmed()
-        assert tpm_driver._is_programmed is True
-        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
-        assert tile_simulator.tpm is not None  # for the type checker
 
+        # check the fpga time is moving
+        initial_time2 = tpm_driver.fpgas_time
+        time.sleep(1.5)
+        final_time2 = tpm_driver.fpgas_time
+        assert initial_time2 != final_time2
+
+        # check the fpga timestamp is not moving
+        initial_time3 = tpm_driver.fpga_current_frame
+        time.sleep(1)
+        final_time3 = tpm_driver.fpga_current_frame
+        assert initial_time3 == final_time3
         # ---------------------------------------
         # Initialise called on a unprogrammed TPM
         # ---------------------------------------

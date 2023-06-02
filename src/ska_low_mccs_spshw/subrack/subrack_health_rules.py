@@ -208,7 +208,6 @@ class SubrackHealthRules(HealthRules):
                 return True
         return False
 
-    # pylint: disable=too-many-boolean-expressions
     def failed_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
@@ -275,7 +274,6 @@ class SubrackHealthRules(HealthRules):
 
         return False
 
-    # pylint: disable=too-many-boolean-expressions
     def degraded_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],

@@ -127,15 +127,20 @@ class MockTpm:
         "fpga1.pps_manager.sync_time_val": 0,
     }
 
-    def __init__(self) -> None:
-        """Initialise the MockTPM."""
+    def __init__(self: MockTpm, logger: logging.Logger) -> None:
+        """
+        Initialise the MockTPM.
+
+        :param logger: a logger for this simulator to use
+        """
         # In hardware we will initialise a sequence to bring the
         # device into the programmed state. We do not simulate these
         # low level details and just assume all went ok.
+        self.logger = logger
         self._is_programmed = True
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
-        self.preadu = [PreAdu()] * 2
+        self.preadu = [PreAdu(logger)] * 2
         self._station_beamf = [self.beam1, self.beam2]
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
@@ -280,8 +285,13 @@ class MockTpm:
 class PreAdu:
     """Mock preadu plugin."""
 
-    def __init__(self: PreAdu) -> None:
-        """Initialise mock plugin."""
+    def __init__(self: PreAdu, logger: logging.Logger) -> None:
+        """
+        Initialise mock plugin.
+
+        :param logger: a logger for this simulator to use
+        """
+        self.logger = logger
         self.channel_filters: list[int] = [0] * 16
 
     def set_attenuation(self: PreAdu, attenuation: int, channel: list[int]) -> None:
@@ -294,23 +304,17 @@ class PreAdu:
         self.channel_filters[channel[0]] = (attenuation & 0x1F) << 3
 
     def write_configuration(self: PreAdu) -> None:
-        """
-        Write configuration to preadu.
-
-        :return: None
-        """
-        return None
+        """Write configuration to preadu."""
+        self.logger.info("Not yet implemented.")
+        return
 
     def select_low_passband(self: PreAdu) -> None:
         """Select low pass band."""
         self.bandpass = "low"
 
     def read_configuration(self: PreAdu) -> None:
-        """
-        Read configuration.
-
-        :return: none
-        """
+        """Read configuration."""
+        self.logger.info("Not yet implemented.")
         return
 
 
@@ -332,7 +336,7 @@ class TileSimulator:
     FPGA1_TEMPERATURE = 38.0
     FPGA2_TEMPERATURE = 37.5
     ADC_RMS = [float(i) for i in range(32)]
-    FPGAS_TIME = [0.0, 0.0]
+    FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 0
@@ -365,7 +369,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
-        self.fpgas_time: list[float] = self.FPGAS_TIME
+        self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             TileData.get_tile_defaults()
@@ -376,10 +380,14 @@ class TileSimulator:
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
+        self._polling_thread.start()
         self.dst_ip: Optional[str] = None
+        self.dst_port: Optional[int] = None
         self.sync_time = 0
         self.csp_rounding = None
         self._adc_rms: list[float] = list(self.ADC_RMS)
+        self.spead_data_simulator = IntegratedChannelDataSimulator()
+
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
@@ -437,9 +445,9 @@ class TileSimulator:
         """
         Erase the fpga firmware.
 
-        :return: none.
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def initialise(
         self: TileSimulator,
@@ -448,7 +456,7 @@ class TileSimulator:
         tile_id: int = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
-    ) -> bool:
+    ) -> None:
         """
         Initialise tile.
 
@@ -457,8 +465,6 @@ class TileSimulator:
         :param pps_delay: pps_delay
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
-
-        :return: none.
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -470,7 +476,7 @@ class TileSimulator:
 
         self._tile_id = tile_id
         self._station_id = station_id
-        return True
+        self._start_polling_event.set()
 
     def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
         """
@@ -489,12 +495,6 @@ class TileSimulator:
         """
         self._tile_id = tile_id
         self._station_id = station_id
-        # fpgas = ["fpga1", "fpga2"]
-        # for f in fpgas:
-        #     self[f + ".dsp_regfile.config_id.station_id"] = station_id
-        #     self[f + ".dsp_regfile.config_id.tpm_id"] = tile_id
-
-        # return
 
     def get_pps_delay(self: TileSimulator) -> float:
         """:return: the pps delay."""
@@ -569,9 +569,9 @@ class TileSimulator:
         return None
 
     def check_arp_table(self: TileSimulator) -> None:
-        """Not Implemented."""
+        """Check arp table."""
+        self.logger.info("This i not implemented ")
         return
-        # raise NotImplementedError
 
     def set_lmc_download(
         self: TileSimulator,
@@ -600,17 +600,17 @@ class TileSimulator:
         # In the Tile simulator we will not be using IP addresses but rather services
         # to route data to the correct location.
         self.dst_ip = dst_ip
+        self.dst_port = dst_port
 
     def reset_eth_errors(self: TileSimulator) -> None:
-        """Not Implemented."""
+        """Reset Ethernet errors."""
+        self.logger.info("This is not implemented")
         return
-        # raise NotImplementedError
 
     def connect(self: TileSimulator) -> None:
         """Fake a connection by constructing the TPM."""
         self.logger.info("Connect called on the simulator")
-        self.tpm = MockTpm()
-        self._polling_thread.start()
+        self.tpm = MockTpm(self.logger)
 
     def __getitem__(self: TileSimulator, key: int | str) -> Any:
         """
@@ -640,8 +640,9 @@ class TileSimulator:
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         :param chan: Input channel to set
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
         """
@@ -683,17 +684,19 @@ class TileSimulator:
         :param subarray_id: The ID of the subarray.
         :param aperture_id: The ID of the aperture.
         :param fpga_reference_time: The FPGA reference time used for synchronization.
-        :return: None
+
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def set_beamformer_regions(self: TileSimulator, regions: list[list[int]]) -> None:
         """
         Set beamformer regions.
 
         :param regions: regions
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def set_first_last_tile(self: TileSimulator, is_first: bool, is_last: bool) -> None:
         """
@@ -839,8 +842,9 @@ class TileSimulator:
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
         assert self.dst_ip
-        spead_data_simulator = IntegratedChannelDataSimulator(self.dst_ip, 4660, 1)
-        spead_data_simulator.send_data(1)
+        assert self.dst_port
+        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        self.spead_data_simulator.send_data(1)
 
     def send_channelised_data(
         self: TileSimulator,
@@ -942,7 +946,6 @@ class TileSimulator:
 
         self.sync_time = sync_time  # type: ignore
         self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
-        self._start_polling_event.set()
 
     def set_lmc_integrated_download(
         self: TileSimulator,
@@ -962,8 +965,9 @@ class TileSimulator:
         :param dst_ip: Destination IP
         :param src_port: Source port for integrated data streams
         :param dst_port: Destination port for integrated data streams
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def sync_fpgas(self: TileSimulator) -> None:
         """
@@ -1027,9 +1031,10 @@ class TileSimulator:
         Test generator input select.
 
         :param inputs: inputs
-        :return: none.
+
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
@@ -1044,8 +1049,8 @@ class TileSimulator:
                 self.tpm[reg1] = 1  # type: ignore
                 self.tpm[reg2] = 1  # type: ignore
 
-            self.fpgas_time[0] = time_utc
-            self.fpgas_time[1] = time_utc
+            self.fpgas_time[0] = int(time_utc)
+            self.fpgas_time[1] = int(time_utc)
             time.sleep(0.1)
 
     def get_arp_table(self: TileSimulator) -> dict[str, Any]:
@@ -1061,9 +1066,10 @@ class TileSimulator:
         Load beam angle.
 
         :param angle_coefficients: angle coefficients.
-        :return: none
+
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def load_antenna_tapering(
         self: TileSimulator, beam: int, tapering_coefficients: list[float]
@@ -1073,9 +1079,10 @@ class TileSimulator:
 
         :param beam: beam
         :param tapering_coefficients: tapering coefficients
-        :return: none
+
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def compute_calibration_coefficients(self: TileSimulator) -> None:
         """
@@ -1116,10 +1123,9 @@ class TileSimulator:
         """
         Get PPS phase terminal count.
 
-        :return: PPS phase terminal count
-        :rtype: int
+        :raises NotImplementedError: if not overwritten.
         """
-        return
+        raise NotImplementedError
 
     def get_station_id(self: TileSimulator) -> int:
         """

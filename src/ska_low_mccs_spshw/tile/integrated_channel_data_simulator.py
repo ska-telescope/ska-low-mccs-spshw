@@ -36,7 +36,7 @@ from __future__ import annotations
 import socket
 import struct
 import time
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 
@@ -44,7 +44,7 @@ __all__ = ["IntegratedChannelDataSimulator"]
 
 
 # pylint: disable=too-many-instance-attributes
-class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
+class IntegratedChannelDataSimulator:
     """
     A class to send simulated integrated channel data.
 
@@ -62,17 +62,12 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
 
     # pylint: disable=too-many-arguments
     def __init__(
-        self: IntegratedChannelDataSimulator, ip: str, port: int, nof_tiles: int = 1
+        self: IntegratedChannelDataSimulator,
     ) -> None:
-        """
-        Init simulator.
-
-        :param ip: IP
-        :param port: Port
-        :param nof_tiles: number of tiles
-        """
-        self._ip = ip
-        self._port = port
+        """Init simulator."""
+        self._ip: Optional[str] = None
+        self._port: Optional[int] = None
+        self._nof_tiles: int = 1
 
         self._unix_epoch_time = int(time.time())
         self._timestamp = 0
@@ -81,7 +76,6 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
         self._packet_payload_length = 1024
         self._data_type = np.uint16
 
-        self._nof_tiles = nof_tiles
         self._nof_fpgas = 2
         self._nof_pols = 2
         self._nof_ants_per_fpga = 8
@@ -236,3 +230,17 @@ class IntegratedChannelDataSimulator:  # pylint: disable=too-few-public-methods
             counter += 2
 
         return packet_data
+
+    def set_destination_ip(
+        self: IntegratedChannelDataSimulator,
+        ip: str,
+        port: int,
+    ) -> None:
+        """
+        Set the destination IP:Port to send SPEAD packets.
+
+        :param ip: the destination ip to send SPEAD packets.
+        :param port: the destination port to send SPEAD packets.
+        """
+        self._ip = ip
+        self._port = port

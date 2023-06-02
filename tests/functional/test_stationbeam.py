@@ -310,7 +310,7 @@ def synchronise_the_station(
     #
     print(f"Tile time: {t1.fpgatime} - Sync time: {current_time}")
     print(f"Programmed Sync time: {t1.fpgareferencetime}")
-    time.sleep(120)
+    #time.sleep(120)
     for t in range(1):
         tm1 = datetime.strftime(datetime.fromtimestamp(time.time()), RFC_FORMAT)
         tm2 = t1.fpgatime

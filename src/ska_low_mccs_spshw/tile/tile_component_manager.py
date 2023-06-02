@@ -1175,7 +1175,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[str] = None,
+        start_time: Optional[int] = None,
         delay: Optional[int] = 2,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,

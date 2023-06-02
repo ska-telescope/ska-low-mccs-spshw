@@ -242,7 +242,7 @@ def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
     station_device.cspRounding = [4] * 384
     station_device.SetLmcDownload('{"destination_ip": "10.0.10.4", "mode": "10g"}')
     station_device.SetLmcIntegratedDownload(
-        '{"destination_ip": "10.0.10.4, "mode": "10g"}'
+        '{"destination_ip": "10.0.10.4", "mode": "10g"}'
     )
     station_device.SetCspIngest('{"destination_ip": "10.0.10.4"}')
     assert station_device.state() == tango.DevState.STANDBY

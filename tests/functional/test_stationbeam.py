@@ -259,6 +259,7 @@ def check_test_generator_is_programmed(
     :param station_device: the station device under test.
     :param subrack_device: the subrack device under test.
     """
+    time.sleep(5)
     station_device.on()
     state = station_device.tileprogrammingstate
     tm = 0

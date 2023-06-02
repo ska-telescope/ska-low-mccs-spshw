@@ -245,7 +245,7 @@ def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
         '{"destination_ip": "10.0.0.98", "mode": "40g"}'
     )
     station_device.SetCspIngest('{"destination_ip": "10.0.0.98"}')
-    assert station_device.state() == tango.DevState.STANDBY
+    assert station_device.state() == tango.DevState.ON
 
 
 @when("the station and subcracks are turned on")

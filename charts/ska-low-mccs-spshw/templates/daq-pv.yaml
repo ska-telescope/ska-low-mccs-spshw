@@ -1,0 +1,74 @@
+{{- /*
+
+This PersistentVolume is generated using the technique described in the Rook
+docs at https://rook.io/docs/rook/v1.10/Storage-Configuration/Shared-Filesystem-CephFS/filesystem-storage/#consume-the-shared-filesystem-across-namespaces
+
+It should be considered an atomic unit, and only changed by regenerating in
+full if the source volume changes.
+
+The following PV manifest was generated with this command:
+
+kubectl get -o yaml pv pvc-5e12240f-83e6-44f8-ad5f-c6d138f61d88 | python3 -c '
+import sys, yaml
+pv = yaml.safe_load(sys.stdin.read())
+del pv["status"]
+pv["metadata"] = {"name": pv["metadata"]["name"] + "-{{ .Release.Namespace }}"}
+pv["spec"]["csi"]["volumeHandle"] += "-{{ .Release.Namespace }}"
+pv["spec"]["csi"]["nodeStageSecretRef"]["name"] += "-user"
+pv["spec"]["csi"]["volumeAttributes"]["rootPath"] = pv["spec"]["csi"]["volumeAttributes"]["subvolumePath"]
+pv["spec"]["csi"]["volumeAttributes"]["staticVolume"] = "true"
+pv["spec"]["claimRef"] = {"name": "claim-psi-low-daq-data", "namespace": "{{ .Release.Namespace }}"}
+print(yaml.dump(pv, width=sys.maxsize))
+'
+
+*/}}
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pvc-5e12240f-83e6-44f8-ad5f-c6d138f61d88-{{ .Release.Namespace }}
+spec:
+  accessModes:
+  - ReadWriteMany
+  capacity:
+    storage: 100Gi
+  claimRef:
+    name: claim-psi-low-daq-data
+    namespace: '{{ .Release.Namespace }}'
+  csi:
+    controllerExpandSecretRef:
+      name: rook-csi-cephfs-provisioner
+      namespace: rook-ceph-external
+    driver: rook-ceph.cephfs.csi.ceph.com
+    nodeStageSecretRef:
+      name: rook-csi-cephfs-node-user
+      namespace: rook-ceph-external
+    volumeAttributes:
+      clusterID: rook-ceph-external
+      fsName: cephfs
+      pool: cephfs_data
+      rootPath: /volumes/csi/csi-vol-9c097016-6589-11ed-9409-da36c28dffb5/1d60f19f-8626-48d3-9c8f-4c15f845c6ea
+      staticVolume: 'true'
+      storage.kubernetes.io/csiProvisionerIdentity: 1668556859626-8081-rook-ceph.cephfs.csi.ceph.com
+      subvolumeName: csi-vol-9c097016-6589-11ed-9409-da36c28dffb5
+      subvolumePath: /volumes/csi/csi-vol-9c097016-6589-11ed-9409-da36c28dffb5/1d60f19f-8626-48d3-9c8f-4c15f845c6ea
+    volumeHandle: 0001-0012-rook-ceph-external-0000000000000001-9c097016-6589-11ed-9409-da36c28dffb5-{{ .Release.Namespace }}
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nfss1
+  volumeMode: Filesystem
+
+---
+
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: claim-psi-low-daq-data
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 100Gi
+  volumeName: pvc-5e12240f-83e6-44f8-ad5f-c6d138f61d88-{{ .Release.Namespace }}
+  storageClassName: nfss1
+  volumeMode: Filesystem

@@ -5,12 +5,14 @@ facility:
         cabinet_network_address: 10.0.0.0
         subracks: [1]
         tpms: [10, 13]
+        LoggingLevelDefault: 5
   subracks:
     reachable_from: psi-node3
     instances:
       1:
         host: 10.0.10.80
         port: 8081
+        LoggingLevelDefault: 5
   tpms:
     reachable_from: psi-node3
     version: tpm_v1_6
@@ -20,13 +22,30 @@ facility:
         host: 10.0.10.218
         subrack: "1"
         subrack_bay: 2
+        LoggingLevelDefault: 5
       13:
         host: 10.0.10.215
         subrack: "1"
         subrack_bay: 5
+        LoggingLevelDefault: 5
 
 deviceServers:
   stations:
     instances:
       1:
-        enabled: false
+        enabled: true
+
+ska-low-mccs-daq:
+  receivers:
+    1:
+      receiver_interface: net1
+      receiver_ip: ""
+      receiver_port: 4660
+      logging_level_default: 5
+      storage: claim-psi-low-daq-data
+      server_node_selector:
+        kubernetes.io/hostname: psi-node3
+      server_annotations:
+        k8s.v1.cni.cncf.io/networks: kube-system/psi-low-sps
+
+

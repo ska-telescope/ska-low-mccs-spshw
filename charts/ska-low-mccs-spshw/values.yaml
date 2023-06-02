@@ -10,7 +10,10 @@ subsystem: low-mccs-spshw
 telescope: SKA-low
 
 labels:
-  app: ska-low-mccs-spshw 
+  app: ska-low-mccs-spshw
+annotations:
+  app.gitlab.com/app: CI_PROJECT_PATH_SLUG
+  app.gitlab.com/env: CI_ENVIRONMENT_SLUG 
 
 global:
   minikube: true
@@ -52,7 +55,7 @@ image:
   name: ska-low-mccs-spshw
   tag: 0.5.0
   pullPolicy: IfNotPresent
-
+  
 # facility:
 #   stations:
 #     instances:
@@ -111,6 +114,24 @@ image:
 #       requests:
 #         memory: 512Mi
 
-nodeSelector: {}
+nodeSelector:
+  kubernetes.io/hostname: psi-node3 
 
 affinity: {}
+
+mccs_cli:
+  # use the MCCS unix cli tool
+  enabled: true
+  component: ska-low-mccs-cli
+  function: mccs-cli-tango-client
+  domain: interactive-testing
+  intent: enabling
+  resources:
+    requests:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi
+    limits:
+      cpu: 100m     # 00m = 0.1 CPU
+      memory: 512Mi # 128Mi = 0.125 GB mem
+      ephemeral-storage: 512Mi

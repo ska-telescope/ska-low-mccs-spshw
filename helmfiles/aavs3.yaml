@@ -1,0 +1,22 @@
+cluster_domain: au-aavs3.skao.int
+
+sps:
+  subracks:
+    instances:
+      "1":
+        host: 10.0.10.32
+        port: 8081
+  tpms:
+    instances:
+      "1":
+        host: 10.0.10.162
+        port: 10000
+        version: tpm_v1_6
+        subrack: "1"
+        subrack_bay: 3
+      "2":
+        host: 10.0.10.164
+        port: 10000
+        version: tpm_v1_6
+        subrack: "1"
+        subrack_bay: 7

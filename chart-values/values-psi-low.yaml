@@ -41,7 +41,7 @@ ska-low-mccs-daq:
   receivers:
     1:
       receiver_interface: net1
-      receiver_ip: ""
+      receiver_ip: "10.0.10.4"
       receiver_port: 4660
       logging_level_default: 5
       storage: claim-psi-low-daq-data

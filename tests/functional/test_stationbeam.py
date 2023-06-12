@@ -182,7 +182,7 @@ def check_station_is_online_and_on(station_device: tango.DeviceProxy) -> None:
     assert station_device.adminMode == AdminMode.ONLINE
 
 @given("a subrack that is online")
-def check_subrack_is_online_and_on(
+def check_subrack_is_online(
     subrack_device: tango.DeviceProxy,
 ) -> None:
     """
@@ -196,7 +196,7 @@ def check_subrack_is_online_and_on(
     assert subrack_device.adminMode == AdminMode.ONLINE
 
 @given("a set of tiles that are in maintenance")
-def check_tiles_are_in_maintenance_and_on(
+def check_tiles_are_in_maintenance(
     tile_device_list: list[tango.DeviceProxy],
 ) -> None:
     """
@@ -288,7 +288,7 @@ def check_test_generator_is_programmed(
     assert station_device.tileprogrammingstate == ("Initialised", "Initialised")
 
 
-@when("the station is synchronised")
+@given("the station is synchronised")
 def synchronise_the_station(
     station_device: tango.DeviceProxy,
     tile_device_list: list[tango.DeviceProxy],
@@ -340,7 +340,7 @@ def synchronise_the_station(
     assert station_device.tileprogrammingstate == ("Synchronised","Synchronised")
 
 
-@when("the test generator is programmed")
+@given("the test generator is programmed to generate a white noise")
 def program_test_generator(
     station_device: tango.DeviceProxy,
     tile_device_list: list[tango.DeviceProxy],

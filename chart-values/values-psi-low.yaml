@@ -36,6 +36,8 @@ deviceServers:
         enabled: true
 
 ska-low-mccs-daq:
+  nodeSelector:
+    kubernetes.io/hostname: psi-node3 
   receivers:
     1:
       receiver_interface: net1

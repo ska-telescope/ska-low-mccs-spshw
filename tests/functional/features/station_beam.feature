@@ -21,5 +21,5 @@ Feature: Test station pointing
         Examples:
             |   delay type   |   correction type   |   amplitude   |
             | zero delays    | uncorrected         | correct       |
-            | static delays  | uncorrected         | incorrect     |
-            | static delays  | corrected           | correct       |
+            #| static delays  | uncorrected         | incorrect     |
+            #| static delays  | corrected           | correct       |

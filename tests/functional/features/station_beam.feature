@@ -1,5 +1,5 @@
 Feature: Test station pointing
-    Test that a delay can be applied to a beam correctly
+    Test that delays can be applied to a beam correctly
 
     Scenario: Correcting delayed beam
         Given a station that is online
@@ -7,11 +7,19 @@ Feature: Test station pointing
         And a set of tiles that are in maintenance
         And a DAQ instance which is online
         And the station is configured
-        
-        When the station and subcracks are turned on
         And the station is synchronised
-        And the test generator is programmed
-        #And the scan is run
-        #And the beam is corrected with pointing delays
+        And the test generator is programmed to generate a white noise
+        And the beamformer is configured
+        And the static delays are set to <delay_type>
 
-        Then the applitude of the corrected beam is as expected
+        When the station and subrack are turned on
+        And the beam is corrected for <correction_type>
+        And the scan is run
+
+        Then the applitude of the beam is approximately <amplitude>
+
+        Examples:
+            |   delay type   |   correction type   |   amplitude   |
+            | zero delays    | uncorrected         | correct       |
+            | static delays  | uncorrected         | incorrect     |
+            | static delays  | corrected           | correct       |

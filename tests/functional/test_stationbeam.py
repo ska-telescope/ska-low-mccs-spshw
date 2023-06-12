@@ -248,7 +248,7 @@ def check_station_is_configured(station_device: tango.DeviceProxy) -> None:
     assert station_device.state() == tango.DevState.STANDBY
 
 
-@when("the station and subcracks are turned on")
+@given("the station and subcracks are turned on")
 def check_test_generator_is_programmed(
     station_device: tango.DeviceProxy,
     subrack_device: tango.DeviceProxy,

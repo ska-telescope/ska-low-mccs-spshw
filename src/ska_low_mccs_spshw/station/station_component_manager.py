@@ -976,7 +976,7 @@ class SpsStationComponentManager(
         Set PPS delay correction.
 
         :param delays: Array of one value per tile, in nanoseconds.
-                Values are internally rounded to 1.25 ns steps
+            Values are internally rounded to 1.25 ns steps
         """
         self._pps_delays = copy.deepcopy(delays)
         i = 0

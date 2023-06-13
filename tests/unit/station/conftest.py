@@ -63,7 +63,7 @@ def num_tiles_fixture() -> int:
 
     :return: the number of tiles
     """
-    return 16
+    return 4
 
 
 @pytest.fixture(name="tile_names")
@@ -127,5 +127,44 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(
                     name, power=PowerState.NO_SUPPLY
                 )
+
+        @command()
+        def MockSubracksOn(self: PatchedStationDevice) -> None:
+            """
+            Mock all subracks being turned on.
+
+            Make the station device think it has received state change
+            event from its subracks, indicating that the subracks are
+            now ON.
+            """
+            for name in self.component_manager._subrack_proxies:
+                self.component_manager._subrack_state_changed(name, power=PowerState.ON)
+
+            for name in self.component_manager._tile_proxies:
+                self.component_manager._tile_state_changed(name, power=PowerState.OFF)
+
+        @command()
+        def MockTilesOff(self: PatchedStationDevice) -> None:
+            """
+            Mock all tiles being turned off.
+
+            Make the station device think it has received state change
+            event from its tiles, indicating that the tiles are
+            now OFF.
+            """
+            for name in self.component_manager._tile_proxies:
+                self.component_manager._tile_state_changed(name, power=PowerState.OFF)
+
+        @command()
+        def MockTilesOn(self: PatchedStationDevice) -> None:
+            """
+            Mock all tiles being turned on.
+
+            Make the station device think it has received state change
+            event from its tiles, indicating that the tiles are
+            now ON.
+            """
+            for name in self.component_manager._tile_proxies:
+                self.component_manager._tile_state_changed(name, power=PowerState.ON)
 
     return PatchedStationDevice

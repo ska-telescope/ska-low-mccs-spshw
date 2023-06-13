@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*
-# pylint: disable=too-many-arguments
+# pylint: disable=too-many-arguments, too-many-lines
+# pylint: disable=too-many-locals, too-many-statements
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -9,6 +10,7 @@
 """This module contains the tests for the SpsStation tango device."""
 from __future__ import annotations
 
+import datetime
 import gc
 import json
 import time
@@ -128,7 +130,7 @@ def station_device_fixture(
     yield tango_harness.get_device(station_name)
 
 
-def test_off(
+def test_Off(
     station_device: SpsStation,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
@@ -207,44 +209,384 @@ def test_off(
     )
 
 
-@pytest.mark.parametrize(
-    ("expected_init_params", "new_params"),
-    [
-        pytest.param(
-            {
-                "subrack_degraded": 0.05,
-                "subrack_failed": 0.2,
-                "tile_degraded": 0.05,
-                "tile_failed": 0.2,
-            },
-            {
-                "subrack_degraded": 0.1,
-                "subrack_failed": 0.3,
-                "tile_degraded": 0.07,
-                "tile_failed": 0.2,
-            },
-            id="Check correct initial values, write new and "
-            "verify new values have been written",
-        )
-    ],
-)
-def test_healthParams(
+def test_On(
     station_device: SpsStation,
-    expected_init_params: dict[str, float],
-    new_params: dict[str, float],
+    mock_tiles: list[DeviceProxy],
+    num_tiles: int,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Test for healthParams attributes.
+    Test our ability to turn the SPS station device on.
 
     :param station_device: the SPS station Tango device under test.
-    :param expected_init_params: the initial values which the health model is
-        expected to have initially
-    :param new_params: the new health rule params to pass to the health model
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
-    assert station_device.healthModelParams == json.dumps(expected_init_params)
-    new_params_json = json.dumps(new_params)
-    station_device.healthModelParams = new_params_json  # type: ignore[assignment]
-    assert station_device.healthModelParams == new_params_json
+    counter = 0
+    sync_time = None
+
+    def getter(*args: Any) -> list:
+        nonlocal counter, sync_time
+        if counter < 2:
+            counter += 1
+            sync_time = datetime.datetime.now()
+        return [sync_time]
+
+    for tile in mock_tiles:
+        pm = PropertyMock()
+        pm.__get__ = getter  # type: ignore[assignment]
+        type(tile).fpgasUnixTime = pm
+
+    # First let's check the initial state
+    assert station_device.adminMode == AdminMode.OFFLINE
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    change_event_callbacks["state"].assert_not_called()
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
+
+    csp_ingest_address = "123.234.123.234"
+    csp_ingest_port = 1234
+
+    station_device.SetCspIngest(
+        json.dumps(
+            {
+                "destination_ip": csp_ingest_address,
+                "destination_port": csp_ingest_port,
+                "source_port": 0,
+            }
+        )
+    )
+
+    # It's already on, so let's turn it off before we turn it on again.
+    station_device.subscribe_event(
+        "longRunningCommandStatus",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_status"],
+    )
+
+    change_event_callbacks["command_status"].assert_change_event(None)
+
+    station_device.subscribe_event(
+        "longRunningCommandResult",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_result"],
+    )
+    change_event_callbacks["command_result"].assert_change_event(("", ""))
+
+    ([result_code], [off_command_id]) = station_device.Off()
+    assert result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "QUEUED")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "IN_PROGRESS")
+    )
+
+    change_event_callbacks["state"].assert_not_called()
+
+    # Make the station think it has received events from its subracks,
+    # advising it that they are off.
+    station_device.MockSubracksOff()
+
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    change_event_callbacks["state"].assert_not_called()
+    assert station_device.state() == DevState.OFF
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "COMPLETED")
+    )
+
+    # Now turn the station back on using the On command
+    ([result_code], [on_command_id]) = station_device.On()
+    assert result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "COMPLETED", on_command_id, "QUEUED")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
+    )
+
+    change_event_callbacks["state"].assert_not_called()
+
+    # Make the station think it has received events from its subracks and then tiles,
+    # advising it that they are on.
+    station_device.MockSubracksOn()
+    station_device.MockTilesOn()
+
+    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
+    assert station_device.state() == DevState.ON
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "COMPLETED", on_command_id, "COMPLETED")
+    )
+    for i, tile in enumerate(mock_tiles):
+        last_tile = i == num_tiles - 1
+        if last_tile:
+            num_configures = 4
+        else:
+            num_configures = 2
+        assert len(tile.Configure40GCore.mock_calls) == num_configures
+        assert json.loads(
+            tile.Configure40GCore.mock_calls[0 if not last_tile else 2].args[0]
+        ) == {
+            "core_id": 0,
+            "arp_table_entry": 0,
+            "source_ip": f"10.0.0.{str(216 + (2 * i))}",
+            "source_mac": 107752307294424 + (2 * i),
+            "source_port": 61648,
+            "destination_ip": f"10.0.0.{str(218 + (2 * i))}"
+            if i != num_tiles - 1
+            else csp_ingest_address,
+            "destination_port": 4660 if not last_tile else csp_ingest_port,
+        }
+        assert json.loads(
+            tile.Configure40GCore.mock_calls[1 if not last_tile else 3].args[0]
+        ) == {
+            "core_id": 1,
+            "arp_table_entry": 0,
+            "source_ip": f"10.0.0.{str(217 + (2 * i))}",
+            "source_mac": 107752307294425 + (2 * i),
+            "source_port": 61648,
+            "destination_ip": f"10.0.0.{str(219 + (2 * i))}"
+            if i != num_tiles - 1
+            else csp_ingest_address,
+            "destination_port": 4660 if not last_tile else csp_ingest_port,
+        }
+        assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
+        assert json.loads(tile.ConfigureStationBeamformer.mock_calls[0].args[0]) == {
+            "is_first": (i == 0),
+            "is_last": (last_tile),
+        }
+        assert len(tile.SetLmcDownload.mock_calls) == 2
+        assert json.loads(tile.SetLmcDownload.mock_calls[0].args[0]) == {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 61648,
+        }
+        assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 61648,
+        }
+        assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
+        assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
+            "mode": "10G",
+            "destination_ip": "0.0.0.0",
+            "beam_payload_length": 8192,
+            "channel_payload_length": 8192,
+        }
+
+
+def test_Initialise(
+    station_device: SpsStation,
+    mock_tiles: list[DeviceProxy],
+    num_tiles: int,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test of the Initialise command.
+
+    :param station_device: The station device to use
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    counter = 0
+    sync_time = None
+
+    def getter(*args: Any) -> list:
+        nonlocal counter, sync_time
+        if counter < 2:
+            counter += 1
+            sync_time = datetime.datetime.now()
+        return [sync_time]
+
+    for tile in mock_tiles:
+        pm = PropertyMock()
+        pm.__get__ = getter  # type: ignore[assignment]
+        type(tile).fpgasUnixTime = pm
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+
+    csp_ingest_address = "123.234.123.234"
+    csp_ingest_port = 1234
+
+    station_device.SetCspIngest(
+        json.dumps(
+            {
+                "destination_ip": csp_ingest_address,
+                "destination_port": csp_ingest_port,
+                "source_port": 0,
+            }
+        )
+    )
+
+    station_device.subscribe_event(
+        "longRunningCommandStatus",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_status"],
+    )
+
+    change_event_callbacks["command_status"].assert_change_event(None)
+    station_device.subscribe_event(
+        "longRunningCommandResult",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_result"],
+    )
+    change_event_callbacks["command_result"].assert_change_event(("", ""))
+
+    ([result_code], [command_id]) = station_device.Initialise()
+    assert result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "IN_PROGRESS")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "COMPLETED")
+    )
+
+    for i, tile in enumerate(mock_tiles):
+        last_tile = i == num_tiles - 1
+        if last_tile:
+            num_configures = 4
+        else:
+            num_configures = 2
+        assert len(tile.Configure40GCore.mock_calls) == num_configures
+        assert json.loads(
+            tile.Configure40GCore.mock_calls[0 if not last_tile else 2].args[0]
+        ) == {
+            "core_id": 0,
+            "arp_table_entry": 0,
+            "source_ip": f"10.0.0.{str(216 + (2 * i))}",
+            "source_mac": 107752307294424 + (2 * i),
+            "source_port": 61648,
+            "destination_ip": f"10.0.0.{str(218 + (2 * i))}"
+            if i != num_tiles - 1
+            else csp_ingest_address,
+            "destination_port": 4660 if not last_tile else csp_ingest_port,
+        }
+        assert json.loads(
+            tile.Configure40GCore.mock_calls[1 if not last_tile else 3].args[0]
+        ) == {
+            "core_id": 1,
+            "arp_table_entry": 0,
+            "source_ip": f"10.0.0.{str(217 + (2 * i))}",
+            "source_mac": 107752307294425 + (2 * i),
+            "source_port": 61648,
+            "destination_ip": f"10.0.0.{str(219 + (2 * i))}"
+            if i != num_tiles - 1
+            else csp_ingest_address,
+            "destination_port": 4660 if not last_tile else csp_ingest_port,
+        }
+        assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
+        assert json.loads(tile.ConfigureStationBeamformer.mock_calls[0].args[0]) == {
+            "is_first": (i == 0),
+            "is_last": (last_tile),
+        }
+        assert len(tile.SetLmcDownload.mock_calls) == 2
+        assert json.loads(tile.SetLmcDownload.mock_calls[0].args[0]) == {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 61648,
+        }
+        assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": "0.0.0.0",
+            "destination_port": 4660,
+            "source_port": 61648,
+        }
+        assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
+        assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
+            "mode": "10G",
+            "destination_ip": "0.0.0.0",
+            "beam_payload_length": 8192,
+            "channel_payload_length": 8192,
+        }
+
+
+def test_Standby(
+    station_device: SpsStation,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test of the Standby command.
+
+    :param station_device: The station device to use
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    change_event_callbacks["state"].assert_not_called()
+
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
+    station_device.subscribe_event(
+        "longRunningCommandStatus",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_status"],
+    )
+
+    change_event_callbacks["command_status"].assert_change_event(None)
+    station_device.subscribe_event(
+        "longRunningCommandResult",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_result"],
+    )
+    change_event_callbacks["command_result"].assert_change_event(("", ""))
+
+    ([result_code], [command_id]) = station_device.Standby()
+    assert result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "IN_PROGRESS")
+    )
+    change_event_callbacks["state"].assert_not_called()
+
+    # Make the station think it has received events from its tiles,
+    # advising it that they are off.
+    station_device.MockTilesOff()
+
+    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    change_event_callbacks["state"].assert_not_called()
+    assert station_device.state() == DevState.STANDBY
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "COMPLETED")
+    )
 
 
 @pytest.mark.parametrize(
@@ -473,7 +815,7 @@ def test_healthParams(
             "LoadCalibrationCoefficients",
             [2, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4],
             "LoadCalibrationCoefficients",
-            [3.2, 4.3, 6.1, 6.6, 10.2, 8.8, 4.4],
+            np.array([2, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4]),
             False,
         ),
     ],
@@ -533,18 +875,24 @@ def test_station_tile_commands(
         assert json.loads(tile_command_args) == json.loads(
             tile_command_mock.call_args[0][0]
         )
-    elif isinstance(tile_command_args, list):
-        assert tile_command_args == list(tile_command_mock.call_args[0][0])
+    elif isinstance(tile_command_args, np.ndarray):
+        assert np.all(tile_command_args == tile_command_mock.call_args[0][0])
     else:
         assert tile_command_args == tile_command_mock.call_args[0][0]
 
 
-def test_SetCspIngest(station_device: SpsStation) -> None:
+def test_SetCspIngest(
+    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
+) -> None:
     """
     Test of the SetCspIngest command.
 
     :param station_device: The station device to use
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
     """
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     station_device.SetCspIngest(
         json.dumps(
             {
@@ -556,6 +904,70 @@ def test_SetCspIngest(station_device: SpsStation) -> None:
     )
     assert station_device.cspIngestAddress == "123.123.234.234"
     assert station_device.cspIngestPort == 1234
+    assert station_device.cspSourcePort == 2345
+    for i, tile in enumerate(mock_tiles):
+        if i != num_tiles - 1:
+            tile.Configure40GCore.assert_not_called()
+        else:
+            assert len(tile.Configure40GCore.mock_calls) == 2
+            assert json.loads(tile.Configure40GCore.mock_calls[0].args[0]) == {
+                "core_id": 0,
+                "arp_table_entry": 0,
+                "source_ip": f"10.0.0.{str(216 + (2 * i))}",
+                "source_mac": 107752307294424 + (2 * i),
+                "source_port": 61648,
+                "destination_ip": "123.123.234.234",
+                "destination_port": 1234,
+            }
+            assert json.loads(tile.Configure40GCore.mock_calls[1].args[0]) == {
+                "core_id": 1,
+                "arp_table_entry": 0,
+                "source_ip": f"10.0.0.{str(217 + (2 * i))}",
+                "source_mac": 107752307294425 + (2 * i),
+                "source_port": 61648,
+                "destination_ip": "123.123.234.234",
+                "destination_port": 1234,
+            }
+
+
+@pytest.mark.parametrize(
+    ("expected_init_params", "new_params"),
+    [
+        pytest.param(
+            {
+                "subrack_degraded": 0.05,
+                "subrack_failed": 0.2,
+                "tile_degraded": 0.05,
+                "tile_failed": 0.2,
+            },
+            {
+                "subrack_degraded": 0.1,
+                "subrack_failed": 0.3,
+                "tile_degraded": 0.07,
+                "tile_failed": 0.2,
+            },
+            id="Check correct initial values, write new and "
+            "verify new values have been written",
+        )
+    ],
+)
+def test_healthParams(
+    station_device: SpsStation,
+    expected_init_params: dict[str, float],
+    new_params: dict[str, float],
+) -> None:
+    """
+    Test for healthParams attributes.
+
+    :param station_device: the SPS station Tango device under test.
+    :param expected_init_params: the initial values which the health model is
+        expected to have initially
+    :param new_params: the new health rule params to pass to the health model
+    """
+    assert station_device.healthModelParams == json.dumps(expected_init_params)
+    new_params_json = json.dumps(new_params)
+    station_device.healthModelParams = new_params_json  # type: ignore[assignment]
+    assert station_device.healthModelParams == new_params_json
 
 
 def test_isCalibrated(station_device: SpsStation) -> None:
@@ -593,11 +1005,6 @@ def test_fortyGbNetworkAddress(
     [
         pytest.param("channeliserRounding", lambda _: [3] * 512, lambda _: [3] * 512),
         pytest.param(
-            "cspRounding",
-            lambda _: [4] * 384,
-            lambda _: [4] * 384,
-        ),
-        pytest.param(
             "staticTimeDelays",
             lambda num_tiles: list(range(32 * num_tiles)),
             lambda i: [(i * 32) + q for q in range(32)],
@@ -628,7 +1035,6 @@ def test_rw_attributes(
     These are:
         staticTimeDelays
         channeliserRounding
-        cspRounding
         preaduLevels
         ppsDelays
 
@@ -650,20 +1056,55 @@ def test_rw_attributes(
     for i in range(num_tiles):
         setattr(type(mock_tiles[i]), attribute, rounding_mocks[i])
     setattr(station_device, attribute, data(num_tiles))
+    time.sleep(0.1)
     for i in range(num_tiles):
         assert all(rounding_mocks[i].call_args[0][0] == tile_data(i))
     assert all(getattr(station_device, attribute) == data(num_tiles))
 
 
+def test_cspRounding(
+    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
+) -> None:
+    """
+    Test for the cspRounding attribute.
+
+    :param station_device: The station device to use
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
+    """
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    rounding_mocks = [PropertyMock() for _ in range(num_tiles)]
+    for _, tile in enumerate(mock_tiles):
+        tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.1)
+    for i in range(num_tiles):
+        setattr(type(mock_tiles[i]), "cspRounding", rounding_mocks[i])
+    time.sleep(0.1)
+    station_device.cspRounding = [4] * 384  # type: ignore[assignment]
+    for i, mock in enumerate(rounding_mocks):
+        if i == num_tiles - 1:
+            assert all(mock.call_args[0][0] == [4] * 384)
+        else:
+            mock.assert_not_called()
+    assert all(station_device.cspRounding == [4] * 384)  # type: ignore[arg-type]
+
+
 def test_beamformerTable(
-    station_device: SpsStation,
+    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
 ) -> None:
     """
     Test the beamformerTable attribute.
 
     :param station_device: The station device to use
+    :param mock_tiles: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param num_tiles: the number of mock tiles
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    for _, tile in enumerate(mock_tiles):
+        tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
     assert np.all(
         station_device.beamformerTable
@@ -823,11 +1264,13 @@ def test_station_tile_attributes(
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for i, tile in enumerate(mock_tiles):
         setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
+    time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         init_expected_value(num_tiles)
     )
     for i, tile in enumerate(mock_tiles):
         setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
+    time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         final_expected_value(num_tiles)
     )

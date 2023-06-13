@@ -60,7 +60,7 @@ class _SubrackProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this station
-            is to be assigned
+                is to be assigned
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -118,7 +118,7 @@ class _TileProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this station
-            is to be assigned
+                is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -403,6 +403,12 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.STANDBY
             else:
                 evaluated_power_state = PowerState.UNKNOWN
+            self.logger.debug(
+                "In SpsStationComponentManager._evaluatePowerState with:\n"
+                f"\tsubracks: {self._subrack_power_states.values()}\n"
+                f"\ttiles: {self._tile_power_states.values()}\n"
+                f"\tresult: {str(evaluated_power_state)}"
+            )
             self._update_component_state(power=evaluated_power_state)
 
     def set_power_state(
@@ -585,17 +591,93 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if not all(
-            power_state == PowerState.ON for power_state in self._subrack_power_states
+            power_state == PowerState.ON
+            for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
         if not all(
-            power_state == PowerState.ON for power_state in self._tile_power_states
+            power_state == PowerState.ON
+            for power_state in self._tile_power_states.values()
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK and all(
+            proxy._proxy is not None
+            and proxy._proxy.tileProgrammingState not in {"Initialised", "Synchronised"}
+            for proxy in self._tile_proxies.values()
+        ):
+            self.logger.debug("Initialising tiles")
+            result_code = self._initialise_tiles(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising station")
+            result_code = self._initialise_station(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Checking synchronisation")
+            result_code = self._check_station_synchronisation(
+                task_callback, task_abort_event
+            )
+
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            self.logger.debug("End initialisation")
+            task_status = TaskStatus.COMPLETED
+        else:
+            self.logger.error("Initialisation failed")
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status)
+
+    def initialise(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _initialise method.
+
+        This method returns immediately after it submitted
+        `self._initialise` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :return: a task staus and response message
+        """
+        return self.submit_task(self._initialise, task_callback=task_callback)
+
+    @check_communicating
+    def _initialise(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Initialise this station.
+
+        The order to turn a station on is: subrack, then tiles
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        self.logger.debug("Starting initialise sequence")
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        result_code = ResultCode.OK
+        if not all(
+            power_state == PowerState.ON
+            for power_state in self._subrack_power_states.values()
+        ):
+            self.logger.debug("Subracks not on.")
+            result_code = ResultCode.FAILED
+
+        if not all(
+            power_state == PowerState.ON
+            for power_state in self._tile_power_states.values()
+        ):
+            self.logger.debug("Tiles not on.")
+            result_code = ResultCode.FAILED
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
@@ -894,7 +976,7 @@ class SpsStationComponentManager(
         Set PPS delay correction.
 
         :param delays: Array of one value per tile, in nanoseconds.
-            Values are internally rounded to 1.25 ns steps
+                Values are internally rounded to 1.25 ns steps
         """
         self._pps_delays = copy.deepcopy(delays)
         i = 0
@@ -987,13 +1069,13 @@ class SpsStationComponentManager(
             Current hardware supports only a single value, thus oly 1st value is used
         """
         self._csp_rounding = copy.deepcopy(truncation)
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(
-                    f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
-                )
-                proxy._proxy.cspRounding = truncation
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+            self.logger.debug(
+                f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
+            )
+            proxy._proxy.cspRounding = truncation
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[int]:
@@ -1065,6 +1147,15 @@ class SpsStationComponentManager(
         :return: UDP port for CSP ingest port
         """
         return self._csp_ingest_port
+
+    @property
+    def csp_source_port(self: SpsStationComponentManager) -> int:
+        """
+        Get 40Gb CSP source port.
+
+        :return: UDP port for CSP source port
+        """
+        return self._csp_source_port
 
     @property
     def is_programmed(self: SpsStationComponentManager) -> bool:
@@ -1310,6 +1401,48 @@ class SpsStationComponentManager(
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
+        base_ip = self._fortygb_network_address.split(".")
+        if self._station_id % 2 == 1:
+            base_ip3 = 0x80
+        else:
+            base_ip3 = 0xC0
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        last_tile = len(self._tile_proxies) - 1
+        src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
+        src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"
+        dst_ip1 = self._csp_ingest_address
+        dst_ip2 = self._csp_ingest_address
+        dst_port = self._csp_ingest_port
+        src_mac = self._base_mac_address + base_ip3 + 24 + 2 * last_tile
+        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip1}")
+        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip2}")
+        proxy._proxy.Configure40GCore(
+            json.dumps(
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 0,
+                    "source_ip": src_ip1,
+                    "source_mac": src_mac,
+                    "source_port": self._source_port,
+                    "destination_ip": dst_ip1,
+                    "destination_port": dst_port,
+                }
+            )
+        )
+        proxy._proxy.Configure40GCore(
+            json.dumps(
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 0,
+                    "source_ip": src_ip2,
+                    "source_mac": src_mac + 1,
+                    "source_port": self._source_port,
+                    "destination_ip": dst_ip2,
+                    "destination_port": dst_port,
+                }
+            )
+        )
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
@@ -1358,7 +1491,8 @@ class SpsStationComponentManager(
         proxies = list(self._tile_proxies.values())
         proxy = proxies[tile]._proxy
         assert proxy is not None  # for the type checker
-        coefs = [float(tile_antenna)] + calibration_coefficients[2:]
+        coefs = copy.deepcopy(calibration_coefficients)
+        coefs[0] = float(tile_antenna)
         proxy.LoadCalibrationCoefficients(coefs)
 
     def apply_calibration(self: SpsStationComponentManager, switch_time: str) -> None:
@@ -1420,7 +1554,7 @@ class SpsStationComponentManager(
         :param start_time: time at which to start the beamformer,
             defaults to 0
         :param duration: duration for which to run the beamformer,
-            defaults to -1 (run forever)
+                defaults to -1 (run forever)
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
         """

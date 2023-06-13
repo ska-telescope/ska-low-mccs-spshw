@@ -153,8 +153,8 @@ class SpsStation(SKAObsDevice):
             :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
+                        message indicating status. The message is for
+                        information purpose only.
             """
             self._device._is_calibrated = False
             self._device._is_programmed = False
@@ -273,7 +273,7 @@ class SpsStation(SKAObsDevice):
         Return a flag indicating whether this station is currently calibrated or not.
 
         :return: a flag indicating whether this station is currently
-            calibrated or not.
+                calibrated or not.
         """
         return self._is_calibrated
 
@@ -283,7 +283,7 @@ class SpsStation(SKAObsDevice):
         Return a flag indicating whether this station is currently configured or not.
 
         :return: a flag indicating whether this station is currently
-            configured or not.
+                configured or not.
         """
         return self.component_manager._is_configured
 
@@ -464,6 +464,17 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.csp_ingest_port
 
+    @attribute(dtype="DevLong")
+    def cspSourcePort(self: SpsStation) -> int:
+        """
+        Get CSP source port.
+
+        CSP source port is set by the SetCspIngest command
+
+        :return: UDP port for the CSP source port
+        """
+        return self.component_manager.csp_source_port
+
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:
         """
@@ -612,14 +623,12 @@ class SpsStation(SKAObsDevice):
     # -------------
 
     @command(
-        dtype_in="DevString",
+        dtype_in="DevVoid",
         dtype_out="DevVarLongStringArray",
     )
-    def Initialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
         """
-        Configure the station with all relevant parameters.
-
-        :param argin: Configuration parameters encoded in a json string
+        Initialise the station.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -630,7 +639,7 @@ class SpsStation(SKAObsDevice):
             >>> dp.command_inout("Initialise")
         """
         handler = self.get_command_object("Initialise")
-        (return_code, message) = handler(argin)
+        (return_code, message) = handler()
         return ([return_code], [message])
 
     @command(

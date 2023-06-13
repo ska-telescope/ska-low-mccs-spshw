@@ -60,7 +60,7 @@ class _SubrackProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this station
-                is to be assigned
+            is to be assigned
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -118,7 +118,7 @@ class _TileProxy(DeviceComponentManager):
 
         :param fqdn: the FQDN of the device
         :param station_id: the id of the station to which this station
-                is to be assigned
+            is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -1554,7 +1554,7 @@ class SpsStationComponentManager(
         :param start_time: time at which to start the beamformer,
             defaults to 0
         :param duration: duration for which to run the beamformer,
-                defaults to -1 (run forever)
+            defaults to -1 (run forever)
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
         """

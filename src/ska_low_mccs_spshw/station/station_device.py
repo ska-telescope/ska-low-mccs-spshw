@@ -153,8 +153,8 @@ class SpsStation(SKAObsDevice):
             :param kwargs: keyword args to the component manager method
 
             :return: A tuple containing a return code and a string
-                        message indicating status. The message is for
-                        information purpose only.
+                message indicating status. The message is for
+                information purpose only.
             """
             self._device._is_calibrated = False
             self._device._is_programmed = False
@@ -273,7 +273,7 @@ class SpsStation(SKAObsDevice):
         Return a flag indicating whether this station is currently calibrated or not.
 
         :return: a flag indicating whether this station is currently
-                calibrated or not.
+            calibrated or not.
         """
         return self._is_calibrated
 
@@ -283,7 +283,7 @@ class SpsStation(SKAObsDevice):
         Return a flag indicating whether this station is currently configured or not.
 
         :return: a flag indicating whether this station is currently
-                configured or not.
+            configured or not.
         """
         return self.component_manager._is_configured
 

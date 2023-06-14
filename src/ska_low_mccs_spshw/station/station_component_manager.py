@@ -777,7 +777,7 @@ class SpsStationComponentManager(
             #    results.append(result_code)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state == "Initialised" for state in states):
+            if all(state in ["Initialised", "Synchronised"] for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED

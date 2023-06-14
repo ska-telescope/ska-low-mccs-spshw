@@ -605,7 +605,7 @@ class SpsStationComponentManager(
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
-        if result_code == ResultCode.OK and all(
+        if result_code == ResultCode.OK and any(
             proxy._proxy is not None
             and proxy._proxy.tileProgrammingState not in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()

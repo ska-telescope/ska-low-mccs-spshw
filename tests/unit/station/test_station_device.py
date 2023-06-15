@@ -21,6 +21,7 @@ from ska_tango_testing.context import (
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
+from ska_low_mccs_spshw.mocks import MockFieldStation
 from ska_low_mccs_spshw.station import SpsStation
 
 # TODO: Weird hang-at-garbage-collection bug
@@ -41,6 +42,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "command_status",
         "health_state",
         "state",
+        "outsideTemperature",
         timeout=2.0,
     )
 
@@ -55,12 +57,23 @@ def station_name_fixture() -> str:
     return "low-mccs/sps_station/001"
 
 
+@pytest.fixture(name="field_station_name", scope="session")
+def field_station_name_fixture() -> str:
+    """
+    Return the name of the SPS station Tango device.
+
+    :return: the name of the SPS station Tango device.
+    """
+    return "low-mccs/fieldstation/001"
+
+
 @pytest.fixture(name="tango_harness")
 def tango_harness_fixture(  # pylint: disable=too-many-arguments
     station_name: str,
     patched_station_device_class: type[SpsStation],
     subrack_name: str,
     mock_subrack: DeviceProxy,
+    field_station_name: str,
     tile_name: str,
     mock_tile: DeviceProxy,
 ) -> Generator[TangoContextProtocol, None, None]:
@@ -73,10 +86,10 @@ def tango_harness_fixture(  # pylint: disable=too-many-arguments
     :param subrack_name: the name of the subrack Tango device
     :param mock_subrack: a mock subrack proxy that has been configured
         with the required subrack behaviours.
+    :param field_station_name: the name of the FieldStation Tango device
     :param tile_name: the name of the subrack Tango device
     :param mock_tile: a mock tile proxy that has been configured with
         the required tile behaviours.
-
     :yields: a tango context.
     """
     context_manager = ThreadedTestTangoContextManager()
@@ -88,10 +101,29 @@ def tango_harness_fixture(  # pylint: disable=too-many-arguments
         SubrackFQDNs=[subrack_name],
         CabinetNetworkAddress="10.0.0.0",
     )
+    context_manager.add_device(
+        field_station_name,
+        MockFieldStation,
+    )
     context_manager.add_mock_device(subrack_name, mock_subrack)
     context_manager.add_mock_device(tile_name, mock_tile)
     with context_manager as context:
         yield context
+
+
+@pytest.fixture(name="field_station_device")
+def field_station_device_fixture(
+    tango_harness: TangoContextProtocol,
+    field_station_name: str,
+) -> DeviceProxy:
+    """
+    Fixture that returns the tile Tango device under test.
+
+    :param tango_harness: a test harness for Tango devices.
+    :param field_station_name: name of the Field station Tango device.
+    :yield: the Field station Tango device under test.
+    """
+    yield tango_harness.get_device(field_station_name)
 
 
 @pytest.fixture(name="station_device")
@@ -104,10 +136,43 @@ def station_device_fixture(
 
     :param tango_harness: a test harness for Tango devices.
     :param station_name: name of the station Tango device.
-
     :yield: the station Tango device under test.
     """
     yield tango_harness.get_device(station_name)
+
+
+def test_mock_field_station(
+    field_station_device: DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test basic functionality of the mock field station.
+
+    :param field_station_device: the Field station Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    assert (
+        field_station_device.outsideTemperature
+        == MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
+    )
+
+    field_station_device.subscribe_event(
+        "outsideTemperature",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["outsideTemperature"],
+    )
+    change_event_callbacks["outsideTemperature"].assert_change_event(
+        MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
+    )
+
+    mocked_outside_temperature = 37.2
+
+    field_station_device.MockOutsideTemperatureChange(mocked_outside_temperature)
+
+    change_event_callbacks["outsideTemperature"].assert_change_event(
+        mocked_outside_temperature
+    )
 
 
 def test_off(
@@ -219,8 +284,8 @@ def test_healthParams(
     Test for healthParams attributes.
 
     :param station_device: the SPS station Tango device under test.
-    :param expected_init_params: the initial values which the health model is
-        expected to have initially
+    :param expected_init_params: the initial values which the health
+        model is expected to have initially
     :param new_params: the new health rule params to pass to the health model
     """
     assert station_device.healthModelParams == json.dumps(expected_init_params)

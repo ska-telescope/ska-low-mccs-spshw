@@ -327,7 +327,7 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
             "subscriptions" : [
                 "adminmode",
                 "state",
-                "tileprogrammingstate"
+                #"tileprogrammingstate"
             ]
         },
         "subrack": {

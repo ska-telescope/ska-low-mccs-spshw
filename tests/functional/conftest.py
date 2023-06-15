@@ -375,7 +375,6 @@ def get_device_fixture(
     tango_context: TangoContextProtocol,
     device_mapping: dict[str, DeviceMapping],
     change_event_callbacks: MockTangoEventCallbackGroup,
-    mode: AdminMode,
 ) -> Callable[[str], tango.DeviceProxy]:
     """
     Return a memoized function that returns a DeviceProxy for a given name.
@@ -389,7 +388,7 @@ def get_device_fixture(
     """
 
     @lru_cache
-    def _get_device(short_name: str) -> tango.DeviceProxy:
+    def _get_device(short_name: str, mode: AdminMode) -> tango.DeviceProxy:
         device_data = device_mapping[short_name]
         name = device_data["name"]
         tango_device = tango_context.get_device(name)

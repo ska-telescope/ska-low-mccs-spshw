@@ -1,0 +1,16 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsStationCalibrator_GetCalibration.json",
+    "title": "MccsStationCalibrator GetCalibration schema",
+    "description": "Schema for MccsStationCalibrator's GetCalibration command",
+    "type": "object",
+    "properties": {
+        "frequency_channel": {
+            "description": "Freqency channel to calibrate for",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+        }
+    },
+    "required": ["frequency_channel"]
+}

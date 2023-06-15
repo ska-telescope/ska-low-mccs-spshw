@@ -375,6 +375,7 @@ def get_device_fixture(
     tango_context: TangoContextProtocol,
     device_mapping: dict[str, DeviceMapping],
     change_event_callbacks: MockTangoEventCallbackGroup,
+    mode: AdminMode,
 ) -> Callable[[str], tango.DeviceProxy]:
     """
     Return a memoized function that returns a DeviceProxy for a given name.
@@ -392,6 +393,7 @@ def get_device_fixture(
         device_data = device_mapping[short_name]
         name = device_data["name"]
         tango_device = tango_context.get_device(name)
+        tango_device.adminmode = mode
 
         # TODO: why do some devices i.e. MccsDaqReceiver need this?
         for _ in range(23):
@@ -406,7 +408,7 @@ def get_device_fixture(
         dev_class = device_info.dev_class
         print(f"Created DeviceProxy for {short_name} - {dev_class} {name}")
         for attr in device_data.get("subscriptions", []):
-            #attr_value = tango_device.read_attribute(attr).value
+            attr_value = tango_device.read_attribute(attr).value
             attr_event = change_event_callbacks[f"{name}/{attr}"]
             tango_device.subscribe_event(
                 attr,
@@ -414,8 +416,8 @@ def get_device_fixture(
                 attr_event,
             )
             print(f"Subscribed to {name}/{attr}")
-            #attr_event.assert_change_event(attr_value)
-            #print(f"Received initial value for {name}/{attr}: {attr_value}")
+            attr_event.assert_change_event(attr_value)
+            print(f"Received initial value for {name}/{attr}: {attr_value}")
 
         return tango_device
 
@@ -564,7 +566,7 @@ def get_online_tango_device(
     :param state: the desired DevState
     :return: a Tango DeviceProxy to a device in the desired state
     """
-    dev = get_device(short_name)
+    dev = get_device(short_name,mode)
     dev_name = dev.dev_name()
 
     initial_admin_mode = dev.read_attribute("adminMode").value

@@ -18,12 +18,12 @@ facility:
     version: tpm_v1_6
     port: 10000
     instances:
-      10:
+      2:
         host: 10.0.10.218
         subrack: "1"
         subrack_bay: 2
         LoggingLevelDefault: 5
-      13:
+      5:
         host: 10.0.10.215
         subrack: "1"
         subrack_bay: 5

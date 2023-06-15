@@ -6,7 +6,7 @@ simulators:
 deviceServers:  # e.g....
   tpms:
     instances:
-      1:
+      2:
         host: 10.0.10.201
         port: 10000
         version: tpm_v1_6

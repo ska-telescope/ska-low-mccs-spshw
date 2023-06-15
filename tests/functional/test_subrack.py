@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import enum
 import json
+from typing import TypedDict
 
 import pytest
 import tango
@@ -26,9 +27,10 @@ from ska_tango_testing.context import TangoContextProtocol
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
+
 TPM_BAY_COUNT = 8
 MAX_SUBRACK_FAN_SPEED = 8000.0
-
+DeviceMapping = TypedDict("DeviceMapping", {"name": str, "subscriptions": list[str]})
 
 # TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,
 # but we need to know the meaning of 1 and 2 in the context of fan modes,
@@ -94,6 +96,7 @@ def test_turn_off_tpms() -> None:
 def check_subrack_is_online_and_on(
     subrack_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Check that the subrack is online and on.
@@ -109,25 +112,30 @@ def check_subrack_is_online_and_on(
     subrack_device.subscribe_event(
         "state",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_state"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/state"],
     )
-
+    print(f"{subrack_device.state()} 1")
+    print(change_event_callbacks.__dict__)
     # Test can run in ONLINE or MAINTENANCE admin mode,
     # so we only need to act if the admin mode is OFFLINE
     if admin_mode == AdminMode.OFFLINE:
         change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.DISABLE
+            f"{device_mapping['subrack']['name']}/state", tango.DevState.DISABLE
         )
+        print(f"{subrack_device.state()} 2")
         print("Subrack device is in DISABLE state.")
         print("Putting subrack device ONLINE...")
         subrack_device.adminMode = AdminMode.ONLINE
         change_event_callbacks.assert_change_event(
-            "subrack_state", tango.DevState.UNKNOWN
+            f"{device_mapping['subrack']['name']}/state", tango.DevState.UNKNOWN
         )
+        print(f"{subrack_device.state()} 3")
         print("Subrack device is in UNKNOWN state.")
 
+    print(f"{subrack_device.state()} 4")
+
     change_event_callbacks.assert_change_event(
-        "subrack_state",
+        f"{device_mapping['subrack']['name']}/state",
         OneOf(tango.DevState.OFF, tango.DevState.ON),
     )
     state = subrack_device.state()
@@ -138,13 +146,13 @@ def check_subrack_is_online_and_on(
         subrack_device.On()
 
         change_event_callbacks.assert_change_event(
-            "subrack_state",
+            f"{device_mapping['subrack']['name']}/state",
             tango.DevState.UNKNOWN,
         )
         print("Subrack device is in UNKNOWN state.")
 
         change_event_callbacks.assert_change_event(
-            "subrack_state",
+            f"{device_mapping['subrack']['name']}/state",
             tango.DevState.ON,
         )
 
@@ -166,6 +174,7 @@ def choose_a_fan() -> int:
 def choose_a_tpm(
     subrack_device: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> int:
     """
     Return a TPM number.
@@ -179,16 +188,16 @@ def choose_a_tpm(
     subrack_device.subscribe_event(
         "tpmPresent",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_tpm_present"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpmPresent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_tpm_present",
+        f"{device_mapping['subrack']['name']}/tpmPresent",
         Anything,
     )
     tpms_present = subrack_device.tpmPresent
     if tpms_present is None:
         change_event_callbacks.assert_change_event(
-            "subrack_tpm_present",
+            f"{device_mapping['subrack']['name']}/tpmPresent",
             Anything,
         )
         tpms_present = subrack_device.tpmPresent
@@ -203,6 +212,7 @@ def ensure_subrack_fan_mode(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Ensure that the fan is in manual mode.
@@ -220,17 +230,17 @@ def ensure_subrack_fan_mode(
     subrack_device.subscribe_event(
         "subrackFanModes",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_mode"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/subrackFanModes"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_mode",
+        f"{device_mapping['subrack']['name']}/subrackFanModes",
         fan_modes,
     )
 
     if fan_modes is None:
         # We only just put it online / turned it on,
         # so let's wait for a poll to return a real value
-        change_event_callbacks.assert_change_event("subrack_fan_mode", Anything)
+        change_event_callbacks.assert_change_event(f"{device_mapping['subrack']['name']}/subrackFanModes", Anything)
     fan_modes = subrack_device.subrackFanModes
     assert fan_modes is not None
 
@@ -242,7 +252,7 @@ def ensure_subrack_fan_mode(
         subrack_device.SetSubrackFanMode(encoded_arg)
 
         change_event_callbacks.assert_change_event(
-            "subrack_fan_mode",
+            f"{device_mapping['subrack']['name']}/subrackFanModes",
             expected_fan_modes,
         )
 
@@ -252,6 +262,8 @@ def ensure_subrack_fan_speed_percent(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
+    
 ) -> None:
     """
     Ensure that the fan is set to 90% speed.
@@ -268,10 +280,10 @@ def ensure_subrack_fan_speed_percent(
     subrack_device.subscribe_event(
         "subrackFanSpeedsPercent",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_speeds_percent"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/subrackFanSpeedsPercent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds_percent",
+        f"{device_mapping['subrack']['name']}/subrackFanSpeedsPercent",
         expected_fan_speeds_percent,
     )
 
@@ -296,6 +308,7 @@ def ensure_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Ensure that the fan's speed is about 90% of its maximum.
@@ -316,19 +329,20 @@ def ensure_subrack_fan_speed(
     subrack_device.subscribe_event(
         "subrackFanSpeeds",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_fan_speeds"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/subrackFanSpeeds"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds
+        f"{device_mapping['subrack']['name']}/subrackFanSpeeds", expected_fan_speeds
     )
 
 
 @given(parsers.parse("the TPM is {target_power}"))
 def ensure_tpm_power_state(
     subrack_device: tango.DeviceProxy,
-    tpm_number: int,
+    tpm_1_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
     target_power: str,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Ensure that the TPM's power state is as expected.
@@ -340,37 +354,37 @@ def ensure_tpm_power_state(
     :param target_power: name of the target power to check
     """
     subrack_device.subscribe_event(
-        f"tpm{tpm_number}PowerState",
+        f"tpm{tpm_1_number}PowerState",
         tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_tpm_power_state"],
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"],
     )
-    change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+    change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
         OneOf(PowerState.UNKNOWN, PowerState.OFF, PowerState.ON)
     )
-    tpm_power_state = getattr(subrack_device, f"tpm{tpm_number}PowerState")
+    tpm_power_state = getattr(subrack_device, f"tpm{tpm_1_number}PowerState")
     if tpm_power_state == PowerState.UNKNOWN:
         # We've just turned it on and haven't received poll results yet
         print("TPM power state is still unknown. Waiting for next event...")
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
             OneOf(PowerState.OFF, PowerState.ON)
         )
 
-    tpm_power_state = getattr(subrack_device, f"tpm{tpm_number}PowerState")
+    tpm_power_state = getattr(subrack_device, f"tpm{tpm_1_number}PowerState")
     print(f"TPM power state is now {tpm_power_state}")
 
     if target_power == "off" and tpm_power_state == PowerState.ON:
         print("TPM is on. Powering it off...")
-        subrack_device.PowerOffTpm(tpm_number)
+        subrack_device.PowerOffTpm(tpm_1_number)
 
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
             PowerState.OFF
         )
         print("TPM is off.")
     elif target_power == "on" and tpm_power_state == PowerState.OFF:
         print("TPM is off. Powering it on...")
-        subrack_device.PowerOnTpm(tpm_number)
+        subrack_device.PowerOnTpm(tpm_1_number)
 
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
             PowerState.ON
         )
         print("TPM is on.")
@@ -395,7 +409,7 @@ def set_subrack_fan_speed(
 @when("I tell the subrack to turn on the TPM")
 def turn_on_tpm(
     subrack_device: tango.DeviceProxy,
-    tpm_number: int,
+    tpm_1_number: int,
 ) -> None:
     """
     Tell the subrack to turn on the TPM.
@@ -403,8 +417,8 @@ def turn_on_tpm(
     :param subrack_device: the subrack Tango device under test.
     :param tpm_number: number of the TPM being exercised by this test.
     """
-    print(f"Turning on TPM {tpm_number}...")
-    subrack_device.PowerOnTpm(tpm_number)
+    print(f"Turning on TPM {tpm_1_number}...")
+    subrack_device.PowerOnTpm(tpm_1_number)
 
 
 @when("I tell the subrack to turn off all TPMs")
@@ -425,6 +439,7 @@ def check_subrack_fan_speed_setting(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Check that the fan's speed setting becomes 100%.
@@ -439,7 +454,7 @@ def check_subrack_fan_speed_setting(
     expected_fan_speeds_percent = [pytest.approx(p) for p in fan_speeds_percent]
     expected_fan_speeds_percent[fan_number - 1] = pytest.approx(100.0)
 
-    change_event_callbacks["subrack_fan_speeds_percent"].assert_change_event(
+    change_event_callbacks[f"{device_mapping['subrack']['name']}/fanSpeedsPercent"].assert_change_event(
         expected_fan_speeds_percent
     )
 
@@ -449,6 +464,7 @@ def check_subrack_fan_speed(
     subrack_device: tango.DeviceProxy,
     fan_number: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    device_mapping: dict[str, DeviceMapping],
 ) -> None:
     """
     Check that the fan's speed becomes approximately 100% of its maximum.
@@ -466,7 +482,7 @@ def check_subrack_fan_speed(
         pytest.approx(p * MAX_SUBRACK_FAN_SPEED / 100.0) for p in fan_speeds_percent
     ]
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds", expected_fan_speeds
+        f"{device_mapping['subrack']['name']}/subrackFanSpeeds", expected_fan_speeds
     )
 
 
@@ -474,6 +490,8 @@ def check_subrack_fan_speed(
 def check_tpm_power_state(
     change_event_callbacks: MockTangoEventCallbackGroup,
     target_power: str,
+    device_mapping: dict[str, DeviceMapping],
+    tpm_1_number: int,
 ) -> None:
     """
     Check that the chosen TPM has a given power state.
@@ -485,12 +503,12 @@ def check_tpm_power_state(
     assert target_power in ["off", "on"]
 
     if target_power == "off":
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
             PowerState.OFF
         )
         print("TPM is off as expected.")
     else:
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+        change_event_callbacks[f"{device_mapping['subrack']['name']}/tpm{tpm_1_number}PowerState"].assert_change_event(
             PowerState.ON
         )
         print("TPM is off as expected.")

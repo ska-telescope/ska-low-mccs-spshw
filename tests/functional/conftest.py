@@ -541,7 +541,7 @@ _DevState = {"ON": tango.DevState.ON, "OFF": tango.DevState.OFF}.__getitem__
 
 
 @given(
-    parsers.parse("a {short_name} that is {mode} and {state}"),
+    parsers.parse("a {short_name} that is in mode {mode} and state {state}"),
     converters={
         "state": _DevState,
         "mode": AdminMode.__getitem__,

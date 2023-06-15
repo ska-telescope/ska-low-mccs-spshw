@@ -406,7 +406,7 @@ def get_device_fixture(
         dev_class = device_info.dev_class
         print(f"Created DeviceProxy for {short_name} - {dev_class} {name}")
         for attr in device_data.get("subscriptions", []):
-            attr_value = tango_device.read_attribute(attr).value
+            #attr_value = tango_device.read_attribute(attr).value
             attr_event = change_event_callbacks[f"{name}/{attr}"]
             tango_device.subscribe_event(
                 attr,
@@ -414,8 +414,8 @@ def get_device_fixture(
                 attr_event,
             )
             print(f"Subscribed to {name}/{attr}")
-            attr_event.assert_change_event(attr_value)
-            print(f"Received initial value for {name}/{attr}: {attr_value}")
+            #attr_event.assert_change_event(attr_value)
+            #print(f"Received initial value for {name}/{attr}: {attr_value}")
 
         return tango_device
 

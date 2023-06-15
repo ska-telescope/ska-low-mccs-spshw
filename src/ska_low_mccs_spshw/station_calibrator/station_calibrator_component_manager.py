@@ -145,7 +145,6 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         :return: A list of calibration values
         """
         assert self._calibration_store_proxy is not None
-        das = self._calibration_store_proxy.GetSolution(
+        return self._calibration_store_proxy.GetSolution(
             channel, self._outside_temperature
         )
-        return das

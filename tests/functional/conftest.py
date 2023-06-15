@@ -360,8 +360,8 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
                 "tileProgrammingState",
             ],
         },
-        "daq": {
-            "name": "psi-low/daqreceiver/001",
+        "DAQ": {
+            "name": "low-mccs/daqreceiver/001",
             "subscriptions": [
                 "adminMode",
                 "state",

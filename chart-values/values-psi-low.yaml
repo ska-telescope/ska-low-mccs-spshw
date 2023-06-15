@@ -4,7 +4,7 @@ facility:
       1:
         cabinet_network_address: 10.0.0.0
         subracks: [1]
-        tpms: [10, 13]
+        tpms: [2, 5]
         LoggingLevelDefault: 5
   subracks:
     reachable_from: psi-node3

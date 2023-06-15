@@ -64,57 +64,57 @@ def daq_device_fixture(
 ) -> tango.DeviceProxy:
     return tango_harness.get_device(daq_name)
 
-@pytest.fixture(name="subrack_device", scope="module")
-def subrack_device_fixture(
-    tango_harness: TangoContextProtocol,
-    subrack_name: str,
-) -> tango.DeviceProxy:
-    """
-    Return the subrack device under test.
+# @pytest.fixture(name="subrack_device", scope="module")
+# def subrack_device_fixture(
+#     tango_harness: TangoContextProtocol,
+#     subrack_name: str,
+# ) -> tango.DeviceProxy:
+#     """
+#     Return the subrack device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param subrack_name: name of the subrack Tango device.
+#     :param tango_harness: a test harness for Tango devices.
+#     :param subrack_name: name of the subrack Tango device.
 
-    :return: the subrack Tango device under test.
-    """
-    return tango_harness.get_device(subrack_name)
-
-
-@pytest.fixture(name="station_device")
-def station_device_fixture(
-    tango_harness: TangoContextProtocol,
-    station_name: str,
-) -> tango.DeviceProxy:
-    """
-    Return the station device under test.
-
-    :param tango_harness: a test harness for Tango devices.
-    :param station_name: name of the station Tango device.
-
-    :return: the station Tango device under test.
-    """
-    return tango_harness.get_device(station_name)
+#     :return: the subrack Tango device under test.
+#     """
+#     return tango_harness.get_device(subrack_name)
 
 
-@pytest.fixture(name="tile_device_list")
-def tile_device_fixture(
-    tango_harness: TangoContextProtocol,
-    tile_name_1: str,
-    tile_name_2: str,
-) -> list[tango.DeviceProxy]:
-    """
-    Return the subrack device under test.
+# @pytest.fixture(name="station_device")
+# def station_device_fixture(
+#     tango_harness: TangoContextProtocol,
+#     station_name: str,
+# ) -> tango.DeviceProxy:
+#     """
+#     Return the station device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param tile_name_1: name of the tile Tango device no. 1.
-    :param tile_name_2: name of the tile Tango device no. 2.
+#     :param tango_harness: a test harness for Tango devices.
+#     :param station_name: name of the station Tango device.
 
-    :return: a list containing the tile devices under test.
-    """
-    return [
-        tango_harness.get_device(tile_name_1),
-        tango_harness.get_device(tile_name_2),
-    ]
+#     :return: the station Tango device under test.
+#     """
+#     return tango_harness.get_device(station_name)
+
+
+# @pytest.fixture(name="tile_device_list")
+# def tile_device_fixture(
+#     tango_harness: TangoContextProtocol,
+#     tile_name_1: str,
+#     tile_name_2: str,
+# ) -> list[tango.DeviceProxy]:
+#     """
+#     Return the subrack device under test.
+
+#     :param tango_harness: a test harness for Tango devices.
+#     :param tile_name_1: name of the tile Tango device no. 1.
+#     :param tile_name_2: name of the tile Tango device no. 2.
+
+#     :return: a list containing the tile devices under test.
+#     """
+#     return [
+#         tango_harness.get_device(tile_name_1),
+#         tango_harness.get_device(tile_name_2),
+#     ]
 
 
 def skip_if_tiles_simulated(

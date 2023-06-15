@@ -322,21 +322,13 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
         "<domain>/<class>/<instance>"
     """
     return {
-        "tile_1": {
-            "name": f"low-mccs/tile/{tpm_1_number:04}",
-            "subscriptions": [
+        "station": {
+            "name" : "low-mccs/station/001",
+            "subscriptions" : [
                 "adminMode",
                 "state",
-                "tileProgrammingState",
-            ],
-        },
-        "tile_2": {
-            "name": f"low-mccs/tile/{tpm_2_number:04}",
-            "subscriptions": [
-                "adminMode",
-                "state",
-                "tileProgrammingState",
-            ],
+                #"tileprogrammingstate"
+            ]
         },
         "subrack": {
             "name": "low-mccs/subrack/0001",
@@ -352,13 +344,21 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
                 "tpmPresent",
             ],
         },
-        "station": {
-            "name" : "low-mccs/station/001",
-            "subscriptions" : [
+        "tile_1": {
+            "name": f"low-mccs/tile/{tpm_1_number:04}",
+            "subscriptions": [
                 "adminMode",
                 "state",
-                #"tileprogrammingstate"
-            ]
+                "tileProgrammingState",
+            ],
+        },
+        "tile_2": {
+            "name": f"low-mccs/tile/{tpm_2_number:04}",
+            "subscriptions": [
+                "adminMode",
+                "state",
+                "tileProgrammingState",
+            ],
         },
         "DAQ": {
             "name": "low-mccs/daqreceiver/001",

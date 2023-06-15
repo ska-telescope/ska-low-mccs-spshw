@@ -1,6 +1,6 @@
-==================
+=============================
 Station calibrator subpackage
-==================
+=============================
 
 .. automodule:: ska_low_mccs_spshw.station_calibrator
 

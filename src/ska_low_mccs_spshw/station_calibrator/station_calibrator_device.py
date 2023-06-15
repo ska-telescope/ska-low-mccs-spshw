@@ -238,7 +238,7 @@ class MccsStationCalibrator(SKABaseDevice):
             **kwargs: Any,
         ) -> list[float]:
             """
-            Implement :py:meth:`.MccsStationCalibrator.GetCalibrationCommand` commands.
+            Implement :py:meth:`.MccsStationCalibrator.GetCalibration` command.
 
             :param args: Positional arguments. This should be empty and
                 is provided for type hinting purposes only.

@@ -30,8 +30,6 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         calibration_store_fqdn: str,
         communication_state_callback: Callable[[CommunicationStatus], None],
         component_state_callback: Callable[..., None],
-        field_station_proxy: Optional[MccsDeviceProxy] = None,
-        calibration_store_proxy: Optional[MccsDeviceProxy] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -44,10 +42,6 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
             the component manager and its component changes.
         :param component_state_callback: callback to be called when the
             component state changes.
-        :param field_station_proxy: proxy to the field station,
-            defaults to None
-        :param calibration_store_proxy: proxy to the calibration store,
-            defaults to None
         """
         super().__init__(
             logger,
@@ -59,11 +53,9 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         )
         self._component_state_callback = component_state_callback
         self._field_station_fqdn = field_station_fqdn
-        self._field_station_proxy: Optional[MccsDeviceProxy] = field_station_proxy
+        self._field_station_proxy: Optional[MccsDeviceProxy] = None
         self._calibration_store_fqdn = calibration_store_fqdn
-        self._calibration_store_proxy: Optional[
-            MccsDeviceProxy
-        ] = calibration_store_proxy
+        self._calibration_store_proxy: Optional[MccsDeviceProxy] = None
         self._outside_temperature = 25
         self.logger = logger
 

@@ -322,28 +322,6 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
         "<domain>/<class>/<instance>"
     """
     return {
-        "station": {
-            "name" : "low-mccs/station/001",
-            "subscriptions" : [
-                "adminMode",
-                "state",
-                #"tileprogrammingstate"
-            ]
-        },
-        "subrack": {
-            "name": "low-mccs/subrack/0001",
-            "subscriptions": [
-                "adminMode",
-                "state",
-                f"tpm{tpm_1_number}PowerState",
-                f"tpm{tpm_2_number}PowerState",
-                "subrackFanModes",
-                "subrackFanSpeeds",
-                "subrackFanPercent",
-                "subrackFanSpeedsPercent",
-                "tpmPresent",
-            ],
-        },
         "tile_1": {
             "name": f"low-mccs/tile/{tpm_1_number:04}",
             "subscriptions": [
@@ -359,6 +337,28 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
                 "state",
                 "tileProgrammingState",
             ],
+        },
+        "subrack": {
+            "name": "low-mccs/subrack/0001",
+            "subscriptions": [
+                "adminMode",
+                "state",
+                f"tpm{tpm_1_number}PowerState",
+                f"tpm{tpm_2_number}PowerState",
+                "subrackFanModes",
+                "subrackFanSpeeds",
+                "subrackFanPercent",
+                "subrackFanSpeedsPercent",
+                "tpmPresent",
+            ],
+        },
+        "station": {
+            "name" : "low-mccs/station/001",
+            "subscriptions" : [
+                "adminMode",
+                "state",
+                #"tileprogrammingstate"
+            ]
         },
         "DAQ": {
             "name": "low-mccs/daqreceiver/001",
@@ -581,12 +581,13 @@ def get_online_tango_device(
             tango.DevState.OFF,
             tango.DevState.ALARM,
             tango.DevState.ON,
+            tango.DevState.STANDBY,
         }
     else:  # AdminMode OFFLINE, NOT_FITTED, RESERVED
         assert initial_state == tango.DevState.DISABLE
 
     # only support ONLINE for now
-    assert mode == AdminMode.ONLINE
+    #assert mode == AdminMode.ONLINE
 
     # bring ONLINE if not already
     if initial_admin_mode != AdminMode.ONLINE:

@@ -95,8 +95,8 @@ class MccsStationCalibrator(SKABaseDevice):
             self.logger,
             self.FieldStationFQDN,
             self.CalibrationStoreFQDN,
-            self._component_communication_state_changed, 
-            self._component_state_callback
+            self._component_communication_state_changed,
+            self._component_state_callback,
         )
 
     def init_command_objects(self: MccsStationCalibrator) -> None:

@@ -116,7 +116,7 @@ def test_GetCalibration(
     :param calibration_solutions: the expected calibration solutions to be returned
         The key is the channel and the value is the calibration solution
     """
-    station_calibrator_device.adminMode = AdminMode.ONLINE # type: ignore[assignment]
+    station_calibrator_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for channel in calibration_solutions:
         argin = json.dumps({"frequency_channel": channel})
         result = station_calibrator_device.GetCalibration(argin)

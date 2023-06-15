@@ -590,7 +590,17 @@ class SpsStationComponentManager(
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        if not all(
+        result_code = ResultCode.OK
+
+        if all(
+            proxy._proxy is not None
+            and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
+            for proxy in self._tile_proxies.values()
+        ):
+            self.logger.debug("Tiles already initialised")
+            result_code = ResultCode.FAILED
+
+        if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._subrack_power_states.values()
         ):
@@ -598,18 +608,14 @@ class SpsStationComponentManager(
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
-        if not all(
+        if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
 
-        if result_code == ResultCode.OK and any(
-            proxy._proxy is not None
-            and proxy._proxy.tileProgrammingState not in {"Initialised", "Synchronised"}
-            for proxy in self._tile_proxies.values()
-        ):
+        if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
             result_code = self._initialise_tiles(task_callback, task_abort_event)
 

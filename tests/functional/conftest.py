@@ -9,22 +9,8 @@
 from __future__ import annotations
 
 import os
-import socket
-import threading
-import time
 from contextlib import contextmanager
-from types import TracebackType
-from typing import (
-    Any,
-    Callable,
-    ContextManager,
-    Generator,
-    Literal,
-    Optional,
-    Type,
-    Union,
-    cast,
-)
+from typing import Any, Callable, ContextManager, Generator, Union, cast
 
 import _pytest
 import pytest
@@ -129,86 +115,40 @@ def subrack_address_context_manager_factory_fixture(
         return _yield_address
     else:
 
-        class _SubrackServerContextManager:
-            def __init__(self: _SubrackServerContextManager) -> None:
-                # Imports are deferred until now,
-                # so that we do not try to import from ska_low_mccs_spshw
-                # until we know that we need to.
-                # This allows us to runour functional tests
-                # against a real cluster
-                # from within a test runner pod
-                # that does not have ska_low_mccs_spshw installed.
-                import uvicorn
-
+        def _subrack_server_context_manager() -> ContextManager[tuple[str, int]]:
+            # Imports are deferred until now,
+            # so that we do not try to import from ska_low_mccs_spshw
+            # until we know that we need to.
+            # This allows us to runour functional tests
+            # against a real cluster
+            # from within a test runner pod
+            # that does not have ska_low_mccs_spshw installed.
+            try:
                 from ska_low_mccs_spshw.subrack import SubrackSimulator
                 from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
-                    configure_server,
+                    SubrackServerContextManager,
                 )
+            except ImportError as import_error:
+                raise ImportError(
+                    """Error: you must do one of the following:
+                    * use "--true-context" flag or TRUE_TANGO_CONTEXT environment
+                    variable to run these tests against a pre-deployed cluster in
+                    which the Tango device under test is already running.
+                    * use SUBRACK_ADDRESS environment variable to specify the host
+                    and port of a subrack server. The test harness will stand up
+                    the Tango device under test to monitor and control the subrack
+                    at that server address.
+                    * run these tests in an environment in which ska_low_mccs_spshw
+                    and its dependencies are installed. The test harness will
+                    stand up its own subrack simulator server, and then stand up
+                    the Tango device under test to monitor and control that
+                    subrack simulator server."""
+                ) from import_error
 
-                class _ThreadableServer(uvicorn.Server):
-                    def install_signal_handlers(self: _ThreadableServer) -> None:
-                        pass
+            subrack_simulator = SubrackSimulator(**subrack_simulator_config)
+            return SubrackServerContextManager(subrack_simulator)
 
-                server_config = configure_server(
-                    SubrackSimulator(**subrack_simulator_config),
-                    host="127.0.0.1",
-                    port=0,
-                )
-                self._server = _ThreadableServer(config=server_config)
-                self._socket = socket.socket()
-                self._thread = threading.Thread(
-                    target=self._server.run, args=([self._socket],), daemon=True
-                )
-
-            def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
-                self._thread.start()
-                while not self._server.started:
-                    time.sleep(1e-3)
-                _, port = self._socket.getsockname()
-                return "127.0.0.1", port
-
-            def __exit__(
-                self: _SubrackServerContextManager,
-                exc_type: Optional[Type[BaseException]],
-                exception: Optional[BaseException],
-                trace: Optional[TracebackType],
-            ) -> Literal[False]:
-                """
-                Exit the context.
-
-                :param exc_type: the type of exception thrown in the with block
-                :param exception: the exception thrown in the with block
-                :param trace: a traceback
-
-                :returns: whether the exception (if any) has been fully handled
-                    by this method and should be swallowed i.e. not re-raised
-
-                :raises ImportError: if this context manager is running in an
-                    environment that does not have ska_low_mccs_spshw installed.
-                """
-                if exc_type is ImportError:
-                    raise ImportError(
-                        """Error: you must do one of the following:
-                        * use "--true-context" flag or TRUE_TANGO_CONTEXT environment
-                          variable to run these tests against a pre-deployed cluster in
-                          which the Tango device under test is already running.
-                        * use SUBRACK_ADDRESS environment variable to specify the host
-                          and port of a subrack server. The test harness will stand up
-                          the Tango device under test to monitor and control the subrack
-                          at that server address.
-                        * run these tests in an environment in which ska_low_mccs_spshw
-                          and its dependencies are installed. The test harness will
-                          stand up its own subrack simulator server, and then stand up
-                          the Tango device under test to monitor and control that
-                          subrack simulator server."""
-                    ) from exception
-
-                self._server.should_exit = True
-                self._thread.join()
-
-                return False
-
-        return _SubrackServerContextManager
+        return _subrack_server_context_manager
 
 
 @pytest.fixture(name="tango_harness", scope="module")

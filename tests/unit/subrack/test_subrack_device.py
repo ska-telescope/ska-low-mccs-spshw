@@ -10,14 +10,10 @@ from __future__ import annotations
 
 import gc
 import json
-from typing import Any, Generator
+from typing import Any, Iterator
 
 import pytest
 from ska_control_model import AdminMode, PowerState, ResultCode
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
@@ -27,6 +23,7 @@ from ska_low_mccs_spshw.subrack import (
     SubrackData,
     SubrackSimulator,
 )
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -72,48 +69,43 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    subrack_name: str,
-    subrack_address: tuple[str, int],
-) -> Generator[TangoContextProtocol, None, None]:
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    subrack_id: int,
+    subrack_simulator: SubrackSimulator,
+) -> Iterator[SpsTangoTestHarnessContext]:
     """
-    Return a Tango harness against which to run tests of the deployment.
+    Return a test context in which both subrack simulator and Tango device are running.
 
-    :param subrack_name: the name of the subrack Tango device
-    :param subrack_address: the host and port of the subrack
+    :param subrack_id: the ID of the subrack under test
+    :param subrack_simulator: the backend simulator that the Tango
+        device will monitor and control
 
-    :yields: a tango context.
+    :yields: a test context.
     """
-    subrack_ip, subrack_port = subrack_address
+    harness = SpsTangoTestHarness()
+    harness.add_subrack_simulator(subrack_id, subrack_simulator)
+    harness.add_subrack_device(subrack_id)
 
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_device(
-        subrack_name,
-        "ska_low_mccs_spshw.MccsSubrack",
-        SubrackIp=subrack_ip,
-        SubrackPort=subrack_port,
-        UpdateRate=1.0,
-        LoggingLevelDefault=5,
-    )
-    with context_manager as context:
+    with harness as context:
         yield context
 
 
 @pytest.fixture(name="subrack_device")
 def subrack_device_fixture(
-    tango_harness: TangoContextProtocol,
-    subrack_name: str,
+    test_context: SpsTangoTestHarnessContext,
+    subrack_id: int,
 ) -> DeviceProxy:
     """
     Fixture that returns the subrack Tango device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param subrack_name: name of the subrack Tango device.
+    :param test_context: a test context in which both
+        subrack simulator and subrack Tango device are running.
+    :param subrack_id: ID of the subrack.
 
     :yield: the subrack Tango device under test.
     """
-    yield tango_harness.get_device(subrack_name)
+    yield test_context.get_subrack_device(subrack_id)
 
 
 def test_off_on(

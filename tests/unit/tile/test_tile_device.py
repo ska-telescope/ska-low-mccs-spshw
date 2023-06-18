@@ -13,8 +13,8 @@ import gc
 import itertools
 import json
 import time
-import unittest
-from typing import Any, Generator, Optional
+import unittest.mock
+from typing import Any, Iterator, Optional
 
 import numpy as np
 import pytest
@@ -26,14 +26,11 @@ from ska_control_model import (
     ResultCode,
 )
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DevFailed, DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator, TileData
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -57,59 +54,49 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    tile_name: str,
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    tile_id: int,
     patched_tile_device_class: type[MccsTile],
-    subrack_name: str,
-    mock_subrack: unittest.mock.Mock,
-) -> Generator[TangoContextProtocol, None, None]:
+    mock_subrack_device_proxy: unittest.mock.Mock,
+) -> Iterator[SpsTangoTestHarnessContext]:
     """
-    Return a Tango harness against which to run tests of the deployment.
+    Return a test context in which a tile Tango device is running.
 
-    :param tile_name: the name of the tile Tango device
-    :param patched_tile_device_class: a subrack of MccsTile that has
+    :param tile_id: the ID of the tile under test
+    :param patched_tile_device_class: a subclass of MccsTile that has
         been patched with extra commands that mock system under control
         behaviours.
-    :param subrack_name: the name of the subrack Tango device
-    :param mock_subrack: a mock proxy to the subrack Tango device
+    :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
+        device.
 
-    :yields: a tango context.
+    :yields: a test context.
     """
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_device(
-        tile_name,
-        patched_tile_device_class,
-        TileId=1,
-        SimulationConfig=1,
-        TestConfig=1,
-        SubrackFQDN=subrack_name,
-        SubrackBay=1,
-        AntennasPerTile=2,
-        LoggingLevelDefault=3,
-        TpmIp="10.0.10.201",
-        TpmCpldPort=10000,
-        TpmVersion="tpm_v1_6",
+    harness = SpsTangoTestHarness()
+    harness.add_mock_subrack_device(1, mock_subrack_device_proxy)
+    harness.add_tile_device(
+        tile_id,
+        device_class=patched_tile_device_class,
     )
-    context_manager.add_mock_device(subrack_name, mock_subrack)
-    with context_manager as context:
+    with harness as context:
         yield context
 
 
 @pytest.fixture(name="tile_device")
 def tile_device_fixture(
-    tango_harness: TangoContextProtocol,
-    tile_name: str,
+    test_context: SpsTangoTestHarnessContext,
+    tile_id: int,
 ) -> DeviceProxy:
     """
     Fixture that returns the tile Tango device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param tile_name: name of the tile Tango device.
+    :param test_context: a test context in which the tile
+        Tango device under test is running.
+    :param tile_id: ID of the tile.
 
     :yield: the tile Tango device under test.
     """
-    yield tango_harness.get_device(tile_name)
+    yield test_context.get_tile_device(tile_id)
 
 
 # pylint: disable=too-many-lines

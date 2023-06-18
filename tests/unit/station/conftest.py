@@ -149,8 +149,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
             Mock all tiles being turned off.
 
             Make the station device think it has received state change
-            event from its tiles, indicating that the tiles are
-            now OFF.
+            event from its tiles, indicating that the tiles are now OFF.
             """
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
@@ -161,8 +160,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
             Mock all tiles being turned on.
 
             Make the station device think it has received state change
-            event from its tiles, indicating that the tiles are
-            now ON.
+            event from its tiles, indicating that the tiles are now ON.
             """
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)

@@ -82,11 +82,7 @@ K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal
 K8S_TEST_RUNNER_CHART_NAME ?= ska-low-mccs-k8s-test-runner
-K8S_TEST_RUNNER_CHART_TAG ?= 0.7.2
-
-
-# TODO: Temporary override to newer image with tango 9.3.6, until we update test runner.
-K8S_TEST_RUNNER_IMAGE_TAG = 9.3.22
+K8S_TEST_RUNNER_CHART_TAG ?= 0.8.0
 
 
 K8S_TEST_RUNNER_CHART_OVERRIDES =

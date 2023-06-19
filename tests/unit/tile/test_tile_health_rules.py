@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*
-# type: ignore[assignment, arg-type]
 #
 # This file is part of the SKA Low MCCS project
 #

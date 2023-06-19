@@ -622,9 +622,10 @@ class TestTileOrchestrator:
             that the tile orchestrator took the right action in
             response to the stimulus.
         """
-        # pylint: disable=line-too-long
+
         def stimulate() -> None:
             """Apply the specified stimulus on the orchestrator."""
+            # pylint: disable=line-too-long
             {
                 Stimulus.DESIRE_ONLINE: lambda tc: tc.desire_online(),
                 Stimulus.DESIRE_OFFLINE: lambda tc: tc.desire_offline(),

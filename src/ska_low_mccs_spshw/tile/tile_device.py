@@ -143,7 +143,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
-        for (command_name, command_object) in [
+        for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
@@ -179,7 +179,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
-        for (command_name, method_name) in [
+        for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
             ("Configure", "configure"),
@@ -1416,6 +1416,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(register_name)
 
     class WriteRegisterCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the WriteRegister() command.
 
@@ -1835,6 +1836,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(argin)
 
     class SetLmcDownloadCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the SetLmcDownload() command.
 
@@ -2623,6 +2625,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class StartBeamformerCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the StartBeamformer(argin) command.
 
@@ -3007,6 +3010,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class SendDataSamplesCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the SendDataSamples() command.
 

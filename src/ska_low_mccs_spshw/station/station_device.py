@@ -117,7 +117,7 @@ class SpsStation(SKAObsDevice):
         #
         # Long running commands
         #
-        for (command_name, method_name) in [
+        for command_name, method_name in [
             ("Initialise", "initialise"),
             ("StartAcquisition", "start_acquisition"),
         ]:

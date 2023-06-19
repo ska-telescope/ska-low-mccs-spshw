@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*
-# pylint: disable=too-many-arguments
-# type: ignore[assignment, arg-type]
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -82,7 +80,7 @@ class TestTileHealthModel:
             ),
         ],
     )
-    def test_health_changed_monitored_value(
+    def test_health_changed_monitored_value(  # pylint: disable=too-many-arguments
         self: TestTileHealthModel,
         health_model: TileHealthModel,
         init_monitoring_points: dict[str, Any],
@@ -100,12 +98,18 @@ class TestTileHealthModel:
         :param final_monitoring_points: the new values of the monitoring points
         :param final_health_state: the final expected health state
         """
-        health_model._state["tile_health_structure"] = health_model._merge_dicts(
+        # TODO: Fixed in ska-low-mccs-common > 0.7.2
+        health_model._state[
+            "tile_health_structure"
+        ] = health_model._merge_dicts(  # type: ignore[assignment]
             TileData.get_tile_defaults(), init_monitoring_points
         )
         assert init_health_state == health_model.evaluate_health()
-        health_model._state["tile_health_structure"] = health_model._merge_dicts(
-            health_model._state["tile_health_structure"], final_monitoring_points
+        health_model._state[
+            "tile_health_structure"
+        ] = health_model._merge_dicts(  # type: ignore[assignment]
+            health_model._state["tile_health_structure"],  # type: ignore[arg-type]
+            final_monitoring_points,
         )
         assert final_health_state == health_model.evaluate_health()
 
@@ -162,7 +166,7 @@ class TestTileHealthModel:
             ),
         ],
     )
-    def test_health_changed_thresholds(
+    def test_health_changed_thresholds(  # pylint: disable=too-many-arguments
         self: TestTileHealthModel,
         health_model: TileHealthModel,
         init_thresholds: dict[str, Any],
@@ -180,7 +184,10 @@ class TestTileHealthModel:
         :param final_thresholds: the new values of the thresholds
         :param final_health_state: the final expected health state
         """
-        health_model._state["tile_health_structure"] = TileData.get_tile_defaults()
+        # TODO: Fixed in ska-low-mccs-common > 0.7.2
+        health_model._state[
+            "tile_health_structure"
+        ] = TileData.get_tile_defaults()  # type: ignore[assignment]
         health_model.health_params = init_thresholds
         assert init_health_state == health_model.evaluate_health()
         health_model.health_params = final_thresholds

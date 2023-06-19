@@ -119,9 +119,7 @@ class IntegratedChannelDataSimulator:
         :param sleep_between_antennas: time in seconds.
         """
         for tile in range(self._nof_tiles):
-
             for ant in range(self._nof_ants_per_fpga):
-
                 for chan in range(
                     int(self._nof_channels / self._nof_channels_per_packet)
                 ):

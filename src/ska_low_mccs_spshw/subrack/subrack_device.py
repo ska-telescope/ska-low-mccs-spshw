@@ -383,7 +383,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         """Initialise the command handlers for this device."""
         super().init_command_objects()
 
-        for (command_name, method_name) in [
+        for command_name, method_name in [
             ("PowerOnTpm", "turn_on_tpm"),
             ("PowerOffTpm", "turn_off_tpm"),
             ("PowerUpTpms", "turn_on_tpms"),
@@ -400,7 +400,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                     logger=self.logger,
                 ),
             )
-        for (command_name, command_class) in [
+        for command_name, command_class in [
             ("SetSubrackFanMode", SetSubrackFanModeCommand),
             ("SetPowerSupplyFanSpeed", SetPowerSupplyFanSpeedCommand),
         ]:

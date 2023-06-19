@@ -56,7 +56,7 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         self._field_station_proxy: Optional[MccsDeviceProxy] = None
         self._calibration_store_fqdn = calibration_store_fqdn
         self._calibration_store_proxy: Optional[MccsDeviceProxy] = None
-        self._outside_temperature = 25
+        self._outside_temperature: float = 25
         self.logger = logger
 
     def start_communicating(self: StationCalibratorComponentManager) -> None:
@@ -83,7 +83,7 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
 
         try:
             self._field_station_proxy.add_change_event_callback(
-                "OutsideTemperature", self._field_station_outside_temperature_changed
+                "outsideTemperature", self._field_station_outside_temperature_changed
             )
         except Exception as e:  # pylint: disable=broad-except
             self._update_component_state(fault=True)

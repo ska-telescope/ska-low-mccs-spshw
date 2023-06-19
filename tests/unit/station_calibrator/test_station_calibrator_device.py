@@ -56,8 +56,9 @@ def station_calibrator_name_fixture() -> str:
 
 
 @pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
+def tango_harness_fixture(  # pylint: disable=too-many-arguments
     station_calibrator_name: str,
+    patched_station_calibrator_device_class: type,
     field_station_name: str,
     mock_field_station: DeviceProxy,
     calibration_store_name: str,
@@ -67,6 +68,8 @@ def tango_harness_fixture(
     Return a Tango harness against which to run tests of the deployment.
 
     :param station_calibrator_name: the name of the station calibrator Tango device
+    :param patched_station_calibrator_device_class: a subclass of MccsStationCalibrator
+        that has been patched with extra commands for use in testing
     :param field_station_name: the name of the field station Tango device
     :param mock_field_station: a mock field station proxy that has been configured
         with the required field station behaviours.
@@ -79,7 +82,7 @@ def tango_harness_fixture(
     context_manager = ThreadedTestTangoContextManager()
     context_manager.add_device(
         station_calibrator_name,
-        MccsStationCalibrator,
+        patched_station_calibrator_device_class,
         FieldStationFQDN=field_station_name,
         CalibrationStoreFQDN=calibration_store_name,
     )
@@ -107,7 +110,7 @@ def station_calibrator_device_fixture(
 
 def test_GetCalibration(
     station_calibrator_device: MccsStationCalibrator,
-    calibration_solutions: dict[int, list[float]],
+    calibration_solutions: dict[tuple[int, float], list[float]],
 ) -> None:
     """
     Test of the GetCalibration command.
@@ -117,7 +120,8 @@ def test_GetCalibration(
         The key is the channel and the value is the calibration solution
     """
     station_calibrator_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    for channel in calibration_solutions:
+    for channel, temperature in calibration_solutions:
         argin = json.dumps({"frequency_channel": channel})
+        station_calibrator_device.SetOutsideTemperature(temperature)
         result = station_calibrator_device.GetCalibration(argin)
-        assert all(result == calibration_solutions[channel])
+        assert all(result == calibration_solutions[(channel, temperature)])

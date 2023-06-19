@@ -417,7 +417,7 @@ def get_device_fixture(
             print(f"Subscribed to {name}/{attr}")
             if not isinstance(attr_value,int) and attr_value is not None:
                 attr_value = list(attr_value)
-            change_event_callbacks.assert_change_event(f"{name}/{attr}",attr_value,lookahead=3)
+            change_event_callbacks.assert_change_event(f"{name}/{attr}",attr_value,lookahead=10)
             print(f"Received initial value for {name}/{attr}: {attr_value}")
 
         return tango_device

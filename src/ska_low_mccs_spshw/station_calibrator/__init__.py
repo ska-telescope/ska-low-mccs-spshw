@@ -15,5 +15,5 @@ __all__ = [
 ]
 
 from .station_calibrator_component_manager import StationCalibratorComponentManager
-from .station_calibrator_health_model import StationCalibratorHealthModel
 from .station_calibrator_device import MccsStationCalibrator
+from .station_calibrator_health_model import StationCalibratorHealthModel

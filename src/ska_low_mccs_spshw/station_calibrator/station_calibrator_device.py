@@ -102,7 +102,7 @@ class MccsStationCalibrator(SKABaseDevice):
     def init_command_objects(self: MccsStationCalibrator) -> None:
         """Initialise the command handlers for this device."""
         super().init_command_objects()
-        for (command_name, command_object) in [
+        for command_name, command_object in [
             ("GetCalibration", self.GetCalibrationCommand),
         ]:
             self.register_command_object(

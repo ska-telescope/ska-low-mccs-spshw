@@ -415,7 +415,7 @@ def get_device_fixture(
                 attr_event,
             )
             print(f"Subscribed to {name}/{attr}")
-            if (not isinstance(attr_value,int) or not isinstance(attr_value,str)) and attr_value is not None:
+            if not isinstance(attr_value,int) and not isinstance(attr_value,str) and attr_value is not None:
                 attr_value = list(attr_value)
             change_event_callbacks.assert_change_event(f"{name}/{attr}",attr_value,lookahead=10)
             print(f"Received initial value for {name}/{attr}: {attr_value}")

@@ -13,6 +13,7 @@ for, amongst other things, monitoring and control of LFAA.
 """
 
 __all__ = [
+    "MccsDaqReceiver",
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
@@ -20,6 +21,7 @@ __all__ = [
     "version",
 ]
 
+from .daq_receiver import MccsDaqReceiver
 from .station import SpsStation
 from .station_calibrator import MccsStationCalibrator
 from .subrack import MccsSubrack

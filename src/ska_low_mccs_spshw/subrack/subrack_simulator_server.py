@@ -131,7 +131,7 @@ def main() -> None:
     """Entry point for an HTTP server that fronts a subrack simulator."""
     subrack = SubrackSimulator()
 
-    port = int(os.getenv("SIMULATOR_PORT", "8081"))
+    port = int(os.getenv("SUBRACK_SIMULATOR_PORT", "8081"))
     run_server_forever(subrack, port)
 
 

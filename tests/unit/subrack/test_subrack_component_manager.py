@@ -321,7 +321,7 @@ class TestOn:
             board_current=pytest.approx(0.7),
         )
 
-        for (name, values) in [
+        for name, values in [
             ("backplane_temperatures", [45.0, 46.0]),
             ("board_temperatures", [47.0, 48.0]),
             # Not implemented on SMB

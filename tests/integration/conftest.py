@@ -9,17 +9,14 @@
 from __future__ import annotations
 
 import functools
-import socket
-import threading
-import time
-from types import TracebackType
-from typing import Any, Callable, ContextManager, Generator, Literal, Optional, Type
+from typing import Any, Callable, Generator
 
 import pytest
-import uvicorn
 
 from ska_low_mccs_spshw.subrack import SubrackSimulator
-from ska_low_mccs_spshw.subrack.subrack_simulator_server import configure_server
+from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
+    SubrackServerContextManager,
+)
 
 
 def pytest_itemcollected(item: pytest.Item) -> None:
@@ -66,83 +63,17 @@ def subrack_simulator_fixture(
     return subrack_simulator_factory()
 
 
-@pytest.fixture(name="subrack_server_launcher", scope="session")
-def subrack_server_launcher_fixture() -> Callable[
-    [SubrackSimulator], ContextManager[tuple[str, int]]
-]:
-    """
-    Return a subrack server launcher.
-
-    :return: a callable that, when called, launches a subrack server for
-        use in testing, yields it, and tears it down afterwards.
-    """
-
-    class _ThreadableServer(uvicorn.Server):
-        def install_signal_handlers(self: _ThreadableServer) -> None:
-            pass
-
-    class _SubrackServerContextManager:
-        def __init__(
-            self: _SubrackServerContextManager,
-            subrack_simulator: SubrackSimulator,
-        ) -> None:
-            self._socket = socket.socket()
-            server_config = configure_server(
-                subrack_simulator, host="127.0.0.1", port=0
-            )
-            self._server = _ThreadableServer(config=server_config)
-            self._thread = threading.Thread(
-                target=self._server.run, args=([self._socket],), daemon=True
-            )
-
-        def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
-            self._thread.start()
-
-            while not self._server.started:
-                time.sleep(1e-3)
-            _, port = self._socket.getsockname()
-            return "127.0.0.1", port
-
-        def __exit__(
-            self,
-            exc_type: Optional[Type[BaseException]],
-            exception: Optional[BaseException],
-            trace: Optional[TracebackType],
-        ) -> Literal[False]:
-            """
-            Exit the context.
-
-            :param exc_type: the type of exception thrown in the with block
-            :param exception: the exception thrown in the with block
-            :param trace: a traceback
-
-            :returns: whether the exception (if any) has been fully handled
-                by this method and should be swallowed i.e. not re-raised
-            """
-            self._server.should_exit = True
-            self._thread.join()
-            return False
-
-    return _SubrackServerContextManager
-
-
 @pytest.fixture(name="subrack_address")
 def subrack_address_fixture(
-    subrack_server_launcher: Callable[
-        [SubrackSimulator], ContextManager[tuple[str, int]]
-    ],
     subrack_simulator: SubrackSimulator,
 ) -> Generator[tuple[str, int], None, None]:
     """
     Yield the host and port of a running subrack server.
 
-    :param subrack_server_launcher: a callable that, when called,
-        returns a context manager that spins up a subrack server, yields
-        it for use in testing, and then shuts its down afterwards.
     :param subrack_simulator: the actual backend simulator to which this
         server provides an interface.
 
     :yields: the host and port of a running subrack server.
     """
-    with subrack_server_launcher(subrack_simulator) as (host, port):
+    with SubrackServerContextManager(subrack_simulator) as (host, port):
         yield host, port

@@ -18,6 +18,7 @@ import logging
 import threading
 import time
 from datetime import datetime, timezone
+from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
 import tango
@@ -402,7 +403,7 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.STANDBY
             else:
                 evaluated_power_state = PowerState.UNKNOWN
-            self.logger.info(
+            self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
@@ -589,18 +590,100 @@ class SpsStationComponentManager(
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-        if not all(
-            power_state == PowerState.ON for power_state in self._subrack_power_states
+        result_code = ResultCode.OK
+
+        if all(
+            proxy._proxy is not None
+            and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
+            for proxy in self._tile_proxies.values()
+        ):
+            self.logger.debug("Tiles already initialised")
+            result_code = ResultCode.FAILED
+
+        if result_code == ResultCode.OK and not all(
+            power_state == PowerState.ON
+            for power_state in self._subrack_power_states.values()
         ):
             self.logger.debug("Starting on sequence on subracks")
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
-        if not all(
-            power_state == PowerState.ON for power_state in self._tile_power_states
+        if result_code == ResultCode.OK and not all(
+            power_state == PowerState.ON
+            for power_state in self._tile_power_states.values()
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising tiles")
+            result_code = self._initialise_tiles(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising station")
+            result_code = self._initialise_station(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Checking synchronisation")
+            result_code = self._check_station_synchronisation(
+                task_callback, task_abort_event
+            )
+
+        if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
+            self.logger.debug("End initialisation")
+            task_status = TaskStatus.COMPLETED
+        else:
+            self.logger.error("Initialisation failed")
+            task_status = TaskStatus.FAILED
+        if task_callback:
+            task_callback(status=task_status)
+
+    def initialise(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _initialise method.
+
+        This method returns immediately after it submitted
+        `self._initialise` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :return: a task staus and response message
+        """
+        return self.submit_task(self._initialise, task_callback=task_callback)
+
+    @check_communicating
+    def _initialise(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Initialise this station.
+
+        The order to turn a station on is: subrack, then tiles
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        self.logger.debug("Starting initialise sequence")
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        result_code = ResultCode.OK
+        if not all(
+            power_state == PowerState.ON
+            for power_state in self._subrack_power_states.values()
+        ):
+            self.logger.debug("Subracks not on.")
+            result_code = ResultCode.FAILED
+
+        if not all(
+            power_state == PowerState.ON
+            for power_state in self._tile_power_states.values()
+        ):
+            self.logger.debug("Tiles not on.")
+            result_code = ResultCode.FAILED
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
@@ -700,7 +783,7 @@ class SpsStationComponentManager(
             #    results.append(result_code)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state == "Initialised" for state in states):
+            if all(state in ["Initialised", "Synchronised"] for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
@@ -878,7 +961,6 @@ class SpsStationComponentManager(
         """
         return self._is_configured
 
-    # :TODO: Most methods just return a dummy value
     # ----------
     # Attributes
     # ----------
@@ -1073,13 +1155,25 @@ class SpsStationComponentManager(
         return self._csp_ingest_port
 
     @property
+    def csp_source_port(self: SpsStationComponentManager) -> int:
+        """
+        Get 40Gb CSP source port.
+
+        :return: UDP port for CSP source port
+        """
+        return self._csp_source_port
+
+    @property
     def is_programmed(self: SpsStationComponentManager) -> bool:
         """
         Get TPM programming state.
 
         :return: True if all TPMs are programmed
         """
-        return True
+        return all(
+            programming_state in {"Programmed", "Initialised", "Synchronised"}
+            for programming_state in self.tile_programming_state()
+        )
 
     @property
     def test_generator_active(self: SpsStationComponentManager) -> bool:
@@ -1088,7 +1182,10 @@ class SpsStationComponentManager(
 
         :return: True if at least one TPM uses test generator
         """
-        return False
+        return any(
+            tile._proxy is not None and tile._proxy.testGeneratorActive
+            for tile in self._tile_proxies.values()
+        )
 
     @property
     def is_beamformer_running(self: SpsStationComponentManager) -> bool:
@@ -1097,7 +1194,10 @@ class SpsStationComponentManager(
 
         :return: Get station beamformer state
         """
-        return False
+        return all(
+            tile._proxy is not None and tile._proxy.isBeamformerRunning
+            for tile in self._tile_proxies.values()
+        )
 
     def tile_programming_state(self: SpsStationComponentManager) -> list[str]:
         """
@@ -1120,7 +1220,7 @@ class SpsStationComponentManager(
         rms_values: list[float] = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            rms_values = rms_values + proxy._proxy.AdcPower
+            rms_values = rms_values + proxy._proxy.adcPower
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
@@ -1129,7 +1229,15 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of board temperatures
         """
-        return [35.0, 35.0, 35.0]
+        board_temperatures = list(
+            tile._proxy is not None and tile._proxy.boardTemperature
+            for tile in self._tile_proxies.values()
+        )
+        return [
+            min(board_temperatures),
+            mean(board_temperatures),
+            max(board_temperatures),
+        ]
 
     def fpga_temperature_summary(self: SpsStationComponentManager) -> list[float]:
         """
@@ -1137,7 +1245,11 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        return [35.0, 35.0, 35.0]
+        fpga_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpgaTemperature
+            for tile in self._tile_proxies.values()
+        )
+        return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
         """
@@ -1145,7 +1257,11 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of PPS delays
         """
-        return [0.0, 0.0, 0.0]
+        pps_delays = list(
+            tile._proxy is not None and tile._proxy.ppsDelay
+            for tile in self._tile_proxies.values()
+        )
+        return [min(pps_delays), mean(pps_delays), max(pps_delays)]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1153,15 +1269,21 @@ class SpsStationComponentManager(
 
         :return: TRUE if SYSREF is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.sysrefPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def pll_locked_summary(self: SpsStationComponentManager) -> bool:
         """
         Get summary of PLL lock state.
 
-        :return: TRUE if SYSREF is present in all tiles
+        :return: TRUE if PLL locked in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.pllLocked
+            for tile in self._tile_proxies.values()
+        )
 
     def pps_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1169,7 +1291,10 @@ class SpsStationComponentManager(
 
         :return: TRUE if PPS is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.ppsPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def clock_present_summary(self: SpsStationComponentManager) -> bool:
         """
@@ -1177,7 +1302,10 @@ class SpsStationComponentManager(
 
         :return: TRUE if 10 MHz clock is present in all tiles
         """
-        return True
+        return all(
+            tile._proxy is not None and tile._proxy.clockPresent
+            for tile in self._tile_proxies.values()
+        )
 
     def forty_gb_network_errors(self: SpsStationComponentManager) -> list[int]:
         """
@@ -1279,6 +1407,48 @@ class SpsStationComponentManager(
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
+        base_ip = self._fortygb_network_address.split(".")
+        if self._station_id % 2 == 1:
+            base_ip3 = 0x80
+        else:
+            base_ip3 = 0xC0
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        last_tile = len(self._tile_proxies) - 1
+        src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
+        src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"
+        dst_ip1 = self._csp_ingest_address
+        dst_ip2 = self._csp_ingest_address
+        dst_port = self._csp_ingest_port
+        src_mac = self._base_mac_address + base_ip3 + 24 + 2 * last_tile
+        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip1}")
+        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip2}")
+        proxy._proxy.Configure40GCore(
+            json.dumps(
+                {
+                    "core_id": 0,
+                    "arp_table_entry": 0,
+                    "source_ip": src_ip1,
+                    "source_mac": src_mac,
+                    "source_port": self._source_port,
+                    "destination_ip": dst_ip1,
+                    "destination_port": dst_port,
+                }
+            )
+        )
+        proxy._proxy.Configure40GCore(
+            json.dumps(
+                {
+                    "core_id": 1,
+                    "arp_table_entry": 0,
+                    "source_ip": src_ip2,
+                    "source_mac": src_mac + 1,
+                    "source_port": self._source_port,
+                    "destination_ip": dst_ip2,
+                    "destination_port": dst_port,
+                }
+            )
+        )
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
@@ -1327,7 +1497,8 @@ class SpsStationComponentManager(
         proxies = list(self._tile_proxies.values())
         proxy = proxies[tile]._proxy
         assert proxy is not None  # for the type checker
-        coefs = [float(tile_antenna)] + calibration_coefficients[2:]
+        coefs = copy.deepcopy(calibration_coefficients)
+        coefs[0] = float(tile_antenna)
         proxy.LoadCalibrationCoefficients(coefs)
 
     def apply_calibration(self: SpsStationComponentManager, switch_time: str) -> None:
@@ -1342,7 +1513,7 @@ class SpsStationComponentManager(
         """
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyCalibration()
+            tile._proxy.ApplyCalibration(switch_time)
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]

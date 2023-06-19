@@ -55,7 +55,7 @@ class SubrackServerContextManager:
 
     def __init__(
         self: SubrackServerContextManager,
-        backend: SubrackProtocol,
+        backend: SubrackProtocol | None = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -64,7 +64,9 @@ class SubrackServerContextManager:
             provides web access.
         """
         self._socket = socket.socket()
-        server_config = _configure_server(backend, host="127.0.0.1", port=0)
+        server_config = _configure_server(
+            backend or SubrackSimulator(), host="127.0.0.1", port=0
+        )
         self._server = _ThreadableServer(config=server_config)
         self._thread = threading.Thread(
             target=self._server.run, args=([self._socket],), daemon=True

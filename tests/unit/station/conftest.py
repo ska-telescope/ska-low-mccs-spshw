@@ -18,10 +18,10 @@ from tango.server import command
 from ska_low_mccs_spshw import SpsStation
 
 
-@pytest.fixture(name="mock_subrack")
-def mock_subrack_fixture() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_subrack_device_proxy")
+def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
     """
-    Fixture that provides a mock MccsSubrack device.
+    Fixture that provides a mock MccsSubrack device proxy.
 
     :return: a mock MccsSubrack device.
     """
@@ -44,14 +44,16 @@ def mock_tile_builder_fixture() -> MockDeviceBuilder:
     return builder
 
 
-@pytest.fixture(name="mock_tile")
-def mock_tile_fixture(mock_tile_builder: MockDeviceBuilder) -> unittest.mock.Mock:
+@pytest.fixture(name="mock_tile_device_proxy")
+def mock_tile_device_proxy_fixture(
+    mock_tile_builder: MockDeviceBuilder,
+) -> unittest.mock.Mock:
     """
-    Fixture that provides a mock MccsTile device.
+    Fixture that provides a mock MccsTile device proxy.
 
     :param mock_tile_builder: builder for mock Tiles
 
-    :return: a mock MccsTile device.
+    :return: a mock MccsTile device proxy.
     """
     return mock_tile_builder()
 
@@ -66,19 +68,8 @@ def num_tiles_fixture() -> int:
     return 4
 
 
-@pytest.fixture(name="tile_names")
-def tile_names_fixture(num_tiles: int) -> list[str]:
-    """
-    Fixture that provides a list of mock MccsTile fqdns.
-
-    :param num_tiles: the number of tiles to use
-    :return: list of tile fqdns
-    """
-    return [f"low-mccs/tile/{str.zfill(str(i), 4)}" for i in range(num_tiles)]
-
-
-@pytest.fixture(name="mock_tiles")
-def mock_tiles_fixture(
+@pytest.fixture(name="mock_tile_device_proxies")
+def mock_tile_device_proxies_fixture(
     mock_tile_builder: MockDeviceBuilder, num_tiles: int
 ) -> list[unittest.mock.Mock]:
     """
@@ -92,8 +83,8 @@ def mock_tiles_fixture(
     return [mock_tile_builder() for _ in range(num_tiles)]
 
 
-@pytest.fixture(name="patched_station_device_class")
-def patched_station_device_class_fixture() -> type[SpsStation]:
+@pytest.fixture(name="patched_sps_station_device_class")
+def patched_sps_station_device_class_fixture() -> type[SpsStation]:
     """
     Return a station device class patched with extra methods for testing.
 
@@ -101,7 +92,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
         testing.
     """
 
-    class PatchedStationDevice(SpsStation):
+    class PatchedSpsStationDevice(SpsStation):
         """
         SpsStation patched with extra commands for testing purposes.
 
@@ -110,7 +101,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
         """
 
         @command()
-        def MockSubracksOff(self: PatchedStationDevice) -> None:
+        def MockSubracksOff(self: PatchedSpsStationDevice) -> None:
             """
             Mock all subracks being turned off.
 
@@ -129,7 +120,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
                 )
 
         @command()
-        def MockSubracksOn(self: PatchedStationDevice) -> None:
+        def MockSubracksOn(self: PatchedSpsStationDevice) -> None:
             """
             Mock all subracks being turned on.
 
@@ -144,7 +135,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
 
         @command()
-        def MockTilesOff(self: PatchedStationDevice) -> None:
+        def MockTilesOff(self: PatchedSpsStationDevice) -> None:
             """
             Mock all tiles being turned off.
 
@@ -155,7 +146,7 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(name, power=PowerState.OFF)
 
         @command()
-        def MockTilesOn(self: PatchedStationDevice) -> None:
+        def MockTilesOn(self: PatchedSpsStationDevice) -> None:
             """
             Mock all tiles being turned on.
 
@@ -165,4 +156,4 @@ def patched_station_device_class_fixture() -> type[SpsStation]:
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
 
-    return PatchedStationDevice
+    return PatchedSpsStationDevice

@@ -9,28 +9,25 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Generator
+from typing import Iterator
 
 import pytest
 from ska_control_model import CommunicationStatus
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.station import SpsStationComponentManager
+from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    subrack_name: str,
-    mock_subrack: unittest.mock.Mock,
-    tile_name: str,
-    mock_tile: unittest.mock.Mock,
-) -> Generator[TangoContextProtocol, None, None]:
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    subrack_id: int,
+    mock_subrack_device_proxy: unittest.mock.Mock,
+    tile_id: int,
+    mock_tile_device_proxy: unittest.mock.Mock,
+) -> Iterator[None]:
     """
-    Return a Tango harness against which to run tests of station component manager.
+    Yield into a context in which Tango is running, with mock devices.
 
     The station component manager acts as a Tango client to the subrack
     and tile Tango device. In these unit tests, the subrack and tile
@@ -39,20 +36,21 @@ def tango_harness_fixture(
     a tango subsystem in place. Here, we assume that the station has
     only one subrack and one tile.
 
-    :param subrack_name: the name of the subrack Tango device
-    :param mock_subrack: a mock that has been configured with the
-        required subrack behaviours.
-    :param tile_name: the name of the subrack Tango device
-    :param mock_tile: a mock that has been configured with the
-        required tile behaviours.
+    :param subrack_id: ID of the subrack Tango device to be mocked
+    :param mock_subrack_device_proxy: a mock subrack device proxy
+        that has been configured with the required subrack behaviours.
+    :param tile_id: ID of the tile Tango device to be mocked
+    :param mock_tile_device_proxy: a mock tile device proxy
+        that has been configured with the required subrack behaviours.
 
-    :yields: a tango context.
+    :yields: into a context in which Tango is running, with a mock
+        subrack device.
     """
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_mock_device(subrack_name, mock_subrack)
-    context_manager.add_mock_device(tile_name, mock_tile)
-    with context_manager as context:
-        yield context
+    harness = SpsTangoTestHarness()
+    harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
+    harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
+    with harness:
+        yield
 
 
 @pytest.fixture(name="callbacks")
@@ -74,18 +72,19 @@ def callbacks_fixture() -> MockCallableGroup:
 
 @pytest.fixture(name="station_component_manager")
 def station_component_manager_fixture(
-    tango_harness: TangoContextProtocol,
-    subrack_name: str,
-    tile_name: str,
+    test_context: None,
+    subrack_id: int,
+    tile_id: int,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
 
-    :param tango_harness: a test harness for MCCS tango devices
-    :param subrack_name: name of the subservient subrack Tango device
-    :param tile_name: name of the subservient subrack Tango device
+    :param test_context: a Tango test context running the required
+        mock subservient devices
+    :param subrack_id: ID of the subservient subrack Tango device
+    :param tile_id: ID of the subservient subrack Tango device
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
 
@@ -94,8 +93,8 @@ def station_component_manager_fixture(
     """
     return SpsStationComponentManager(
         1,
-        [subrack_name],
-        [tile_name],
+        [get_subrack_name(subrack_id)],
+        [get_tile_name(tile_id)],
         "10.0.0.0",
         logger,
         1,

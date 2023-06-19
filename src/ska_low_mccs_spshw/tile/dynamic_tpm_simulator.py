@@ -153,7 +153,7 @@ class DynamicValuesUpdater:
         with tango.EnsureOmniThread():
             self._thread_is_running = True
             while self._thread_is_running:
-                for (generator, callback) in self._targets:
+                for generator, callback in self._targets:
                     callback(next(generator))
                 time.sleep(self._update_rate)
 

@@ -6,32 +6,56 @@
 #
 PROJECT = ska-low-mccs-spshw
 
-HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
+include .make/base.mk
 
-PYTHON_SWITCHES_FOR_BLACK = --line-length=88
-PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
+########################################################################
+# DOCS
+########################################################################
+include .make/docs.mk
+
+DOCS_SPHINXOPTS = -n -W --keep-going
+
+docs-pre-build:
+	poetry config virtualenvs.create false
+	poetry install --no-root --only docs
+
+.PHONY: docs-pre-build
+
+########################################################################
+# PYTHON
+########################################################################
+include .make/python.mk
+
+PYTHON_LINE_LENGTH = 88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_TEST_FILE = tests
-DOCS_SPHINXOPTS = -n -W --keep-going
-
-include .make/oci.mk
-include .make/k8s.mk
-include .make/python.mk
-include .make/raw.mk
-include .make/base.mk
-include .make/docs.mk
-include .make/helm.mk
-include .make/xray.mk
-
-# define private overrides for above variables in here
--include PrivateRules.mak
-
-python-post-format:
-	docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
+
+.PHONY: python-post-lint
+
+
+########################################################################
+# OCI
+########################################################################
+include .make/oci.mk
+
+
+########################################################################
+# HELM
+########################################################################
+include .make/helm.mk
+
+HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
+
+########################################################################
+# K8S
+########################################################################
+include .make/k8s.mk
+include .make/raw.mk
+include .make/xray.mk
 
 
 K8S_FACILITY ?= k8s-test
@@ -58,7 +82,8 @@ K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal
 K8S_TEST_RUNNER_CHART_NAME ?= ska-low-mccs-k8s-test-runner
-K8S_TEST_RUNNER_CHART_TAG ?= 0.4.2
+K8S_TEST_RUNNER_CHART_TAG ?= 0.8.0
+
 
 K8S_TEST_RUNNER_CHART_OVERRIDES =
 
@@ -117,4 +142,11 @@ k8s-do-test:
 	helm  -n $(KUBE_NAMESPACE) uninstall $(K8S_TEST_RUNNER_CHART_RELEASE) ; \
 	exit $$EXIT_CODE
 
-.PHONY: python-post-format python-post-lint k8s-do-test
+.PHONY: k8s-do-test
+
+
+########################################################################
+# PRIVATE OVERRIDES
+########################################################################
+
+-include PrivateRules.mak

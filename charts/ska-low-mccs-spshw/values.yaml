@@ -124,8 +124,7 @@ image:
 #       requests:
 #         memory: 512Mi
 
-nodeSelector:
-  kubernetes.io/hostname: psi-node3 
+nodeSelector: {} 
 
 affinity: {}
 

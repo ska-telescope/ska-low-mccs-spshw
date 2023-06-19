@@ -1,4 +1,6 @@
 facility:
+  nodeSelector:
+    kubernetes.io/hostname: psi-node3
   stations:
     instances:
       1:

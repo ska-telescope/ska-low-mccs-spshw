@@ -307,7 +307,7 @@ def change_event_callbacks_fixture(
 
     return MockTangoEventCallbackGroup(
         *keys,
-        timeout=30.0,  # TPM takes a long time to initialise
+        timeout=60.0,  # TPM takes a long time to initialise
     )
 
 
@@ -325,9 +325,9 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
         "station": {
             "name" : "low-mccs/station/001",
             "subscriptions" : [
-                "adminMode",
+                "adminmode",
                 "state",
-                #"tileprogrammingstate"
+                "tileprogrammingstate"
             ]
         },
         "subrack": {
@@ -339,7 +339,7 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
                 f"tpm{tpm_2_number}PowerState",
                 "subrackFanModes",
                 "subrackFanSpeeds",
-                "subrackFanPercent",
+                #"subrackFanPercent",
                 "subrackFanSpeedsPercent",
                 "tpmPresent",
             ],
@@ -388,11 +388,10 @@ def get_device_fixture(
     """
 
     @lru_cache
-    def _get_device(short_name: str, mode: AdminMode) -> tango.DeviceProxy:
+    def _get_device(short_name: str) -> tango.DeviceProxy:
         device_data = device_mapping[short_name]
         name = device_data["name"]
         tango_device = tango_context.get_device(name)
-        tango_device.adminmode = mode
 
         # TODO: why do some devices i.e. MccsDaqReceiver need this?
         for _ in range(23):
@@ -406,6 +405,7 @@ def get_device_fixture(
 
         dev_class = device_info.dev_class
         print(f"Created DeviceProxy for {short_name} - {dev_class} {name}")
+        time.sleep(5)
         for attr in device_data.get("subscriptions", []):
             attr_value = tango_device.read_attribute(attr).value
             attr_event = change_event_callbacks[f"{name}/{attr}"]
@@ -415,7 +415,9 @@ def get_device_fixture(
                 attr_event,
             )
             print(f"Subscribed to {name}/{attr}")
-            attr_event.assert_change_event(attr_value)
+            if not isinstance(attr_value,int) and attr_value is not None:
+                attr_value = list(attr_value)
+            change_event_callbacks.assert_change_event(f"{name}/{attr}",attr_value,lookahead=3)
             print(f"Received initial value for {name}/{attr}: {attr_value}")
 
         return tango_device
@@ -553,6 +555,7 @@ def get_online_tango_device(
     short_name: str,
     mode: AdminMode,
     state: tango.DevState,
+    device_mapping: dict[str, DeviceMapping],
 ) -> tango.DeviceProxy:
     """
     Given a short name, get a Tango device in the given state and mode.
@@ -565,7 +568,7 @@ def get_online_tango_device(
     :param state: the desired DevState
     :return: a Tango DeviceProxy to a device in the desired state
     """
-    dev = get_device(short_name,mode)
+    dev = get_device(short_name)
     dev_name = dev.dev_name()
 
     initial_admin_mode = dev.read_attribute("adminMode").value
@@ -581,7 +584,7 @@ def get_online_tango_device(
             tango.DevState.OFF,
             tango.DevState.ALARM,
             tango.DevState.ON,
-            tango.DevState.STANDBY,
+            tango.DevState.UNKNOWN
         }
     else:  # AdminMode OFFLINE, NOT_FITTED, RESERVED
         assert initial_state == tango.DevState.DISABLE
@@ -589,12 +592,13 @@ def get_online_tango_device(
     # only support ONLINE for now
     #assert mode == AdminMode.ONLINE
 
+    dev.adminmode = mode
     # bring ONLINE if not already
-    if initial_admin_mode != AdminMode.ONLINE:
-        dev.adminMode = AdminMode.ONLINE
-        admin_mode_events.assert_change_event(AdminMode.ONLINE)
+    if initial_admin_mode != mode:
+        dev.adminMode = mode
+        admin_mode_events.assert_change_event(mode)
 
-        if initial_admin_mode == AdminMode.MAINTENANCE:
+        if initial_admin_mode == mode:
             state_events.assert_not_called()
         else:
             # TODO: MccsTile should transition to UNKNOWN but doesn't

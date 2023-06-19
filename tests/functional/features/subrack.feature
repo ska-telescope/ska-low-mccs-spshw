@@ -4,7 +4,8 @@ Feature: Test always-on subrack
 
     @XTP-17870 @XTP-17871
     Scenario: Monitor and control subrack fan speed
-        Given a subrack that is online and on
+        Given a subrack that is in mode ONLINE and state ON
+        #Given a subrack that is online and on
         And a choice of subrack fan
         And the fan mode is manual
         And the fan's speed setting is 90%
@@ -17,7 +18,8 @@ Feature: Test always-on subrack
 
     @XTP-17875 @XTP-17871
     Scenario: Turn on a TPM
-        Given a subrack that is online and on
+        Given a subrack that is in mode ONLINE and state ON
+        #Given a subrack that is online and on
         And a choice of TPM
         And the TPM is off
 
@@ -27,7 +29,8 @@ Feature: Test always-on subrack
 
     @XTP-17876 @XTP-17871
     Scenario: Turn off all TPMs
-        Given a subrack that is online and on
+        Given a subrack that is in mode ONLINE and state ON
+        #Given a subrack that is online and on
         And a choice of TPM
         And the TPM is on
 

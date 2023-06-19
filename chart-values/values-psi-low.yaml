@@ -1,6 +1,7 @@
-facility:
+ska-low-mccs-spshw:
   nodeSelector:
     kubernetes.io/hostname: psi-node3
+facility:
   stations:
     instances:
       1:

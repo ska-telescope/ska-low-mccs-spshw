@@ -62,7 +62,7 @@ class MockFieldStation(SKABaseDevice):
         dtype="float",
         label="outsideTemperature",
     )
-    def outsidetemperature(self: MockFieldStation) -> float:
+    def outsideTemperature(self: MockFieldStation) -> float:
         """
         Return the mocked outside temperature.
 
@@ -74,7 +74,7 @@ class MockFieldStation(SKABaseDevice):
     # Mocked Commands
     # ---------------
     @command(dtype_in="float", dtype_out="DevVarLongStringArray")
-    def mockoutsidetemperaturechange(
+    def MockOutsideTemperatureChange(
         self: MockFieldStation, argin: float
     ) -> DevVarLongStringArrayType:
         """

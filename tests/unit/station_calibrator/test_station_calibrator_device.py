@@ -10,18 +10,17 @@ from __future__ import annotations
 
 import gc
 import json
-from typing import Generator
+import time
+from typing import Iterator
+from unittest.mock import Mock
 
 import pytest
 from ska_control_model import AdminMode
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 
 from ska_low_mccs_spshw import MccsStationCalibrator
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -45,67 +44,47 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="station_calibrator_name", scope="session")
-def station_calibrator_name_fixture() -> str:
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    patched_station_calibrator_device_class: MccsStationCalibrator,
+    mock_field_station_device_proxy: Mock,
+    mock_calibration_store_device_proxy: Mock,
+) -> Iterator[SpsTangoTestHarnessContext]:
     """
-    Return the name of the Station Calibrator Tango device.
+    Yield into a context in which Tango is running, with mock devices.
 
-    :return: the name of the Station Calibrator Tango device.
-    """
-    return "low-mccs/stationcalibrator/001"
-
-
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(  # pylint: disable=too-many-arguments
-    station_calibrator_name: str,
-    patched_station_calibrator_device_class: type,
-    field_station_name: str,
-    mock_field_station: DeviceProxy,
-    calibration_store_name: str,
-    mock_calibration_store: DeviceProxy,
-) -> Generator[TangoContextProtocol, None, None]:
-    """
-    Return a Tango harness against which to run tests of the deployment.
-
-    :param station_calibrator_name: the name of the station calibrator Tango device
     :param patched_station_calibrator_device_class: a subclass of MccsStationCalibrator
         that has been patched with extra commands for use in testing
-    :param field_station_name: the name of the field station Tango device
-    :param mock_field_station: a mock field station proxy that has been configured
-        with the required field station behaviours.
-    :param calibration_store_name: the name of the calibration store Tango device
-    :param mock_calibration_store: a mock calibration store proxy that has been
-        configured with the required calibration store behaviours.
+    :param mock_field_station_device_proxy: a mock field station proxy that has been
+        configured with the required field station behaviours.
+    :param mock_calibration_store_device_proxy: a mock calibration store proxy that has
+        been configured with the required calibration store behaviours.
 
-    :yields: a tango context.
+    :yields: a test context.
     """
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_device(
-        station_calibrator_name,
-        patched_station_calibrator_device_class,
-        FieldStationFQDN=field_station_name,
-        CalibrationStoreFQDN=calibration_store_name,
+    harness = SpsTangoTestHarness()
+    harness.set_station_calibrator_device(
+        device_class=patched_station_calibrator_device_class,
     )
-    context_manager.add_mock_device(field_station_name, mock_field_station)
-    context_manager.add_mock_device(calibration_store_name, mock_calibration_store)
-    with context_manager as context:
+    harness.add_mock_field_station_device(mock_field_station_device_proxy)
+    harness.add_mock_calibration_store_device(mock_calibration_store_device_proxy)
+    with harness as context:
         yield context
 
 
 @pytest.fixture(name="station_calibrator_device")
 def station_calibrator_device_fixture(
-    tango_harness: TangoContextProtocol,
-    station_calibrator_name: str,
+    test_context: SpsTangoTestHarnessContext,
 ) -> DeviceProxy:
     """
-    Fixture that returns the tile Tango device under test.
+    Fixture that returns the station calibrator Tango device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param station_calibrator_name: name of the station calibrator Tango device.
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
 
     :yield: the station calibrator Tango device under test.
     """
-    yield tango_harness.get_device(station_calibrator_name)
+    yield test_context.get_station_calibrator_device()
 
 
 def test_GetCalibration(
@@ -120,6 +99,10 @@ def test_GetCalibration(
         The key is the channel and the value is the calibration solution
     """
     station_calibrator_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+
+    # Give the calibrator a moment to set up the proxies
+    time.sleep(0.1)
+
     for channel, temperature in calibration_solutions:
         argin = json.dumps({"frequency_channel": channel})
         station_calibrator_device.SetOutsideTemperature(temperature)

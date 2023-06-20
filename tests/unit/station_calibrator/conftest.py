@@ -35,27 +35,17 @@ def calibration_solutions_fixture() -> dict[tuple[int, float], list[float]]:
     }
 
 
-@pytest.fixture(name="calibration_store_name", scope="session")
-def calibration_store_name_fixture() -> str:
-    """
-    Return the name of the Calibration Store Tango device.
-
-    :return: the name of the Calibration Store Tango device.
-    """
-    return "low-mccs/calibrationstore/001"
-
-
-@pytest.fixture(name="mock_calibration_store")
-def mock_calibration_store_fixture(
+@pytest.fixture(name="mock_calibration_store_device_proxy")
+def mock_calibration_store_device_proxy_fixture(
     calibration_solutions: dict[tuple[int, float], list[float]],
 ) -> unittest.mock.Mock:
     """
-    Fixture that provides a mock MccsCalibrationStore device.
+    Fixture that provides a mock MccsCalibrationStore device proxy.
 
     :param calibration_solutions: sample calibration solutions to return from the
         calibration store, where the channel and temperature are the key
 
-    :return: a mock MccsCalibrationStore device.
+    :return: a mock MccsCalibrationStore device proxy.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
@@ -64,18 +54,8 @@ def mock_calibration_store_fixture(
     return calibration_store
 
 
-@pytest.fixture(name="field_station_name", scope="session")
-def field_station_name_fixture() -> str:
-    """
-    Return the name of the Field Station Tango device.
-
-    :return: the name of the Field Station Tango device.
-    """
-    return "low-mccs/fieldstation/001"
-
-
-@pytest.fixture(name="mock_field_station")
-def mock_field_station_fixture() -> unittest.mock.Mock:
+@pytest.fixture(name="mock_field_station_device_proxy")
+def mock_field_station_device_proxy_fixture() -> unittest.mock.Mock:
     """
     Fixture that provides a mock FieldStation device.
 

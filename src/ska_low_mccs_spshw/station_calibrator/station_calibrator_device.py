@@ -13,9 +13,7 @@ import json
 import logging
 from typing import Any, Final, Optional
 
-import tango
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
-from ska_low_mccs_common import release
 from ska_tango_base.base import SKABaseDevice
 from ska_tango_base.commands import FastCommand, JsonValidator
 from tango.server import command, device_property
@@ -32,15 +30,15 @@ class MccsStationCalibrator(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
-    FieldStationFQDN = device_property(
+    FieldStationName = device_property(
         dtype=str,
         mandatory=True,
-        doc="The FQDN of the Field Station to get field information from.",
+        doc="The name of the Field Station to get field information from.",
     )
-    CalibrationStoreFQDN = device_property(
+    CalibrationStoreName = device_property(
         dtype=str,
         mandatory=True,
-        doc="The FQDN of the Calibration Store to get calibrations from.",
+        doc="The name of the Calibration Store to get calibrations from.",
     )
 
     # ---------------
@@ -64,18 +62,6 @@ class MccsStationCalibrator(SKABaseDevice):
         self.component_manager: StationCalibratorComponentManager
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: StationCalibratorHealthModel
-        self._build_state: str = release.get_release_info()
-        self._version_id: str = release.version
-
-    def init_device(self: MccsStationCalibrator) -> None:
-        """
-        Initialise the device.
-
-        This is overridden here to change the Tango serialisation model.
-        """
-        util = tango.Util.instance()
-        util.set_serial_model(tango.SerialModel.NO_SYNC)
-        super().init_device()
 
     def _init_state_model(self: MccsStationCalibrator) -> None:
         super()._init_state_model()
@@ -93,8 +79,8 @@ class MccsStationCalibrator(SKABaseDevice):
         """
         return StationCalibratorComponentManager(
             self.logger,
-            self.FieldStationFQDN,
-            self.CalibrationStoreFQDN,
+            self.FieldStationName,
+            self.CalibrationStoreName,
             self._component_communication_state_changed,
             self._component_state_callback,
         )
@@ -179,6 +165,7 @@ class MccsStationCalibrator(SKABaseDevice):
 
         :param kwargs: dictionary of state change parameters.
         """
+        self.logger.debug("State change received")
 
     def _health_changed(self: MccsStationCalibrator, health: HealthState) -> None:
         """
@@ -245,17 +232,11 @@ class MccsStationCalibrator(SKABaseDevice):
             :param kwargs: keyword arguments unpacked from the JSON
                 argument to the command.
 
-            :raises ValueError: if mandatory parameters are missing
             :return: A tuple containing a return code and a string
                    message indicating status. The message is for
                    information purpose only.
             """
-            frequency_channel = kwargs.get("frequency_channel", None)
-            if frequency_channel is None:
-                self._component_manager.logger.error(
-                    "frequency_channel must be provided"
-                )
-                raise ValueError("frequency_channel has not been provided")
+            frequency_channel = kwargs["frequency_channel"]
             return self._component_manager.get_calibration(frequency_channel)
 
     @command(dtype_in="DevString", dtype_out="DevVarDoubleArray")

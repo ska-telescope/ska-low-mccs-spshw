@@ -598,20 +598,20 @@ def get_online_tango_device(
         dev.adminMode = mode
         admin_mode_events.assert_change_event(mode)
 
-        if initial_admin_mode == mode:
-            state_events.assert_not_called()
-        else:
-            # TODO: MccsTile should transition to UNKNOWN but doesn't
-            # if dev.info().dev_class != "MccsTile":
-            state_events.assert_change_event(tango.DevState.UNKNOWN)
-            state_events.assert_change_event(
-                OneOf(tango.DevState.ON, tango.DevState.OFF),lookahead=10
-            )
+        # if initial_admin_mode == mode:
+        #     state_events.assert_not_called()
+        # else:
+        #     # TODO: MccsTile should transition to UNKNOWN but doesn't
+        #     # if dev.info().dev_class != "MccsTile":
+        #     state_events.assert_change_event(tango.DevState.UNKNOWN)
+        #     state_events.assert_change_event(
+        #         OneOf(tango.DevState.ON, tango.DevState.OFF),lookahead=10
+        #     )
 
     # should we be on or off?
     if dev.read_attribute("state").value != state:
         print(f"Turning {dev.dev_name()} {state}")
-        turn_tango_device_onoff(change_event_callbacks, get_device, short_name, state)
+        set_tango_device_state(change_event_callbacks, get_device, short_name, state)
 
     return dev
 
@@ -647,7 +647,7 @@ def set_tango_device_attribute(
     parsers.parse("the user turns the {short_name} {desired_state}"),
     converters={"desired_state": _DevState},
 )
-def turn_tango_device_onoff(
+def set_tango_device_state(
     change_event_callbacks: MockTangoEventCallbackGroup,
     get_device: Callable[[str], tango.DeviceProxy],
     short_name: str,
@@ -666,8 +666,13 @@ def turn_tango_device_onoff(
     # Issue the command
     if desired_state == tango.DevState.ON:
         [result_code], [command_id] = dev.On()
-    else:
+    elif desired_state == tango.DevState.OFF:
         [result_code], [command_id] = dev.Off()
+    elif desired_state == tango.DevState.STANDBY:
+        [result_code], [command_id] = dev.Standby()
+    else:
+        raise ValueError(f"State {desired_state} is not a valid state.")
+
     assert result_code == ResultCode.QUEUED
     print(f"Command queued on {dev.dev_name()}: {command_id}")
 

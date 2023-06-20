@@ -12,16 +12,12 @@ import logging
 import time
 import unittest.mock
 from datetime import datetime, timezone
-from typing import Any, Generator, Union
+from typing import Any, Union
 
 import pytest
 import pytest_mock
 from _pytest.fixtures import SubRequest
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus, TestMode
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -34,31 +30,6 @@ from ska_low_mccs_spshw.tile import (
     TpmDriver,
     TpmStatus,
 )
-
-
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    subrack_name: str,
-    mock_subrack: unittest.mock.Mock,
-) -> Generator[TangoContextProtocol, None, None]:
-    """
-    Return a Tango harness against which to run tests of tile component manager.
-
-    The tile component manager acts as a Tango client to the subrack
-    Tango device. In these unit tests, the subrack Tango device is
-    mocked out, but since the tile component manager uses tango to talk
-    to it, we still need some semblance of a tango subsystem in place.
-
-    :param subrack_name: the name of the subrack Tango device
-    :param mock_subrack: a mock that has been configured with the
-        required subrack behaviours.
-
-    :yields: a tango context.
-    """
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_mock_device(subrack_name, mock_subrack)
-    with context_manager as context:
-        yield context
 
 
 # pylint: disable=too-many-lines

@@ -10,13 +10,11 @@ from __future__ import annotations
 
 import logging
 import unittest.mock
-from typing import Callable
+from typing import Callable, Iterator
 
 import pytest
 from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
-from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
-from ska_tango_testing.context import TangoContextProtocol
 from ska_tango_testing.mock import MockCallableGroup
 from tango.server import command
 
@@ -28,6 +26,11 @@ from ska_low_mccs_spshw.tile import (
     StaticTpmSimulatorComponentManager,
     TileComponentManager,
     TileSimulator,
+)
+from tests.harness import (
+    SpsTangoTestHarness,
+    SpsTangoTestHarnessContext,
+    get_subrack_name,
 )
 
 
@@ -43,17 +46,6 @@ def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     :return: a factory for device proxy mocks
     """
     return MockDeviceBuilder()
-
-
-@pytest.fixture(name="simulation_mode")
-def simulation_mode_fixture() -> SimulationMode:
-    """
-    Return the simulation mode to be used when initialising the tile class object.
-
-    :return: the simulation mode to be used when initialising the
-        tile class object under test.
-    """
-    return SimulationMode.TRUE
 
 
 @pytest.fixture(name="test_mode")
@@ -97,12 +89,12 @@ def initial_tpm_power_state_fixture() -> PowerState:
     return PowerState.OFF
 
 
-@pytest.fixture(name="mock_subrack")
-def mock_subrack_fixture(
+@pytest.fixture(name="mock_subrack_device_proxy")
+def mock_subrack_device_proxy_fixture(
     subrack_tpm_id: int, initial_tpm_power_state: PowerState
 ) -> unittest.mock.Mock:
     """
-    Fixture that provides a mock MccsSubrack device.
+    Fixture that provides a mock subrack device proxy.
 
     :param subrack_tpm_id: This tile's position in its subrack
     :param initial_tpm_power_state: the initial power mode of the
@@ -117,19 +109,25 @@ def mock_subrack_fixture(
     return builder()
 
 
-@pytest.fixture(name="mock_subrack_device_proxy")
-def mock_subrack_device_proxy_fixture(
-    subrack_name: str, logger: logging.Logger
-) -> MccsDeviceProxy:
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    subrack_id: int,
+    mock_subrack_device_proxy: unittest.mock.Mock,
+) -> Iterator[None]:
     """
-    Return a mock device proxy to an subrack device.
+    Yield into a context in which Tango is running, with a mock subrack device.
 
-    :param subrack_name: name of the subrack device.
-    :param logger: a logger for the device proxy to use.
+    :param subrack_id: ID of the subrack Tango device to be mocked
+    :param mock_subrack_device_proxy: a mock subrack device proxy that
+        has been configured with the required subrack behaviours.
 
-    :return: a mock device proxy to an subrack device.
+    :yields: into a context in which Tango is running, with a mock
+        subrack device.
     """
-    return MccsDeviceProxy(subrack_name, logger)
+    harness = SpsTangoTestHarness()
+    harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
+    with harness:
+        yield
 
 
 @pytest.fixture(name="callbacks")
@@ -187,16 +185,6 @@ def tpm_version_fixture() -> str:
     :return: the TPM version
     """
     return "tpm_v1_6"
-
-
-@pytest.fixture(name="tile_id")
-def tile_id_fixture() -> int:
-    """
-    Return the tile id.
-
-    :return: the tile id
-    """
-    return 1
 
 
 @pytest.fixture(name="static_tpm_simulator")
@@ -276,8 +264,7 @@ def dynamic_tpm_simulator_component_manager_fixture(
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(
-    tango_harness: TangoContextProtocol,
-    simulation_mode: SimulationMode,
+    test_context: SpsTangoTestHarnessContext,
     test_mode: TestMode,
     logger: logging.Logger,
     max_workers: int,
@@ -285,7 +272,7 @@ def tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_name: str,
+    subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
 ) -> TileComponentManager:
@@ -294,17 +281,15 @@ def tile_component_manager_fixture(
 
     (This is a pytest fixture.)
 
-    :param tango_harness: a test harness for MCCS tango devices
-    :param simulation_mode: the initial simulation mode of this
-        component manager
+    :param test_context: a test context in which Tango is running,
+        with a single mock subrack device.
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_name: FQDN of the subrack that controls power to
-        this tile
+    :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
     :param callbacks: dictionary of driver callbacks.
@@ -312,7 +297,7 @@ def tile_component_manager_fixture(
     :return: a TPM component manager in the specified simulation mode.
     """
     return TileComponentManager(
-        simulation_mode,
+        SimulationMode.TRUE,
         test_mode,
         logger,
         max_workers,
@@ -320,7 +305,7 @@ def tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_name,
+        get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
@@ -343,7 +328,6 @@ def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="mock_tile_component_manager")
 def mock_tile_component_manager_fixture(
-    simulation_mode: SimulationMode,
     test_mode: TestMode,
     logger: logging.Logger,
     max_workers: int,
@@ -351,7 +335,7 @@ def mock_tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
-    subrack_name: str,
+    subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
 ) -> TileComponentManager:
@@ -360,15 +344,13 @@ def mock_tile_component_manager_fixture(
 
     (This is a pytest fixture.)
 
-    :param simulation_mode: the initial simulation mode of this
-        component manager
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_name: name of the subrack that controls power to
+    :param subrack_id: ID of the subrack that controls power to
         this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
@@ -377,7 +359,7 @@ def mock_tile_component_manager_fixture(
     :return: a TPM component manager in the specified simulation mode.
     """
     return TileComponentManager(
-        simulation_mode,
+        SimulationMode.TRUE,
         test_mode,
         logger,
         max_workers,
@@ -385,7 +367,7 @@ def mock_tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
-        subrack_name,
+        get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],

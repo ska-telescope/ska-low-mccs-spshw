@@ -14,6 +14,7 @@ from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.station.station_health_model import SpsStationHealthModel
+from tests.harness import get_subrack_name, get_tile_name
 
 
 class TestSpsStationHealthModel:
@@ -223,18 +224,17 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
                 },
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.FAILED
-                        for i in range(3)
+                        get_subrack_name(subrack_id): HealthState.FAILED
+                        for subrack_id in range(3)
                     },
                 },
                 HealthState.OK,
@@ -245,18 +245,17 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
                 },
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.FAILED
-                        for i in range(1)
+                        get_subrack_name(subrack_id): HealthState.FAILED
+                        for subrack_id in range(1)
                     },
                 },
                 HealthState.OK,
@@ -267,18 +266,18 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
-                        for i in range(16)
+                        get_tile_name(tile_id): (
+                            HealthState.OK if tile_id != 0 else HealthState.FAILED
+                        )
+                        for tile_id in range(16)
                     },
                 },
                 {
-                    "tile": {"low-mccs-spshw/tile/0000": HealthState.OK},
+                    "tile": {get_tile_name(0): HealthState.OK},
                 },
                 HealthState.DEGRADED,
                 HealthState.OK,
@@ -339,14 +338,14 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
-                        for i in range(16)
+                        get_tile_name(tile_id): (
+                            HealthState.OK if tile_id != 0 else HealthState.FAILED
+                        )
+                        for tile_id in range(16)
                     },
                 },
                 {"tile_degraded": 0.05, "tile_failed": 0.2},
@@ -359,14 +358,13 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
-                            HealthState.OK if i != 0 else HealthState.FAILED
+                        get_subrack_name(subrack_id): (
+                            HealthState.OK if subrack_id != 0 else HealthState.FAILED
                         )
-                        for i in range(10)
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
                 },
                 {"subrack_degraded": 0.05, "subrack_failed": 0.2},
@@ -379,14 +377,13 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
-                            HealthState.OK if i > 3 else HealthState.FAILED
+                        get_subrack_name(subrack_id): (
+                            HealthState.OK if subrack_id > 3 else HealthState.FAILED
                         )
-                        for i in range(10)
+                        for subrack_id in range(10)
                     },
                     "tile": {
-                        f"low-mccs-spshw/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
                     },
                 },
                 {"subrack_degraded": 0.6, "subrack_failed": 0.8},

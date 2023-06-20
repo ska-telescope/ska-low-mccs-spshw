@@ -14,20 +14,17 @@ import datetime
 import gc
 import json
 import time
-from typing import Any, Callable, Generator
-from unittest.mock import PropertyMock
+import unittest.mock
+from typing import Any, Callable, Iterator
 
 import numpy as np
 import pytest
 from ska_control_model import AdminMode, ResultCode
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.station import SpsStation
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -51,18 +48,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="station_name", scope="session")
-def station_name_fixture() -> str:
-    """
-    Return the name of the SPS station Tango device.
-
-    :return: the name of the SPS station Tango device.
-    """
-    return "low-mccs/sps_station/001"
-
-
-@pytest.fixture(name="station_cabinet_network_address", scope="session")
-def station_cabinet_network_address_fixture() -> str:
+@pytest.fixture(name="cabinet_network_address", scope="session")
+def cabinet_network_address_fixture() -> str:
     """
     Return the station cabinet network address.
 
@@ -71,63 +58,58 @@ def station_cabinet_network_address_fixture() -> str:
     return "10.0.0.0"
 
 
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(  # pylint: disable=too-many-arguments
-    station_name: str,
-    patched_station_device_class: type[SpsStation],
-    subrack_name: str,
-    mock_subrack: DeviceProxy,
-    tile_names: list[str],
-    mock_tiles: list[DeviceProxy],
-    station_cabinet_network_address: str,
-) -> Generator[TangoContextProtocol, None, None]:
+@pytest.fixture(name="test_context")
+def test_context_fixture(
+    cabinet_network_address: str,
+    mock_subrack_device_proxy: unittest.mock.Mock,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    patched_sps_station_device_class: type[SpsStation],
+) -> Iterator[SpsTangoTestHarnessContext]:
     """
-    Return a Tango harness against which to run tests of the deployment.
+    Return a test context in which an SPS station Tango device is running.
 
-    :param station_name: the name of the subrack Tango device
-    :param patched_station_device_class: a subclass of SpsStation that
-        has been patched with extra commands for use in testing
-    :param subrack_name: the name of the subrack Tango device
-    :param mock_subrack: a mock subrack proxy that has been configured
-        with the required subrack behaviours.
-    :param tile_names: the names of the tile Tango devices
-    :param mock_tiles: mock tile proxies that have been configured with
-        the required tile behaviours.
-    :param station_cabinet_network_address: the station cabinet network
-        address
+    :param cabinet_network_address: the network address of the SPS
+        cabinet
+    :param mock_subrack_device_proxy: a mock return as a device proxy to
+        the subrack device
+    :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
+        devices
+    :param patched_sps_station_device_class: a subclass of SpsStation
+        that has been patched with extra commands that mock system under
+        control behaviours.
 
-    :yields: a tango context.
+    :yields: a test context.
     """
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_device(
-        station_name,
-        patched_station_device_class,
-        StationId=0,
-        TileFQDNs=tile_names,
-        SubrackFQDNs=[subrack_name],
-        CabinetNetworkAddress=station_cabinet_network_address,
+    harness = SpsTangoTestHarness()
+    harness.add_mock_subrack_device(1, mock_subrack_device_proxy)
+
+    for i, mock_tile_device_proxy in enumerate(mock_tile_device_proxies):
+        harness.add_mock_tile_device(i + 1, mock_tile_device_proxy)
+
+    harness.set_sps_station_device(
+        cabinet_network_address,
+        subrack_ids=[1],
+        tile_ids=range(1, len(mock_tile_device_proxies) + 1),
+        device_class=patched_sps_station_device_class,
     )
-    context_manager.add_mock_device(subrack_name, mock_subrack)
-    for i, name in enumerate(tile_names):
-        context_manager.add_mock_device(name, mock_tiles[i])
-    with context_manager as context:
+
+    with harness as context:
         yield context
 
 
 @pytest.fixture(name="station_device")
 def station_device_fixture(
-    tango_harness: TangoContextProtocol,
-    station_name: str,
+    test_context: SpsTangoTestHarnessContext,
 ) -> DeviceProxy:
     """
-    Fixture that returns the tile Tango device under test.
+    Fixture that returns the SPS station Tango device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param station_name: name of the station Tango device.
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
 
     :yield: the station Tango device under test.
     """
-    yield tango_harness.get_device(station_name)
+    yield test_context.get_sps_station_device()
 
 
 def test_Off(
@@ -211,7 +193,7 @@ def test_Off(
 
 def test_On(
     station_device: SpsStation,
-    mock_tiles: list[DeviceProxy],
+    mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
@@ -219,7 +201,7 @@ def test_On(
     Test our ability to turn the SPS station device on.
 
     :param station_device: the SPS station Tango device under test.
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     :param change_event_callbacks: dictionary of Tango change event
@@ -235,8 +217,8 @@ def test_On(
             sync_time = datetime.datetime.now()
         return [sync_time]
 
-    for tile in mock_tiles:
-        pm = PropertyMock()
+    for tile in mock_tile_device_proxies:
+        pm = unittest.mock.PropertyMock()
         pm.__get__ = getter  # type: ignore[assignment]
         type(tile).fpgasUnixTime = pm
 
@@ -335,7 +317,7 @@ def test_On(
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "COMPLETED", on_command_id, "COMPLETED")
     )
-    for i, tile in enumerate(mock_tiles):
+    for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         if last_tile:
             num_configures = 4
@@ -347,10 +329,10 @@ def test_On(
         ) == {
             "core_id": 0,
             "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(216 + (2 * i))}",
-            "source_mac": 107752307294424 + (2 * i),
+            "source_ip": f"10.0.0.{str(152 + (2 * i))}",
+            "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(218 + (2 * i))}"
+            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
             if i != num_tiles - 1
             else csp_ingest_address,
             "destination_port": 4660 if not last_tile else csp_ingest_port,
@@ -360,10 +342,10 @@ def test_On(
         ) == {
             "core_id": 1,
             "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(217 + (2 * i))}",
-            "source_mac": 107752307294425 + (2 * i),
+            "source_ip": f"10.0.0.{str(153 + (2 * i))}",
+            "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(219 + (2 * i))}"
+            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
             if i != num_tiles - 1
             else csp_ingest_address,
             "destination_port": 4660 if not last_tile else csp_ingest_port,
@@ -399,7 +381,7 @@ def test_On(
 
 def test_Initialise(
     station_device: SpsStation,
-    mock_tiles: list[DeviceProxy],
+    mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
@@ -407,7 +389,7 @@ def test_Initialise(
     Test of the Initialise command.
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     :param change_event_callbacks: dictionary of Tango change event
@@ -423,8 +405,8 @@ def test_Initialise(
             sync_time = datetime.datetime.now()
         return [sync_time]
 
-    for tile in mock_tiles:
-        pm = PropertyMock()
+    for tile in mock_tile_device_proxies:
+        pm = unittest.mock.PropertyMock()
         pm.__get__ = getter  # type: ignore[assignment]
         type(tile).fpgasUnixTime = pm
 
@@ -468,7 +450,7 @@ def test_Initialise(
         (command_id, "COMPLETED")
     )
 
-    for i, tile in enumerate(mock_tiles):
+    for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         if last_tile:
             num_configures = 4
@@ -480,10 +462,10 @@ def test_Initialise(
         ) == {
             "core_id": 0,
             "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(216 + (2 * i))}",
-            "source_mac": 107752307294424 + (2 * i),
+            "source_ip": f"10.0.0.{str(152 + (2 * i))}",
+            "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(218 + (2 * i))}"
+            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
             if i != num_tiles - 1
             else csp_ingest_address,
             "destination_port": 4660 if not last_tile else csp_ingest_port,
@@ -493,10 +475,10 @@ def test_Initialise(
         ) == {
             "core_id": 1,
             "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(217 + (2 * i))}",
-            "source_mac": 107752307294425 + (2 * i),
+            "source_ip": f"10.0.0.{str(153 + (2 * i))}",
+            "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(219 + (2 * i))}"
+            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
             if i != num_tiles - 1
             else csp_ingest_address,
             "destination_port": 4660 if not last_tile else csp_ingest_port,
@@ -824,7 +806,7 @@ def test_station_tile_commands(
     station_device: SpsStation,
     command: str,
     command_args: Any,
-    mock_tiles: DeviceProxy,
+    mock_tile_device_proxies: DeviceProxy,
     tile_command: str,
     tile_command_args: Any,
     tile_command_args_json_dict: bool,
@@ -835,19 +817,22 @@ def test_station_tile_commands(
     :param station_device: The station device to use
     :param command: The command to call on the station
     :param command_args: The arguments to call the command with
-    :param mock_tiles: The mock for the tiles to verify commands being called
+    :param mock_tile_device_proxies: The mock for the tiles to verify
+        commands being called
     :param tile_command: The expected command to be called on the tile
     :param tile_command_args: The expected arguments for the command on the tile
-    :param tile_command_args_json_dict: True if the arguments for the tile command are
-        a JSON dictionary. This prompts the test to load the dictionary as a python
-        dictionary so it can be safely compared with the input, as the two JSON strings
-        cannot be directly compared, since Python dictionaries are not ordered. The
-        expected arguments parameter should be a json dictionary.
+    :param tile_command_args_json_dict:
+        True if the arguments for the tile command are a JSON dictionary.
+        This prompts the test to load the dictionary as a python dictionary
+        so it can be safely compared with the input,
+        as the two JSON strings cannot be directly compared,
+        since Python dictionaries are not ordered.
+        The expected arguments parameter should be a json dictionary.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
 
     # Some commands require tile programming state to be Initialised or Synchronised
-    mock_tiles[0].tileProgrammingState = "Synchronised"
+    mock_tile_device_proxies[0].tileProgrammingState = "Synchronised"
 
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
@@ -857,7 +842,7 @@ def test_station_tile_commands(
         getattr(station_device, command)()
     else:
         getattr(station_device, command)(command_args)
-    tile_command_mock = getattr(mock_tiles[0], tile_command)
+    tile_command_mock = getattr(mock_tile_device_proxies[0], tile_command)
 
     # Wait for LRCs to execute
     timeout = 10
@@ -882,13 +867,15 @@ def test_station_tile_commands(
 
 
 def test_SetCspIngest(
-    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    num_tiles: int,
 ) -> None:
     """
     Test of the SetCspIngest command.
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
@@ -905,7 +892,7 @@ def test_SetCspIngest(
     assert station_device.cspIngestAddress == "123.123.234.234"
     assert station_device.cspIngestPort == 1234
     assert station_device.cspSourcePort == 2345
-    for i, tile in enumerate(mock_tiles):
+    for i, tile in enumerate(mock_tile_device_proxies):
         if i != num_tiles - 1:
             tile.Configure40GCore.assert_not_called()
         else:
@@ -913,8 +900,8 @@ def test_SetCspIngest(
             assert json.loads(tile.Configure40GCore.mock_calls[0].args[0]) == {
                 "core_id": 0,
                 "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(216 + (2 * i))}",
-                "source_mac": 107752307294424 + (2 * i),
+                "source_ip": f"10.0.0.{str(152 + (2 * i))}",
+                "source_mac": 107752307294360 + (2 * i),
                 "source_port": 61648,
                 "destination_ip": "123.123.234.234",
                 "destination_port": 1234,
@@ -922,8 +909,8 @@ def test_SetCspIngest(
             assert json.loads(tile.Configure40GCore.mock_calls[1].args[0]) == {
                 "core_id": 1,
                 "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(217 + (2 * i))}",
-                "source_mac": 107752307294425 + (2 * i),
+                "source_ip": f"10.0.0.{str(153 + (2 * i))}",
+                "source_mac": 107752307294361 + (2 * i),
                 "source_port": 61648,
                 "destination_ip": "123.123.234.234",
                 "destination_port": 1234,
@@ -989,15 +976,15 @@ def test_isConfigured(station_device: SpsStation) -> None:
 
 
 def test_fortyGbNetworkAddress(
-    station_device: SpsStation, station_cabinet_network_address: str
+    station_device: SpsStation, cabinet_network_address: str
 ) -> None:
     """
     Test of the fortyGbNetworkAddress attribute.
 
     :param station_device: The station device to use
-    :param station_cabinet_network_address: the station network cabinet address
+    :param cabinet_network_address: the station network cabinet address
     """
-    assert station_device.fortyGbNetworkAddress == station_cabinet_network_address
+    assert station_device.fortyGbNetworkAddress == cabinet_network_address
 
 
 @pytest.mark.parametrize(
@@ -1023,7 +1010,7 @@ def test_fortyGbNetworkAddress(
 )
 def test_rw_attributes(
     station_device: SpsStation,
-    mock_tiles: list[DeviceProxy],
+    mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     attribute: str,
     data: Callable[[int], list[float]],
@@ -1039,7 +1026,7 @@ def test_rw_attributes(
         ppsDelays
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     :param attribute: the attribute on the station to use
@@ -1049,12 +1036,12 @@ def test_rw_attributes(
         function of the tile number in the list of tile mocks.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    rounding_mocks = [PropertyMock() for _ in range(num_tiles)]
-    for i, tile in enumerate(mock_tiles):
+    rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
+    for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
     for i in range(num_tiles):
-        setattr(type(mock_tiles[i]), attribute, rounding_mocks[i])
+        setattr(type(mock_tile_device_proxies[i]), attribute, rounding_mocks[i])
     setattr(station_device, attribute, data(num_tiles))
     time.sleep(0.1)
     for i in range(num_tiles):
@@ -1063,23 +1050,25 @@ def test_rw_attributes(
 
 
 def test_cspRounding(
-    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    num_tiles: int,
 ) -> None:
     """
     Test for the cspRounding attribute.
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    rounding_mocks = [PropertyMock() for _ in range(num_tiles)]
-    for _, tile in enumerate(mock_tiles):
+    rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
+    for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
     for i in range(num_tiles):
-        setattr(type(mock_tiles[i]), "cspRounding", rounding_mocks[i])
+        setattr(type(mock_tile_device_proxies[i]), "cspRounding", rounding_mocks[i])
     time.sleep(0.1)
     station_device.cspRounding = [4] * 384  # type: ignore[assignment]
     for i, mock in enumerate(rounding_mocks):
@@ -1091,18 +1080,20 @@ def test_cspRounding(
 
 
 def test_beamformerTable(
-    station_device: SpsStation, mock_tiles: list[DeviceProxy], num_tiles: int
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    num_tiles: int,
 ) -> None:
     """
     Test the beamformerTable attribute.
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    for _, tile in enumerate(mock_tiles):
+    for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
@@ -1232,7 +1223,7 @@ def test_beamformerTable(
 )
 def test_station_tile_attributes(
     station_device: SpsStation,
-    mock_tiles: list[DeviceProxy],
+    mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     attribute_name: str,
     tile_attribute_name: str,
@@ -1245,7 +1236,7 @@ def test_station_tile_attributes(
     Test of attributes which aggregate tile attributes.
 
     :param station_device: The station device to use
-    :param mock_tiles: mock tile proxies that have been configured with
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     :param attribute_name: the attribute to access on the station
@@ -1262,13 +1253,13 @@ def test_station_tile_attributes(
         a function of the number of tiles in the station.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    for i, tile in enumerate(mock_tiles):
+    for i, tile in enumerate(mock_tile_device_proxies):
         setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         init_expected_value(num_tiles)
     )
-    for i, tile in enumerate(mock_tiles):
+    for i, tile in enumerate(mock_tile_device_proxies):
         setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(

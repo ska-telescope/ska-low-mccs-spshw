@@ -539,7 +539,7 @@ def _str_to_tango(attr: tango.AttributeInfoEx, value: str) -> Any:
     return retval
 
 
-_DevState = {"ON": tango.DevState.ON, "OFF": tango.DevState.OFF}.__getitem__
+_DevState = {"ON": tango.DevState.ON, "OFF": tango.DevState.OFF, "STANDBY": tango.DevState.STANDBY}.__getitem__
 
 
 @given(

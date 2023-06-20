@@ -598,15 +598,15 @@ def get_online_tango_device(
         dev.adminMode = mode
         admin_mode_events.assert_change_event(mode)
 
-        # if initial_admin_mode == mode:
-        #     state_events.assert_not_called()
-        # else:
-        #     # TODO: MccsTile should transition to UNKNOWN but doesn't
-        #     # if dev.info().dev_class != "MccsTile":
-        #     state_events.assert_change_event(tango.DevState.UNKNOWN)
-        #     state_events.assert_change_event(
-        #         OneOf(tango.DevState.ON, tango.DevState.OFF),lookahead=10
-        #     )
+        if initial_admin_mode == mode:
+            state_events.assert_not_called()
+        else:
+            # TODO: MccsTile should transition to UNKNOWN but doesn't
+            # if dev.info().dev_class != "MccsTile":
+            state_events.assert_change_event(tango.DevState.UNKNOWN)
+            state_events.assert_change_event(
+                OneOf(tango.DevState.ON, tango.DevState.OFF),lookahead=10
+            )
 
     # should we be on or off?
     if dev.read_attribute("state").value != state:

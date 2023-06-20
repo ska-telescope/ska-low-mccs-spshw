@@ -55,8 +55,7 @@ class MccsStationCalibrator(SKABaseDevice):
         # devices; we are only supposed to define an `init_device` method. But
         # we insist on doing so here, just so that we can define some
         # attributes, thereby stopping the linters from complaining about
-        # "attribute-defined-outside-init" etc. We still need to make sure that
-        # `init_device` re-initialises any values defined in here.
+        # "attribute-defined-outside-init" etc.
         super().__init__(*args, **kwargs)
 
         self.component_manager: StationCalibratorComponentManager

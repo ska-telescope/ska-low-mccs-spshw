@@ -16,7 +16,11 @@ from ska_control_model import CommunicationStatus
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.station_calibrator import StationCalibratorComponentManager
-from tests.harness import SpsTangoTestHarness, get_field_station_name, get_calibration_store_name
+from tests.harness import (
+    SpsTangoTestHarness,
+    get_calibration_store_name,
+    get_field_station_name,
+)
 
 
 @pytest.fixture(name="test_context")
@@ -62,8 +66,6 @@ def callbacks_fixture() -> MockCallableGroup:
 @pytest.fixture(name="station_calibrator_component_manager")
 def station_calibrator_component_manager_fixture(
     test_context: None,
-    subrack_id: int,
-    tile_id: int,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
 ) -> StationCalibratorComponentManager:
@@ -99,7 +101,10 @@ def test_communication(
         manager under test
     :param callbacks: dictionary of driver callbacks.
     """
-    assert station_calibrator_component_manager.communication_state == CommunicationStatus.DISABLED
+    assert (
+        station_calibrator_component_manager.communication_state
+        == CommunicationStatus.DISABLED
+    )
 
     # takes the component out of DISABLED
     station_calibrator_component_manager.start_communicating()

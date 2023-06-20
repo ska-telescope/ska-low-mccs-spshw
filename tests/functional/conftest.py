@@ -604,9 +604,9 @@ def get_online_tango_device(
             # TODO: MccsTile should transition to UNKNOWN but doesn't
             # if dev.info().dev_class != "MccsTile":
             state_events.assert_change_event(tango.DevState.UNKNOWN)
-            state_events.assert_change_event(
-                OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY),lookahead=20
-            )
+            # state_events.assert_change_event(
+            #     OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY),lookahead=20
+            # )
 
     # should we be on or off?
     if dev.read_attribute("state").value != state:

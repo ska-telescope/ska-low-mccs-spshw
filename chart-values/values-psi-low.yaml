@@ -50,9 +50,9 @@ ska-low-mccs-daq:
     kubernetes.io/hostname: psi-node3 
   receivers:
     1:
-      # receiver_interface: net1
+      receiver_interface: net1
       receiver_ip: ""
-      # receiver_port: 4660
+      receiver_port: 4660
       logging_level_default: 5
       storage: daq-data
       server_node_selector:

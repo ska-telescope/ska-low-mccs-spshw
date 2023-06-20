@@ -405,7 +405,7 @@ def get_device_fixture(
 
         dev_class = device_info.dev_class
         print(f"Created DeviceProxy for {short_name} - {dev_class} {name}")
-        time.sleep(5)
+        # time.sleep(5)
         for attr in device_data.get("subscriptions", []):
             attr_value = tango_device.read_attribute(attr).value
             attr_event = change_event_callbacks[f"{name}/{attr}"]
@@ -604,11 +604,11 @@ def get_online_tango_device(
             # TODO: MccsTile should transition to UNKNOWN but doesn't
             # if dev.info().dev_class != "MccsTile":
             state_events.assert_change_event(tango.DevState.UNKNOWN)
-            print(dev.state())
-            if dev.info().dev_class != "MccsTile":
-                state_events.assert_change_event(
-                    OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY, tango.DevState.UNKNOWN),lookahead=50
-                )
+            # print(dev.state())
+        if dev.info().dev_class != "MccsTile":
+            state_events.assert_change_event(
+                OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY),lookahead=100
+            )
 
     # should we be on or off?
     if dev.read_attribute("state").value != state:
@@ -692,8 +692,8 @@ def set_tango_device_state(
     #     print(f"LRCS on {dev.dev_name()}: {call_details['attribute_value']}")
     #     assert call_details["attribute_value"][-2] == command_id
     #     result_code = call_details["attribute_value"][-1]
-
-    change_event_callbacks[f"{dev.dev_name()}/state"].assert_change_event(desired_state)
+    # time.sleep(5)
+    change_event_callbacks[f"{dev.dev_name()}/state"].assert_change_event(desired_state,lookahead=100)
 
 
 @then(parsers.parse("the {device}'s {attribute} is {value}"))

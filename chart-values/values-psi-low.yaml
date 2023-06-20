@@ -1,6 +1,7 @@
 ska-low-mccs-spshw:
   nodeSelector:
     kubernetes.io/hostname: psi-node3
+
 facility:
   stations:
     instances:
@@ -26,11 +27,17 @@ facility:
         subrack: "1"
         subrack_bay: 2
         LoggingLevelDefault: 5
+        resources:
+          requests:
+            memory: 512Mi
       5:
         host: 10.0.10.215
         subrack: "1"
         subrack_bay: 5
         LoggingLevelDefault: 5
+        resources:
+          requests:
+            memory: 512Mi
 
 deviceServers:
   stations:
@@ -44,13 +51,18 @@ ska-low-mccs-daq:
   receivers:
     1:
       receiver_interface: net1
-      receiver_ip: "10.0.10.4"
+      receiver_ip: ""
       receiver_port: 4660
       logging_level_default: 5
-      storage: claim-psi-low-daq-data
+      storage: daq-data
       server_node_selector:
         kubernetes.io/hostname: psi-node3
       server_annotations:
         k8s.v1.cni.cncf.io/networks: kube-system/psi-low-sps
+
+  storage: # List of specs of PVCs to create
+  - name: daq-data
+    size: "250Mi"
+
 
 

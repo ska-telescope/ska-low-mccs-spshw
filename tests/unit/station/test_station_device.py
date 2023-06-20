@@ -94,6 +94,9 @@ def test_context_fixture(
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
         device_class=patched_sps_station_device_class,
     )
+    harness.add_field_station_device(
+        device_class=MockFieldStation,
+    )
 
     with harness as context:
         yield context
@@ -112,6 +115,21 @@ def station_device_fixture(
     :yield: the station Tango device under test.
     """
     yield test_context.get_sps_station_device()
+
+
+@pytest.fixture(name="field_station_device")
+def field_station_device_fixture(
+    test_context: SpsTangoTestHarnessContext,
+) -> DeviceProxy:
+    """
+    Fixture that returns the tile Tango device under test.
+
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
+
+    :yield: the station Tango device under test.
+    """
+    yield test_context.get_field_station_device()
 
 
 def test_mock_field_station(

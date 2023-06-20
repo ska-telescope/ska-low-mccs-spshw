@@ -9,9 +9,9 @@
 
 
 __all__ = [
-    "MockFieldStation",
     "MockFieldStationComponentManager",
+    "MockFieldStation",
 ]
 
-from .mock_field_station_device import MockFieldStation
 from .mock_field_station_component_manager import MockFieldStationComponentManager
+from .mock_field_station_device import MockFieldStation

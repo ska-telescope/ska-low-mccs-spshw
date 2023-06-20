@@ -325,7 +325,7 @@ def device_mapping_fixture(tpm_1_number: int, tpm_2_number) -> dict[str, DeviceM
         "station": {
             "name" : "low-mccs/station/001",
             "subscriptions" : [
-                "adminmode",
+                "adminMode",
                 "state",
                 #"tileprogrammingstate"
             ]

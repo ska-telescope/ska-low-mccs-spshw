@@ -2,9 +2,9 @@ Feature: Test station pointing
     Test that delays can be applied to a beam correctly
 
     Scenario: Correcting delayed beam
-        Given a subrack that is in mode ONLINE and state OFF
-        And a tile_1 that is in mode MAINTENANCE and state OFF
+        Given a tile_1 that is in mode MAINTENANCE and state OFF
         And a tile_2 that is in mode MAINTENANCE and state OFF
+        And a subrack that is in mode ONLINE and state OFF
         And a station that is in mode ONLINE and state STANDBY
         And a DAQ which is in mode ONLINE and state ON
         # And the station is configured

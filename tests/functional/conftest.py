@@ -605,9 +605,10 @@ def get_online_tango_device(
             # if dev.info().dev_class != "MccsTile":
             state_events.assert_change_event(tango.DevState.UNKNOWN)
             print(dev.state())
-            state_events.assert_change_event(
-                OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY, tango.DevState.UNKNOWN),lookahead=50
-            )
+            if dev.info().dev_class != "MccsTile":
+                state_events.assert_change_event(
+                    OneOf(tango.DevState.ON, tango.DevState.OFF, tango.DevState.STANDBY, tango.DevState.UNKNOWN),lookahead=50
+                )
 
     # should we be on or off?
     if dev.read_attribute("state").value != state:

@@ -122,7 +122,7 @@ def field_station_device_fixture(
     test_context: SpsTangoTestHarnessContext,
 ) -> DeviceProxy:
     """
-    Fixture that returns the tile Tango device under test.
+    Fixture that returns the field station Tango device under test.
 
     :param test_context: a Tango test context
         containing an SPS station and mock subservient devices.

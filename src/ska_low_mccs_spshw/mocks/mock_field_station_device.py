@@ -85,7 +85,7 @@ class MockFieldStation(SKABaseDevice):
                 indicating status.
         """
         self.outside_temperature = argin
-        self.push_change_event("outsidetemperature", argin)
+        self.push_change_event("outsideTemperature", argin)
         return ([ResultCode.OK], ["_"])
 
 

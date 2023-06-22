@@ -1,0 +1,39 @@
+{{- $defaults := dict "enabled" true "logging_level_default" 3}}
+{{- $calibration_stores := .Values.deviceServers.calibrationstores}}
+name: "calibrationstore-{{.Release.Name}}"
+function: ska-low-mccs-spshw-calibrationstore
+domain: ska-low-mccs-spshw
+instances:
+{{- range $key, $this_calibration_store := $calibration_stores.instances}}
+{{- if (pluck "enabled" $this_calibration_store $calibration_stores $defaults | first)}}
+  - {{printf "calibrationstore-%03d" (int $key)}}
+{{- end}}
+{{- end}}
+command: MccsCalibrationStore
+server:
+  name: "MccsCalibrationStore"
+  instances:
+{{- range $key, $this_calibration_store := $calibration_stores.instances}}
+    - name: {{printf "calibrationstore-%03d" (int $key)}}
+      classes:
+        - name: "MccsCalibrationStore"
+          devices:
+            - name: {{printf "low-mccs/calibrationstore/%03d" (int $key)}}
+              properties:
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{pluck "logging_level_default" $this_calibration_store $calibration_stores $defaults | first | toString | quote}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

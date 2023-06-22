@@ -144,7 +144,7 @@ class MccsStationCalibrator(SKABaseDevice):
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
             CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
-            CommunicationStatus.ESTABLISHED: None,  # wait for a power mode update
+            CommunicationStatus.ESTABLISHED: "component_on",
         }
 
         action = action_map[communication_state]

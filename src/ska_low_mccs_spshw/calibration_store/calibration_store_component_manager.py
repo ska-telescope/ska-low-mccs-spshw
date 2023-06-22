@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module implements the mock component management for mock field station."""
+"""This module implements the component management for a calibration store."""
 from __future__ import annotations
 
 import logging
@@ -14,15 +14,15 @@ from typing import Callable, Optional
 from ska_control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-__all__ = ["MockFieldStationComponentManager"]
+__all__ = ["CalibrationStoreComponentManager"]
 
 
 # pylint: disable-next=abstract-method
-class MockFieldStationComponentManager(TaskExecutorComponentManager):
-    """A mock component manager for MockFieldStation."""
+class CalibrationStoreComponentManager(TaskExecutorComponentManager):
+    """A mock component manager for MccsCalibrationStore."""
 
     def __init__(
-        self: MockFieldStationComponentManager,
+        self: CalibrationStoreComponentManager,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[
@@ -49,13 +49,13 @@ class MockFieldStationComponentManager(TaskExecutorComponentManager):
         self._component_state_callback = component_state_changed_callback
         self.logger = logger
 
-    def start_communicating(self: MockFieldStationComponentManager) -> None:
+    def start_communicating(self: CalibrationStoreComponentManager) -> None:
         """Establish communication."""
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
-    def stop_communicating(self: MockFieldStationComponentManager) -> None:
-        """Break off communication with the pasdBus."""
+    def stop_communicating(self: CalibrationStoreComponentManager) -> None:
+        """Break off communication."""
         if self.communication_state == CommunicationStatus.DISABLED:
             return
 

@@ -90,6 +90,25 @@ ska-low-mccs-spshw:
         host: subrack-simulator-1
 
   deviceServers:  # e.g....
+    stations:
+      instances:
+        1:
+          cabinet_network_address: 10.0.0.0
+          subracks: [1]
+          tpms: [1]
+    stationcalibrators:
+      instances:
+        1:
+          field_station: 1
+          calibration_store: 1
+    calibrationstores:
+      instances:
+        1:
+          logging_level: 5
+    mockfieldstations:
+      instances:
+        1:
+          logging_level: 5
     tpms:
       instances:
         1:

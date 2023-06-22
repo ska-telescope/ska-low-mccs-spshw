@@ -71,6 +71,9 @@ typing-extensions = "^4.6.3"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 
 [tool.poetry.scripts]
+MccsStationCalibrator = "ska_low_mccs_spshw.station_calibrator.station_calibrator_device:main"
+MccsCalibrationStore = "ska_low_mccs_spshw.calibration_store.calibration_store_device:main"
+MockFieldStation = "ska_low_mccs_spshw.mocks.mock_field_station_device:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"

@@ -54,15 +54,15 @@ ska-low-mccs-daq:
       receiver_ip: ""
       receiver_port: 4660
       logging_level_default: 5
-      storage: daq-data
+      # storage: daq-data
       server_node_selector:
         kubernetes.io/hostname: psi-node3
-      # server_annotations:
-      #   k8s.v1.cni.cncf.io/networks: kube-system/psi-low-sps
+      server_annotations:
+        k8s.v1.cni.cncf.io/networks: kube-system/psi-low-sps
 
-  storage: # List of specs of PVCs to create
-  - name: daq-data
-    size: "250Mi"
+  # storage: # List of specs of PVCs to create
+  # - name: daq-data
+  #   size: "250Mi"
 
 
 

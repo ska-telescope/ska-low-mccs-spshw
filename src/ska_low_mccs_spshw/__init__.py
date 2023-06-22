@@ -17,11 +17,13 @@ __all__ = [
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
+    "MccsStationCalibrator",
     # device subpackages
     "subrack",
     "tile",
 ]
 
 from .station import SpsStation
+from .station_calibrator import MccsStationCalibrator
 from .subrack import MccsSubrack
 from .tile import MccsTile

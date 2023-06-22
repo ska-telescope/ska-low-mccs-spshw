@@ -6,7 +6,7 @@ Feature: Test station pointing
         And a tile_1 that is in mode MAINTENANCE and state OFF
         And a tile_2 that is in mode MAINTENANCE and state OFF
         And a station that is in mode ONLINE and state STANDBY
-        #And a DAQ that is in mode ONLINE and state ON
+        And a DAQ that is in mode ONLINE and state ON
         # And the station is configured
         # And the station and subrack are turned on
         # And the station is synchronised

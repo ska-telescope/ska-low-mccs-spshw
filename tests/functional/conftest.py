@@ -584,7 +584,8 @@ def get_online_tango_device(
             tango.DevState.OFF,
             tango.DevState.ALARM,
             tango.DevState.ON,
-            tango.DevState.UNKNOWN
+            tango.DevState.UNKNOWN,
+            tango.DevState.STANDBY,
         }
     else:  # AdminMode OFFLINE, NOT_FITTED, RESERVED
         assert initial_state == tango.DevState.DISABLE

@@ -1,12 +1,12 @@
 {{- $defaults := dict "enabled" true "logging_level_default" 3}}
 {{- $field_stations := .Values.deviceServers.mockfieldstations}}
-name: "fieldstation-{{.Release.Name}}"
-function: ska-low-mccs-spshw-fieldstation
+name: "mockfieldstation-{{.Release.Name}}"
+function: ska-low-mccs-spshw-mockfieldstation
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_field_station := $field_stations.instances}}
 {{- if (pluck "enabled" $this_field_station $field_stations $defaults | first)}}
-  - {{printf "fieldstation-%03d" (int $key)}}
+  - {{printf "mockfieldstation-%03d" (int $key)}}
 {{- end}}
 {{- end}}
 command: MockFieldStation
@@ -14,11 +14,11 @@ server:
   name: "MockFieldStation"
   instances:
 {{- range $key, $this_field_station := $field_stations.instances}}
-    - name: {{printf "fieldstation-%03d" (int $key)}}
+    - name: {{printf "mockfieldstation-%03d" (int $key)}}
       classes:
         - name: "MockFieldStation"
           devices:
-            - name: {{printf "low-mccs/fieldstation/%03d" (int $key)}}
+            - name: {{printf "low-mccs/mockfieldstation/%03d" (int $key)}}
               properties:
                 - name: "LoggingLevelDefault"
                   values:

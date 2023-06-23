@@ -67,11 +67,11 @@ class MccsCalibrationStore(SKABaseDevice):
     @command(dtype_in="DevString", dtype_out="DevVarDoubleArray")
     def GetSolution(self: MccsCalibrationStore, argin: str) -> list[float]:
         """
-        Get a calibration from the calibration store.
+        Get a calibration solution from the database.
 
-        :param argin: json-dictionary of field conditions.
+        :param argin: json-dictionary of field conditions and channel data.
 
-        :return: a calibration from the calibration store.
+        :return: a calibration solution from the database.
         """
         # TODO: implement this properly, including a schema for json validation
         # and reading solutions from a db

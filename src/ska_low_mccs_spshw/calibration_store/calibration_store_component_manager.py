@@ -19,7 +19,7 @@ __all__ = ["CalibrationStoreComponentManager"]
 
 # pylint: disable-next=abstract-method
 class CalibrationStoreComponentManager(TaskExecutorComponentManager):
-    """A mock component manager for MccsCalibrationStore."""
+    """A component manager for MccsCalibrationStore."""
 
     def __init__(
         self: CalibrationStoreComponentManager,

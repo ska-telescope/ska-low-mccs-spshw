@@ -22,7 +22,7 @@ server:
               properties:
                 - name: "FieldStationName"
                   values:
-                    - {{printf "low-mccs/fieldstation/%03d" (int $this_station_calibrator.field_station)}}
+                    - {{printf "low-mccs/mockfieldstation/%03d" (int $this_station_calibrator.field_station)}}
                 - name: "CalibrationStoreName"
                   values:
                     - {{printf "low-mccs/calibrationstore/%03d" (int $this_station_calibrator.calibration_store)}}

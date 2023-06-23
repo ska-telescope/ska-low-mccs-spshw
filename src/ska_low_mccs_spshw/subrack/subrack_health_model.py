@@ -48,7 +48,7 @@ class SubrackHealthModel(BaseHealthModel):
 
         assert isinstance(self._state["subrack_state_points"], dict)
 
-        state_points = self._state.get("subrack_state_points")
+        state_points = self._state.get("subrack_state_points", {})
         # set the old_value to the previous value if exists otherwise have it match new
         if state_points.get("tpm_voltages"):
             self._state["subrack_state_points"]["old_tpm_voltages"] = state_points.get(

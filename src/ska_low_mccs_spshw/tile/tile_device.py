@@ -45,7 +45,7 @@ __all__ = ["MccsTile", "main"]
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
-# pylint: disable=too-many-lines, too-many-public-methods
+# pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(SKABaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 

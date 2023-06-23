@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import sys
 from typing import Any, Optional, cast
 
 import tango
@@ -75,6 +76,21 @@ class SpsStation(SKAObsDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
+
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        version = f"{device_name} Software Version: {self._version_id}"
+        properties = (
+            f"Initialised {device_name} device with properties:\n"
+            f"\tStationFQDN: low-mccs/station/{self.StationId:03}\n"
+            f"\tTileFQDNs: {self.TileFQDNs}\n"
+            f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
+            f"\tCabinetNetworkAddress: {self.CabinetNetworkAddress}\n"
+        )
+        self.logger.info(
+            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
 
     def _init_state_model(self: SpsStation) -> None:
         super()._init_state_model()

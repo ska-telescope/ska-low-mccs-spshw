@@ -8,6 +8,7 @@
 """This module implements component management for station calibrators."""
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from typing import Any, Callable, Optional
@@ -32,7 +33,7 @@ class _FieldStationProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_callback: Callable[[CommunicationStatus], None],
-        component_state_callback: Callable[[dict[str, Any]], None],
+        component_state_callback: Callable[..., None],
         outside_temperature_changed_callback: Callable[[str, Any, Any], None],
     ) -> None:
         """
@@ -102,7 +103,7 @@ class _CalibrationStoreProxy(DeviceComponentManager):
         logger: logging.Logger,
         max_workers: int,
         communication_state_callback: Callable[[CommunicationStatus], None],
-        component_state_callback: Callable[[dict[str, Any]], None],
+        component_state_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new instance.
@@ -223,17 +224,15 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         self._update_component_state(power=None, fault=None)
 
     def _field_station_state_changed(
-        self: StationCalibratorComponentManager, state_change: dict[str, Any]
+        self: StationCalibratorComponentManager, **kwargs: Any
     ) -> None:
-        self._component_state_callback(
-            **state_change, device_name=self._field_station_name
-        )
+        self._component_state_callback(**kwargs, device_name=self._field_station_name)
 
     def _calibration_store_state_changed(
-        self: StationCalibratorComponentManager, state_change: dict[str, Any]
+        self: StationCalibratorComponentManager, **kwargs: Any
     ) -> None:
         self._component_state_callback(
-            **state_change, device_name=self._calibration_store_name
+            **kwargs, device_name=self._calibration_store_name
         )
 
     def _field_station_communication_state_changed(
@@ -288,7 +287,10 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         attr_value: Any,
         attr_quality: tango.AttrQuality,
     ) -> None:
-        print(f"attrval {attr_value}")
+        self.logger.info(
+            "Outside temperature changed from "
+            f"{self._outside_temperature} to {attr_value}"
+        )
         self._outside_temperature = attr_value
 
     @check_communicating
@@ -309,5 +311,7 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
             self.logger.error("GetCalibration failed - outside temperature is None")
             raise ValueError("Outside temperature has not been read yet")
         return self._calibration_store_proxy._proxy.GetSolution(
-            channel, self._outside_temperature
+            json.dumps(
+                {"channel": channel, "outside_temperature": self._outside_temperature}
+            )
         )

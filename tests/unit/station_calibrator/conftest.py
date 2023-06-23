@@ -7,6 +7,7 @@
 """This module defines a harness for unit testing the Station calibrator module."""
 from __future__ import annotations
 
+import json
 import unittest.mock
 
 import pytest
@@ -47,10 +48,15 @@ def mock_calibration_store_device_proxy_fixture(
 
     :return: a mock MccsCalibrationStore device proxy.
     """
+
+    def _GetSolution(argin: str) -> list[float]:
+        args = json.loads(argin)
+        return calibration_solutions[(args["channel"], args["outside_temperature"])]
+
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
     calibration_store = builder()
-    calibration_store.GetSolution = lambda c, t: calibration_solutions[(c, t)]
+    calibration_store.GetSolution = _GetSolution
     return calibration_store
 
 

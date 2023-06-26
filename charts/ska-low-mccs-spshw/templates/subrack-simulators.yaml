@@ -34,7 +34,7 @@ spec:
         component: subrack-simulator-{{$key}}
     spec:
       containers:
-      - name: simulator-{{$key}}
+      - name: subrack-simulator-{{$key}}
 {{- with $.Values.image}}
         image: {{.registry}}/{{.name}}:{{.tag}}
 {{- end}}
@@ -42,6 +42,6 @@ spec:
         command:
           - "SubrackSimulator"
         env:
-          - name: SIMULATOR_PORT
+          - name: SUBRACK_SIMULATOR_PORT
             value: {{$value.port | default "8081" | quote}}
 {{- end}}

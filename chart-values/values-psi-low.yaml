@@ -30,3 +30,6 @@ deviceServers:
     instances:
       1:
         enabled: false
+
+receivers:
+  1: {}

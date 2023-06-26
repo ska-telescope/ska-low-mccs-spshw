@@ -39,3 +39,6 @@ deviceServers:
     logging_level_default: 5
     simulation_config: 1
     test_config: 1
+
+receivers:
+  1: {}

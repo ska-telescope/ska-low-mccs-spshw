@@ -15,9 +15,8 @@ import time
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
+from ska_low_mccs_common.component import ObjectComponent
 
-# from ska_control_model import CommunicationStatus
-from ..base.component import ObjectComponent
 from .tile_data import TileData
 from .tpm_status import TpmStatus
 

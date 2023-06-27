@@ -15,10 +15,9 @@ from typing import Any, Callable, Optional
 
 import tango
 from ska_control_model import CommunicationStatus
-from ska_low_mccs_common.component import check_communicating
+from ska_low_mccs_common.component import DeviceComponentManager
+from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
-
-from ..base.component import DeviceComponentManager
 
 __all__ = ["StationCalibratorComponentManager"]
 
@@ -67,6 +66,7 @@ class _FieldStationProxy(DeviceComponentManager):
         )
 
     def start_communicating(self: _FieldStationProxy) -> None:
+        """Establish communication with the station components."""
         self._connecting = True
         super().start_communicating()
 

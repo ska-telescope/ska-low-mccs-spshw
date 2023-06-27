@@ -27,12 +27,11 @@ from ska_control_model import (
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import (
     MccsBaseComponentManager,
-    check_communicating,
-    check_on,
+    ObjectComponentManager,
 )
+from ska_tango_base.base import check_communicating, check_on
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from ..base.component import ObjectComponentManager
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator
 from .tile_orchestrator import TileOrchestrator

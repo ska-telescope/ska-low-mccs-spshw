@@ -73,8 +73,8 @@ CUCUMBER_JSON_PATH ?= build/reports/cucumber.json
 JSON_REPORT_PATH ?= build/reports/report.json
 
 K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
-    --junitxml=$(JUNITXML_REPORT_PATH) \
-    --cucumberjson=$(CUCUMBER_JSON_PATH) \
+	--junitxml=$(JUNITXML_REPORT_PATH) \
+	--cucumberjson=$(CUCUMBER_JSON_PATH) \
 	--json-report --json-report-file=$(JSON_REPORT_PATH)
 
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional

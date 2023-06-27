@@ -124,6 +124,11 @@ def test_communication(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
+    callbacks["communication_status"].assert_not_called()
+
     station_component_manager.stop_communicating()
 
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
+
+    callbacks["communication_status"].assert_not_called()

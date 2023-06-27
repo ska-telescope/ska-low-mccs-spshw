@@ -1,0 +1,45 @@
+{{- $defaults := dict "enabled" true "logging_level_default" 3}}
+{{- $station_calibrators := .Values.deviceServers.stationcalibrators}}
+name: "stationcalibrator-{{.Release.Name}}"
+function: ska-low-mccs-spshw-stationcalibrator
+domain: ska-low-mccs-spshw
+instances:
+{{- range $key, $this_station_calibrator := $station_calibrators.instances}}
+{{- if (pluck "enabled" $this_station_calibrator $station_calibrators $defaults | first)}}
+  - {{printf "stationcalibrator-%03d" (int $key)}}
+{{- end}}
+{{- end}}
+command: MccsStationCalibrator
+server:
+  name: "MccsStationCalibrator"
+  instances:
+{{- range $key, $this_station_calibrator := $station_calibrators.instances}}
+    - name: {{printf "stationcalibrator-%03d" (int $key)}}
+      classes:
+        - name: "MccsStationCalibrator"
+          devices:
+            - name: {{printf "low-mccs/stationcalibrator/%03d" (int $key)}}
+              properties:
+                - name: "FieldStationName"
+                  values:
+                    - {{printf "low-mccs/mockfieldstation/%03d" (int $this_station_calibrator.field_station)}}
+                - name: "CalibrationStoreName"
+                  values:
+                    - {{printf "low-mccs/calibrationstore/%03d" (int $this_station_calibrator.calibration_store)}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{pluck "logging_level_default" $this_station_calibrator $station_calibrators $defaults | first | toString | quote}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

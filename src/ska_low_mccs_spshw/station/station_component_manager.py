@@ -30,14 +30,13 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
-from ska_low_mccs_common.component import (  # check_on,
+from ska_low_mccs_common.component import (
+    DeviceComponentManager,
     MccsBaseComponentManager,
-    check_communicating,
 )
 from ska_low_mccs_common.utils import threadsafe
+from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
-
-from ..base.component import DeviceComponentManager
 
 __all__ = ["SpsStationComponentManager"]
 

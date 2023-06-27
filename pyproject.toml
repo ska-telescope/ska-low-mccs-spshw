@@ -23,7 +23,7 @@ requests = "^2.28.1"
 scipy = "^1.9.3"
 ska-tango-base = "^0.18.0"
 ska-control-model = "0.3.1"
-ska-low-mccs-common = "^0.7.2"
+ska-low-mccs-common = "^0.8.0"
 fastapi = "^0.88.0"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 typing-extensions = "^4.4.0"
@@ -71,6 +71,9 @@ typing-extensions = "^4.6.3"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 
 [tool.poetry.scripts]
+MccsStationCalibrator = "ska_low_mccs_spshw.station_calibrator.station_calibrator_device:main"
+MccsCalibrationStore = "ska_low_mccs_spshw.calibration_store.calibration_store_device:main"
+MockFieldStation = "ska_low_mccs_spshw.mocks.mock_field_station_device:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"

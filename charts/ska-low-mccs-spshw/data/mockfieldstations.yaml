@@ -1,0 +1,39 @@
+{{- $defaults := dict "enabled" true "logging_level_default" 3}}
+{{- $field_stations := .Values.deviceServers.mockfieldstations}}
+name: "mockfieldstation-{{.Release.Name}}"
+function: ska-low-mccs-spshw-mockfieldstation
+domain: ska-low-mccs-spshw
+instances:
+{{- range $key, $this_field_station := $field_stations.instances}}
+{{- if (pluck "enabled" $this_field_station $field_stations $defaults | first)}}
+  - {{printf "mockfieldstation-%03d" (int $key)}}
+{{- end}}
+{{- end}}
+command: MockFieldStation
+server:
+  name: "MockFieldStation"
+  instances:
+{{- range $key, $this_field_station := $field_stations.instances}}
+    - name: {{printf "mockfieldstation-%03d" (int $key)}}
+      classes:
+        - name: "MockFieldStation"
+          devices:
+            - name: {{printf "low-mccs/mockfieldstation/%03d" (int $key)}}
+              properties:
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{pluck "logging_level_default" $this_field_station $field_stations $defaults | first | toString | quote}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}

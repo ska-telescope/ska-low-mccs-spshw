@@ -80,7 +80,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             update_rate=update_rate,
         )
         power_supply_component_manager = PowerSupplyProxySimulator(
-            logger, initial_power_state=_initial_power_state, initial_fail=_initial_fail
+            logger,
+            None,  # super() call will set the communication_state_changed_callback
+            None,  # super() call with set the component_state_changed_callback
+            initial_power_state=_initial_power_state,
+            initial_fail=_initial_fail,
         )
 
         # we only need one worker; the heavy lifting is done by the poller in the

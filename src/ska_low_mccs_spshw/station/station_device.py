@@ -18,11 +18,11 @@ from typing import Any, Optional, cast
 
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
-from ska_low_mccs_common import release
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
+from ..version import version_info
 from .station_component_manager import SpsStationComponentManager
 from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
@@ -179,8 +179,14 @@ class SpsStation(SKAObsDevice):
             self._device._current_beamformer_table = [[0] * 7] * 48
             self._device._desired_beamformer_table = [[0] * 7] * 48
 
-            self._device._build_state = release.get_release_info()
-            self._device._version_id = release.version
+            self._device._build_state = ",".join(
+                [
+                    version_info["name"],
+                    version_info["version"],
+                    version_info["description"],
+                ]
+            )
+            self._device._version_id = version_info["version"]
 
             self._device.set_archive_event("tileProgrammingState", True, False)
 

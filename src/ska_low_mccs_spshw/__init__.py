@@ -13,17 +13,21 @@ for, amongst other things, monitoring and control of LFAA.
 """
 
 __all__ = [
-    # devices
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
     "MccsStationCalibrator",
-    # device subpackages
-    "subrack",
-    "tile",
+    "version",
 ]
 
 from .station import SpsStation
 from .station_calibrator import MccsStationCalibrator
 from .subrack import MccsSubrack
 from .tile import MccsTile
+from .version import version_info
+
+__version__ = version_info["version"]
+
+
+if __name__ == "__main__":
+    print(__version__)

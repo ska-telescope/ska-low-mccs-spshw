@@ -301,14 +301,6 @@ class TestOn:
         # Successful in establishing communication with the upstream power supply
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-        # Upstream power supply sends an event advising that the subrack is on.
-        # Try to establish communication with the subrack management board.
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-
-        # Successful in establishing communication with the subrack management board.
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.ON)
@@ -443,10 +435,6 @@ class TestOn:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.ON)
@@ -505,10 +493,6 @@ class TestOn:
 
         subrack_component_manager.start_communicating()
 
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )

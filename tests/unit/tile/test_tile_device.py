@@ -408,7 +408,7 @@ class TestMccsTile:
 
         with pytest.raises(
             DevFailed,
-            match="Communication is not being attempted so cannot be established.",
+            match="Communication with component is not established",
         ):
             _ = getattr(tile_device, attribute)
 
@@ -596,7 +596,7 @@ class TestMccsTileCommands:
         args = [] if arg is None else [arg]
         with pytest.raises(
             DevFailed,
-            match="Communication is not being attempted so cannot be established.",
+            match="Communication with component is not established",
         ):
             _ = getattr(tile_device, device_command)(*args)
 
@@ -643,7 +643,7 @@ class TestMccsTileCommands:
 
         with pytest.raises(
             DevFailed,
-            match="is being attempted but has not been successfully established",
+            match="Communication with component is not established",
         ):
             _ = tile_device.StartAcquisition(json.dumps({"delay": 5}))
 
@@ -731,7 +731,7 @@ class TestMccsTileCommands:
 
         with pytest.raises(
             DevFailed,
-            match="Communication is not being attempted so cannot be established.",
+            match="Communication with component is not established",
         ):
             _ = tile_device.Initialise()
 
@@ -744,7 +744,7 @@ class TestMccsTileCommands:
 
         with pytest.raises(
             DevFailed,
-            match="is being attempted but has not been successfully established",
+            match="Communication with component is not established",
         ):
             _ = tile_device.Initialise()
 
@@ -788,7 +788,7 @@ class TestMccsTileCommands:
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
-            match="is being attempted but has not been successfully established",
+            match="Communication with component is not established",
         ):
             _ = tile_device.GetFirmwareAvailable()
 

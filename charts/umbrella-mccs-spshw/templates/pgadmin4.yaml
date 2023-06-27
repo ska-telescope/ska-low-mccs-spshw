@@ -1,0 +1,175 @@
+{{ if .Values.pgadmin4.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
+    component: pgadmin4-spshw
+{{ if or (.Values.global.annotations) (.Values.annotations) }}
+  annotations:
+{{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 4 }}
+{{ end }}
+spec:
+  replicas: {{ .Values.pgadmin4.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "ska-low-mccs-spshw.labels" . | indent 6 }}
+      component: pgadmin4-spshw
+  template:
+    metadata:
+      labels:
+        {{- include "ska-low-mccs-spshw.labels" . | indent 8 }}
+        component: pgadmin4-spshw
+    {{ if or (.Values.global.annotations) (.Values.annotations) }}
+      annotations:
+{{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 8 }}
+    {{ end }}
+    spec:
+      volumes:
+      {{- if .Values.pgadmin4.serverDefinitions.enabled }}
+      - name: definitions
+        secret:
+        {{- if not .Values.pgadmin4.existingSecret }}
+          secretName: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+        {{- else }}
+          secretName: {{ .Values.existingSecret }}
+        {{- end }}
+          items:
+          - key: servers.json
+            path: servers.json
+      {{- end }}
+      containers:
+        - name: pgadmin4
+          image: "{{ .Values.pgadmin4.image.registry }}/{{ .Values.pgadmin4.image.repository }}:{{ .Values.pgadmin4.image.tag }}"
+          imagePullPolicy: {{ .Values.pgadmin4.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.pgadmin4.containerPorts.http }}
+              protocol: TCP
+        {{- if .Values.pgadmin4.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              port: http
+              path: /misc/ping
+            {{- .Values.pgadmin4.livenessProbe | toYaml | nindent 12 }}
+        {{- end }}
+        {{- if .Values.pgadmin4.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              port: http
+              path: /misc/ping
+            {{- .Values.pgadmin4.readinessProbe | toYaml | nindent 12 }}
+        {{- end }}
+          env:
+            - name: PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION
+              value: "False"
+            - name: PGADMIN_DEFAULT_EMAIL
+              value: {{ .Values.pgadmin4.env.email }}
+            - name: PGADMIN_DEFAULT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+          {{- if not .Values.pgadmin4.existingSecret }}
+                  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+          {{- else }}
+                  name: {{ .Values.pgadmin4.existingSecret }}
+          {{- end }}
+                  key: password
+          {{- if .Values.pgadmin4.serverDefinitions.enabled }}
+            - name: PGADMIN_SERVER_JSON_FILE
+              value: /pgadmin4/servers.json
+          {{- end }}
+          volumeMounts:
+          {{- if .Values.pgadmin4.serverDefinitions.enabled }}
+          - name: definitions
+            mountPath: /pgadmin4/servers.json
+            subPath: servers.json
+          {{- end }}
+          resources:
+            {{- .Values.pgadmin4.resources | toYaml | nindent 12 }}
+
+---
+
+{{- if not .Values.pgadmin4.existingSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
+    component: pgadmin4-spshw
+{{ if or (.Values.global.annotations) (.Values.annotations) }}
+  annotations:
+{{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 4 }}
+{{ end }}
+type: Opaque
+data:
+  password: {{ default "SuperSecret" .Values.pgadmin4.env.password | b64enc | quote }}
+{{- if .Values.pgadmin4.serverDefinitions.enabled }}
+  servers.json: {{ include "pgadmin.serverDefinitions" . | b64enc | quote }}
+{{- end }}
+{{- end }}
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
+    component: pgadmin4-spshw
+{{ if or (.Values.global.annotations) (.Values.annotations) }}
+  annotations:
+{{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 4 }}
+{{ end }}
+spec:
+  type: {{ .Values.pgadmin4.service.type }}
+  ports:
+    - port: {{ .Values.pgadmin4.service.port }}
+    {{- if .Values.pgadmin4.service.nodePort }}
+      nodePort: {{ .Values.pgadmin4.service.nodePort }}
+    {{- end }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
+    component: pgadmin4-spshw
+
+---
+
+{{- if .Values.pgadmin4.ingress.enabled }}
+{{- $svcPort := .Values.pgadmin4.service.port }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
+    component: pgadmin4-spshw
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      proxy_set_header X-Script-Name /{{ .Release.Namespace }}/pgadmin4;
+      proxy_set_header X-Scheme "https";
+
+{{ if or (.Values.global.annotations) (.Values.annotations) }}
+{{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 4 }}
+{{ end }}
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /{{ .Release.Namespace }}/pgadmin4
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+                port:
+                  number: {{ $svcPort }}
+{{- end }}
+{{ end }}

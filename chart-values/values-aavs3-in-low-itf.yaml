@@ -29,3 +29,6 @@ deviceServers:
     logging_level_default: 5
   tpms:
     logging_level_default: 5
+
+receivers:
+  1: {}

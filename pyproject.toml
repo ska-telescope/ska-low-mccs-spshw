@@ -28,6 +28,7 @@ fastapi = "^0.88.0"
 uvicorn = {extras = ["standard"], version = "^0.20.0"}
 typing-extensions = "^4.4.0"
 future = "^0.18.3"
+ska-low-mccs-daq-interface = "^0.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"
@@ -76,9 +77,12 @@ MccsCalibrationStore = "ska_low_mccs_spshw.calibration_store.calibration_store_d
 MockFieldStation = "ska_low_mccs_spshw.mocks.mock_field_station_device:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
+SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
 Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
-SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
+MccsDaqReceiver = "ska_low_mccs_spshw.daq_receiver.daq_receiver_device:main"
+DaqSimulator = "ska_low_mccs_spshw.daq_receiver.daq_simulator:main"
+
 
 [tool.pytest.ini_options]
 testpaths = "tests/"

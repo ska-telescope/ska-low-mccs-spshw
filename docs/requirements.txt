@@ -11,6 +11,7 @@ sphinxcontrib-plantuml
 fastapi
 fire
 pyyaml
+ska-low-mccs-daq-interface == 0.1.0
 typing-extensions
 uritools
 uvicorn[standard]

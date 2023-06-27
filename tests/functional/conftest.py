@@ -86,8 +86,7 @@ def subrack_address_fixture() -> tuple[str, int] | None:
     if address_var in os.environ:
         [host, port_str] = os.environ[address_var].split(":")
         return host, int(port_str)
-    else:
-        return None
+    return None
 
 
 @pytest.fixture(name="functional_test_context", scope="module")
@@ -95,6 +94,7 @@ def functional_test_context_fixture(
     true_context: bool,
     subrack_id: int,
     subrack_address: tuple[str, int] | None,
+    daq_id: int,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Yield a Tango context containing the device/s under test.
@@ -104,14 +104,21 @@ def functional_test_context_fixture(
     :param subrack_id: ID of the subrack Tango device.
     :param subrack_address: the address of a subrack server if one is
         already running; otherwise None.
+    :param daq_id: the ID of the daq receiver
 
     :yields: a Tango context containing the devices under test
     """
     harness = SpsTangoTestHarness()
+
     if not true_context:
         if subrack_address is None:
             harness.add_subrack_simulator(subrack_id)
         harness.add_subrack_device(subrack_id, subrack_address)
+        harness.add_daq_instance(daq_id)
+        harness.add_daq_device(
+            daq_id,
+            address=None,  # dynamically get address of DAQ instance
+        )
 
     with harness as context:
         yield context
@@ -132,5 +139,16 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
         "subrack_tpm_present",
+        "daq_state",
         timeout=30.0,
     )
+
+
+@pytest.fixture(name="acquisition_duration", scope="session")
+def acquisition_duration_fixture() -> int:
+    """
+    Return the duration of data capture in seconds.
+
+    :return: Duration of data capture.
+    """
+    return 2

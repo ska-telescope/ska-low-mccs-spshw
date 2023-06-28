@@ -12,6 +12,7 @@ from __future__ import annotations
 import importlib
 import json
 import logging
+import sys
 from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
@@ -265,6 +266,13 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of the PSI-Low subrack."""
 
+    # ----------
+    # Properties
+    # ----------
+    SubrackIp = device_property(dtype=str)
+    SubrackPort = device_property(dtype=int, default_value=8081)
+    UpdateRate = device_property(dtype=float, default_value=15.0)
+
     # A map from the compnent manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
     # Attributes that don't map one-to-one are handled individually.
@@ -286,6 +294,10 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
     }
+
+    # --------------
+    # Initialization
+    # --------------
 
     def __init__(self: MccsSubrack, *args: Any, **kwargs: Any) -> None:
         """
@@ -315,12 +327,27 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         self.clock_presence: list[str] = []
         self._update_health_data()
 
-    # ----------
-    # Properties
-    # ----------
-    SubrackIp = device_property(dtype=str)
-    SubrackPort = device_property(dtype=int, default_value=8081)
-    UpdateRate = device_property(dtype=float, default_value=15.0)
+    def init_device(self: MccsSubrack) -> None:
+        """
+        Initialise the device.
+
+        This is overridden here to change the Tango serialisation model.
+        """
+        super().init_device()
+
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        version = f"{device_name} Software Version: {self._version_id}"
+        properties = (
+            f"Initialised {device_name} device with properties:\n"
+            f"\tSubrackIP: {self.SubrackIp}\n"
+            f"\tSubrackPort: {self.SubrackPort}\n"
+            f"\tUpdateRate: {self.UpdateRate}\n"
+        )
+        self.logger.info(
+            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
 
     class InitCommand(DeviceInitCommand):
         """Initialisation command class for this base device."""
@@ -355,9 +382,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             self._completed()
             return (ResultCode.OK, message)
 
-    # --------------
-    # Initialization
-    # --------------
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.

@@ -2,6 +2,16 @@
 
 ## unreleased
 
+## 0.6.0
+
+* [MCCS-1539] DAQ receiver Tango device
+* [MCCS-1529] Kwargs refactor
+* [MCCS-1569] [MCCS-1570] [MCCS-1572] Calibration store device, mock field station device, station calibrator device
+* [MCCS-1451] Tile simulator improvements
+* [mccs-1419] Jupyter notebooks to generate 4 and 8 beams.
+* [MCCS-1525] Tile health model fixes
+* [MCCS-1387] Subrack health
+
 ## 0.5.0
 
 * [MCCS-1412] Chart fixes and improvements

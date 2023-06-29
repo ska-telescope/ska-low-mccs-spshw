@@ -14,6 +14,8 @@ from typing import Callable, Optional
 from ska_control_model import CommunicationStatus, PowerState
 from ska_tango_base.executor import TaskExecutorComponentManager
 
+from .calibration_store_database_connection import CalibrationStoreDatabaseConnection
+
 __all__ = ["CalibrationStoreComponentManager"]
 
 
@@ -28,6 +30,11 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         component_state_changed_callback: Callable[
             [Optional[bool], Optional[PowerState]], None
         ],
+        host: str = "test-postgresql",
+        port: int = 5432,
+        dbname: str = "postgres",
+        user: str = "postgres",
+        password: str = "",
     ) -> None:
         """
         Initialise a new instance.
@@ -48,11 +55,17 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         self._communication_state_callback = communication_state_changed_callback
         self._component_state_callback = component_state_changed_callback
         self.logger = logger
+        self._database_connection = CalibrationStoreDatabaseConnection(
+            logger, communication_state_changed_callback, host, port, dbname, user, password
+        )
 
     def start_communicating(self: CalibrationStoreComponentManager) -> None:
         """Establish communication."""
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            return
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-        self._update_communication_state(CommunicationStatus.ESTABLISHED)
+
+        self._database_connection.verify_database_connection()
 
     def stop_communicating(self: CalibrationStoreComponentManager) -> None:
         """Break off communication."""
@@ -61,3 +74,38 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
 
         self._update_communication_state(CommunicationStatus.DISABLED)
         self._update_component_state(power=None, fault=None)
+
+    def get_solution(
+        self: CalibrationStoreComponentManager,
+        frequency_channel: int,
+        outside_temperature: float,
+    ) -> list[float]:
+        """
+        Get a solution for the provided frequency and outside temperature.
+
+        This at present will return the most recently stored solution for the inputs.
+
+        :param frequency_channel: the frequency channel of the desired solution.
+        :param outside_temperature: the outside temperature of the desired solution.
+        :return: a calibration solution from the database.
+        """
+        return self._database_connection.get_solution(
+            frequency_channel, outside_temperature
+        )
+
+    def store_solution(
+        self: CalibrationStoreComponentManager,
+        solution: list[float],
+        frequency_channel: int,
+        outside_temperature: float,
+    ) -> None:
+        """
+        Store the provided solution in the database.
+
+        :param solution: the solution to store
+        :param frequency_channel: the frequency channel that the solution is for
+        :param outside_temperature: the outside temperature that the solution is for
+        """
+        return self._database_connection.store_solution(
+            solution, frequency_channel, outside_temperature
+        )

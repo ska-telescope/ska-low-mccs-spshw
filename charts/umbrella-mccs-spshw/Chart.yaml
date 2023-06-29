@@ -19,7 +19,6 @@ dependencies:
   - name: postgresql
     version: 11.6.6
     repository: https://charts.bitnami.com/bitnami
-    condition: postgresql.enabled
 
   # Taranta
   - name: ska-tango-taranta-dashboard

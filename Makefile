@@ -125,6 +125,12 @@ endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
 
+RELEASE_NAME ?= test
+POSTGRES_HOST ?= $(RELEASE_NAME)-postgresql
+
+K8S_CHART_PARAMS  += \
+	--set pgadmin4.serverDefinitions.servers.firstServer.Host=$(POSTGRES_HOST)
+
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \
 		$(K8S_TEST_RUNNER_CHART_RELEASE) $(K8S_TEST_RUNNER_CHART_NAME) \

@@ -312,6 +312,9 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
             raise ValueError("Outside temperature has not been read yet")
         return self._calibration_store_proxy._proxy.GetSolution(
             json.dumps(
-                {"channel": channel, "outside_temperature": self._outside_temperature}
+                {
+                    "frequency_channel": channel,
+                    "outside_temperature": self._outside_temperature,
+                }
             )
         )

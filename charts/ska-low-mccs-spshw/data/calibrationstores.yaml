@@ -1,5 +1,6 @@
 {{- $defaults := dict "enabled" true "logging_level_default" 3}}
 {{- $calibration_stores := .Values.deviceServers.calibrationstores}}
+{{- $pghost := .Release.Name}}
 name: "calibrationstore-{{.Release.Name}}"
 function: ska-low-mccs-spshw-calibrationstore
 domain: ska-low-mccs-spshw
@@ -23,6 +24,21 @@ server:
                 - name: "LoggingLevelDefault"
                   values:
                     - {{pluck "logging_level_default" $this_calibration_store $calibration_stores $defaults | first | toString | quote}}
+                - name: "DatabaseHost"
+                  values:
+                    - "test-postgresql"
+                - name: "DatabasePort"
+                  values:
+                    - "5432"
+                - name: "DatabaseName"
+                  values:
+                    - "postgres"
+                - name: "DatabaseAdminUser"
+                  values:
+                    - "postgres"
+                - name: "DatabaseAdminPassword"
+                  values:
+                    - "secretpassword"
 {{- end}}
 depends_on:
   - device: sys/database/2

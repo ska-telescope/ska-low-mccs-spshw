@@ -231,9 +231,7 @@ class MccsStationCalibrator(SKABaseDevice):
             :param kwargs: keyword arguments unpacked from the JSON
                 argument to the command.
 
-            :return: A tuple containing a return code and a string
-                   message indicating status. The message is for
-                   information purpose only.
+            :return: a calibration from the calibration store.
             """
             frequency_channel = kwargs["frequency_channel"]
             return self._component_manager.get_calibration(frequency_channel)

@@ -18,4 +18,4 @@ __all__ = [
 from .calibration_store_component_manager import CalibrationStoreComponentManager
 from .calibration_store_database_connection import CalibrationStoreDatabaseConnection
 from .calibration_store_device import MccsCalibrationStore
-from .station_calibrator_health_model import CalibrationStoreHealthModel
+from .calibration_store_health_model import CalibrationStoreHealthModel

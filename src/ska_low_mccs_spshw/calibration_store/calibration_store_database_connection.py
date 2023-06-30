@@ -47,7 +47,7 @@ class CalibrationStoreDatabaseConnection:
         :param database_admin_password: the database admin password
         """
         self._logger = logger
-        self._connection_pool = self.create_connection_pool(
+        self._connection_pool = self._create_connection_pool(
             database_host,
             database_port,
             database_name,
@@ -58,7 +58,7 @@ class CalibrationStoreDatabaseConnection:
         self._timeout = 10
 
     # pylint: disable=too-many-arguments
-    def create_connection_pool(
+    def _create_connection_pool(
         self: CalibrationStoreDatabaseConnection,
         database_host: str,
         database_port: int,

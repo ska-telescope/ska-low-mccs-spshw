@@ -64,7 +64,7 @@ def patched_calibration_store_database_connection_class_fixture(
         It has been patched to have a mocked out connection pool.
         """
 
-        def create_connection_pool(
+        def _create_connection_pool(
             self: PatchedCalibrationStoreDatabaseConnection, *args: Any, **kwargs: Any
         ) -> Mock:
             """

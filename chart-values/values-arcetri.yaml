@@ -87,3 +87,6 @@ deviceServers:  # e.g....
     resources:
       requests:
         memory: 512Mi
+
+receivers:
+  1: {}

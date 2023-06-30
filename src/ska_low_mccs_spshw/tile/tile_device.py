@@ -13,6 +13,7 @@ import itertools
 import json
 import logging
 import os.path
+import sys
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -44,7 +45,7 @@ __all__ = ["MccsTile", "main"]
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
-# pylint: disable=too-many-lines, too-many-public-methods
+# pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(SKABaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
@@ -96,8 +97,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._max_workers = 1
         super().init_device()
 
-        message = (
-            "Initialised MccsTile device with properties:\n"
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        version = f"{device_name} Software Version: {self._version_id}"
+        properties = (
+            f"Initialised {device_name} device with properties:\n"
             f"\tSubrackFQDN: {self.SubrackFQDN}\n"
             f"\tSubrackBay: {self.SubrackBay}\n"
             f"\tTileId: {self.TileId}\n"
@@ -108,7 +113,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
         )
-        self.logger.info(message)
+        self.logger.info(
+            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()

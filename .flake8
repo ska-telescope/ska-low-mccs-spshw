@@ -24,6 +24,7 @@ per-file-ignores =
     src/ska_low_mccs_spshw/tile/demo_tile_device.py: N802
     src/ska_low_mccs_spshw/tile/tile_cli.py: N802
     src/ska_low_mccs_spshw/mocks/mock_field_station_device.py: N802
+    src/ska_low_mccs_spshw/daq_receiver/daq_receiver_device.py: N802
     tests/integration/test_integration_tmc.py: N802
     tests/unit/station_calibrator/conftest.py: N802
     tests/unit/station_calibrator/test_station_calibrator_device.py: N802
@@ -32,3 +33,4 @@ per-file-ignores =
     tests/unit/subrack/test_subrack_device.py: N802
     tests/unit/tile/conftest.py: N802
     tests/unit/tile/test_tile_device.py: N802
+    tests/unit/daq_receiver/test_daq_receiver_device.py: N802

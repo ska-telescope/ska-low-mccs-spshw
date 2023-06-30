@@ -108,3 +108,40 @@ def test_GetCalibration(
         station_calibrator_device.SetOutsideTemperature(temperature)
         result = station_calibrator_device.GetCalibration(argin)
         assert all(result == calibration_solutions[(channel, temperature)])
+
+
+def test_StoreCalibration(
+    station_calibrator_device: MccsStationCalibrator,
+    calibration_solutions: dict[tuple[int, float], list[float]],
+    mock_calibration_store_device_proxy: Mock,
+) -> None:
+    """
+    Test of the StoreCalibration command.
+
+    :param station_calibrator_device: the station calibrator device under test
+    :param calibration_solutions: the calibration solutions to store
+        The key is the channel and the value is the calibration solution
+    :param mock_calibration_store_device_proxy: a mock calibration store proxy that has
+        been configured with the required calibration store behaviours.
+    """
+    station_calibrator_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+
+    # Give the calibrator a moment to set up the proxies
+    time.sleep(0.1)
+
+    for channel, temperature in calibration_solutions:
+        argin = json.dumps(
+            {
+                "frequency_channel": channel,
+                "solution": calibration_solutions[(channel, temperature)],
+            }
+        )
+        station_calibrator_device.SetOutsideTemperature(temperature)
+        station_calibrator_device.StoreCalibration(argin)
+        assert json.loads(
+            mock_calibration_store_device_proxy.StoreSolution.call_args[0][0]
+        ) == {
+            "outside_temperature": temperature,
+            "frequency_channel": channel,
+            "solution": calibration_solutions[(channel, temperature)],
+        }

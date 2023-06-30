@@ -14,12 +14,14 @@ import threading
 from typing import Any, Callable, Optional
 
 import tango
-from ska_control_model import CommunicationStatus
+from ska_control_model import CommunicationStatus, ResultCode
 from ska_low_mccs_common.component import DeviceComponentManager
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 
 __all__ = ["StationCalibratorComponentManager"]
+
+DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
 class _FieldStationProxy(DeviceComponentManager):
@@ -313,6 +315,35 @@ class StationCalibratorComponentManager(TaskExecutorComponentManager):
         return self._calibration_store_proxy._proxy.GetSolution(
             json.dumps(
                 {
+                    "frequency_channel": channel,
+                    "outside_temperature": self._outside_temperature,
+                }
+            )
+        )
+
+    @check_communicating
+    def store_calibration(
+        self: StationCalibratorComponentManager,
+        solution: list[float],
+        channel: int,
+    ) -> DevVarLongStringArrayType:
+        """
+        Store a solution in the calibration store.
+
+        :param solution: the calibration solution to store
+        :param channel: the frequency channel the solution is for
+
+        :raises ValueError: if the outside temperature has not been read yet
+        :return: tuple of result code and message
+        """
+        assert self._calibration_store_proxy._proxy is not None
+        if self._outside_temperature is None:
+            self.logger.error("StoreCalibration failed - outside temperature is None")
+            raise ValueError("Outside temperature has not been read yet")
+        return self._calibration_store_proxy._proxy.StoreSolution(
+            json.dumps(
+                {
+                    "solution": solution,
                     "frequency_channel": channel,
                     "outside_temperature": self._outside_temperature,
                 }

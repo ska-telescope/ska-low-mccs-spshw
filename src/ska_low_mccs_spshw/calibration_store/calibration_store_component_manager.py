@@ -11,18 +11,21 @@ from __future__ import annotations
 import logging
 from typing import Callable, Optional
 
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, PowerState, ResultCode
 from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .calibration_store_database_connection import CalibrationStoreDatabaseConnection
 
 __all__ = ["CalibrationStoreComponentManager"]
 
+DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
 
 # pylint: disable-next=abstract-method
 class CalibrationStoreComponentManager(TaskExecutorComponentManager):
     """A component manager for MccsCalibrationStore."""
 
+    # pylint: disable=too-many-arguments
     def __init__(
         self: CalibrationStoreComponentManager,
         logger: logging.Logger,
@@ -30,11 +33,11 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         component_state_changed_callback: Callable[
             [Optional[bool], Optional[PowerState]], None
         ],
-        host: str,
-        port: int,
-        dbname: str,
-        user: str,
-        password: str,
+        database_host: str,
+        database_port: int,
+        database_name: str,
+        database_admin_user: str,
+        database_admin_password: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -45,6 +48,11 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param database_host: the database host
+        :param database_port: the database port
+        :param database_name: the database name
+        :param database_admin_user: the database admin user
+        :param database_admin_password: the database admin password
         """
         super().__init__(
             logger,
@@ -60,31 +68,45 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         self._database_connection = self.create_database_connection(
             logger,
             communication_state_changed_callback,
-            host,
-            port,
-            dbname,
-            user,
-            password,
+            database_host,
+            database_port,
+            database_name,
+            database_admin_user,
+            database_admin_password,
         )
 
+    # pylint: disable=too-many-arguments
     def create_database_connection(
         self: CalibrationStoreComponentManager,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        host: str,
-        port: int,
-        dbname: str,
-        user: str,
-        password: str,
+        database_host: str,
+        database_port: int,
+        database_name: str,
+        database_admin_user: str,
+        database_admin_password: str,
     ) -> CalibrationStoreDatabaseConnection:
+        """
+        Create the database connection object.
+
+        :param logger: a logger for the connection to use
+        :param communication_state_changed_callback: callback to be
+            called when the component state changes
+        :param database_host: the database host
+        :param database_port: the database port
+        :param database_name: the database name
+        :param database_admin_user: the database admin user
+        :param database_admin_password: the database admin password
+        :return: the database connection
+        """
         return CalibrationStoreDatabaseConnection(
             logger,
             communication_state_changed_callback,
-            host,
-            port,
-            dbname,
-            user,
-            password,
+            database_host,
+            database_port,
+            database_name,
+            database_admin_user,
+            database_admin_password,
         )
 
     def start_communicating(self: CalibrationStoreComponentManager) -> None:
@@ -126,13 +148,15 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         solution: list[float],
         frequency_channel: int,
         outside_temperature: float,
-    ) -> None:
+    ) -> DevVarLongStringArrayType:
         """
         Store the provided solution in the database.
 
         :param solution: the solution to store
         :param frequency_channel: the frequency channel that the solution is for
         :param outside_temperature: the outside temperature that the solution is for
+
+        :return: tuple of result code and message
         """
         return self._database_connection.store_solution(
             solution, frequency_channel, outside_temperature

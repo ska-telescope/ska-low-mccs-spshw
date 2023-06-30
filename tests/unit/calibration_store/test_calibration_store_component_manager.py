@@ -45,6 +45,7 @@ def callbacks_fixture() -> MockCallableGroup:
     )
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="calibration_store_component_manager")
 def calibration_store_component_manager_fixture(
     test_context: None,
@@ -66,6 +67,8 @@ def calibration_store_component_manager_fixture(
 
     :param test_context: a Tango test context running the required
         mock subservient devices
+    :param patched_calibration_store_component_manager_class: the patched component
+        manager class with a mock of the database connection
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
     :param database_host: the database host

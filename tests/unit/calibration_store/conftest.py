@@ -53,11 +53,16 @@ def patched_calibration_store_database_connection_class_fixture(
     """
     Return a calibration store database connection with the connection pool mocked out.
 
+    :param mock_connection_pool: the mocked database connection pool
     :return: a calibration store database connection with a mocked connection pool.
     """
 
     class PatchedCalibrationStoreDatabaseConnection(CalibrationStoreDatabaseConnection):
-        """CalibrationStoreDatabaseConnection patched with mocked out connection pool."""
+        """
+        Patched CalibrationStoreDatabaseConnection.
+
+        It has been patched to have a mocked out connection pool.
+        """
 
         def create_connection_pool(
             self: PatchedCalibrationStoreDatabaseConnection, *args: Any, **kwargs: Any
@@ -65,6 +70,8 @@ def patched_calibration_store_database_connection_class_fixture(
             """
             Create the mock connection pool for connecting to a postgres database.
 
+            :param args: positional arguments (ignored here)
+            :param kwargs: named arguments (ignored here)
             :return: the mock connection pool
             """
             return mock_connection_pool
@@ -79,32 +86,42 @@ def patched_calibration_store_component_manager_class_fixture(
     ],
 ) -> type[CalibrationStoreComponentManager]:
     """
-    Return a calibration store component manager with the database connection mocked out.
+    Return a patched calibration store component manager.
+
+    It has been patched to have the database connection mocked out.
+
+    :param patched_calibration_store_database_connection_class: patched class for the
+        database connection with a mocked connection pool
 
     :return: a calibration store component manager with a mocked database connection.
     """
 
     class PatchedCalibrationStoreComponentManager(CalibrationStoreComponentManager):
-        """CalibrationStoreComponentManager patched with mocked out database connection."""
+        """
+        Patched CalibrationStoreComponentManager.
 
+        It has been patched to have a mocked out database connection.
+        """
+
+        # pylint: disable=too-many-arguments
         def create_database_connection(
             self: PatchedCalibrationStoreComponentManager,
             logger: logging.Logger,
             communication_state_changed_callback: Callable[[CommunicationStatus], None],
-            host: str,
-            port: int,
-            dbname: str,
-            user: str,
-            password: str,
+            database_host: str,
+            database_port: int,
+            database_name: str,
+            database_admin_user: str,
+            database_admin_password: str,
         ) -> CalibrationStoreDatabaseConnection:
             return patched_calibration_store_database_connection_class(
                 logger,
                 communication_state_changed_callback,
-                host,
-                port,
-                dbname,
-                user,
-                password,
+                database_host,
+                database_port,
+                database_name,
+                database_admin_user,
+                database_admin_password,
             )
 
     return PatchedCalibrationStoreComponentManager
@@ -112,10 +129,15 @@ def patched_calibration_store_component_manager_class_fixture(
 
 @pytest.fixture(name="patched_calibration_store_device_class")
 def patched_calibration_store_device_class_fixture(
-    patched_calibration_store_component_manager_class: CalibrationStoreComponentManager,
+    patched_calibration_store_component_manager_class: type[
+        CalibrationStoreComponentManager
+    ],
 ) -> type[MccsCalibrationStore]:
     """
     Return a calibration store device class patched with extra methods for testing.
+
+    :param patched_calibration_store_component_manager_class: patched class for the
+        component manager with a mocked database connection
 
     :return: a calibration store device class patched with extra methods for testing.
     """

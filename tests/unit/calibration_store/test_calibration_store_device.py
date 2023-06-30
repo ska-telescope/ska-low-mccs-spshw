@@ -45,6 +45,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="test_context")
 def test_context_fixture(
     patched_calibration_store_device_class: type[MccsCalibrationStore],
@@ -57,7 +58,7 @@ def test_context_fixture(
     """
     Yield into a context in which Tango is running, with mock devices.
 
-    :param patched_station_calibrator_device_class: a subclass of MccsCalibrationStore
+    :param patched_calibration_store_device_class: a subclass of MccsCalibrationStore
         that has been patched to mock out the database connection
     :param database_host: the database host
     :param database_port: the database port
@@ -101,6 +102,7 @@ def test_GetSolution(
     Test of the GetCalibration command.
 
     :param calibration_store_device: the calibration store device under test
+    :param mock_connection: the mock database connection
     """
     calibration_store_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
 
@@ -128,6 +130,7 @@ def test_StoreSolution(
     Test of the StoreSolution command.
 
     :param calibration_store_device: the calibration store device under test
+    :param mock_connection: the mock database connection
     """
     calibration_store_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
 

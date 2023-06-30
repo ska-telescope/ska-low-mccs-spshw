@@ -23,6 +23,8 @@ from .station_calibrator_health_model import StationCalibratorHealthModel
 
 __all__ = ["MccsStationCalibrator", "main"]
 
+DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
 
 class MccsStationCalibrator(SKABaseDevice):
     """An implementation of a station calibrator Tango device for MCCS."""
@@ -89,6 +91,7 @@ class MccsStationCalibrator(SKABaseDevice):
         super().init_command_objects()
         for command_name, command_object in [
             ("GetCalibration", self.GetCalibrationCommand),
+            ("StoreCalibration", self.StoreCalibrationCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -246,6 +249,77 @@ class MccsStationCalibrator(SKABaseDevice):
         :return: a calibration from the calibration store.
         """
         handler = self.get_command_object("GetCalibration")
+        return handler(argin)
+
+    class StoreCalibrationCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the StoreCalibration() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/station_calibrator/schemas/MccsStationCalibrator_StoreCalibration.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station_calibrator.schemas",
+                "MccsStationCalibrator_StoreCalibration.json",
+            )
+        )
+
+        def __init__(
+            self: MccsStationCalibrator.StoreCalibrationCommand,
+            component_manager: StationCalibratorComponentManager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new instance.
+
+            :param component_manager: the device's component manager
+            :param logger: a logger for this command to log with.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("StoreCalibration", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        def do(
+            self: MccsStationCalibrator.StoreCalibrationCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> DevVarLongStringArrayType:
+            """
+            Implement :py:meth:`.MccsStationCalibrator.StoreCalibration` command.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            """
+            frequency_channel = kwargs["frequency_channel"]
+            solution = kwargs["solution"]
+            return self._component_manager.store_calibration(
+                solution, frequency_channel
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StoreCalibration(
+        self: MccsStationCalibrator, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Store a calibration solution the calibration store.
+
+        :param argin: json-dictionary of field conditions and the solution.
+
+        :return: a tuple of the result code and message.
+        """
+        handler = self.get_command_object("StoreCalibration")
         return handler(argin)
 
 

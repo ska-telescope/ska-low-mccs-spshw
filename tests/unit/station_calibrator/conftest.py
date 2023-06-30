@@ -12,6 +12,7 @@ import unittest.mock
 
 import pytest
 import tango
+from ska_control_model import ResultCode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
@@ -33,12 +34,18 @@ def mock_calibration_store_device_proxy_fixture(
 
     def _GetSolution(argin: str) -> list[float]:
         args = json.loads(argin)
-        return calibration_solutions[(args["channel"], args["outside_temperature"])]
+        return calibration_solutions[
+            (args["frequency_channel"], args["outside_temperature"])
+        ]
 
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
     calibration_store = builder()
     calibration_store.GetSolution = _GetSolution
+    calibration_store.StoreSolution.return_value = (
+        [ResultCode.OK],
+        ["Solution stored successfully"],
+    )
     return calibration_store
 
 

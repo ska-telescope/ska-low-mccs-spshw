@@ -19,7 +19,7 @@ from ska_tango_base.commands import FastCommand, JsonValidator
 from tango.server import command, device_property
 
 from .calibration_store_component_manager import CalibrationStoreComponentManager
-from .station_calibrator_health_model import CalibrationStoreHealthModel
+from .calibration_store_health_model import CalibrationStoreHealthModel
 
 __all__ = ["MccsCalibrationStore", "main"]
 

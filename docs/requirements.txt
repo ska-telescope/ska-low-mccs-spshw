@@ -10,6 +10,8 @@ sphinx-rtd-theme
 sphinxcontrib-plantuml
 fastapi
 fire
+psycopg
+psycopg_pool
 pyyaml
 ska-low-mccs-daq-interface == 0.1.0
 typing-extensions

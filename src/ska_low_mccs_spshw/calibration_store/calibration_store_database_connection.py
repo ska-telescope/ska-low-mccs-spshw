@@ -9,37 +9,12 @@
 from __future__ import annotations
 
 import logging
-import os
 from typing import Callable
 
 from psycopg import sql
 from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool, PoolTimeout
-from ska_control_model import CommunicationStatus
-
-
-def create_connection_pool(
-    host: str = "test-postgresql",
-    port: int = 5432,
-    dbname: str = "postgres",
-    user: str = "postgres",
-    password: str = "",
-) -> ConnectionPool:
-    """
-    Create the connection pool for connecting to a postgres database.
-
-    :return: the connection pool
-    """
-    conninfo = (
-        f"host={host} "
-        f"port={port} "
-        f"dbname={dbname} "
-        f"user={user} "
-        f"password={password}"
-    )
-    connect_kwargs = {"row_factory": dict_row}
-
-    return ConnectionPool(conninfo, kwargs=connect_kwargs)
+from ska_control_model import CommunicationStatus, ResultCode
 
 
 class CalibrationStoreDatabaseConnection:
@@ -49,17 +24,43 @@ class CalibrationStoreDatabaseConnection:
         self: CalibrationStoreDatabaseConnection,
         logger: logging.Logger,
         communication_state_callback: Callable[[CommunicationStatus], None],
-        host: str = "test-postgresql",
-        port: int = 5432,
-        dbname: str = "postgres",
-        user: str = "postgres",
-        password: str = "",
+        host: str,
+        port: int,
+        dbname: str,
+        user: str,
+        password: str,
     ) -> None:
         """Initialise a new instance of a database connection."""
         self._logger = logger
-        self._connection_pool = create_connection_pool(host, port, dbname, user, password)
+        self._connection_pool = self.create_connection_pool(
+            host, port, dbname, user, password
+        )
         self._communication_state_callback = communication_state_callback
         self._timeout = 10
+
+    def create_connection_pool(
+        self: CalibrationStoreDatabaseConnection,
+        host: str,
+        port: int,
+        dbname: str,
+        user: str,
+        password: str,
+    ) -> ConnectionPool:
+        """
+        Create the connection pool for connecting to a postgres database.
+
+        :return: the connection pool
+        """
+        conninfo = (
+            f"host={host} "
+            f"port={port} "
+            f"dbname={dbname} "
+            f"user={user} "
+            f"password={password}"
+        )
+        connect_kwargs = {"row_factory": dict_row}
+
+        return ConnectionPool(conninfo, kwargs=connect_kwargs)
 
     def verify_database_connection(self: CalibrationStoreDatabaseConnection) -> None:
         """Verify that connection to the database can be established"""
@@ -117,3 +118,4 @@ class CalibrationStoreDatabaseConnection:
             )
 
             cx.execute(query, [frequency_channel, outside_temperature, solution])
+        return ([ResultCode.OK], ["Solution stored successfully"])

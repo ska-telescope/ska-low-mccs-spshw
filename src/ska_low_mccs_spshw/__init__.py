@@ -20,6 +20,7 @@ __all__ = [
     "version",
 ]
 
+from .calibration_store import MccsCalibrationStore
 from .station import SpsStation
 from .station_calibrator import MccsStationCalibrator
 from .subrack import MccsSubrack

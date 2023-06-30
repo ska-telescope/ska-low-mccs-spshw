@@ -30,11 +30,11 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
         component_state_changed_callback: Callable[
             [Optional[bool], Optional[PowerState]], None
         ],
-        host: str = "test-postgresql",
-        port: int = 5432,
-        dbname: str = "postgres",
-        user: str = "postgres",
-        password: str = "",
+        host: str,
+        port: int,
+        dbname: str,
+        user: str,
+        password: str,
     ) -> None:
         """
         Initialise a new instance.
@@ -51,12 +51,40 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
             max_workers=1,
+            power=None,
+            fault=None,
         )
         self._communication_state_callback = communication_state_changed_callback
         self._component_state_callback = component_state_changed_callback
         self.logger = logger
-        self._database_connection = CalibrationStoreDatabaseConnection(
-            logger, communication_state_changed_callback, host, port, dbname, user, password
+        self._database_connection = self.create_database_connection(
+            logger,
+            communication_state_changed_callback,
+            host,
+            port,
+            dbname,
+            user,
+            password,
+        )
+
+    def create_database_connection(
+        self: CalibrationStoreComponentManager,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        host: str,
+        port: int,
+        dbname: str,
+        user: str,
+        password: str,
+    ) -> CalibrationStoreDatabaseConnection:
+        return CalibrationStoreDatabaseConnection(
+            logger,
+            communication_state_changed_callback,
+            host,
+            port,
+            dbname,
+            user,
+            password,
         )
 
     def start_communicating(self: CalibrationStoreComponentManager) -> None:

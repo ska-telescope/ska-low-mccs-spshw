@@ -35,7 +35,6 @@ class MccsCalibrationStore(SKABaseDevice):
     DatabaseAdminUser = device_property(dtype=str, default_value="postgres")
     DatabaseAdminPassword = device_property(dtype=str, default_value="")
 
-
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         """
         Initialise this device object.

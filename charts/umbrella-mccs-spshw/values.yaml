@@ -104,7 +104,7 @@ postgresql:
       user: "postgres"
 
     persistence:
-      enabled: true
+      enabled: false
       ## @param primary.persistence.mountPath The path the volume will be mounted at
       ## Note: useful when using custom PostgreSQL images
       ##

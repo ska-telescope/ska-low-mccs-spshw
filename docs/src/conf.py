@@ -54,6 +54,7 @@ autodoc_mock_imports = [
     "ska_control_model",
     "ska_low_mccs_common",
     "psycopg",
+    "psycopg_pool",
 ]
 
 

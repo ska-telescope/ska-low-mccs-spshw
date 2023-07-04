@@ -147,7 +147,7 @@ def test_StoreSolution(
 
     command = sql.SQL(
         "INSERT INTO tab_mccs_calib("
-        "creation_time, outside_temperature, channel, calibration)"
+        "creation_time, frequency_channel, outside_temperature, calibration)"
         "VALUES (current_timestamp, %s, %s, %s);"
     )
 

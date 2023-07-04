@@ -1,6 +1,7 @@
 Feature: Test calibration
     Test that calibration solutions can be stored and loaded correctly
 
+    @XTP-25768
     Scenario: Store a calibration solution
         Given a calibration store that is online
         And the database table is initially empty
@@ -9,6 +10,7 @@ Feature: Test calibration
 
         Then the solution is stored in the database
 
+    @XTP-25769
     Scenario: Load a calibration solution
         Given a calibration store that is online
         And a field station that is online

@@ -13,7 +13,7 @@ from typing import Callable
 
 from psycopg import sql
 from psycopg.rows import dict_row
-from psycopg_pool import ConnectionPool, PoolTimeout
+from psycopg_pool import ConnectionPool, PoolClosed, PoolTimeout
 from ska_control_model import CommunicationStatus, ResultCode
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
@@ -56,6 +56,8 @@ class CalibrationStoreDatabaseConnection:
         )
         self._communication_state_callback = communication_state_callback
         self._timeout = 10
+        self._connection_tries = 0
+        self._connection_max_tries = 5
 
     # pylint: disable=too-many-arguments
     def _create_connection_pool(
@@ -110,25 +112,38 @@ class CalibrationStoreDatabaseConnection:
 
         :param frequency_channel: the frequency channel of the desired solution.
         :param outside_temperature: the outside temperature of the desired solution.
+
+        :raises PoolClosed: if there are repeated connection issues with the database
         :raises ValueError: if there is no stored solution for the provided inputs
+
         :return: a calibration solution from the database.
         """
-        with self._connection_pool.connection(self._timeout) as cx:
-            query = sql.SQL(
-                "SELECT calibration, creation_time "
-                "FROM tab_mccs_calib "
-                "WHERE frequency_channel=%s AND outside_temperature=%s "
-                "ORDER BY creation_time DESC"
-            )
-
-            result = cx.execute(query, [frequency_channel, outside_temperature])
-            row = result.fetchone()
-            if row is None:
-                raise ValueError(
-                    "Solution not found in database for "
-                    f"channel {frequency_channel}, temperature {outside_temperature}"
+        try:
+            with self._connection_pool.connection(self._timeout) as cx:
+                self._connection_tries = 0
+                query = sql.SQL(
+                    "SELECT calibration, creation_time "
+                    "FROM tab_mccs_calib "
+                    "WHERE frequency_channel=%s AND outside_temperature=%s "
+                    "ORDER BY creation_time DESC"
                 )
-            return row["calibration"]
+
+                result = cx.execute(query, [frequency_channel, outside_temperature])
+                row = result.fetchone()
+                if row is None:
+                    raise ValueError(
+                        "Solution not found in database for "
+                        f"channel {frequency_channel},"
+                        f" temperature {outside_temperature}"
+                    )
+                return row["calibration"]
+        except PoolClosed as exc:
+            self._logger.info("Pool closed already.")
+            self._connection_tries += 1
+            if self._connection_tries >= self._connection_max_tries:
+                raise PoolClosed("Connection failed.") from exc
+            self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
+            return self.get_solution(frequency_channel, outside_temperature)
 
     def store_solution(
         self: CalibrationStoreDatabaseConnection,
@@ -143,14 +158,26 @@ class CalibrationStoreDatabaseConnection:
         :param frequency_channel: the frequency channel that the solution is for
         :param outside_temperature: the outside temperature that the solution is for
 
+        :raises PoolClosed: if there are repeated connection issues witht the database
+
         :return: tuple of result code and message.
         """
-        with self._connection_pool.connection(self._timeout) as cx:
-            query = sql.SQL(
-                "INSERT INTO tab_mccs_calib("
-                "creation_time, frequency_channel, outside_temperature, calibration)"
-                "VALUES (current_timestamp, %s, %s, %s);"
-            )
+        try:
+            with self._connection_pool.connection(self._timeout) as cx:
+                self._connection_tries = 0
+                query = sql.SQL(
+                    "INSERT INTO tab_mccs_calib("
+                    "creation_time, frequency_channel, "
+                    "outside_temperature, calibration)"
+                    "VALUES (current_timestamp, %s, %s, %s);"
+                )
 
-            cx.execute(query, [frequency_channel, outside_temperature, solution])
+                cx.execute(query, [frequency_channel, outside_temperature, solution])
+        except PoolClosed as exc:
+            self._logger.info("Pool closed already.")
+            self._connection_tries += 1
+            if self._connection_tries >= self._connection_max_tries:
+                raise PoolClosed("Connection failed.") from exc
+            self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
+            return self.store_solution(solution, frequency_channel, outside_temperature)
         return ([ResultCode.OK], ["Solution stored successfully"])

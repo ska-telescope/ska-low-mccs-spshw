@@ -1,6 +1,5 @@
 {{- $defaults := dict "enabled" true "logging_level_default" 3}}
 {{- $calibration_stores := .Values.deviceServers.calibrationstores}}
-{{- $pghost := .Release.Name}}
 name: "calibrationstore-{{.Release.Name}}"
 function: ska-low-mccs-spshw-calibrationstore
 domain: ska-low-mccs-spshw

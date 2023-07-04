@@ -113,7 +113,7 @@ class CalibrationStoreDatabaseConnection:
         :param frequency_channel: the frequency channel of the desired solution.
         :param outside_temperature: the outside temperature of the desired solution.
 
-        :raises PoolClosed: if there are repeated connection issues with the database
+        :raises RuntimeError: if there are repeated connection issues with the database
         :raises ValueError: if there is no stored solution for the provided inputs
 
         :return: a calibration solution from the database.
@@ -141,7 +141,7 @@ class CalibrationStoreDatabaseConnection:
             self._logger.info("Pool closed already.")
             self._connection_tries += 1
             if self._connection_tries >= self._connection_max_tries:
-                raise PoolClosed("Connection failed.") from exc
+                raise RuntimeError("Connection failed.") from exc
             self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
             return self.get_solution(frequency_channel, outside_temperature)
 
@@ -158,7 +158,7 @@ class CalibrationStoreDatabaseConnection:
         :param frequency_channel: the frequency channel that the solution is for
         :param outside_temperature: the outside temperature that the solution is for
 
-        :raises PoolClosed: if there are repeated connection issues witht the database
+        :raises RuntimeError: if there are repeated connection issues witht the database
 
         :return: tuple of result code and message.
         """
@@ -177,7 +177,7 @@ class CalibrationStoreDatabaseConnection:
             self._logger.info("Pool closed already.")
             self._connection_tries += 1
             if self._connection_tries >= self._connection_max_tries:
-                raise PoolClosed("Connection failed.") from exc
+                raise RuntimeError("Connection failed.") from exc
             self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
             return self.store_solution(solution, frequency_channel, outside_temperature)
         return ([ResultCode.OK], ["Solution stored successfully"])

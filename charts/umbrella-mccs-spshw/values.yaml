@@ -115,7 +115,7 @@ pgadmin4:
        Group: "Servers"
        Port: 5432
        Username: "postgres"
-       Host: "localhost"
+       Host: "test-posgresql"
        SSLMode: "prefer"
        MaintenanceDB: "postgres"
 

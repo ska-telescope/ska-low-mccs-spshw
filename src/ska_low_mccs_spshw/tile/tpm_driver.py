@@ -60,40 +60,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
 
-    PREADU_SIGNAL_MAP = {
-        0: {"preadu_id": 1, "channel": 14},
-        1: {"preadu_id": 1, "channel": 15},
-        2: {"preadu_id": 1, "channel": 12},
-        3: {"preadu_id": 1, "channel": 13},
-        4: {"preadu_id": 1, "channel": 10},
-        5: {"preadu_id": 1, "channel": 11},
-        6: {"preadu_id": 1, "channel": 8},
-        7: {"preadu_id": 1, "channel": 9},
-        8: {"preadu_id": 0, "channel": 0},
-        9: {"preadu_id": 0, "channel": 1},
-        10: {"preadu_id": 0, "channel": 2},
-        11: {"preadu_id": 0, "channel": 3},
-        12: {"preadu_id": 0, "channel": 4},
-        13: {"preadu_id": 0, "channel": 5},
-        14: {"preadu_id": 0, "channel": 6},
-        15: {"preadu_id": 0, "channel": 7},
-        16: {"preadu_id": 1, "channel": 6},
-        17: {"preadu_id": 1, "channel": 7},
-        18: {"preadu_id": 1, "channel": 4},
-        19: {"preadu_id": 1, "channel": 5},
-        20: {"preadu_id": 1, "channel": 2},
-        21: {"preadu_id": 1, "channel": 3},
-        22: {"preadu_id": 1, "channel": 0},
-        23: {"preadu_id": 1, "channel": 1},
-        24: {"preadu_id": 0, "channel": 8},
-        25: {"preadu_id": 0, "channel": 9},
-        26: {"preadu_id": 0, "channel": 10},
-        27: {"preadu_id": 0, "channel": 11},
-        28: {"preadu_id": 0, "channel": 12},
-        29: {"preadu_id": 0, "channel": 13},
-        30: {"preadu_id": 0, "channel": 14},
-        31: {"preadu_id": 0, "channel": 15},
-    }
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -1481,13 +1447,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: set_preadu_levels")
         for preadu in self.tile.tpm.tpm_preadu:
-            preadu.select_low_passband()
+            preadu.select_low_passband()  # unimplemented on TPM 1.6
             preadu.read_configuration()
 
-        for channel in list(self.PREADU_SIGNAL_MAP.keys()):
+        for channel in list(self.tile.preadu_signal_map.keys()):
             # Apply attenuation
-            pid = self.PREADU_SIGNAL_MAP[channel]["preadu_id"]
-            channel = self.PREADU_SIGNAL_MAP[channel]["channel"]
+            pid = self.tile.preadu_signal_map[channel]["preadu_id"]
+            channel = self.tile.preadu_signal_map[channel]["channel"]
             attenuation = int(round(levels[channel]))
             self.tile.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
 
@@ -1502,14 +1468,14 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: get_preadu_levels")
         for preadu in self.tile.tpm.tpm_preadu:
-            preadu.select_low_passband()
+            preadu.select_low_passband() # unimplemented on TPM 1.6
             preadu.read_configuration()
 
         levels: list[int] = []
-        for channel in list(self.PREADU_SIGNAL_MAP.keys()):
-            pid = self.PREADU_SIGNAL_MAP[channel]["preadu_id"]
-            channel = self.PREADU_SIGNAL_MAP[channel]["channel"]
-            attenuation = self.tile.tpm_preadu[pid].channel_filters[channel] >> 3
+        for channel in list(self.tile.preadu_signal_map.keys()):
+            pid = self.tile.preadu_signal_map[channel]["preadu_id"]
+            channel = self.tile.preadu_signal_map[channel]["channel"]
+            attenuation = self.tile.tpm_preadu[pid].get_attenuation()[channel]
             levels = levels + [attenuation]
         return levels
 

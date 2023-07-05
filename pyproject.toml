@@ -13,8 +13,8 @@ url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
 [tool.poetry.dependencies]
 python = "~3.10"
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "14712ee5d4ffe84e208476af70df03fdbb098dcb", subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "67585a0fd8f72cac87f9d70d1f13113369e58a60" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "2f28a7fe261494d93c12f43171a067aaabcb57f4", subdirectory = "python" }
+pyfabil = { git = "https://bitbucket.org/lessju/pyfabil.git", rev = "a9d6d08432f6ceecf0f3ba2e51ffde1d4ae269ca" }
 fire = "^0.5.0"
 numpy = "^1.23.0"
 psycopg = {extras = ["binary"], version = "^3.0.15"}

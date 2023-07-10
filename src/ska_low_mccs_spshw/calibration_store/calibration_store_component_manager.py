@@ -62,9 +62,6 @@ class CalibrationStoreComponentManager(TaskExecutorComponentManager):
             power=None,
             fault=None,
         )
-        self._communication_state_callback = communication_state_changed_callback
-        self._component_state_callback = component_state_changed_callback
-        self.logger = logger
         self._database_connection = self.create_database_connection(
             logger,
             communication_state_changed_callback,

@@ -32,6 +32,8 @@ class CalibrationStoreDatabaseConnection:
         database_name: str,
         database_admin_user: str,
         database_admin_password: str,
+        timeout: float = 10,
+        connection_max_tries: int = 5,
     ) -> None:
         """
         Initialise a new instance of a database connection.
@@ -45,6 +47,9 @@ class CalibrationStoreDatabaseConnection:
         :param database_name: the database name
         :param database_admin_user: the database admin user
         :param database_admin_password: the database admin password
+        :param timeout: the timeout for database operations
+        :param connection_max_tries: the maximum number of attempts to connect to the
+            database
         """
         self._logger = logger
         self._connection_pool = self._create_connection_pool(
@@ -55,9 +60,9 @@ class CalibrationStoreDatabaseConnection:
             database_admin_password,
         )
         self._communication_state_callback = communication_state_callback
-        self._timeout = 10
+        self._timeout = timeout
         self._connection_tries = 0
-        self._connection_max_tries = 5
+        self._connection_max_tries = connection_max_tries
 
     # pylint: disable=too-many-arguments
     def _create_connection_pool(
@@ -114,7 +119,6 @@ class CalibrationStoreDatabaseConnection:
         :param outside_temperature: the outside temperature of the desired solution.
 
         :raises RuntimeError: if there are repeated connection issues with the database
-        :raises ValueError: if there is no stored solution for the provided inputs
 
         :return: a calibration solution from the database.
         """
@@ -131,11 +135,7 @@ class CalibrationStoreDatabaseConnection:
                 result = cx.execute(query, [frequency_channel, outside_temperature])
                 row = result.fetchone()
                 if row is None:
-                    raise ValueError(
-                        "Solution not found in database for "
-                        f"channel {frequency_channel},"
-                        f" temperature {outside_temperature}"
-                    )
+                    return []
                 return row["calibration"]
         except PoolClosed as exc:
             self._logger.info("Pool closed already.")

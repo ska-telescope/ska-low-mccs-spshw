@@ -71,6 +71,29 @@ def test_add_to_existing_table(database_connection_pool: ConnectionPool) -> None
 
 @scenario(
     "features/calibration.feature",
+    "Load a non-existent calibration solution",
+)
+def test_loading_non_existent_solution(
+    database_connection_pool: ConnectionPool,
+) -> None:
+    """
+    Test retrieving a calibration solution for inputs that don't have a solution.
+
+    This should return an empty array to indicate the solution doesn't exist.
+
+    Bear in mind that data in the database will persist between test runs if not
+    cleaned up, so here we remove any data from the table.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param database_connection_pool: connection pool for the database
+    """
+    empty_table(database_connection_pool)
+
+
+@scenario(
+    "features/calibration.feature",
     "Load a calibration solution",
 )
 def test_loading_solution(database_connection_pool: ConnectionPool) -> None:
@@ -207,6 +230,26 @@ def frequency_channel_fixture() -> int:
     :return: the frequency channel
     """
     return 23
+
+
+@pytest.fixture(name="unused_outside_temperature")
+def unused_outside_temperature_fixture() -> float:
+    """
+    Fixture for a not calibrated-for outside temperature.
+
+    :return: the outside temperature
+    """
+    return 15.0
+
+
+@pytest.fixture(name="unused_frequency_channel")
+def unused_frequency_channel_fixture() -> int:
+    """
+    Fixture for a not calibrated-for calibration frequency channel.
+
+    :return: the frequency channel
+    """
+    return 13
 
 
 @given("a calibration store that is online", target_fixture="calibration_store")
@@ -567,6 +610,47 @@ def when_get_calibration(
     return station_calibrator.GetCalibration(
         json.dumps({"frequency_channel": frequency_channel})
     )
+
+
+@when(
+    "the calibration store tries to get a calibration solution not in the database",
+    target_fixture="missing_solution",
+)
+def when_get_non_existent_calibration(
+    calibration_store: tango.DeviceProxy,
+    unused_outside_temperature: float,
+    unused_frequency_channel: int,
+) -> list[float]:
+    """
+    Retrieve a non_existent calibration solution using the calibration store.
+
+    This should return just an empty list since the solution does not exist
+
+    :param calibration_store: proxy to the station calibrator
+    :param unused_outside_temperature: the outside temperature to get a solution for
+    :param unused_frequency_channel: the frequency channel to get a solution for
+    :return: the retrieved calibration solution, which is an empty list
+    """
+    return calibration_store.GetSolution(
+        json.dumps(
+            {
+                "outside_temperature": unused_outside_temperature,
+                "frequency_channel": unused_frequency_channel,
+            }
+        )
+    )
+
+
+@then("the calibration store returns an empty array")
+def then_empty_calibration(
+    missing_solution: list[float],
+) -> None:
+    """
+    Verify the returned solution is an empty array.
+
+    :param missing_solution: the retrieved solution from the database
+    """
+    assert not missing_solution
 
 
 @then("the correct calibration solution is retrieved")

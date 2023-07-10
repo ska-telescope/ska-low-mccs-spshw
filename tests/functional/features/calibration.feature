@@ -20,6 +20,15 @@ Feature: Test calibration
         Then the solution is stored in the database
         And existing data is not overwritten
 
+    @XTP-25944
+    Scenario: Load a non-existent calibration solution
+        Given a calibration store that is online
+        And the calibration store database contains calibration solutions
+
+        When the calibration store tries to get a calibration solution not in the database
+
+        Then the calibration store returns an empty array
+
     @XTP-25769
     Scenario: Load a calibration solution
         Given a calibration store that is online

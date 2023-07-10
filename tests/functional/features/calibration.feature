@@ -10,6 +10,16 @@ Feature: Test calibration
 
         Then the solution is stored in the database
 
+    @XTP-25944
+    Scenario: Add a calibration solution to existing table
+        Given a calibration store that is online
+        And the calibration store database contains calibration solutions
+
+        When the calibration store is given a solution to store
+
+        Then the solution is stored in the database
+        And existing data is not overwritten
+
     @XTP-25769
     Scenario: Load a calibration solution
         Given a calibration store that is online
@@ -21,3 +31,15 @@ Feature: Test calibration
         When the station calibrator tries to get a calibration solution
 
         Then the correct calibration solution is retrieved
+
+    @XTP-25946
+    Scenario: Load a calibration solution with multiple available
+        Given a calibration store that is online
+        And a field station that is online
+        And a station calibrator that is online
+        And the calibration store database contains multiple calibration solutions for the same inputs
+        And the field station has read the outside temperature
+
+        When the station calibrator tries to get a calibration solution
+
+        Then the most recently stored calibration solution is retrieved

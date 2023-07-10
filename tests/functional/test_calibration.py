@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import time
 from typing import Iterator
 
 import pytest
@@ -48,6 +49,28 @@ def test_storing_solution(database_connection_pool: ConnectionPool) -> None:
 
 @scenario(
     "features/calibration.feature",
+    "Add a calibration solution to existing table",
+)
+def test_add_to_existing_table(database_connection_pool: ConnectionPool) -> None:
+    """
+    Test storing a calibration solution when there's already data.
+
+    Check that when a solution is sent to the MccsCalibrationStore, the solution
+    is stored in the database, without overwriting existing data.
+
+    Bear in mind that data in the database will persist between test runs if not
+    cleaned up, so here we remove any data from the table.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param database_connection_pool: connection pool for the database
+    """
+    empty_table(database_connection_pool)
+
+
+@scenario(
+    "features/calibration.feature",
     "Load a calibration solution",
 )
 def test_loading_solution(database_connection_pool: ConnectionPool) -> None:
@@ -56,6 +79,30 @@ def test_loading_solution(database_connection_pool: ConnectionPool) -> None:
 
     Check that when the station calibrator tries to retrieve an existing solution,
     the correct solution is returned.
+
+    Bear in mind that data in the database will persist between test runs if not
+    cleaned up, so here we remove any data from the table.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param database_connection_pool: connection pool for the database
+    """
+    empty_table(database_connection_pool)
+
+
+@scenario(
+    "features/calibration.feature",
+    "Load a calibration solution with multiple available",
+)
+def test_loading_solution_multiple_available(
+    database_connection_pool: ConnectionPool,
+) -> None:
+    """
+    Test retrieving a calibration solution, when there are multiple available.
+
+    Check that when the station calibrator tries to retrieve an existing solution,
+    the most recently stored solution is returned.
 
     Bear in mind that data in the database will persist between test runs if not
     cleaned up, so here we remove any data from the table.
@@ -106,6 +153,40 @@ def database_connection_pool_fixture(
     connect_kwargs = {"row_factory": dict_row}
 
     return ConnectionPool(conninfo, kwargs=connect_kwargs)
+
+
+@pytest.fixture(name="calibration_solution")
+def calibration_solution_fixture() -> list[float]:
+    """
+    Fixture that provides a sample calibration solution.
+
+    This is distinct to the calibration solutions that may be initially stored in the
+    database, so that it can be verified that the correct solution is retrieved.
+
+    :return: a sample calibration solution.
+    """
+    return [float(2)] + [0.7 * i for i in range(8)]
+
+
+@pytest.fixture(name="alternative_calibration_solutions")
+def alternative_calibration_solutions_fixture() -> dict[tuple[int, float], list[float]]:
+    """
+    Fixture that provides alternative sample calibration solutions.
+
+    This is used to test for when there are multiple solutions for the same inputs,
+    that the correct one is retrieved.
+
+    :return: a sample calibration solution. The keys are tuples of the channel
+        and the outside temperature, and the values are lists of calibration values
+    """
+    return {
+        (23, 25.0): [float(4)] + [0.8 * i for i in range(8)],
+        (45, 25.0): [float(7)] + [1.4 * (i % 2) for i in range(8)],
+        (23, 30.0): [float(1)] + [0.1 * i for i in range(8)],
+        (45, 30.0): [float(2)] + [1.1 * (i % 2) for i in range(8)],
+        (23, 35.0): [float(4)] + [0.9 * i for i in range(8)],
+        (45, 35.0): [float(8)] + [1.4 * (i % 2) for i in range(8)],
+    }
 
 
 @pytest.fixture(name="outside_temperature")
@@ -295,6 +376,60 @@ def given_database_has_solutions(
             )
 
 
+@given(
+    "the calibration store database contains multiple calibration solutions "
+    "for the same inputs"
+)
+def given_database_has_multiple_solutions(
+    calibration_solutions: dict[tuple[int, float], list[float]],
+    alternative_calibration_solutions: dict[tuple[int, float], list[float]],
+    database_connection_pool: ConnectionPool,
+) -> None:
+    """
+    Populate the database with multiple solutions for the same inputs.
+
+    :param calibration_solutions: the calibration solutions to store
+    :param alternative_calibration_solutions: the alternative calibration
+        solutions to store
+    :param database_connection_pool: connection pool for the database
+    """
+    empty_table(database_connection_pool)
+
+    with database_connection_pool.connection() as cx:
+        for channel, temperature in calibration_solutions:
+            query = sql.SQL(
+                "INSERT INTO tab_mccs_calib("
+                "creation_time, frequency_channel, outside_temperature, calibration)"
+                "VALUES (current_timestamp, %s, %s, %s);"
+            )
+
+            cx.execute(
+                query,
+                [channel, temperature, calibration_solutions[(channel, temperature)]],
+            )
+    # brief pause before inserting the new set of data
+    time.sleep(0.1)
+
+    # We need to recreate the connection here as the database transaction is done when
+    # the connection is closed
+    with database_connection_pool.connection() as cx:
+        for channel, temperature in alternative_calibration_solutions:
+            query = sql.SQL(
+                "INSERT INTO tab_mccs_calib("
+                "creation_time, frequency_channel, outside_temperature, calibration)"
+                "VALUES (current_timestamp, %s, %s, %s);"
+            )
+
+            cx.execute(
+                query,
+                [
+                    channel,
+                    temperature,
+                    alternative_calibration_solutions[(channel, temperature)],
+                ],
+            )
+
+
 @given("the field station has read the outside temperature")
 def given_field_station_has_read_temperature(
     field_station: tango.DeviceProxy,
@@ -318,7 +453,7 @@ def when_store_solution(
     calibration_store: tango.DeviceProxy,
     outside_temperature: float,
     frequency_channel: int,
-    calibration_solutions: dict[tuple[int, float], list[float]],
+    calibration_solution: list[float],
 ) -> None:
     """
     Use the Calibration Store device to store a solution.
@@ -326,16 +461,14 @@ def when_store_solution(
     :param calibration_store: proxy to the calibration store
     :param outside_temperature: the outside temperature
     :param frequency_channel: the frequency channel to calibrate for
-    :param calibration_solutions: the test calibration solutions
+    :param calibration_solution: the test calibration solution
     """
     [result_code], [message] = calibration_store.StoreSolution(
         json.dumps(
             {
                 "frequency_channel": frequency_channel,
                 "outside_temperature": outside_temperature,
-                "solution": calibration_solutions[
-                    (frequency_channel, outside_temperature)
-                ],
+                "solution": calibration_solution,
             }
         )
     )
@@ -345,13 +478,47 @@ def when_store_solution(
 
 @then("the solution is stored in the database")
 def then_solution_stored(
-    calibration_solutions: dict[tuple[int, float], list[float]],
+    calibration_solution: list[float],
     outside_temperature: float,
     frequency_channel: int,
     database_connection_pool: ConnectionPool,
 ) -> None:
     """
     Verify the database contains the intended data.
+
+    :param calibration_solution: the newly stored solution
+    :param outside_temperature: the outside temperature
+    :param frequency_channel: the frequency channel
+    :param database_connection_pool: connection pool for the database
+    """
+    with database_connection_pool.connection() as cx:
+        query = sql.SQL(
+            "SELECT calibration, creation_time "
+            "FROM tab_mccs_calib "
+            "WHERE frequency_channel=%s AND outside_temperature=%s "
+            "ORDER BY creation_time DESC"
+        )
+
+        result = cx.execute(query, [frequency_channel, outside_temperature])
+        # fetchone to get the most recent
+        row = result.fetchone()
+        if row is None:
+            pytest.fail(
+                "Solution not found in database for "
+                f"channel {frequency_channel}, temperature {outside_temperature}"
+            )
+        assert row["calibration"] == pytest.approx(calibration_solution)
+
+
+@then("existing data is not overwritten")
+def then_existing_data_not_overwritten(
+    calibration_solutions: dict[tuple[int, float], list[float]],
+    outside_temperature: float,
+    frequency_channel: int,
+    database_connection_pool: ConnectionPool,
+) -> None:
+    """
+    Verify the database still contains existing data.
 
     :param calibration_solutions: the initially stored solutions
     :param outside_temperature: the outside temperature
@@ -367,8 +534,10 @@ def then_solution_stored(
         )
 
         result = cx.execute(query, [frequency_channel, outside_temperature])
-        # fetchone to get the most recent
-        # there could exist older data from previous test runs
+        # fetchone to pop the most recent, which will be the newly added data
+        result.fetchone()
+
+        # then get the second-most recent, which will be the existing data
         row = result.fetchone()
         if row is None:
             pytest.fail(
@@ -417,4 +586,24 @@ def then_correct_calibration(
     """
     assert retrieved_solution == pytest.approx(
         calibration_solutions[(frequency_channel, outside_temperature)]
+    )
+
+
+@then("the most recently stored calibration solution is retrieved")
+def then_most_recent_calibration(
+    retrieved_solution: list[float],
+    alternative_calibration_solutions: dict[tuple[int, float], list[float]],
+    outside_temperature: float,
+    frequency_channel: int,
+) -> None:
+    """
+    Verify the returned solution is the one stored most recently.
+
+    :param retrieved_solution: the retrieved solution from the database
+    :param alternative_calibration_solutions: the most recently stored solutions
+    :param outside_temperature: the outside temperature
+    :param frequency_channel: the frequency channel
+    """
+    assert retrieved_solution == pytest.approx(
+        alternative_calibration_solutions[(frequency_channel, outside_temperature)]
     )

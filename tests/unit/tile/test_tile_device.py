@@ -50,7 +50,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "tile_programming_state",
         "adc_power",
-        timeout=2.0,
+        timeout=3.0,
     )
 
 
@@ -263,11 +263,21 @@ class TestMccsTile:
             change_event_callbacks["health_state"],
         )
 
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         assert tile_device.healthState == HealthState.UNKNOWN
 
         tile_device.adminMode = AdminMode.ONLINE
         assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+        change_event_callbacks["state"].assert_not_called()
 
         mock_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
@@ -278,6 +288,7 @@ class TestMccsTile:
             tile_health_structure=TileData.get_tile_defaults(),
         )
 
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
 

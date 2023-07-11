@@ -12,28 +12,11 @@ import unittest.mock
 
 import pytest
 import tango
+from ska_control_model import ResultCode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw.station_calibrator import MccsStationCalibrator
-
-
-@pytest.fixture(name="calibration_solutions")
-def calibration_solutions_fixture() -> dict[tuple[int, float], list[float]]:
-    """
-    Fixture that provides sample calibration solutions.
-
-    :return: a sample calibration solution. The keys are tuples of the channel
-        and the outside temperature, and the values are lists of calibration values
-    """
-    return {
-        (23, 25.0): [0.5 * i for i in range(256)],
-        (45, 25.0): [1.2 * (i % 2) for i in range(256)],
-        (23, 30.0): [0.6 * i for i in range(256)],
-        (45, 30.0): [1.4 * (i % 2) for i in range(256)],
-        (23, 35.0): [0.7 * i for i in range(256)],
-        (45, 35.0): [1.6 * (i % 2) for i in range(256)],
-    }
 
 
 @pytest.fixture(name="mock_calibration_store_device_proxy")
@@ -51,12 +34,18 @@ def mock_calibration_store_device_proxy_fixture(
 
     def _GetSolution(argin: str) -> list[float]:
         args = json.loads(argin)
-        return calibration_solutions[(args["channel"], args["outside_temperature"])]
+        return calibration_solutions[
+            (args["frequency_channel"], args["outside_temperature"])
+        ]
 
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
     calibration_store = builder()
     calibration_store.GetSolution = _GetSolution
+    calibration_store.StoreSolution.return_value = (
+        [ResultCode.OK],
+        ["Solution stored successfully"],
+    )
     return calibration_store
 
 

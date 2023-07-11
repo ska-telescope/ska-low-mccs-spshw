@@ -12,3 +12,8 @@ dependencies:
     version: 0.3.10
     repository: https://artefact.skao.int/repository/helm-internal
     condition: ska-tango-base.enabled,global.sub-system.ska-tango-base.enabled
+
+  # Postgresql
+  - name: postgresql
+    version: 11.6.6
+    repository: https://charts.bitnami.com/bitnami

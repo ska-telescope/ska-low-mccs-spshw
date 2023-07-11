@@ -116,10 +116,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-        if self.SubrackFQDN == "low-mccs/subrack/0000":
-            self.logger.warning(
-                "Tile device initialised without SubrackFQDN property initialised."
-            )
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()

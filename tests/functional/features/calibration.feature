@@ -20,7 +20,7 @@ Feature: Test calibration
         Then the solution is stored in the database
         And existing data is not overwritten
 
-    @XTP-25944
+    @XTP-25989
     Scenario: Load a non-existent calibration solution
         Given a calibration store that is online
         And the calibration store database contains calibration solutions

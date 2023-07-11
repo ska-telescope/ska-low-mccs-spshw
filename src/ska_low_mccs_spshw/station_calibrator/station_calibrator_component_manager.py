@@ -14,14 +14,12 @@ import threading
 from typing import Any, Callable, Optional
 
 import tango
-from ska_control_model import CommunicationStatus, ResultCode
+from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import DeviceComponentManager
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 
 __all__ = ["StationCalibratorComponentManager"]
-
-DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
 class _FieldStationProxy(DeviceComponentManager):

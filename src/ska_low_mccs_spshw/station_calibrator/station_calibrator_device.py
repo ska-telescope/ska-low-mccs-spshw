@@ -23,8 +23,6 @@ from .station_calibrator_health_model import StationCalibratorHealthModel
 
 __all__ = ["MccsStationCalibrator", "main"]
 
-DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
-
 
 class MccsStationCalibrator(SKABaseDevice):
     """An implementation of a station calibrator Tango device for MCCS."""
@@ -124,7 +122,7 @@ class MccsStationCalibrator(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            return (ResultCode.OK, "Init command completed OK")
+            return super().do(*args, **kwargs)
 
     # ----------
     # Callbacks

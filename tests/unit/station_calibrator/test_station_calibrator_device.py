@@ -80,7 +80,7 @@ def station_calibrator_device_fixture(
     Fixture that returns the station calibrator Tango device under test.
 
     :param test_context: a Tango test context
-        containing a calibration store and mock subservient devices.
+        containing a station calibrator and mock subservient devices.
 
     :yield: the station calibrator Tango device under test.
     """

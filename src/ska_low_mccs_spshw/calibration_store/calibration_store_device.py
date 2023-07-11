@@ -117,7 +117,7 @@ class MccsCalibrationStore(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            return (ResultCode.OK, "Init command completed OK")
+            return super().do(*args, **kwargs)
 
     def _component_communication_state_changed(
         self: MccsCalibrationStore,

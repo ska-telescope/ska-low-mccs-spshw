@@ -450,12 +450,12 @@ def given_database_has_multiple_solutions(
                 query,
                 [channel, temperature, calibration_solutions[(channel, temperature)]],
             )
-    # brief pause before inserting the new set of data
-    time.sleep(0.1)
+        # Commit the database transaction for the first set of data
+        cx.commit()
 
-    # We need to recreate the connection here as the database transaction is done when
-    # the connection is closed
-    with database_connection_pool.connection() as cx:
+        # brief pause before inserting the new set of data
+        time.sleep(0.1)
+
         for channel, temperature in alternative_calibration_solutions:
             query = sql.SQL(
                 "INSERT INTO tab_mccs_calib("

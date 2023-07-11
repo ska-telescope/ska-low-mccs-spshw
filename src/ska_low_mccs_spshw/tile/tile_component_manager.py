@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, cast
 
 import tango
 from pyaavs.tile import Tile as Tile12
@@ -35,6 +35,7 @@ from ska_tango_base.executor import TaskExecutorComponentManager
 from .dynamic_tpm_simulator import DynamicTpmSimulator
 from .static_tpm_simulator import StaticTpmSimulator
 from .tile_orchestrator import TileOrchestrator
+from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus
@@ -246,7 +247,7 @@ class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
         )
 
 
-# pylint: disable=too-many-public-methods,too-many-instance-attributes
+# pylint: disable=too-many-public-methods,too-many-instance-attributes, too-many-locals
 class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
@@ -265,6 +266,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        _tpm_driver: Optional[TpmDriver] = None,
+        _subrack_proxy: Optional[MccsDeviceProxy] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -316,41 +319,30 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             )
             tpm_version = ""
 
-        tile = cast(
+        tile_sim = TileSimulator(logger)
+        tile_sim_dym = DynamicTileSimulator(logger)
+        tile_hw = cast(
             Tile12,
             HwTile(
                 ip=tpm_ip, port=tpm_cpld_port, logger=logger, tpm_version=tpm_version
             ),
         )
-
-        self._tpm_driver: Union[
-            TpmDriver,
-            StaticTpmSimulatorComponentManager,
-            DynamicTpmSimulatorComponentManager,
-        ]  # for the type checker
-
         if simulation_mode == SimulationMode.TRUE:
             if test_mode == TestMode.TEST:
-                self._tpm_driver = StaticTpmSimulatorComponentManager(
-                    logger,
-                    self._tpm_communication_state_changed,
-                    self._update_component_state,
-                )
+                tile = tile_sim
             else:
-                self._tpm_driver = DynamicTpmSimulatorComponentManager(
-                    logger,
-                    self._tpm_communication_state_changed,
-                    self._update_component_state,
-                )
+                tile = tile_sim_dym
         else:
-            self._tpm_driver = TpmDriver(
-                logger,
-                tile_id,
-                tile,
-                tpm_version,
-                self._tpm_communication_state_changed,
-                self._update_component_state,
-            )
+            tile = tile_hw
+
+        self._tpm_driver = _tpm_driver or TpmDriver(
+            logger,
+            tile_id,
+            tile,
+            tpm_version,
+            self._tpm_communication_state_changed,
+            self._update_component_state,
+        )
 
         def _update_component_power_state(power_state: PowerState) -> None:
             self._update_component_state(power=power_state)

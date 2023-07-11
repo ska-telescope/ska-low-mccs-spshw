@@ -25,7 +25,7 @@ server:
             - {{$key | toString | quote}}
           - name: "SubrackFQDN"
             values:
-            - {{printf "low-mccs/subrack/%04d" (int $this_tile.subrack)}}
+            - {{printf "low-mccs/subrack/%04d" (required "You must supply a subrackFQDN" $this_tile.subrack | int)}}
           - name: "SubrackBay"
             values:
             - {{$this_tile.subrack_bay | toString | quote}}

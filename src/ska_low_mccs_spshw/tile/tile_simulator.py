@@ -19,7 +19,7 @@ from typing import Any, List, Optional, Union
 
 from pyfabil.base.definitions import Device, LibraryError
 
-from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
+from .dynamic_values_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 from .integrated_channel_data_simulator import IntegratedChannelDataSimulator
 from .tile_data import TileData
 

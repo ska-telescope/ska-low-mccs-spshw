@@ -184,7 +184,6 @@ def tpm_version_fixture() -> str:
 @pytest.fixture(name="dynamic_tile_component_manager")
 def dynamic_tile_component_manager_fixture(
     test_context: SpsTangoTestHarnessContext,
-    test_mode: TestMode,
     logger: logging.Logger,
     max_workers: int,
     tile_id: int,
@@ -196,11 +195,10 @@ def dynamic_tile_component_manager_fixture(
     callbacks: MockCallableGroup,
 ) -> TileComponentManager:
     """
-    Return a tile component manager (in simulation and test mode as specified).
+    Return a tile component manager (That drives a DynamicTileSimulator).
 
     :param test_context: a test context in which Tango is running,
         with a single mock subrack device.
-    :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
@@ -216,55 +214,6 @@ def dynamic_tile_component_manager_fixture(
     return TileComponentManager(
         SimulationMode.TRUE,
         TestMode.NONE,
-        logger,
-        max_workers,
-        tile_id,
-        tpm_ip,
-        tpm_cpld_port,
-        tpm_version,
-        get_subrack_name(subrack_id),
-        subrack_tpm_id,
-        callbacks["communication_status"],
-        callbacks["component_state"],
-    )
-
-
-# pylint: disable=too-many-arguments
-@pytest.fixture(name="static_tile_component_manager")
-def static_tile_component_manager_fixture(
-    test_context: SpsTangoTestHarnessContext,
-    test_mode: TestMode,
-    logger: logging.Logger,
-    max_workers: int,
-    tile_id: int,
-    tpm_ip: str,
-    tpm_cpld_port: int,
-    tpm_version: str,
-    subrack_id: int,
-    subrack_tpm_id: int,
-    callbacks: MockCallableGroup,
-) -> TileComponentManager:
-    """
-    Return a tile component manager (in simulation and test mode as specified).
-
-    :param test_context: a test context in which Tango is running,
-        with a single mock subrack device.
-    :param test_mode: the initial test mode of this component manager
-    :param logger: the logger to be used by this object.
-    :param tile_id: the unique ID for the tile
-    :param tpm_ip: the IP address of the tile
-    :param tpm_cpld_port: the port at which the tile is accessed for control
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_id: ID of the subrack that controls power to this tile
-    :param subrack_tpm_id: This tile's position in its subrack
-    :param max_workers: nos. of worker threads
-    :param callbacks: dictionary of driver callbacks.
-
-    :return: a TPM component manager in the specified simulation mode.
-    """
-    return TileComponentManager(
-        SimulationMode.TRUE,
-        test_mode,
         logger,
         max_workers,
         tile_id,

@@ -55,7 +55,6 @@ class TestTileComponentManager:
         :param power_state: the power mode of the TPM when we break off
             comms
         """
-        # tile_component_manager= tile_component_manager
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
@@ -292,26 +291,14 @@ class TestStaticSimulatorCommon:
     @pytest.fixture()
     def tile(
         self: TestStaticSimulatorCommon,
-        static_tile_component_manager: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
         Return the tile component under test.
 
-        This is parametrised to return
-
-        * a static TPM simulator,
-
-        * a static TPM simulator component manager,
-
-        * a Tile component manager (in simulation and test mode and
-          turned on)
-
-        So any test that relies on this fixture will be run three times:
-        once for each of the above classes.
-
-        :param static_tile_component_manager: the tile component manager (
-            driving a staticTileSimulator)
+        :param tile_component_manager: the tile component manager (
+            driving a TileSimulator)
         :param callbacks: dictionary of driver callbacks.
 
         :return: the tile class object under test
@@ -319,7 +306,7 @@ class TestStaticSimulatorCommon:
         # pylint: disable=attribute-defined-outside-init
         self.tile_name = "tile_component_manager"
 
-        static_tile_component_manager.start_communicating()
+        tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
@@ -333,7 +320,7 @@ class TestStaticSimulatorCommon:
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.INITIALISED
         )
-        return static_tile_component_manager
+        return tile_component_manager
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -495,10 +482,9 @@ class TestStaticSimulatorCommon:
         num_args: int,
     ) -> None:
         """
-        Test of commands that aren't implemented yet.
+        Test these commands can be called.
 
-        Since the commands don't really do
-        anything, these tests simply check that the command can be called.
+        these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
         :param tile: the tile class object under test.
@@ -683,7 +669,7 @@ class TestStaticSimulatorCommon:
         assert tile.read_register(register) == expected_read
 
     # pylint: disable=too-many-arguments
-    @pytest.mark.xfail(reason="Unsure, to do with TpmDriver bitwise operations")
+    @pytest.mark.xfail(reason="Not implemented in TileSimulator.")
     @pytest.mark.parametrize(
         "write_address",
         [
@@ -758,7 +744,6 @@ class TestStaticSimulatorCommon:
         tile.stop_beamformer()
         assert not tile.is_beamformer_running
 
-    @pytest.mark.xfail(reason="Looked nasty will return")
     def test_initialise_beamformer(
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
@@ -772,19 +757,19 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         """
+        # check initial value
+        assert tile.beamformer_table == TpmDriver.BEAMFORMER_TABLE
+
         tile.initialise_beamformer(64, 32, False, False)
 
+        time.sleep(30)  # long poll time.
+
         table = tile.beamformer_table
-        expected = [
-            [64, 0, 0, 0, 0, 0, 0],
-            [72, 0, 0, 8, 0, 0, 0],
-            [80, 0, 0, 16, 0, 0, 0],
-            [88, 0, 0, 24, 0, 0, 0],
-        ] + [[0, 0, 0, 0, 0, 0, 0]] * 44
+        expected = [[64, 32, 0]]
 
         assert table == expected
 
-    @pytest.mark.xfail(reason="Looked nasty will return")
+    @pytest.mark.xfail(reason="Move to TpmDriver")
     def test_set_beamformer_regions(
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
@@ -811,7 +796,9 @@ class TestStaticSimulatorCommon:
 
         assert table == expected
 
-    @pytest.mark.xfail(reason="Looked nasty will return")
+    @pytest.mark.xfail(
+        reason="If no core found 'for core in self._forty_gb_core_list:' runs."
+    )
     def test_40g_configuration(
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
@@ -899,17 +886,7 @@ class TestDynamicSimulatorCommon:
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
-        Return the tile component under test.
-
-        This is parametrised to return
-
-        * a dynamic TPM simulator component manager,
-
-        * a Tile component manager (in simulation and test mode and
-          turned on)
-
-        So any test that relies on this fixture will be run three times:
-        once for each of the above classes.
+        Return the tile component under test. (Driving a DynamicTileSimulator.).
 
         :param dynamic_tile_component_manager: the tile component manager (
             Driving a DynamicTileSimulator)

@@ -1116,12 +1116,10 @@ class TileSimulator:
         raise NotImplementedError
 
     def get_phase_terminal_count(self: TileSimulator) -> None:
-        """
-        Get PPS phase terminal count.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Get PPS phase terminal count."""
+        self.logger.info(
+            "Not implemented, returning to allow polling loop to complete."
+        )
 
     def get_station_id(self: TileSimulator) -> int:
         """

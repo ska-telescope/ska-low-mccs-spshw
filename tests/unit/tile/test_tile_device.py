@@ -545,7 +545,6 @@ class TestMccsTile:
 class TestMccsTileCommands:
     """Tests of MccsTile device commands."""
 
-    @pytest.mark.xfail(reason="these are implemented in the TileSimulator.")
     @pytest.mark.parametrize(
         ("device_command", "arg"),
         [
@@ -597,7 +596,7 @@ class TestMccsTileCommands:
         arg: Any,
     ) -> None:
         """
-        A very weak test for commands that are not implemented yet.
+        A very weak test for to check commands can be called.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -625,8 +624,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         time.sleep(0.1)
 
-        with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = getattr(tile_device, device_command)(*args)
+        getattr(tile_device, device_command)(*args)
 
     def test_StartAcquisition(
         self: TestMccsTileCommands,
@@ -995,7 +993,6 @@ class TestMccsTileCommands:
             ):
                 _ = tile_device.WriteRegister(bad_json_arg)
 
-    @pytest.mark.xfail(reason="Not implemented in simulator.")
     def test_ReadAddress(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -1063,7 +1060,9 @@ class TestMccsTileCommands:
         assert result_code == ResultCode.OK
         assert "WriteAddress" in message.split("_")[-1]
 
-    @pytest.mark.xfail(reason="needs investigation.")
+    @pytest.mark.xfail(
+        reason="If no core found 'for core in self._forty_gb_core_list:' runs."
+    )
     def test_Configure40GCore(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -1192,7 +1191,6 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError"):
             _ = tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
-    @pytest.mark.xfail(reason="Not propagated down from TpmDriver.")
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(
@@ -1227,15 +1225,17 @@ class TestMccsTileCommands:
         tile_device.MockTpmOff()
         time.sleep(0.1)
         tile_device.MockTpmOn()
-
+        time.sleep(0.1)
         assert not tile_device.isBeamformerRunning
         args = {"start_time": start_time, "duration": duration}
         tile_device.StartBeamformer(json.dumps(args))
+        time.sleep(30)  # slow update parameter
         assert tile_device.isBeamformerRunning
         tile_device.StopBeamformer()
+        time.sleep(30)  # slow update parameter
         assert not tile_device.isBeamformerRunning
 
-    @pytest.mark.xfail(reason="Not Implemented properly in simulator")
+    @pytest.mark.xfail(reason="Needs investigation.")
     def test_configure_beamformer(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
@@ -1275,6 +1275,7 @@ class TestMccsTileCommands:
                 }
             )
         )
+        time.sleep(30)
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected

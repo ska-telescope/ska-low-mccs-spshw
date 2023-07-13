@@ -12,7 +12,7 @@ import gc
 
 import pytest
 import tango
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 # TODO: Weird hang-at-garbage-collection bug
@@ -31,7 +31,9 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "station_state",
         "subrack_state",
         "tile_state",
-        timeout=2.0,
+        "tile_programming_state",
+        "sps_station_command_status",
+        timeout=15.0,
     )
 
 
@@ -105,7 +107,71 @@ def test_station(
     change_event_callbacks["station_state"].assert_change_event(tango.DevState.STANDBY)
     change_event_callbacks["station_state"].assert_not_called()
 
+    tile_device.subscribe_event(
+        "tileProgrammingState",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["tile_programming_state"],
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
     tile_device.On()
 
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "NotProgrammed"
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
+    change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
     change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
+
+
+class TestStationTileIntegration:  # pylint: disable=too-few-public-methods
+    """Test the integration between the Station and the Tile."""
+
+    def test_initialise_can_execute(
+        self: TestStationTileIntegration,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station Initialise function executes.
+
+        This is a very simple test just just to see that the TileSimulator
+        starts counting once turned on and initialised.
+
+        TODO: Initialise does a huge number of tasks.
+        This test only check the initialise command can complete,
+        it does not check in any specifics.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device, subrack_device, tile_device, change_event_callbacks
+        )
+
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(None)
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )

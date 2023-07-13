@@ -639,9 +639,9 @@ class TileSimulator:
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         :param chan: Input channel to set
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        self.logger.info("Not implemented, return without error to allow poll.")
+        return
 
     def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
         """

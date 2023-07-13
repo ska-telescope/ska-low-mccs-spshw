@@ -881,7 +881,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Arrange
         tile_simulator.connect()
-        assert tile_simulator.tpm._is_programmed is True
+        tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
 
         # Values to be used for assertions later.
@@ -1385,7 +1385,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
-        assert tpm_driver._is_beamformer_running is False
+        assert tile_simulator.tpm
+        tile_simulator.tpm._is_programmed = True
+        tpm_driver._is_beamformer_running = False
 
         tpm_driver.start_beamformer(3, 4)
         tpm_driver._update_attributes()

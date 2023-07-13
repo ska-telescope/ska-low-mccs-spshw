@@ -20,6 +20,13 @@ dependencies:
     version: 2.0.0
     repository: https://jupyterhub.github.io/helm-chart/
 
+  #SKUID 
+  - name: ska-ser-skuid
+    version: 3.3.3
+    repository: https://artefact.skao.int/repository/helm-internal
+    condition: ska-ser-skuid.enabled
+  
+
   # Taranta
   - name: ska-tango-taranta-dashboard
     version: 1.4.0

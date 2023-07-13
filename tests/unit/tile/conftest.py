@@ -361,12 +361,12 @@ def static_tile_component_manager_fixture(
 
 @pytest.fixture(name="patched_tile_device_class")
 def patched_tile_device_class_fixture(
-    tile_component_manager: TileComponentManager,
+    static_tile_component_manager: TileComponentManager,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
-    :param tile_component_manager: A mock component manager.
+    :param static_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -395,14 +395,14 @@ def patched_tile_device_class_fixture(
 
             :return: a mock component manager
             """
-            tile_component_manager.set_communication_state_callback(
+            static_tile_component_manager.set_communication_state_callback(
                 self._communication_state_changed,
             )
-            tile_component_manager.set_component_state_callback(
+            static_tile_component_manager.set_component_state_callback(
                 self._component_state_changed,
             )
 
-            return tile_component_manager
+            return static_tile_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:

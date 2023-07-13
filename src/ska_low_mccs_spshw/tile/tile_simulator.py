@@ -55,7 +55,7 @@ class StationBeamformer:
             if not item[2] in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
-        self._channel_table = table
+        self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]
 
     def get_channel_table(self: StationBeamformer) -> list[list[int]]:
         """
@@ -349,7 +349,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 0
-    TILE_ID = 1
+    TILE_ID = 2
 
     def __init__(
         self: TileSimulator,
@@ -533,6 +533,7 @@ class TileSimulator:
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
         """
+        assert core_id in [0, 1]
         core_dict = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,

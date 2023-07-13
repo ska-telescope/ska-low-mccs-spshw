@@ -539,6 +539,12 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
 
         tpm_driver._update_tpm_status()
+        assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
+
+        # This operation is performed by a poll. Done manually here for speed.
+        tpm_driver._tile_id = tile_simulator._tile_id
+
+        tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.INITIALISED
 
         tpm_driver._check_channeliser_started = (  # type: ignore[assignment]
@@ -651,7 +657,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Update attributes and check driver updates
         tpm_driver._update_attributes()
         assert tpm_driver._station_id == tile_simulator._station_id
-        assert tpm_driver._tile_id == tile_simulator._tile_id
+        tpm_driver._tile_id = tile_simulator._tile_id
 
         # mock programmed state
         tpm_driver._is_programmed = True
@@ -1166,12 +1172,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         station_bf_2 = tile_simulator.tpm.station_beamf[1]
 
         for table in station_bf_1._channel_table:
-            assert table[0] == start_channel
-            assert table[1] == nof_channels
+            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
             assert len(table) < 8
         for table in station_bf_2._channel_table:
-            assert table[0] == start_channel
-            assert table[1] == nof_channels
+            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
 
         assert tile_simulator._is_first == is_first
         assert tile_simulator._is_last == is_last

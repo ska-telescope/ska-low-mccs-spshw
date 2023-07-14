@@ -140,6 +140,9 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_tpm_power_state",
         "subrack_tpm_present",
         "daq_state",
+        "calibration_store_state",
+        "field_station_state",
+        "station_calibrator_state",
         timeout=30.0,
     )
 

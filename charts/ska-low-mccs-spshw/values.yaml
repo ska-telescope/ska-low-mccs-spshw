@@ -42,6 +42,53 @@ dsconfig:
       tag: 9.3.6
       pullPolicy: IfNotPresent
 
+# The following values overwrite the default values in the postgresql dependency.
+# See https://artifacthub.io/packages/helm/bitnami/postgresql
+postgresql:
+  commonLabels:
+    app: ska-low-mccs-spshw
+
+  image:
+    debug: true
+
+  auth:
+    postgresPassword: "secretpassword"
+
+  primary:
+    service:
+      type: LoadBalancer
+
+    initdb:
+      scriptsConfigMap: ska-low-mccs-spshw-initdb
+      user: "postgres"
+
+    persistence:
+      enabled: false
+      ## @param primary.persistence.mountPath The path the volume will be mounted at
+      ## Note: useful when using custom PostgreSQL images
+      ##
+      mountPath: /bitnami/postgresql
+      ## @param primary.persistence.storageClass PVC Storage Class for PostgreSQL Primary data volume
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      storageClass: "nfss1"
+      ## @param primary.persistence.accessModes PVC Access Mode for PostgreSQL volume
+      ##
+      accessModes:
+        - ReadWriteMany
+      ## @param primary.persistence.size PVC Storage Request for PostgreSQL volume
+      ##
+      size: 12Gi
+
+initDbName: ska-low-mccs-spshw-initdb # must be equals to postgresql.primary.initdb.scriptsConfigMap
+initDbBasePath: data/
+initDbScripts:
+- create_tables.sql
+
 resources:
   requests:
     cpu: 20m

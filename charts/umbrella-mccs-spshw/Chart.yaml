@@ -8,14 +8,24 @@ icon: https://www.skatelescope.org/wp-content/uploads/2016/07/09545_NEW_LOGO_201
 dependencies:
   - name: ska-low-mccs-spshw 
     version: 0.6.0
-    repository: file://../ska-low-mccs-spshw
-  - name: ska-low-mccs-daq
-    version: 0.3.0
-    repository: https://artefact.skao.int/repository/helm-internal
+    repository: file://../ska-low-mccs-spshw 
+
+  # Postgresql
+  - name: postgresql
+    version: 11.6.6
+    repository: https://charts.bitnami.com/bitnami
+
   # Jupyterhub
   - name: jupyterhub
     version: 2.0.0
     repository: https://jupyterhub.github.io/helm-chart/
+
+  #SKUID 
+  - name: ska-ser-skuid
+    version: 3.3.3
+    repository: https://artefact.skao.int/repository/helm-internal
+    condition: ska-ser-skuid.enabled
+  
 
   # Taranta
   - name: ska-tango-taranta-dashboard

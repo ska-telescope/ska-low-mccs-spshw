@@ -21,3 +21,11 @@ deviceServers:  # e.g....
 
 receivers:
   1: {}
+  # receivers:
+  #   1:
+  #     # external_ip: # optional: if provided, this is the IP address of an external DAQ receiver
+  #     port:  # optional: defaults to 50051
+  #     storage: daq-data  # must refer to a PVC: pre-existing or created above
+  #     server_node_selector: {}  # optional
+  #     server_annotations: {}  # optional
+  #     server_affinity: {}  # optional

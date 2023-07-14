@@ -174,7 +174,6 @@ html_theme_options = {
 }
 
 html_context = {
-    "display_gitlab": True,  # Integrate GitHub
     "favicon_url": "img/favicon.ico",
     "logo_url": "img/logo.png",
     "theme_logo_only": True,

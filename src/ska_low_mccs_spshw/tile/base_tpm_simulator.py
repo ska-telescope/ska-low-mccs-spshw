@@ -26,7 +26,7 @@ __all__ = ["BaseTpmSimulator"]
 # pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
 class BaseTpmSimulator:
     """
-    A mock TPMDriver to facilitate unit testing tile_component_manager.
+    A mock TPMDriver for testing tile_component_manager.
 
     :todo: The current TPM driver has a wrapper to make it consistent
         with the interface of this simulator. It would be more better if

@@ -398,12 +398,13 @@ class TestMccsTileTpmDriver:
         """
         self.setup_devices(tile_device, subrack_device, change_event_callbacks)
 
-        # TODO: is this meant to be a ValueError
-        with pytest.raises(tango.DevFailed):
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Cannot send data before StartAcquisition",
+        ):
             [[result_code], [message]] = tile_device.SendDataSamples(
                 json.dumps({"data_type": "beam"})
             )
-
         # Start Acquisition
         [[result_code], [message]] = tile_device.StartAcquisition(
             json.dumps({"delay": 5})
@@ -457,7 +458,6 @@ class TestMccsTileTpmDriver:
         # check is a subset
         assert config.items() <= result.items()
 
-    @pytest.mark.xfail(reason="Bug in TpmDriver int2ip with None")
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -488,7 +488,10 @@ class TestMccsTileTpmDriver:
             "core_id": 4,
             "arp_table_entry": 0,
         }
-        with pytest.raises(ValueError, match="Core_id must be 1 or 2"):
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Invalid core id or arp table id specified",
+        ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
 
     def test_configure_beamformer(

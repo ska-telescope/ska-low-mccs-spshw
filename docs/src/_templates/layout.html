@@ -6,15 +6,15 @@
 
 {# original content
 
-{% if logo_url and theme_logo_only %}
+{% if logo and theme_logo_only %}
 <a href="{{ pathto(master_doc) }}">
 {% else %}
 <a href="{{ pathto(master_doc) }}" class="icon icon-home"> {{project }}
 {% endif %}
 
-{% if logo_url %}
+{% if logo %}
 
-<img src="{{ pathto('_static/' + logo_url, 1) }}" class="logo" />
+<img src="{{ pathto('_static/' + logo, 1) }}" class="logo" />
 {% endif %}
 </a>
 

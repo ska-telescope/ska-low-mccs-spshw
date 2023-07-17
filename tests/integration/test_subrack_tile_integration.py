@@ -337,6 +337,14 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised"
         )
+        # check that the fpga time is moving.
+        initial_time = tile_device.fpgasUnixTime[0]
+        sleep_time = 2
+        time.sleep(sleep_time)
+        final_time = tile_device.fpgasUnixTime[0]
+
+        assert pytest.approx(final_time - initial_time) == sleep_time
+
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
         # This is done, and the subrack device detects that the TPM is now on.
@@ -368,19 +376,25 @@ class TestMccsTileTpmDriver:
         """
         self.setup_devices(tile_device, subrack_device, change_event_callbacks)
 
+        delay_time = 2  # seconds
         [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
+            json.dumps({"delay": delay_time})
         )
         assert result_code == ResultCode.QUEUED
         assert "StartAcquisition" in message.split("_")[-1]
 
-        # check that the fpga time is moving.
-        initial_time = tile_device.fpgasUnixTime[0]
-        sleep_time = 2
-        time.sleep(sleep_time)
-        final_time = tile_device.fpgasUnixTime[0]
+        initial_frame = tile_device.currentFrame
+        time.sleep(delay_time - 1)
+        final_frame = tile_device.currentFrame
+        assert initial_frame == final_frame == 0
 
-        assert pytest.approx(final_time - initial_time) == sleep_time
+        time.sleep(1)
+
+        initial_frame = tile_device.currentFrame
+        sleep_time = 1  # seconds
+        time.sleep(sleep_time)
+        final_frame = tile_device.currentFrame
+        assert final_frame > initial_frame
 
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
@@ -406,19 +420,22 @@ class TestMccsTileTpmDriver:
                 json.dumps({"data_type": "beam"})
             )
         # Start Acquisition
+        delay_time = 2
         [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
+            json.dumps({"delay": delay_time})
         )
         assert result_code == ResultCode.QUEUED
         assert "StartAcquisition" in message.split("_")[-1]
 
-        initial_time = tile_device.fpgasUnixTime[0]
-        sleep_time = 30
-        time.sleep(sleep_time)
-        final_time = tile_device.fpgasUnixTime[0]
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Cannot send data before StartAcquisition",
+        ):
+            [[result_code], [message]] = tile_device.SendDataSamples(
+                json.dumps({"data_type": "beam"})
+            )
 
-        assert pytest.approx(final_time - initial_time) == sleep_time
-
+        time.sleep(delay_time + 0.1)
         [[result_code], [message]] = tile_device.SendDataSamples(
             json.dumps({"data_type": "raw"})
         )
@@ -523,7 +540,7 @@ class TestMccsTileTpmDriver:
                 }
             )
         )
-        time.sleep(30)  # allow time for a poll.
+        tile_device.UpdateAttributes()
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected

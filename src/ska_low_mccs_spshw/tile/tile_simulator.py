@@ -224,15 +224,11 @@ class MockTpm:
         Get address value.
 
         :param address: Memory address to read from
-        :param n: Number of words to read
+        :param n: Number of items to read
 
         :return: Values
         """
-        values = []
-        for i in range(n):
-            key = str(address + i)
-            values.append(self._address_map.get(key, 0))
-        return values
+        return [self._address_map.get(str(address + i), 0) for i in range(n)]
 
     def write_address(
         self: MockTpm, address: int, values: list[int], retry: bool = True
@@ -240,9 +236,9 @@ class MockTpm:
         """
         Write address value.
 
-        :param address: Memory address to read from
+        :param address: Memory address to write
         :param values: value to write
-        :param retry: retry
+        :param retry: retry (does nothing yet.)
         """
         for i, value in enumerate(values):
             key = str(address + i)

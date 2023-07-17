@@ -148,8 +148,6 @@ def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
-    (This is a pytest fixture.)
-
     :return: the number of worker threads
     """
     return 1
@@ -203,8 +201,6 @@ def tile_component_manager_fixture(
     """
     Return a tile component manager (in simulation and test mode as specified).
 
-    (This is a pytest fixture.)
-
     :param test_context: a test context in which Tango is running,
         with a single mock subrack device.
     :param test_mode: the initial test mode of this component manager
@@ -240,8 +236,6 @@ def tile_component_manager_fixture(
 def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     """
     Return a TileSimulator.
-
-    (This is a pytest fixture.)
 
     :param logger: logger
     :return: a TileSimulator
@@ -320,8 +314,6 @@ def static_tile_component_manager_fixture(
     """
     Return a tile component manager (in simulation and test mode as specified).
 
-    (This is a pytest fixture.)
-
     :param test_context: a test context in which Tango is running,
         with a single mock subrack device.
     :param test_mode: the initial test mode of this component manager
@@ -337,7 +329,7 @@ def static_tile_component_manager_fixture(
 
     :return: a TPM component manager in the specified simulation mode.
     """
-    cm = TileComponentManager(
+    component_manager = TileComponentManager(
         SimulationMode.TRUE,
         test_mode,
         logger,
@@ -352,11 +344,13 @@ def static_tile_component_manager_fixture(
         callbacks["component_state"],
         StaticTpmSimulator(logger, callbacks["component_state"]),
     )
-    cm._tpm_driver._communication_state_changed = (  # type: ignore
-        cm._tpm_communication_state_changed
+    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+        component_manager._tpm_communication_state_changed
     )
-    cm._tpm_driver._component_state_changed_callback = cm._update_component_state
-    return cm
+    component_manager._tpm_driver._component_state_changed_callback = (
+        component_manager._update_component_state
+    )
+    return component_manager
 
 
 @pytest.fixture(name="patched_tile_device_class")

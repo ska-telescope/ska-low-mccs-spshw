@@ -274,7 +274,7 @@ def dynamic_tile_component_manager_fixture(
 
     :return: a TPM component manager in the specified simulation mode.
     """
-    cm = TileComponentManager(
+    component_manager = TileComponentManager(
         SimulationMode.TRUE,
         TestMode.NONE,
         logger,
@@ -289,11 +289,13 @@ def dynamic_tile_component_manager_fixture(
         callbacks["component_state"],
         DynamicTpmSimulator(logger, callbacks["component_state"]),
     )
-    cm._tpm_driver._communication_state_changed = (  # type: ignore
-        cm._tpm_communication_state_changed
+    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+        component_manager._tpm_communication_state_changed
     )
-    cm._tpm_driver._component_state_changed_callback = cm._update_component_state
-    return cm
+    component_manager._tpm_driver._component_state_changed_callback = (
+        component_manager._update_component_state
+    )
+    return component_manager
 
 
 # pylint: disable=too-many-arguments

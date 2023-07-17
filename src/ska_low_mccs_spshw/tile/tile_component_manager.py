@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Optional, Union, cast
 
 import tango
 from pyaavs.tile import Tile as Tile12
@@ -60,7 +60,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
-        _mock_tpm_driver: Optional[BaseTpmSimulator] = None,
+        _tpm_driver: Optional[Union[TpmDriver, BaseTpmSimulator]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -95,7 +95,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param _mock_tpm_driver: a optional mock TpmDriver to inject for unit tests.
+        :param _tpm_driver: a optional TpmDriver to inject for testing.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
@@ -113,23 +113,23 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             )
             tpm_version = ""
 
-        self.tile_sim = TileSimulator(logger)
-        self.tile_sim_dym = DynamicTileSimulator(logger)
-        self.tile_hw = cast(
-            Tile12,
-            HwTile(
-                ip=tpm_ip, port=tpm_cpld_port, logger=logger, tpm_version=tpm_version
-            ),
-        )
         if simulation_mode == SimulationMode.TRUE:
             if test_mode == TestMode.TEST:
-                tile = self.tile_sim
+                tile = TileSimulator(logger)
             else:
-                tile = self.tile_sim_dym
+                tile = DynamicTileSimulator(logger)
         else:
-            tile = self.tile_hw
+            tile = cast(
+                Tile12,
+                HwTile(
+                    ip=tpm_ip,
+                    port=tpm_cpld_port,
+                    logger=logger,
+                    tpm_version=tpm_version,
+                ),
+            )
 
-        self._tpm_driver = _mock_tpm_driver or TpmDriver(
+        self._tpm_driver = _tpm_driver or TpmDriver(
             logger,
             tile_id,
             tile,

@@ -83,6 +83,14 @@ jupyterhub:
     service:
       type: ClusterIP
 
+# SKUID 
+ska-ser-skuid:
+  enabled: true
+  skuid:
+    use_pv: false
+    config:
+      generator_id: "mvp01"
+ 
 # The following values are used by the templates in this chart for create pgAdmin and initialising the database
 pgadmin4:
   enabled: true

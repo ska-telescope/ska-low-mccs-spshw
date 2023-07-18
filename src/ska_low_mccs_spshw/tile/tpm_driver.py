@@ -97,7 +97,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
-        self._preadu_levels: list[int] = [0] * 32
+        self._preadu_levels: list[float] = [0.0] * 32
         self._static_delays: list[float] = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
@@ -317,7 +317,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             # self._beamformer_table = self.BEAMFORMER_TABLE
             # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
             # self._csp_rounding = self.CSP_ROUNDING
-            # self._preadu_levels = [0] * 32
+            # self._preadu_levels = [0.0] * 32
             # self._static_delays = [0.0] * 32
             self._is_programmed = False
             self._is_beamformer_running = False
@@ -1412,7 +1412,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def preadu_levels(self: TpmDriver) -> list[int]:
+    def preadu_levels(self: TpmDriver) -> list[float]:
         """
         Get preadu levels in dB.
 
@@ -1421,7 +1421,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return copy.deepcopy(self._preadu_levels)
 
     @preadu_levels.setter
-    def preadu_levels(self: TpmDriver, levels: list[int]) -> None:
+    def preadu_levels(self: TpmDriver, levels: list[float]) -> None:
         """
         Set preadu levels in dB.
 
@@ -1438,7 +1438,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
-    def _set_preadu_levels(self: TpmDriver, levels: list[int]) -> None:
+    def _set_preadu_levels(self: TpmDriver, levels: list[float]) -> None:
         """
         Get current preadu settings.
 
@@ -1454,13 +1454,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             # Apply attenuation
             pid = self.tile.preadu_signal_map[channel]["preadu_id"]
             channel = self.tile.preadu_signal_map[channel]["channel"]
-            attenuation = int(round(levels[channel]))
+            attenuation = levels[channel]
             self.tile.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
 
         for preadu in self.tile.tpm.tpm_preadu:
             preadu.write_configuration()
 
-    def _get_preadu_levels(self: TpmDriver) -> list[int]:
+    def _get_preadu_levels(self: TpmDriver) -> list[float]:
         """
         Get current preadu settings.
 
@@ -1471,7 +1471,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             preadu.select_low_passband() # unimplemented on TPM 1.6
             preadu.read_configuration()
 
-        levels: list[int] = []
+        levels: list[float] = []
         for channel in list(self.tile.preadu_signal_map.keys()):
             pid = self.tile.preadu_signal_map[channel]["preadu_id"]
             channel = self.tile.preadu_signal_map[channel]["channel"]

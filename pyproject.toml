@@ -64,7 +64,7 @@ ska-tango-testing = "^0.6.0"
 
 [tool.poetry.group.docs.dependencies]
 Sphinx = "^6.2.1"
-sphinx-rtd-theme = "^1.2.1"
+ska-ser-sphinx-theme = "^0.1.1"
 sphinx-autodoc-typehints = "^1.23.0"
 sphinxcontrib-plantuml = "^0.25"
 fastapi = "^0.100.0"
@@ -72,6 +72,7 @@ fire = "^0.5.0"
 PyYAML = "^6.0"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
+ska-low-mccs-daq-interface = "^0.1.0"
 
 [tool.poetry.scripts]
 MccsStationCalibrator = "ska_low_mccs_spshw.station_calibrator.station_calibrator_device:main"

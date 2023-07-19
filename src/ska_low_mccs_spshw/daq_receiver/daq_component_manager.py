@@ -321,3 +321,51 @@ class DaqComponentManager(TaskExecutorComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.COMPLETED)
         return status
+
+    @check_communicating
+    def start_bandpass_monitor(
+        self: DaqComponentManager,
+        argin: dict[str, Any],
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Start monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json dictionary with keywords.
+            * station_config_path
+                Path to a station configuration file.
+            * plot_directory
+                Directory in which to store bandpass plots.
+            * monitor_rms
+                Whether or not to additionally produce RMS plots.
+                Default: False.
+            * auto_handle_daq
+                Whether DAQ should be automatically reconfigured,
+                started and stopped without user action if necessary.
+                This set to False means we expect DAQ to already
+                be properly configured and listening for traffic
+                and DAQ will not be stopped when `StopBandpassMonitor`
+                is called.
+                Default: False.
+        """
+        return self._daq_client.start_bandpass_monitor(json.dumps(argin))
+
+    @check_communicating
+    def stop_bandpass_monitor(
+        self: DaqComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> None:
+        """
+        Stop monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will cease monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+        """
+        self._daq_client.stop_bandpass_monitor()

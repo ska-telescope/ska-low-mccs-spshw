@@ -227,6 +227,8 @@ class MccsDaqReceiver(SKABaseDevice):
             ("DaqStatus", self.DaqStatusCommand),
             ("GetConfiguration", self.GetConfigurationCommand),
             ("Stop", self.StopCommand),
+            ("StartBandpassMonitor", self.StartBandpassMonitorCommand),
+            ("StopBandpassMonitor", self.StopBandpassMonitorCommand),
         ]:
             self.register_command_object(
                 command_name,
@@ -702,6 +704,140 @@ class MccsDaqReceiver(SKABaseDevice):
         """
         handler = self.get_command_object("SetConsumers")
         (result_code, message) = handler(argin)
+        return ([result_code], [message])
+
+    class StartBandpassMonitorCommand(FastCommand):
+        """Class for handling the StartBandpassMonitorCommand(argin) command."""
+
+        def __init__(  # type: ignore
+            self: MccsDaqReceiver.StartBandpassMonitorCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StartBandpassMonitorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        # pylint: disable=arguments-differ
+        def do(  # type: ignore[override]
+            self: MccsDaqReceiver.StartBandpassMonitorCommand, argin: str
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement MccsDaqReceiver.SetConsumersCommand functionality.
+
+            Start monitoring antenna bandpasses.
+
+            The MccsDaqReceiver will begin monitoring antenna bandpasses
+                and producing plots of the spectra.
+
+            :param argin: A json dictionary with keywords.
+                * station_config_path
+                    Path to a station configuration file.
+                * plot_directory
+                    Directory in which to store bandpass plots.
+                * monitor_rms
+                    Whether or not to additionally produce RMS plots.
+                    Default: False.
+                * auto_handle_daq
+                    Whether DAQ should be automatically reconfigured,
+                    started and stopped without user action if necessary.
+                    This set to False means we expect DAQ to already
+                    be properly configured and listening for traffic
+                    and DAQ will not be stopped when `StopBandpassMonitor`
+                    is called.
+                    Default: False.
+            """
+            return self._component_manager.start_bandpass_monitor(argin)
+
+    @command(
+        dtype_in="DevString", dtype_out="DevVarLongStringArray"
+    )
+    def StartBandpassMonitor(self: MccsDaqReceiver, argin: str) -> DevVarLongStringArrayType:
+        """
+        Start monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json dictionary with keywords.
+            * station_config_path
+                Path to a station configuration file.
+            * plot_directory
+                Directory in which to store bandpass plots.
+            * monitor_rms
+                Whether or not to additionally produce RMS plots.
+                Default: False.
+            * auto_handle_daq
+                Whether DAQ should be automatically reconfigured,
+                started and stopped without user action if necessary.
+                This set to False means we expect DAQ to already
+                be properly configured and listening for traffic
+                and DAQ will not be stopped when `StopBandpassMonitor`
+                is called.
+                Default: False.
+        """
+        handler = self.get_command_object("StartBandpassMonitor")
+        (result_code, message) = handler(argin)
+        return ([result_code], [message])
+
+    class StopBandpassMonitorCommand(FastCommand):
+        """Class for handling the StopBandpassMonitorCommand() command."""
+
+        def __init__(  # type: ignore
+            self: MccsDaqReceiver.StopBandpassMonitorCommand,
+            component_manager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new StopBandpassMonitorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        # pylint: disable=arguments-differ
+        def do(  # type: ignore[override]
+            self: MccsDaqReceiver.StopBandpassMonitorCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement MccsDaqReceiver.SetConsumersCommand functionality.
+
+            Stop monitoring antenna bandpasses.
+
+            The MccsDaqReceiver will cease monitoring antenna bandpasses
+                and producing plots of the spectra.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            return self._component_manager.stop_bandpass_monitor()
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def StopBandpassMonitor(
+        self: MccsDaqReceiver, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Stop monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will cease monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("StopBandpassMonitor")
+        (result_code, message) = handler()
         return ([result_code], [message])
 
     # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")

@@ -292,16 +292,24 @@ class PreAdu:
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-        self.channel_filters: list[int] = [0] * 16
+        self.channel_filters: list[float] = [0.00] * 16
 
-    def set_attenuation(self: PreAdu, attenuation: int, channel: list[int]) -> None:
+    def set_attenuation(self: PreAdu, attenuation: float, channel: list[int]) -> None:
         """
         Set preadu channel attenuation.
 
         :param attenuation: the attenuation.
         :param channel: the channel.
         """
-        self.channel_filters[channel[0]] = (attenuation & 0x1F) << 3
+        self.channel_filters[channel[0]] = attenuation
+
+    def get_attenuation(self: PreAdu) -> list[float]:
+        """
+        Get preadu attenuation for all channels.
+
+        :return: attenuation for all channels.
+        """
+        return self.channel_filters
 
     def write_configuration(self: PreAdu) -> None:
         """Write configuration to preadu."""

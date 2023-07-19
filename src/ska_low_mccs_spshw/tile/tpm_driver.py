@@ -60,7 +60,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
 
-
     # pylint: disable=too-many-arguments
     def __init__(
         self: TpmDriver,
@@ -1468,7 +1467,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: get_preadu_levels")
         for preadu in self.tile.tpm.tpm_preadu:
-            preadu.select_low_passband() # unimplemented on TPM 1.6
+            preadu.select_low_passband()  # unimplemented on TPM 1.6
             preadu.read_configuration()
 
         levels: list[float] = []

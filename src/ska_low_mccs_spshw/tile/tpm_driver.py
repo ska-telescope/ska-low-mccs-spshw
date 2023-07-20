@@ -1430,6 +1430,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             if acquired:
                 try:
                     self._set_preadu_levels(levels)
+                    if self._get_preadu_levels() != levels:
+                        self.logger.warning("TpmDriver: Updating PreADU levels failed")
+                        return
                     self._preadu_levels = levels
                 # pylint: disable=broad-except
                 except Exception as e:

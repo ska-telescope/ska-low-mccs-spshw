@@ -1222,14 +1222,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Set preADU levels to 3 for all channels
         tpm_driver.preadu_levels = [3.00] * 32
         # Read PyFABIL software preADU levels for preADU 1, channel 1
-        # Does not check if preADU levels have made it to the HW
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
-        # Check TPM driver software preADU levels
-        assert tpm_driver._preadu_levels == [3.00] * 32
-
-        # TODO: Check value of tpm_driver.preadu_levels == 3.00 instead of
-        # tpm_driver._preadu_levels. Would test write to HW and read back
-        # Possible with tile simulator?
+        # Check TPM driver preADU levels
+        assert tpm_driver.preadu_levels == [3.00] * 32
 
         # Check exception caught.
         tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]

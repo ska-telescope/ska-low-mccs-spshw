@@ -132,37 +132,37 @@ image:
 #     1:
 #       host: subrack-simulator-1
 
-# deviceServers:  # e.g....
-#   stations:
-#     instances:
-#       1:
-#         enabled: false  # suppress this Tango device
-#     logging_level_default: 5
-#   subracks:
-#     instances:
-#       1:
-#         enabled: false  # suppress this Tango device
-#     logging_level_default: 5
-#   tpms:
-#     instances:
-#       10:
-#         host: 10.0.10.201
-#         port: 10000
-#         version: tpm_v1_6
-#         subrack: "1"
-#         subrack_bay: 1
-#     logging_level_default: 5
-#     simulation_config: 1
-#     test_config: 1
-#     resources:
-#       requests:
-#         memory: 512Mi
+deviceServers:  # e.g....
+  # stations:
+  #   instances:
+  #     1:
+  #       enabled: false  # suppress this Tango device
+  #   logging_level_default: 5
+  # subracks:
+  #   instances:
+  #     1:
+  #       enabled: false  # suppress this Tango device
+  #   logging_level_default: 5
+  # tpms:
+  #   instances:
+  #     10:
+  #       host: 10.0.10.201
+  #       port: 10000
+  #       version: tpm_v1_6
+  #       subrack: "1"
+  #       subrack_bay: 1
+  #   logging_level_default: 5
+  #   simulation_config: 1
+  #   test_config: 1
+  #   resources:
+  #     requests:
+  #       memory: 512Mi
 
 # receivers:
 #   1:
 #     host: "daq-receiver-001"  # optional: hostname of a pre-existing DAQ
 #     port: 50051  # optional: defaults to 50051
-#     receiver_interface: net1  # optional: defaults to "eth0"
+#     #receiver_interface: net1  # optional: defaults to "eth0"
 #     receiver_ip: ""  # empty = Determine from interface name
 #     receiver_port: 5660  # optional: defaults to 4660
 #     logging_level_default: 5

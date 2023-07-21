@@ -285,16 +285,24 @@ class PreAdu:
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-        self.channel_filters: list[int] = [0] * 16
+        self.channel_filters: list[float] = [0.00] * 16
 
-    def set_attenuation(self: PreAdu, attenuation: int, channel: list[int]) -> None:
+    def set_attenuation(self: PreAdu, attenuation: float, channel: list[int]) -> None:
         """
         Set preadu channel attenuation.
 
         :param attenuation: the attenuation.
         :param channel: the channel.
         """
-        self.channel_filters[channel[0]] = (attenuation & 0x1F) << 3
+        self.channel_filters[channel[0]] = attenuation
+
+    def get_attenuation(self: PreAdu) -> list[float]:
+        """
+        Get preadu attenuation for all channels.
+
+        :return: attenuation for all channels.
+        """
+        return self.channel_filters
 
     def write_configuration(self: PreAdu) -> None:
         """Write configuration to preadu."""
@@ -386,6 +394,40 @@ class TileSimulator:
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = IntegratedChannelDataSimulator()
 
+        self.preadu_signal_map = {
+            0: {"preadu_id": 1, "channel": 0},
+            1: {"preadu_id": 1, "channel": 1},
+            2: {"preadu_id": 1, "channel": 2},
+            3: {"preadu_id": 1, "channel": 3},
+            4: {"preadu_id": 1, "channel": 4},
+            5: {"preadu_id": 1, "channel": 5},
+            6: {"preadu_id": 1, "channel": 6},
+            7: {"preadu_id": 1, "channel": 7},
+            8: {"preadu_id": 0, "channel": 15},
+            9: {"preadu_id": 0, "channel": 14},
+            10: {"preadu_id": 0, "channel": 13},
+            11: {"preadu_id": 0, "channel": 12},
+            12: {"preadu_id": 0, "channel": 11},
+            13: {"preadu_id": 0, "channel": 10},
+            14: {"preadu_id": 0, "channel": 9},
+            15: {"preadu_id": 0, "channel": 8},
+            16: {"preadu_id": 1, "channel": 8},
+            17: {"preadu_id": 1, "channel": 9},
+            18: {"preadu_id": 1, "channel": 10},
+            19: {"preadu_id": 1, "channel": 11},
+            20: {"preadu_id": 1, "channel": 12},
+            21: {"preadu_id": 1, "channel": 13},
+            22: {"preadu_id": 1, "channel": 14},
+            23: {"preadu_id": 1, "channel": 15},
+            24: {"preadu_id": 0, "channel": 7},
+            25: {"preadu_id": 0, "channel": 6},
+            26: {"preadu_id": 0, "channel": 5},
+            27: {"preadu_id": 0, "channel": 4},
+            28: {"preadu_id": 0, "channel": 3},
+            29: {"preadu_id": 0, "channel": 2},
+            30: {"preadu_id": 0, "channel": 1},
+            31: {"preadu_id": 0, "channel": 0},
+        }
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:

@@ -1208,39 +1208,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.csp_rounding = -3  # type: ignore[assignment]
         assert tile_simulator.csp_rounding == 0
 
-    @pytest.mark.xfail(reason="_preadu_levels is overwritten by a list when set")
-    def test_pre_adu_levels_edge_case(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Unit test for the pre_adu_levels method edge case.
-
-        :param tpm_driver: The TPM driver instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        tile_simulator.connect()
-        assert tile_simulator.tpm
-
-        # We set the preadu_levels
-        tpm_driver.preadu_levels = [3] * 32
-
-        # This code simulates a scenario where a piece of code between
-        # the tpm_driver and the hardware goes wrong leading to an
-        # incorrect value being written to the preadu.
-        # We expect the tpm_driver to be always be able to
-        # retreive the values from hardware.
-
-        # A piece of code has a error and writes a unexpected value.
-        tile_simulator.tpm.preadu[1].channel_filters[1] = (4 & 0x1F) << 3
-
-        # The TpmDriver should be able to get the value from hardware using
-        # tpm_driver.preadu_levels. Notice _get_preadu_levels is no longer called
-        # and we are not reading from hardware so this fails
-        assert tpm_driver._get_preadu_levels() != [3] * 32
-        assert tpm_driver.preadu_levels != [3] * 32
-
     def test_pre_adu_levels(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1254,18 +1221,20 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert tpm_driver.preadu_levels == [0] * 32
+        assert tpm_driver.preadu_levels == [0.00] * 32
 
-        tpm_driver.preadu_levels = [3] * 32
-        assert tile_simulator.tpm.preadu[1].channel_filters[1] >> 3 == 3
-
-        assert tpm_driver._preadu_levels == [3] * 32
+        # Set preADU levels to 3 for all channels
+        tpm_driver.preadu_levels = [3.00] * 32
+        # Read PyFABIL software preADU levels for preADU 1, channel 1
+        assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
+        # Check TPM driver preADU levels
+        assert tpm_driver.preadu_levels == [3.00] * 32
 
         # Check exception caught.
         tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]
             side_effect=Exception("mocked exception")
         )
-        tpm_driver.preadu_levels = [3] * 32
+        tpm_driver.preadu_levels = [3.00] * 32
 
     def test_load_calibration_coefficients(
         self: TestTpmDriver,

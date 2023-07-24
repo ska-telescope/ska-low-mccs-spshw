@@ -16,6 +16,7 @@ import os.path
 import sys
 from typing import Any, Callable, Final, Optional, cast
 
+import numpy as np
 import tango
 from ska_control_model import (
     AdminMode,
@@ -1012,7 +1013,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype=(float,),
         max_dim_x=32,
     )
-    def preaduLevels(self: MccsTile) -> list[float]:
+    def preaduLevels(self: MccsTile) -> np.ndarray:
         """
         Get attenuator level of preADU channels, one per input channel.
 
@@ -1021,7 +1022,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
-    def preaduLevels(self: MccsTile, levels: list[float]) -> None:
+    def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 

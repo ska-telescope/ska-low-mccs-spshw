@@ -544,3 +544,27 @@ class TestMccsTileTpmDriver:
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected
+
+    def test_preadu_levels(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the preadu_levels.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        initial_level = tile_device.preadulevels
+
+        final_level = [i + 1.00 for i in initial_level]
+        tile_device.preadulevels = final_level
+
+        # TANGO returns a ndarray.
+        assert tile_device.preadulevels.tolist() == final_level  # type: ignore

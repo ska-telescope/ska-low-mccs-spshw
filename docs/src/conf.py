@@ -52,6 +52,7 @@ autodoc_mock_imports = [
     "tango",
     "ska_control_model",
     "ska_low_mccs_common",
+    "ska_ser_skuid",
     "psycopg",
     "psycopg_pool",
 ]

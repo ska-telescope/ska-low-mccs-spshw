@@ -22,6 +22,8 @@ server:
               properties:
                 - name: "SubrackFQDNs"
                   values:
+                - name: "SkuidService"
+                  values: - "{{.Values.deviceServers.centralnode.SkuidService}}"  
 {{- range $subrack := $this_station.subracks}}
                     - {{printf "low-mccs/subrack/%04d" (int $subrack)}}
 {{- end}}

@@ -136,6 +136,7 @@ pgadmin4:
     enabled: true
 
 ska-low-mccs-spshw:
+  SkuidService: "ska-ser-skuid-test-svc.ska-low-mccs-spshw.svc.cluster.local:9870"
   simulators:
     subracks:
       1:

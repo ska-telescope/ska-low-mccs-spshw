@@ -22,7 +22,7 @@ import threading
 import time
 from typing import Any, Callable, Optional, cast
 
-# import numpy as np
+import numpy as np
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
@@ -96,7 +96,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
-        self._preadu_levels: list[float] = [0.0] * 32
+        self._preadu_levels: np.ndarray[Any, np.dtype[np.float64]] = np.zeros(32)
         self._static_delays: list[float] = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
@@ -1411,7 +1411,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def preadu_levels(self: TpmDriver) -> list[float]:
+    def preadu_levels(self: TpmDriver) -> np.ndarray:
         """
         Get preadu levels in dB.
 
@@ -1420,7 +1420,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return copy.deepcopy(self._preadu_levels)
 
     @preadu_levels.setter
-    def preadu_levels(self: TpmDriver, levels: list[float]) -> None:
+    def preadu_levels(self: TpmDriver, levels: np.ndarray) -> None:
         """
         Set preadu levels in dB.
 
@@ -1430,7 +1430,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             if acquired:
                 try:
                     self._set_preadu_levels(levels)
-                    if self._get_preadu_levels() != levels:
+                    if any(self._get_preadu_levels() != levels):  # type: ignore
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                         return
                     self._preadu_levels = levels
@@ -1440,7 +1440,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
-    def _set_preadu_levels(self: TpmDriver, levels: list[float]) -> None:
+    def _set_preadu_levels(self: TpmDriver, levels: np.ndarray) -> None:
         """
         Get current preadu settings.
 
@@ -1462,7 +1462,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         for preadu in self.tile.tpm.tpm_preadu:
             preadu.write_configuration()
 
-    def _get_preadu_levels(self: TpmDriver) -> list[float]:
+    def _get_preadu_levels(self: TpmDriver) -> np.ndarray:
         """
         Get current preadu settings.
 
@@ -1479,7 +1479,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             channel = self.tile.preadu_signal_map[channel]["channel"]
             attenuation = self.tile.tpm_preadu[pid].get_attenuation()[channel]
             levels = levels + [attenuation]
-        return levels
+        return np.array(levels)
 
     # TODO connect all these with real hardware probes (in poll loop)
     @property

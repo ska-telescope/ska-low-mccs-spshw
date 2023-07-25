@@ -1010,20 +1010,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.csp_rounding = rounding
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=(float,),
         max_dim_x=32,
     )
-    def preaduLevels(self: MccsTile) -> list[int]:
+    def preaduLevels(self: MccsTile) -> np.ndarray:
         """
         Get attenuator level of preADU channels, one per input channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        result = self.component_manager.preadu_levels
-        return np.asarray(result)
+        return self.component_manager.preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
-    def preaduLevels(self: MccsTile, levels: list[int]) -> None:
+    def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 

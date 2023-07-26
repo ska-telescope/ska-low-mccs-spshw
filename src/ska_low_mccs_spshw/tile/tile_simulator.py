@@ -555,13 +555,16 @@ class TileSimulator:
 
     def configure_40g_core(
         self: TileSimulator,
-        core_id: int,
-        arp_table_entry: int,
-        src_mac: str,
-        src_ip: str,
-        src_port: int,
-        dst_ip: str,
-        dst_port: int,
+        core_id: int = 0,
+        arp_table_entry: int = 0,
+        src_mac: Optional[int] = None,
+        src_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_ip: Optional[str] = None,
+        dst_port: Optional[int] = None,
+        rx_port_filter: Optional[int] = None,
+        netmask: Optional[int] = None,
+        gateway_ip: Optional[int] = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -575,6 +578,9 @@ class TileSimulator:
         :param src_port: port of the source
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
+        :param rx_port_filter: Filter for incoming packets
+        :param netmask: Netmask
+        :param gateway_ip: Gateway IP
         """
         core_dict = {
             "core_id": core_id,
@@ -584,6 +590,9 @@ class TileSimulator:
             "src_port": src_port,
             "dst_ip": dst_ip,
             "dst_port": dst_port,
+            "rx_port_filter": rx_port_filter,
+            "netmask": netmask,
+            "gateway_ip": gateway_ip,
         }
         self._forty_gb_core_list.append(core_dict)
 

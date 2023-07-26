@@ -1,12 +1,12 @@
 {{- $defaults := dict "enabled" true "logging_level_default" 3}}
-{{- $stations := .Values.deviceServers.stations}}
-name: "station-{{.Release.Name}}"
+{{- $stations := .Values.deviceServers.spsstations}}
+name: "spsstation-{{.Release.Name}}"
 function: ska-low-mccs-spshw-station
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_station := $stations.instances}}
 {{- if (pluck "enabled" $this_station $stations $defaults | first)}}
-  - {{printf "station-%03d" (int $key)}}
+  - {{printf "spsstation-%03d" (int $key)}}
 {{- end}}
 {{- end}}
 command: SpsStation
@@ -14,11 +14,11 @@ server:
   name: "SpsStation"
   instances:
 {{- range $key, $this_station := $stations.instances}}
-    - name: {{printf "station-%03d" (int $key)}}
+    - name: {{printf "spsstation-%03d" (int $key)}}
       classes:
         - name: "SpsStation"
           devices:
-            - name: {{printf "low-mccs/station/%03d" (int $key)}}
+            - name: {{printf "low-mccs/spsstation/%03d" (int $key)}}
               properties:
                 - name: "SubrackFQDNs"
                   values:

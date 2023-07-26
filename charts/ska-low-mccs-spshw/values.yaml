@@ -101,7 +101,7 @@ image:
   pullPolicy: IfNotPresent
 
 # facility:
-#   stations:
+#   spsstations:
 #     instances:
 #       1:
 #         cabinet_network_address: 10.0.0.0
@@ -133,7 +133,7 @@ image:
 #       host: subrack-simulator-1
 
 deviceServers:  # e.g....
-  # stations:
+  # spsstations:
   #   instances:
   #     1:
   #       enabled: false  # suppress this Tango device

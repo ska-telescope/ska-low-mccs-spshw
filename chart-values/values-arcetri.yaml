@@ -1,5 +1,5 @@
 facility:
-  stations:
+  spsstations:
     instances:
       1:
         cabinet_network_address: 10.0.0.0
@@ -63,7 +63,7 @@ simulators:
      # port: 8081  # optional, defaults to 8081
 
 deviceServers:  # e.g....
-  # stations:
+  # spsstations:
   #   instances:
   #     1:
   #       enabled: false  # suppress this Tango device

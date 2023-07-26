@@ -1,5 +1,5 @@
 facility:
-  stations:
+  spsstations:
     instances:
       1:
         cabinet_network_address: 10.0.0.0
@@ -26,7 +26,7 @@ facility:
         subrack_bay: 5
 
 deviceServers:
-  stations:
+  spsstations:
     instances:
       1:
         enabled: false

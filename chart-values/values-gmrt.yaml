@@ -1,5 +1,5 @@
 facility:
-  spsstations:
+  stations:
     instances:
       1:
         cabinet_network_address: 10.0.0.0
@@ -29,7 +29,7 @@ simulators:
       host: subrack-simulator-1
 
 deviceServers:
-  spsstations:
+  stations:
     instances:
       1:
         enabled: false  # suppress this Tango device

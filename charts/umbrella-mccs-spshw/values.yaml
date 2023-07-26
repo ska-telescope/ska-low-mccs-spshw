@@ -167,7 +167,7 @@ ska-low-mccs-spshw:
   #         # server_node_selector: {}  # optional
   #         # server_annotations: {}  # optional
   #         # server_affinity: {}  # optional
-  #   spsstations:
+  #   stations:
   #     instances:
   #       1:
   #         cabinet_network_address: 10.0.0.0

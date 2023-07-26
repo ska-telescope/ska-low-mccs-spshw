@@ -1,6 +1,7 @@
 {{- $defaults := dict "enabled" true "logging_level_default" 3}}
-{{- $stations := .Values.deviceServers.spsstations}}
+{{- $stations := .Values.deviceServers.stations}}
 name: "spsstation-{{.Release.Name}}"
+kubernetesName: "spsstation"
 function: ska-low-mccs-spshw-station
 domain: ska-low-mccs-spshw
 instances:

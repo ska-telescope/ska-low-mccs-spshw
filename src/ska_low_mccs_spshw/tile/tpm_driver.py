@@ -1100,13 +1100,16 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
     def configure_40g_core(
         self: TpmDriver,
-        core_id: int,
-        arp_table_entry: int,
-        src_mac: int,
-        src_ip: str,
-        src_port: int,
-        dst_ip: str,
-        dst_port: int,
+        core_id: int = 0,
+        arp_table_entry: int = 0,
+        src_mac: Optional[int] = None,
+        src_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_ip: Optional[str] = None,
+        dst_port: Optional[int] = None,
+        rx_port_filter: Optional[int] = None,
+        netmask: Optional[int] = None,
+        gateway_ip: Optional[int] = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -1118,6 +1121,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         :param src_port: port of the source
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
+        :param rx_port_filter: Filter for incoming packets
+        :param netmask: Netmask
+        :param gateway_ip: Gateway IP
         """
         self.logger.debug("TpmDriver: configure_40g_core")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1131,6 +1137,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         src_port,
                         dst_ip,
                         dst_port,
+                        rx_port_filter,
+                        netmask,
+                        gateway_ip,
                     )
                 # pylint: disable=broad-except
                 except Exception as e:

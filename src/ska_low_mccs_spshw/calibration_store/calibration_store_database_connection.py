@@ -52,6 +52,7 @@ class CalibrationStoreDatabaseConnection:
             database
         """
         self._logger = logger
+        self.connect_kwargs = {"row_factory": dict_row}
         self._connection_pool = self._create_connection_pool(
             database_host,
             database_port,
@@ -63,7 +64,6 @@ class CalibrationStoreDatabaseConnection:
         self._timeout = timeout
         self._connection_tries = 0
         self._connection_max_tries = connection_max_tries
-        self.connect_kwargs = {"row_factory": dict_row}
 
     # pylint: disable=too-many-arguments
     def _create_connection_pool(

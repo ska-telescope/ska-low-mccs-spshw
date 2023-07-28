@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.6.0"
+version = "0.7.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -13,7 +13,7 @@ url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
 [tool.poetry.dependencies]
 python = "~3.10"
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "2f28a7fe261494d93c12f43171a067aaabcb57f4", subdirectory = "python" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "8d2b442242c6fad3fb6ddee1ca4198f9eae19970", subdirectory = "python" }
 pyfabil = { git = "https://bitbucket.org/lessju/pyfabil.git", rev = "a9d6d08432f6ceecf0f3ba2e51ffde1d4ae269ca" }
 fire = "^0.5.0"
 numpy = "^1.23.0"

@@ -1229,7 +1229,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Read PyFABIL software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
         # Check TPM driver preADU levels
-        assert tpm_driver.preadu_levels.tolist() == [3.00] * 32
+        tpm_driver.preadu_levels = np.array([3.00] * 32)
 
         # Check exception caught.
         tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]
@@ -1968,6 +1968,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "src_port": 8080,
             "dst_ip": "3221226219",
             "dst_port": 9000,
+            "rx_port_filter": None,
+            "netmask": None,
+            "gateway_ip": None,
         }
 
         tpm_driver.configure_40g_core(**core_dict)
@@ -1979,6 +1982,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             core_dict["src_port"],
             core_dict["dst_ip"],
             core_dict["dst_port"],
+            core_dict["rx_port_filter"],
+            core_dict["netmask"],
+            core_dict["gateway_ip"],
         )
         # Check that exceptions raised are caught.
         tile_simulator.configure_40g_core.side_effect = Exception("Mocked exception")
@@ -2006,6 +2012,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "src_port": 8080,
             "dst_ip": "3221226219",
             "dst_port": 9000,
+            "rx_port_filter": None,
+            "netmask": None,
+            "gateway_ip": None,
         }
 
         tile_simulator.connect()

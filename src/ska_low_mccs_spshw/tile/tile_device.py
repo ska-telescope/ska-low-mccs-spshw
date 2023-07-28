@@ -1699,9 +1699,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             src_port = kwargs.get("source_port", None)
             dst_ip = kwargs.get("destination_ip", None)
             dst_port = kwargs.get("destination_port", None)
+            rx_port_filter = kwargs.get("rx_port_filter", None)
+            netmask = kwargs.get("netmask", None)
+            gateway_ip = kwargs.get("gateway_ip", None)
 
             self._component_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+                core_id,
+                arp_table_entry,
+                src_mac,
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port,
+                rx_port_filter,
+                netmask,
+                gateway_ip,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 

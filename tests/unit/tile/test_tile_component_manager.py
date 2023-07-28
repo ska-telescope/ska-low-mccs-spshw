@@ -791,6 +791,9 @@ class TestStaticSimulatorCommon:
             "src_port": 8888,
             "dst_ip": "mock_dst_ip",
             "dst_port": 3333,
+            "rx_port_filter": None,
+            "netmask": None,
+            "gateway_ip": None,
         }
 
         assert tile.get_40g_configuration(-1, 0) == [expected]

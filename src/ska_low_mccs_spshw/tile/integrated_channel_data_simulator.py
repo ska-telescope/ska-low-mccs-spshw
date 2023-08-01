@@ -327,6 +327,15 @@ class IntegratedChannelDataSimulator:
         first_channel: int,
         last_channel: int,
     ) -> np.ndarray:
+        """
+        Generate a simulated bandpass spectrum.
+
+        :param polarisation: 1 for y polarisation, 0 for x polarisation
+        :param first_channel: The first channel to generate for
+        :param last_channel: the last channel to generate for
+
+        :return: a bandpass spectrum between the first and last channels
+        """
         channels = np.array(list(range(first_channel, last_channel + 1, 1)))
         freqs = channels * 800e6 / 1024
         powers_table = (

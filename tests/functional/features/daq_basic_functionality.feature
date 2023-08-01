@@ -1,7 +1,7 @@
 @XTP-21181
 Feature: DAQ functionality As a developer, I want to be able to configure the DAQ So that we can send different types of data through
 
-    @XTP-21182
+    @XTP-21182 @XTP-21181
     Scenario: Turning the DAQ on
         Given the DAQ is available
         And the DAQ is in the DISABLE state
@@ -10,7 +10,7 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         When I set adminMode to ONLINE
         Then the DAQ is in the ON state
         And the DAQ is in health state OK
-
+    @XTP-21181
     Scenario: Turning the DAQ off
         Given the DAQ is available
         And the DAQ is in the ON state
@@ -20,7 +20,7 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         Then the DAQ is in the DISABLE state
         And the DAQ is in health state UNKNOWN
 
-    @XTP-21184
+    @XTP-21184 @XTP-21181
     Scenario: Configuring the DAQ to raw data
         Given the DAQ is available
         And the DAQ is in the ON state
@@ -30,7 +30,7 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         And the DAQ is in health state OK
         And the DAQ is in raw data mode
 
-    @XTP-21185
+    @XTP-21185 @XTP-21181
     Scenario: Configuring the DAQ to channelised data
         Given the DAQ is available
         And the DAQ is in the ON state

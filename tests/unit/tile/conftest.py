@@ -21,9 +21,7 @@ from tango.server import command
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
     DynamicTpmSimulator,
-    DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
-    StaticTpmSimulatorComponentManager,
     TileComponentManager,
     TileSimulator,
 )
@@ -150,8 +148,6 @@ def max_workers_fixture() -> int:
     """
     Return the number of worker threads.
 
-    (This is a pytest fixture.)
-
     :return: the number of worker threads
     """
     return 1
@@ -187,80 +183,6 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
-@pytest.fixture(name="static_tpm_simulator")
-def static_tpm_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:
-    """
-    Return a static TPM simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a static TPM simulator
-    """
-    return StaticTpmSimulator(logger)
-
-
-@pytest.fixture(name="dynamic_tpm_simulator")
-def dynamic_tpm_simulator_fixture(logger: logging.Logger) -> DynamicTpmSimulator:
-    """
-    Return a dynamic TPM simulator.
-
-    (This is a pytest fixture.)
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-
-    :return: a dynamic TPM simulator
-    """
-    return DynamicTpmSimulator(logger)
-
-
-@pytest.fixture(name="static_tpm_simulator_component_manager")
-def static_tpm_simulator_component_manager_fixture(
-    logger: logging.Logger,
-    callbacks: MockCallableGroup,
-) -> StaticTpmSimulatorComponentManager:
-    """
-    Return an static TPM simulator component manager.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param callbacks: dictionary of driver callbacks.
-
-    :return: a static TPM simulator component manager.
-    """
-    return StaticTpmSimulatorComponentManager(
-        logger,
-        callbacks["communication_status"],
-        callbacks["component_state"],
-    )
-
-
-@pytest.fixture(name="dynamic_tpm_simulator_component_manager")
-def dynamic_tpm_simulator_component_manager_fixture(
-    logger: logging.Logger,
-    callbacks: MockCallableGroup,
-) -> DynamicTpmSimulatorComponentManager:
-    """
-    Return an dynamic TPM simulator component manager.
-
-    (This is a pytest fixture.)
-
-    :param logger: the logger to be used by this object.
-    :param callbacks: dictionary of driver callbacks.
-
-    :return: a static TPM simulator component manager.
-    """
-    return DynamicTpmSimulatorComponentManager(
-        logger,
-        callbacks["communication_status"],
-        callbacks["component_state"],
-    )
-
-
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(
@@ -278,8 +200,6 @@ def tile_component_manager_fixture(
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
-
-    (This is a pytest fixture.)
 
     :param test_context: a test context in which Tango is running,
         with a single mock subrack device.
@@ -317,8 +237,6 @@ def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     """
     Return a TileSimulator.
 
-    (This is a pytest fixture.)
-
     :param logger: logger
     :return: a TileSimulator
     """
@@ -326,8 +244,64 @@ def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
 
 
 # pylint: disable=too-many-arguments
-@pytest.fixture(name="mock_tile_component_manager")
-def mock_tile_component_manager_fixture(
+@pytest.fixture(name="dynamic_tile_component_manager")
+def dynamic_tile_component_manager_fixture(
+    test_context: SpsTangoTestHarnessContext,
+    logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    subrack_id: int,
+    subrack_tpm_id: int,
+    callbacks: MockCallableGroup,
+) -> TileComponentManager:
+    """
+    Return a tile component manager (That drives a DynamicTileSimulator).
+
+    :param test_context: a test context in which Tango is running,
+        with a single mock subrack device.
+    :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param subrack_id: ID of the subrack that controls power to this tile
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param max_workers: nos. of worker threads
+    :param callbacks: dictionary of driver callbacks.
+
+    :return: a TPM component manager in the specified simulation mode.
+    """
+    component_manager = TileComponentManager(
+        SimulationMode.TRUE,
+        TestMode.NONE,
+        logger,
+        max_workers,
+        tile_id,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        get_subrack_name(subrack_id),
+        subrack_tpm_id,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        DynamicTpmSimulator(logger, callbacks["component_state"]),
+    )
+    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+        component_manager._tpm_communication_state_changed
+    )
+    component_manager._tpm_driver._component_state_changed_callback = (
+        component_manager._update_component_state
+    )
+    return component_manager
+
+
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="static_tile_component_manager")
+def static_tile_component_manager_fixture(
+    test_context: SpsTangoTestHarnessContext,
     test_mode: TestMode,
     logger: logging.Logger,
     max_workers: int,
@@ -342,23 +316,22 @@ def mock_tile_component_manager_fixture(
     """
     Return a tile component manager (in simulation and test mode as specified).
 
-    (This is a pytest fixture.)
-
+    :param test_context: a test context in which Tango is running,
+        with a single mock subrack device.
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param subrack_id: ID of the subrack that controls power to
-        this tile
+    :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
     :param callbacks: dictionary of driver callbacks.
 
     :return: a TPM component manager in the specified simulation mode.
     """
-    return TileComponentManager(
+    component_manager = TileComponentManager(
         SimulationMode.TRUE,
         test_mode,
         logger,
@@ -371,17 +344,25 @@ def mock_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        StaticTpmSimulator(logger, callbacks["component_state"]),
     )
+    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+        component_manager._tpm_communication_state_changed
+    )
+    component_manager._tpm_driver._component_state_changed_callback = (
+        component_manager._update_component_state
+    )
+    return component_manager
 
 
 @pytest.fixture(name="patched_tile_device_class")
 def patched_tile_device_class_fixture(
-    mock_tile_component_manager: TileComponentManager,
+    static_tile_component_manager: TileComponentManager,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
-    :param mock_tile_component_manager: A mock component manager.
+    :param static_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -410,14 +391,14 @@ def patched_tile_device_class_fixture(
 
             :return: a mock component manager
             """
-            mock_tile_component_manager.set_communication_state_callback(
+            static_tile_component_manager.set_communication_state_callback(
                 self._communication_state_changed,
             )
-            mock_tile_component_manager.set_component_state_callback(
+            static_tile_component_manager.set_component_state_callback(
                 self._component_state_changed,
             )
 
-            return mock_tile_component_manager
+            return static_tile_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:

@@ -242,7 +242,7 @@ class TestMccsTile:
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
-        mock_tile_component_manager: unittest.mock.Mock,
+        static_tile_component_manager: unittest.mock.Mock,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -253,7 +253,8 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param mock_tile_component_manager: A mock component manager.
+        :param static_tile_component_manager: A component manager.
+            (Using a BaseTpmSimulator)
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
 
@@ -279,10 +280,10 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         change_event_callbacks["state"].assert_not_called()
 
-        mock_tile_component_manager._update_communication_state(
+        static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
-        mock_tile_component_manager._update_component_state(
+        static_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),
@@ -295,7 +296,7 @@ class TestMccsTile:
     def test_adcPower(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
-        mock_tile_component_manager: unittest.mock.Mock,
+        static_tile_component_manager: unittest.mock.Mock,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -306,7 +307,8 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param mock_tile_component_manager: A mock component manager.
+        :param static_tile_component_manager: A component manager.
+            (Using a BaseTpmSimulator)
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
 
@@ -333,11 +335,11 @@ class TestMccsTile:
             change_event_callbacks["adc_power"],
         )
 
-        mock_tile_component_manager._update_communication_state(
+        static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
-        mock_tile_component_manager._adc_rms = list(range(32))
-        mock_tile_component_manager._update_component_state(
+        static_tile_component_manager._adc_rms = list(range(32))
+        static_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),

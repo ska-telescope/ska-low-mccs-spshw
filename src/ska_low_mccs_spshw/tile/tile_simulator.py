@@ -55,7 +55,7 @@ class StationBeamformer:
             if not item[2] in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
-        self._channel_table = table
+        self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]
 
     def get_channel_table(self: StationBeamformer) -> list[list[int]]:
         """
@@ -137,11 +137,12 @@ class MockTpm:
         # device into the programmed state. We do not simulate these
         # low level details and just assume all went ok.
         self.logger = logger
-        self._is_programmed = True
+        self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu(logger)] * 2
         self._station_beamf = [self.beam1, self.beam2]
+        self._address_map: dict[str, int] = {}
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
         """
@@ -218,38 +219,30 @@ class MockTpm:
             address = hex(address)
         return self._register_map.get(address)
 
-    def read_address(self: MockTpm, address: int | str, n: int = 1) -> Optional[Any]:
+    def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
         """
         Get address value.
 
         :param address: Memory address to read from
-        :param n: Number of words to read
+        :param n: Number of items to read
 
         :return: Values
         """
-        if address == ("pll", 0x508):
-            return 0xE7
-        if type(address) == int:
-            address = hex(address)
-        return self._register_map.get(address)
+        return [self._address_map.get(str(address + i), 0) for i in range(n)]
 
     def write_address(
-        self: MockTpm, address: int | str, values: int, retry: bool = True
+        self: MockTpm, address: int, values: list[int], retry: bool = True
     ) -> None:
         """
         Write address value.
 
-        :param address: Memory address to read from
+        :param address: Memory address to write
         :param values: value to write
-        :param retry: retry
-
-        :raises LibraryError:Attempting to set a register not in the memory address.
+        :param retry: retry (does nothing yet.)
         """
-        if isinstance(address, int):
-            address = hex(address)
-        if address == "" or address == "unknown":
-            raise LibraryError(f"Unknown register: {address}")
-        self._register_map[address] = values
+        for i, value in enumerate(values):
+            key = str(address + i)
+            self._address_map.update({key: value})
 
     def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
         """
@@ -338,7 +331,12 @@ class TileSimulator:
     write_register for simplicity.
     """
 
-    VOLTAGE = 4.7
+    CHANNELISER_TRUNCATION: list[int] = [3] * 512
+    STATIC_DELAYS = [0.0] * 32
+    PREADU_LEVELS = [0.0] * 32
+    CLOCK_SIGNALS_OK = True
+
+    VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
@@ -355,7 +353,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 0
-    TILE_ID = 1
+    TILE_ID = 2
 
     def __init__(
         self: TileSimulator,
@@ -484,12 +482,9 @@ class TileSimulator:
         self.tpm._is_programmed = True  # type: ignore
 
     def erase_fpga(self: TileSimulator) -> None:
-        """
-        Erase the fpga firmware.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Erase the fpga firmware."""
+        assert self.tpm
+        self.tpm._is_programmed = False
 
     def initialise(
         self: TileSimulator,
@@ -582,6 +577,7 @@ class TileSimulator:
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
         """
+        assert core_id in [0, 1]
         core_dict = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
@@ -691,9 +687,9 @@ class TileSimulator:
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         :param chan: Input channel to set
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        self.logger.info("Not implemented, return without error to allow poll.")
+        return
 
     def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
         """
@@ -831,12 +827,9 @@ class TileSimulator:
         return True
 
     def stop_beamformer(self: TileSimulator) -> None:
-        """
-        Stop beamformer.
-
-        :raises NotImplementedError: if not overwritten
-        """
-        raise NotImplementedError
+        """Stop beamformer."""
+        self.tpm.beam1.stop()  # type: ignore
+        self.tpm.beam2.stop()  # type: ignore
 
     def configure_integrated_channel_data(
         self: TileSimulator,
@@ -1171,12 +1164,10 @@ class TileSimulator:
         raise NotImplementedError
 
     def get_phase_terminal_count(self: TileSimulator) -> None:
-        """
-        Get PPS phase terminal count.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Get PPS phase terminal count."""
+        self.logger.info(
+            "Not implemented, returning to allow polling loop to complete."
+        )
 
     def get_station_id(self: TileSimulator) -> int:
         """

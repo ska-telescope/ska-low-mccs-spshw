@@ -8,31 +8,25 @@
 """This module contains the tests of the tile component manage."""
 from __future__ import annotations
 
-import logging
 import time
 import unittest.mock
 from datetime import datetime, timezone
-from typing import Any, Union
+from typing import Any
 
 import pytest
 import pytest_mock
-from _pytest.fixtures import SubRequest
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus, TestMode
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.tile import (
     DynamicTpmSimulator,
-    DynamicTpmSimulatorComponentManager,
     StaticTpmSimulator,
-    StaticTpmSimulatorComponentManager,
     TileComponentManager,
-    TpmDriver,
     TpmStatus,
 )
 
 
-# pylint: disable=too-many-lines
 class TestTileComponentManager:
     """
     Class for testing the tile component manager.
@@ -186,6 +180,9 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
         tile_component_manager._tpm_power_state_changed(PowerState.ON)
 
+        # TODO: this may be a bug, why do we need a sleep?
+        time.sleep(0.3)
+
         tile_component_manager.off()
         # TODO: This is still an old-school MockCallable because -common
         mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
@@ -291,89 +288,36 @@ class TestStaticSimulatorCommon:
         """
         return PowerState.ON
 
-    @pytest.fixture(
-        params=[
-            "static_tpm_simulator",
-            "static_tpm_simulator_component_manager",
-            "tile_component_manager",
-        ]
-    )
-    # pylint: disable=too-many-arguments
+    @pytest.fixture()
     def tile(
         self: TestStaticSimulatorCommon,
-        static_tpm_simulator: StaticTpmSimulator,
-        static_tpm_simulator_component_manager: StaticTpmSimulatorComponentManager,
-        tile_component_manager: TileComponentManager,
+        static_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
-        request: SubRequest,
-    ) -> Union[
-        StaticTpmSimulator,
-        StaticTpmSimulatorComponentManager,
-        TileComponentManager,
-    ]:
+    ) -> TileComponentManager:
         """
-        Return the tile component under test.
+        Return the tile component under test (Driving a StaticTpmSimulator).
 
-        This is parametrised to return
-
-        * a static TPM simulator,
-
-        * a static TPM simulator component manager,
-
-        * a Tile component manager (in simulation and test mode and
-          turned on)
-
-        So any test that relies on this fixture will be run three times:
-        once for each of the above classes.
-
-        :param static_tpm_simulator: the static TPM simulator to return
-        :param static_tpm_simulator_component_manager: the static TPM
-            simulator component manager to return
-        :param tile_component_manager: the tile component manager (in
-            simulation mode) to return
+        :param static_tile_component_manager: the tile component manager (
+            driving a StaticTpmSimulator)
         :param callbacks: dictionary of driver callbacks.
-        :param request: A pytest object giving access to the requesting test
-            context.
-
-        :raises ValueError:if fixture is parametrized with unrecognised
-            option
 
         :return: the tile class object under test
         """
         # pylint: disable=attribute-defined-outside-init
-        self.tile_name = request.param
-        if request.param == "static_tpm_simulator":
-            return static_tpm_simulator
-        if request.param == "static_tpm_simulator_component_manager":
-            static_tpm_simulator_component_manager.start_communicating()
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.ESTABLISHED
-            )
-            callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
+        self.tile_name = "tile_component_manager"
 
-            return static_tpm_simulator_component_manager
-        if request.param == "tile_component_manager":
-            tile_component_manager.start_communicating()
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.ESTABLISHED
-            )
-            callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False, lookahead=3)
-            callbacks["component_state"].assert_call(
-                programming_state=TpmStatus.PROGRAMMED
-            )
-            callbacks["component_state"].assert_call(
-                programming_state=TpmStatus.INITIALISED
-            )
-            return tile_component_manager
-        raise ValueError("Tile fixture parametrized with unrecognised option")
+        static_tile_component_manager.start_communicating()
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False, lookahead=3)
+        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED
+        )
+        return static_tile_component_manager
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -401,11 +345,7 @@ class TestStaticSimulatorCommon:
     )
     def test_read_attribute(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -432,11 +372,7 @@ class TestStaticSimulatorCommon:
     )
     def test_read_time_attribute(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         attribute_name: str,
         expected_value: Any,
         expected_component_value: Any,
@@ -493,11 +429,7 @@ class TestStaticSimulatorCommon:
     )
     def test_write_attribute(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         attribute_name: str,
         initial_value: Any,
         values_to_write: list,
@@ -542,11 +474,7 @@ class TestStaticSimulatorCommon:
     )
     def test_command(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
         command_name: str,
         num_args: int,
@@ -575,11 +503,7 @@ class TestStaticSimulatorCommon:
 
     def test_set_lmc_download(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
@@ -603,11 +527,7 @@ class TestStaticSimulatorCommon:
     )
     def test_timed_command(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         command_name: str,
         implemented: bool,
     ) -> None:
@@ -649,11 +569,7 @@ class TestStaticSimulatorCommon:
 
     def test_initialise(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
     ) -> None:
         """
         Test of the initialise command, which programs the TPM.
@@ -671,11 +587,7 @@ class TestStaticSimulatorCommon:
 
     def test_download_firmware(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
@@ -701,11 +613,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         register: str,
         write_values: list[int],
     ) -> None:
@@ -736,11 +644,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("read_length", [0, 4])
     def test_read_and_write_address(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         write_address: int,
         write_values: list[int],
         read_address: int,
@@ -784,11 +688,7 @@ class TestStaticSimulatorCommon:
 
     def test_start_stop_beamformer(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
     ) -> None:
         """
         Test start and stop beamformer.
@@ -808,11 +708,7 @@ class TestStaticSimulatorCommon:
 
     def test_initialise_beamformer(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
     ) -> None:
         """
         Test initialise_beamformer.
@@ -837,11 +733,7 @@ class TestStaticSimulatorCommon:
 
     def test_set_beamformer_regions(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
     ) -> None:
         """
         Test set_beamformer_regions.
@@ -867,11 +759,7 @@ class TestStaticSimulatorCommon:
 
     def test_40g_configuration(
         self: TestStaticSimulatorCommon,
-        tile: Union[
-            StaticTpmSimulator,
-            StaticTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
     ) -> None:
         """
         Test 40G configuration.
@@ -923,10 +811,7 @@ class TestDynamicSimulatorCommon:
     commands to the dynamic TPM simulator. Tests in this class are
     tested against:
 
-    * the DynamicTpmSimulator
-    * the DynamicTpmSimulatorComponentManager,
-    * the TileComponentManager (in simulation mode, test mode off, and
-      turned on)
+    * the TileComponentManager (Driving the DynamicTpmSimulator)
     """
 
     @pytest.fixture()
@@ -954,73 +839,34 @@ class TestDynamicSimulatorCommon:
         """
         return PowerState.ON
 
-    @pytest.fixture(
-        params=[
-            "dynamic_tpm_simulator_component_manager",
-            "tile_component_manager",
-        ]
-    )
+    @pytest.fixture()
     def tile(
         self: TestDynamicSimulatorCommon,
-        dynamic_tpm_simulator_component_manager: DynamicTpmSimulatorComponentManager,
-        tile_component_manager: TileComponentManager,
+        dynamic_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
-        request: SubRequest,
-    ) -> Union[DynamicTpmSimulatorComponentManager, TileComponentManager]:
+    ) -> TileComponentManager:
         """
-        Return the tile component under test.
+        Return the tile component under test. (Driving a DynamicTpmSimulator).
 
-        This is parametrised to return
-
-        * a dynamic TPM simulator component manager,
-
-        * a Tile component manager (in simulation and test mode and
-          turned on)
-
-        So any test that relies on this fixture will be run three times:
-        once for each of the above classes.
-
-        :param dynamic_tpm_simulator_component_manager: the dynamic TPM
-            simulator component manager to return
-        :param tile_component_manager: the tile component manager (in
-            simulation mode) to return
-        :param request: A pytest object giving access to the requesting test
-            context.
+        :param dynamic_tile_component_manager: the tile component manager (
+            Driving a DynamicTpmSimulator)
         :param callbacks: dictionary of driver callbacks.
-
-        :raises ValueError: if parametrized with an unrecognised option
 
         :return: the tile class object under test
         """
-        if request.param == "dynamic_tpm_simulator_component_manager":
-            dynamic_tpm_simulator_component_manager.start_communicating()
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.ESTABLISHED
-            )
-            callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False)
-            return dynamic_tpm_simulator_component_manager
-        if request.param == "tile_component_manager":
-            tile_component_manager.start_communicating()
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.NOT_ESTABLISHED
-            )
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.ESTABLISHED
-            )
-            callbacks["component_state"].assert_call(power=PowerState.ON)
-            callbacks["component_state"].assert_call(fault=False, lookahead=3)
-            callbacks["component_state"].assert_call(
-                programming_state=TpmStatus.PROGRAMMED
-            )
-            callbacks["component_state"].assert_call(
-                programming_state=TpmStatus.INITIALISED
-            )
-            return tile_component_manager
-        raise ValueError("Tile fixture parametrized with unrecognised option")
+        dynamic_tile_component_manager.start_communicating()
+
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(fault=False, lookahead=3)
+        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED
+        )
+        return dynamic_tile_component_manager
 
     @pytest.mark.parametrize(
         "attribute_name",
@@ -1033,10 +879,7 @@ class TestDynamicSimulatorCommon:
     )
     def test_dynamic_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: Union[
-            DynamicTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         attribute_name: str,
     ) -> None:
         """
@@ -1074,10 +917,7 @@ class TestDynamicSimulatorCommon:
     )
     def test_read_static_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: Union[
-            DynamicTpmSimulatorComponentManager,
-            TileComponentManager,
-        ],
+        tile: TileComponentManager,
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -1093,127 +933,3 @@ class TestDynamicSimulatorCommon:
             "==" equality test.
         """
         assert getattr(tile, attribute_name) == expected_value
-
-
-class TestTpmDriver:
-    """Class for testing TpmDriver commands."""
-
-    @pytest.fixture()
-    def hardware_tile_mock(self: TestTpmDriver) -> unittest.mock.Mock:
-        """
-        Provide a mock for the hardware tile.
-
-        :return: An hardware tile mock
-        """
-        return unittest.mock.Mock()
-
-    # pylint: disable=too-many-arguments
-    @pytest.fixture()
-    def tpm_driver_with_mocked_tile(
-        self: TestTpmDriver,
-        logger: logging.Logger,
-        max_workers: int,
-        tile_id: int,
-        tpm_version: str,
-        callbacks: MockCallableGroup,
-        hardware_tile_mock: unittest.mock.Mock,
-    ) -> TpmDriver:
-        """
-        Return a TPMDriver using a mocked Tile.
-
-        :param logger: a object that implements the standard logging
-            interface of :py:class:`logging.Logger`
-        :param max_workers: nos. of worker threads
-        :param tile_id: the unique ID for the tile
-        :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-        :param callbacks: dictionary of driver callbacks.
-        :param hardware_tile_mock: The mock tile used by the TpmDriver.
-
-        :return: a TpmDriver driving a mocked tile
-        """
-        return TpmDriver(
-            logger,
-            tile_id,
-            hardware_tile_mock,
-            tpm_version,
-            callbacks["communication_status"],
-            callbacks["component_state"],
-        )
-
-    def test_communication_fails(
-        self: TestTpmDriver,
-        tpm_driver_with_mocked_tile: TpmDriver,
-        hardware_tile_mock: unittest.mock.Mock,
-    ) -> None:
-        """
-        Test we can create the driver but not start communication with the component.
-
-        We can create the tile class object under test, but will not be
-        able to use it to establish communication with the component
-        (which is a hardware TPM that does not exist in this test
-        harness).
-
-        :param tpm_driver_with_mocked_tile: the patched tpm driver under test.
-        :param hardware_tile_mock: An hardware tile mock
-        """
-        hardware_tile_mock.tpm = None
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.DISABLED
-        )
-        tpm_driver_with_mocked_tile.start_communicating()
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
-        # Wait for the message to execute
-        # then check that the connect has been called
-        # but the component is still unconnected
-        time.sleep(0.3)
-        hardware_tile_mock.connect.assert_called_with()
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
-
-    def test_communication(
-        self: TestTpmDriver,
-        tpm_driver_with_mocked_tile: TpmDriver,
-        hardware_tile_mock: unittest.mock.Mock,
-    ) -> None:
-        """
-        Test we can create the driver and start communication with the component.
-
-        We can create the tile class object under test, and we will mock
-        the underlying component (which is a hardware TPM that does not exist
-        in this test harness).
-
-        :param tpm_driver_with_mocked_tile: the patched tpm driver under test.
-        :param hardware_tile_mock: An hardware tile mock
-        """
-        hardware_tile_mock.tpm = True
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.DISABLED
-        )
-        tpm_driver_with_mocked_tile.start_communicating()
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.NOT_ESTABLISHED
-        )
-
-        # Wait for the message to execute
-        time.sleep(1)
-        hardware_tile_mock.connect.assert_called_once()
-        # assert "_ConnectToTile" in
-        # tpm_driver_with_mocked_tile._queue_manager._task_result[0]
-        # assert tpm_driver_with_mocked_tile._queue_manager._task_result[1] == str(
-        #    ResultCode.OK.value
-        # )
-
-        # assert tpm_driver_with_mocked_tile._queue_manager._task_result[2] ==
-        # "Connected to Tile"
-        assert (
-            tpm_driver_with_mocked_tile.communication_state
-            == CommunicationStatus.ESTABLISHED
-        )

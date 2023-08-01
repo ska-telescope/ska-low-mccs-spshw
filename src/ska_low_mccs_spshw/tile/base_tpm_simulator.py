@@ -15,7 +15,7 @@ import time
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
-from ska_low_mccs_common.component import ObjectComponent
+from ska_control_model import CommunicationStatus, PowerState
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -24,9 +24,9 @@ __all__ = ["BaseTpmSimulator"]
 
 
 # pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
-class BaseTpmSimulator(ObjectComponent):
+class BaseTpmSimulator:
     """
-    A simulator for a TPM.
+    A mock TPMDriver for testing tile_component_manager.
 
     :todo: The current TPM driver has a wrapper to make it consistent
         with the interface of this simulator. It would be more better if
@@ -94,17 +94,21 @@ class BaseTpmSimulator(ObjectComponent):
     def __init__(
         self: BaseTpmSimulator,
         logger: logging.Logger,
+        communication_state_changed: Optional[Callable[..., None]] = None,
         component_state_changed_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param communication_state_changed: callback to be called
+            when the communication state changes.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
         self.logger = logger
         self._component_state_changed_callback = component_state_changed_callback
+        self._communication_state_changed = communication_state_changed
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
@@ -143,6 +147,42 @@ class BaseTpmSimulator(ObjectComponent):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._is_last: bool
         self._is_first: bool
+        self.communication_state = CommunicationStatus.NOT_ESTABLISHED
+        self._fail_communicate = False
+
+    def start_communicating(self: BaseTpmSimulator) -> None:
+        """
+        Establish communication with the component, then start monitoring.
+
+        :raises ConnectionError: if the attempt to establish
+            communication with the channel fails.
+        """
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            return
+
+        if self._communication_state_changed:
+            self._communication_state_changed(CommunicationStatus.NOT_ESTABLISHED)
+            self._communication_state_changed(CommunicationStatus.ESTABLISHED)
+            self.communication_state = CommunicationStatus.ESTABLISHED
+
+        if self._fail_communicate:
+            raise ConnectionError("Failed to connect")
+
+        if self._component_state_changed_callback:
+            self._component_state_changed_callback(power=PowerState.ON)
+            self._component_state_changed_callback(fault=False)
+
+    def stop_communicating(self: BaseTpmSimulator) -> None:
+        """Cease monitoring the component, and break off all communication with it."""
+        if self.communication_state == CommunicationStatus.DISABLED:
+            return
+
+        if self._component_state_changed_callback:
+            self._component_state_changed_callback(power=None, fault=None)
+
+        if self._communication_state_changed:
+            self._communication_state_changed(CommunicationStatus.DISABLED)
+            self.communication_state = CommunicationStatus.DISABLED
 
     @property
     def firmware_available(

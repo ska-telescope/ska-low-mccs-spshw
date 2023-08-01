@@ -326,7 +326,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._fpgas_time = self.FPGAS_TIME
             self._fpga_current_frame = 0
             self._current_tile_beamformer_frame = 0
-            self._fpga_reference_time = 0
             self._tile_health_structure["timing"]["pps"]["status"] = True
             self._clock_present = True
             self._sysref_present = True
@@ -1173,9 +1172,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     if dict_to_append is not None:
                         self._forty_gb_core_list.append(dict_to_append)
         else:
-            self._forty_gb_core_list = [
-                self._get_40g_core_configuration(core_id, arp_table_entry)
-            ]
+            if self._get_40g_core_configuration(core_id, arp_table_entry):
+                self._forty_gb_core_list = [
+                    self._get_40g_core_configuration(core_id, arp_table_entry)
+                ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
             self.logger.debug(f"{core}")

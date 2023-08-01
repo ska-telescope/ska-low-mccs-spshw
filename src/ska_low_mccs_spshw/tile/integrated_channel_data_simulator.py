@@ -335,16 +335,20 @@ class IntegratedChannelDataSimulator:
         ordered_powers_table = OrderedDict(sorted(powers_table.items()))
         powers_array = np.zeros((len(channels)), dtype=np.float16)
         for channel in channels:
-            xind = bisect.bisect_left(
+            # Get the highest frequency below the input channel
+            # and interpolate between that and the one above
+            left_index = bisect.bisect_left(
                 list(ordered_powers_table.keys()), freqs[channel - first_channel]
             )
-            k1 = list(ordered_powers_table.keys())[xind]
-            k2 = list(ordered_powers_table.keys())[xind - 1]
-            frac1 = (freqs[channel - first_channel] - k1) / (k2 - k1)
-            frac2 = 1 - frac1
+            higher_bound = list(ordered_powers_table.keys())[left_index]
+            lower_bound = list(ordered_powers_table.keys())[left_index - 1]
+            higher_frac = (freqs[channel - first_channel] - higher_bound) / (
+                lower_bound - higher_bound
+            )
+            lower_frac = 1 - higher_frac
             powers_array[channel - first_channel] = (
-                frac2 * ordered_powers_table[k1]
-            ) + (frac1 * ordered_powers_table[k2])
+                lower_frac * ordered_powers_table[higher_bound]
+            ) + (higher_frac * ordered_powers_table[lower_bound])
         return powers_array
 
     def _generate_raw_data(

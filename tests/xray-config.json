@@ -2,7 +2,9 @@
   "test_plans": [
     {
       "select_from_tag": {
-        "default": "XTP-17871"
+        "default": "XTP-17871",
+        "XTP-17871": "XTP-17871",
+        "XTP-21181": "XTP-21181"
       }
     }
   ],

@@ -888,7 +888,10 @@ class TileSimulator:
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
-        self.spead_data_simulator.send_data(1)
+        thread = threading.Thread(
+            target=self.spead_data_simulator.send_raw_data, args=[1], daemon=True
+        )
+        thread.start()
 
     def send_channelised_data(
         self: TileSimulator,
@@ -906,9 +909,23 @@ class TileSimulator:
         :param last_channel: Last channel to send
         :param timestamp: When to start transmission
         :param seconds: When to synchronise
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        # Check if number of samples is a multiple of 32
+        if number_of_samples % 32 != 0:
+            new_value = (int(number_of_samples / 32) + 1) * 32
+            self.logger.warning(
+                f"{number_of_samples} is not a multiple of 32, using {new_value}"
+            )
+            number_of_samples = new_value
+        assert self.dst_ip
+        assert self.dst_port
+        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        thread = threading.Thread(
+            target=self.spead_data_simulator.send_channelised_data,
+            args=[1, number_of_samples, first_channel, last_channel],
+            daemon=True,
+        )
+        thread.start()
 
     def send_channelised_data_continuous(
         self: TileSimulator,

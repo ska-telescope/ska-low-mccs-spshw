@@ -10,6 +10,7 @@ so configure like this:
         logging_level_default: 5
 
 */}}
+{{- $namespace := .Release.Namespace}}
 {{- $calibration_stores := dig "calibrationstores" dict .Values.deviceServers}}
 {{- if $calibration_stores}}
 name: calibrationstore-{{.Release.Name}}
@@ -33,7 +34,7 @@ server:
               properties:
                 - name: "DatabaseHost"
                   values:
-                    - "test-postgresql"
+                    - "station-calibration-postgresql"
                 - name: "DatabasePort"
                   values:
                     - "5432"

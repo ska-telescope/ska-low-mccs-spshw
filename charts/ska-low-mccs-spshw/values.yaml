@@ -46,6 +46,8 @@ dsconfig:
 # The following values overwrite the default values in the postgresql dependency.
 # See https://artifacthub.io/packages/helm/bitnami/postgresql
 postgresql:
+  fullnameOverride: station-calibration-postgresql
+
   commonLabels:
     app: ska-low-mccs-spshw
 

@@ -1,0 +1,72 @@
+{{- /*
+Defines the deployment for SpsStation Tango devices.
+
+  deviceServers:
+    spsstations:
+      1:
+        cabinet_network_address: 10.0.0.0
+        subracks:
+        - "1"
+        tpms:
+        - "10"
+        - "13"
+        logging_level_default: 5
+
+*/}}
+{{- $spsstations := dig "spsstations" dict .Values.deviceServers}}
+{{- if $spsstations}}
+name: "spsstation-{{.Release.Name}}"
+function: ska-low-mccs-spshw-spsstation
+domain: ska-low-mccs-spshw
+instances:
+{{- range $id := keys $spsstations}}
+  - {{printf "spsstation-%03d" (int $id)}}
+{{- end}}
+command: SpsStation
+server:
+  name: "SpsStation"
+  instances:
+{{- range $id, $this_spsstation := $spsstations}}
+{{- $spsstation_id := int $id}}
+    - name: {{printf "spsstation-%03d" $spsstation_id}}
+      classes:
+        - name: "SpsStation"
+          devices:
+            - name: {{printf "low-mccs/spsstation/%03d" $spsstation_id}}
+              properties:
+                - name: "StationId"
+                  values:
+                    - {{quote $spsstation_id}}
+                - name: "CabinetNetworkAddress"
+                  values:
+                    - {{quote $this_spsstation.cabinet_network_address}}
+                - name: "SubrackFQDNs"
+                  values:
+{{- range $subrack := $this_spsstation.subracks}}
+                    - {{printf "low-mccs/subrack/%04d" (int $subrack)}}
+{{- end}}
+                - name: "TileFQDNs"
+                  values:
+{{- range $tpm := $this_spsstation.tpms}}
+                    - {{printf "low-mccs/tile/%04d" (int $tpm)}}
+{{- end}}
+{{- with $this_spsstation.logging_level_default}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}

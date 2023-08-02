@@ -1,0 +1,48 @@
+{{- /* Configure the SPS Station Tango devices. */}}
+{{- $overrides := dict}}
+{{- if hasKey .Values "overrides"}}
+{{- $overrides = .Values.overrides}}
+{{- end}}
+{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $defaults := .Values.defaults}}
+
+{{- $spsstation_instances := dict}}
+
+{{- range $station_id, $station_spec := $merged.array.stations}}
+
+{{- $spsstation_spec := dig "sps" "sps_station" dict $station_spec}}
+{{- $spsstation_enabled := pluck "enabled" $spsstation_spec $station_spec (dict "enabled" true) | first}}
+
+{{- if $spsstation_enabled}}
+{{- $spsstation_instance := dict}}
+{{- $spsstation_logging_level_defaults := pluck "logging_level_default" $spsstation_spec $defaults}}
+{{- if $spsstation_logging_level_defaults}}
+{{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
+{{- end }}
+{{- $_ := set $spsstation_instance "cabinet_network_address" (dig "cabinet_network_address" "0.0.0.0" $spsstation_spec)}}
+
+{{- range $device_type := list "subracks" "tpms"}}
+{{- $devices := list}}
+{{- $device_specs := dig "sps" $device_type dict $station_spec}}
+{{- range $device_id, $device_spec := $device_specs}}
+{{- if (dig "enabled" true $device_spec)}}
+{{- $devices = append $devices $device_id}}
+{{- end }}
+{{- end }}
+{{- $_ := set $spsstation_instance $device_type $devices}}
+{{- end }}
+
+{{- $_ := set $spsstation_instances $station_id $spsstation_instance}}
+
+{{- end }}
+
+{{- end }}
+
+{{- if $spsstation_instances}}
+deviceServers:
+  spsstations:
+{{- range $id, $spec := $spsstation_instances}}
+    {{int $id}}:
+{{toYaml $spec | indent 6}}
+{{- end }}
+{{- end }}

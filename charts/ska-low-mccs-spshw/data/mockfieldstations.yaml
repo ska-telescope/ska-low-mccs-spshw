@@ -1,28 +1,37 @@
-{{- $defaults := dict "enabled" true "logging_level_default" 3}}
-{{- $field_stations := .Values.deviceServers.mockfieldstations}}
+{{- /*
+Defines the deployment for mock field station Tango devices.
+
+  deviceServers:
+    mockfieldstations:
+      1:
+        logging_level_default: 5
+
+*/}}
+{{- $mock_field_stations := dig "mockfieldstations" dict .Values.deviceServers}}
+{{- if $mock_field_stations}}
 name: "mockfieldstation-{{.Release.Name}}"
-function: ska-low-mccs-spshw-mockfieldstation
+function: ska-low-mccs-spshw-mockfieldstation-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_field_station := $field_stations.instances}}
-{{- if (pluck "enabled" $this_field_station $field_stations $defaults | first)}}
-  - {{printf "mockfieldstation-%03d" (int $key)}}
-{{- end}}
+{{- range $id := (keys $mock_field_stations)}}
+  - {{printf "mockfieldstation-%03d" (int $id)}}
 {{- end}}
 command: MockFieldStation
 server:
   name: "MockFieldStation"
   instances:
-{{- range $key, $this_field_station := $field_stations.instances}}
-    - name: {{printf "mockfieldstation-%03d" (int $key)}}
+{{- range $id, $this_mock_field_station := $mock_field_stations}}
+    - name: {{printf "mockfieldstation-%03d" (int $id)}}
       classes:
         - name: "MockFieldStation"
           devices:
-            - name: {{printf "low-mccs/mockfieldstation/%03d" (int $key)}}
+            - name: {{printf "low-mccs/mockfieldstation/%03d" (int $id)}}
               properties:
+{{- if (hasKey $this_mock_field_station "logging_level_default")}}
                 - name: "LoggingLevelDefault"
                   values:
-                    - {{pluck "logging_level_default" $this_field_station $field_stations $defaults | first | toString | quote}}
+                    - {{quote $this_mock_field_station.logging_level_default}}
+{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -37,3 +46,4 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}

@@ -1,28 +1,36 @@
-{{- $defaults := dict "enabled" true "logging_level_default" 3}}
-{{- $calibration_stores := .Values.deviceServers.calibrationstores}}
-name: "calibrationstore-{{.Release.Name}}"
-function: ska-low-mccs-spshw-calibrationstore
+{{- /*
+Defines the deployment for MccsCalibrationStore Tango devices.
+
+Currently all device properties are hardcoded except the logging level default,
+so configure like this:
+
+  deviceServers:
+    calibrationstores:
+      1:
+        logging_level_default: 5
+
+*/}}
+{{- $calibration_stores := dig "calibrationstores" dict .Values.deviceServers}}
+{{- if $calibration_stores}}
+name: calibrationstore-{{.Release.Name}}
+function: ska-low-mccs-spshw-calibrationstore-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_calibration_store := $calibration_stores.instances}}
-{{- if (pluck "enabled" $this_calibration_store $calibration_stores $defaults | first)}}
-  - {{printf "calibrationstore-%03d" (int $key)}}
-{{- end}}
+{{- range $id := (keys $calibration_stores)}}
+  - {{printf "calibrationstore-%03d" (int $id)}}
 {{- end}}
 command: MccsCalibrationStore
 server:
   name: "MccsCalibrationStore"
   instances:
-{{- range $key, $this_calibration_store := $calibration_stores.instances}}
-    - name: {{printf "calibrationstore-%03d" (int $key)}}
+{{- range $id, $this_calibration_store := $calibration_stores}}
+{{- $calibration_store_id := int $id}}
+    - name: {{printf "calibrationstore-%03d" $calibration_store_id}}
       classes:
         - name: "MccsCalibrationStore"
           devices:
-            - name: {{printf "low-mccs/calibrationstore/%03d" (int $key)}}
+            - name: {{printf "low-mccs/calibrationstore/%03d" $calibration_store_id}}
               properties:
-                - name: "LoggingLevelDefault"
-                  values:
-                    - {{pluck "logging_level_default" $this_calibration_store $calibration_stores $defaults | first | toString | quote}}
                 - name: "DatabaseHost"
                   values:
                     - "test-postgresql"
@@ -38,6 +46,11 @@ server:
                 - name: "DatabaseAdminPassword"
                   values:
                     - "secretpassword"
+{{- if (hasKey $this_calibration_store "logging_level_default")}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{quote $this_calibration_store.logging_level_default}}
+{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -52,3 +65,4 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}

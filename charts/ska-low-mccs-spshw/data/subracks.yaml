@@ -1,19 +1,31 @@
-{{- $defaults := dict "enabled" true "port" 8081 "logging_level_default" 3}}
-{{- $subracks := .Values.deviceServers.subracks}}
+{{- /*
+Defines the deployment for MccsSubrack Tango devices.
+
+  deviceServers:
+    subracks:
+      1:
+        srmb_host: 10.0.10.80
+        srmb_port: 8081
+        nodeSelector:
+          kubernetes.io/hostname: psi-node3
+        logging_level_default: 5
+
+*/}}
+{{- $subracks := dig "subracks" dict .Values.deviceServers}}
+{{- $node_selector := dict}}
+{{- if $subracks}}
 name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-spshw-subrack
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_subrack := $subracks.instances}}
-{{- if (pluck "enabled" $this_subrack $subracks $defaults | first)}}
+{{- range $key, $this_subrack := $subracks}}
   - {{printf "subrack-%04d" (int $key)}}
-{{- end}}
 {{- end}}
 command: MccsSubrack
 server: 
   name: "MccsSubrack"
   instances:
-{{- range $key, $this_subrack := $subracks.instances}}
+{{- range $key, $this_subrack := $subracks}}
     - name: {{printf "subrack-%04d" (int $key)}}
       classes:
       - name: "MccsSubrack"
@@ -22,14 +34,18 @@ server:
           properties:
           - name: "SubrackIp"
             values: 
-            - {{$this_subrack.host | quote}}
+            - {{$this_subrack.srmb_host | quote}}
           - name: "SubrackPort"
             values: 
-            - {{pluck "port" $this_subrack $subracks $defaults | first | toString | quote}}
+            - {{$this_subrack.srmb_port | quote}}
+{{- with $this_subrack.logging_level_default}}
           - name: "LoggingLevelDefault"
             values: 
-            - {{pluck "logging_level_default" $this_subrack $subracks $defaults | first | toString | quote}}
-
+            - {{quote .}}
+{{- end}}
+{{- with $this_subrack.nodeSelector}}
+{{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -44,7 +60,8 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
-{{- if (hasKey $subracks "reachable_from") }}
+{{- with $node_selector}}
 nodeSelector:
-  kubernetes.io/hostname: {{ $subracks.reachable_from }}
+{{toYaml . | indent 2}}
+{{- end}}
 {{- end}}

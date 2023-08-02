@@ -1,0 +1,57 @@
+{{- /* Configure the DAQ Tango devices. */}}
+{{- $overrides := dict}}
+{{- if hasKey .Values "overrides"}}
+{{- $overrides = .Values.overrides}}
+{{- end}}
+{{$merged := mergeOverwrite .Values.platform $overrides}}
+{{- $defaults := .Values.defaults}}
+
+{{- $daq_instances := dict}}
+{{- $daq_simulators := dict}}
+
+{{- range $station_id, $station_spec := $merged.array.stations}}
+{{- $station_number := int $station_id}}
+
+{{- $daq_spec := dig "sps" "daq" dict $station_spec}}
+{{- $daq_enabled := pluck "enabled" $daq_spec $station_spec (dict "enabled" true) | first}}
+{{- if $daq_enabled}}
+{{- $daq_host := dig "host" (printf "daq-receiver-%03d" $station_number) $daq_spec}}
+{{- $daq_port := dig "port" 50051 $daq_spec}}
+{{- $daq_receiver_interface := dig "receiver_interface" "eth0" $daq_spec}}
+{{- $daq_receiver_ip := dig "receiver_ip" "" $daq_spec}}
+{{- $daq_receiver_port := dig "receiver_port" 4660 $daq_spec}}
+{{- $daq_logging_level_defaults := pluck "logging_level_default" $daq_spec $defaults}}
+
+{{- $daq_simulated := dig "simulated" false $daq_spec}}
+{{- if $daq_simulated}}
+{{- $daq_host = printf "daq-simulator-%d" $station_number}}
+{{- $_ := set $daq_simulators $station_id (dict "host" $daq_host "port" $daq_port)}}
+{{- end }}
+
+{{- $daq_instance := dict "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port}}
+{{- if $daq_logging_level_defaults}}
+{{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
+{{- end }}
+{{- $_ := set $daq_instances $station_id $daq_instance}}
+{{- end }}
+
+{{- end }}
+
+{{- if $daq_instances}}
+deviceServers:
+  daqs:
+{{- range $daq_id, $daq_spec := $daq_instances}}
+    {{$daq_id}}:
+{{toYaml $daq_spec | indent 6}}
+{{- end }}
+{{- end }}
+
+{{- if $daq_simulators}}
+
+simulators:
+  daqs:
+{{- range $daq_id, $daq_spec := $daq_simulators}}
+    {{$daq_id}}:
+{{toYaml $daq_spec | indent 6}}
+{{- end}}
+{{- end}}

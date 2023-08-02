@@ -1,0 +1,90 @@
+defaults:
+  logging_level_default: 5
+
+overrides:
+  array:
+    stations:
+      "1":
+        sps:
+          subracks:
+            "1":
+              simulated: true
+          tpms:
+            "1":
+              host: 10.0.10.201
+              resources:
+                requests:
+                  memory: 512Mi
+            "2":
+              host: 10.0.10.202
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 2
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+            "3":
+              host: 10.0.10.203
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 3
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+            "5":
+              host: 10.0.10.205
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 5
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+            "6":
+              host: 10.0.10.206
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 6
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+            "7":
+              host: 10.0.10.207
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 7
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+            "8":
+              host: 10.0.10.208
+              port: 10000
+              version: tpm_v1_6
+              subrack: 1
+              subrack_slot: 8
+              simulated: 1
+              resources:
+                requests:
+                  memory: 512Mi
+
+{{- /* TODO: https://github.com/roboll/helmfile/issues/1242#issuecomment-655423707
+Some services, such as jupyterhub and some taranta services,
+are already provided on some platforms.
+These are specified in "platform.cluster.services".
+We want to launch these services ourselves, if and only if they are not already provided.
+Unfortunately, helmfile currently only supports release conditions of the form "foo.enabled",
+so we have to do some templating here to make it work. */}}
+{{- $platform_spec := fromYaml (readFile "../../platform/arcetri.yaml")}}
+{{- range $service := (list "jupyterhub" "taranta-platform")}}
+{{$service}}:
+  enabled: {{not (dig "platform" "cluster" "services" $service false $platform_spec)}}
+{{- end}}

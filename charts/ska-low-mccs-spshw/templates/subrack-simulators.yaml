@@ -1,40 +1,52 @@
-{{- range $key, $value := ((.Values.simulators).subracks)}}
+{{- /*
+Deploy the subrack simulator/s.
+
+  simulators:
+    subracks:
+      1:
+        srmb_host: subrack-simulator-1
+        srmb_port: 8081
+
+*/}}
+{{- range $key, $spec := ((.Values.simulators).subracks)}}
+{{- $host := $spec.srmb_host}}
+{{- $port := $spec.srmb_port | default 8081}}
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{$value.host}}
+  name: {{$host}}
   namespace: {{$.Release.Namespace}}
   labels:
-    component: subrack-simulator-{{$key}}
+    component: {{$host}}
 spec:
   ports:
   - name: http
-    port: {{$value.port | default 8081}}
+    port: {{$port}}
   type: ClusterIP
   selector:
-    component: subrack-simulator-{{$key}}
+    component: {{$host}}
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{$value.host}}
+  name: {{$host}}
   namespace: {{$.Release.Namespace}}
   labels:
-    component: subrack-simulator-{{$key}}
+    component: {{$host}}
 spec:
   selector:
     matchLabels:
-      component: subrack-simulator-{{$key}}
-  serviceName: subrack-simulator-{{$key}}
+      component: {{$host}}
+  serviceName: {{$host}}
   replicas: 1
   template:
     metadata:
       labels:
-        component: subrack-simulator-{{$key}}
+        component: {{$host}}
     spec:
       containers:
-      - name: subrack-simulator-{{$key}}
+      - name: {{$host}}
 {{- with $.Values.image}}
         image: {{.registry}}/{{.name}}:{{.tag}}
 {{- end}}
@@ -43,5 +55,5 @@ spec:
           - "SubrackSimulator"
         env:
           - name: SUBRACK_SIMULATOR_PORT
-            value: {{$value.port | default "8081" | quote}}
+            value: {{$port | quote}}
 {{- end}}

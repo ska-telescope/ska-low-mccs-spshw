@@ -15,6 +15,7 @@ labels:
 global:
   minikube: true
   tango_host: databaseds-tango-base-test:10000
+  cluster_domain: cluster.local
 
 livenessProbe:
   initialDelaySeconds: 0
@@ -100,73 +101,59 @@ image:
   tag: 0.8.0
   pullPolicy: IfNotPresent
 
-# facility:
-#   stations:
-#     instances:
-#       1:
-#         cabinet_network_address: 10.0.0.0
-#         subracks: [1]
-#         tpms: [10, 13]
-#   subracks:
-#     reachable_from: psi-node3
-#     instances:
-#       1:
-#         host: 10.0.10.80
-#         port: 8081
-#   tpms:
-#     reachable_from: psi-node3
-#     version: tpm_v1_6
-#     port: 10000
-#     instances:
-#       10:
-#         host: 10.0.10.218
-#         subrack: "1"
-#         subrack_bay: 2
-#       13:
-#         host: 10.0.10.215
-#         subrack: "1"
-#         subrack_bay: 5
-
-# simulators:
-#   subracks:
-#     1:
-#       host: subrack-simulator-1
-
-deviceServers:  # e.g....
-  # stations:
-  #   instances:
-  #     1:
-  #       enabled: false  # suppress this Tango device
-  #   logging_level_default: 5
+deviceServers: {} # e.g....
+  # spsstations:
+  #   1:
+  #     cabinet_network_address: 10.0.0.0
+  #     subracks:
+  #     - "1"
+  #     tpms:
+  #     - "10"
+  #     - "13"
+  #     logging_level_default: 5
+  # calibrationstores:
+  #   1:
+  #     logging_level_default: 5
+  # mockfieldstations:
+  #   1:
+  #     logging_level_default: 5
+  # stationcalibrators:
+  #   1:
+  #     logging_level_default: 5
+  # daqs:
+  #   1:
+  #     host: daq-simulator-1
+  #     port: 50051
+  #     receiver_interface: eth0
+  #     receiver_ip: ""
+  #     receiver_port: 4660
+  #     logging_level_default: 5
   # subracks:
-  #   instances:
-  #     1:
-  #       enabled: false  # suppress this Tango device
-  #   logging_level_default: 5
+  #   1:
+  #     srmb_host: subrack-simulator-1
+  #     srmb_port: 8081
+  #     logging_level_default: 5
+  #     nodeSelector:
+  #       kubernetes.io/hostname: psi-node3
   # tpms:
-  #   instances:
-  #     10:
-  #       host: 10.0.10.201
-  #       port: 10000
-  #       version: tpm_v1_6
-  #       subrack: "1"
-  #       subrack_bay: 1
-  #   logging_level_default: 5
-  #   simulation_config: 1
-  #   test_config: 1
-  #   resources:
-  #     requests:
-  #       memory: 512Mi
+  #   10:
+  #     host: 10.0.10.201
+  #     port: 10000
+  #     version: tpm_v1_6
+  #     subrack: 1
+  #     subrack_slot: 1
+  #     simulation_config: 1
+  #     test_config: 1
+  #     logging_level_default: 5
+  #     nodeSelector:
+  #       kubernetes.io/hostname: psi-node3
 
-# receivers:
-#   1:
-#     host: "daq-receiver-001"  # optional: hostname of a pre-existing DAQ
-#     port: 50051  # optional: defaults to 50051
-#     #receiver_interface: net1  # optional: defaults to "eth0"
-#     receiver_ip: ""  # empty = Determine from interface name
-#     receiver_port: 5660  # optional: defaults to 4660
-#     logging_level_default: 5
-
-nodeSelector: {}
-
-affinity: {}
+simulators: {} # e.g.
+  # daqs:
+  #   1:
+  #     host: daq-simulator-1
+  #     port: 50051
+  # subracks:
+  #   1:
+  #     srmb_host: subrack-simulator-1
+  #     srmb_port: 8081

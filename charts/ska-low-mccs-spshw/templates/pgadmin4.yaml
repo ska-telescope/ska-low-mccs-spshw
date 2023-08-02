@@ -1,4 +1,4 @@
-{{ if .Values.pgadmin4.enabled }}
+{{- if (and (hasKey .Values "pgadmin4") (dig "enabled" false .Values.pgadmin4))}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -172,4 +172,4 @@ spec:
                 port:
                   number: {{ $svcPort }}
 {{- end }}
-{{ end }}
+{{- end }}

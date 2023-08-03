@@ -885,13 +885,11 @@ class TileSimulator:
         # Should we create a raw data SPEAD packet generator?
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
+        self.stop_data_transmission()
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
-        thread = threading.Thread(
-            target=self.spead_data_simulator.send_raw_data, args=[1], daemon=True
-        )
-        thread.start()
+        self.spead_data_simulator.send_raw_data(1)
 
     def send_channelised_data(
         self: TileSimulator,
@@ -917,15 +915,13 @@ class TileSimulator:
                 f"{number_of_samples} is not a multiple of 32, using {new_value}"
             )
             number_of_samples = new_value
+        self.stop_data_transmission()
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
-        thread = threading.Thread(
-            target=self.spead_data_simulator.send_channelised_data,
-            args=[1, number_of_samples, first_channel, last_channel],
-            daemon=True,
+        self.spead_data_simulator.send_channelised_data(
+            1, number_of_samples, first_channel, last_channel
         )
-        thread.start()
 
     def send_channelised_data_continuous(
         self: TileSimulator,
@@ -986,12 +982,8 @@ class TileSimulator:
         raise NotImplementedError
 
     def stop_data_transmission(self: TileSimulator) -> None:
-        """
-        Stop data transmission.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Stop data transmission."""
+        self.spead_data_simulator.stop_sending_data()
 
     def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
         """

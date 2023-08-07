@@ -2,6 +2,11 @@
 
 ## unreleased
 
+## 0.8.0
+
+* [MCCS-1547] Tile Component Manager and TpmDriver to use the new TileSimulator
+* [MCCS-1650] Updating TPM Firmware to sbf416 version
+
 ## 0.7.1
 
 * Updated make submodule.

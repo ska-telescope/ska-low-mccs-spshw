@@ -59,6 +59,8 @@ repositories:
     url: https://artefact.skao.int/repository/helm-internal
   - name: bitnami
     url: https://charts.bitnami.com/bitnami
+  - name: jupyterhub
+    url: https://jupyterhub.github.io/helm-chart
 
 releases:
   - name: ska-low-mccs-spshw

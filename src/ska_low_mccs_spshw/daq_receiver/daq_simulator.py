@@ -141,6 +141,7 @@ class DaqSimulator:
 
         :return: a resultcode, message tuple
         """
+        print("initialising...")
         if self._initialised:
             return ResultCode.REJECTED, "Daq already initialised"
         self._config.update(config)
@@ -172,6 +173,7 @@ class DaqSimulator:
 
         :yield: a status update.
         """
+        print("starting...")
         self._modes = convert_daq_modes(modes_to_start)
         yield "LISTENING"
 
@@ -185,6 +187,7 @@ class DaqSimulator:
 
         :return: a resultcode, message tuple
         """
+        print("stopping...")
         self._modes = []
         return ResultCode.OK, "Daq stopped"
 
@@ -199,6 +202,7 @@ class DaqSimulator:
 
         :return: a resultcode, message tuple
         """
+        print("configuring...")
         if config:
             self._config.update(config)
             return ResultCode.OK, "Daq reconfigured"
@@ -213,6 +217,7 @@ class DaqSimulator:
 
         :return: a configuration dictionary.
         """
+        print("Getting configuration...")
         config = self._config.copy()
         try:
             port = int(config["receiver_ports"])
@@ -238,6 +243,7 @@ class DaqSimulator:
 
         :return: A json string containing the status of this DaqReceiver.
         """
+        print("Getting status...")
         # 2. Get consumer list, filter by `running`
         running_consumers = [[mode.name, int(mode)] for mode in self._modes]
         return {

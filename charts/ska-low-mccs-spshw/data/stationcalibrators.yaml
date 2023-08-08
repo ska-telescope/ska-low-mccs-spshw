@@ -7,6 +7,7 @@ Defines the deployment for station calibrator Tango devices.
         logging_level_default: 5
 
 */}}
+{{- if (hasKey .Values "deviceServers")}}
 {{- $station_calibrators := dig "stationcalibrators" dict .Values.deviceServers}}
 {{- if $station_calibrators}}
 name: "stationcalibrator-{{.Release.Name}}"
@@ -53,4 +54,5 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}
 {{- end}}

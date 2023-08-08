@@ -10,6 +10,7 @@ so configure like this:
         logging_level_default: 5
 
 */}}
+{{- if (hasKey .Values "deviceServers")}}
 {{- $namespace := .Release.Namespace}}
 {{- $calibration_stores := dig "calibrationstores" dict .Values.deviceServers}}
 {{- if $calibration_stores}}
@@ -66,4 +67,5 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}
 {{- end}}

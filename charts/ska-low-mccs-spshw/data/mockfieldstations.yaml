@@ -7,6 +7,7 @@ Defines the deployment for mock field station Tango devices.
         logging_level_default: 5
 
 */}}
+{{- if (hasKey .Values "deviceServers")}}
 {{- $mock_field_stations := dig "mockfieldstations" dict .Values.deviceServers}}
 {{- if $mock_field_stations}}
 name: "mockfieldstation-{{.Release.Name}}"
@@ -46,4 +47,5 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}
 {{- end}}

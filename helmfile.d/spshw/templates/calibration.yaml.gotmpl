@@ -14,6 +14,7 @@ and the station calibrators.
 {{- $instances := dict}}
 
 {{- range $device_type := list "calibration_store" "mock_field_station" "calibrator"}}
+{{- $_ := set $instances $device_type dict}}
 {{- range $station_id, $station_spec := $merged.array.stations}}
 
 {{- $device_spec := dig "sps" $device_type dict $station_spec}}
@@ -24,13 +25,13 @@ and the station calibrators.
 {{- if $device_logging_level_defaults}}
 {{- $_ := set $device_instance "logging_level_default" (first $device_logging_level_defaults)}}
 {{- end }}
-{{- $_ := set $instances $device_type (dict $station_id $device_instance)}}
+{{- $_ := set (index $instances $device_type) $station_id $device_instance}}
 {{- end }}
 
 {{- end }}
 {{- end }}
 
-{{- if $instances}}
+{{- if (or $instances.calibration_store $instances.mock_field_station $instances.calibrator)}}
 deviceServers:
 {{- end }}
 {{- $calstore_instances := $instances.calibration_store}}

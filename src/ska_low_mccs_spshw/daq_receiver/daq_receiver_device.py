@@ -736,43 +736,14 @@ class MccsDaqReceiver(SKABaseDevice):
                 and producing plots of the spectra.
 
             :param argin: A json dictionary with keywords.
-                * station_config_path
-                    Path to a station configuration file.
-                * plot_directory
-                    Directory in which to store bandpass plots.
-                * monitor_rms
-                    Whether or not to additionally produce RMS plots.
-                    Default: False.
-                * auto_handle_daq
-                    Whether DAQ should be automatically reconfigured,
-                    started and stopped without user action if necessary.
-                    This set to False means we expect DAQ to already
-                    be properly configured and listening for traffic
-                    and DAQ will not be stopped when `StopBandpassMonitor`
-                    is called.
-                    Default: False.
-            """
-            return self._component_manager.start_bandpass_monitor(argin)
-
-    @command(
-        dtype_in="DevString", dtype_out="DevVarLongStringArray"
-    )
-    def StartBandpassMonitor(self: MccsDaqReceiver, argin: str) -> DevVarLongStringArrayType:
-        """
-        Start monitoring antenna bandpasses.
-
-        The MccsDaqReceiver will begin monitoring antenna bandpasses
-            and producing plots of the spectra.
-
-        :param argin: A json dictionary with keywords.
-            * station_config_path
+                - station_config_path
                 Path to a station configuration file.
-            * plot_directory
+                - plot_directory
                 Directory in which to store bandpass plots.
-            * monitor_rms
+                - monitor_rms
                 Whether or not to additionally produce RMS plots.
                 Default: False.
-            * auto_handle_daq
+                - auto_handle_daq
                 Whether DAQ should be automatically reconfigured,
                 started and stopped without user action if necessary.
                 This set to False means we expect DAQ to already
@@ -780,6 +751,42 @@ class MccsDaqReceiver(SKABaseDevice):
                 and DAQ will not be stopped when `StopBandpassMonitor`
                 is called.
                 Default: False.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            return self._component_manager.start_bandpass_monitor(argin)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartBandpassMonitor(
+        self: MccsDaqReceiver, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Start monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json dictionary with keywords.
+            - station_config_path
+            Path to a station configuration file.
+            - plot_directory
+            Directory in which to store bandpass plots.
+            - monitor_rms
+            Whether or not to additionally produce RMS plots.
+            Default: False.
+            - auto_handle_daq
+            Whether DAQ should be automatically reconfigured,
+            started and stopped without user action if necessary.
+            This set to False means we expect DAQ to already
+            be properly configured and listening for traffic
+            and DAQ will not be stopped when `StopBandpassMonitor`
+            is called.
+            Default: False.
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         handler = self.get_command_object("StartBandpassMonitor")
         (result_code, message) = handler(argin)
@@ -823,9 +830,7 @@ class MccsDaqReceiver(SKABaseDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    def StopBandpassMonitor(
-        self: MccsDaqReceiver, argin: str
-    ) -> DevVarLongStringArrayType:
+    def StopBandpassMonitor(self: MccsDaqReceiver) -> DevVarLongStringArrayType:
         """
         Stop monitoring antenna bandpasses.
 

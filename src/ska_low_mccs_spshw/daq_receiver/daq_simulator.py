@@ -12,10 +12,13 @@ It exists to allow MccsDaqReceiver to be unit tested.
 from __future__ import annotations
 
 import functools
+import json
 import os
+import time
 from enum import IntEnum
-from typing import Any, Callable, Iterator, TypeVar, cast
+from typing import Any, Callable, Iterator, Optional, TypeVar, cast
 
+from pyaavs import station
 from ska_control_model import ResultCode
 from ska_low_mccs_daq_interface import run_server_forever
 
@@ -127,9 +130,13 @@ class DaqSimulator:
         self._config = {
             "observation_metadata": "foo",
             "receiver_ports": "bah",
+            "append_integrated": False,
         }
 
         self._modes: list[DaqModes] = []
+
+        self._stop_bandpass: bool = False
+        self._monitoring_bandpass: bool = False
 
     def initialise(
         self: DaqSimulator, config: dict[str, Any]
@@ -213,9 +220,9 @@ class DaqSimulator:
 
         :return: a configuration dictionary.
         """
-        config = self._config.copy()
+        config: dict[str, Any] = self._config.copy()
         try:
-            port = int(config["receiver_ports"])
+            port = cast(int, config["receiver_ports"])
         except ValueError:
             pass
         except TypeError:
@@ -245,7 +252,146 @@ class DaqSimulator:
             "Receiver Interface": self._config.get("receiver_interface", 0),
             "Receiver Ports": self._config.get("receiver_ports", ""),
             "Receiver IP": [self._config.get("receiver_ip", "")],
+            "Bandpass Monitor": self._monitoring_bandpass,
         }
+
+    # pylint: disable=too-many-return-statements
+    @check_initialisation
+    def start_bandpass_monitor(
+        self: DaqSimulator,
+        argin: str,
+    ) -> tuple[ResultCode, str]:
+        """
+        Start monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json dictionary with keywords
+            - station_config_path
+            Path to a station configuration file.
+            - plot_directory
+            Directory in which to store bandpass plots.
+            - monitor_rms
+            Whether or not to additionally produce RMS plots.
+            Default: False.
+            - auto_handle_daq
+            Whether DAQ should be automatically reconfigured,
+            started and stopped without user action if necessary.
+            This set to False means we expect DAQ to already
+            be properly configured and listening for traffic
+            and DAQ will not be stopped when `StopBandpassMonitor`
+            is called.
+            Default: False.
+
+        :return: a task status and response message
+        """
+        if self._monitoring_bandpass:
+            return (ResultCode.REJECTED, "Bandpass monitor is already active.")
+
+        self._stop_bandpass = False
+        params: dict[str, Any] = json.loads(argin)
+        try:
+            station_config_path: str = params["station_config_path"]
+            plot_directory: str = params["plot_directory"]
+        except KeyError:
+            return (
+                ResultCode.REJECTED,
+                "Param `argin` must have keys for `station_config_path` and "
+                "`plot_directory`",
+            )
+        auto_handle_daq: bool = cast(bool, params.get("auto_handle_daq", False))
+        if self._config["append_integrated"]:
+            if not auto_handle_daq:
+                return (
+                    ResultCode.REJECTED,
+                    "Current DAQ config is invalid. "
+                    "The `append_integrated` option must be set to false for bandpass "
+                    "monitoring.",
+                )
+            self.configure({"append_integrated": False})
+
+        if "INTEGRATED_CHANNEL_DATA" not in self._modes:
+            if not auto_handle_daq:
+                return (
+                    ResultCode.REJECTED,
+                    "INTEGRATED_CHANNEL_DATA consumer must be running before bandpasses"
+                    " can be monitored.",
+                )
+            self.start(modes_to_start="INTEGRATED_CHANNEL_DATA")
+
+        if not os.path.exists(station_config_path) or not os.path.isfile(
+            station_config_path
+        ):
+            return (
+                ResultCode.REJECTED,
+                f"Specified configuration file ({station_config_path}) does not exist.",
+            )
+
+        station.load_configuration_file(station_config_path)
+        station_conf = station.configuration
+        # Extract station name
+        station_name = station_conf["station"]["name"]
+        if station_name.upper() == "UNNAMED":
+            return (
+                ResultCode.REJECTED,
+                f"Please set station name in configuration file {station_config_path},"
+                " currently unnamed.",
+            )
+
+        # Check that the station is configured to transmit data over 1G
+        if station_conf["network"]["lmc"]["use_teng_integrated"]:
+            return (
+                ResultCode.REJECTED,
+                f"Station {station_config_path} must be configured to send "
+                "integrated data over the 1G network, and each station "
+                "should define a different destination port. Please check",
+            )
+
+        # Create plotting directory structure
+        if not self.create_plotting_directory(plot_directory, station_name):
+            return (
+                ResultCode.FAILED,
+                f"Unable to create plotting directory at: {plot_directory}",
+            )
+
+        self._monitoring_bandpass = True
+        while not self._stop_bandpass:
+            time.sleep(1)
+        if auto_handle_daq:
+            self.stop()
+        self._monitoring_bandpass = False
+
+        return (ResultCode.OK, "Bandpass monitoring complete.")
+
+    def stop_bandpass_monitor(self: DaqSimulator) -> tuple[ResultCode, str]:
+        """
+        Stop monitoring antenna bandpasses.
+
+        :return: a resultcode, message tuple
+        """
+        self._stop_bandpass = True
+        return (ResultCode.OK, "Bandpass monitor stopping.")
+
+    def create_plotting_directory(
+        self: DaqSimulator,
+        parent: str,
+        station_name: str,
+        return_value: Optional[bool] = True,
+    ) -> bool:
+        """
+        Create plotting directory structure for this station.
+
+        This method will always return `True` unless `return_value` is overridden.
+
+        :param parent: Parent plotting directory
+        :param station_name: Station name
+        :param return_value: Value this method should return.
+
+        :return: `True` unless overridden to return `False`
+        """
+        assert return_value is not None
+        return return_value
 
 
 def main() -> None:

@@ -214,7 +214,7 @@ class MockTpm:
         """
         if address == ("pll", 0x508):
             return 0xE7
-        if type(address) == int:
+        if isinstance(address, int):
             address = hex(address)
         return self._register_map.get(address)
 
@@ -229,7 +229,7 @@ class MockTpm:
         """
         if address == ("pll", 0x508):
             return 0xE7
-        if type(address) == int:
+        if isinstance(address, int):
             address = hex(address)
         return self._register_map.get(address)
 

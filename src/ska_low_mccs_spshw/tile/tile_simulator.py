@@ -885,10 +885,11 @@ class TileSimulator:
         # Should we create a raw data SPEAD packet generator?
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
+        self.stop_data_transmission()
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
-        self.spead_data_simulator.send_data(1)
+        self.spead_data_simulator.send_raw_data(1)
 
     def send_channelised_data(
         self: TileSimulator,
@@ -906,9 +907,21 @@ class TileSimulator:
         :param last_channel: Last channel to send
         :param timestamp: When to start transmission
         :param seconds: When to synchronise
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        # Check if number of samples is a multiple of 32
+        if number_of_samples % 32 != 0:
+            new_value = (int(number_of_samples / 32) + 1) * 32
+            self.logger.warning(
+                f"{number_of_samples} is not a multiple of 32, using {new_value}"
+            )
+            number_of_samples = new_value
+        self.stop_data_transmission()
+        assert self.dst_ip
+        assert self.dst_port
+        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        self.spead_data_simulator.send_channelised_data(
+            1, number_of_samples, first_channel, last_channel
+        )
 
     def send_channelised_data_continuous(
         self: TileSimulator,
@@ -969,12 +982,8 @@ class TileSimulator:
         raise NotImplementedError
 
     def stop_data_transmission(self: TileSimulator) -> None:
-        """
-        Stop data transmission.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Stop data transmission."""
+        self.spead_data_simulator.stop_sending_data()
 
     def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
         """

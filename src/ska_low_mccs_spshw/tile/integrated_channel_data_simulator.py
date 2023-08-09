@@ -1,4 +1,5 @@
 #  -*- coding: utf-8 -*
+# pylint: disable=too-many-nested-blocks
 #
 # BSD 3-Clause License
 #
@@ -33,9 +34,12 @@
 
 from __future__ import annotations
 
+import bisect
 import socket
 import struct
+import threading
 import time
+from collections import OrderedDict
 from typing import Any, Optional
 
 import numpy as np
@@ -87,8 +91,67 @@ class IntegratedChannelDataSimulator:
 
         self._timestamp = 0
 
+        self._sample_x_powers = {
+            0.0: 0.0050,
+            30e6: 0.0050,
+            50e6: 0.50,
+            65e6: 3.15,
+            136e6: 1.58,
+            137e6: 3.15,
+            138e6: 1.58,
+            240e6: 0.39,
+            250e6: 2.51,
+            260e6: 0.10,
+            270e6: 1.58,
+            280e6: 0.25,
+            360e6: 0.10,
+            370e6: 0.25,
+            375e6: 0.079,
+            380e6: 0.20,
+            390e6: 0.025,
+            400e6: 0.010,
+        }
+        self._sample_y_powers = {
+            0.0: 0.0050,
+            30e6: 0.0050,
+            50e6: 0.50,
+            65e6: 3.15,
+            136e6: 1.26,
+            137e6: 3.15,
+            138e6: 1.26,
+            140e6: 1.26,
+            240e6: 0.32,
+            250e6: 2.51,
+            260e6: 1.58,
+            270e6: 3.15,
+            280e6: 0.20,
+            360e6: 0.06,
+            370e6: 0.50,
+            375e6: 0.10,
+            380e6: 0.25,
+            390e6: 0.020,
+            400e6: 0.010,
+        }
+
+        self._data_types = {"raw", "channel"}
+        self._stop_events = {
+            data_type: threading.Event() for data_type in self._data_types
+        }
+        # These need to be instantiated at runtime to set their args
+        self._threads: dict[str, threading.Thread] = {}
+
         # Generate test data
-        self._packet_data = np.zeros(
+        self._raw_packet_data = np.zeros(
+            (
+                self._nof_tiles,
+                self._nof_fpgas,
+                self._nof_ants_per_fpga,
+                self._nof_channel_packets,
+                self._nof_channels_per_packet * 2,
+            ),
+            dtype=np.uint16,
+        )
+        self._channelised_packet_data = np.zeros(
             (
                 self._nof_tiles,
                 self._nof_fpgas,
@@ -103,35 +166,144 @@ class IntegratedChannelDataSimulator:
             for fpga in range(self._nof_fpgas):
                 for antenna in range(self._nof_ants_per_fpga):
                     for channel in range(self._nof_channel_packets):
-                        self._packet_data[tpm][fpga][antenna][
+                        self._raw_packet_data[tpm][fpga][antenna][
                             channel
-                        ] = self._generate_data(tpm, fpga, antenna, channel)
+                        ] = self._generate_raw_data(tpm, fpga, antenna, channel)
+                        self._channelised_packet_data[tpm][fpga][antenna][
+                            channel
+                        ] = self._generate_channelised_data(tpm, fpga, antenna, channel)
 
         # Create socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def send_data(
-        self: IntegratedChannelDataSimulator, sleep_between_antennas: int
+    def stop_sending_data(self: IntegratedChannelDataSimulator) -> None:
+        """Stop sending data."""
+        # The AAVS tile only needs to stop channel continuous here but with the
+        # sleep between antennas the other data modes can end up running for a
+        # long time here so having a way to stop them is useful
+        for data_type, event in self._stop_events.items():
+            event.set()
+            while self._threads[data_type].is_alive():
+                # Wait for the thread to finish execution, so that the event isn't
+                # cleared before the thread dies
+                time.sleep(0.1)
+
+    def send_raw_data(
+        self: IntegratedChannelDataSimulator,
+        sleep_between_antennas: int,
     ) -> None:
         """
-        Generate integrated channel data.
+        Send raw data.
+
+        However note at present the data generated is integrated channel data.
 
         :param sleep_between_antennas: time in seconds.
         """
+        self._threads["raw"] = threading.Thread(
+            target=self._send_raw_data,
+            name="raw_data_thread",
+            args=[sleep_between_antennas],
+            daemon=True,
+        )
+        self._stop_events["raw"].clear()
+        self._threads["raw"].start()
+
+    def _send_raw_data(
+        self: IntegratedChannelDataSimulator,
+        sleep_between_antennas: int,
+    ) -> None:
+        """
+        Send raw data.
+
+        However note at present the data generated is integrated channel data.
+
+        :param sleep_between_antennas: time in seconds.
+        """
+        self._stop_events["raw"].clear()
         for tile in range(self._nof_tiles):
             for ant in range(self._nof_ants_per_fpga):
                 for chan in range(
                     int(self._nof_channels / self._nof_channels_per_packet)
                 ):
                     for fpga in range(self._nof_fpgas):
+                        if self._stop_events["raw"].is_set():
+                            return
                         self._transmit_packet(
                             tile,
                             fpga,
                             self._timestamp,
                             ant + fpga * self._nof_ants_per_fpga,
                             chan * self._nof_channels_per_packet,
+                            self._raw_packet_data,
                         )
 
+                time.sleep(sleep_between_antennas)
+
+        self._timestamp += 1
+
+    def send_channelised_data(
+        self: IntegratedChannelDataSimulator,
+        sleep_between_antennas: int,
+        number_of_samples: int = 128,
+        first_channel: int = 0,
+        last_channel: int = 511,
+    ) -> None:
+        """
+        Send integrated channel data.
+
+        :param sleep_between_antennas: time in seconds.
+        :param number_of_samples: Number of spectra to send
+        :param first_channel: First channel to send
+        :param last_channel: Last channel to send
+        """
+        self._threads["channel"] = threading.Thread(
+            target=self._send_channelised_data,
+            name="channel_data_thread",
+            args=[
+                sleep_between_antennas,
+                number_of_samples,
+                first_channel,
+                last_channel,
+            ],
+            daemon=True,
+        )
+        self._stop_events["channel"].clear()
+        self._threads["channel"].start()
+
+    def _send_channelised_data(
+        self: IntegratedChannelDataSimulator,
+        sleep_between_antennas: int,
+        number_of_samples: int = 128,
+        first_channel: int = 0,
+        last_channel: int = 511,
+    ) -> None:
+        """
+        Send integrated channel data.
+
+        :param sleep_between_antennas: time in seconds.
+        :param number_of_samples: Number of spectra to send
+        :param first_channel: First channel to send
+        :param last_channel: Last channel to send
+        """
+        self._stop_events["channel"].clear()
+        num_channels = 1 + last_channel - first_channel
+        for tile in range(self._nof_tiles):
+            for ant in range(self._nof_ants_per_fpga):
+                for _ in range(number_of_samples):
+                    for chan in range(
+                        int(num_channels / self._nof_channels_per_packet)
+                    ):
+                        for fpga in range(self._nof_fpgas):
+                            if self._stop_events["channel"].is_set():
+                                return
+                            self._transmit_packet(
+                                tile,
+                                fpga,
+                                self._timestamp,
+                                ant + fpga * self._nof_ants_per_fpga,
+                                first_channel + (chan * self._nof_channels_per_packet),
+                                self._channelised_packet_data,
+                            )
                 time.sleep(sleep_between_antennas)
 
         self._timestamp += 1
@@ -143,6 +315,7 @@ class IntegratedChannelDataSimulator:
         timestamp: int,
         start_antenna: int,
         start_channel: int,
+        packet_data: np.ndarray,
     ) -> None:
         """
         Generate a packet.
@@ -152,6 +325,7 @@ class IntegratedChannelDataSimulator:
         :param timestamp: Time
         :param start_antenna: start antenna
         :param start_channel: start channel
+        :param packet_data: the data to send
         """
         header = 0x53 << 56 | 0x04 << 48 | 0x02 << 40 | 0x06 << 32 | 0x08
         heap_counter = 1 << 63 | 0x0001 << 48 | timestamp
@@ -182,14 +356,89 @@ class IntegratedChannelDataSimulator:
                 lmc_tpm_info,
                 sample_offset,
             )
-            + self._packet_data[tpm_id][fpga_id][
-                start_antenna // self._nof_ants_per_fpga
-            ][start_channel // self._nof_channels_per_packet].tobytes()
+            + packet_data[tpm_id][fpga_id][start_antenna // self._nof_ants_per_fpga][
+                start_channel // self._nof_channels_per_packet
+            ].tobytes()
         )
 
         self._socket.sendto(packet, (self._ip, self._port))
 
-    def _generate_data(
+    def _generate_channelised_data(
+        self: IntegratedChannelDataSimulator,
+        tpm_id: int,
+        fpga_id: int,
+        start_antenna: int,
+        start_channel: int,
+    ) -> Any:
+        """
+        Generate samples data set.
+
+        :param tpm_id: Id of the TPM
+        :param fpga_id: Id of the FPGA
+        :param start_antenna: start antenna
+        :param start_channel: start channel
+
+        :return: the packet data
+        """
+        start_antenna = (
+            tpm_id * self._nof_ants_per_fpga * self._nof_fpgas
+            + fpga_id * self._nof_ants_per_fpga
+            + start_antenna
+        )
+
+        x_bandpass = self._generate_simulated_bandpass(
+            0,
+            start_channel * self._nof_channels_per_packet,
+            ((1 + start_channel) * self._nof_channels_per_packet) - 1,
+        )
+        y_bandpass = self._generate_simulated_bandpass(
+            1,
+            start_channel * self._nof_channels_per_packet,
+            ((1 + start_channel) * self._nof_channels_per_packet) - 1,
+        )
+
+        return np.ravel([x_bandpass, y_bandpass], "F")
+
+    def _generate_simulated_bandpass(
+        self: IntegratedChannelDataSimulator,
+        polarisation: int,
+        first_channel: int,
+        last_channel: int,
+    ) -> np.ndarray:
+        """
+        Generate a simulated bandpass spectrum.
+
+        :param polarisation: 1 for y polarisation, 0 for x polarisation
+        :param first_channel: The first channel to generate for
+        :param last_channel: the last channel to generate for
+
+        :return: a bandpass spectrum between the first and last channels
+        """
+        channels = np.arange(first_channel, last_channel + 1, 1)
+        freqs = channels * 800e6 / 1024
+        powers_table = (
+            self._sample_y_powers if polarisation == 1 else self._sample_x_powers
+        )
+        ordered_powers_table = OrderedDict(sorted(powers_table.items()))
+        powers_array = np.zeros((len(channels)), dtype=np.float16)
+        for channel in channels:
+            # Get the highest frequency below the input channel
+            # and interpolate between that and the one above
+            left_index = bisect.bisect_left(
+                list(ordered_powers_table.keys()), freqs[channel - first_channel]
+            )
+            higher_bound = list(ordered_powers_table.keys())[left_index]
+            lower_bound = list(ordered_powers_table.keys())[left_index - 1]
+            higher_frac = (freqs[channel - first_channel] - higher_bound) / (
+                lower_bound - higher_bound
+            )
+            lower_frac = 1 - higher_frac
+            powers_array[channel - first_channel] = (
+                lower_frac * ordered_powers_table[higher_bound]
+            ) + (higher_frac * ordered_powers_table[lower_bound])
+        return powers_array
+
+    def _generate_raw_data(
         self: IntegratedChannelDataSimulator,
         tpm_id: int,
         fpga_id: int,

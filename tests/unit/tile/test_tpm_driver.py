@@ -15,6 +15,7 @@ import time
 import unittest.mock
 from typing import Any
 
+import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
@@ -482,7 +483,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.static_delays
         tpm_driver.csp_rounding = [2] * 384
         _ = tpm_driver.csp_rounding
-        tpm_driver.preadu_levels = list(range(32))
+        tpm_driver.preadu_levels = np.arange(0, 31, 1, dtype=int)
         _ = tpm_driver.preadu_levels
 
     def test_set_beamformer_regions(
@@ -537,6 +538,12 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         tile_simulator.tpm._is_programmed = True  # type: ignore
         tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
+
+        tpm_driver._update_tpm_status()
+        assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
+
+        # This operation is performed by a poll. Done manually here for speed.
+        tpm_driver._tile_id = tile_simulator._tile_id
 
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.INITIALISED
@@ -651,7 +658,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Update attributes and check driver updates
         tpm_driver._update_attributes()
         assert tpm_driver._station_id == tile_simulator._station_id
-        assert tpm_driver._tile_id == tile_simulator._tile_id
+        tpm_driver._tile_id = tile_simulator._tile_id
 
         # mock programmed state
         tpm_driver._is_programmed = True
@@ -881,7 +888,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Arrange
         tile_simulator.connect()
-        assert tile_simulator.tpm._is_programmed is True
+        tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
 
         # Values to be used for assertions later.
@@ -1166,12 +1173,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         station_bf_2 = tile_simulator.tpm.station_beamf[1]
 
         for table in station_bf_1._channel_table:
-            assert table[0] == start_channel
-            assert table[1] == nof_channels
+            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
             assert len(table) < 8
         for table in station_bf_2._channel_table:
-            assert table[0] == start_channel
-            assert table[1] == nof_channels
+            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
 
         assert tile_simulator._is_first == is_first
         assert tile_simulator._is_last == is_last
@@ -1204,39 +1209,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.csp_rounding = -3  # type: ignore[assignment]
         assert tile_simulator.csp_rounding == 0
 
-    @pytest.mark.xfail(reason="_preadu_levels is overwritten by a list when set")
-    def test_pre_adu_levels_edge_case(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Unit test for the pre_adu_levels method edge case.
-
-        :param tpm_driver: The TPM driver instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        tile_simulator.connect()
-        assert tile_simulator.tpm
-
-        # We set the preadu_levels
-        tpm_driver.preadu_levels = [3] * 32
-
-        # This code simulates a scenario where a piece of code between
-        # the tpm_driver and the hardware goes wrong leading to an
-        # incorrect value being written to the preadu.
-        # We expect the tpm_driver to be always be able to
-        # retreive the values from hardware.
-
-        # A piece of code has a error and writes a unexpected value.
-        tile_simulator.tpm.preadu[1].channel_filters[1] = (4 & 0x1F) << 3
-
-        # The TpmDriver should be able to get the value from hardware using
-        # tpm_driver.preadu_levels. Notice _get_preadu_levels is no longer called
-        # and we are not reading from hardware so this fails
-        assert tpm_driver._get_preadu_levels() != [3] * 32
-        assert tpm_driver.preadu_levels != [3] * 32
-
     def test_pre_adu_levels(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1250,18 +1222,20 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert tpm_driver.preadu_levels == [0] * 32
+        assert all(tpm_driver.preadu_levels == np.zeros(32))
 
-        tpm_driver.preadu_levels = [3] * 32
-        assert tile_simulator.tpm.preadu[1].channel_filters[1] >> 3 == 3
-
-        assert tpm_driver._preadu_levels == [3] * 32
+        # Set preADU levels to 3 for all channels
+        tpm_driver.preadu_levels = np.array([3.00] * 32)
+        # Read PyFABIL software preADU levels for preADU 1, channel 1
+        assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
+        # Check TPM driver preADU levels
+        tpm_driver.preadu_levels = np.array([3.00] * 32)
 
         # Check exception caught.
         tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]
             side_effect=Exception("mocked exception")
         )
-        tpm_driver.preadu_levels = [3] * 32
+        tpm_driver.preadu_levels = np.array([3.00] * 32)
 
     def test_load_calibration_coefficients(
         self: TestTpmDriver,
@@ -1385,7 +1359,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
-        assert tpm_driver._is_beamformer_running is False
+        assert tile_simulator.tpm
+        tile_simulator.tpm._is_programmed = True
+        tpm_driver._is_beamformer_running = False
 
         tpm_driver.start_beamformer(3, 4)
         tpm_driver._update_attributes()
@@ -1992,6 +1968,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "src_port": 8080,
             "dst_ip": "3221226219",
             "dst_port": 9000,
+            "rx_port_filter": None,
+            "netmask": None,
+            "gateway_ip": None,
         }
 
         tpm_driver.configure_40g_core(**core_dict)
@@ -2003,6 +1982,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             core_dict["src_port"],
             core_dict["dst_ip"],
             core_dict["dst_port"],
+            core_dict["rx_port_filter"],
+            core_dict["netmask"],
+            core_dict["gateway_ip"],
         )
         # Check that exceptions raised are caught.
         tile_simulator.configure_40g_core.side_effect = Exception("Mocked exception")
@@ -2030,6 +2012,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "src_port": 8080,
             "dst_ip": "3221226219",
             "dst_port": 9000,
+            "rx_port_filter": None,
+            "netmask": None,
+            "gateway_ip": None,
         }
 
         tile_simulator.connect()

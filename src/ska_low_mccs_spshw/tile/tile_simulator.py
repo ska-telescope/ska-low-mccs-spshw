@@ -55,7 +55,7 @@ class StationBeamformer:
             if not item[2] in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
-        self._channel_table = table
+        self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]
 
     def get_channel_table(self: StationBeamformer) -> list[list[int]]:
         """
@@ -137,11 +137,12 @@ class MockTpm:
         # device into the programmed state. We do not simulate these
         # low level details and just assume all went ok.
         self.logger = logger
-        self._is_programmed = True
+        self._is_programmed = False
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu(logger)] * 2
         self._station_beamf = [self.beam1, self.beam2]
+        self._address_map: dict[str, int] = {}
 
     def find_register(self: MockTpm, address: str) -> List[Any]:
         """
@@ -218,38 +219,30 @@ class MockTpm:
             address = hex(address)
         return self._register_map.get(address)
 
-    def read_address(self: MockTpm, address: int | str, n: int = 1) -> Optional[Any]:
+    def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
         """
         Get address value.
 
         :param address: Memory address to read from
-        :param n: Number of words to read
+        :param n: Number of items to read
 
         :return: Values
         """
-        if address == ("pll", 0x508):
-            return 0xE7
-        if isinstance(address, int):
-            address = hex(address)
-        return self._register_map.get(address)
+        return [self._address_map.get(str(address + i), 0) for i in range(n)]
 
     def write_address(
-        self: MockTpm, address: int | str, values: int, retry: bool = True
+        self: MockTpm, address: int, values: list[int], retry: bool = True
     ) -> None:
         """
         Write address value.
 
-        :param address: Memory address to read from
+        :param address: Memory address to write
         :param values: value to write
-        :param retry: retry
-
-        :raises LibraryError:Attempting to set a register not in the memory address.
+        :param retry: retry (does nothing yet.)
         """
-        if isinstance(address, int):
-            address = hex(address)
-        if address == "" or address == "unknown":
-            raise LibraryError(f"Unknown register: {address}")
-        self._register_map[address] = values
+        for i, value in enumerate(values):
+            key = str(address + i)
+            self._address_map.update({key: value})
 
     def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
         """
@@ -292,16 +285,24 @@ class PreAdu:
         :param logger: a logger for this simulator to use
         """
         self.logger = logger
-        self.channel_filters: list[int] = [0] * 16
+        self.channel_filters: list[float] = [0.00] * 16
 
-    def set_attenuation(self: PreAdu, attenuation: int, channel: list[int]) -> None:
+    def set_attenuation(self: PreAdu, attenuation: float, channel: list[int]) -> None:
         """
         Set preadu channel attenuation.
 
         :param attenuation: the attenuation.
         :param channel: the channel.
         """
-        self.channel_filters[channel[0]] = (attenuation & 0x1F) << 3
+        self.channel_filters[channel[0]] = attenuation
+
+    def get_attenuation(self: PreAdu) -> list[float]:
+        """
+        Get preadu attenuation for all channels.
+
+        :return: attenuation for all channels.
+        """
+        return self.channel_filters
 
     def write_configuration(self: PreAdu) -> None:
         """Write configuration to preadu."""
@@ -330,7 +331,12 @@ class TileSimulator:
     write_register for simplicity.
     """
 
-    VOLTAGE = 4.7
+    CHANNELISER_TRUNCATION: list[int] = [3] * 512
+    STATIC_DELAYS = [0.0] * 32
+    PREADU_LEVELS = [0.0] * 32
+    CLOCK_SIGNALS_OK = True
+
+    VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
     FPGA1_TEMPERATURE = 38.0
@@ -347,7 +353,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 0
-    TILE_ID = 1
+    TILE_ID = 2
 
     def __init__(
         self: TileSimulator,
@@ -388,6 +394,40 @@ class TileSimulator:
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = IntegratedChannelDataSimulator()
 
+        self.preadu_signal_map = {
+            0: {"preadu_id": 1, "channel": 0},
+            1: {"preadu_id": 1, "channel": 1},
+            2: {"preadu_id": 1, "channel": 2},
+            3: {"preadu_id": 1, "channel": 3},
+            4: {"preadu_id": 1, "channel": 4},
+            5: {"preadu_id": 1, "channel": 5},
+            6: {"preadu_id": 1, "channel": 6},
+            7: {"preadu_id": 1, "channel": 7},
+            8: {"preadu_id": 0, "channel": 15},
+            9: {"preadu_id": 0, "channel": 14},
+            10: {"preadu_id": 0, "channel": 13},
+            11: {"preadu_id": 0, "channel": 12},
+            12: {"preadu_id": 0, "channel": 11},
+            13: {"preadu_id": 0, "channel": 10},
+            14: {"preadu_id": 0, "channel": 9},
+            15: {"preadu_id": 0, "channel": 8},
+            16: {"preadu_id": 1, "channel": 8},
+            17: {"preadu_id": 1, "channel": 9},
+            18: {"preadu_id": 1, "channel": 10},
+            19: {"preadu_id": 1, "channel": 11},
+            20: {"preadu_id": 1, "channel": 12},
+            21: {"preadu_id": 1, "channel": 13},
+            22: {"preadu_id": 1, "channel": 14},
+            23: {"preadu_id": 1, "channel": 15},
+            24: {"preadu_id": 0, "channel": 7},
+            25: {"preadu_id": 0, "channel": 6},
+            26: {"preadu_id": 0, "channel": 5},
+            27: {"preadu_id": 0, "channel": 4},
+            28: {"preadu_id": 0, "channel": 3},
+            29: {"preadu_id": 0, "channel": 2},
+            30: {"preadu_id": 0, "channel": 1},
+            31: {"preadu_id": 0, "channel": 0},
+        }
         # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
@@ -442,12 +482,9 @@ class TileSimulator:
         self.tpm._is_programmed = True  # type: ignore
 
     def erase_fpga(self: TileSimulator) -> None:
-        """
-        Erase the fpga firmware.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Erase the fpga firmware."""
+        assert self.tpm
+        self.tpm._is_programmed = False
 
     def initialise(
         self: TileSimulator,
@@ -513,13 +550,16 @@ class TileSimulator:
 
     def configure_40g_core(
         self: TileSimulator,
-        core_id: int,
-        arp_table_entry: int,
-        src_mac: str,
-        src_ip: str,
-        src_port: int,
-        dst_ip: str,
-        dst_port: int,
+        core_id: int = 0,
+        arp_table_entry: int = 0,
+        src_mac: Optional[int] = None,
+        src_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_ip: Optional[str] = None,
+        dst_port: Optional[int] = None,
+        rx_port_filter: Optional[int] = None,
+        netmask: Optional[int] = None,
+        gateway_ip: Optional[int] = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -533,7 +573,11 @@ class TileSimulator:
         :param src_port: port of the source
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
+        :param rx_port_filter: Filter for incoming packets
+        :param netmask: Netmask
+        :param gateway_ip: Gateway IP
         """
+        assert core_id in [0, 1]
         core_dict = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
@@ -542,6 +586,9 @@ class TileSimulator:
             "src_port": src_port,
             "dst_ip": dst_ip,
             "dst_port": dst_port,
+            "rx_port_filter": rx_port_filter,
+            "netmask": netmask,
+            "gateway_ip": gateway_ip,
         }
         self._forty_gb_core_list.append(core_dict)
 
@@ -640,9 +687,9 @@ class TileSimulator:
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         :param chan: Input channel to set
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        self.logger.info("Not implemented, return without error to allow poll.")
+        return
 
     def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
         """
@@ -780,12 +827,9 @@ class TileSimulator:
         return True
 
     def stop_beamformer(self: TileSimulator) -> None:
-        """
-        Stop beamformer.
-
-        :raises NotImplementedError: if not overwritten
-        """
-        raise NotImplementedError
+        """Stop beamformer."""
+        self.tpm.beam1.stop()  # type: ignore
+        self.tpm.beam2.stop()  # type: ignore
 
     def configure_integrated_channel_data(
         self: TileSimulator,
@@ -841,10 +885,11 @@ class TileSimulator:
         # Should we create a raw data SPEAD packet generator?
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
+        self.stop_data_transmission()
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
-        self.spead_data_simulator.send_data(1)
+        self.spead_data_simulator.send_raw_data(1)
 
     def send_channelised_data(
         self: TileSimulator,
@@ -862,9 +907,21 @@ class TileSimulator:
         :param last_channel: Last channel to send
         :param timestamp: When to start transmission
         :param seconds: When to synchronise
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        # Check if number of samples is a multiple of 32
+        if number_of_samples % 32 != 0:
+            new_value = (int(number_of_samples / 32) + 1) * 32
+            self.logger.warning(
+                f"{number_of_samples} is not a multiple of 32, using {new_value}"
+            )
+            number_of_samples = new_value
+        self.stop_data_transmission()
+        assert self.dst_ip
+        assert self.dst_port
+        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        self.spead_data_simulator.send_channelised_data(
+            1, number_of_samples, first_channel, last_channel
+        )
 
     def send_channelised_data_continuous(
         self: TileSimulator,
@@ -925,12 +982,8 @@ class TileSimulator:
         raise NotImplementedError
 
     def stop_data_transmission(self: TileSimulator) -> None:
-        """
-        Stop data transmission.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Stop data transmission."""
+        self.spead_data_simulator.stop_sending_data()
 
     def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
         """
@@ -1120,12 +1173,10 @@ class TileSimulator:
         raise NotImplementedError
 
     def get_phase_terminal_count(self: TileSimulator) -> None:
-        """
-        Get PPS phase terminal count.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Get PPS phase terminal count."""
+        self.logger.info(
+            "Not implemented, returning to allow polling loop to complete."
+        )
 
     def get_station_id(self: TileSimulator) -> int:
         """

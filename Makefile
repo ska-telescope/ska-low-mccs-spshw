@@ -5,7 +5,7 @@
 # See LICENSE for more info.
 #
 PROJECT = ska-low-mccs-spshw
-
+#KUBE_NAMESPACE=dp-mccs-adam-p
 include .make/base.mk
 
 ########################################################################

@@ -2,6 +2,31 @@
 
 ## unreleased
 
+## 0.8.0
+
+* [MCCS-1547] Tile Component Manager and TpmDriver to use the new TileSimulator
+* [MCCS-1650] Updating TPM Firmware to sbf416 version
+
+## 0.7.1
+
+* Updated make submodule.
+
+## 0.7.0
+
+* [MCCS-1565] Updated TPM Driver to Support 40G Gateway
+* [MCCS-1644] Update station name to spsstation
+* [MCCS-1623] Update tango preadulevels type.
+* [MCCS-1456] DAQ Functional Tests
+* [MCCS-1623] Modified TPM driver to support TPM 1.6 preADU
+* [MCCS-1636] Use ska-ser-sphinx-theme
+* [MCCS-1633] Update /docs/src/_static/img/ in MCCS repos
+* [MCCS-1589] Skuid added in the spshw umbrella
+* [MCCS-1579] Add calibration store device, and PostgreSQL database for data storage
+* [MCCS-1518] No warning given if tile device initialised without subrack fqdn
+* [MCCS-1605] Fix intermittent health state test
+* [MCCS-1627] Dependency update
+* [MCCS-1613] Add version logging to device init
+
 ## 0.6.0
 
 * [MCCS-1539] DAQ receiver Tango device

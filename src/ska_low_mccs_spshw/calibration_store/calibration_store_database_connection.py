@@ -52,6 +52,7 @@ class CalibrationStoreDatabaseConnection:
             database
         """
         self._logger = logger
+        self._connect_kwargs = {"row_factory": dict_row}
         self._connection_pool = self._create_connection_pool(
             database_host,
             database_port,
@@ -91,9 +92,8 @@ class CalibrationStoreDatabaseConnection:
             f"user={database_admin_user} "
             f"password={database_admin_password}"
         )
-        connect_kwargs = {"row_factory": dict_row}
 
-        return ConnectionPool(conninfo, kwargs=connect_kwargs)
+        return ConnectionPool(conninfo, kwargs=self._connect_kwargs)
 
     def verify_database_connection(self: CalibrationStoreDatabaseConnection) -> None:
         """Verify that connection to the database can be established."""
@@ -142,7 +142,9 @@ class CalibrationStoreDatabaseConnection:
             self._connection_tries += 1
             if self._connection_tries >= self._connection_max_tries:
                 raise RuntimeError("Connection failed.") from exc
-            self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
+            self._connection_pool = ConnectionPool(
+                self._connection_pool.conninfo, kwargs=self._connect_kwargs
+            )
             return self.get_solution(frequency_channel, outside_temperature)
 
     def store_solution(
@@ -178,6 +180,8 @@ class CalibrationStoreDatabaseConnection:
             self._connection_tries += 1
             if self._connection_tries >= self._connection_max_tries:
                 raise RuntimeError("Connection failed.") from exc
-            self._connection_pool = ConnectionPool(self._connection_pool.conninfo)
+            self._connection_pool = ConnectionPool(
+                self._connection_pool.conninfo, kwargs=self._connect_kwargs
+            )
             return self.store_solution(solution, frequency_channel, outside_temperature)
         return ([ResultCode.OK], ["Solution stored successfully"])

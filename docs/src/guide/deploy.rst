@@ -21,7 +21,7 @@ been set up. You must manually set your k8s context for the platform
 you are targetting, before running the above command.)
 
 To tear down a release that has been deployed by helmfile,
-use the command ``helmfile destroy``.
+use the command ``helmfile destroy`` or ``helmfile --environment <environment_name> delete``.
 
 ------------
 How it works

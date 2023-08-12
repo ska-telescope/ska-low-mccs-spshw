@@ -9,7 +9,6 @@ Deploy the Tango devices. For example,
         - "1"
         tpms:
         - "10"
-        - "13"
         logging_level_default: 5
     calibrationstores:
       1:

@@ -11,6 +11,9 @@ on deploying the MCCS subsystem as a whole.
 
 ``ska-low-mccs-spshw`` uses helmfile to configure helm values files.
 
+---------------------
+Deploy using helmfile
+---------------------
 To deploy ``ska-low-mccs-spshw`` onto a k8s cluster, use the command
 ``helmfile --environment <environment_name> sync``.
 To see what environments are supported,
@@ -21,7 +24,23 @@ been set up. You must manually set your k8s context for the platform
 you are targetting, before running the above command.)
 
 To tear down a release that has been deployed by helmfile,
-use the command ``helmfile destroy`` or ``helmfile --environment <environment_name> delete``.
+use the command ``helmfile <same arguments> destroy``.
+It is important that the arguments to the ``destroy`` command
+be the same as those used with the ``sync`` command.
+For example, if the release was deployed with ``helmfile --environment gmrt sync``,
+then it must be torn down with ``helmfile --environment gmrt destroy``.
+If arguments are omitted from the ``helmfile destroy`` command,
+the release may not be fully torn down.
+
+--------------------------------
+Deploy using the .make submodule
+--------------------------------
+The ``ska-low-mccs-spshw`` repo includes the ``ska-cicd-makefile`` submodule,
+and thus supports the SKA-standard ``make install-chart`` and ``make uninstall-chart`` targets.
+When using this approach,
+use the ``K8S_HELMFILE_ENV``environment variable to specify the environment.
+For example, ``make K8S_HELMFILE_ENV=aavs3 install-chart`` and
+``make K8S_HELMFILE_ENV=aavs3 uninstall-chart``.
 
 ------------
 How it works
@@ -142,9 +161,9 @@ There are two keys:
                      enabled: true
 
   * The ``simulated`` key indicates that devices should run against a simulator,
-    or should simulate their interactions between hardware.
+    or should simulate their interactions with hardware.
     Not all device templates support this key,
-    and those that do may handle it in different ways.
+    and those that do may handle it in various ways.
     For example the subrack device template deploys a subrack simulator
     for it to monitor and control, whereas the TPM device template
     merely puts the TPM device into simulation mode.
@@ -157,7 +176,6 @@ There are two keys:
          array:
            stations:
              "1":
-               enabled: false
                sps:
                  subracks:
                    "1":

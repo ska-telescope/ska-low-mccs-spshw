@@ -159,3 +159,6 @@ simulators: {} # e.g.
   #   1:
   #     srmb_host: subrack-simulator-1
   #     srmb_port: 8081
+
+pgadmin4:
+  enabled: false

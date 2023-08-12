@@ -83,7 +83,7 @@ releases:
   - name: jupyterhub
     namespace: ska-low-mccs-spshw
     chart: jupyterhub/jupyterhub
-    version: 2.0.0
+    version: 3.0.0
     values:
       - values/jupyterhub.yaml
     condition: jupyterhub.enabled

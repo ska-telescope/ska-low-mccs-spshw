@@ -400,7 +400,7 @@ class IntegratedChannelDataSimulator:
 
         return np.ravel([x_bandpass, y_bandpass], "F")
 
-    def _generate_simulated_bandpass(
+    def _generate_simulated_bandpass(  # pylint: disable=too-many-locals
         self: IntegratedChannelDataSimulator,
         polarisation: int,
         first_channel: int,
@@ -437,7 +437,10 @@ class IntegratedChannelDataSimulator:
             powers_array[channel - first_channel] = (
                 lower_frac * ordered_powers_table[higher_bound]
             ) + (higher_frac * ordered_powers_table[lower_bound])
-        return powers_array
+        noisy_array = powers_array + (
+            (np.random.rand(len(channels)) - 0.5) * 0.2 * powers_array
+        )
+        return noisy_array
 
     def _generate_raw_data(
         self: IntegratedChannelDataSimulator,

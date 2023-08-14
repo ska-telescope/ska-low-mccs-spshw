@@ -183,10 +183,11 @@ class IntegratedChannelDataSimulator:
         # long time here so having a way to stop them is useful
         for data_type, event in self._stop_events.items():
             event.set()
-            while self._threads[data_type].is_alive():
-                # Wait for the thread to finish execution, so that the event isn't
-                # cleared before the thread dies
-                time.sleep(0.1)
+            if data_type in self._threads:
+                while self._threads[data_type].is_alive():
+                    # Wait for the thread to finish execution, so that the event isn't
+                    # cleared before the thread dies
+                    time.sleep(0.1)
 
     def send_raw_data(
         self: IntegratedChannelDataSimulator,

@@ -29,7 +29,9 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 class MccsCalibrationStore(SKABaseDevice):
     """An implementation of the CalibrationStore Tango device."""
 
-    DatabaseHost = device_property(dtype=str, default_value="test-postgresql")
+    DatabaseHost = device_property(
+        dtype=str, default_value="station-calibration-postgresql"
+    )
     DatabasePort = device_property(dtype=int, default_value=5432)
     DatabaseName = device_property(dtype=str, default_value="postgres")
     DatabaseAdminUser = device_property(dtype=str, default_value="postgres")

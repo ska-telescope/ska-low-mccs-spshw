@@ -1,8 +1,8 @@
-{{ if .Values.pgadmin4.enabled }}
+{{- if .Values.pgadmin4.enabled}}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmine4-{{ .Release.Name }}
+  name: {{ template "ska-low-mccs-spshw.name" . }}-pgadmin4-{{ .Release.Name }}
   namespace: {{ .Release.Namespace }}
   labels:
     {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
@@ -172,4 +172,4 @@ spec:
                 port:
                   number: {{ $svcPort }}
 {{- end }}
-{{ end }}
+{{- end }}

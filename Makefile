@@ -53,16 +53,18 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 ########################################################################
 # K8S
 ########################################################################
+K8S_USE_HELMFILE = true
+K8S_HELMFILE = helmfile.d/helmfile.yaml
+K8S_HELMFILE_ENV ?= stfc-ci
+
 include .make/k8s.mk
 include .make/raw.mk
 include .make/xray.mk
 
 
-K8S_FACILITY ?= k8s-test
-K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
-
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
+	--selector chart=ska-low-mccs-spshw \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif

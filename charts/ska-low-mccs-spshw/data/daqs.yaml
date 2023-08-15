@@ -1,66 +1,77 @@
-{{- $release := .Release}}
-{{- $values := .Values}}
-{{- range $id, $spec := .Values.receivers }}
-{{- $station_id := (int $id)}}
-{{- $defaults := dict
-  "host" (printf "daq-simulator-%03d" $station_id)
-  "port" 50051
-  "receiver_interface" "eth0"
-  "receiver_ip" ""
-  "receiver_port" 4660
-  "logging_level_default" 3
-}}
-{{- $defaulted := (mergeOverwrite $defaults $spec)}}
-name: daq-receiver-{{$release.Name}}
-function: ska-low-mccs-daq-daqreceiver
-domain: ska-low-mccs-daq
+{{- /*
+Defines the deployment for MccsDaqReceiver Tango devices.
+
+  deviceServers:
+    daqs:
+      1:
+        host: daq-simulator-1
+        port: 50051
+        receiver_interface: eth0
+        receiver_ip: ""
+        receiver_port: 4660
+        logging_level_default: 5
+
+*/}}
+{{- $daqs := dig "daqs" dict .Values.deviceServers}}
+{{- if $daqs}}
+name: daq-receiver-{{.Release.Name}}
+function: ska-low-mccs-spshw-daq-tango
+domain: ska-low-mccs-spshw
 instances:
-  - {{(printf "daq-tango-%03d" $station_id) | quote}}
+{{- range $id, $this_daq := $daqs}}
+{{- $daq_id := int $id}}
+  - {{printf "daq-%03d" $daq_id}}
+{{- end}}
 command: "MccsDaqReceiver"
 server:
   name: "MccsDaqReceiver"
   instances:
-    - name: {{(printf "daq-tango-%03d" $station_id) | quote}}
+{{- range $id, $this_daq := $daqs}}
+{{- $daq_id := int $id}}
+    - name: {{printf "daq-%03d" $daq_id}}
       classes:
       - name: "MccsDaqReceiver"
         devices:
-        - name: {{(printf "low-mccs/daqreceiver/%03d" $station_id) | quote}}
+        - name: {{printf "low-mccs/daqreceiver/%03d" $daq_id}}
           properties:
           - name: "DaqId"
             values:
-            - {{$station_id | toString | quote}}
+            - {{quote $daq_id}}
           - name: "ReceiverInterface"
             values:
-            - {{$defaulted.receiver_interface | quote}}
+            - {{quote $this_daq.receiver_interface}}
           - name: "ReceiverIp"
             values:
-            - {{$defaulted.receiver_ip | quote}}
+            - {{quote $this_daq.receiver_ip}}
           - name: "ReceiverPort"
             values:
-            - {{$defaulted.receiver_port | toString | quote}}
+            - {{quote $this_daq.receiver_port}}
           - name: "Host"
             values:
-            - {{$defaulted.host | quote}}
+            - {{$this_daq.host}}
           - name: "Port"
             values:
-            - {{$defaulted.port | toString | quote}}
+            - {{quote $this_daq.port}}
           - name: "ConsumersToStart"
             values:
             - "DaqModes.INTEGRATED_CHANNEL_DATA"
+{{- if (hasKey $this_daq "logging_level_default")}}
           - name: "LoggingLevelDefault"
             values: 
-            - {{$defaulted.logging_level_default | toString | quote}}
+            - {{quote $this_daq.logging_level_default}}
+{{- end }}
+{{- end }}
 depends_on:
   - device: sys/database/2
 image:
-{{- with $values.image}}
+{{- with .Values.image}}
   registry: "{{.registry}}"
   image: "{{.name}}"
   tag: "{{.tag}}"
   pullPolicy: "{{.pullPolicy}}"
 {{- end}}
 livenessProbe:
-{{toYaml $values.livenessProbe | indent 2 }}
+{{toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
-{{toYaml $values.readinessProbe | indent 2 }}
+{{toYaml .Values.readinessProbe | indent 2 }}
 {{- end }}

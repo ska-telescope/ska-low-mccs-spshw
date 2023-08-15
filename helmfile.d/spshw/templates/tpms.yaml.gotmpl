@@ -1,0 +1,58 @@
+{{- /* Configure the TPM Tango devices. */}}
+{{- $overrides := dict}}
+{{- if hasKey .Values "overrides"}}
+{{- $overrides = .Values.overrides}}
+{{- end}}
+{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $defaults := .Values.defaults}}
+
+{{- $tpm_instances := dict}}
+{{- $tpm_simulators := dict}}
+
+{{- range $station_id, $station_spec := $merged.array.stations}}
+
+{{- $station_enabled := true}}
+{{- if hasKey $station_spec "enabled"}}
+{{- $station_enabled = $station_spec.enabled}}
+{{- end }}
+
+{{- $station_number := int $station_id}}
+{{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
+
+{{- range $tpm_id, $tpm_spec := $tpm_specs}}
+
+{{- $tpm_enabled := $station_enabled}}
+{{- if hasKey $tpm_spec "enabled"}}
+{{- $tpm_enabled = $tpm_spec.enabled}}
+{{- end }}
+
+{{- if $tpm_enabled}}
+{{- $tpm_number := printf "%d" (add (mul $station_number 16) -16 (int $tpm_id))}}
+{{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack" "subrack_slot" "nodeSelector"}}
+
+{{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
+{{- if $tpm_logging_level_defaults}}
+{{- $_ := set $tpm_instance "logging_level_default" (first $tpm_logging_level_defaults)}}
+{{- end }}
+
+{{- $tpm_simulated := dig "simulated" false $tpm_spec}}
+{{- if $tpm_simulated}}
+{{- $_ := set $tpm_instance "simulation_config" 1}}
+{{- $_ := set $tpm_instance "test_config" 1}}
+{{- end}}
+
+{{- $_ := set $tpm_instances $tpm_number $tpm_instance}}
+{{- end}}
+
+{{- end}}
+
+{{- end}}
+
+{{- if $tpm_instances}}
+deviceServers:
+  tpms:
+{{- range $tpm_number, $tpm_spec := $tpm_instances}}
+    {{$tpm_number}}:
+{{toYaml $tpm_spec | indent 6}}
+{{- end }}
+{{- end }}

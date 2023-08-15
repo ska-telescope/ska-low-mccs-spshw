@@ -132,6 +132,7 @@ class IntegratedChannelDataSimulator:
             390e6: 0.020,
             400e6: 0.010,
         }
+        self._noise_level = 0.2  # Max fractional deviation from a value due to noise
 
         self._data_types = {"raw", "channel"}
         self._stop_events = {
@@ -184,10 +185,7 @@ class IntegratedChannelDataSimulator:
         for data_type, event in self._stop_events.items():
             event.set()
             if data_type in self._threads:
-                while self._threads[data_type].is_alive():
-                    # Wait for the thread to finish execution, so that the event isn't
-                    # cleared before the thread dies
-                    time.sleep(0.1)
+                self._threads[data_type].join()
 
     def send_raw_data(
         self: IntegratedChannelDataSimulator,
@@ -438,7 +436,7 @@ class IntegratedChannelDataSimulator:
                 lower_frac * ordered_powers_table[higher_bound]
             ) + (higher_frac * ordered_powers_table[lower_bound])
         noisy_array = powers_array + (
-            (np.random.rand(len(channels)) - 0.5) * 0.2 * powers_array
+            (np.random.rand(len(channels)) - 0.5) * 2 * self._noise_level * powers_array
         )
         return noisy_array
 

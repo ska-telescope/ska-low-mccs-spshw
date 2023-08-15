@@ -30,7 +30,7 @@ fastapi = "^0.100.0"
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
 typing-extensions = "^4.7.1"
 future = "^0.18.3"
-ska-low-mccs-daq-interface = "^0.1.0"
+ska-low-mccs-daq-interface = "^0.1.1"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^3.3.3"

@@ -132,7 +132,11 @@ class IntegratedChannelDataSimulator:
             390e6: 0.020,
             400e6: 0.010,
         }
-        self._noise_level = 0.2  # Max fractional deviation from a value due to noise
+
+        # Max fractional deviation from a value due to noise
+        # Set to 0 by default for ease of testing
+        # For demoing, this can be set to something around 0.2
+        self._noise_level = 0.0
 
         self._data_types = {"raw", "channel"}
         self._stop_events = {
@@ -178,14 +182,22 @@ class IntegratedChannelDataSimulator:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     def stop_sending_data(self: IntegratedChannelDataSimulator) -> None:
-        """Stop sending data."""
+        """
+        Stop sending data.
+
+        This forces each data sending thread to finish execution
+
+        :raises RuntimeError: If a thread failed to finish
+        """
         # The AAVS tile only needs to stop channel continuous here but with the
         # sleep between antennas the other data modes can end up running for a
         # long time here so having a way to stop them is useful
         for data_type, event in self._stop_events.items():
             event.set()
             if data_type in self._threads:
-                self._threads[data_type].join()
+                self._threads[data_type].join(timeout=10)
+                if self._threads[data_type].is_alive():
+                    raise RuntimeError("Failed to stop thread.")
 
     def send_raw_data(
         self: IntegratedChannelDataSimulator,

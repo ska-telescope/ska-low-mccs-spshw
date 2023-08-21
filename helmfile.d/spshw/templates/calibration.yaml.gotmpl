@@ -15,7 +15,8 @@ and the station calibrators.
 
 {{- range $device_type := list "calibration_store" "mock_field_station" "calibrator"}}
 {{- $_ := set $instances $device_type dict}}
-{{- range $station_id, $station_spec := $merged.array.stations}}
+{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $device_spec := dig "sps" $device_type dict $station_spec}}
 {{- $device_enabled := pluck "enabled" $device_spec $station_spec (dict "enabled" true) | first}}
@@ -25,9 +26,11 @@ and the station calibrators.
 {{- if $device_logging_level_defaults}}
 {{- $_ := set $device_instance "logging_level_default" (first $device_logging_level_defaults)}}
 {{- end }}
-{{- $_ := set (index $instances $device_type) $station_id $device_instance}}
+{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+{{- $_ := set (index $instances $device_type) $station_name $device_instance}}
 {{- end }}
 
+{{- end }}
 {{- end }}
 {{- end }}
 
@@ -38,7 +41,7 @@ deviceServers:
 {{- if $calstore_instances}}
   calibrationstores:
 {{- range $id, $spec := $calstore_instances}}
-    {{int $id}}:
+    {{$id}}:
 {{toYaml $spec | indent 6}}
 {{- end }}
 {{- end }}
@@ -47,7 +50,7 @@ deviceServers:
 {{- if $mockfieldstation_instances}}
   mockfieldstations:
 {{- range $id, $spec := $mockfieldstation_instances}}
-    {{int $id}}:
+    {{$id}}:
 {{toYaml $spec | indent 6}}
 {{- end }}
 {{- end }}
@@ -56,7 +59,7 @@ deviceServers:
 {{- if $calibrator_instances}}
   stationcalibrators:
 {{- range $id, $spec := $calibrator_instances}}
-    {{int $id}}:
+    {{$id}}:
 {{toYaml $spec | indent 6}}
 {{- end }}
 {{- end }}

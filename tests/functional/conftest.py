@@ -117,8 +117,8 @@ def functional_test_context_fixture(
         if subrack_address is None:
             harness.add_subrack_simulator(subrack_id)
         harness.add_subrack_device(subrack_id, subrack_address)
-        harness.add_daq_instance(daq_id)
-        harness.add_daq_device(
+        harness.set_daq_instance()
+        harness.set_daq_device(
             daq_id,
             address=None,  # dynamically get address of DAQ instance
         )

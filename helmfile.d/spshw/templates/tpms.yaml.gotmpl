@@ -9,14 +9,14 @@
 {{- $tpm_instances := dict}}
 {{- $tpm_simulators := dict}}
 
-{{- range $station_id, $station_spec := $merged.array.stations}}
+{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $station_enabled := true}}
 {{- if hasKey $station_spec "enabled"}}
 {{- $station_enabled = $station_spec.enabled}}
 {{- end }}
 
-{{- $station_number := int $station_id}}
 {{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
 
 {{- range $tpm_id, $tpm_spec := $tpm_specs}}
@@ -27,8 +27,11 @@
 {{- end }}
 
 {{- if $tpm_enabled}}
-{{- $tpm_number := printf "%d" (add (mul $station_number 16) -16 (int $tpm_id))}}
-{{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack" "subrack_slot" "nodeSelector"}}
+{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+{{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
+
+{{- $_ := set $tpm_instance "tile_id" (int $tpm_id)}}
+{{- $_ := set $tpm_instance "subrack" (printf "%s-%d" $station_name (int $tpm_spec.subrack))}}
 
 {{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
 {{- if $tpm_logging_level_defaults}}
@@ -41,11 +44,12 @@
 {{- $_ := set $tpm_instance "test_config" 1}}
 {{- end}}
 
-{{- $_ := set $tpm_instances $tpm_number $tpm_instance}}
+{{- $_ := set $tpm_instances (printf "%s-%02d" $station_name (int $tpm_id)) $tpm_instance}}
 {{- end}}
 
 {{- end}}
 
+{{- end}}
 {{- end}}
 
 {{- if $tpm_instances}}

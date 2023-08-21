@@ -3,13 +3,13 @@ Defines the deployment for SpsStation Tango devices.
 
   deviceServers:
     spsstations:
-      1:
+      "n3-2":
         cabinet_network_address: 10.0.0.0
         subracks:
-        - "1"
+        - "n3-2-1"
         tpms:
-        - "10"
-        - "13"
+        - "n3-2-10"
+        - "n3-2-13"
         logging_level_default: 5
 
 */}}
@@ -19,36 +19,35 @@ name: "spsstation-{{.Release.Name}}"
 function: ska-low-mccs-spshw-spsstation
 domain: ska-low-mccs-spshw
 instances:
-{{- range $id := keys $spsstations}}
-  - {{printf "spsstation-%03d" (int $id)}}
+{{- range $name := keys $spsstations}}
+  - {{printf "spsstation-%s" $name}}
 {{- end}}
 command: SpsStation
 server:
   name: "SpsStation"
   instances:
-{{- range $id, $this_spsstation := $spsstations}}
-{{- $spsstation_id := int $id}}
-    - name: {{printf "spsstation-%03d" $spsstation_id}}
+{{- range $name, $this_spsstation := $spsstations}}
+    - name: {{printf "spsstation-%s" $name}}
       classes:
         - name: "SpsStation"
           devices:
-            - name: {{printf "low-mccs/spsstation/%03d" $spsstation_id}}
+            - name: {{printf "low-mccs/spsstation/%s" $name}}
               properties:
                 - name: "StationId"
                   values:
-                    - {{quote $spsstation_id}}
+                    - {{quote $this_spsstation.station_id}}
                 - name: "CabinetNetworkAddress"
                   values:
                     - {{quote $this_spsstation.cabinet_network_address}}
                 - name: "SubrackFQDNs"
                   values:
 {{- range $subrack := $this_spsstation.subracks}}
-                    - {{printf "low-mccs/subrack/%04d" (int $subrack)}}
+                    - {{printf "low-mccs/subrack/%s" $subrack}}
 {{- end}}
                 - name: "TileFQDNs"
                   values:
 {{- range $tpm := $this_spsstation.tpms}}
-                    - {{printf "low-mccs/tile/%04d" (int $tpm)}}
+                    - {{printf "low-mccs/tile/%s" $tpm}}
 {{- end}}
 {{- with $this_spsstation.logging_level_default}}
                 - name: "LoggingLevelDefault"

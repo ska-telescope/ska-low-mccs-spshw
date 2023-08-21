@@ -9,14 +9,14 @@
 {{- $subrack_instances := dict}}
 {{- $subrack_simulators := dict}}
 
-{{- range $station_id, $station_spec := $merged.array.stations}}
+{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $station_enabled := true}}
 {{- if hasKey $station_spec "enabled"}}
 {{- $station_enabled = $station_spec.enabled}}
 {{- end }}
 
-{{- $station_number := int $station_id}}
 {{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
 
 {{- range $subrack_id, $subrack_spec := $subrack_specs}}
@@ -27,7 +27,8 @@
 {{- end }}
 
 {{- if $subrack_enabled}}
-{{- $subrack_number := printf "%d" (add $station_number $station_number -2 (int $subrack_id))}}
+{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+{{- $subrack_number := printf "%s-%d" $station_name (int $subrack_id)}}
 {{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
 {{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
 {{- if $subrack_logging_level_defaults}}
@@ -45,6 +46,7 @@
 {{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
 {{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
 {{- $_ := set $subrack_instances $subrack_number $subrack_instance}}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

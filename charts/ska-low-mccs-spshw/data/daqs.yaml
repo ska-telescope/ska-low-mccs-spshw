@@ -3,8 +3,8 @@ Defines the deployment for MccsDaqReceiver Tango devices.
 
   deviceServers:
     daqs:
-      1:
-        host: daq-simulator-1
+      "s1-2":
+        host: daq-simulator-s1-2
         port: 50051
         receiver_interface: eth0
         receiver_ip: ""
@@ -18,25 +18,23 @@ name: daq-receiver-{{.Release.Name}}
 function: ska-low-mccs-spshw-daq-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $id, $this_daq := $daqs}}
-{{- $daq_id := int $id}}
-  - {{printf "daq-%03d" $daq_id}}
+{{- range $daq_id, $this_daq := $daqs}}
+  - {{printf "daq-%s" $daq_id}}
 {{- end}}
 command: "MccsDaqReceiver"
 server:
   name: "MccsDaqReceiver"
   instances:
-{{- range $id, $this_daq := $daqs}}
-{{- $daq_id := int $id}}
-    - name: {{printf "daq-%03d" $daq_id}}
+{{- range $daq_id, $this_daq := $daqs}}
+    - name: {{printf "daq-%s" $daq_id}}
       classes:
       - name: "MccsDaqReceiver"
         devices:
-        - name: {{printf "low-mccs/daqreceiver/%03d" $daq_id}}
+        - name: {{printf "low-mccs/daqreceiver/%s" $daq_id}}
           properties:
           - name: "DaqId"
             values:
-            - {{quote $daq_id}}
+            - {{quote $this_daq.id}}
           - name: "ReceiverInterface"
             values:
             - {{quote $this_daq.receiver_interface}}

@@ -3,7 +3,7 @@ Defines the deployment for MccsSubrack Tango devices.
 
   deviceServers:
     subracks:
-      1:
+      s3-2-1:
         srmb_host: 10.0.10.80
         srmb_port: 8081
         nodeSelector:
@@ -19,18 +19,18 @@ function: ska-low-mccs-spshw-subrack
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_subrack := $subracks}}
-  - {{printf "subrack-%04d" (int $key)}}
+  - {{printf "subrack-%s" $key}}
 {{- end}}
 command: MccsSubrack
 server: 
   name: "MccsSubrack"
   instances:
 {{- range $key, $this_subrack := $subracks}}
-    - name: {{printf "subrack-%04d" (int $key)}}
+    - name: {{printf "subrack-%s" $key}}
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs/subrack/%04d" (int $key)}}
+        - name: {{printf "low-mccs/subrack/%s" $key}}
           properties:
           - name: "SubrackIp"
             values: 

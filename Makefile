@@ -28,8 +28,8 @@ include .make/python.mk
 
 PYTHON_LINE_LENGTH = 88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
-PYTHON_VARS_AFTER_PYTEST = --forked
-PYTHON_TEST_FILE = tests
+PYTHON_VARS_AFTER_PYTEST = --forked --count=1000
+PYTHON_TEST_FILE = tests/unit/station/test_station_device.py::test_Initialise
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests

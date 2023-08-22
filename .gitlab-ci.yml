@@ -73,6 +73,7 @@ psi-low-k8s-test:
     TANGO_HOST: "tango-databaseds.$KUBE_NAMESPACE:10000"
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
     K8S_HELMFILE_ENV: psi-low
+    STATION_LABEL: psi-low
     PASS_PROXY_CONFIG: "yes"
     JUNITXML_REPORT_PATH: build/reports/psi-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/psi-low-cucumber.json

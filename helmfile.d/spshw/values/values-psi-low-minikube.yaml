@@ -1,13 +1,15 @@
 overrides:
   array:
-    stations:
-      "1":
-        sps:
-          subracks:
-            "1":
-              nodeSelector: ~
-          tpms:
-            "10":
-              nodeSelector: ~
-            "13":
-              nodeSelector: ~
+    station_clusters:
+      "p1":
+        stations:
+          "1":
+            sps:
+              subracks:
+                "1":
+                  nodeSelector: ~
+              tpms:
+                "10":
+                  nodeSelector: ~
+                "13":
+                  nodeSelector: ~

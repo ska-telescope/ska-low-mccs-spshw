@@ -3,13 +3,14 @@ Defines the deployment for SpsStation Tango devices.
 
   deviceServers:
     spsstations:
-      "n3-2":
+      "s8-1":
+        station_id: 345
         cabinet_network_address: 10.0.0.0
         subracks:
-        - "n3-2-1"
+        - "s8-1-1"
         tpms:
-        - "n3-2-10"
-        - "n3-2-13"
+        - "s8-1-10"
+        - "s8-1-13"
         logging_level_default: 5
 
 */}}

@@ -3,8 +3,9 @@ Defines the deployment for MccsDaqReceiver Tango devices.
 
   deviceServers:
     daqs:
-      "s1-2":
-        host: daq-simulator-s1-2
+      "s8-1":
+        id: 345
+        host: daq-simulator-s8-1
         port: 50051
         receiver_interface: eth0
         receiver_ip: ""

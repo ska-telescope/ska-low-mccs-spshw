@@ -105,44 +105,47 @@ image:
 
 deviceServers: {} # e.g....
   # spsstations:
-  #   1:
+  #   "s8-1":
+  #     station_id: 345
   #     cabinet_network_address: 10.0.0.0
   #     subracks:
-  #     - "1"
+  #     - "s8-1-1"
   #     tpms:
-  #     - "10"
-  #     - "13"
+  #     - "s8-1-10"
+  #     - "s8-1-13"
   #     logging_level_default: 5
   # calibrationstores:
-  #   1:
+  #   "s8-1":
   #     logging_level_default: 5
   # mockfieldstations:
-  #   1:
+  #   "s8-1":
   #     logging_level_default: 5
   # stationcalibrators:
-  #   1:
+  #   "s8-1":
   #     logging_level_default: 5
   # daqs:
-  #   1:
-  #     host: daq-simulator-1
+  #   "s8-1":
+  #     id: 345
+  #     host: daq-simulator-s8-1
   #     port: 50051
   #     receiver_interface: eth0
   #     receiver_ip: ""
   #     receiver_port: 4660
   #     logging_level_default: 5
   # subracks:
-  #   1:
-  #     srmb_host: subrack-simulator-1
+  #   "s8-1-1":
+  #     srmb_host: subrack-simulator-s8-1
   #     srmb_port: 8081
   #     logging_level_default: 5
   #     nodeSelector:
   #       kubernetes.io/hostname: psi-node3
   # tpms:
-  #   10:
+  #   "s8-1-10":
+  #     tile_id: 10
   #     host: 10.0.10.201
   #     port: 10000
   #     version: tpm_v1_6
-  #     subrack: 1
+  #     subrack: "s8-1-1"
   #     subrack_slot: 1
   #     simulation_config: 1
   #     test_config: 1
@@ -152,12 +155,12 @@ deviceServers: {} # e.g....
 
 simulators: {} # e.g.
   # daqs:
-  #   1:
-  #     host: daq-simulator-1
+  #   "s8-1":
+  #     host: daq-simulator-s8-1
   #     port: 50051
   # subracks:
-  #   1:
-  #     srmb_host: subrack-simulator-1
+  #   "s8-1-1":
+  #     srmb_host: subrack-simulator-s8-1
   #     srmb_port: 8081
 
 pgadmin4:

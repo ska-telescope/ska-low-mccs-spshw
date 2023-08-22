@@ -58,38 +58,50 @@ which currently has one subrack and two TPMs, is:
    platform:
      metadata:
        version: 0.0.3
-       description: A platform configuration specification for the PSI-Low.
+       description: A platform configuration specification for the PSI-Low.   
+
      cluster:
        domain: cluster.local
+       services:
+         jupyterhub: true
+         taranta-platform: true
+       daq:
+         storage_class: nfss1
+         node_selector:
+           kubernetes.io/hostname: psi-node3
+   
      array:
        name: psi-low
-       stations:
-         "1":
-           name: psi-low
-           sps:
-             subracks:
-               "1":
-                 srmb_host: 10.0.10.80
-                 srmb_port: 8081
-                 nodeSelector:
-                   kubernetes.io/hostname: psi-node3
-             tpms:
-               "10":
-                 host: 10.0.10.218
-                 port: 10000
-                 version: tpm_v1_6
-                 subrack: 1
-                 subrack_slot: 2
-                 nodeSelector:
-                   kubernetes.io/hostname: psi-node3
-               "13":
-                 host: 10.0.10.215
-                 port: 10000
-                 version: tpm_v1_6
-                 subrack: 1
-                 subrack_slot: 5
-                 nodeSelector:
-                   kubernetes.io/hostname: psi-node3
+       station_clusters:
+         "p1":
+           stations:
+             "1":
+               id: 1
+               name: psi-low
+               sps:
+                 subracks:
+                   "1":
+                     srmb_host: 10.0.10.80
+                     srmb_port: 8081
+                     nodeSelector:
+                       kubernetes.io/hostname: psi-node3
+                 tpms:
+                   "10":
+                     host: 10.0.10.218
+                     port: 10000
+                     version: tpm_v1_6
+                     subrack: 1
+                     subrack_slot: 2
+                     nodeSelector:
+                       kubernetes.io/hostname: psi-node3
+                   "13":
+                     host: 10.0.10.215
+                     port: 10000
+                     version: tpm_v1_6
+                     subrack: 1
+                     subrack_slot: 5
+                     nodeSelector:
+                       kubernetes.io/hostname: psi-node3
 
 Subsequent files specify default values and overrides.
 There are two keys:
@@ -115,12 +127,14 @@ There are two keys:
 
      overrides:
        array:
-         stations:
-           "1":
-             sps:
-               tpms:
-                 "10":
-                   logging_level_default: 5
+         station_clusters:
+           "p1":
+             stations:
+               "1":
+                 sps:
+                   tpms:
+                     "10":
+                       logging_level_default: 5
 
   Two special keys are supported:
 
@@ -133,15 +147,17 @@ There are two keys:
 
        overrides:
          array:
-           stations:
-             "1":
-               sps:
-                 calibration_store:
-                   enabled: false
-                 mock_field_station:
-                   enabled: false
-                 station_calibrator:
-                   enabled: false
+           station_clusters:
+             "p1":
+               stations:
+                 "1":
+                   sps:
+                     calibration_store:
+                       enabled: false
+                     mock_field_station:
+                       enabled: false
+                     station_calibrator:
+                       enabled: false
 
     One can also disable an entire station, and then enable only certain
     devices:
@@ -150,15 +166,17 @@ There are two keys:
 
        overrides:
          array:
-           stations:
-             "1":
-               enabled: false
-               sps:
-                 tpms:
-                   "10":
-                     enabled: true
-                   "13":
-                     enabled: true
+           station_clusters:
+             "p1":
+               stations:
+                 "1":
+                   enabled: false
+                   sps:
+                     tpms:
+                       "10":
+                         enabled: true
+                       "13":
+                         enabled: true
 
   * The ``simulated`` key indicates that devices should run against a simulator,
     or should simulate their interactions with hardware.
@@ -174,18 +192,20 @@ There are two keys:
 
        overrides:
          array:
-           stations:
-             "1":
-               sps:
-                 subracks:
-                   "1":
-                     simulated: true
+           station_clusters:
+             "p1":
+               stations:
+                 "1":
+                   sps:
+                     subracks:
+                       "1":
+                         simulated: true
 
 --------------------------------
 Direct deployment of helm charts
 --------------------------------
 It is possible to deploy helm charts directly.
-However note that helm chart configuration is handled by helmfile,
+However note that platform-specific chart configuration is handled by helmfile,
 so the helm chart values files are expected to provide
 a deterministic, fully-configured specification
 of what devices and simulators should be deployed.
@@ -195,25 +215,27 @@ For example:
 
    deviceServers:
      subracks:
-       1:
-         logging_level_default: 5
-         nodeSelector:
-           kubernetes.io/hostname: psi-node3
-         srmb_host: subrack-simulator-1
+       "s8-1-1":
+         srmb_host: subrack-simulator-s8-1
          srmb_port: 8081
-     tpms:
-       10:
-         host: 10.0.10.218
          logging_level_default: 5
          nodeSelector:
            kubernetes.io/hostname: psi-node3
+     tpms:
+       "s8-1-10":
+         tile_id: 10
+         host: 10.0.10.201
          port: 10000
-         subrack: 1
-         subrack_slot: 2
          version: tpm_v1_6
-   
+         subrack: "s8-1-1"
+         subrack_slot: 1
+         simulation_config: 1
+         test_config: 1
+         logging_level_default: 5
+         nodeSelector:
+           kubernetes.io/hostname: psi-node3
    simulators:
      subracks:
-       1:
-         srmb_host: subrack-simulator-1
+       "s8-1-1":
+         srmb_host: subrack-simulator-s8-1
          srmb_port: 8081

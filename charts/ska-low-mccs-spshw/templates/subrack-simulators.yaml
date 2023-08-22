@@ -3,8 +3,8 @@ Deploy the subrack simulator/s.
 
   simulators:
     subracks:
-      1:
-        srmb_host: subrack-simulator-1
+      "s8-1-1":
+        srmb_host: subrack-simulator-s8-1
         srmb_port: 8081
 
 */}}

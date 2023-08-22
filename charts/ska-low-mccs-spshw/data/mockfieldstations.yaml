@@ -3,7 +3,7 @@ Defines the deployment for mock field station Tango devices.
 
   deviceServers:
     mockfieldstations:
-      1:
+      "s1-2":
         logging_level_default: 5
 
 */}}
@@ -15,18 +15,18 @@ function: ska-low-mccs-spshw-mockfieldstation-tango
 domain: ska-low-mccs-spshw
 instances:
 {{- range $id := (keys $mock_field_stations)}}
-  - {{printf "mockfieldstation-%03d" (int $id)}}
+  - {{printf "mockfieldstation-%s" $id}}
 {{- end}}
 command: MockFieldStation
 server:
   name: "MockFieldStation"
   instances:
 {{- range $id, $this_mock_field_station := $mock_field_stations}}
-    - name: {{printf "mockfieldstation-%03d" (int $id)}}
+    - name: {{printf "mockfieldstation-%s" $id}}
       classes:
         - name: "MockFieldStation"
           devices:
-            - name: {{printf "low-mccs/mockfieldstation/%03d" (int $id)}}
+            - name: {{printf "low-mccs/mockfieldstation/%s" $id}}
               properties:
 {{- if (hasKey $this_mock_field_station "logging_level_default")}}
                 - name: "LoggingLevelDefault"

@@ -92,9 +92,20 @@ def subrack_address_fixture() -> tuple[str, int] | None:
     return None
 
 
+@pytest.fixture(name="station_label", scope="module")
+def station_label_fixture() -> str | None:
+    """
+    Return the name of the station under test.
+
+    :return: the name of the station under test.
+    """
+    return os.environ.get("STATION_LABEL")
+
+
 @pytest.fixture(name="functional_test_context", scope="module")
 def functional_test_context_fixture(
     true_context: bool,
+    station_label: str | None,
     subrack_id: int,
     subrack_address: tuple[str, int] | None,
     daq_id: int,
@@ -104,6 +115,7 @@ def functional_test_context_fixture(
 
     :param true_context: whether to test against an existing Tango
         deployment
+    :param station_label: name of the station under test.
     :param subrack_id: ID of the subrack Tango device.
     :param subrack_address: the address of a subrack server if one is
         already running; otherwise None.
@@ -111,14 +123,14 @@ def functional_test_context_fixture(
 
     :yields: a Tango context containing the devices under test
     """
-    harness = SpsTangoTestHarness()
+    harness = SpsTangoTestHarness(station_label)
 
     if not true_context:
         if subrack_address is None:
             harness.add_subrack_simulator(subrack_id)
         harness.add_subrack_device(subrack_id, subrack_address)
-        harness.add_daq_instance(daq_id)
-        harness.add_daq_device(
+        harness.set_daq_instance()
+        harness.set_daq_device(
             daq_id,
             address=None,  # dynamically get address of DAQ instance
         )

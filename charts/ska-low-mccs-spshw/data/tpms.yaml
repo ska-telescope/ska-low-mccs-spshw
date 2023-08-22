@@ -3,11 +3,12 @@ Defines the deployment for MccsTile Tango devices.
 
   deviceServers:
     tpms:
-      10:
+      n3-2-01:
+        tile_id: 1
         host: 10.0.10.201
         port: 10000
         version: tpm_v1_6
-        subrack: 1
+        subrack: n3-2-1
         subrack_slot: 1
         simulation_config: 1
         test_config: 1
@@ -24,25 +25,25 @@ function: ska-low-mccs-spshw-tile
 domain: ska-low-mccs-spshw
 instances:
 {{- range $key, $this_tile := $tiles}}
-  - {{printf "tile-%04d" (int $key)}}
+  - {{printf "tile-%s" $key}}
 {{- end}}
 command: MccsTile
 server: 
   name: MccsTile
   instances:
 {{- range $key, $this_tile := $tiles}}
-    - name: {{printf "tile-%04d" (int $key)}}
+    - name: {{printf "tile-%s" $key}}
       classes:
       - name: MccsTile
         devices:
-        - name: {{printf "low-mccs/tile/%04d" (int $key)}}
+        - name: {{printf "low-mccs/tile/%s" $key}}
           properties:
           - name: "TileId"
             values:
-            - {{quote $key}}
+            - {{quote $this_tile.tile_id}}
           - name: "SubrackFQDN"
             values:
-            - {{printf "low-mccs/subrack/%04d" (int $this_tile.subrack) | quote}}
+            - {{printf "low-mccs/subrack/%s" $this_tile.subrack | quote}}
           - name: "SubrackBay"
             values:
             - {{quote $this_tile.subrack_slot}}

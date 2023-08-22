@@ -83,7 +83,7 @@ class SpsStation(SKAObsDevice):
         version = f"{device_name} Software Version: {self._version_id}"
         properties = (
             f"Initialised {device_name} device with properties:\n"
-            f"\tStationFQDN: low-mccs/station/{self.StationId:03}\n"
+            f"\tStationId: {self.StationId}\n"
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tCabinetNetworkAddress: {self.CabinetNetworkAddress}\n"

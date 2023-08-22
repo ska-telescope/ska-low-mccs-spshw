@@ -3,8 +3,8 @@ Deploy the DAQ simulator/s.
 
   simulators:
     daqs:
-      1:
-        host: daq-simulator-1
+      "s8-1":
+        host: daq-simulator-s8-1
         port: 50051
 
 */}}

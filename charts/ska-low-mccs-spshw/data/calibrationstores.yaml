@@ -6,7 +6,7 @@ so configure like this:
 
   deviceServers:
     calibrationstores:
-      1:
+      "s1-2":
         logging_level_default: 5
 
 */}}
@@ -19,19 +19,18 @@ function: ska-low-mccs-spshw-calibrationstore-tango
 domain: ska-low-mccs-spshw
 instances:
 {{- range $id := (keys $calibration_stores)}}
-  - {{printf "calibrationstore-%03d" (int $id)}}
+  - {{printf "calibrationstore-%s" $id}}
 {{- end}}
 command: MccsCalibrationStore
 server:
   name: "MccsCalibrationStore"
   instances:
 {{- range $id, $this_calibration_store := $calibration_stores}}
-{{- $calibration_store_id := int $id}}
-    - name: {{printf "calibrationstore-%03d" $calibration_store_id}}
+    - name: {{printf "calibrationstore-%s" $id}}
       classes:
         - name: "MccsCalibrationStore"
           devices:
-            - name: {{printf "low-mccs/calibrationstore/%03d" $calibration_store_id}}
+            - name: {{printf "low-mccs/calibrationstore/%s" $id}}
               properties:
                 - name: "DatabaseHost"
                   values:

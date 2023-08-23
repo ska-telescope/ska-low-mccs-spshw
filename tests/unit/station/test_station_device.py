@@ -464,7 +464,21 @@ def test_Initialise(
         pm.__get__ = getter  # type: ignore[assignment]
         type(tile).fpgasUnixTime = pm
 
+    # First let's check the initial state
+    assert station_device.adminMode == AdminMode.OFFLINE
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    change_event_callbacks["state"].assert_not_called()
+
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
 
     csp_ingest_address = "123.234.123.234"
     csp_ingest_port = 1234

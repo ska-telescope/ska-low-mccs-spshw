@@ -1,3 +1,4 @@
+# Added TPM2 in simulation mode, To test with real hardware, We need to comment everything starting from overrides.
 defaults:
   logging_level_default: 5
 
@@ -14,6 +15,8 @@ overrides:
           tpms:
             "10":
               simulated: true
+            "13":
+              simulated: true  
 
 {{- /* TODO: https://github.com/roboll/helmfile/issues/1242#issuecomment-655423707
 Some services, such as jupyterhub and some taranta services,

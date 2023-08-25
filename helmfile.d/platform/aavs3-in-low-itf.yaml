@@ -32,17 +32,17 @@ platform:
             sps:
               subracks:
                 "1":
-                  srmb_host: 10.0.10.32
+                  srmb_host: 10.135.155.132
                   srmb_port: 8081
               tpms:
                 "1":
-                  host: 10.0.10.162
+                  host: 10.135.155.141
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
                   subrack_slot: 3
                 "2":
-                  host: 10.0.10.164
+                  host: 10.135.155.145
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1

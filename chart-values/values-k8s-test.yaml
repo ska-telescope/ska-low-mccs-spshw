@@ -1,13 +1,22 @@
+global:
+  cluster_domain: cluster.local
+
 simulators:
   subracks:
     1:
       host: subrack-simulator-1
 
+# ska-low-mccs-daq:
+#   receivers: # DAQ Server. (backend)
+#     1: {}
+      # gpu_limit: 1
+      # runtimeclassname: nvidia
+
 deviceServers:  # e.g....
   tpms:
     instances:
       1:
-        host: 10.0.10.201
+        host: "tpms-tile-0001"
         port: 10000
         version: tpm_v1_6
         subrack: "1"
@@ -31,8 +40,8 @@ deviceServers:  # e.g....
     instances:
       1:
         logging_level: 5
-receivers:
-  1: {}
+# receivers:
+#   1: {}
   # receivers:
   #   1:
   #     # external_ip: # optional: if provided, this is the IP address of an external DAQ receiver
@@ -41,3 +50,6 @@ receivers:
   #     server_node_selector: {}  # optional
   #     server_annotations: {}  # optional
   #     server_affinity: {}  # optional
+receivers:
+  1:
+    host: "daq-receiver-001"

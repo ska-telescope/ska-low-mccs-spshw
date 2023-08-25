@@ -135,19 +135,17 @@ pgadmin4:
   ingress:
     enabled: true
 
+# ska-low-mccs-daq:
+#   receivers: # DAQ Server. (backend)
+#     1: {}
+      # gpu_limit: 1
+      # runtimeclassname: nvidia
+
 ska-low-mccs-spshw:
   simulators:
     subracks:
       1:
         host: subrack-simulator-1
-  # receivers:
-  #   1:
-  #     # external_ip: # optional: if provided, this is the IP address of an external DAQ receiver
-  #     port:  # optional: defaults to 50051
-  #     storage: daq-data  # must refer to a PVC: pre-existing or created above
-  #     server_node_selector: {}  # optional
-  #     server_annotations: {}  # optional
-  #     server_affinity: {}  # optional
   receivers:
     1: {}
       # external_ip: # optional: if provided, this is the IP address of an external DAQ receiver
@@ -158,45 +156,47 @@ ska-low-mccs-spshw:
       # server_affinity: {}  # optional
       # runtimeclassname: nvidia # optional: must refer to a RunTimeClass existing in the cluster.
       # gpu_limit: "1" # optional
-  # deviceServers:  # e.g....
-  #   receivers:
-  #       1:
-  #         # external_ip: # optional: if provided, this is the IP address of an external DAQ receiver
-  #         # port:  # optional: defaults to 50051
-  #         # storage: daq-data  # must refer to a PVC: pre-existing or created above
-  #         # server_node_selector: {}  # optional
-  #         # server_annotations: {}  # optional
-  #         # server_affinity: {}  # optional
-  #   stations:
-  #     instances:
-  #       1:
-  #         cabinet_network_address: 10.0.0.0
-  #         subracks: [1]
-  #         tpms: [1]
-  #   stationcalibrators:
-  #     instances:
-  #       1:
-  #         field_station: 1
-  #         calibration_store: 1
-  #   calibrationstores:
-  #     instances:
-  #       1:
-  #         logging_level: 5
-  #   mockfieldstations:
-  #     instances:
-  #       1:
-  #         logging_level: 5
-  #   tpms:
-  #     instances:
-  #       1:
-  #         host: 10.0.10.201
-  #         port: 10000
-  #         version: tpm_v1_6
-  #         subrack: "1"
-  #         subrack_bay: 1
-  #     logging_level_default: 5
-  #     simulation_config: 1
-  #     test_config: 1
-  #     resources:
-  #       requests:
-  #         memory: 512Mi
+
+  deviceServers:  # e.g....
+    stations:
+      instances:
+        1:
+          cabinet_network_address: 10.0.0.0
+          subracks: [1]
+          tpms: [1]
+    stationcalibrators:
+      instances:
+        1:
+          field_station: 1
+          calibration_store: 1
+    calibrationstores:
+      instances:
+        1:
+          logging_level: 5
+    mockfieldstations:
+      instances:
+        1:
+          logging_level: 5
+    tpms:
+      instances:
+        1:
+          host: 10.0.10.201
+          port: 10000
+          version: tpm_v1_6
+          subrack: "1"
+          subrack_bay: 1
+      logging_level_default: 5
+      simulation_config: 1
+      test_config: 1
+      resources:
+        requests:
+          memory: 512Mi
+
+  receivers: # DAQ Tango device. (frontend)
+    1:
+      host: "daq-receiver-001"  # optional: hostname of a pre-existing DAQ
+      # port: 50051  # optional: defaults to 50051
+      # receiver_interface: net1  # optional: defaults to "eth0"
+      # receiver_ip: ""  # empty = Determine from interface name
+      # receiver_port: 5660  # optional: defaults to 4660
+      # logging_level_default: 5

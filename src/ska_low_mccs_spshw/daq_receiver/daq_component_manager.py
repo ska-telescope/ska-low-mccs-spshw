@@ -17,7 +17,8 @@ from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskS
 from ska_low_mccs_daq_interface import DaqClient
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
-
+import functools
+print = functools.partial(print, flush=True)  # noqa: A001
 __all__ = ["DaqComponentManager"]
 
 
@@ -326,7 +327,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
     @check_communicating
     def start_bandpass_monitor(
         self: DaqComponentManager,
-        argin: dict[str, Any],
+        argin: str,
         task_callback: Optional[Callable] = None,
     ) -> tuple[ResultCode, str]:
         """
@@ -335,7 +336,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         The MccsDaqReceiver will begin monitoring antenna bandpasses
             and producing plots of the spectra.
 
-        :param argin: A json dictionary with keywords
+        :param argin: A json string with keywords
             - station_config_path
             Path to a station configuration file.
             - plot_directory
@@ -355,13 +356,104 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: a task status and response message
         """
-        return self._daq_client.start_bandpass_monitor(json.dumps(argin))
+        print("SUBMITTING BANDPASS START")
+        return self.submit_task(
+            self._start_bandpass_monitor,
+            args=[argin],
+            task_callback=task_callback,
+        )
+    
+    @check_communicating
+    def _start_bandpass_monitor(
+        self: DaqComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start monitoring antenna bandpasses.
+
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json string with keywords
+            - station_config_path
+            Path to a station configuration file.
+            - plot_directory
+            Directory in which to store bandpass plots.
+            - monitor_rms
+            Whether or not to additionally produce RMS plots.
+            Default: False.
+            - auto_handle_daq
+            Whether DAQ should be automatically reconfigured,
+            started and stopped without user action if necessary.
+            This set to False means we expect DAQ to already
+            be properly configured and listening for traffic
+            and DAQ will not be stopped when `StopBandpassMonitor`
+            is called.
+            Default: False.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        print("IN BANDPASS START")
+        if task_callback:
+            task_callback(status=TaskStatus.QUEUED)
+        # rc, msg = self._daq_client.start_bandpass_monitor(argin)
+        # if task_callback:
+        #     task_callback(status=rc, result=msg)
+        try:
+            for response in self._daq_client.start_bandpass_monitor(argin):
+                x_bandpass_plot: str = None
+                y_bandpass_plot: str = None
+                rms_plot: str = None
+                print(f"GOT RESPONSE: {response}")
+                if task_callback is not None:
+                    task_callback(
+                        status=TaskStatus(response["result_code"]),
+                        result=response["message"],
+                    )
+                print("1")
+                if "x_bandpass_plot" in response:
+                    if response["x_bandpass_plot"] is not (None or [None]):
+                        x_bandpass_plot = response["x_bandpass_plot"]
+                        #self._component_state_callback(x_bandpass_plot=x_bandpass_plot)
+                        print(f"x_bandpass_plot: {x_bandpass_plot}")
+                print("2")
+                if "y_bandpass_plot" in response:
+                    if response["y_bandpass_plot"] is not (None or [None]):
+                        y_bandpass_plot = response["y_bandpass_plot"]
+                        #self._component_state_callback(y_bandpass_plot=y_bandpass_plot)
+                        print(f"y_bandpass_plot: {y_bandpass_plot}")
+                print("3")
+                if "rms_plot" in response:
+                    if response["rms_plot"] is not (None or [None]):
+                        rms_plot = response["rms_plot"]
+                        #self._component_state_callback(rms_plot=rms_plot)
+                        print(f"rms_plot: {rms_plot}")
+                # Call if at least 1 isn't None.
+                all_plots = [x_bandpass_plot, y_bandpass_plot, rms_plot]
+                print(f"all plots: {all_plots}")
+                if not all(plot == [None] for plot in all_plots):
+                    print("CALLING CB")
+                    self._component_state_callback(x_bandpass_plot=x_bandpass_plot, y_bandpass_plot=y_bandpass_plot, rms_plot=rms_plot)
+                print("END OF RESPONSE CHECK")
+
+        except Exception as e:  # pylint: disable=broad-exception-caught  # XXX
+            print(f"CAUGHT EXCEPTION: {e}")
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=f"Exception: {e}",
+                )
+            return
+        print("EXITING START BANDPASS")
 
     @check_communicating
     def stop_bandpass_monitor(
         self: DaqComponentManager,
         task_callback: Optional[Callable] = None,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Stop monitoring antenna bandpasses.
 
@@ -370,4 +462,4 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :param task_callback: Update task state, defaults to None
         """
-        self._daq_client.stop_bandpass_monitor()
+        return self._daq_client.stop_bandpass_monitor()

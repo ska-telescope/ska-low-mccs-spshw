@@ -1,36 +1,54 @@
 # SPSHW values for Low ITF.
-# All IP addresses are TBD.
+global:
+  minikube: false
+  cluster_domain: lowitf.internal.skao.int
+
 facility:
   subracks:
     instances:
       1:
-        host: 10.135.0.1  # TODO
+        host: 10.0.10.32
         port: 8081
   tpms:
-    version: tpm_v1_6
-    port: 10000
     instances:
-      1:
-        host: 10.135.1.10  # TODO
-        subrack: "1"
-        subrack_bay: 1
+#        1:
+#          host: 10.0.10.162
+#          port: 10000
+#          version: tpm_v1_6
+#          subrack: "1"
+#          subrack_bay: 3
       2:
-        host: 10.135.1.11  # TODO
+        host: 10.0.10.164
+        port: 10000
+        version: tpm_v1_6
         subrack: "1"
-        subrack_bay: 2
-
-simulators:
-  subracks:
-    1:
-      host: subrack-simulator-1
+        subrack_bay: 7
 
 deviceServers:
   subracks:
+    reachable_from: au-itf-cloud03
+    enabled: true
     logging_level_default: 5
   tpms:
+    reachable_from: au-itf-cloud03
     logging_level_default: 5
-    simulation_config: 1
-    test_config: 1
 
 receivers:
-  1: {}
+  1:
+    host: daq-receiver-001 # optional: if provided, this is the IP address of an external DAQ receiver
+    # port:  # optional: defaults to 50051
+    # storage: daq-data  # must refer to a PVC: pre-existing or created above
+    # server_node_selector: {}  # optional
+    # server_annotations: {}  # optional
+    # server_affinity: {}  # optional
+    runtimeclassname: nvidia # optional: must refer to a RunTimeClass existing in the cluster.
+    gpu_limit: "1" # optional
+
+image:
+  registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+  name: ska-low-mccs-spshw
+  tag: 0.6.0
+  pullPolicy: IfNotPresent
+
+nodeSelector:
+  kubernetes.io/hostname: au-itf-cloud03

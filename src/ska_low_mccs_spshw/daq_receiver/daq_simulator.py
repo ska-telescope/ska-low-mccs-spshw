@@ -19,7 +19,7 @@ from enum import IntEnum
 from typing import Any, Callable, Iterator, Optional, TypeVar, cast
 
 from pyaavs import station
-from ska_control_model import ResultCode
+from ska_control_model import ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import run_server_forever
 
 __all__ = ["DaqSimulator"]
@@ -179,6 +179,7 @@ class DaqSimulator:
 
         :yield: a status update.
         """
+        print("SIMULATOR START")
         self._modes = convert_daq_modes(modes_to_start)
         yield "LISTENING"
 
@@ -260,7 +261,7 @@ class DaqSimulator:
     def start_bandpass_monitor(
         self: DaqSimulator,
         argin: str,
-    ) -> tuple[ResultCode, str]:
+    ) -> Iterator[tuple[TaskStatus, str, str|None, str|None, str|None]]:
         """
         Start monitoring antenna bandpasses.
 
@@ -287,7 +288,8 @@ class DaqSimulator:
         :return: a task status and response message
         """
         if self._monitoring_bandpass:
-            return (ResultCode.REJECTED, "Bandpass monitor is already active.")
+            yield (TaskStatus.REJECTED, "Bandpass monitor is already active.", None, None, None)
+            return
 
         self._stop_bandpass = False
         params: dict[str, Any] = json.loads(argin)
@@ -295,74 +297,87 @@ class DaqSimulator:
             station_config_path: str = params["station_config_path"]
             plot_directory: str = params["plot_directory"]
         except KeyError:
-            return (
-                ResultCode.REJECTED,
-                "Param `argin` must have keys for `station_config_path` and "
-                "`plot_directory`",
+            yield (
+                TaskStatus.REJECTED,
+                "Param `argin` must have keys for `station_config_path` "
+                "and `plot_directory`", None, None, None
             )
+            return
         auto_handle_daq: bool = cast(bool, params.get("auto_handle_daq", False))
         if self._config["append_integrated"]:
             if not auto_handle_daq:
-                return (
-                    ResultCode.REJECTED,
+                yield (
+                    TaskStatus.REJECTED,
                     "Current DAQ config is invalid. "
-                    "The `append_integrated` option must be set to false for bandpass "
-                    "monitoring.",
+                    "The `append_integrated` option must be set to false "
+                    "for bandpass monitoring.", None, None, None
                 )
+                return
             self.configure({"append_integrated": False})
 
         if "INTEGRATED_CHANNEL_DATA" not in self._modes:
             if not auto_handle_daq:
-                return (
-                    ResultCode.REJECTED,
-                    "INTEGRATED_CHANNEL_DATA consumer must be running before bandpasses"
-                    " can be monitored.",
+                yield (
+                    TaskStatus.REJECTED,
+                    "INTEGRATED_CHANNEL_DATA consumer must be running "
+                    "before bandpasses can be monitored.", None, None, None
                 )
+                return
             self.start(modes_to_start="INTEGRATED_CHANNEL_DATA")
 
         if not os.path.exists(station_config_path) or not os.path.isfile(
             station_config_path
         ):
-            return (
-                ResultCode.REJECTED,
-                f"Specified configuration file ({station_config_path}) does not exist.",
+            yield (
+                TaskStatus.REJECTED,
+                f"Specified configuration file ({station_config_path}) does not exist.", None, None, None
             )
+            return
 
         station.load_configuration_file(station_config_path)
         station_conf = station.configuration
         # Extract station name
         station_name = station_conf["station"]["name"]
         if station_name.upper() == "UNNAMED":
-            return (
-                ResultCode.REJECTED,
-                f"Please set station name in configuration file {station_config_path},"
-                " currently unnamed.",
+            yield (
+                TaskStatus.REJECTED,
+                "Please set station name in configuration file "
+                f"{station_config_path}, currently unnamed.", None, None, None
             )
+            return
 
         # Check that the station is configured to transmit data over 1G
         if station_conf["network"]["lmc"]["use_teng_integrated"]:
-            return (
-                ResultCode.REJECTED,
+            yield (
+                TaskStatus.REJECTED,
                 f"Station {station_config_path} must be configured to send "
-                "integrated data over the 1G network, and each station "
-                "should define a different destination port. Please check",
+                "integrated data over the 1G network, and each station should "
+                "define a different destination port. Please check", None, None, None
             )
+            return
 
         # Create plotting directory structure
         if not self.create_plotting_directory(plot_directory, station_name):
-            return (
-                ResultCode.FAILED,
-                f"Unable to create plotting directory at: {plot_directory}",
+            yield (
+                TaskStatus.FAILED,
+                f"Unable to create plotting directory at: {plot_directory}", None, None, None
             )
+            return
 
         self._monitoring_bandpass = True
+        yield (TaskStatus.IN_PROGRESS, "Bandpass monitor active", None, None, None)
+
+        i=0 # So the attribute can iterate.
         while not self._stop_bandpass:
-            time.sleep(1)
+            yield (TaskStatus.IN_PROGRESS, "plot sent", f"fake_x_bandpass_plot_{i}", f"fake_y_bandpass_plot_{i}", f"fake_rms_plot_{i}",)
+            i+=1
+            time.sleep(5)
+
         if auto_handle_daq:
             self.stop()
         self._monitoring_bandpass = False
 
-        return (ResultCode.OK, "Bandpass monitoring complete.")
+        yield (TaskStatus.COMPLETED, "Bandpass monitoring complete.", None, None, None)
 
     def stop_bandpass_monitor(self: DaqSimulator) -> tuple[ResultCode, str]:
         """
@@ -377,21 +392,18 @@ class DaqSimulator:
         self: DaqSimulator,
         parent: str,
         station_name: str,
-        return_value: Optional[bool] = True,
     ) -> bool:
         """
         Create plotting directory structure for this station.
 
-        This method will always return `True` unless `return_value` is overridden.
+        This method will always return `True` unless parent=="invalid_directory"
 
         :param parent: Parent plotting directory
         :param station_name: Station name
-        :param return_value: Value this method should return.
 
-        :return: `True` unless overridden to return `False`
+        :return: `False` if parent=="invalid_directory" else `True`
         """
-        assert return_value is not None
-        return return_value
+        return not (parent == "invalid_directory")
 
 
 def main() -> None:

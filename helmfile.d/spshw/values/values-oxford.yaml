@@ -1,0 +1,13 @@
+defaults:
+  logging_level_default: 5
+
+overrides:
+  array:
+    stations:
+      "1":
+        sps:
+          subracks:
+            "1":
+              srmb_host: subrack_simulator
+              srmb_port: 8081
+              simulated: true

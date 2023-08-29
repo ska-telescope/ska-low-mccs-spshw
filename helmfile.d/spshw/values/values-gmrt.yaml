@@ -1,0 +1,19 @@
+# Added TPM2 in simulation mode, To test with real hardware, We need to comment everything starting from overrides.
+defaults:
+  logging_level_default: 5
+
+overrides:
+  array:
+    stations:
+      "1":
+        sps:
+          daq:
+            simulated: true
+          subracks:
+            "1":
+              simulated: true
+          tpms:
+            "10":
+              simulated: true
+            "13":
+              simulated: true  

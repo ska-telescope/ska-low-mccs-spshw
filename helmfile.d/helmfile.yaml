@@ -15,7 +15,7 @@ environments:
       - platform/aa0.5/aa0-5-s9-5.yaml
       - platform/aa0.5/aa0-5-s10-3.yaml
       - platform/aa0.5/aa0-5-s10-6.yaml
-      - spshw/values/values-aa0-5.yaml.gotmpl
+      - spshw/values/values-aa0-5.yaml
   aa0.5-minikube:
     values:
       - platform/aa0.5/aa0-5.yaml
@@ -25,56 +25,67 @@ environments:
       - platform/aa0.5/aa0-5-s9-5.yaml
       - platform/aa0.5/aa0-5-s10-3.yaml
       - platform/aa0.5/aa0-5-s10-6.yaml
-      - spshw/values/values-aa0-5.yaml.gotmpl
+      - spshw/values/values-aa0-5.yaml
       - platform/minikube.yaml
   aavs3:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml
       - platform/aavs3.yaml
-      - spshw/values/values-aavs3.yaml.gotmpl
+      - spshw/values/values-aavs3.yaml
   aavs3-minikube:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml
       - platform/aavs3.yaml
-      - spshw/values/values-aavs3.yaml.gotmpl
+      - spshw/values/values-aavs3.yaml
       - platform/minikube.yaml
   aavs3-in-low-itf:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3-in-low-itf.yaml
       - platform/aavs3-in-low-itf.yaml
-      - spshw/values/values-aavs3-in-low-itf.yaml.gotmpl
+      - spshw/values/values-aavs3-in-low-itf.yaml
   aavs3-in-low-itf-minikube:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3-in-low-itf.yaml
       - platform/aavs3-in-low-itf.yaml
-      - spshw/values/values-aavs3-in-low-itf.yaml.gotmpl
+      - spshw/values/values-aavs3-in-low-itf.yaml
       - platform/minikube.yaml
   arcetri:
     values:
       - platform/arcetri.yaml
-      - spshw/values/values-arcetri.yaml.gotmpl
+      - spshw/values/values-arcetri.yaml
   gmrt:
     values:
       - platform/gmrt.yaml
-      - spshw/values/values-gmrt.yaml.gotmpl
+      - spshw/values/values-gmrt.yaml
   oxford:
     values:
       - platform/oxford.yaml
-      - spshw/values/values-oxford.yaml.gotmpl
+      - spshw/values/values-oxford.yaml
   psi-low:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=c0120fa49d0e8dba79a035a225f65be15eb23dc6
       - platform/psi-low.yaml
-      - spshw/values/values-psi-low.yaml.gotmpl
+      - spshw/values/values-psi-low.yaml
   psi-low-minikube:
     values:
       # - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=c0120fa49d0e8dba79a035a225f65be15eb23dc6
       - platform/psi-low.yaml
-      - spshw/values/values-psi-low.yaml.gotmpl
+      - spshw/values/values-psi-low.yaml
       - platform/minikube.yaml
       - spshw/values/values-psi-low-minikube.yaml
 ---
 
+values:
+{{- $_jupyterhub := dig "platform" "cluster" "services" "jupyterhub" false .Values}}
+{{- $jupyterhub := dig "overrides" "cluster" "services" "jupyterhub" $_jupyterhub .Values}}
+{{- $_taranta_platform := dig "platform" "cluster" "services" "taranta-platform" false .Values}}
+{{- $taranta_platform := dig "overrides" "cluster" "services" "taranta-platform" $_taranta_platform .Values}}
+  - jupyterhub:
+      enabled: {{not $jupyterhub}}
+  - taranta-platform:
+      enabled: {{not $taranta_platform}}
+
+---
 repositories:
   - name: skao
     url: https://artefact.skao.int/repository/helm-internal

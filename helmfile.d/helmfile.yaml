@@ -81,13 +81,21 @@ environments:
 ---
 
 values:
+{{- $overrides := dict}}
+{{- if hasKey .Values "overrides"}}
+{{- $overrides = .Values.overrides}}
+{{- end}}
+{{- $merged := mergeOverwrite .Values.platform $overrides}}
+  - platform:
+{{toYaml $merged | indent 6}}
+
 {{- $_jupyterhub := dig "platform" "cluster" "services" "jupyterhub" false .Values}}
 {{- $jupyterhub := dig "overrides" "cluster" "services" "jupyterhub" $_jupyterhub .Values}}
 {{- $_taranta_platform := dig "platform" "cluster" "services" "taranta-platform" false .Values}}
 {{- $taranta_platform := dig "overrides" "cluster" "services" "taranta-platform" $_taranta_platform .Values}}
-  - jupyterhub:
+    jupyterhub:
       enabled: {{not $jupyterhub}}
-  - taranta-platform:
+    taranta-platform:
       enabled: {{not $taranta_platform}}
 
 ---

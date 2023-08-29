@@ -1,15 +1,11 @@
 {{- /* Configure the subrack Tango devices. */}}
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $platform := .Values.platform}}
 {{- $defaults := .Values.defaults}}
 
 {{- $subrack_instances := dict}}
 {{- $subrack_simulators := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
 {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $station_enabled := true}}

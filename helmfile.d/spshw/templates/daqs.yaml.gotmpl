@@ -1,15 +1,11 @@
 {{- /* Configure the DAQ Tango devices. */}}
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{$merged := mergeOverwrite .Values.platform $overrides}}
+{{- $platform := .Values.platform}}
 {{- $defaults := .Values.defaults}}
 
 {{- $daq_instances := dict}}
 {{- $daq_simulators := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
 {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $daq_spec := dig "sps" "daq" dict $station_spec}}

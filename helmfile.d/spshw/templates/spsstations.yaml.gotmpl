@@ -1,14 +1,11 @@
 {{- /* Configure the SPS Station Tango devices. */}}
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
 {{- $defaults := .Values.defaults}}
 
 {{- $spsstation_instances := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
 {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $spsstation_spec := dig "sps" "sps_station" dict $station_spec}}

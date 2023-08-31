@@ -17,8 +17,8 @@ Defines the deployment for MccsTile Tango devices.
           kubernetes.io/hostname: psi-node3
 
 */}}
-{{- $tiles := dig "tpms" dict .Values.deviceServers}}
 {{- $node_selector := dict}}
+{{- $tiles := dig "tpms" dict .Values.deviceServers}}
 {{- if $tiles}}
 name: tile-{{.Release.Name}}
 function: ska-low-mccs-spshw-tile
@@ -74,6 +74,8 @@ server:
             values:
             - {{quote .}}
 {{- end}}
+{{- /* TODO: ska-tango-utils does not let us set nodeSelector per device server,
+so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_tile.nodeSelector}}
 {{- $_ := mergeOverwrite $node_selector .}}
 {{- end}}

@@ -4,18 +4,15 @@ the calibration stores,
 the mock field stations,
 and the station calibrators.
 */}}
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
 {{- $defaults := .Values.defaults}}
 
 {{- $instances := dict}}
 
 {{- range $device_type := list "calibration_store" "mock_field_station" "calibrator"}}
 {{- $_ := set $instances $device_type dict}}
-{{- range $station_cluster_id, $station_cluster_spec := $merged.array.station_clusters}}
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
 {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
 
 {{- $device_spec := dig "sps" $device_type dict $station_spec}}

@@ -1,12 +1,9 @@
 {{- /* Configure global chart values. */}}
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{- $merged := mergeOverwrite .Values.platform $overrides}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
 global:
-  cluster_domain: {{dig "cluster" "domain" "cluster.local" $merged}}
-  minikube: {{dig "cluster" "minikube" false $merged}}
+  cluster_domain: {{dig "cluster" "domain" "cluster.local" $platform}}
+  minikube: {{dig "cluster" "minikube" false $platform}}
 
 {{- if (hasKey .Values "ska-tango-base")}}
 {{- if (hasKey (index .Values "ska-tango-base") "enabled")}}

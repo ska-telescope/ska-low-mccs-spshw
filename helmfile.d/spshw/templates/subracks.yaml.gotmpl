@@ -1,5 +1,6 @@
 {{- /* Configure the subrack Tango devices. */}}
-{{- $platform := .Values.platform}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
 {{- $defaults := .Values.defaults}}
 
 {{- $subrack_instances := dict}}

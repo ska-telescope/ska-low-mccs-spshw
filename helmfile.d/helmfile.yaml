@@ -90,23 +90,6 @@ environments:
       - spshw/values/values-psi-low.yaml
       - platform/minikube.yaml
       - spshw/values/values-psi-low-minikube.yaml
----
-
-values:
-{{- $overrides := dict}}
-{{- if hasKey .Values "overrides"}}
-{{- $overrides = .Values.overrides}}
-{{- end}}
-{{- $merged := mergeOverwrite .Values.platform $overrides}}
-  - platform:
-{{toYaml $merged | indent 6}}
-
-{{- $jupyterhub := dig "cluster" "services" "jupyterhub" false $merged}}
-{{- $taranta_platform := dig "cluster" "services" "taranta-platform" false $merged}}
-    jupyterhub:
-      enabled: {{not $jupyterhub}}
-    taranta-platform:
-      enabled: {{not $taranta_platform}}
 
 ---
 
@@ -130,24 +113,32 @@ releases:
       - spshw/templates/subracks.yaml.gotmpl
       - spshw/templates/tpms.yaml.gotmpl
       - spshw/templates/daqs.yaml.gotmpl
+
   - name: ska-ser-skuid
     namespace: ska-low-mccs
     chart: skao/ska-ser-skuid
     version: 3.3.3
     values:
       - values/skuid.yaml
+
+{{- $_jupyterhub_provided := dig "platform" "cluster" "services" "jupyterhub" false .Values}}
+{{- $jupyterhub_provided := dig "overrides" "cluster" "services" "jupyterhub" $_jupyterhub_provided .Values}}
+{{- if not $jupyterhub_provided}}
   - name: jupyterhub
     namespace: ska-low-mccs
     chart: jupyterhub/jupyterhub
     version: 3.0.0
     values:
       - values/jupyterhub.yaml
-    condition: jupyterhub.enabled
+{{- end}}
+
+{{- $_taranta_platform_provided := dig "platform" "cluster" "services" "taranta-platform" false .Values}}
+{{- $taranta_platform_provided := dig "overrides" "cluster" "services" "taranta-platform" $_taranta_platform_provided .Values}}
+{{- if not $taranta_platform_provided}}
   - name: taranta-dashboard
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-dashboard
     version: 1.4.0
-    condition: taranta-platform.enabled
     values:
       - ingress:
           enabled: true
@@ -156,22 +147,23 @@ releases:
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-dashboard-pvc
     version: 1.4.0
-    condition: taranta-platform.enabled
   - name: taranta-auth
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-auth
     version: 0.1.6
-    condition: taranta-platform.enabled
     values:
       - ingress:
           enabled: true
           hostname: "*"
+{{- end}}
+
   - name: taranta
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta
     version: 2.2.4
     values:
       - values/taranta.yaml
+
   - name: tangogql
     namespace: ska-low-mccs
     chart: skao/ska-tango-tangogql

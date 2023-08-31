@@ -4,7 +4,8 @@ the calibration stores,
 the mock field stations,
 and the station calibrators.
 */}}
-{{- $platform := .Values.platform}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
 {{- $defaults := .Values.defaults}}
 
 {{- $instances := dict}}

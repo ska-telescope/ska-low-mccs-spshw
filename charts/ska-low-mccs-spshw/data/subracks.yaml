@@ -12,7 +12,6 @@ Defines the deployment for MccsSubrack Tango devices.
 
 */}}
 {{- $subracks := dig "subracks" dict .Values.deviceServers}}
-{{- $node_selector := dict}}
 {{- if $subracks}}
 name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-spshw-subrack
@@ -27,6 +26,10 @@ server:
   instances:
 {{- range $key, $this_subrack := $subracks}}
     - name: {{printf "subrack-%s" $key}}
+{{- with $this_subrack.nodeSelector}}
+      nodeSelector:
+{{toYaml . | indent 8}}
+{{- end}}
       classes:
       - name: "MccsSubrack"
         devices:
@@ -43,9 +46,6 @@ server:
             values: 
             - {{quote .}}
 {{- end}}
-{{- with $this_subrack.nodeSelector}}
-{{- $_ := mergeOverwrite $node_selector .}}
-{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -60,8 +60,4 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
-{{- with $node_selector}}
-nodeSelector:
-{{toYaml . | indent 2}}
-{{- end}}
 {{- end}}

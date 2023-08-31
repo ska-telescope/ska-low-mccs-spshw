@@ -18,7 +18,6 @@ Defines the deployment for MccsTile Tango devices.
 
 */}}
 {{- $tiles := dig "tpms" dict .Values.deviceServers}}
-{{- $node_selector := dict}}
 {{- if $tiles}}
 name: tile-{{.Release.Name}}
 function: ska-low-mccs-spshw-tile
@@ -33,6 +32,10 @@ server:
   instances:
 {{- range $key, $this_tile := $tiles}}
     - name: {{printf "tile-%s" $key}}
+{{- with $this_tile.nodeSelector}}
+      nodeSelector:
+{{toYaml . | indent 8}}
+{{- end}}
       classes:
       - name: MccsTile
         devices:
@@ -74,9 +77,6 @@ server:
             values:
             - {{quote .}}
 {{- end}}
-{{- with $this_tile.nodeSelector}}
-{{- $_ := mergeOverwrite $node_selector .}}
-{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -91,8 +91,4 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
-{{- with $node_selector}}
-nodeSelector:
-{{toYaml . | indent 2}}
-{{- end}}
 {{- end}}

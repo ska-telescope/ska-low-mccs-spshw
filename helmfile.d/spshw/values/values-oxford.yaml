@@ -3,11 +3,13 @@ defaults:
 
 overrides:
   array:
-    stations:
-      "1":
-        sps:
-          subracks:
-            "1":
-              srmb_host: subrack_simulator
-              srmb_port: 8081
-              simulated: true
+    station_clusters:
+      "o1":
+        stations:
+          "1":
+            sps:
+              subracks:
+                "1":
+                  srmb_host: subrack_simulator
+                  srmb_port: 8081
+                  simulated: true

@@ -114,12 +114,16 @@ releases:
       - spshw/templates/tpms.yaml.gotmpl
       - spshw/templates/daqs.yaml.gotmpl
 
+{{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
+{{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}
+{{- if not $tango_host_provided}}
   - name: ska-tango-base
     namespace: ska-low-mccs
     chart: skao/ska-tango-base
     version: 0.3.10
     values:
       - values/globals.yaml.gotmpl
+{{- end}}
 
   - name: ska-ser-skuid
     namespace: ska-low-mccs

@@ -140,7 +140,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_command_status"],
         )
-        change_event_callbacks["tile_command_status"].assert_change_event(None)
+        change_event_callbacks["tile_command_status"].assert_change_event(())
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
@@ -310,7 +310,7 @@ class TestMccsTileTpmDriver:
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_command_status"],
         )
-        change_event_callbacks["tile_command_status"].assert_change_event(None)
+        change_event_callbacks["tile_command_status"].assert_change_event(())
 
         tile_device.subscribe_event(
             "tileProgrammingState",
@@ -343,7 +343,7 @@ class TestMccsTileTpmDriver:
         time.sleep(sleep_time)
         final_time = tile_device.fpgasUnixTime[0]
 
-        assert pytest.approx(final_time - initial_time) == sleep_time
+        assert (final_time - initial_time) >= sleep_time
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.

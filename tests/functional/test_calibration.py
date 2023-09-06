@@ -607,9 +607,16 @@ def when_get_calibration(
     :param frequency_channel: the frequency channel to get a solution for
     :return: the retrieved calibration solution
     """
-    return station_calibrator.GetCalibration(
+    retrieved_solution = station_calibrator.GetCalibration(
         json.dumps({"frequency_channel": frequency_channel})
     )
+    # TODO: Fix this race condition properly
+    if not list(retrieved_solution):
+        time.sleep(5.0)
+        retrieved_solution = station_calibrator.GetCalibration(
+            json.dumps({"frequency_channel": frequency_channel})
+        )
+    return retrieved_solution
 
 
 @when(

@@ -151,7 +151,7 @@ def test_off_on(
         EventType.CHANGE_EVENT,
         change_event_callbacks["boardCurrent"],
     )
-    change_event_callbacks["boardCurrent"].assert_change_event(None)
+    change_event_callbacks["boardCurrent"].assert_change_event([])
     change_event_callbacks["boardCurrent"].assert_not_called()
 
     # Now let's put the device online
@@ -171,7 +171,7 @@ def test_off_on(
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
 
     subrack_device.subscribe_event(
         "longRunningCommandResult",
@@ -205,7 +205,7 @@ def test_off_on(
     )
 
     change_event_callbacks["boardCurrent"].assert_change_event([])
-    assert subrack_device.boardCurrent is None
+    assert not list(subrack_device.boardCurrent)
 
     # Okay, let's turn it back on again,
     # but we can't be bothered tracking the command status this time.
@@ -262,7 +262,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     change_event_callbacks["state"].assert_not_called()
 
     for attribute_name, expected_initial_value in [
-        ("tpmPresent", None),
+        ("tpmPresent", []),
         ("tpmCount", 0),
         ("tpm1PowerState", PowerState.UNKNOWN),
         ("tpm2PowerState", PowerState.UNKNOWN),
@@ -272,20 +272,20 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("tpm6PowerState", PowerState.UNKNOWN),
         ("tpm7PowerState", PowerState.UNKNOWN),
         ("tpm8PowerState", PowerState.UNKNOWN),
-        ("backplaneTemperatures", None),
-        ("boardTemperatures", None),
-        ("boardCurrent", None),
-        ("powerSupplyCurrents", None),
-        ("powerSupplyFanSpeeds", None),
-        ("powerSupplyPowers", None),
-        ("powerSupplyVoltages", None),
-        ("subrackFanSpeeds", None),
-        ("subrackFanSpeedsPercent", None),
-        ("subrackFanModes", None),
-        ("tpmCurrents", None),
-        ("tpmPowers", None),
-        # ("tpmTemperatures", None),  # Not implemented on SMB
-        ("tpmVoltages", None),
+        ("backplaneTemperatures", []),
+        ("boardTemperatures", []),
+        ("boardCurrent", []),
+        ("powerSupplyCurrents", []),
+        ("powerSupplyFanSpeeds", []),
+        ("powerSupplyPowers", []),
+        ("powerSupplyVoltages", []),
+        ("subrackFanSpeeds", []),
+        ("subrackFanSpeedsPercent", []),
+        ("subrackFanModes", []),
+        ("tpmCurrents", []),
+        ("tpmPowers", []),
+        # ("tpmTemperatures", []),  # Not implemented on SMB
+        ("tpmVoltages", []),
     ]:
         subrack_device.subscribe_event(
             attribute_name,
@@ -356,7 +356,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
 
     subrack_device.subscribe_event(
         "longRunningCommandResult",

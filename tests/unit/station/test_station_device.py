@@ -202,7 +202,7 @@ def test_Off(
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
 
     station_device.subscribe_event(
         "longRunningCommandResult",
@@ -312,7 +312,7 @@ def test_On(
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
 
     station_device.subscribe_event(
         "longRunningCommandResult",
@@ -499,7 +499,7 @@ def test_Initialise(
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
     station_device.subscribe_event(
         "longRunningCommandResult",
         EventType.CHANGE_EVENT,
@@ -609,7 +609,7 @@ def test_Standby(
         change_event_callbacks["command_status"],
     )
 
-    change_event_callbacks["command_status"].assert_change_event(None)
+    change_event_callbacks["command_status"].assert_change_event(())
     station_device.subscribe_event(
         "longRunningCommandResult",
         EventType.CHANGE_EVENT,

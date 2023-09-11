@@ -159,3 +159,8 @@ simulators: {} # e.g.
 
 pgadmin4:
   enabled: false
+
+ska-low-mccs-daq:
+  image:
+    tag: 0.4.0-dev.c1f5f44b2
+    registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq

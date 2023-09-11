@@ -2,6 +2,12 @@
 
 ## unreleased
 
+## 0.10.0
+
+* [MCCS-1775] Fix bug in deployment configuration for minikube platforms
+* [MCCS-1762] update to pytango 9.4.2
+* [MCCS-1697] Support tangodb being provided as a platform service, so we don't need to deploy it ourselves
+
 ## 0.9.0
 
 * [MCCS-1690] remove ska-tango-base

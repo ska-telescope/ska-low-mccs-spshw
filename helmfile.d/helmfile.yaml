@@ -57,11 +57,13 @@ environments:
     values:
       - platform/arcetri.yaml
       - spshw/values/values-arcetri.yaml
+      - platform/minikube.yaml
   gmrt:
     kubeContext: minikube
     values:
       - platform/gmrt.yaml
       - spshw/values/values-gmrt.yaml
+      - platform/minikube.yaml
   low-itf:
     kubeContext: low-itf
     values:
@@ -78,6 +80,7 @@ environments:
     values:
       - platform/oxford.yaml
       - spshw/values/values-oxford.yaml
+      - platform/minikube.yaml
   psi-low:
     kubeContext: psi-low
     values:

@@ -10,8 +10,8 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import threading
-from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Iterator
 
 __all__ = [
     "acquire_timeout",
@@ -20,9 +20,7 @@ __all__ = [
 
 
 @contextmanager
-def acquire_timeout(
-    lock: threading.Lock, timeout: float
-) -> Generator[bool, None, None]:
+def acquire_timeout(lock: threading.Lock, timeout: float) -> Iterator[bool]:
     """
     Create an implementation of a lock context manager with timeout.
 

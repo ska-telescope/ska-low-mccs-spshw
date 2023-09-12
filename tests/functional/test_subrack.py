@@ -22,9 +22,10 @@ import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode, PowerState
-from ska_tango_testing.context import TangoContextProtocol
 from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+
+from tests.harness import SpsTangoTestHarnessContext
 
 TPM_BAY_COUNT = 8
 MAX_SUBRACK_FAN_SPEED = 8000.0
@@ -46,18 +47,19 @@ class FanMode(enum.IntEnum):  # type: ignore[no-redef]
 
 @pytest.fixture(name="subrack_device", scope="module")
 def subrack_device_fixture(
-    tango_harness: TangoContextProtocol,
-    subrack_name: str,
+    functional_test_context: SpsTangoTestHarnessContext,
+    subrack_id: int,
 ) -> tango.DeviceProxy:
     """
     Return the subrack device under test.
 
-    :param tango_harness: a test harness for Tango devices.
-    :param subrack_name: name of the subrack Tango device.
+    :param functional_test_context: the test context in which functional
+        tests are run.
+    :param subrack_id: ID of the subrack Tango device.
 
     :return: the subrack Tango device under test.
     """
-    return tango_harness.get_device(subrack_name)
+    return functional_test_context.get_subrack_device(subrack_id)
 
 
 @scenario("features/subrack.feature", "Monitor and control subrack fan speed")
@@ -185,17 +187,17 @@ def choose_a_tpm(
         "subrack_tpm_present",
         Anything,
     )
-    tpms_present = subrack_device.tpmPresent
-    if tpms_present is None:
+    tpms_present = list(subrack_device.tpmPresent)
+    if not tpms_present:
         change_event_callbacks.assert_change_event(
             "subrack_tpm_present",
             Anything,
         )
-        tpms_present = subrack_device.tpmPresent
+        tpms_present = list(subrack_device.tpmPresent)
 
-    assert tpms_present is not None
+    assert tpms_present
 
-    return 1 + list(tpms_present).index(True)
+    return 1 + tpms_present.index(True)
 
 
 @given("the fan mode is manual")
@@ -227,14 +229,14 @@ def ensure_subrack_fan_mode(
         fan_modes,
     )
 
-    if fan_modes is None:
+    if not fan_modes:
         # We only just put it online / turned it on,
         # so let's wait for a poll to return a real value
         change_event_callbacks.assert_change_event("subrack_fan_mode", Anything)
-    fan_modes = subrack_device.subrackFanModes
-    assert fan_modes is not None
+    fan_modes = list(subrack_device.subrackFanModes)
+    assert fan_modes
 
-    expected_fan_modes = list(fan_modes)
+    expected_fan_modes = fan_modes
     if expected_fan_modes[fan_number - 1] == FanMode.AUTO:
         expected_fan_modes[fan_number - 1] = int(FanMode.MANUAL)
 

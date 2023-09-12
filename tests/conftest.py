@@ -213,31 +213,99 @@ def subrack_device_attribute_values_fixture(
     }
 
 
-@pytest.fixture(name="station_name", scope="session")
-def station_name_fixture() -> str:
+@pytest.fixture(name="subrack_id", scope="session")
+def subrack_id_fixture() -> int:
     """
-    Return the name of the station Tango device.
+    Return the id of the subrack under test.
 
-    :return: the name of the station Tango device.
+    :return: the id of the subrack under test.
     """
-    return "low-mccs/station/001"
+    return 1
 
 
-@pytest.fixture(name="subrack_name", scope="session")
-def subrack_name_fixture() -> str:
+@pytest.fixture(name="tile_id", scope="session")
+def tile_id_fixture() -> int:
     """
-    Return the name of the subrack Tango device.
+    Return the id of the tile under test.
 
-    :return: the name of the subrack Tango device.
+    :return: the id of the tile under test.
     """
-    return "low-mccs/subrack/0001"
+    return 1
 
 
-@pytest.fixture(name="tile_name", scope="session")
-def tile_name_fixture() -> str:
+@pytest.fixture(name="daq_id", scope="session")
+def daq_id_fixture() -> int:
     """
-    Return the name of the subrack Tango device.
+    Return the daq id of this daq receiver.
 
-    :return: the name of the subrack Tango device.
+    :return: the daq id of this daq receiver.
     """
-    return "low-mccs/tile/0001"
+    return 1
+
+
+@pytest.fixture(name="calibration_solutions")
+def calibration_solutions_fixture() -> dict[tuple[int, float], list[float]]:
+    """
+    Fixture that provides sample calibration solutions.
+
+    :return: a sample calibration solution. The keys are tuples of the channel
+        and the outside temperature, and the values are lists of calibration values
+    """
+    return {
+        (23, 25.0): [float(1)] + [0.5 * i for i in range(8)],
+        (45, 25.0): [float(3)] + [1.2 * (i % 2) for i in range(8)],
+        (23, 30.0): [float(5)] + [0.6 * i for i in range(8)],
+        (45, 30.0): [float(4)] + [1.4 * (i % 2) for i in range(8)],
+        (23, 35.0): [float(6)] + [0.7 * i for i in range(8)],
+        (45, 35.0): [float(2)] + [1.6 * (i % 2) for i in range(8)],
+    }
+
+
+@pytest.fixture(name="database_host")
+def database_host_fixture() -> str:
+    """
+    Fixture that provides the database host.
+
+    :return: the database host
+    """
+    return "station-calibration-postgresql"
+
+
+@pytest.fixture(name="database_port")
+def database_port_fixture() -> int:
+    """
+    Fixture that provides the database port.
+
+    :return: the database port
+    """
+    return 5432
+
+
+@pytest.fixture(name="database_name")
+def database_name_fixture() -> str:
+    """
+    Fixture that provides the database name.
+
+    :return: the database name
+    """
+    return "postgres"
+
+
+@pytest.fixture(name="database_admin_user")
+def database_admin_user_fixture() -> str:
+    """
+    Fixture that provides the database admin user.
+
+    :return: the database admin user
+    """
+    return "postgres"
+
+
+@pytest.fixture(name="database_admin_password")
+def database_admin_password_fixture() -> str:
+    """
+    Fixture that provides the database admin password.
+
+    :return: the database admin password
+    """
+    return "secretpassword"

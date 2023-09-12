@@ -2,6 +2,62 @@
 
 ## unreleased
 
+## 0.10.0
+
+* [MCCS-1775] Fix bug in deployment configuration for minikube platforms
+* [MCCS-1762] update to pytango 9.4.2
+* [MCCS-1697] Support tangodb being provided as a platform service, so we don't need to deploy it ourselves
+
+## 0.9.0
+
+* [MCCS-1690] remove ska-tango-base
+* [MCCS-1682] pull in daq chart
+* [MCCS-1681] remote platform spec
+* [MCCS-1678] pair programming updates
+* [MCCS-1587] Outline plan to implement the Functional test shows DAQ metadata are
+* [MCCS-1671] Fix intermittent SpsStation Initialise test
+* [MCCS-1670] support multiple stations in clusters
+* [MCCS-1593] Connect metadata to daq output
+* [MCCS-1664] Add noise to the simulated bandpass
+* [MCCS-1610] helmfile
+* [MCCS-1663] Fix key error in stop_sending_data.
+* [MCCS-1546] Update the IntegratedChannelDataSimulator to create simulated bandpass data
+
+## 0.8.0
+
+* [MCCS-1547] Tile Component Manager and TpmDriver to use the new TileSimulator
+* [MCCS-1650] Updating TPM Firmware to sbf416 version
+
+## 0.7.1
+
+* Updated make submodule.
+
+## 0.7.0
+
+* [MCCS-1565] Updated TPM Driver to Support 40G Gateway
+* [MCCS-1644] Update station name to spsstation
+* [MCCS-1623] Update tango preadulevels type.
+* [MCCS-1456] DAQ Functional Tests
+* [MCCS-1623] Modified TPM driver to support TPM 1.6 preADU
+* [MCCS-1636] Use ska-ser-sphinx-theme
+* [MCCS-1633] Update /docs/src/_static/img/ in MCCS repos
+* [MCCS-1589] Skuid added in the spshw umbrella
+* [MCCS-1579] Add calibration store device, and PostgreSQL database for data storage
+* [MCCS-1518] No warning given if tile device initialised without subrack fqdn
+* [MCCS-1605] Fix intermittent health state test
+* [MCCS-1627] Dependency update
+* [MCCS-1613] Add version logging to device init
+
+## 0.6.0
+
+* [MCCS-1539] DAQ receiver Tango device
+* [MCCS-1529] Kwargs refactor
+* [MCCS-1569] [MCCS-1570] [MCCS-1572] Calibration store device, mock field station device, station calibrator device
+* [MCCS-1451] Tile simulator improvements
+* [mccs-1419] Jupyter notebooks to generate 4 and 8 beams.
+* [MCCS-1525] Tile health model fixes
+* [MCCS-1387] Subrack health
+
 ## 0.5.0
 
 * [MCCS-1412] Chart fixes and improvements

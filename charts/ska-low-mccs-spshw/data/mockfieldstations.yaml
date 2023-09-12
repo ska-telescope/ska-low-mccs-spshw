@@ -1,0 +1,51 @@
+{{- /*
+Defines the deployment for mock field station Tango devices.
+
+  deviceServers:
+    mockfieldstations:
+      "s1-2":
+        logging_level_default: 5
+
+*/}}
+{{- if (hasKey .Values "deviceServers")}}
+{{- $mock_field_stations := dig "mockfieldstations" dict .Values.deviceServers}}
+{{- if $mock_field_stations}}
+name: "mockfieldstation-{{.Release.Name}}"
+function: ska-low-mccs-spshw-mockfieldstation-tango
+domain: ska-low-mccs-spshw
+instances:
+{{- range $id := (keys $mock_field_stations)}}
+  - {{printf "mockfieldstation-%s" $id}}
+{{- end}}
+command: MockFieldStation
+server:
+  name: "MockFieldStation"
+  instances:
+{{- range $id, $this_mock_field_station := $mock_field_stations}}
+    - name: {{printf "mockfieldstation-%s" $id}}
+      classes:
+        - name: "MockFieldStation"
+          devices:
+            - name: {{printf "low-mccs/mockfieldstation/%s" $id}}
+              properties:
+{{- if (hasKey $this_mock_field_station "logging_level_default")}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{quote $this_mock_field_station.logging_level_default}}
+{{- end}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}
+{{- end}}

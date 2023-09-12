@@ -1,21 +1,64 @@
+{{- /*
+Deploy the Tango devices. For example,
+
+  deviceServers:
+    spsstations:
+      "s8-1":
+        station_id: 345
+        cabinet_network_address: 10.0.0.0
+        subracks:
+        - "s8-1-1"
+        tpms:
+        - "s8-1-10"
+        - "s8-1-13"
+        logging_level_default: 5
+    calibrationstores:
+      "s8-1":
+        logging_level_default: 5
+    mockfieldstations:
+      "s8-1":
+        logging_level_default: 5
+    stationcalibrators:
+      "s8-1":
+        logging_level_default: 5
+    daqs:
+      "s8-1":
+        id: 345
+        host: daq-simulator-s8-1
+        port: 50051
+        receiver_interface: eth0
+        receiver_ip: ""
+        receiver_port: 4660
+        logging_level_default: 5
+    subracks:
+      "s8-1-1":
+        srmb_host: subrack-simulator-s8-1
+        srmb_port: 8081
+        logging_level_default: 5
+        nodeSelector:
+          kubernetes.io/hostname: psi-node3
+    tpms:
+      "s8-1-10":
+        tile_id: 10
+        host: 10.0.10.201
+        port: 10000
+        version: tpm_v1_6
+        subrack: "s8-1-1"
+        subrack_slot: 1
+        simulation_config: 1
+        test_config: 1
+        logging_level_default: 5
+        nodeSelector:
+          kubernetes.io/hostname: psi-node3
+*/}}
 {{ $localchart := . }}
-
-{{- $suts := default dict .Values.facility}}
-
-{{- range $type, $specs := .Values.simulators}}
-{{- $_ := set $suts $type (default (dict "instances" dict) (index $suts $type))}}
-{{- range $key, $spec := $specs}}
-{{- $_ := set (index $suts $type).instances $key $spec}}
-{{- end }}
-{{- end }}
-
-{{- $_ := set .Values "deviceServers" (default dict .Values.deviceServers)}}
-{{- $_ := merge .Values.deviceServers $suts}}
 
 {{- range $key, $deviceserver := .Values.deviceServers }}
 
 {{- $filedeviceserver := tpl ($.Files.Get (printf "data/%s.yaml" $key)) $ | fromYaml }}
-{{- $context := dict "name" $key "deviceserver" $filedeviceserver "image" $filedeviceserver.image "local" $localchart}}
+{{- $name := $filedeviceserver.kubernetesName | default $key}}
+
+{{- $context := dict "name" $name "deviceserver" $filedeviceserver "image" $filedeviceserver.image "local" $localchart}}
 {{ template "ska-tango-util.multidevice-config.tpl" $context }}
 {{ template "ska-tango-util.multidevice-sacc-role.tpl" $context }}
 {{ template "ska-tango-util.multidevice-job.tpl" $context }}

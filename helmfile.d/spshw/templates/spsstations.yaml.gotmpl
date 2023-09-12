@@ -1,0 +1,63 @@
+{{- /* Configure the SPS Station Tango devices. */}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
+{{- $defaults := .Values.defaults}}
+
+{{- $spsstation_instances := dict}}
+
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
+{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+
+{{- $spsstation_spec := dig "sps" "sps_station" dict $station_spec}}
+{{- $spsstation_enabled := pluck "enabled" $spsstation_spec $station_spec (dict "enabled" true) | first}}
+
+{{- if $spsstation_enabled}}
+{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+{{- $spsstation_instance := dict}}
+{{- $_ := set $spsstation_instance "station_id" $station_spec.id}}
+
+{{- $spsstation_logging_level_defaults := pluck "logging_level_default" $spsstation_spec $defaults}}
+{{- if $spsstation_logging_level_defaults}}
+{{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
+{{- end }}
+
+{{- $cabinet_address := "0.0.0.0"}}
+{{- $cabinet := dig "sps" "cabinet" "" $station_spec}}
+{{- if $cabinet}}
+{{- $cabinet_address = index $station_cluster_spec "cabinets" $cabinet "network_address"}}
+{{- end}}
+{{- $_ := set $spsstation_instance "cabinet_network_address" $cabinet_address}}
+
+{{- $subracks := list}}
+{{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
+{{- range $subrack_id, $subrack_spec := $subrack_specs}}
+{{- if (dig "enabled" true $subrack_spec)}}
+{{- $subracks = append $subracks (printf "%s-%d" $station_name (int $subrack_id))}}
+{{- end }}
+{{- end }}
+{{- $_ := set $spsstation_instance "subracks" (sortAlpha $subracks)}}
+
+{{- $tpms := list}}
+{{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
+{{- range $tpm_id, $tpm_spec := $tpm_specs}}
+{{- if (dig "enabled" true $tpm_spec)}}
+{{- $tpms = append $tpms (printf "%s-%02d" $station_name (int $tpm_id))}}
+{{- end }}
+{{- end }}
+{{- $_ := set $spsstation_instance "tpms" (sortAlpha $tpms)}}
+
+{{- $_ := set $spsstation_instances $station_name $spsstation_instance}}
+
+{{- end }}
+{{- end }}
+
+{{- end }}
+
+{{- if $spsstation_instances}}
+deviceServers:
+  spsstations:
+{{- range $id, $spec := $spsstation_instances}}
+    {{quote $id}}:
+{{toYaml $spec | indent 6}}
+{{- end }}
+{{- end }}

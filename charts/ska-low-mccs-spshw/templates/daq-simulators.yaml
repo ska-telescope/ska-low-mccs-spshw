@@ -1,0 +1,63 @@
+{{- /*
+Deploy the DAQ simulator/s.
+
+  simulators:
+    daqs:
+      "s8-1":
+        host: daq-simulator-s8-1
+        port: 50051
+
+*/}}
+{{- $image := .Values.image}}
+{{- if hasKey .Values "simulators"}}
+{{- $daq_simulators := dig "daqs" dict .Values.simulators}}
+{{- range $spec := values $daq_simulators}}
+{{- $slug := $spec.host}}
+{{- $port := $spec.port}}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{$slug}}
+  namespace: {{$.Release.Namespace}}
+  labels:
+    component: {{$slug}}
+spec:
+  ports:
+  - name: http
+    port: {{$port}}
+  type: ClusterIP
+  selector:
+    component: {{$slug}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{$slug}}
+  namespace: {{$.Release.Namespace}}
+  labels:
+    component: {{$slug}}
+spec:
+  selector:
+    matchLabels:
+      component: {{$slug}}
+  serviceName: {{$slug}}
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: {{$slug}}
+    spec:
+      containers:
+      - name: {{$slug}}
+{{- with $image}}
+        image: {{.registry}}/{{.name}}:{{.tag}}
+{{- end}}
+        imagePullPolicy: IfNotPresent
+        command:
+          - "DaqSimulator"
+        env:
+          - name: DAQ_SIMULATOR_PORT
+            value: {{$port | quote}}
+{{- end}}
+{{- end}}

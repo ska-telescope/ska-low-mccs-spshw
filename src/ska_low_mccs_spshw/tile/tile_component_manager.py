@@ -25,229 +25,23 @@ from ska_control_model import (
     TestMode,
 )
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_low_mccs_common.component import (
-    MccsBaseComponentManager,
-    check_communicating,
-    check_on,
-)
+from ska_low_mccs_common.component import MccsBaseComponentManager
+from ska_tango_base.base import check_communicating, check_on
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from ..base.component import ObjectComponentManager
-from .dynamic_tpm_simulator import DynamicTpmSimulator
-from .static_tpm_simulator import StaticTpmSimulator
+from .base_tpm_simulator import BaseTpmSimulator
 from .tile_orchestrator import TileOrchestrator
+from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus
 
 __all__ = [
-    "DynamicTpmSimulatorComponentManager",
-    "StaticTpmSimulatorComponentManager",
     "TileComponentManager",
 ]
 
 
-# pylint: disable=too-many-lines
-class _TpmSimulatorComponentManager(ObjectComponentManager):
-    """
-    A component manager for a TPM simulator.
-
-    This is a private class that supports the public component manager
-    classes for static and dynamic TPM simulators.
-    """
-
-    __PASSTHROUGH = [
-        "adc_rms",
-        "apply_pointing_delays",
-        "arp_table",
-        "beamformer_table",
-        "board_temperature",
-        "channeliser_truncation",
-        "pending_data_requests",
-        "clock_present",
-        "configure_40g_core",
-        "configure_integrated_beam_data",
-        "configure_integrated_channel_data",
-        "configure_test_generator",
-        "csp_rounding",
-        "current_tile_beamformer_frame",
-        "download_firmware",
-        "erase_fpga",
-        "firmware_available",
-        "firmware_name",
-        "firmware_version",
-        "fpga1_temperature",
-        "fpga2_temperature",
-        "fpga_current_frame",
-        "fpgas_time",
-        "fpga_reference_time",
-        "get_40g_configuration",
-        "voltages",
-        "temperatures",
-        "currents",
-        "timing",
-        "io",
-        "dsp",
-        "tpm_version",
-        "initialise_beamformer",
-        "initialise",
-        "is_beamformer_running",
-        "is_programmed",
-        "load_calibration_coefficients",
-        "load_pointing_delays",
-        "phase_terminal_count",
-        "pll_locked",
-        "post_synchronisation",
-        "pps_delay",
-        "pps_present",
-        "preadu_levels",
-        "read_address",
-        "read_register",
-        "register_list",
-        "send_data_samples",
-        "set_beamformer_regions",
-        "set_lmc_download",
-        "set_lmc_integrated_download",
-        "start_acquisition",
-        "start_beamformer",
-        "static_delays",
-        "station_id",
-        "stop_beamformer",
-        "stop_data_transmission",
-        "stop_integrated_data",
-        "apply_calibration",
-        "sync_fpgas",
-        "sysref_present",
-        "test_generator_active",
-        "test_generator_input_select",
-        "tile_id",
-        "tpm_status",
-        "tpm_version",
-        "voltage_mon",
-        "write_address",
-        "write_register",
-    ]
-
-    def __getattr__(
-        self: _TpmSimulatorComponentManager, name: str, default_value: Any = None
-    ) -> Any:
-        """
-        Get value for an attribute not found in the usual way.
-
-        Implemented to check against a list of attributes to pass down
-        to the simulator. The intent is to avoid having to implement a
-        whole lot of methods that simply call the corresponding method
-        on the simulator. The only reason this is possible is because
-        the simulator has much the same interface as its component
-        manager.
-
-        :param name: name of the requested attribute
-        :param default_value: value to return if the attribute is not
-            found
-
-        :return: the requested attribute
-        """
-        if name in self.__PASSTHROUGH:
-            return self._get_from_component(name)
-        return default_value
-
-    @check_communicating
-    def _get_from_component(self: _TpmSimulatorComponentManager, name: str) -> Any:
-        """
-        Get an attribute from the component (if we are communicating with it).
-
-        :param name: name of the attribute to get.
-
-        :return: the attribute value
-        """
-        # This one-liner is only a method so that we can decorate it.
-        return getattr(self._component, name)
-
-    def __setattr__(self: _TpmSimulatorComponentManager, name: str, value: Any) -> Any:
-        """
-        Set an attribute on this TPM simulator component manager.
-
-        This is implemented to pass writes to certain attributes to the
-        underlying TPM simulator.
-
-        :param name: name of the attribute for which the value is to be
-            set
-        :param value: new value of the attribute
-        """
-        if name in self.__PASSTHROUGH:
-            self._set_in_component(name, value)
-        else:
-            super().__setattr__(name, value)
-
-    @check_communicating
-    def _set_in_component(
-        self: _TpmSimulatorComponentManager, name: str, value: Any
-    ) -> None:
-        """
-        Set an attribute in the component (if we are communicating with it).
-
-        :param name: name of the attribute to set.
-        :param value: new value for the attribute
-        """
-        # This one-liner is only a method so that we can decorate it.
-        setattr(self._component, name, value)
-
-
-class StaticTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
-    """A component manager for a static TPM simulator."""
-
-    def __init__(
-        self: StaticTpmSimulatorComponentManager,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[..., None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param logger: a logger for this object to use
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be called when the
-            component state changes.
-        """
-        super().__init__(
-            StaticTpmSimulator(logger, component_state_changed_callback),
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-
-class DynamicTpmSimulatorComponentManager(_TpmSimulatorComponentManager):
-    """A component manager for a dynamic TPM simulator."""
-
-    def __init__(
-        self: DynamicTpmSimulatorComponentManager,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[..., None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param logger: a logger for this object to use
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be called when the
-            component state changes.
-        """
-        super().__init__(
-            DynamicTpmSimulator(logger, component_state_changed_callback),
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-
-# pylint: disable=too-many-public-methods,too-many-instance-attributes
+# pylint: disable=too-many-public-methods,too-many-instance-attributes, too-many-lines
 class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
@@ -268,6 +62,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_rate: float = 5.0,
+        _tpm_driver: Optional[Union[TpmDriver, BaseTpmSimulator]] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -305,6 +100,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param update_rate: how often updates to attribute values should be provided.
             This is not necessarily the same as the rate at which
             the instrument is polled.
+        :param _tpm_driver: a optional TpmDriver to inject for testing.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
@@ -322,42 +118,31 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             )
             tpm_version = ""
 
-        tile = cast(
-            Tile12,
-            HwTile(
-                ip=tpm_ip, port=tpm_cpld_port, logger=logger, tpm_version=tpm_version
-            ),
-        )
-
-        self._tpm_driver: Union[
-            TpmDriver,
-            StaticTpmSimulatorComponentManager,
-            DynamicTpmSimulatorComponentManager,
-        ]  # for the type checker
-
         if simulation_mode == SimulationMode.TRUE:
             if test_mode == TestMode.TEST:
-                self._tpm_driver = StaticTpmSimulatorComponentManager(
-                    logger,
-                    self._tpm_communication_state_changed,
-                    self._update_component_state,
-                )
+                tile = TileSimulator(logger)
             else:
-                self._tpm_driver = DynamicTpmSimulatorComponentManager(
-                    logger,
-                    self._tpm_communication_state_changed,
-                    self._update_component_state,
-                )
+                tile = DynamicTileSimulator(logger)
         else:
-            self._tpm_driver = TpmDriver(
-                logger,
-                tile_id,
-                tile,
-                tpm_version,
-                self._tpm_communication_state_changed,
-                self._update_component_state,
-                update_rate=update_rate,
+            tile = cast(
+                Tile12,
+                HwTile(
+                    ip=tpm_ip,
+                    port=tpm_cpld_port,
+                    logger=logger,
+                    tpm_version=tpm_version,
+                ),
             )
+
+        self._tpm_driver = _tpm_driver or TpmDriver(
+            logger,
+            tile_id,
+            tile,
+            tpm_version,
+            self._tpm_communication_state_changed,
+            self._update_component_state,
+            update_rate=update_rate,
+        )
 
         def _update_component_power_state(power_state: PowerState) -> None:
             self._update_component_state(power=power_state)
@@ -1181,7 +966,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[str] = None,
+        start_time: Optional[int] = None,
         delay: Optional[int] = 2,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -1199,7 +984,9 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            success = self._tpm_driver.start_acquisition(start_time, delay)
+            success = self._tpm_driver.start_acquisition(  # type: ignore[assignment]
+                start_time, delay
+            )
         except NotImplementedError:
             raise
         # pylint: disable-next=broad-except

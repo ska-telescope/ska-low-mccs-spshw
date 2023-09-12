@@ -1,0 +1,7 @@
+{{- /* Configure global chart values. */}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
+global:
+  cluster_domain: {{dig "cluster" "domain" "cluster.local" $platform}}
+  minikube: {{dig "cluster" "minikube" false $platform}}
+  tango_host: {{dig "cluster" "services" "tango-base" "tango-host" "" $platform | default "databaseds-tango-base:10000"}}

@@ -13,6 +13,7 @@ import itertools
 import json
 import logging
 import os.path
+import sys
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -44,7 +45,7 @@ __all__ = ["MccsTile", "main"]
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 
-# pylint: disable=too-many-lines, too-many-public-methods
+# pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(SKABaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
@@ -96,8 +97,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._max_workers = 1
         super().init_device()
 
-        message = (
-            "Initialised MccsTile device with properties:\n"
+        self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
+        device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
+        version = f"{device_name} Software Version: {self._version_id}"
+        properties = (
+            f"Initialised {device_name} device with properties:\n"
             f"\tSubrackFQDN: {self.SubrackFQDN}\n"
             f"\tSubrackBay: {self.SubrackBay}\n"
             f"\tTileId: {self.TileId}\n"
@@ -108,7 +113,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
         )
-        self.logger.info(message)
+        self.logger.info(
+            "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
+        )
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -143,7 +150,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """Set up the handler objects for Commands."""
         super().init_command_objects()
 
-        for (command_name, command_object) in [
+        for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
@@ -179,7 +186,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
-        for (command_name, method_name) in [
+        for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
             ("Configure", "configure"),
@@ -1003,20 +1010,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.csp_rounding = rounding
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=(float,),
         max_dim_x=32,
     )
-    def preaduLevels(self: MccsTile) -> list[int]:
+    def preaduLevels(self: MccsTile) -> np.ndarray:
         """
         Get attenuator level of preADU channels, one per input channel.
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        result = self.component_manager.preadu_levels
-        return np.asarray(result)
+        return self.component_manager.preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
-    def preaduLevels(self: MccsTile, levels: list[int]) -> None:
+    def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 
@@ -1416,6 +1422,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(register_name)
 
     class WriteRegisterCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the WriteRegister() command.
 
@@ -1692,9 +1699,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             src_port = kwargs.get("source_port", None)
             dst_ip = kwargs.get("destination_ip", None)
             dst_port = kwargs.get("destination_port", None)
+            rx_port_filter = kwargs.get("rx_port_filter", None)
+            netmask = kwargs.get("netmask", None)
+            gateway_ip = kwargs.get("gateway_ip", None)
 
             self._component_manager.configure_40g_core(
-                core_id, arp_table_entry, src_mac, src_ip, src_port, dst_ip, dst_port
+                core_id,
+                arp_table_entry,
+                src_mac,
+                src_ip,
+                src_port,
+                dst_ip,
+                dst_port,
+                rx_port_filter,
+                netmask,
+                gateway_ip,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -1835,6 +1854,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return handler(argin)
 
     class SetLmcDownloadCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the SetLmcDownload() command.
 
@@ -2623,6 +2643,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class StartBeamformerCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the StartBeamformer(argin) command.
 
@@ -3007,6 +3028,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     class SendDataSamplesCommand(FastCommand):
+        # pylint: disable=line-too-long
         """
         Class for handling the SendDataSamples() command.
 

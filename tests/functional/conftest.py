@@ -8,33 +8,17 @@
 """This module contains pytest-specific test harness for SPSHW functional tests."""
 from __future__ import annotations
 
+import json
 import os
-import socket
-import threading
-import time
-from contextlib import contextmanager
-from types import TracebackType
-from typing import (
-    Any,
-    Callable,
-    ContextManager,
-    Generator,
-    Literal,
-    Optional,
-    Type,
-    Union,
-    cast,
-)
+from time import sleep
+from typing import Iterator
 
 import _pytest
 import pytest
-from ska_control_model import LoggingLevel
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-    TrueTangoContextManager,
-)
+import tango
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+
+from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -87,170 +71,72 @@ def true_context_fixture(request: pytest.FixtureRequest) -> bool:
     return False
 
 
-@pytest.fixture(name="subrack_address_context_manager_factory", scope="module")
-def subrack_address_context_manager_factory_fixture(
-    subrack_simulator_config: dict[str, Any],
-) -> Callable[[], ContextManager[tuple[str, int]]]:
+@pytest.fixture(name="subrack_address", scope="module")
+def subrack_address_fixture() -> tuple[str, int] | None:
     """
-    Return the subrack address context manager factory.
+    Return the address of a subrack.
 
-    That is, return a callable that, when called, provides a context
-    manager that, when entered, returns a subrack host and port, while
-    at the same time ensuring the validity of that host and port.
+    If a real hardware subrack is present, or there is a pre-existing
+    simulator, then this fixture returns the subrack address as a
+    (hostname, port) tuple. If there is no pre-existing subrack server,
+    then this fixture returns None, indicating that the test harness
+    should stand up a subrack simulator server itself.
 
-    This fixture obtains the subrack address in one of two ways:
-
-    Firstly it checks for a `SUBRACK_ADDRESS` environment variable, of
-    the form "localhost:8081". If found, it is expected that a subrack
-    is already available at this host and port, so there is nothing more
-    for this fixture to do. The callable that it returns, will itself
-    return an empty context manager that, when entered, simply yields
-    the specified host and port.
-
-    Otherwise, the callable that this factory returns will be a context
-    manager for a subrack simulator server instance. When entered, that
-    context manager will launch the subrack simulator server, and then
-    yield the host and port on which it is running.
-
-    :param subrack_simulator_config: a keyword dictionary that specifies
-        the desired configuration of the simulator backend.
-
-    :return: a callable that returns a context manager that, when
-        entered, yields the host and port of a subrack server.
+    :return: the address of a subrack, or None if a subrack server is
+        not yet running.
     """
     address_var = "SUBRACK_ADDRESS"
     if address_var in os.environ:
         [host, port_str] = os.environ[address_var].split(":")
-
-        @contextmanager
-        def _yield_address() -> Generator[tuple[str, int], None, None]:
-            yield host, int(port_str)
-
-        return _yield_address
-    else:
-
-        class _SubrackServerContextManager:
-            def __init__(self: _SubrackServerContextManager) -> None:
-                # Imports are deferred until now,
-                # so that we do not try to import from ska_low_mccs_spshw
-                # until we know that we need to.
-                # This allows us to runour functional tests
-                # against a real cluster
-                # from within a test runner pod
-                # that does not have ska_low_mccs_spshw installed.
-                import uvicorn
-
-                from ska_low_mccs_spshw.subrack import SubrackSimulator
-                from ska_low_mccs_spshw.subrack.subrack_simulator_server import (
-                    configure_server,
-                )
-
-                class _ThreadableServer(uvicorn.Server):
-                    def install_signal_handlers(self: _ThreadableServer) -> None:
-                        pass
-
-                server_config = configure_server(
-                    SubrackSimulator(**subrack_simulator_config),
-                    host="127.0.0.1",
-                    port=0,
-                )
-                self._server = _ThreadableServer(config=server_config)
-                self._socket = socket.socket()
-                self._thread = threading.Thread(
-                    target=self._server.run, args=([self._socket],), daemon=True
-                )
-
-            def __enter__(self: _SubrackServerContextManager) -> tuple[str, int]:
-                self._thread.start()
-                while not self._server.started:
-                    time.sleep(1e-3)
-                _, port = self._socket.getsockname()
-                return "127.0.0.1", port
-
-            def __exit__(
-                self: _SubrackServerContextManager,
-                exc_type: Optional[Type[BaseException]],
-                exception: Optional[BaseException],
-                trace: Optional[TracebackType],
-            ) -> Literal[False]:
-                """
-                Exit the context.
-
-                :param exc_type: the type of exception thrown in the with block
-                :param exception: the exception thrown in the with block
-                :param trace: a traceback
-
-                :returns: whether the exception (if any) has been fully handled
-                    by this method and should be swallowed i.e. not re-raised
-
-                :raises ImportError: if this context manager is running in an
-                    environment that does not have ska_low_mccs_spshw installed.
-                """
-                if exc_type is ImportError:
-                    raise ImportError(
-                        """Error: you must do one of the following:
-                        * use "--true-context" flag or TRUE_TANGO_CONTEXT environment
-                          variable to run these tests against a pre-deployed cluster in
-                          which the Tango device under test is already running.
-                        * use SUBRACK_ADDRESS environment variable to specify the host
-                          and port of a subrack server. The test harness will stand up
-                          the Tango device under test to monitor and control the subrack
-                          at that server address.
-                        * run these tests in an environment in which ska_low_mccs_spshw
-                          and its dependencies are installed. The test harness will
-                          stand up its own subrack simulator server, and then stand up
-                          the Tango device under test to monitor and control that
-                          subrack simulator server."""
-                    ) from exception
-
-                self._server.should_exit = True
-                self._thread.join()
-
-                return False
-
-        return _SubrackServerContextManager
+        return host, int(port_str)
+    return None
 
 
-@pytest.fixture(name="tango_harness", scope="module")
-def tango_harness_fixture(
-    subrack_name: str,
-    subrack_address_context_manager_factory: Callable[
-        [], ContextManager[tuple[str, int]]
-    ],
+@pytest.fixture(name="station_label", scope="module")
+def station_label_fixture() -> str | None:
+    """
+    Return the name of the station under test.
+
+    :return: the name of the station under test.
+    """
+    return os.environ.get("STATION_LABEL")
+
+
+@pytest.fixture(name="functional_test_context", scope="module")
+def functional_test_context_fixture(
     true_context: bool,
-) -> Generator[TangoContextProtocol, None, None]:
+    station_label: str | None,
+    subrack_id: int,
+    subrack_address: tuple[str, int] | None,
+    daq_id: int,
+) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Yield a Tango context containing the device/s under test.
 
-    :param subrack_name: name of the subrack Tango device.
-    :param subrack_address_context_manager_factory: a callable that
-         returns a context manager that, when entered, yields the host
-         and port of a subrack.
     :param true_context: whether to test against an existing Tango
         deployment
+    :param station_label: name of the station under test.
+    :param subrack_id: ID of the subrack Tango device.
+    :param subrack_address: the address of a subrack server if one is
+        already running; otherwise None.
+    :param daq_id: the ID of the daq receiver
 
     :yields: a Tango context containing the devices under test
     """
-    tango_context_manager: Union[
-        TrueTangoContextManager, ThreadedTestTangoContextManager
-    ]  # for the type checker
-    if true_context:
-        tango_context_manager = TrueTangoContextManager()
-        with tango_context_manager as context:
-            yield context
-    else:
-        with subrack_address_context_manager_factory() as (host, port):
-            tango_context_manager = ThreadedTestTangoContextManager()
-            cast(ThreadedTestTangoContextManager, tango_context_manager).add_device(
-                subrack_name,
-                "ska_low_mccs_spshw.MccsSubrack",
-                SubrackIp=host,
-                SubrackPort=port,
-                UpdateRate=1.0,
-                LoggingLevelDefault=int(LoggingLevel.DEBUG),
-            )
-            with tango_context_manager as context:
-                yield context
+    harness = SpsTangoTestHarness(station_label)
+
+    if not true_context:
+        if subrack_address is None:
+            harness.add_subrack_simulator(subrack_id)
+        harness.add_subrack_device(subrack_id, subrack_address)
+        harness.set_daq_instance()
+        harness.set_daq_device(
+            daq_id,
+            address=None,  # dynamically get address of DAQ instance
+        )
+
+    with harness as context:
+        yield context
 
 
 @pytest.fixture(name="change_event_callbacks", scope="module")
@@ -268,5 +154,91 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_fan_speeds_percent",
         "subrack_tpm_power_state",
         "subrack_tpm_present",
+        "daq_state",
+        "calibration_store_state",
+        "field_station_state",
+        "station_calibrator_state",
         timeout=30.0,
     )
+
+
+@pytest.fixture(name="acquisition_duration", scope="session")
+def acquisition_duration_fixture() -> int:
+    """
+    Return the duration of data capture in seconds.
+
+    :return: Duration of data capture.
+    """
+    return 2
+
+
+# pylint: disable=inconsistent-return-statements
+def poll_until_consumer_running(
+    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 5
+) -> None:
+    """
+    Poll until device is in wanted state.
+
+    This function recursively calls itself up to `no_of_iters` times.
+
+    :param daq: the DAQ receiver Tango device
+    :param wanted_consumer: the consumer we're waiting for
+    :param no_of_iters: number of times to iterate
+    """
+    status = json.loads(daq.DaqStatus())
+    for consumer in status["Running Consumers"]:
+        if wanted_consumer in consumer:
+            return
+
+    if no_of_iters == 1:
+        pytest.fail(f"Wanted consumer: {wanted_consumer} not started.")
+
+    sleep(1)
+    return poll_until_consumer_running(daq, wanted_consumer, no_of_iters - 1)
+
+
+# pylint: disable=inconsistent-return-statements
+def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -> None:
+    """
+    Poll until device is in wanted state.
+
+    This function recursively calls itself up to `no_of_iters` times.
+
+    :param daq: the DAQ receiver Tango device
+    :param no_of_iters: number of times to iterate
+    """
+    status = json.loads(daq.DaqStatus())
+    if status["Running Consumers"] == []:
+        return
+
+    if no_of_iters == 1:
+        pytest.fail("Consumers not stopped.")
+
+    sleep(1)
+    return poll_until_consumers_stopped(daq, no_of_iters - 1)
+
+
+# pylint: disable=inconsistent-return-statements
+def poll_until_state_change(
+    daq: tango.DeviceProxy, wanted_state: tango.DevState, no_of_iters: int = 5
+) -> None:
+    """
+    Poll until device is in wanted state.
+
+    This function recursively calls itself up to `no_of_iters` times.
+
+    :param daq: the DAQ receiver Tango device
+    :param wanted_state: the state we're waiting for
+    :param no_of_iters: number of times to iterate
+    """
+    if daq.state() == wanted_state:
+        return
+
+    if no_of_iters == 1:
+        pytest.fail(
+            f"device not in desired state, \
+        wanted: {wanted_state}, actual: {daq.state()}"
+        )
+
+    sleep(1)
+    return poll_until_state_change(daq, wanted_state, no_of_iters - 1)

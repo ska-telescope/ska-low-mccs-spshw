@@ -1,0 +1,70 @@
+{{- /*
+Defines the deployment for MccsCalibrationStore Tango devices.
+
+Currently all device properties are hardcoded except the logging level default,
+so configure like this:
+
+  deviceServers:
+    calibrationstores:
+      "s1-2":
+        logging_level_default: 5
+
+*/}}
+{{- if (hasKey .Values "deviceServers")}}
+{{- $namespace := .Release.Namespace}}
+{{- $calibration_stores := dig "calibrationstores" dict .Values.deviceServers}}
+{{- if $calibration_stores}}
+name: calibrationstore-{{.Release.Name}}
+function: ska-low-mccs-spshw-calibrationstore-tango
+domain: ska-low-mccs-spshw
+instances:
+{{- range $id := (keys $calibration_stores)}}
+  - {{printf "calibrationstore-%s" $id}}
+{{- end}}
+command: MccsCalibrationStore
+server:
+  name: "MccsCalibrationStore"
+  instances:
+{{- range $id, $this_calibration_store := $calibration_stores}}
+    - name: {{printf "calibrationstore-%s" $id}}
+      classes:
+        - name: "MccsCalibrationStore"
+          devices:
+            - name: {{printf "low-mccs/calibrationstore/%s" $id}}
+              properties:
+                - name: "DatabaseHost"
+                  values:
+                    - "station-calibration-postgresql"
+                - name: "DatabasePort"
+                  values:
+                    - "5432"
+                - name: "DatabaseName"
+                  values:
+                    - "postgres"
+                - name: "DatabaseAdminUser"
+                  values:
+                    - "postgres"
+                - name: "DatabaseAdminPassword"
+                  values:
+                    - "secretpassword"
+{{- if (hasKey $this_calibration_store "logging_level_default")}}
+                - name: "LoggingLevelDefault"
+                  values:
+                    - {{quote $this_calibration_store.logging_level_default}}
+{{- end}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with .Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml .Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml .Values.readinessProbe | indent 2 }}
+{{- end}}
+{{- end}}

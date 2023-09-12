@@ -15,9 +15,8 @@ import time
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
+from ska_control_model import CommunicationStatus, PowerState
 
-# from ska_control_model import CommunicationStatus
-from ..base.component import ObjectComponent
 from .tile_data import TileData
 from .tpm_status import TpmStatus
 
@@ -25,9 +24,9 @@ __all__ = ["BaseTpmSimulator"]
 
 
 # pylint: disable=too-many-lines,too-many-instance-attributes,too-many-public-methods
-class BaseTpmSimulator(ObjectComponent):
+class BaseTpmSimulator:
     """
-    A simulator for a TPM.
+    A mock TPMDriver for testing tile_component_manager.
 
     :todo: The current TPM driver has a wrapper to make it consistent
         with the interface of this simulator. It would be more better if
@@ -95,17 +94,21 @@ class BaseTpmSimulator(ObjectComponent):
     def __init__(
         self: BaseTpmSimulator,
         logger: logging.Logger,
+        communication_state_changed: Optional[Callable[..., None]] = None,
         component_state_changed_callback: Optional[Callable[..., None]] = None,
     ) -> None:
         """
         Initialise a new TPM simulator instance.
 
         :param logger: a logger for this simulator to use
+        :param communication_state_changed: callback to be called
+            when the communication state changes.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         """
         self.logger = logger
         self._component_state_changed_callback = component_state_changed_callback
+        self._communication_state_changed = communication_state_changed
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
@@ -144,6 +147,42 @@ class BaseTpmSimulator(ObjectComponent):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._is_last: bool
         self._is_first: bool
+        self.communication_state = CommunicationStatus.NOT_ESTABLISHED
+        self._fail_communicate = False
+
+    def start_communicating(self: BaseTpmSimulator) -> None:
+        """
+        Establish communication with the component, then start monitoring.
+
+        :raises ConnectionError: if the attempt to establish
+            communication with the channel fails.
+        """
+        if self.communication_state == CommunicationStatus.ESTABLISHED:
+            return
+
+        if self._communication_state_changed:
+            self._communication_state_changed(CommunicationStatus.NOT_ESTABLISHED)
+            self._communication_state_changed(CommunicationStatus.ESTABLISHED)
+            self.communication_state = CommunicationStatus.ESTABLISHED
+
+        if self._fail_communicate:
+            raise ConnectionError("Failed to connect")
+
+        if self._component_state_changed_callback:
+            self._component_state_changed_callback(power=PowerState.ON)
+            self._component_state_changed_callback(fault=False)
+
+    def stop_communicating(self: BaseTpmSimulator) -> None:
+        """Cease monitoring the component, and break off all communication with it."""
+        if self.communication_state == CommunicationStatus.DISABLED:
+            return
+
+        if self._component_state_changed_callback:
+            self._component_state_changed_callback(power=None, fault=None)
+
+        if self._communication_state_changed:
+            self._communication_state_changed(CommunicationStatus.DISABLED)
+            self.communication_state = CommunicationStatus.DISABLED
 
     @property
     def firmware_available(
@@ -600,13 +639,16 @@ class BaseTpmSimulator(ObjectComponent):
     # pylint: disable=too-many-arguments
     def configure_40g_core(
         self: BaseTpmSimulator,
-        core_id: int,
-        arp_table_entry: int,
-        src_mac: int,
-        src_ip: str,
-        src_port: int,
-        dst_ip: str,
-        dst_port: int,
+        core_id: int = 0,
+        arp_table_entry: int = 0,
+        src_mac: Optional[int] = None,
+        src_ip: Optional[str] = None,
+        src_port: Optional[int] = None,
+        dst_ip: Optional[str] = None,
+        dst_port: Optional[int] = None,
+        rx_port_filter: Optional[int] = None,
+        netmask: Optional[int] = None,
+        gateway_ip: Optional[int] = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -620,6 +662,9 @@ class BaseTpmSimulator(ObjectComponent):
         :param src_port: port of the source
         :param dst_ip: IP address of the destination
         :param dst_port: port of the destination
+        :param rx_port_filter: Filter for incoming packets
+        :param netmask: Netmask
+        :param gateway_ip: Gateway IP
 
         :raises ValueError: Invalid core or ARP table entry
         """
@@ -631,6 +676,9 @@ class BaseTpmSimulator(ObjectComponent):
             "src_port": src_port,
             "dst_ip": dst_ip,
             "dst_port": dst_port,
+            "rx_port_filter": rx_port_filter,
+            "netmask": netmask,
+            "gateway_ip": gateway_ip,
         }
         if core_id not in [0, 1] or arp_table_entry not in range(8):
             raise ValueError("Invalid core or ARP table entry")

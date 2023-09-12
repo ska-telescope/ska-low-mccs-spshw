@@ -9,96 +9,16 @@
 from __future__ import annotations
 
 import gc
-from typing import Generator
+import json
+import time
 
 import pytest
 import tango
 from ska_control_model import AdminMode, PowerState, ResultCode
-from ska_tango_testing.context import (
-    TangoContextProtocol,
-    ThreadedTestTangoContextManager,
-)
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from tango import DeviceProxy
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
-
-
-@pytest.fixture(name="tango_harness")
-def tango_harness_fixture(
-    subrack_name: str,
-    subrack_address: tuple[str, int],
-    tile_name: str,
-) -> Generator[TangoContextProtocol, None, None]:
-    """
-    Return a Tango harness against which to run tests of the deployment.
-
-    :param subrack_name: the name of the subrack Tango device
-    :param subrack_address: the host and port of the subrack
-    :param tile_name: the name of the tile Tango device
-
-    :yields: a tango context.
-    """
-    subrack_ip, subrack_port = subrack_address
-
-    context_manager = ThreadedTestTangoContextManager()
-    context_manager.add_device(
-        subrack_name,
-        "ska_low_mccs_spshw.MccsSubrack",
-        SubrackIp=subrack_ip,
-        SubrackPort=subrack_port,
-        UpdateRate=1.0,
-        LoggingLevelDefault=5,
-    )
-    context_manager.add_device(
-        tile_name,
-        "ska_low_mccs_spshw.MccsTile",
-        TileId=1,
-        SubrackFQDN=subrack_name,
-        SubrackBay=1,
-        AntennasPerTile=2,
-        SimulationConfig=1,
-        TestConfig=1,
-        TpmIp="10.0.10.201",
-        TpmCpldPort=10000,
-        TpmVersion="tpm_v1_6",
-        LoggingLevelDefault=5,
-    )
-    with context_manager as context:
-        yield context
-
-
-@pytest.fixture(name="subrack_device")
-def subrack_device_fixture(
-    tango_harness: TangoContextProtocol,
-    subrack_name: str,
-) -> DeviceProxy:
-    """
-    Return the subrack Tango device under test.
-
-    :param tango_harness: a test harness for Tango devices.
-    :param subrack_name: name of the subrack Tango device.
-
-    :return: the subrack Tango device under test.
-    """
-    return tango_harness.get_device(subrack_name)
-
-
-@pytest.fixture(name="tile_device")
-def tile_device_fixture(
-    tango_harness: TangoContextProtocol,
-    tile_name: str,
-) -> DeviceProxy:
-    """
-    Fixture that returns the tile Tango device under test.
-
-    :param tango_harness: a test harness for Tango devices.
-    :param tile_name: name of the tile Tango device.
-
-    :return: the tile Tango device under test.
-    """
-    return tango_harness.get_device(tile_name)
 
 
 @pytest.fixture(name="change_event_callbacks")
@@ -115,6 +35,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrack_tpm_power_state",
         "tile_state",
         "tile_command_status",
+        "tile_programming_state",
         timeout=2.0,
     )
 
@@ -219,7 +140,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_command_status"],
         )
-        change_event_callbacks["tile_command_status"].assert_change_event(None)
+        change_event_callbacks["tile_command_status"].assert_change_event(())
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
@@ -286,3 +207,364 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         # The tile device receives this event too. It transitions to OFF.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         change_event_callbacks["tile_state"].assert_not_called()
+
+
+class TestMccsTileTpmDriver:
+    """This class is for testing the MccsTile using the TileSimulator."""
+
+    def setup_devices(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Set devices in a commonly desired state.
+
+        Consider generalising this to expand for different setups.
+
+        # FINAL_CONFIGURATION
+        tile_device.adminMode == AdminMode.ONLINE
+        tile_device.state == tango.DevState.ON
+        subrack_device.adminMode == AdminMode.ONLINE
+        subrack_device.state == tango.DevState.ON
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        assert subrack_device.adminMode == AdminMode.OFFLINE
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        # Since the subrack device is in adminMode OFFLINE,
+        # it is not even trying to monitor and control its subrack,
+        # so it reports its state as DISABLE,
+        # and its TPM power states as UNKNOWN.
+        subrack_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_state"],
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+
+        subrack_device.subscribe_event(
+            "tpm1PowerState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_tpm_power_state"],
+        )
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.UNKNOWN
+        )
+
+        # Since the tile device is in adminMode OFFLINE,
+        # it is not even trying to monitor and control its subrack,
+        # so it reports its state as DISABLE.
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+
+        # Before the tile device tries to connect with its TPM,
+        # it needs to find out from its subrack whether the TPM is even turned on.
+        # So it subscribes to change events from its subrack's corresponding
+        # TPM power state attribute.
+        # The subrack reports that the TPM power state is UNKNOWN,
+        # so the tile remains in UNKNOWN state.
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_not_called()
+
+        subrack_device.adminMode = AdminMode.ONLINE
+
+        # The subrack device tries to establish a connection to its upstream power
+        # supply device.
+        # Until this connection is established, it is in UNKNOWN state.
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.UNKNOWN
+        )
+
+        # Once the subrack device is connected to its subrack,
+        # it transitions to ON state.
+        # It is also now in a position to report on whether its TPMs are on or off.
+        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.OFF
+        )
+
+        # The tile device receives the same event,
+        # so it transitions to OFF state.
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
+        # Now the tile device can turn its TPM on,
+        # but first let's subscribe to change events on command status,
+        # so that we can track the status of the command
+        tile_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_command_status"],
+        )
+        change_event_callbacks["tile_command_status"].assert_change_event(())
+
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+        ([result_code], [on_command_id]) = tile_device.On()
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "QUEUED")
+        )
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "NotProgrammed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Programmed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
+        # check that the fpga time is moving.
+        initial_time = tile_device.fpgasUnixTime[0]
+        sleep_time = 2
+        time.sleep(sleep_time)
+        final_time = tile_device.fpgasUnixTime[0]
+
+        assert (final_time - initial_time) >= sleep_time
+
+        # The tile device tells the subrack device
+        # to tell its subrack to power on its TPM.
+        # This is done, and the subrack device detects that the TPM is now on.
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.ON
+        )
+
+        # The tile device receives this event too.
+        # TODO: it transitions straight to ON without going through UNKNOWN. Why?
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "COMPLETED")
+        )
+
+    def test_start_acquisition(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test StartAcquisition.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        delay_time = 2  # seconds
+        [[result_code], [message]] = tile_device.StartAcquisition(
+            json.dumps({"delay": delay_time})
+        )
+        assert result_code == ResultCode.QUEUED
+        assert "StartAcquisition" in message.split("_")[-1]
+
+        initial_frame = tile_device.currentFrame
+        time.sleep(delay_time - 1)
+        final_frame = tile_device.currentFrame
+        assert initial_frame == final_frame == 0
+
+        time.sleep(1)
+
+        initial_frame = tile_device.currentFrame
+        sleep_time = 1  # seconds
+        time.sleep(sleep_time)
+        final_frame = tile_device.currentFrame
+        assert final_frame > initial_frame
+
+    def test_send_data_samples(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test SendDataSamples can only be called if startAcquisition has been.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Cannot send data before StartAcquisition",
+        ):
+            [[result_code], [message]] = tile_device.SendDataSamples(
+                json.dumps({"data_type": "beam"})
+            )
+        # Start Acquisition
+        delay_time = 2
+        [[result_code], [message]] = tile_device.StartAcquisition(
+            json.dumps({"delay": delay_time})
+        )
+        assert result_code == ResultCode.QUEUED
+        assert "StartAcquisition" in message.split("_")[-1]
+
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Cannot send data before StartAcquisition",
+        ):
+            [[result_code], [message]] = tile_device.SendDataSamples(
+                json.dumps({"data_type": "beam"})
+            )
+
+        time.sleep(delay_time + 0.1)
+        [[result_code], [message]] = tile_device.SendDataSamples(
+            json.dumps({"data_type": "raw"})
+        )
+
+    def test_configure_40g_core(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for configuring the 40G cores.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        config = {
+            "core_id": 1,
+            "arp_table_entry": 0,
+            "source_ip": "10.0.0.98",
+            "destination_ip": "10.0.0.99",
+        }
+
+        tile_device.Configure40GCore(json.dumps(config))
+
+        arg = {
+            "core_id": 1,
+            "arp_table_entry": 0,
+        }
+        result_str = tile_device.Get40GCoreConfiguration(json.dumps(arg))
+        result = json.loads(result_str)
+
+        # check is a subset
+        assert config.items() <= result.items()
+
+    def test_configure_40g_core_with_bad_configuration(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for Configure40gCore unhappy case.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        # Load a bad configuration.
+        bad_config = {
+            "core_id": 4,
+            "arp_table_entry": 0,
+            "source_ip": "10.0.0.98",
+            "destination_ip": "10.0.0.99",
+        }
+
+        tile_device.Configure40GCore(json.dumps(bad_config))
+
+        arg = {
+            "core_id": 4,
+            "arp_table_entry": 0,
+        }
+        with pytest.raises(
+            tango.DevFailed,
+            match="ValueError: Invalid core id or arp table id specified",
+        ):
+            tile_device.Get40GCoreConfiguration(json.dumps(arg))
+
+    def test_configure_beamformer(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for configuring the beamformer.
+
+        Note: This is a very basic test testing the happy case.
+        consider unhappy cases and more complex scenarios.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        tile_device.ConfigureStationBeamformer(
+            json.dumps(
+                {
+                    "start_channel": 2,
+                    "n_channels": 8,
+                    "is_first": True,
+                    "is_last": False,
+                }
+            )
+        )
+        tile_device.UpdateAttributes()
+        table = list(tile_device.beamformerTable)
+        expected = [2, 0, 0, 0, 0, 0, 0]
+        assert table == expected
+
+    def test_preadu_levels(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the preadu_levels.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        initial_level = tile_device.preadulevels
+
+        final_level = [i + 1.00 for i in initial_level]
+        tile_device.preadulevels = final_level
+
+        # TANGO returns a ndarray.
+        assert tile_device.preadulevels.tolist() == final_level  # type: ignore

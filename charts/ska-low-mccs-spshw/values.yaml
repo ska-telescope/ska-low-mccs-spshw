@@ -14,7 +14,8 @@ labels:
 
 global:
   minikube: true
-  tango_host: databaseds-tango-base-test:10000
+  tango_host: databaseds-tango-base:10000
+  cluster_domain: cluster.local
 
 livenessProbe:
   initialDelaySeconds: 0
@@ -35,12 +36,55 @@ dsconfig:
     image: ska-tango-images-tango-dsconfig
     tag: 1.5.1
     pullPolicy: IfNotPresent
-  itango:
-    image:
-      registry: artefact.skao.int
-      image: ska-tango-images-tango-itango
-      tag: 9.3.6
-      pullPolicy: IfNotPresent
+
+# The following values overwrite the default values in the postgresql dependency.
+# See https://artifacthub.io/packages/helm/bitnami/postgresql
+postgresql:
+  fullnameOverride: station-calibration-postgresql
+
+  commonLabels:
+    app: ska-low-mccs-spshw
+
+  image:
+    debug: true
+
+  auth:
+    postgresPassword: "secretpassword"
+
+  primary:
+    service:
+      type: LoadBalancer
+
+    initdb:
+      scriptsConfigMap: ska-low-mccs-spshw-initdb
+      user: "postgres"
+
+    persistence:
+      enabled: false
+      ## @param primary.persistence.mountPath The path the volume will be mounted at
+      ## Note: useful when using custom PostgreSQL images
+      ##
+      mountPath: /bitnami/postgresql
+      ## @param primary.persistence.storageClass PVC Storage Class for PostgreSQL Primary data volume
+      ## If defined, storageClassName: <storageClass>
+      ## If set to "-", storageClassName: "", which disables dynamic provisioning
+      ## If undefined (the default) or set to null, no storageClassName spec is
+      ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+      ##   GKE, AWS & OpenStack)
+      ##
+      storageClass: "nfss1"
+      ## @param primary.persistence.accessModes PVC Access Mode for PostgreSQL volume
+      ##
+      accessModes:
+        - ReadWriteMany
+      ## @param primary.persistence.size PVC Storage Request for PostgreSQL volume
+      ##
+      size: 12Gi
+
+initDbName: ska-low-mccs-spshw-initdb # must be equals to postgresql.primary.initdb.scriptsConfigMap
+initDbBasePath: data/
+initDbScripts:
+- create_tables.sql
 
 resources:
   requests:
@@ -50,67 +94,68 @@ resources:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 0.5.0
+  tag: 0.10.0
   pullPolicy: IfNotPresent
 
-# facility:
-#   stations:
-#     instances:
-#       1:
-#         cabinet_network_address: 10.0.0.0
-#         subracks: [1]
-#         tpms: [10, 13]
-#   subracks:
-#     reachable_from: psi-node3
-#     instances:
-#       1:
-#         host: 10.0.10.80
-#         port: 8081
-#   tpms:
-#     reachable_from: psi-node3
-#     version: tpm_v1_6
-#     port: 10000
-#     instances:
-#       10:
-#         host: 10.0.10.218
-#         subrack: "1"
-#         subrack_bay: 2
-#       13:
-#         host: 10.0.10.215
-#         subrack: "1"
-#         subrack_bay: 5
+deviceServers: {} # e.g....
+  # spsstations:
+  #   "s8-1":
+  #     station_id: 345
+  #     cabinet_network_address: 10.0.0.0
+  #     subracks:
+  #     - "s8-1-1"
+  #     tpms:
+  #     - "s8-1-10"
+  #     - "s8-1-13"
+  #     logging_level_default: 5
+  # calibrationstores:
+  #   "s8-1":
+  #     logging_level_default: 5
+  # mockfieldstations:
+  #   "s8-1":
+  #     logging_level_default: 5
+  # stationcalibrators:
+  #   "s8-1":
+  #     logging_level_default: 5
+  # daqs:
+  #   "s8-1":
+  #     id: 345
+  #     host: daq-simulator-s8-1
+  #     port: 50051
+  #     receiver_interface: eth0
+  #     receiver_ip: ""
+  #     receiver_port: 4660
+  #     logging_level_default: 5
+  # subracks:
+  #   "s8-1-1":
+  #     srmb_host: subrack-simulator-s8-1
+  #     srmb_port: 8081
+  #     logging_level_default: 5
+  #     nodeSelector:
+  #       kubernetes.io/hostname: psi-node3
+  # tpms:
+  #   "s8-1-10":
+  #     tile_id: 10
+  #     host: 10.0.10.201
+  #     port: 10000
+  #     version: tpm_v1_6
+  #     subrack: "s8-1-1"
+  #     subrack_slot: 1
+  #     simulation_config: 1
+  #     test_config: 1
+  #     logging_level_default: 5
+  #     nodeSelector:
+  #       kubernetes.io/hostname: psi-node3
 
-# simulators:
-#   subracks:
-#     1:
-#       host: subrack-simulator-1
+simulators: {} # e.g.
+  # daqs:
+  #   "s8-1":
+  #     host: daq-simulator-s8-1
+  #     port: 50051
+  # subracks:
+  #   "s8-1-1":
+  #     srmb_host: subrack-simulator-s8-1
+  #     srmb_port: 8081
 
-# deviceServers:  # e.g....
-#   stations:
-#     instances:
-#       1:
-#         enabled: false  # suppress this Tango device
-#     logging_level_default: 5
-#   subracks:
-#     instances:
-#       1:
-#         enabled: false  # suppress this Tango device
-#     logging_level_default: 5
-#   tpms:
-#     instances:
-#       10:
-#         host: 10.0.10.201
-#         port: 10000
-#         version: tpm_v1_6
-#         subrack: "1"
-#         subrack_bay: 1
-#     logging_level_default: 5
-#     simulation_config: 1
-#     test_config: 1
-#     resources:
-#       requests:
-#         memory: 512Mi
-
-nodeSelector: {}
-
-affinity: {}
+pgadmin4:
+  enabled: false

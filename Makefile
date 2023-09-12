@@ -5,40 +5,66 @@
 # See LICENSE for more info.
 #
 PROJECT = ska-low-mccs-spshw
+include .make/base.mk
 
-HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
+########################################################################
+# DOCS
+########################################################################
+include .make/docs.mk
 
-PYTHON_SWITCHES_FOR_BLACK = --line-length=88
-PYTHON_SWITCHES_FOR_ISORT = --skip-glob=*/__init__.py -w=88
+DOCS_SPHINXOPTS = -W --keep-going
+
+docs-pre-build:
+	poetry config virtualenvs.create false
+	poetry install --no-root --only docs
+
+.PHONY: docs-pre-build
+
+########################################################################
+# PYTHON
+########################################################################
+include .make/python.mk
+
+PYTHON_LINE_LENGTH = 88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_TEST_FILE = tests
-DOCS_SPHINXOPTS = -n -W --keep-going
-
-include .make/oci.mk
-include .make/k8s.mk
-include .make/python.mk
-include .make/raw.mk
-include .make/base.mk
-include .make/docs.mk
-include .make/helm.mk
-include .make/xray.mk
-
-# define private overrides for above variables in here
--include PrivateRules.mak
-
-python-post-format:
-	docformatter -r -i --wrap-summaries 88 --wrap-descriptions 72 --pre-summary-newline src/ tests/ 	
 
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 
+.PHONY: python-post-lint
 
-K8S_FACILITY ?= k8s-test
-K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
+
+########################################################################
+# OCI
+########################################################################
+include .make/oci.mk
+
+
+########################################################################
+# HELM
+########################################################################
+include .make/helm.mk
+
+HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
+
+########################################################################
+# K8S
+########################################################################
+K8S_USE_HELMFILE = true
+K8S_HELMFILE = helmfile.d/helmfile.yaml
+K8S_HELMFILE_ENV ?= stfc-ci
+
+include .make/k8s.mk
+include .make/raw.mk
+include .make/xray.mk
+
 
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
+	--selector chart=ska-low-mccs-spshw \
+	--selector chart=ska-tango-base \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
@@ -49,8 +75,8 @@ CUCUMBER_JSON_PATH ?= build/reports/cucumber.json
 JSON_REPORT_PATH ?= build/reports/report.json
 
 K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
-    --junitxml=$(JUNITXML_REPORT_PATH) \
-    --cucumberjson=$(CUCUMBER_JSON_PATH) \
+	--junitxml=$(JUNITXML_REPORT_PATH) \
+	--cucumberjson=$(CUCUMBER_JSON_PATH) \
 	--json-report --json-report-file=$(JSON_REPORT_PATH)
 
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
@@ -58,9 +84,10 @@ K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt
 
 K8S_TEST_RUNNER_CHART_REGISTRY ?= https://artefact.skao.int/repository/helm-internal
 K8S_TEST_RUNNER_CHART_NAME ?= ska-low-mccs-k8s-test-runner
-K8S_TEST_RUNNER_CHART_TAG ?= 0.4.2
+K8S_TEST_RUNNER_CHART_TAG ?= 0.8.0
 
-K8S_TEST_RUNNER_CHART_OVERRIDES =
+
+K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=databaseds-tango-base:10000  # TODO: This should be the default in the k8s-test-runner
 
 ifdef PASS_PROXY_CONFIG
 FACILITY_HTTP_PROXY ?= $(http_proxy)
@@ -107,14 +134,21 @@ k8s-do-test:
 	kubectl -n $(KUBE_NAMESPACE) wait pod ska-low-mccs-k8s-test-runner \
 		--for=condition=ready --timeout=$(K8S_TIMEOUT)
 	kubectl -n $(KUBE_NAMESPACE) cp tests/ ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/tests
-	@kubectl -n $(KUBE_NAMESPACE) exec ska-low-mccs-k8s-test-runner -- bash -c \
+	kubectl -n $(KUBE_NAMESPACE) exec ska-low-mccs-k8s-test-runner -- bash -c \
 		"cd $(K8S_TEST_RUNNER_WORKING_DIRECTORY) && \
 		mkdir -p build/reports && \
 		$(K8S_TEST_RUNNER_PIP_INSTALL_COMMAND) && \
-		pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
+		STATION_LABEL=$(STATION_LABEL) pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
 	EXIT_CODE=$$? ; \
 	kubectl -n $(KUBE_NAMESPACE) cp ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/build/ ./build/ ; \
 	helm  -n $(KUBE_NAMESPACE) uninstall $(K8S_TEST_RUNNER_CHART_RELEASE) ; \
 	exit $$EXIT_CODE
 
-.PHONY: python-post-format python-post-lint k8s-do-test
+.PHONY: k8s-do-test
+
+
+########################################################################
+# PRIVATE OVERRIDES
+########################################################################
+
+-include PrivateRules.mak

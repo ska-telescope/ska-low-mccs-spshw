@@ -252,6 +252,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
     # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -266,6 +267,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        update_rate: float = 5.0,
     ) -> None:
         """
         Initialise a new instance.
@@ -300,6 +302,9 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param update_rate: how often updates to attribute values should be provided.
+            This is not necessarily the same as the rate at which
+            the instrument is polled.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
@@ -351,6 +356,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 tpm_version,
                 self._tpm_communication_state_changed,
                 self._update_component_state,
+                update_rate=update_rate,
             )
 
         def _update_component_power_state(power_state: PowerState) -> None:

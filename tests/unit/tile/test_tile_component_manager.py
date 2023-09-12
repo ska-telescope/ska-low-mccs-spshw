@@ -1143,6 +1143,7 @@ class TestTpmDriver:
         tpm_version: str,
         callbacks: MockCallableGroup,
         hardware_tile_mock: unittest.mock.Mock,
+        update_rate: float,
     ) -> TpmDriver:
         """
         Return a TPMDriver using a mocked Tile.
@@ -1154,6 +1155,7 @@ class TestTpmDriver:
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param callbacks: dictionary of driver callbacks.
         :param hardware_tile_mock: The mock tile used by the TpmDriver.
+        :param update_rate: Polling rate.
 
         :return: a TpmDriver driving a mocked tile
         """
@@ -1164,6 +1166,7 @@ class TestTpmDriver:
             tpm_version,
             callbacks["communication_status"],
             callbacks["component_state"],
+            update_rate,
         )
 
     def test_communication_fails(

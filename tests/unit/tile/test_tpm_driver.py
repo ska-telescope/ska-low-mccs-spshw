@@ -30,6 +30,7 @@ def tpm_driver_fixture(
     tpm_version: str,
     callbacks: MockCallableGroup,
     tile_simulator: TileSimulator,
+    update_rate: float = 5.0,
 ) -> TpmDriver:
     """
     Return a TPMDriver using a tile_simulator.
@@ -40,6 +41,7 @@ def tpm_driver_fixture(
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param callbacks: dictionary of driver callbacks.
     :param tile_simulator: The tile used by the TpmDriver.
+    :param update_rate: Polling rate.
 
     :return: a TpmDriver driving a simulated tile
     """
@@ -50,6 +52,7 @@ def tpm_driver_fixture(
         tpm_version,
         callbacks["communication_status"],
         callbacks["component_state"],
+        update_rate=update_rate,
     )
 
 
@@ -217,14 +220,14 @@ class TestTpmDriver:
         fpga2_temp = 32
         board_temp = 4
         voltage = 1
-
+        poll_request: list = []
         tile_simulator._tile_health_structure["temperatures"]["FPGA0"] = fpga1_temp
         tile_simulator._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temp
         tile_simulator._tile_health_structure["temperatures"]["board"] = board_temp
         tile_simulator._tile_health_structure["voltages"]["MON_5V0"] = voltage
 
         # Mock a poll event by updating attributes manually.
-        tpm_driver._update_attributes()
+        tpm_driver._update_attributes(poll_request)
 
         # check that they are updated
         assert tpm_driver._tile_health_structure["temperatures"]["FPGA0"] == fpga1_temp
@@ -241,7 +244,7 @@ class TestTpmDriver:
             side_effect=LibraryError("attribute mocked to fail")
         )
         time.sleep(6)  # time waited needs to be more than tpm_driver.time_interval_1
-        tpm_driver._update_attributes()
+        tpm_driver._update_attributes(poll_request)
 
         assert (
             tpm_driver._tile_health_structure["voltages"]["MON_5V0"]
@@ -260,6 +263,7 @@ class TestTpmDriver:
         :param tile_simulator: The mocked tile
         """
         # Mock a connection to the TPM.
+        poll_request: list = []
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
 
@@ -281,7 +285,7 @@ class TestTpmDriver:
         assert tpm_driver.fpga_reference_time != pytest.approx(mocked_sync_time)
 
         # update values to read from simulation.
-        tpm_driver._update_attributes()
+        tpm_driver._update_attributes(poll_request)
 
         # check that the values have been read from the simulator.
         adc_rms = tpm_driver.adc_rms
@@ -451,9 +455,9 @@ class TestTpmDriver:
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
-
+        poll_request: list = []
         # Update attributes and check driver updates
-        tpm_driver._update_attributes()
+        tpm_driver._update_attributes(poll_request)
         assert tpm_driver._station_id == tile_simulator._station_id
         assert tpm_driver._tile_id == tile_simulator._tile_id
 
@@ -801,6 +805,7 @@ class TestTpmDriver:
         tile_id: int,
         callbacks: MockCallableGroup,
         tile_simulator: TileSimulator,
+        update_rate: float = 5.0,
     ) -> None:
         """
         Test that the tpm driver will get the correct firmware bitfile.
@@ -812,6 +817,7 @@ class TestTpmDriver:
         :param tile_id: the unique ID for the tile
         :param callbacks: dictionary of driver callbacks.
         :param tile_simulator: The tile used by the TpmDriver.
+        :param update_rate: polling rate.
         """
         driver = TpmDriver(
             logger,
@@ -820,5 +826,6 @@ class TestTpmDriver:
             tpm_version_to_test,
             callbacks["communication_status"],
             callbacks["component_state"],
+            update_rate=update_rate,
         )
         assert driver.firmware_name == expected_firmware_name

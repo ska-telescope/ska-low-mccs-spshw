@@ -198,6 +198,15 @@ def tile_id_fixture() -> int:
     """
     return 1
 
+@pytest.fixture(name="update_rate")
+def update_rate_fixture() -> float:
+    """
+    Return the update_rate.
+
+    :return: the update_rate
+    """
+    return 1.0
+
 
 @pytest.fixture(name="static_tpm_simulator")
 def static_tpm_simulator_fixture(logger: logging.Logger) -> StaticTpmSimulator:

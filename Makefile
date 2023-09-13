@@ -5,7 +5,6 @@
 # See LICENSE for more info.
 #
 PROJECT = ska-low-mccs-spshw
-#KUBE_NAMESPACE=dp-mccs-adam-p
 include .make/base.mk
 
 ########################################################################
@@ -53,6 +52,10 @@ HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 ########################################################################
 # K8S
 ########################################################################
+K8S_USE_HELMFILE = true
+K8S_HELMFILE = helmfile.d/helmfile.yaml
+K8S_HELMFILE_ENV ?= stfc-ci
+
 include .make/k8s.mk
 include .make/raw.mk
 include .make/xray.mk
@@ -66,6 +69,8 @@ _gitlab_tag = $(VERSION)-dev.c$(shell git rev-parse --short=8 $(_remote_tracking
 
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
+	--selector chart=ska-low-mccs-spshw \
+	--selector chart=ska-tango-base \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
@@ -93,7 +98,7 @@ K8S_TEST_RUNNER_CHART_NAME ?= ska-low-mccs-k8s-test-runner
 K8S_TEST_RUNNER_CHART_TAG ?= 0.8.0
 
 
-K8S_TEST_RUNNER_CHART_OVERRIDES =
+K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=databaseds-tango-base:10000  # TODO: This should be the default in the k8s-test-runner
 
 ifdef PASS_PROXY_CONFIG
 FACILITY_HTTP_PROXY ?= $(http_proxy)
@@ -140,11 +145,11 @@ k8s-do-test:
 	kubectl -n $(KUBE_NAMESPACE) wait pod ska-low-mccs-k8s-test-runner \
 		--for=condition=ready --timeout=$(K8S_TIMEOUT)
 	kubectl -n $(KUBE_NAMESPACE) cp tests/ ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/tests
-	@kubectl -n $(KUBE_NAMESPACE) exec ska-low-mccs-k8s-test-runner -- bash -c \
+	kubectl -n $(KUBE_NAMESPACE) exec ska-low-mccs-k8s-test-runner -- bash -c \
 		"cd $(K8S_TEST_RUNNER_WORKING_DIRECTORY) && \
 		mkdir -p build/reports && \
 		$(K8S_TEST_RUNNER_PIP_INSTALL_COMMAND) && \
-		pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
+		STATION_LABEL=$(STATION_LABEL) pytest $(K8S_TEST_RUNNER_PYTEST_OPTIONS) $(K8S_TEST_RUNNER_PYTEST_TARGET)" ; \
 	EXIT_CODE=$$? ; \
 	kubectl -n $(KUBE_NAMESPACE) cp ska-low-mccs-k8s-test-runner:$(K8S_TEST_RUNNER_WORKING_DIRECTORY)/build/ ./build/ ; \
 	helm  -n $(KUBE_NAMESPACE) uninstall $(K8S_TEST_RUNNER_CHART_RELEASE) ; \

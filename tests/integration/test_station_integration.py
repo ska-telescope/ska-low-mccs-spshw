@@ -160,7 +160,7 @@ class TestStationTileIntegration:  # pylint: disable=too-few-public-methods
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["sps_station_command_status"],
         )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(None)
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
 
         ([result_code], [initialise_id]) = sps_station_device.Initialise()
 

@@ -2,6 +2,27 @@
 
 ## unreleased
 
+## 0.10.0
+
+* [MCCS-1775] Fix bug in deployment configuration for minikube platforms
+* [MCCS-1762] update to pytango 9.4.2
+* [MCCS-1697] Support tangodb being provided as a platform service, so we don't need to deploy it ourselves
+
+## 0.9.0
+
+* [MCCS-1690] remove ska-tango-base
+* [MCCS-1682] pull in daq chart
+* [MCCS-1681] remote platform spec
+* [MCCS-1678] pair programming updates
+* [MCCS-1587] Outline plan to implement the Functional test shows DAQ metadata are
+* [MCCS-1671] Fix intermittent SpsStation Initialise test
+* [MCCS-1670] support multiple stations in clusters
+* [MCCS-1593] Connect metadata to daq output
+* [MCCS-1664] Add noise to the simulated bandpass
+* [MCCS-1610] helmfile
+* [MCCS-1663] Fix key error in stop_sending_data.
+* [MCCS-1546] Update the IntegratedChannelDataSimulator to create simulated bandpass data
+
 ## 0.8.0
 
 * [MCCS-1547] Tile Component Manager and TpmDriver to use the new TileSimulator

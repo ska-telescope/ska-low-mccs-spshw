@@ -1,55 +1,84 @@
-{{- $defaults := dict "enabled" true "logging_level_default" 3 "port" 10000 "version" "tpm_v1_6" "simulation_config" 0 "test_config" 0}}
-{{- $tiles := .Values.deviceServers.tpms}}
-name: "tile-{{.Release.Name}}"
+{{- /*
+Defines the deployment for MccsTile Tango devices.
+
+  deviceServers:
+    tpms:
+      n3-2-01:
+        tile_id: 1
+        host: 10.0.10.201
+        port: 10000
+        version: tpm_v1_6
+        subrack: n3-2-1
+        subrack_slot: 1
+        simulation_config: 1
+        test_config: 1
+        logging_level_default: 5
+        nodeSelector:
+          kubernetes.io/hostname: psi-node3
+
+*/}}
+{{- $node_selector := dict}}
+{{- $tiles := dig "tpms" dict .Values.deviceServers}}
+{{- if $tiles}}
+name: tile-{{.Release.Name}}
 function: ska-low-mccs-spshw-tile
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_tile := $tiles.instances}}
-{{- if (pluck "enabled" $this_tile $tiles $defaults | first)}}
-  - {{printf "tile-%04d" (int $key)}}
-{{- end}}
+{{- range $key, $this_tile := $tiles}}
+  - {{printf "tile-%s" $key}}
 {{- end}}
 command: MccsTile
 server: 
-  name: "MccsTile"
+  name: MccsTile
   instances:
-{{- range $key, $this_tile := $tiles.instances}}
-    - name: {{printf "tile-%04d" (int $key)}}
+{{- range $key, $this_tile := $tiles}}
+    - name: {{printf "tile-%s" $key}}
       classes:
-      - name: "MccsTile"
+      - name: MccsTile
         devices:
-        - name: {{printf "low-mccs/tile/%04d" (int $key)}}
+        - name: {{printf "low-mccs/tile/%s" $key}}
           properties:
           - name: "TileId"
             values:
-            - {{$key | toString | quote}}
+            - {{quote $this_tile.tile_id}}
           - name: "SubrackFQDN"
             values:
-            - {{printf "low-mccs/subrack/%04d" (required "You must supply a subrackFQDN" $this_tile.subrack | int)}}
+            - {{printf "low-mccs/subrack/%s" $this_tile.subrack | quote}}
           - name: "SubrackBay"
             values:
-            - {{$this_tile.subrack_bay | toString | quote}}
+            - {{quote $this_tile.subrack_slot}}
           - name: "AntennasPerTile"
             values:
             - "16"
-          - name: "LoggingLevelDefault"
-            values:
-            - {{pluck "logging_level_default" $this_tile $tiles $defaults | first | toString | quote}}
           - name: "TpmIp"
             values:
-            - {{$this_tile.host | quote}}
+            - {{quote $this_tile.host}}
           - name: "TpmCpldPort"
             values:
-            - {{pluck "port" $this_tile $tiles $defaults | first | toString | quote}}
+            - {{quote $this_tile.port}}
           - name: "TpmVersion"
             values:
-            - {{pluck "version" $this_tile $tiles $defaults | first | quote}}
+            - {{quote $this_tile.version}}
+{{- with $this_tile.simulation_config}}
           - name: "SimulationConfig"
             values:
-            - {{pluck "simulation_config" $this_tile $tiles $defaults | first | toString | quote}}
+            - {{quote .}}
+{{- end}}
+{{- with $this_tile.test_config}}
           - name: "TestConfig"
             values:
-            - {{pluck "test_config" $this_tile $tiles $defaults | first | toString | quote}}
+            - {{quote .}}
+{{- end}}
+{{- with $this_tile.logging_level_default}}
+          - name: "LoggingLevelDefault"
+            values:
+            - {{quote .}}
+{{- end}}
+{{- /* TODO: ska-tango-utils does not let us set nodeSelector per device server,
+so for now we have to merge all our nodeSelector values into one.*/}}
+{{- with $this_tile.nodeSelector}}
+{{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 depends_on:
   - device: sys/database/2
@@ -64,7 +93,8 @@ livenessProbe:
 {{ toYaml .Values.livenessProbe | indent 2 }}
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
-{{- if (hasKey $tiles "reachable_from") }}
+{{- with $node_selector}}
 nodeSelector:
-  kubernetes.io/hostname: {{ $tiles.reachable_from }}
+{{toYaml . | indent 2}}
+{{- end}}
 {{- end}}

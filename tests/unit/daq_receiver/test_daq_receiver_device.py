@@ -32,17 +32,15 @@ gc.disable()
 @pytest.fixture(name="device_under_test")
 def device_under_test_fixture(
     test_context: SpsTangoTestHarnessContext,
-    daq_id: int,
 ) -> tango.DeviceProxy:
     """
     Fixture that returns the device under test.
 
     :param test_context: the context in which the tests are running.
-    :param daq_id: the ID of the DAQ instance under test.
 
     :return: the device under test
     """
-    return test_context.get_daq_device(daq_id)
+    return test_context.get_daq_device()
 
 
 class TestMccsDaqReceiver:
@@ -276,17 +274,16 @@ class TestPatchedDaq:
                 """
                 return mock_component_manager
 
-            @command(dtype_in="DevString")
+            @command(dtype_in="DevVarStringArray")
             def CallReceivedDataCallback(
-                self: _PatchedDaqReceiver, input_data: str
+                self: _PatchedDaqReceiver, input_data: tuple[str, str, str]
             ) -> None:
                 """
                 Call to the received data callback.
 
                 :param input_data: the input data to the callback in json form.
                 """
-                params = json.loads(input_data)
-                self._received_data_callback(*params)
+                self._received_data_callback(*input_data)
 
         return _PatchedDaqReceiver
 
@@ -306,8 +303,8 @@ class TestPatchedDaq:
         :yields: a test harness context.
         """
         test_harness = SpsTangoTestHarness()
-        test_harness.add_daq_instance(daq_id, DaqSimulator())
-        test_harness.add_daq_device(
+        test_harness.set_daq_instance(DaqSimulator())
+        test_harness.set_daq_device(
             daq_id, address=None, device_class=device_class_under_test
         )  # dynamically get DAQ address
         with test_harness as test_context:
@@ -317,28 +314,175 @@ class TestPatchedDaq:
     @pytest.mark.parametrize(
         "input_data, result",
         [
-            (("burst_raw", "file_name", 0), {"filename": "file_name", "tile": 0}),
-            (("cont_channel", "file_name", 1), {"filename": "file_name", "tile": 1}),
             (
-                ("integrated_channel", "file_name", 2),
-                {"filename": "file_name", "tile": 2},
+                (
+                    "burst_raw",
+                    "file_name",
+                    json.dumps(
+                        {"channel_id": 1, "station_id": 2, "additional_info": 0}
+                    ),
+                ),
+                {
+                    "data_mode": "burst_raw",
+                    "file_name": "file_name",
+                    "tile": 0,
+                    "metadata": {
+                        "channel_id": 1,
+                        "station_id": 2,
+                        "additional_info": 0,
+                    },
+                },
             ),
-            (("burst_channel", "file_name", 3), {"filename": "file_name", "tile": 3}),
-            (("burst_beam", "file_name", 4), {"filename": "file_name", "tile": 4}),
-            (("integrated_beam", "file_name", 5), {"filename": "file_name", "tile": 5}),
             (
-                ("station", "file_name", 512),
-                {"filename": "file_name", "amount_of_data": 512},
+                (
+                    "cont_channel",
+                    "file_name",
+                    json.dumps({"additional_info": 1}),
+                ),
+                {
+                    "data_mode": "cont_channel",
+                    "file_name": "file_name",
+                    "tile": 1,
+                    "metadata": {"additional_info": 1},
+                },
             ),
-            (("correlator", "file_name"), {"filename": "file_name"}),
-            (("antenna_buffer", "file_name", 8), {"filename": "file_name", "tile": 8}),
+            (
+                (
+                    "integrated_channel",
+                    "file_name",
+                    json.dumps({"additional_info": 2}),
+                ),
+                {
+                    "data_mode": "integrated_channel",
+                    "file_name": "file_name",
+                    "tile": 2,
+                    "metadata": {"additional_info": 2},
+                },
+            ),
+            (
+                (
+                    "burst_channel",
+                    "file_name",
+                    json.dumps({"additional_info": 3}),
+                ),
+                {
+                    "data_mode": "burst_channel",
+                    "file_name": "file_name",
+                    "tile": 3,
+                    "metadata": {"additional_info": 3},
+                },
+            ),
+            (
+                (
+                    "burst_beam",
+                    "file_name",
+                    json.dumps({"additional_info": 4}),
+                ),
+                {
+                    "data_mode": "burst_beam",
+                    "file_name": "file_name",
+                    "tile": 4,
+                    "metadata": {"additional_info": 4},
+                },
+            ),
+            (
+                (
+                    "integrated_beam",
+                    "file_name",
+                    json.dumps({"additional_info": 5}),
+                ),
+                {
+                    "data_mode": "integrated_beam",
+                    "file_name": "file_name",
+                    "tile": 5,
+                    "metadata": {"additional_info": 5},
+                },
+            ),
+            (
+                (
+                    "station",
+                    "file_name",
+                    json.dumps({"additional_info": 512}),
+                ),
+                {
+                    "data_mode": "station",
+                    "file_name": "file_name",
+                    "amount_of_data": 512,
+                    "metadata": {"additional_info": 512},
+                },
+            ),
+            (
+                (
+                    "correlator",
+                    "file_name",
+                    json.dumps({}),
+                ),
+                {
+                    "data_mode": "correlator",
+                    "file_name": "file_name",
+                    "metadata": {},
+                },
+            ),
+            (
+                (
+                    "antenna_buffer",
+                    "file_name",
+                    json.dumps(
+                        {
+                            "additional_info": 8,
+                            "dataset_root": None,
+                            "n_antennas": 8,
+                            "n_pols": 2,
+                            "n_beams": 1,
+                            "tile_id": 4,
+                            "n_chans": 512,
+                            "n_samples": 32,
+                            "n_blocks": 1,
+                            "written_samples": 32,
+                            "timestamp": "1691063930",
+                            "date_time": "2023-08-03 12:58:14.442114",
+                            "data_type": "channel",
+                            "n_baselines": 1,
+                            "n_stokes": 1,
+                            "channel_id": 2,
+                            "station_id": 3,
+                            "tsamp": 0,
+                        }
+                    ),
+                ),
+                {
+                    "data_mode": "antenna_buffer",
+                    "file_name": "file_name",
+                    "tile": 8,
+                    "metadata": {
+                        "additional_info": 8,
+                        "dataset_root": None,
+                        "n_antennas": 8,
+                        "n_pols": 2,
+                        "n_beams": 1,
+                        "tile_id": 4,
+                        "n_chans": 512,
+                        "n_samples": 32,
+                        "n_blocks": 1,
+                        "written_samples": 32,
+                        "timestamp": "1691063930",
+                        "date_time": "2023-08-03 12:58:14.442114",
+                        "data_type": "channel",
+                        "n_baselines": 1,
+                        "n_stokes": 1,
+                        "channel_id": 2,
+                        "station_id": 3,
+                        "tsamp": 0,
+                    },
+                },
+            ),
         ],
     )
     def test_received_data_callback(
         self: TestPatchedDaq,
         device_under_test: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
-        input_data: Union[tuple[str, str], tuple[str, str, int]],
+        input_data: tuple[str, str, str],
         result: dict[str, Union[str, int]],
     ) -> None:
         """
@@ -361,11 +505,11 @@ class TestPatchedDaq:
         change_event_callbacks.assert_change_event("dataReceivedResult", ("", ""))
         assert device_under_test.dataReceivedResult == ("", "")
 
-        device_under_test.CallReceivedDataCallback(json.dumps(input_data))
+        device_under_test.CallReceivedDataCallback(input_data)
         change_event_callbacks.assert_change_event(
             "dataReceivedResult", (input_data[0], "_")
         )
-        assert json.dumps(result) in device_under_test.dataReceivedResult[1]
+        assert result == json.loads(device_under_test.dataReceivedResult[1])
 
     @pytest.mark.parametrize(
         ("consumer_list"),

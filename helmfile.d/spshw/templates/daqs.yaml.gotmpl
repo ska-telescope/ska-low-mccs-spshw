@@ -1,0 +1,107 @@
+{{- /* Configure the DAQ Tango devices. */}}
+{{- $overrides := .Values | get "overrides" dict}}
+{{- $platform := mergeOverwrite .Values.platform $overrides}}
+{{- $defaults := .Values.defaults}}
+
+{{- $daq_instances := dict}}
+{{- $daq_simulators := dict}}
+{{- $daqs_to_launch := dict}}
+{{- $daqs_to_egress := dict}}
+
+{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
+{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+
+{{- $daq_spec := dig "sps" "daq" dict $station_spec}}
+{{- $daq_enabled := pluck "enabled" $daq_spec $station_spec (dict "enabled" true) | first}}
+{{- if $daq_enabled}}
+{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+{{- $daq_host := dig "host" (printf "daq-receiver-%s" $station_name) $daq_spec}}
+{{- $daq_port := dig "port" 50051 $daq_spec}}
+{{- $daq_receiver_interface := dig "receiver_interface" "eth0" $daq_spec}}
+{{- $daq_receiver_ip := dig "receiver_ip" "" $daq_spec}}
+{{- $daq_receiver_port := dig "receiver_port" 4660 $daq_spec}}
+{{- $daq_logging_level_defaults := pluck "logging_level_default" $daq_spec $defaults}}
+
+{{- $daq_simulated := dig "simulated" false $daq_spec}}
+{{- if $daq_simulated}}
+{{- $daq_host = printf "daq-simulator-%s" $station_name}}
+{{- $_ := set $daq_simulators $station_id (dict "host" $daq_host "port" $daq_port)}}
+{{- else}}
+{{- $daq_ip := dig "ip" "" $daq_spec}}
+{{- if $daq_ip}}
+{{- $_ := set $daqs_to_egress $station_name $daq_spec}}
+{{- else}}
+{{ $host := printf "daq-receiver-%s" $station_name}}
+{{- $_ := set $daqs_to_launch $station_name (dict "host" $host "id" (int $station_id))}}
+{{- end}}
+{{- end}}
+
+{{- $daq_instance := dict "id" $station_spec.id "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port}}
+{{- if $daq_logging_level_defaults}}
+{{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
+{{- end }}
+{{- $_ := set $daq_instances $station_name $daq_instance}}
+{{- end }}
+
+{{- end }}
+{{- end }}
+
+{{- if $daq_instances}}
+deviceServers:
+  daqs:
+{{- range $daq_id, $daq_spec := $daq_instances}}
+    {{quote $daq_id}}:
+{{toYaml $daq_spec | indent 6}}
+{{- end }}
+{{- end }}
+
+{{- if $daq_simulators}}
+
+simulators:
+  daqs:
+{{- range $daq_id, $daq_spec := $daq_simulators}}
+    {{quote $daq_id}}:
+{{toYaml $daq_spec | indent 6}}
+{{- end}}
+{{- end}}
+
+{{- if (or $daqs_to_launch $daqs_to_egress)}}
+ska-low-mccs-daq:
+{{- end}}
+{{- if $daqs_to_launch}}
+  storage:
+    daq-data:
+{{- with $platform.cluster.daq.storage_class}}
+      storage_class: {{.}}
+{{- end}}
+      size: "250Mi"
+
+{{- range $station_name, $daq_spec := $daqs_to_launch}}
+{{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
+  receivers:
+    {{$station_name}}:
+      host: {{$daq_spec.host}}
+      id: {{$daq_spec.id}}
+      storage: daq-data
+{{- range $extra := list "annotations" "node_selector" "affinity" "tolerations"}}
+{{- with (dig $extra dict $cluster_daq_spec)}}
+      {{$extra}}:
+{{toYaml . | indent 8}}
+{{- end}}
+{{- end}}
+{{- with (dig "runtime_class" dict $cluster_daq_spec)}}
+      runtime_class: {{.}}
+{{- end}}
+{{- with (dig "gpu_limit" "" $cluster_daq_spec)}}
+      gpu_limit: {{quote .}}
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if $daqs_to_egress}}
+  receiver_egresses:
+{{- range $station_name, $daq_spec := $daqs_to_egress}}
+    {{$station_name}}:
+{{toYaml $daq_spec | indent 6}}
+{{- end}}
+{{- end}}

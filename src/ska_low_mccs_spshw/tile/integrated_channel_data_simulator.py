@@ -133,6 +133,11 @@ class IntegratedChannelDataSimulator:
             400e6: 0.010,
         }
 
+        # Max fractional deviation from a value due to noise
+        # Set to 0 by default for ease of testing
+        # For demoing, this can be set to something around 0.2
+        self._noise_level = 0.0
+
         self._data_types = {"raw", "channel"}
         self._stop_events = {
             data_type: threading.Event() for data_type in self._data_types
@@ -179,16 +184,22 @@ class IntegratedChannelDataSimulator:
         print(f"INIT CHANNEL DATA2: {self._channelised_packet_data}")
 
     def stop_sending_data(self: IntegratedChannelDataSimulator) -> None:
-        """Stop sending data."""
+        """
+        Stop sending data.
+
+        This forces each data sending thread to finish execution
+
+        :raises RuntimeError: If a thread failed to finish
+        """
         # The AAVS tile only needs to stop channel continuous here but with the
         # sleep between antennas the other data modes can end up running for a
         # long time here so having a way to stop them is useful
         for data_type, event in self._stop_events.items():
             event.set()
-            while self._threads[data_type].is_alive():
-                # Wait for the thread to finish execution, so that the event isn't
-                # cleared before the thread dies
-                time.sleep(0.1)
+            if data_type in self._threads:
+                self._threads[data_type].join(timeout=10)
+                if self._threads[data_type].is_alive():
+                    raise RuntimeError("Failed to stop thread.")
 
     def send_raw_data(
         self: IntegratedChannelDataSimulator,
@@ -431,7 +442,7 @@ class IntegratedChannelDataSimulator:
 
         # return packet_data
 
-    def _generate_simulated_bandpass(
+    def _generate_simulated_bandpass(  # pylint: disable=too-many-locals
         self: IntegratedChannelDataSimulator,
         polarisation: int,
         first_channel: int,
@@ -468,7 +479,10 @@ class IntegratedChannelDataSimulator:
             powers_array[channel - first_channel] = (
                 lower_frac * ordered_powers_table[higher_bound]
             ) + (higher_frac * ordered_powers_table[lower_bound])
-        return powers_array
+        noisy_array = powers_array + (
+            (np.random.rand(len(channels)) - 0.5) * 2 * self._noise_level * powers_array
+        )
+        return noisy_array
 
     def _generate_raw_data(
         self: IntegratedChannelDataSimulator,

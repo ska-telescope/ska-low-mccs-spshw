@@ -1,18 +1,19 @@
 {{- /*
-Launch a DAQ simulator for each device instance spec lacking a "host" key.
+Deploy the DAQ simulator/s.
 
-That is, if a Tango device instance spec provides a "host" key,
-the host is assumed to refer to an existing DAQ receiver
-to be monitored and controlled by the Tango device.
+  simulators:
+    daqs:
+      "s8-1":
+        host: daq-simulator-s8-1
+        port: 50051
 
-It that "host" key is missing, then no existing DAQ receiver is specified,
-so we here launch a DAQ simulator for the Tango device to monitor and control.
 */}}
 {{- $image := .Values.image}}
-{{- range $station_id, $spec := .Values.receivers }}
-{{- if not (hasKey $spec "host")}}
-{{- $slug := (printf "daq-simulator-%03d" (int $station_id))}}
-{{- $port := default 50051 .port}}
+{{- if hasKey .Values "simulators"}}
+{{- $daq_simulators := dig "daqs" dict .Values.simulators}}
+{{- range $spec := values $daq_simulators}}
+{{- $slug := $spec.host}}
+{{- $port := $spec.port}}
 ---
 apiVersion: v1
 kind: Service

@@ -4,16 +4,18 @@ defaults:
 
 overrides:
   array:
-    stations:
-      "1":
-        sps:
-          daq:
-            simulated: true
-          subracks:
-            "1":
-              simulated: true
-          tpms:
-            "10":
-              simulated: true
-            "13":
-              simulated: true  
+    station_clusters:
+      "g1":
+        stations:
+          "1":
+            sps:
+              daq:
+                simulated: true
+              subracks:
+                "1":
+                  simulated: true
+              tpms:
+                "10":
+                  simulated: true
+                "13":
+                  simulated: true  

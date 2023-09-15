@@ -3,75 +3,80 @@ defaults:
 
 overrides:
   array:
-    stations:
-      "1":
-        sps:
-          subracks:
-            "1":
-              simulated: true
-          tpms:
-            "1":
-              host: 10.0.10.201
-              resources:
-                requests:
-                  memory: 512Mi
-            "2":
-              host: 10.0.10.202
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 2
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
-            "3":
-              host: 10.0.10.203
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 3
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
-            "5":
-              host: 10.0.10.205
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 5
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
-            "6":
-              host: 10.0.10.206
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 6
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
-            "7":
-              host: 10.0.10.207
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 7
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
-            "8":
-              host: 10.0.10.208
-              port: 10000
-              version: tpm_v1_6
-              subrack: 1
-              subrack_slot: 8
-              simulated: 1
-              resources:
-                requests:
-                  memory: 512Mi
+    station_clusters:
+      "a1":
+        stations:
+          "1":
+            sps:
+              daq:
+                ip: 10.255.255.255
+                port: 50051
+              subracks:
+                "1":
+                  simulated: true
+              tpms:
+                "1":
+                  host: 10.0.10.201
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "2":
+                  host: 10.0.10.202
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 2
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "3":
+                  host: 10.0.10.203
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 3
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "5":
+                  host: 10.0.10.205
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 5
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "6":
+                  host: 10.0.10.206
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 6
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "7":
+                  host: 10.0.10.207
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 7
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
+                "8":
+                  host: 10.0.10.208
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 8
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi

@@ -50,8 +50,23 @@ a sequence of helmfile values files for each environment.
 The first file will generally be a specification of the target platform.
 This file should only change when the platform itself changes.
 
-For example, the platform specification for PSI-Low,
-which currently has one subrack and two TPMs, is:
+The value files are applied from top to bottom. This means that subsequent value files
+will override the previous. So we need to be careful and follow the guidelines. An example
+is:
+
+.. code-block:: yaml
+
+  environments:
+    psi-low-minikube:
+      kubeContext: minikube
+      values:
+        - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=20895318908c03c21def95a4b0b44caa79c58b38
+        - spshw/values/values-psi-low.yaml
+        - platform/minikube.yaml
+        - spshw/values/values-psi-low-minikube.yaml
+
+The platform specification for PSI-Low is currently held in a remote location,
+this has one subrack and two TPMs:
 
 .. code-block:: yaml
 
@@ -200,6 +215,12 @@ There are two keys:
                      subracks:
                        "1":
                          simulated: true
+
+
+Specifying ``2`` platforms is discouraged. 
+The exception being when targeting minikube we apply ``platform/minikube.yaml``.
+This is because local minikube deployments will not have the platform resources,
+and will need to specify its own.
 
 --------------------------------
 Direct deployment of helm charts

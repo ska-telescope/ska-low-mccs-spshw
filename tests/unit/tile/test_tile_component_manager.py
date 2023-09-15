@@ -861,7 +861,7 @@ class TestDynamicSimulatorCommon:
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False, lookahead=3)
+        callbacks["component_state"].assert_call(fault=False)
         callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.INITIALISED

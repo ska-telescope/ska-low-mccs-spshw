@@ -135,10 +135,17 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         change_event_callbacks["state"].assert_not_called()
-
+        # 1
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+        # 2
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
     def test_On(

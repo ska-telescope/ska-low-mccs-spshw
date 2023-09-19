@@ -11,14 +11,14 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import numpy as np
 from typing import Any, Callable, Optional
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import DaqClient
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
-import functools
-print = functools.partial(print, flush=True)  # noqa: A001
+
 __all__ = ["DaqComponentManager"]
 
 
@@ -359,13 +359,12 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: a task status and response message
         """
-        print("SUBMITTING BANDPASS START")
         return self.submit_task(
             self._start_bandpass_monitor,
             args=[argin],
             task_callback=task_callback,
         )
-    
+
     @check_communicating
     def _start_bandpass_monitor(
         self: DaqComponentManager,
@@ -399,58 +398,52 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: a task status and response message
         """
-        print("IN BANDPASS START")
+        # Some DAQ consts. TODO: Put these dangling vars somewhere else.
+        nof_antennas_per_tile = 16
+        nof_channels = 512
+        #bandwidth = 400.0
+        #nof_pols = 2
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
-        # rc, msg = self._daq_client.start_bandpass_monitor(argin)
-        # if task_callback:
-        #     task_callback(status=rc, result=msg)
         try:
             for response in self._daq_client.start_bandpass_monitor(argin):
-                x_bandpass_plot: str = None
-                y_bandpass_plot: str = None
+                x_bandpass_plot = None
+                y_bandpass_plot = None
                 rms_plot: str = None
-                print(f"GOT RESPONSE: {response}")
+                call_callback: bool = False # Only call the callback if we have something to say.
                 if task_callback is not None:
                     task_callback(
                         status=TaskStatus(response["result_code"]),
                         result=response["message"],
                     )
-                print("1")
                 if "x_bandpass_plot" in response:
-                    if response["x_bandpass_plot"] is not (None or [None]):
-                        x_bandpass_plot = response["x_bandpass_plot"]
-                        #self._component_state_callback(x_bandpass_plot=x_bandpass_plot)
-                        print(f"x_bandpass_plot: {x_bandpass_plot}")
-                print("2")
+                    if response["x_bandpass_plot"] != [None]:
+                        # Reconstruct the numpy array.
+                        x_bandpass_plot = np.array(json.loads(response['x_bandpass_plot'][0])).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        call_callback = True
                 if "y_bandpass_plot" in response:
-                    if response["y_bandpass_plot"] is not (None or [None]):
-                        y_bandpass_plot = response["y_bandpass_plot"]
-                        #self._component_state_callback(y_bandpass_plot=y_bandpass_plot)
-                        print(f"y_bandpass_plot: {y_bandpass_plot}")
-                print("3")
+                    if response["y_bandpass_plot"] != [None]:
+                        # Reconstruct the numpy array.
+                        y_bandpass_plot = np.array(json.loads(response['y_bandpass_plot'][0])).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        call_callback = True
                 if "rms_plot" in response:
-                    if response["rms_plot"] is not (None or [None]):
-                        rms_plot = response["rms_plot"]
-                        #self._component_state_callback(rms_plot=rms_plot)
-                        print(f"rms_plot: {rms_plot}")
-                # Call if at least 1 isn't None.
-                all_plots = [x_bandpass_plot, y_bandpass_plot, rms_plot]
-                print(f"all plots: {all_plots}")
-                if not all(plot == [None] for plot in all_plots):
-                    print("CALLING CB")
-                    self._component_state_callback(x_bandpass_plot=x_bandpass_plot, y_bandpass_plot=y_bandpass_plot, rms_plot=rms_plot)
-                print("END OF RESPONSE CHECK")
+                    if response["rms_plot"] != [None]:
+                        rms_plot = np.array(json.loads(response['rms_plot'][0])).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        call_callback = True
+                if call_callback:
+                    self._component_state_callback(
+                        x_bandpass_plot=x_bandpass_plot,
+                        y_bandpass_plot=y_bandpass_plot,
+                        rms_plot=rms_plot,
+                    )
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # XXX
-            print(f"CAUGHT EXCEPTION: {e}")
             if task_callback:
                 task_callback(
                     status=TaskStatus.FAILED,
                     result=f"Exception: {e}",
                 )
             return
-        print("EXITING START BANDPASS")
 
     @check_communicating
     def stop_bandpass_monitor(

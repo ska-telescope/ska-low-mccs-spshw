@@ -910,18 +910,18 @@ class TileSimulator:
         """
         print("IN SEND CHANNEL DATA IN SIMULATOR", flush=True)
         # Check if number of samples is a multiple of 32
-        
+
         if number_of_samples % 32 != 0:
             new_value = (int(number_of_samples / 32) + 1) * 32
             self.logger.warning(
                 f"{number_of_samples} is not a multiple of 32, using {new_value}"
             )
             number_of_samples = new_value
-        # try:        
+        # try:
         #     self.stop_data_transmission()
         # except Exception as e:
         #     print(f"Caught exception: {e}")
-        
+
         assert self.dst_ip
         assert self.dst_port
         print("setting ip and sending data...", flush=True)
@@ -930,7 +930,6 @@ class TileSimulator:
             1, number_of_samples, first_channel, last_channel
         )
         print("data should be sending", flush=True)
-        
 
     def send_channelised_data_continuous(
         self: TileSimulator,

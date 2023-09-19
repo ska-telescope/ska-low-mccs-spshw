@@ -339,7 +339,6 @@ class TestDaqComponentManager:
         daq_component_manager._set_consumers_to_start(consumer_list)
         assert daq_component_manager._consumers_to_start == consumer_list
 
-
     @pytest.mark.parametrize(
         ("bandpass_config", "expected_status", "expected_msg"),
         (
@@ -391,9 +390,10 @@ class TestDaqComponentManager:
                 '{"station_config_path": "tests/data/default_config.yml", '
                 '"plot_directory": "/app/plot/", "auto_handle_daq": "True"}',
                 TaskStatus.IN_PROGRESS,
-                "Bandpass monitor active", 
+                "Bandpass monitor active",
             ),
-        ))
+        ),
+    )
     def test_start_stop_bandpass_monitor(
         self: TestDaqComponentManager,
         daq_component_manager: DaqComponentManager,
@@ -412,7 +412,7 @@ class TestDaqComponentManager:
             under test.
         :param callbacks: a dictionary from which callbacks with
             asynchrony support can be accessed.
-        :param bandpass_config: The configuration string to use when 
+        :param bandpass_config: The configuration string to use when
             calling `start_mandpass_monitor`
         :param expected_status: The first expected status returned from
             `start_bandpass_monitor`
@@ -425,12 +425,15 @@ class TestDaqComponentManager:
         )
         callbacks["communication_state"].assert_call(CommunicationStatus.ESTABLISHED)
         # Call start_bandpass
-        _ = daq_component_manager.start_bandpass_monitor(bandpass_config, task_callback=callbacks["task"])
+        _ = daq_component_manager.start_bandpass_monitor(
+            bandpass_config, task_callback=callbacks["task"]
+        )
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=expected_status, result=expected_msg, lookahead=5)
+        callbacks["task"].assert_call(
+            status=expected_status, result=expected_msg, lookahead=5
+        )
         # Any ResultCode.REJECTED cases end at the line above.
-
 
         if expected_status == TaskStatus.IN_PROGRESS:
             # Assert status shows bandpass monitor is active.
@@ -438,15 +441,26 @@ class TestDaqComponentManager:
             assert status["Bandpass Monitor"]
 
             for i in range(3):
-                callbacks["task"].assert_call(status=expected_status, result="plot sent", lookahead=5)
-                callbacks["component_state"].assert_call(x_bandpass_plot=[f"fake_x_bandpass_plot_{i}"],
-                                                        y_bandpass_plot = [f"fake_y_bandpass_plot_{i}"],
-                                                        rms_plot = [f"fake_rms_plot_{i}"], lookahead=15)
+                callbacks["task"].assert_call(
+                    status=expected_status, result="plot sent", lookahead=5
+                )
+                callbacks["component_state"].assert_call(
+                    x_bandpass_plot=[f"fake_x_bandpass_plot_{i}"],
+                    y_bandpass_plot=[f"fake_y_bandpass_plot_{i}"],
+                    rms_plot=[f"fake_rms_plot_{i}"],
+                    lookahead=15,
+                )
 
-                time.sleep(3) # Wait for simulator output.
+                time.sleep(3)  # Wait for simulator output.
 
-            assert (ResultCode.OK, "Bandpass monitor stopping.") == daq_component_manager.stop_bandpass_monitor()
-            callbacks["task"].assert_call(status = TaskStatus.COMPLETED, result = "Bandpass monitoring complete.", lookahead=20)
+            assert (
+                ResultCode.OK,
+                "Bandpass monitor stopping.",
+            ) == daq_component_manager.stop_bandpass_monitor()
+            callbacks["task"].assert_call(
+                status=TaskStatus.COMPLETED,
+                result="Bandpass monitoring complete.",
+                lookahead=20,
+            )
             status = json.loads(daq_component_manager.daq_status())
             assert not status["Bandpass Monitor"]
-

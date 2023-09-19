@@ -274,7 +274,7 @@ class DaqSimulator:
     def start_bandpass_monitor(
         self: DaqSimulator,
         argin: str,
-    ) -> Iterator[tuple[TaskStatus, str, str|None, str|None, str|None]]:
+    ) -> Iterator[tuple[TaskStatus, str, str | None, str | None, str | None]]:
         """
         Start monitoring antenna bandpasses.
 
@@ -301,7 +301,13 @@ class DaqSimulator:
         :return: a task status and response message
         """
         if self._monitoring_bandpass:
-            yield (TaskStatus.REJECTED, "Bandpass monitor is already active.", None, None, None)
+            yield (
+                TaskStatus.REJECTED,
+                "Bandpass monitor is already active.",
+                None,
+                None,
+                None,
+            )
             return
 
         self._stop_bandpass = False
@@ -313,7 +319,10 @@ class DaqSimulator:
             yield (
                 TaskStatus.REJECTED,
                 "Param `argin` must have keys for `station_config_path` "
-                "and `plot_directory`", None, None, None
+                "and `plot_directory`",
+                None,
+                None,
+                None,
             )
             return
         auto_handle_daq: bool = cast(bool, params.get("auto_handle_daq", False))
@@ -323,7 +332,10 @@ class DaqSimulator:
                     TaskStatus.REJECTED,
                     "Current DAQ config is invalid. "
                     "The `append_integrated` option must be set to false "
-                    "for bandpass monitoring.", None, None, None
+                    "for bandpass monitoring.",
+                    None,
+                    None,
+                    None,
                 )
                 return
             self.configure({"append_integrated": False})
@@ -333,7 +345,10 @@ class DaqSimulator:
                 yield (
                     TaskStatus.REJECTED,
                     "INTEGRATED_CHANNEL_DATA consumer must be running "
-                    "before bandpasses can be monitored.", None, None, None
+                    "before bandpasses can be monitored.",
+                    None,
+                    None,
+                    None,
                 )
                 return
             self.start(modes_to_start="INTEGRATED_CHANNEL_DATA")
@@ -343,7 +358,10 @@ class DaqSimulator:
         ):
             yield (
                 TaskStatus.REJECTED,
-                f"Specified configuration file ({station_config_path}) does not exist.", None, None, None
+                f"Specified configuration file ({station_config_path}) does not exist.",
+                None,
+                None,
+                None,
             )
             return
 
@@ -355,7 +373,10 @@ class DaqSimulator:
             yield (
                 TaskStatus.REJECTED,
                 "Please set station name in configuration file "
-                f"{station_config_path}, currently unnamed.", None, None, None
+                f"{station_config_path}, currently unnamed.",
+                None,
+                None,
+                None,
             )
             return
 
@@ -365,7 +386,10 @@ class DaqSimulator:
                 TaskStatus.REJECTED,
                 f"Station {station_config_path} must be configured to send "
                 "integrated data over the 1G network, and each station should "
-                "define a different destination port. Please check", None, None, None
+                "define a different destination port. Please check",
+                None,
+                None,
+                None,
             )
             return
 
@@ -373,17 +397,26 @@ class DaqSimulator:
         if not self.create_plotting_directory(plot_directory, station_name):
             yield (
                 TaskStatus.FAILED,
-                f"Unable to create plotting directory at: {plot_directory}", None, None, None
+                f"Unable to create plotting directory at: {plot_directory}",
+                None,
+                None,
+                None,
             )
             return
 
         self._monitoring_bandpass = True
         yield (TaskStatus.IN_PROGRESS, "Bandpass monitor active", None, None, None)
 
-        i=0 # So the attribute can iterate.
+        i = 0  # So the attribute can iterate.
         while not self._stop_bandpass:
-            yield (TaskStatus.IN_PROGRESS, "plot sent", f"fake_x_bandpass_plot_{i}", f"fake_y_bandpass_plot_{i}", f"fake_rms_plot_{i}",)
-            i+=1
+            yield (
+                TaskStatus.IN_PROGRESS,
+                "plot sent",
+                f"fake_x_bandpass_plot_{i}",
+                f"fake_y_bandpass_plot_{i}",
+                f"fake_rms_plot_{i}",
+            )
+            i += 1
             time.sleep(5)
 
         if auto_handle_daq:

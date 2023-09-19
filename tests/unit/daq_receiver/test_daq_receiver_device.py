@@ -22,7 +22,11 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango.server import Device, command
 
 from ska_low_mccs_spshw import MccsDaqReceiver
-from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqModes, DaqSimulator, convert_daq_modes
+from ska_low_mccs_spshw.daq_receiver.daq_simulator import (
+    DaqModes,
+    DaqSimulator,
+    convert_daq_modes,
+)
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
 # TODO: [MCCS-1211] Workaround for ska-tango-testing bug.
@@ -145,7 +149,6 @@ class TestMccsDaqReceiver:
         # Check the IP is what we chose.
         assert status["Receiver IP"] == [daq_ip]
 
-
     @pytest.mark.parametrize(
         "daq_modes",
         ("DaqModes.CHANNEL_DATA, DaqModes.BEAM_DATA, DaqModes.RAW_DATA", "1, 2, 0"),
@@ -179,30 +182,31 @@ class TestMccsDaqReceiver:
 
         # --- TODO: Refactor this block into a test helper method that
         #  queries DaqStatus until some condition is satisfied.
-        running_consumers = json.loads(device_under_test.DaqStatus()).get("Running Consumers")
+        running_consumers = json.loads(device_under_test.DaqStatus()).get(
+            "Running Consumers"
+        )
         while running_consumers == []:
             sleep(0.2)
-            running_consumers = json.loads(device_under_test.DaqStatus()).get("Running Consumers")
+            running_consumers = json.loads(device_under_test.DaqStatus()).get(
+                "Running Consumers"
+            )
         # ---
         # Convert the expected DaqModes.
         expected_converted_daq_modes = convert_daq_modes(daq_modes)
         # Convert the running DaqModes after assembling into one string.
-        running_daq_modes:str =""
+        running_daq_modes: str = ""
         for consumer in running_consumers:
             running_daq_modes += f"{consumer[0]},"
-        running_daq_modes=running_daq_modes[0:-1]   # Strip trailing comma.
+        running_daq_modes = running_daq_modes[0:-1]  # Strip trailing comma.
         actual_converted_daq_modes = convert_daq_modes(running_daq_modes)
 
         for consumer in expected_converted_daq_modes:
             # Match DaqMode.value
             assert consumer in actual_converted_daq_modes
 
-
         [result_code], [response] = device_under_test.Stop()
         assert result_code == ResultCode.OK
         assert response == "Daq stopped"
-
-
 
 
 class TestPatchedDaq:
@@ -227,15 +231,18 @@ class TestPatchedDaq:
         :return: a mock to be used as a component manager for the daq
             device.
         """
-        #mock_component_manager = mocker.Mock()
+        # mock_component_manager = mocker.Mock()
         mock_component_manager = unittest.mock.Mock()
         mock_component_manager.start_daq.return_value = (ResultCode.OK, "Daq started")
         mock_component_manager.stop_daq.return_value = (ResultCode.OK, "Daq stopped")
         mock_component_manager._set_consumers_to_start.return_value = (
-                ResultCode.OK,
-                "SetConsumers command completed OK",
-            )
-        mock_component_manager.start_bandpass_monitor.return_value = (ResultCode.OK, "Mock bandpass monitor started.")
+            ResultCode.OK,
+            "SetConsumers command completed OK",
+        )
+        mock_component_manager.start_bandpass_monitor.return_value = (
+            ResultCode.OK,
+            "Mock bandpass monitor started.",
+        )
         # configuration = {
         #     "start_daq.return_value": ,
         #     "stop_daq.return_value": ,
@@ -309,7 +316,6 @@ class TestPatchedDaq:
         )  # dynamically get DAQ address
         with test_harness as test_context:
             yield test_context
-
 
     @pytest.mark.parametrize(
         "input_data, result",
@@ -583,4 +589,6 @@ class TestPatchedDaq:
         assert call_args[0][0] == bandpass_config
 
         _ = device_under_test.StopBandpassMonitor()
-        call_args = mock_component_manager.stop_bandpass_monitor.assert_called_once_with()
+        call_args = (
+            mock_component_manager.stop_bandpass_monitor.assert_called_once_with()
+        )

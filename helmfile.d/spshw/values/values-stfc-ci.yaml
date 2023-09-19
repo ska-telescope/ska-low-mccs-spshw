@@ -10,7 +10,7 @@ overrides:
             id: 1
             sps:
               daq:
-                simulated: true
+                simulated: false
               subracks:
                 "1":
                   simulated: true

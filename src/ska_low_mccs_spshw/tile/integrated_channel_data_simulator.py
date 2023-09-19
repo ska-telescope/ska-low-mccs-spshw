@@ -154,7 +154,7 @@ class IntegratedChannelDataSimulator:
                 self._nof_channel_packets,
                 self._nof_channels_per_packet * 2,
             ),
-            #dtype=np.uint16,
+            # dtype=np.uint16,
             dtype=np.float32,
         )
         self._channelised_packet_data = np.zeros(
@@ -165,7 +165,7 @@ class IntegratedChannelDataSimulator:
                 self._nof_channel_packets,
                 self._nof_channels_per_packet * 2,
             ),
-            #dtype=np.uint16,
+            # dtype=np.uint16,
             dtype=np.float32,
         )
         for tpm in range(self._nof_tiles):
@@ -357,11 +357,11 @@ class IntegratedChannelDataSimulator:
         lmc_tpm_info = 1 << 63 | 0x2001 << 48 | tpm_id << 32 | self._station_id << 16
         sample_offset = 0 << 63 | 0x3300 << 48
 
-        # lmc_info = (1 << 63 
-        #     | 0x2002 << 48 
-        #     | start_channel << 24 
-        #     | self._nof_channels_per_packet << 16 
-        #     | start_antenna << 8 
+        # lmc_info = (1 << 63
+        #     | 0x2002 << 48
+        #     | start_channel << 24
+        #     | self._nof_channels_per_packet << 16
+        #     | start_antenna << 8
         #     | self._nof_ants_per_fpga
         # )
         packet = (

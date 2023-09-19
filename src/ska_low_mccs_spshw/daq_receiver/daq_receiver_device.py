@@ -30,8 +30,7 @@ from .daq_health_model import DaqHealthModel
 __all__ = ["MccsDaqReceiver", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
-import functools
-print = functools.partial(print, flush=True)  # noqa: A001
+
 
 class _StartDaqCommand(SubmittedSlowCommand):
     """
@@ -89,10 +88,11 @@ class _StartDaqCommand(SubmittedSlowCommand):
 
         return super().do(modes_to_start)
 
+
 class _StartBandpassMonitorCommand(SubmittedSlowCommand):
     """
     Class for handling the StartBandpassMonitor command.
-    
+
     #TODO: Better docstring.
     This command starts the DAQ bandpass monitor.
     """
@@ -154,12 +154,12 @@ class _StartBandpassMonitorCommand(SubmittedSlowCommand):
                 message indicating status. The message is for
                 information purpose only.
         """
-        print("IN STARTBANDPASSCOMMAND DO")
         assert (
             not args and not kwargs
         ), f"do method has unexpected arguments: {args}, {kwargs}"
 
         return super().do(argin)
+
 
 class MccsDaqReceiver(SKABaseDevice):
     """An implementation of a MccsDaqReceiver Tango device."""
@@ -306,7 +306,7 @@ class MccsDaqReceiver(SKABaseDevice):
             ("DaqStatus", self.DaqStatusCommand),
             ("GetConfiguration", self.GetConfigurationCommand),
             ("Stop", self.StopCommand),
-            #("StartBandpassMonitor", self.StartBandpassMonitorCommand),
+            # ("StartBandpassMonitor", self.StartBandpassMonitorCommand),
             ("StopBandpassMonitor", self.StopBandpassMonitorCommand),
         ]:
             self.register_command_object(
@@ -405,7 +405,6 @@ class MccsDaqReceiver(SKABaseDevice):
         :param rms_plot: A filepath for an rms plot.
         :param kwargs: Other state changes of device.
         """
-        print(f"IN CPT STATE WITH: {locals()}")
         if fault:
             self.op_state_model.perform_action("component_fault")
             self._health_model.component_fault(True)
@@ -417,7 +416,6 @@ class MccsDaqReceiver(SKABaseDevice):
                 self._health_state = cast(HealthState, health)
                 self.push_change_event("healthState", health)
 
-        # TODO: Change events might not fire if fp is always the same.
         if x_bandpass_plot is not None:
             if isinstance(x_bandpass_plot, list):
                 x_bandpass_plot = x_bandpass_plot[0]
@@ -849,7 +847,6 @@ class MccsDaqReceiver(SKABaseDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        print("IN DEVICE BANDPASS MONITOR START")
         handler = self.get_command_object("StartBandpassMonitor")
         (result_code, message) = handler(argin=argin)
         return ([result_code], [message])
@@ -925,33 +922,36 @@ class MccsDaqReceiver(SKABaseDevice):
         """
         return self._received_data_mode, self._received_data_result
 
-    # TODO: These might want to hold a list of filepaths eventually.
+    # TODO: These might want to cope with diff sized arrays eventually.
     @attribute(
-        dtype=str
+        dtype=(("DevFloat",),),
+        max_dim_x=16,           # Antennas
+        max_dim_y=511,          # Channels
     )
-    def xPolBandpass(self: MccsDaqReceiver) -> str:
+    def xPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:
         """
-        Read the last bandpass plot filepath for the x-polarisation.
+        Read the last bandpass plot data for the x-polarisation.
         """
         return self._x_bandpass_plot
-    
+
     @attribute(
-        dtype=str
+        dtype=(("DevFloat",),),
+        max_dim_x=16,
+        max_dim_y=511,
     )
-    def yPolBandpass(self: MccsDaqReceiver) -> str:
+    def yPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:
         """
-        Read the last bandpass plot filepath for the y-polarisation.
+        Read the last bandpass plot data for the y-polarisation.
         """
         return self._y_bandpass_plot
-    
-    @attribute(
-        dtype=str
-    )
+
+    @attribute(dtype=str)
     def rmsPlot(self: MccsDaqReceiver) -> str:
         """
         Read the last rms plot filepath.
         """
         return self._rms_plot
+
 
 # ----------
 # Run server

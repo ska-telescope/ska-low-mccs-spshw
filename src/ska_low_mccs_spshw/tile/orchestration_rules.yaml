@@ -201,7 +201,7 @@
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, "OFF"]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
 
 # SUBRACK COMMS ESTABLISHED, TPM IS OFF
-!!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "OFF"]: [report_communication_disabled]
+!!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "OFF"]: [stop_communicating_with_subrack, report_communication_disabled, report_tpm_power_unknown]
 !!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, "OFF"]: []  # already online
 !!python/tuple [DESIRE_ON, ESTABLISHED, ~, "OFF"]: [turn_tpm_on]
 !!python/tuple [DESIRE_OFF, ESTABLISHED, ~, "OFF"]: []  # already off

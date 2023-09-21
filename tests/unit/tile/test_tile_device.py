@@ -115,6 +115,11 @@ class TestMccsTile:
         """
         Test TANGO state gets updated as expected.
 
+        The ``MccsTile`` device should undergo state changes when its adminMode changes:
+        - when adminMode is ``OFFLINE`` the device should become ``DISABLED``
+        - when adminMode is ``ONLINE`` the device should attempt to work out the
+        state of the component under control and transition.
+
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
@@ -131,19 +136,22 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
 
         tile_device.adminMode = AdminMode.ONLINE
-
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         change_event_callbacks["state"].assert_not_called()
-        # 1
+
+        # Check when adminMode OFFLINE state transitions to DISABLE
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        # Check when adminMode ONLINE state transitions to state of underlying device
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
-        # 2
+
+        # Check when adminMode OFFLINE state transitions to DISABLE (again)
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        # Check when adminMode ONLINE state transitions to state of underlying device
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)

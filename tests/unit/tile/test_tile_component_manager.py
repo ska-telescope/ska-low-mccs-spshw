@@ -82,6 +82,42 @@ class TestTileComponentManager:
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
+    def test_state_with_adminode(
+        self: TestTileComponentManager,
+        tile_component_manager: TileComponentManager,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test `TileComponentManager` gets updated as expected.
+
+        The `TileComponentManager` should report the power and communication state
+        of the device under control:
+        - when `start_communicating` is called the `TileComponentManager` should
+        transition to the state of the device under test.
+        - when `stop_communicating` is called the `TileComponentManager` should
+        transition to UNKNOWN since connection to the subrack is lost.
+
+        :param tile_component_manager: the tile component manager
+            under test
+        :param callbacks: dictionary of driver callbacks.
+        """
+        assert (
+            tile_component_manager.communication_state == CommunicationStatus.DISABLED
+        )
+        tile_component_manager.start_communicating()
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
+        callbacks["communication_status"].assert_not_called()
+
+        # Stop communicating will break the connection with the subrack
+        # therefore component state becomes UNKNOWN
+        tile_component_manager.stop_communicating()
+        callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+        callbacks["component_state"].assert_not_called()
+
     # TODO: find out if TPM has standby mode, and if so add this case
     @pytest.mark.parametrize(
         "second_power_state",

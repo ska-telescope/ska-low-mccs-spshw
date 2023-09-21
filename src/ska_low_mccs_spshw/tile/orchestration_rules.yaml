@@ -107,13 +107,13 @@
 !!python/tuple [DESIRE_ONLINE, DISABLED]: [set_subrack_communication_not_established, report_communication_not_established, start_communicating_with_subrack]
 !!python/tuple [DESIRE_ON, DISABLED]: [raise_cannot_turn_off_on_when_offline]
 !!python/tuple [DESIRE_OFF, DISABLED]: [raise_cannot_turn_off_on_when_offline]
-!!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, DISABLED]: [set_subrack_communication_not_established]
-!!python/tuple [SUBRACK_COMMS_ESTABLISHED, DISABLED]: [set_subrack_communication_established]
-!!python/tuple [SUBRACK_SAYS_TPM_UNKNOWN, DISABLED]: [set_subrack_communication_established, report_tpm_power_unknown]
-!!python/tuple [SUBRACK_SAYS_TPM_NO_SUPPLY, DISABLED]: [set_subrack_communication_established, report_tpm_no_power_supply]
-!!python/tuple [SUBRACK_SAYS_TPM_OFF, DISABLED]: [set_subrack_communication_established, report_tpm_off]
-!!python/tuple [SUBRACK_SAYS_TPM_ON, DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
-!!python/tuple [TPM_COMMS_NOT_ESTABLISHED, DISABLED]: []  # extremely unlikely race condition
+!!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, DISABLED]: []  # unlikely race condition
+!!python/tuple [SUBRACK_COMMS_ESTABLISHED, DISABLED]: []  # unlikely race condition
+!!python/tuple [SUBRACK_SAYS_TPM_UNKNOWN, DISABLED]: []  # unlikely race condition
+!!python/tuple [SUBRACK_SAYS_TPM_NO_SUPPLY, DISABLED]: []  # unlikely race condition
+!!python/tuple [SUBRACK_SAYS_TPM_OFF, DISABLED]: []  # unlikely race condition
+!!python/tuple [SUBRACK_SAYS_TPM_ON, DISABLED]: []  # unlikely race condition
+!!python/tuple [TPM_COMMS_NOT_ESTABLISHED, DISABLED]: []  # unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, DISABLED]: []  # extremely unlikely race condition
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS NO_SUPPLY

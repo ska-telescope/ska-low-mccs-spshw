@@ -139,12 +139,22 @@ class TileOrchestrator:
     :language: yaml
     """
 
-    RULES: Optional[
-        dict[tuple, list]
-    ] = None  # This will be populated the first time the class gets instantiated.
+    RULES: dict[
+        tuple[str, str]
+        | tuple[str, str, bool | None, str]
+        | tuple[str, str, bool | None, str, str],
+        list[str],
+    ] | None = None  # will be populated the first time the class gets instantiated.
 
     @classmethod
-    def _load_rules(cls) -> dict[tuple, list]:
+    def _load_rules(
+        cls,
+    ) -> dict[
+        tuple[str, str]
+        | tuple[str, str, bool | None, str]
+        | tuple[str, str, bool | None, str, str],
+        list[str],
+    ]:
         # Do this slow I/O once for the whole class, instead of doing it every time we
         # initialise an instance. (We can't hardcode a relative path here, because
         # sphinx-build imports this with a different current directory.)
@@ -156,7 +166,7 @@ class TileOrchestrator:
             # we've no logger so there's no point catching any exceptions.
         return cls.RULES
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable-next=too-many-arguments, too-many-locals
     def __init__(
         self: TileOrchestrator,
         start_communicating_with_subrack_callback: Callable[[], None],
@@ -248,30 +258,31 @@ class TileOrchestrator:
 
         for state, actions in self._load_rules().items():
             action_calls = [getattr(self, f"_{action}") for action in actions]
-            if len(state) == 2:
-                self._decision_table[
-                    Stimulus[state[0]],
-                    CommunicationStatus[state[1]],
-                ] = action_calls
-            elif len(state) == 4:
-                self._decision_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                        state[2],
-                        PowerState[state[3]],
-                    )
-                ] = action_calls
-            else:
-                self._decision_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                        state[2],
-                        PowerState[state[3]],
-                        CommunicationStatus[state[4]],
-                    )
-                ] = action_calls
+            match state:
+                case (stimulus, subrack_comms):
+                    self._decision_table[
+                        Stimulus[cast(str, stimulus)],
+                        CommunicationStatus[cast(str, subrack_comms)],
+                    ] = action_calls
+                case (stimulus, subrack_comms, goal, tpm_power_state):
+                    self._decision_table[
+                        (
+                            Stimulus[cast(str, stimulus)],
+                            CommunicationStatus[cast(str, subrack_comms)],
+                            cast(bool | None, goal),
+                            PowerState[cast(str, tpm_power_state)],
+                        )
+                    ] = action_calls
+                case (stimulus, subrack_comms, goal, tpm_power_state, tpm_comms):
+                    self._decision_table[
+                        (
+                            Stimulus[cast(str, stimulus)],
+                            CommunicationStatus[cast(str, subrack_comms)],
+                            cast(bool | None, goal),
+                            PowerState[cast(str, tpm_power_state)],
+                            CommunicationStatus[cast(str, tpm_comms)],
+                        )
+                    ] = action_calls
 
     def desire_online(self: TileOrchestrator) -> None:
         """Advise that the operator desires the component manager to be online."""

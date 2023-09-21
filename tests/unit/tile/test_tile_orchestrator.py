@@ -51,32 +51,33 @@ class TestTileOrchestrator:
         """
         rules_table: dict[StateStimulusTupleType, list[str]] = {}
         for state, actions in TileOrchestrator._load_rules().items():
-            if len(state) == 2:
-                rules_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                    )
-                ] = actions
-            elif len(state) == 4:
-                rules_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                        state[2],
-                        PowerState[state[3]],
-                    )
-                ] = actions
-            else:
-                rules_table[
-                    (
-                        Stimulus[state[0]],
-                        CommunicationStatus[state[1]],
-                        state[2],
-                        PowerState[state[3]],
-                        CommunicationStatus[state[4]],
-                    )
-                ] = actions
+            match state:
+                case (stimulus, subrack_comms):
+                    rules_table[
+                        (
+                            Stimulus[cast(str, stimulus)],
+                            CommunicationStatus[cast(str, subrack_comms)],
+                        )
+                    ] = actions
+                case (stimulus, subrack_comms, goal, tpm_power_state):
+                    rules_table[
+                        (
+                            Stimulus[cast(str, stimulus)],
+                            CommunicationStatus[cast(str, subrack_comms)],
+                            cast(bool | None, goal),
+                            PowerState[cast(str, tpm_power_state)],
+                        )
+                    ] = actions
+                case (stimulus, subrack_comms, goal, tpm_power_state, tpm_comms):
+                    rules_table[
+                        (
+                            Stimulus[cast(str, stimulus)],
+                            CommunicationStatus[cast(str, subrack_comms)],
+                            cast(bool | None, goal),
+                            PowerState[cast(str, tpm_power_state)],
+                            CommunicationStatus[cast(str, tpm_comms)],
+                        )
+                    ] = actions
 
         return rules_table
 

@@ -345,11 +345,16 @@ class MccsDaqReceiver(SKABaseDevice):
                 message indicating status. The message is for
                 information purpose only.
             """
-            # TODO
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("rmsPlot", True, False)
+
+            # Archived attributes should be logged to the EDA eventually.
+            self._device.set_archive_event("xPolBandpass", True, False)
+            self._device.set_archive_event("yPolBandpass", True, False)
+            self._device.set_archive_event("rmsPlot", True, False)
+
             return (ResultCode.OK, "Init command completed OK")
 
     # ----------
@@ -420,19 +425,24 @@ class MccsDaqReceiver(SKABaseDevice):
             if isinstance(x_bandpass_plot, list):
                 x_bandpass_plot = x_bandpass_plot[0]
             self._x_bandpass_plot = x_bandpass_plot
+            # TODO: Should we be pushing these
+            # events with self.x_bandpass_plot?
             self.push_change_event("xPolBandpass", x_bandpass_plot)
+            self.push_archive_event("xPolBandpass", x_bandpass_plot)
 
         if y_bandpass_plot is not None:
             if isinstance(y_bandpass_plot, list):
                 y_bandpass_plot = y_bandpass_plot[0]
             self._y_bandpass_plot = y_bandpass_plot
             self.push_change_event("yPolBandpass", y_bandpass_plot)
+            self.push_archive_event("yPolBandpass", y_bandpass_plot)
 
         if rms_plot is not None:
             if isinstance(rms_plot, list):
                 rms_plot = rms_plot[0]
             self._rms_plot = rms_plot
             self.push_change_event("rmsPlot", rms_plot)
+            self.push_archive_event("rmsPlot", rms_plot)
 
     def _received_data_callback(
         self: MccsDaqReceiver,
@@ -925,7 +935,7 @@ class MccsDaqReceiver(SKABaseDevice):
     # TODO: These might want to cope with diff sized arrays eventually.
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=16,           # Antennas
+        max_dim_x=256,          # Antennas
         max_dim_y=511,          # Channels
     )
     def xPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:
@@ -936,7 +946,7 @@ class MccsDaqReceiver(SKABaseDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=16,
+        max_dim_x=256,
         max_dim_y=511,
     )
     def yPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:

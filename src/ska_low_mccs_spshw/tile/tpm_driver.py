@@ -1461,12 +1461,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             preadu.select_low_passband()  # unimplemented on TPM 1.6
             preadu.read_configuration()
 
-        for channel in list(self.tile.preadu_signal_map.keys()):
-            # Apply attenuation
-            pid = self.tile.preadu_signal_map[channel]["preadu_id"]
-            channel = self.tile.preadu_signal_map[channel]["channel"]
-            attenuation = levels[channel]
-            self.tile.tpm.tpm_preadu[pid].set_attenuation(attenuation, [channel])
+        assert set(range(len(levels))) == set(self.tile.preadu_signal_map)
+        for channel, level in enumerate(levels):
+            preadu_id = self.tile.preadu_signal_map[channel]["preadu_id"]
+            preadu_ch = self.tile.preadu_signal_map[channel]["channel"]
+            self.tile.tpm.tpm_preadu[preadu_id].set_attenuation(level, [preadu_ch])
 
         for preadu in self.tile.tpm.tpm_preadu:
             preadu.write_configuration()

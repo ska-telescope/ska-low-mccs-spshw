@@ -30,11 +30,12 @@
 # CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""An implementation of a IntegratedChannelDataSimulator."""
+"""An implementation of a SpeadDataSimulator."""
 
 from __future__ import annotations
 
 import bisect
+import logging
 import socket
 import struct
 import threading
@@ -44,11 +45,11 @@ from typing import Any, Optional
 
 import numpy as np
 
-__all__ = ["IntegratedChannelDataSimulator"]
+__all__ = ["SpeadDataSimulator"]
 
 
 # pylint: disable=too-many-instance-attributes
-class IntegratedChannelDataSimulator:
+class SpeadDataSimulator:
     """
     A class to send simulated integrated channel data.
 
@@ -66,13 +67,18 @@ class IntegratedChannelDataSimulator:
 
     # pylint: disable=too-many-arguments
     def __init__(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
+        logger: logging.Logger,
     ) -> None:
-        """Init simulator."""
+        """
+        Init simulator.
+
+        :param logger: a logger.
+        """
         self._ip: Optional[str] = None
         self._port: Optional[int] = None
         self._nof_tiles: int = 1
-
+        self.logger = logger
         self._unix_epoch_time = int(time.time())
         self._timestamp = 0
         self._lmc_capture_mode = 0x6
@@ -181,7 +187,7 @@ class IntegratedChannelDataSimulator:
         # Create socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    def stop_sending_data(self: IntegratedChannelDataSimulator) -> None:
+    def stop_sending_data(self: SpeadDataSimulator) -> None:
         """
         Stop sending data.
 
@@ -200,7 +206,7 @@ class IntegratedChannelDataSimulator:
                     raise RuntimeError("Failed to stop thread.")
 
     def send_raw_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         sleep_between_antennas: int,
     ) -> None:
         """
@@ -220,40 +226,22 @@ class IntegratedChannelDataSimulator:
         self._threads["raw"].start()
 
     def _send_raw_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         sleep_between_antennas: int,
     ) -> None:
         """
         Send raw data.
 
-        However note at present the data generated is integrated channel data.
-
         :param sleep_between_antennas: time in seconds.
+
+        :raises NotImplementedError: send raw data is not implemented.
         """
-        self._stop_events["raw"].clear()
-        for tile in range(self._nof_tiles):
-            for ant in range(self._nof_ants_per_fpga):
-                for chan in range(
-                    int(self._nof_channels / self._nof_channels_per_packet)
-                ):
-                    for fpga in range(self._nof_fpgas):
-                        if self._stop_events["raw"].is_set():
-                            return
-                        self._transmit_packet(
-                            tile,
-                            fpga,
-                            self._timestamp,
-                            ant + fpga * self._nof_ants_per_fpga,
-                            chan * self._nof_channels_per_packet,
-                            self._raw_packet_data,
-                        )
-
-                time.sleep(sleep_between_antennas)
-
-        self._timestamp += 1
+        raise NotImplementedError(
+            "because raw data SPEAD packets are not implemented yet."
+        )
 
     def send_channelised_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         sleep_between_antennas: int,
         number_of_samples: int = 128,
         first_channel: int = 0,
@@ -282,7 +270,7 @@ class IntegratedChannelDataSimulator:
         self._threads["channel"].start()
 
     def _send_channelised_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         sleep_between_antennas: int,
         number_of_samples: int = 128,
         first_channel: int = 0,
@@ -320,7 +308,7 @@ class IntegratedChannelDataSimulator:
         self._timestamp += 1
 
     def _transmit_packet(  # pylint: disable=too-many-locals
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         tpm_id: int,
         fpga_id: int,
         timestamp: int,
@@ -375,7 +363,7 @@ class IntegratedChannelDataSimulator:
         self._socket.sendto(packet, (self._ip, self._port))
 
     def _generate_channelised_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         tpm_id: int,
         fpga_id: int,
         start_antenna: int,
@@ -411,7 +399,7 @@ class IntegratedChannelDataSimulator:
         return np.ravel([x_bandpass, y_bandpass], "F")
 
     def _generate_simulated_bandpass(  # pylint: disable=too-many-locals
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         polarisation: int,
         first_channel: int,
         last_channel: int,
@@ -453,7 +441,7 @@ class IntegratedChannelDataSimulator:
         return noisy_array
 
     def _generate_raw_data(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         tpm_id: int,
         fpga_id: int,
         start_antenna: int,
@@ -493,7 +481,7 @@ class IntegratedChannelDataSimulator:
         return packet_data
 
     def set_destination_ip(
-        self: IntegratedChannelDataSimulator,
+        self: SpeadDataSimulator,
         ip: str,
         port: int,
     ) -> None:

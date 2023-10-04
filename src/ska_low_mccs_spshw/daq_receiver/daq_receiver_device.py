@@ -13,6 +13,7 @@ import json
 import logging
 from typing import Any, Optional, Union, cast
 
+import numpy as np
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
@@ -120,6 +121,7 @@ class _StartBandpassMonitorCommand(SubmittedSlowCommand):
             logger=logger,
         )
 
+    # pylint: disable = arguments-differ
     def do(  # type: ignore[override]
         self: _StartBandpassMonitorCommand,
         *args: Any,
@@ -161,6 +163,7 @@ class _StartBandpassMonitorCommand(SubmittedSlowCommand):
         return super().do(argin)
 
 
+# pylint: disable = too-many-instance-attributes
 class MccsDaqReceiver(SKABaseDevice):
     """An implementation of a MccsDaqReceiver Tango device."""
 
@@ -223,9 +226,9 @@ class MccsDaqReceiver(SKABaseDevice):
         self._health_model: DaqHealthModel
         self._received_data_mode: str
         self._received_data_result: str
-        self._x_bandpass_plot: str
-        self._y_bandpass_plot: str
-        self._rms_plot: str
+        self._x_bandpass_plot: np.ndarray
+        self._y_bandpass_plot: np.ndarray
+        self._rms_plot: np.ndarray
 
     def init_device(self: MccsDaqReceiver) -> None:
         """
@@ -270,9 +273,9 @@ class MccsDaqReceiver(SKABaseDevice):
         self._health_model = DaqHealthModel(self._component_state_callback)
         self._received_data_mode = ""
         self._received_data_result = ""
-        self._x_bandpass_plot = ""
-        self._y_bandpass_plot = ""
-        self._rms_plot = ""
+        self._x_bandpass_plot = np.zeros(shape=(256, 511), dtype=float)
+        self._y_bandpass_plot = np.zeros(shape=(256, 511), dtype=float)
+        self._rms_plot = np.zeros(shape=(256, 511), dtype=float)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(self: MccsDaqReceiver) -> DaqComponentManager:
@@ -388,13 +391,14 @@ class MccsDaqReceiver(SKABaseDevice):
             communication_state == CommunicationStatus.ESTABLISHED
         )
 
+    # pylint: disable = too-many-arguments
     def _component_state_callback(
         self: MccsDaqReceiver,
         fault: Optional[bool] = None,
         health: Optional[HealthState] = None,
-        x_bandpass_plot: Optional[str] = None,
-        y_bandpass_plot: Optional[str] = None,
-        rms_plot: Optional[str] = None,
+        x_bandpass_plot: Optional[np.ndarray] = None,
+        y_bandpass_plot: Optional[np.ndarray] = None,
+        rms_plot: Optional[np.ndarray] = None,
         **kwargs: Optional[Any],
     ) -> None:
         """
@@ -909,7 +913,7 @@ class MccsDaqReceiver(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("StopBandpassMonitor")
-        handler()
+        return handler()
 
     # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     # def Command(self: XXXXXX, argin: str) -> DevVarLongStringArrayType:
@@ -932,15 +936,16 @@ class MccsDaqReceiver(SKABaseDevice):
         """
         return self._received_data_mode, self._received_data_result
 
-    # TODO: These might want to cope with diff sized arrays eventually.
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,          # Antennas
-        max_dim_y=511,          # Channels
+        max_dim_x=256,  # Antennas
+        max_dim_y=511,  # Channels
     )
-    def xPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:
+    def xPolBandpass(self: MccsDaqReceiver) -> np.ndarray:
         """
         Read the last bandpass plot data for the x-polarisation.
+
+        :return: The last block of x-polarised bandpass data.
         """
         return self._x_bandpass_plot
 
@@ -949,16 +954,24 @@ class MccsDaqReceiver(SKABaseDevice):
         max_dim_x=256,
         max_dim_y=511,
     )
-    def yPolBandpass(self: MccsDaqReceiver) -> list[list[float]]:
+    def yPolBandpass(self: MccsDaqReceiver) -> np.ndarray:
         """
         Read the last bandpass plot data for the y-polarisation.
+
+        :return: The last block of y-polarised bandpass data.
         """
         return self._y_bandpass_plot
 
-    @attribute(dtype=str)
-    def rmsPlot(self: MccsDaqReceiver) -> str:
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=256,
+        max_dim_y=511,
+    )
+    def rmsPlot(self: MccsDaqReceiver) -> np.ndarray:
         """
         Read the last rms plot filepath.
+
+        :return: The last block of rms data.
         """
         return self._rms_plot
 

@@ -168,8 +168,6 @@ class TestMccsDaqReceiver:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param mock_component_manager: a mock component manager that has
-            been patched into the device under test
         :param daq_modes: The DAQ consumers to start.
         """
         device_under_test.adminMode = AdminMode.ONLINE

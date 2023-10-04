@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import time
 
+import numpy as np
 import pytest
 from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_tango_testing.mock import MockCallableGroup
@@ -394,13 +395,15 @@ class TestDaqComponentManager:
             ),
         ),
     )
-    def test_start_stop_bandpass_monitor(
+    def test_start_stop_bandpass_monitor(  # pylint: disable = too-many-arguments
         self: TestDaqComponentManager,
         daq_component_manager: DaqComponentManager,
         callbacks: MockCallableGroup,
         bandpass_config: str,
         expected_status: TaskStatus,
         expected_msg: str,
+        x_pol_bandpass_test_data: np.ndarray,
+        y_pol_bandpass_test_data: np.ndarray,
     ) -> None:
         """
         Test for start_bandpass_monitor().
@@ -418,6 +421,8 @@ class TestDaqComponentManager:
             `start_bandpass_monitor`
         :param expected_msg: The first expected message returned from
             `start_bandpass_monitor`
+        :param x_pol_bandpass_test_data: A NumPy array of simulated x-pol bandpass data.
+        :param y_pol_bandpass_test_data: A NumPy array of simulated y-pol bandpass data.
         """
         daq_component_manager.start_communicating()
         callbacks["communication_state"].assert_call(
@@ -440,17 +445,30 @@ class TestDaqComponentManager:
             status = json.loads(daq_component_manager.daq_status())
             assert status["Bandpass Monitor"]
 
-            for i in range(3):
+            for _ in range(3):
                 callbacks["task"].assert_call(
                     status=expected_status, result="plot sent", lookahead=5
                 )
-                callbacks["component_state"].assert_call(
-                    x_bandpass_plot=[f"fake_x_bandpass_plot_{i}"],
-                    y_bandpass_plot=[f"fake_y_bandpass_plot_{i}"],
-                    rms_plot=[f"fake_rms_plot_{i}"],
-                    lookahead=15,
-                )
+                # This isn't working properly.
+                # need to extract the call args and compare... UGH!
+                # while not callbacks["component_state"]._call_queue.empty():
+                call_args = callbacks["component_state"]._call_queue.get(timeout=5)
+                args_dict = call_args[2]
+                received_x_pol_data = args_dict["x_bandpass_plot"]
+                received_y_pol_data = args_dict["y_bandpass_plot"]
 
+                assert np.array_equal(x_pol_bandpass_test_data, received_x_pol_data)
+                assert np.array_equal(y_pol_bandpass_test_data, received_y_pol_data)
+
+                # The following assertion doesn't work properly with numpy arrays.
+                # It results in an illegal boolean array comparison which isn't
+                # what we wanted anyway.
+                # callbacks["component_state"].assert_call(
+                #     x_bandpass_plot=x_pol_bandpass_test_data,
+                #     y_bandpass_plot=y_pol_bandpass_test_data,
+                #     rms_plot=[None],
+                #     lookahead=15,
+                # )
                 time.sleep(3)  # Wait for simulator output.
 
             assert (

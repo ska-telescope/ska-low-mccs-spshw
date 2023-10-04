@@ -16,8 +16,9 @@ import json
 import os
 import time
 from enum import IntEnum
-from typing import Any, Callable, Iterator, Optional, TypeVar, cast
+from typing import Any, Callable, Iterator, TypeVar, cast
 
+import numpy as np
 from pyaavs import station
 from ska_control_model import ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import run_server_forever
@@ -123,6 +124,9 @@ def convert_daq_modes(consumers_to_start: str) -> list[DaqModes]:
 class DaqSimulator:
     """An implementation of a DaqSimulator device."""
 
+    X_POL_BANDPASS_DATA = np.loadtxt("x_pol_bandpass.txt", delimiter=",")
+    Y_POL_BANDPASS_DATA = np.loadtxt("y_pol_bandpass.txt", delimiter=",")
+
     def __init__(self: DaqSimulator):
         """Initialise this device."""
         self._initialised = False
@@ -179,7 +183,6 @@ class DaqSimulator:
 
         :yield: a status update.
         """
-        print("SIMULATOR START")
         self._modes = convert_daq_modes(modes_to_start)
         yield "LISTENING"
 
@@ -298,7 +301,9 @@ class DaqSimulator:
             is called.
             Default: False.
 
-        :return: a task status and response message
+        :yields: a task status and response message.
+            Optionally also bandpass data for both
+            polarisations and rms data.
         """
         if self._monitoring_bandpass:
             yield (
@@ -407,17 +412,17 @@ class DaqSimulator:
         self._monitoring_bandpass = True
         yield (TaskStatus.IN_PROGRESS, "Bandpass monitor active", None, None, None)
 
-        i = 0  # So the attribute can iterate.
+        # TODO: Return bandpass data.
         while not self._stop_bandpass:
+            print("SIMULATOR YIELDING BANDPASS DATA")
             yield (
                 TaskStatus.IN_PROGRESS,
                 "plot sent",
-                f"fake_x_bandpass_plot_{i}",
-                f"fake_y_bandpass_plot_{i}",
-                f"fake_rms_plot_{i}",
+                json.dumps(self.X_POL_BANDPASS_DATA.tolist()),
+                json.dumps(self.Y_POL_BANDPASS_DATA.tolist()),
+                None,
             )
-            i += 1
-            time.sleep(5)
+            time.sleep(3)
 
         if auto_handle_daq:
             self.stop()
@@ -449,7 +454,7 @@ class DaqSimulator:
 
         :return: `False` if parent=="invalid_directory" else `True`
         """
-        return not (parent == "invalid_directory")
+        return not parent == "invalid_directory"
 
 
 def main() -> None:

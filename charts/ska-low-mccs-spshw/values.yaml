@@ -162,5 +162,5 @@ pgadmin4:
 
 ska-low-mccs-daq:
   image:
-    tag: 0.4.0-dev.c48e3dd11
+    tag: 0.4.0-dev.cc35f1ee1
     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq

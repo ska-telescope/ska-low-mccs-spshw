@@ -20,7 +20,7 @@ from typing import Any, List, Optional, Union
 from pyfabil.base.definitions import Device, LibraryError
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
-from .integrated_channel_data_simulator import IntegratedChannelDataSimulator
+from .spead_data_simulator import SpeadDataSimulator
 from .tile_data import TileData
 
 __all__ = ["DynamicTileSimulator", "TileSimulator"]
@@ -392,7 +392,7 @@ class TileSimulator:
         self.sync_time = 0
         self.csp_rounding = None
         self._adc_rms: list[float] = list(self.ADC_RMS)
-        self.spead_data_simulator = IntegratedChannelDataSimulator()
+        self.spead_data_simulator = SpeadDataSimulator(logger)
 
         self.preadu_signal_map = {
             0: {"preadu_id": 1, "channel": 0},

@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import json
 import os
+import queue
+import time
 from time import sleep
-from typing import Iterator
+from typing import Any, Iterator
 
 import _pytest
 import pytest
@@ -158,6 +160,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "calibration_store_state",
         "field_station_state",
         "station_calibrator_state",
+        "data_received_callback",
+        "tile_adminMode",
         timeout=30.0,
     )
 
@@ -220,25 +224,63 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
 
 # pylint: disable=inconsistent-return-statements
 def poll_until_state_change(
-    daq: tango.DeviceProxy, wanted_state: tango.DevState, no_of_iters: int = 5
+    device: tango.DeviceProxy, wanted_state: tango.DevState, no_of_iters: int = 5
 ) -> None:
     """
     Poll until device is in wanted state.
 
     This function recursively calls itself up to `no_of_iters` times.
 
-    :param daq: the DAQ receiver Tango device
+    :param device: the TANGO device
     :param wanted_state: the state we're waiting for
     :param no_of_iters: number of times to iterate
     """
-    if daq.state() == wanted_state:
+    if device.state() == wanted_state:
         return
 
     if no_of_iters == 1:
         pytest.fail(
             f"device not in desired state, \
-        wanted: {wanted_state}, actual: {daq.state()}"
+        wanted: {wanted_state}, actual: {device.state()}"
         )
 
     sleep(1)
-    return poll_until_state_change(daq, wanted_state, no_of_iters - 1)
+    return poll_until_state_change(device, wanted_state, no_of_iters - 1)
+
+
+def expect_attribute(
+    tango_device: tango.DeviceProxy,
+    attr: str,
+    value: Any,
+    *,
+    timeout: float = 60.0,
+) -> bool:
+    """
+    Wait for Tango attribute to have a certain value using a subscription.
+
+    Sets up a subscription to a Tango device attribute,
+    waits for the attribute to have the provided value within a given time,
+    then removes the subscription.
+
+    :param tango_device: a DeviceProxy to a Tango device
+    :param attr: the name of the attribute to be monitored
+    :param value: the attribute value we're waiting for
+    :param timeout: the maximum time to wait, in seconds
+    :return: True if the attribute has the expected value within the given timeout
+    """
+    print(f"Expecting {tango_device.dev_name()}/{attr} == {value!r} within {timeout}s")
+    _queue: queue.SimpleQueue[tango.EventData] = queue.SimpleQueue()
+    subscription_id = tango_device.subscribe_event(
+        attr,
+        tango.EventType.CHANGE_EVENT,
+        _queue.put,
+    )
+    deadline = time.time() + timeout
+    try:
+        while True:
+            event = _queue.get(timeout=deadline - time.time())
+            print(f"Got {tango_device.dev_name()}/{attr} == {event.attr_value.value!r}")
+            if event.attr_value.value == value:
+                return True
+    finally:
+        tango_device.unsubscribe_event(subscription_id)

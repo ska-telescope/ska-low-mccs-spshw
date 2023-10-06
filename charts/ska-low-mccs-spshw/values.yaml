@@ -90,7 +90,12 @@ resources:
   requests:
     cpu: 20m
     memory: 50Mi
-
+ska-low-mccs-daq:
+  image:
+    registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    name: ska-low-mccs-daq
+    tag: 0.4.0-dev.c7c1aa29c
+    pullPolicy: IfNotPresent
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw

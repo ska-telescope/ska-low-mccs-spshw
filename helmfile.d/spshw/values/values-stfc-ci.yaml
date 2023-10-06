@@ -1,6 +1,11 @@
 defaults:
   logging_level_default: 5
 
+platform:
+  cluster:
+    daq:
+      storage_class: nfss1
+
 overrides:
   array:
     station_clusters:
@@ -11,6 +16,27 @@ overrides:
             sps:
               daq:
                 simulated: true
+              subracks:
+                "1":
+                  simulated: true
+                  srmb_host: srmb-1
+                  srmb_port: 8081
+              tpms:
+                "10":
+                  simulated: true
+                  host: 10.0.10.201
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 1
+
+      "real-daq":
+        stations:
+          "1":
+            id: 1
+            sps:
+              daq:
+                simulated: false
               subracks:
                 "1":
                   simulated: true

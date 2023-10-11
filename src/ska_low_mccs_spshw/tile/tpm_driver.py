@@ -278,6 +278,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                     self._update_component_state(
                         tile_health_structure=self._tile_health_structure
                     )
+                self.logger.error("The poller is updating tpm_status")
+                self._update_tpm_status()
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
@@ -623,6 +625,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises Exception: when the aavs raises a exception.
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -650,10 +654,14 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             #
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                self.tile.initialise(
-                    tile_id=self._tile_id,
-                    pps_delay=self._pps_delay,
-                )
+                try:
+                    self.tile.initialise(
+                        tile_id=self._tile_id,
+                        pps_delay=self._pps_delay,
+                    )
+                except Exception as e:
+                    self.logger.error(f"The call to initialise raised a exception {e}")
+                    raise e
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
             #

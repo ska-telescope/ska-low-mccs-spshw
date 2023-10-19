@@ -397,8 +397,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             Default: False.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :return: a task status and response message
         """
         config = self.get_configuration()
         nof_antennas_per_tile = int(config["nof_antennas"])
@@ -468,6 +466,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task status and response message
+        :return: a ResultCode and response message
         """
         return self._daq_client.stop_bandpass_monitor()

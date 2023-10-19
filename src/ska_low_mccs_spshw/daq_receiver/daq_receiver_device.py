@@ -900,8 +900,8 @@ class MccsDaqReceiver(SKABaseDevice):
             """
             return self._component_manager.stop_bandpass_monitor()
 
-    @command()
-    def StopBandpassMonitor(self: MccsDaqReceiver) -> None:
+    @command(dtype_out="DevVarLongStringArray")
+    def StopBandpassMonitor(self: MccsDaqReceiver) -> DevVarLongStringArrayType:
         """
         Stop monitoring antenna bandpasses.
 
@@ -913,7 +913,8 @@ class MccsDaqReceiver(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("StopBandpassMonitor")
-        return handler()
+        (result_code, message) = handler()
+        return ([result_code], [message])
 
     # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     # def Command(self: XXXXXX, argin: str) -> DevVarLongStringArrayType:

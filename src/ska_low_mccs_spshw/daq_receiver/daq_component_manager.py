@@ -10,12 +10,16 @@ from __future__ import annotations
 
 import json
 import logging
+import random
 import threading
+from datetime import date
+from pathlib import PurePath
 from typing import Any, Callable, Optional
 
 import numpy as np
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import DaqClient
+from ska_ser_skuid.client import SkuidClient  # type: ignore
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 
@@ -35,6 +39,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         receiver_ports: str,
         daq_address: str,
         consumers_to_start: str,
+        skuid_url: str,
         logger: logging.Logger,
         max_workers: int,
         communication_state_callback: Callable[[CommunicationStatus], None],
@@ -52,6 +57,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             This is dependent on the communication mechanism used.
             For gRPC, this is the channel.
         :param consumers_to_start: The default consumers to be started.
+        :param skuid_url: The address at which a SKUID service is running.
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -75,6 +81,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         self._received_data_callback = received_data_callback
         self._set_consumers_to_start(consumers_to_start)
         self._daq_client = DaqClient(daq_address)
+        self._skuid_url = skuid_url
 
         super().__init__(
             logger,
@@ -252,6 +259,10 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
+        # Check data directory is in correct format, if not then reconfigure.
+        if not self._data_directory_format_adr55_compliant():
+            config = {"directory": self._construct_adr55_filepath()}
+            self.configure_daq(json.dumps(config))
         try:
             modes_to_start = modes_to_start or self._consumers_to_start
             for response in self._daq_client.start_daq(modes_to_start):
@@ -469,3 +480,91 @@ class DaqComponentManager(TaskExecutorComponentManager):
         :return: a ResultCode and response message
         """
         return self._daq_client.stop_bandpass_monitor()
+    def _data_directory_format_adr55_compliant(
+        self: DaqComponentManager,
+    ) -> bool:
+        """
+        Check the current data directory has ADR-55 format.
+
+        Here we just check that the static parts of the filepath are
+            present where expected.
+            The eb_id and scan_id are not validated.
+
+        :return: Whether the current directory is ADR-55 compliant.
+        """
+        current_directory = self.get_configuration()["directory"].split("/", maxsplit=5)
+        # Reconstruct ADR-55 relevant part of the fp to match against.
+        current_directory_root = "/".join(current_directory[0:5])
+        return PurePath(current_directory_root).match("/product/*/low-mccs/*")
+
+    def _construct_adr55_filepath(
+        self: DaqComponentManager,
+        eb_id: Optional[str] = None,
+        scan_id: Optional[str] = None,
+    ) -> str:
+        """
+        Construct an ADR-55 compliant filepath.
+
+        An ADR-55 compliant filepath for data logging is constructed
+            from the existing DAQ data directory, retrieving or creating
+            UIDs as necessary.
+
+        :param eb_id: A pre-existing eb_id if available.
+        :param scan_id: A pre-existing scan_id if available.
+
+        :return: A data storage directory compliant with ADR-55.
+        """
+        if eb_id is None:
+            eb_id = self._get_eb_id()
+        if scan_id is None:
+            scan_id = self._get_scan_id()
+        existing_directory = self.get_configuration()["directory"]
+        # Replace any double slashes with just one in case
+        # `existing_directory` begins with one.
+        return f"/product/{eb_id}/low-mccs/{scan_id}/{existing_directory}".replace(
+            "//", "/"
+        )
+
+    # TODO: Would there be any mileage in combining these methods?
+    def _get_scan_id(self: DaqComponentManager) -> str:
+        """
+        Get a unique scan ID from SKUID.
+
+        :return: A unique scan ID.
+        """
+        try:
+            skuid_client = SkuidClient(self._skuid_url)
+            uid = skuid_client.fetch_scan_id()
+            return uid
+        except Exception as e:  # pylint: disable=broad-except
+            # Usually when SKUID isn't available.
+            self.logger.warn(
+                "Could not retrieve scan_id from SKUID: %s. "
+                "Using a locally produced scan_id.",
+                e,
+            )
+            random_seq = str(random.randint(1, 999999999999999)).rjust(15, "0")
+            uid = f"scan-local-{random_seq}"
+            return uid
+
+    def _get_eb_id(self: DaqComponentManager) -> str:
+        """
+        Get a unique execution block ID from SKUID.
+
+        :return: A unique execution block ID.
+        """
+        try:
+            skuid_client = SkuidClient(self._skuid_url)
+            uid = skuid_client.fetch_skuid("eb")
+            return uid
+        except Exception as e:  # pylint: disable=broad-except
+            # Usually when SKUID isn't available.
+            self.logger.warn(
+                "Could not retrieve eb_id from SKUID: %s. "
+                "Using a locally produced eb_id.",
+                e,
+            )
+            random_seq = str(random.randint(1, 999999999)).rjust(9, "0")
+            today = date.today().strftime("%Y%m%d")
+            uid = f"eb-local-{today}-{random_seq}"
+            return uid

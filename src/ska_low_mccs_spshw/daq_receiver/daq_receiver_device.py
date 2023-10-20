@@ -203,6 +203,11 @@ class MccsDaqReceiver(SKABaseDevice):
     ConsumersToStart = device_property(
         dtype=str, doc="The default consumer list to start.", default_value=""
     )
+    SkuidUrl = device_property(
+        dtype=str,
+        doc="The location of a running SKUID service.",
+        default_value="ska-ser-skuid-ska-ser-skuid-svc:9870",
+    )
 
     # ---------------
     # Initialisation
@@ -229,6 +234,7 @@ class MccsDaqReceiver(SKABaseDevice):
         self._x_bandpass_plot: np.ndarray
         self._y_bandpass_plot: np.ndarray
         self._rms_plot: np.ndarray
+        self._skuid_url: str
 
     def init_device(self: MccsDaqReceiver) -> None:
         """
@@ -259,6 +265,7 @@ class MccsDaqReceiver(SKABaseDevice):
             f"\tPort: {self.Port}\n"
             f"\tDaqId: {self.DaqId}\n"
             f"\tConsumersToStart: {self.ConsumersToStart}\n"
+            f"\tSkuidUrl: {self.SkuidUrl}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -291,6 +298,7 @@ class MccsDaqReceiver(SKABaseDevice):
             self.ReceiverPorts,
             f"{self.Host}:{self.Port}",
             self.ConsumersToStart,
+            self.SkuidUrl,
             self.logger,
             self._max_workers,
             self._component_communication_state_changed,
@@ -486,7 +494,8 @@ class MccsDaqReceiver(SKABaseDevice):
             self._received_data_mode = data_mode
             self._received_data_result = result
             self.push_change_event(
-                "dataReceivedResult", (self._received_data_mode, "_")
+                "dataReceivedResult",
+                (self._received_data_mode, self._received_data_result),
             )
 
     # ----------

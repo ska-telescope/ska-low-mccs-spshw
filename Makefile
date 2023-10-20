@@ -61,11 +61,11 @@ include .make/raw.mk
 include .make/xray.mk
 
 
-K8S_FACILITY ?= k8s-test
-K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
+# K8S_FACILITY ?= k8s-test
+# K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
 
-_remote_tracking_branch = $(shell git status -sb | head -1 | sed 's/\.\.\./\n/' | tail -1)
-_gitlab_tag = $(VERSION)-dev.c$(shell git rev-parse --short=8 $(_remote_tracking_branch))
+# _remote_tracking_branch = $(shell git status -sb | head -1 | sed 's/\.\.\./\n/' | tail -1)
+# _gitlab_tag = $(VERSION)-dev.c$(shell git rev-parse --short=8 $(_remote_tracking_branch))
 
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \

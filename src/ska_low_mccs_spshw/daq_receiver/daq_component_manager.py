@@ -260,12 +260,18 @@ class DaqComponentManager(TaskExecutorComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         # Check data directory is in correct format, if not then reconfigure.
+        # This delays the start call by a lot if SKUID isn't there.
         if not self._data_directory_format_adr55_compliant():
             config = {"directory": self._construct_adr55_filepath()}
             self.configure_daq(json.dumps(config))
+            self.logger.info(
+                "Data directory automatically reconfigured to: %s", config["directory"]
+            )
         try:
             modes_to_start = modes_to_start or self._consumers_to_start
+            print("BEFORE START CALL")
             for response in self._daq_client.start_daq(modes_to_start):
+                print("AFTER START CALL/GOT RESPONSE")
                 if task_callback:
                     if "status" in response:
                         task_callback(
@@ -480,6 +486,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         :return: a ResultCode and response message
         """
         return self._daq_client.stop_bandpass_monitor()
+
     def _data_directory_format_adr55_compliant(
         self: DaqComponentManager,
     ) -> bool:

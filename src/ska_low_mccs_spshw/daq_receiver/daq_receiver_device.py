@@ -498,45 +498,6 @@ class MccsDaqReceiver(SKABaseDevice):
                 (self._received_data_mode, self._received_data_result),
             )
 
-    # ----------
-    # Attributes
-    # ----------
-
-    # def is_attribute_allowed(
-    #     self: MccsDaqReceiver, attr_req_type: tango.AttReqType
-    # ) -> bool:
-    #     """
-    # pylint: disable-next=line-too-long
-    #     Protect attribute access before being updated otherwise it reports alarm.  # noqa: E501
-
-    #     :param attr_req_type: tango attribute type READ/WRITE
-
-    #     :return: True if the attribute can be read else False
-    #     """
-    #     rc = self.get_state() in [
-    #         tango.DevState.ON,
-    #     ]
-    #     return rc
-
-    # @attribute(
-    #     dtype=int,
-    #     label="label",
-    #     unit="unit",
-    #     standard_unit="unit",
-    #     max_alarm=90,
-    #     min_alarm=1,
-    #     max_warn=80,
-    #     min_warn=5,
-    #     fisallowed=is_attribute_allowed,
-    # )
-    # def some_attribute(self: XXXXXX) -> int:
-    #     """
-    #     Return some_attribute.
-
-    #     :return: some_attribute
-    #     """
-    #     return self._component_manager._some_attribute
-
     # --------
     # Commands
     # --------
@@ -922,6 +883,8 @@ class MccsDaqReceiver(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("StopBandpassMonitor")
+        print(handler)
+        print(type(handler))
         (result_code, message) = handler()
         return ([result_code], [message])
 

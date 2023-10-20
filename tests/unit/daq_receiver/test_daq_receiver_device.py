@@ -244,6 +244,10 @@ class TestPatchedDaq:
             ResultCode.OK,
             "Mock bandpass monitor started.",
         )
+        mock_component_manager.stop_bandpass_monitor.return_value = (
+            ResultCode.OK,
+            "Mock bandpass monitor stopping.",
+        )
         # configuration = {
         #     "start_daq.return_value": ,
         #     "stop_daq.return_value": ,

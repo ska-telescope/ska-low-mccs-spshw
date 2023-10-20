@@ -412,9 +412,7 @@ class DaqSimulator:
         self._monitoring_bandpass = True
         yield (TaskStatus.IN_PROGRESS, "Bandpass monitor active", None, None, None)
 
-        # TODO: Return bandpass data.
         while not self._stop_bandpass:
-            print("SIMULATOR YIELDING BANDPASS DATA")
             yield (
                 TaskStatus.IN_PROGRESS,
                 "plot sent",
@@ -436,6 +434,10 @@ class DaqSimulator:
 
         :return: a resultcode, message tuple
         """
+        if not self._monitoring_bandpass:
+            return (ResultCode.REJECTED, "Bandpass monitor not yet started.")
+        if self._stop_bandpass:
+            return (ResultCode.REJECTED, "Bandpass monitor already stopping.")
         self._stop_bandpass = True
         return (ResultCode.OK, "Bandpass monitor stopping.")
 

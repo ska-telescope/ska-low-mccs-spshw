@@ -16,7 +16,6 @@ overrides:
             sps:
               daq:
                 simulated: false
-                host: daqs-daq-ci-1
               subracks:
                 "1":
                   simulated: true

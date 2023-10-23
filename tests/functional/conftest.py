@@ -197,7 +197,7 @@ def poll_until_consumer_running(
     if no_of_iters == 1:
         pytest.fail(f"Wanted consumer: {wanted_consumer} not started.")
 
-    sleep(1)
+    sleep(8)  # Waiting for SKUID to timeout...
     return poll_until_consumer_running(daq, wanted_consumer, no_of_iters - 1)
 
 

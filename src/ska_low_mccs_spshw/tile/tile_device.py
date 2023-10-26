@@ -122,6 +122,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = TileHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
+        self.set_archive_event("healthState", True, False)
 
     def create_component_manager(
         self: MccsTile,
@@ -240,7 +241,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device._csp_destination_port = 0
             self._device._antenna_ids = []
             self._device.set_change_event("tileProgrammingState", True, False)
+            self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
+            self._device.set_archive_event("adcPower", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -362,6 +365,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.push_change_event(
                     "tileProgrammingState", tile_programming_state.pretty_name()
                 )
+                self.push_archive_event(
+                    "tileProgrammingState", tile_programming_state.pretty_name()
+                )
         if "tile_health_structure" in state_change:
             self._health_model.update_state(
                 tile_health_structure=state_change["tile_health_structure"]
@@ -371,6 +377,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             if self._adc_rms != adc_rms:
                 self._adc_rms = adc_rms
                 self.push_change_event("adcPower", adc_rms)
+                self.push_archive_event("adcPower", adc_rms)
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -386,6 +393,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._health_state != health:
             self._health_state = health
             self.push_change_event("healthState", health)
+            self.push_archive_event("healthState", health)
 
     # ----------
     # Attributes

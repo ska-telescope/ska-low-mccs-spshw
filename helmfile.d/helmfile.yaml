@@ -33,12 +33,12 @@ environments:
   aavs3-production:
     kubeContext: aavs3-production
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=1cdde91f9f80c78d7bc73a94ffc65f8118e61a62
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=734771df7685b654ae6335e42ffef1bfde2ab2df
       - spshw/values/values-aavs3.yaml
   aavs3-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=1cdde91f9f80c78d7bc73a94ffc65f8118e61a62
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=734771df7685b654ae6335e42ffef1bfde2ab2df
       - spshw/values/values-aavs3.yaml
       - platform/minikube.yaml
   arcetri:

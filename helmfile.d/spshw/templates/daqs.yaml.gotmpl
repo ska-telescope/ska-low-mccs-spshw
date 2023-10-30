@@ -3,6 +3,8 @@
 {{- $platform := mergeOverwrite .Values.platform $overrides}}
 {{- $defaults := .Values.defaults}}
 
+{{- $skuid_url := dig "cluster" "services" "skuid" "url" "" $platform | default "http://ska-ser-skuid-ska-ser-skuid-svc:9870/"}}
+
 {{- $daq_instances := dict}}
 {{- $daq_simulators := dict}}
 {{- $daqs_to_launch := dict}}
@@ -36,7 +38,7 @@
 {{- end}}
 {{- end}}
 
-{{- $daq_instance := dict "id" $station_spec.id "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port}}
+{{- $daq_instance := dict "id" $station_spec.id "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port "skuid_url" $skuid_url}}
 {{- if $daq_logging_level_defaults}}
 {{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
 {{- end }}

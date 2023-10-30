@@ -90,16 +90,18 @@ resources:
   requests:
     cpu: 20m
     memory: 50Mi
+
 ska-low-mccs-daq:
   image:
     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
     name: ska-low-mccs-daq
     tag: 0.4.0-dev.c7c1aa29c
     pullPolicy: IfNotPresent
+
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 0.10.0
+  tag: 0.10.0-dirty
   pullPolicy: IfNotPresent
 
 deviceServers: {} # e.g....
@@ -130,6 +132,7 @@ deviceServers: {} # e.g....
   #     receiver_interface: eth0
   #     receiver_ip: ""
   #     receiver_port: 4660
+  #     skuid_url: http://skuid-svc:9870/
   #     logging_level_default: 5
   # subracks:
   #   "s8-1-1":

@@ -60,13 +60,6 @@ include .make/k8s.mk
 include .make/raw.mk
 include .make/xray.mk
 
-
-# K8S_FACILITY ?= k8s-test
-# K8S_CHART_PARAMS += --values chart-values/values-$(K8S_FACILITY).yaml
-
-# _remote_tracking_branch = $(shell git status -sb | head -1 | sed 's/\.\.\./\n/' | tail -1)
-# _gitlab_tag = $(VERSION)-dev.c$(shell git rev-parse --short=8 $(_remote_tracking_branch))
-
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
 	--selector chart=ska-low-mccs-spshw \
@@ -74,12 +67,6 @@ K8S_CHART_PARAMS += \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
-
-# PROJECT_NAME=ska-low-mccs-spshw
-# K8S_CHART_PARAMS += \
-#   --set global.minikube=false \
-#   --set $(PROJECT_NAME).image.registry=registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw \
-#   --set $(PROJECT_NAME).image.tag=$(_gitlab_tag)
 
 JUNITXML_REPORT_PATH ?= build/reports/functional-tests.xml
 CUCUMBER_JSON_PATH ?= build/reports/cucumber.json

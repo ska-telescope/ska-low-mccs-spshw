@@ -35,11 +35,11 @@
 ## 0.7.0
 
 * [MCCS-1565] Updated TPM Driver to Support 40G Gateway
-* [MCCS-1644] Update station naska-sme to spsstation
+* [MCCS-1644] Update station name to spsstation
 * [MCCS-1623] Update tango preadulevels type.
 * [MCCS-1456] DAQ Functional Tests
 * [MCCS-1623] Modified TPM driver to support TPM 1.6 preADU
-* [MCCS-1636] Use er-sphinx-theme
+* [MCCS-1636] Use ska-ser-sphinx-theme
 * [MCCS-1633] Update /docs/src/_static/img/ in MCCS repos
 * [MCCS-1589] Skuid added in the spshw umbrella
 * [MCCS-1579] Add calibration store device, and PostgreSQL database for data storage

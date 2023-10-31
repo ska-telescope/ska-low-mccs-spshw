@@ -883,17 +883,8 @@ class MccsDaqReceiver(SKABaseDevice):
             information purpose only.
         """
         handler = self.get_command_object("StopBandpassMonitor")
-        print(handler)
-        print(type(handler))
         (result_code, message) = handler()
         return ([result_code], [message])
-
-    # @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
-    # def Command(self: XXXXXX, argin: str) -> DevVarLongStringArrayType:
-    #     """"""
-    #     handler = self.get_command_object("Command")
-    #     (result_code, message) = handler(argin)
-    #     return ([result_code], [message])
 
     @attribute(
         dtype=("str",),

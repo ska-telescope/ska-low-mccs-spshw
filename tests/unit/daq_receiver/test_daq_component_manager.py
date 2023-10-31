@@ -339,49 +339,44 @@ class TestDaqComponentManager:
         ("bandpass_config", "expected_status", "expected_msg"),
         (
             (
-                '{"station_config_path": "station_config.yml", '
-                '"plot_directory": "/plot"}',
+                '{"plot_directory": "/plot"}',
                 TaskStatus.REJECTED,
                 "Current DAQ config is invalid. The `append_integrated` "
                 "option must be set to false for bandpass monitoring.",
             ),
+            # (
+            #     '{"station_config_path": "station_config.yml", '
+            #     '"plot_directory": "/plot", "auto_handle_daq": "True"}',
+            #     TaskStatus.REJECTED,
+            #     "Specified configuration file (station_config.yml) does not exist.",
+            # ),
             (
-                '{"station_config_path": "station_config.yml", '
-                '"plot_directory": "/plot", "auto_handle_daq": "True"}',
-                TaskStatus.REJECTED,
-                "Specified configuration file (station_config.yml) does not exist.",
-            ),
-            (
-                '{"station_config_path": "tests/data/default_config.yml", '
-                '"plot_directory": "invalid_directory", "auto_handle_daq": "True"}',
+                '{"plot_directory": "invalid_directory", "auto_handle_daq": "True"}',
                 TaskStatus.FAILED,
                 "Unable to create plotting directory at: invalid_directory",
             ),  # Note: The plot directory for this test must be "invalid_directory"
             (
                 "{}",
                 TaskStatus.REJECTED,
-                "Param `argin` must have keys for `station_config_path`"
-                " and `plot_directory`",
+                "Param `argin` must have key for `plot_directory`",
             ),
-            (
-                '{"station_config_path": "blah"}',
-                TaskStatus.REJECTED,
-                "Param `argin` must have keys for `station_config_path` "
-                "and `plot_directory`",
-            ),
-            (
-                '{"plot_directory": "blahblah"}',
-                TaskStatus.REJECTED,
-                "Param `argin` must have keys for `station_config_path` and "
-                "`plot_directory`",
-            ),
-            (
-                '{"station_config_path": "nonexistent_station_config.yml", '
-                '"plot_directory": "/plot", "auto_handle_daq": "True"}',
-                TaskStatus.REJECTED,
-                "Specified configuration file (nonexistent_station_config.yml) "
-                "does not exist.",
-            ),
+            # (
+            #     '{"station_config_path": "blah"}',
+            #     TaskStatus.REJECTED,
+            #     "Param `argin` must have key for `plot_directory`",
+            # ),
+            # (
+            #     '{"plot_directory": "blahblah"}',
+            #     TaskStatus.REJECTED,
+            #     "Param `argin` must have key for `plot_directory`",
+            # ),
+            # (
+            #     '{"station_config_path": "nonexistent_station_config.yml", '
+            #     '"plot_directory": "/plot", "auto_handle_daq": "True"}',
+            #     TaskStatus.REJECTED,
+            #     "Specified configuration file (nonexistent_station_config.yml) "
+            #     "does not exist.",
+            # ),
             (
                 '{"station_config_path": "tests/data/default_config.yml", '
                 '"plot_directory": "/app/plot/", "auto_handle_daq": "True"}',
@@ -533,9 +528,6 @@ class TestDaqComponentManager:
             re_config = {"directory": daq_component_manager._construct_adr55_filepath()}
             daq_component_manager.configure_daq(json.dumps(re_config))
             time.sleep(1)
-            print(
-                f"Current dir: {daq_component_manager.get_configuration()['directory']}"
-            )
             assert daq_component_manager._data_directory_format_adr55_compliant()
 
     @pytest.mark.parametrize(

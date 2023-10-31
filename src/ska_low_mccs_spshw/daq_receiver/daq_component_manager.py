@@ -269,9 +269,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             )
         try:
             modes_to_start = modes_to_start or self._consumers_to_start
-            print("BEFORE START CALL")
             for response in self._daq_client.start_daq(modes_to_start):
-                print("AFTER START CALL/GOT RESPONSE")
                 if task_callback:
                     if "status" in response:
                         task_callback(
@@ -397,8 +395,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             and producing plots of the spectra.
 
         :param argin: A json string with keywords
-            - station_config_path
-            Path to a station configuration file.
             - plot_directory
             Directory in which to store bandpass plots.
             - monitor_rms

@@ -187,7 +187,6 @@ class SpeadDataSimulator:
 
         # Create socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        print(f"INIT CHANNEL DATA2: {self._channelised_packet_data}")
 
     def stop_sending_data(self: SpeadDataSimulator) -> None:
         """
@@ -286,7 +285,6 @@ class SpeadDataSimulator:
         :param first_channel: First channel to send
         :param last_channel: Last channel to send
         """
-        print(f"SEND CHANNEL DATA: {self._channelised_packet_data}")
         self._stop_events["channel"].clear()
         num_channels = 1 + last_channel - first_channel
         for tile in range(self._nof_tiles):
@@ -345,13 +343,6 @@ class SpeadDataSimulator:
         lmc_tpm_info = 1 << 63 | 0x2001 << 48 | tpm_id << 32 | self._station_id << 16
         sample_offset = 0 << 63 | 0x3300 << 48
 
-        # lmc_info = (1 << 63
-        #     | 0x2002 << 48
-        #     | start_channel << 24
-        #     | self._nof_channels_per_packet << 16
-        #     | start_antenna << 8
-        #     | self._nof_ants_per_fpga
-        # )
         packet = (
             struct.pack(
                 ">" + "Q" * 9,
@@ -407,28 +398,6 @@ class SpeadDataSimulator:
         )
 
         return np.ravel([x_bandpass, y_bandpass], "F")
-        # start_antenna = (
-        #     tpm_id * self._nof_ants_per_fpga * self._nof_fpgas
-        #     + fpga_id * self._nof_ants_per_fpga
-        #     + start_antenna
-        # )
-        # packet_data = np.zeros(self._packet_payload_length // 2, dtype=np.uint16)
-
-        # counter = 0
-        # for c in range(self._nof_channels_per_packet):
-        #     packet_data[counter] = (
-        #         start_antenna * self._nof_channels
-        #         + start_channel * self._nof_channels_per_packet
-        #         + c
-        #     )
-        #     packet_data[counter + 1] = (
-        #         start_antenna * self._nof_channels
-        #         + self._nof_channels
-        #         - (start_channel * self._nof_channels_per_packet + c)
-        #     )
-        #     counter += 2
-
-        # return packet_data
 
     def _generate_simulated_bandpass(  # pylint: disable=too-many-locals
         self: SpeadDataSimulator,

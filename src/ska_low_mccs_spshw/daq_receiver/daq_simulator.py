@@ -19,7 +19,6 @@ from enum import IntEnum
 from typing import Any, Callable, Iterator, TypeVar, cast
 
 import numpy as np
-from pyaavs import station
 from ska_control_model import ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import run_server_forever
 
@@ -272,7 +271,6 @@ class DaqSimulator:
             "Bandpass Monitor": self._monitoring_bandpass,
         }
 
-    # pylint: disable=too-many-return-statements
     @check_initialisation
     def start_bandpass_monitor(
         self: DaqSimulator,
@@ -285,8 +283,6 @@ class DaqSimulator:
             and producing plots of the spectra.
 
         :param argin: A json dictionary with keywords
-            - station_config_path
-            Path to a station configuration file.
             - plot_directory
             Directory in which to store bandpass plots.
             - monitor_rms
@@ -318,13 +314,12 @@ class DaqSimulator:
         self._stop_bandpass = False
         params: dict[str, Any] = json.loads(argin)
         try:
-            station_config_path: str = params["station_config_path"]
+            # station_config_path: str = params["station_config_path"]
             plot_directory: str = params["plot_directory"]
         except KeyError:
             yield (
                 TaskStatus.REJECTED,
-                "Param `argin` must have keys for `station_config_path` "
-                "and `plot_directory`",
+                "Param `argin` must have key for `plot_directory`",
                 None,
                 None,
                 None,
@@ -358,45 +353,7 @@ class DaqSimulator:
                 return
             self.start(modes_to_start="INTEGRATED_CHANNEL_DATA")
 
-        if not os.path.exists(station_config_path) or not os.path.isfile(
-            station_config_path
-        ):
-            yield (
-                TaskStatus.REJECTED,
-                f"Specified configuration file ({station_config_path}) does not exist.",
-                None,
-                None,
-                None,
-            )
-            return
-
-        station.load_configuration_file(station_config_path)
-        station_conf = station.configuration
-        # Extract station name
-        station_name = station_conf["station"]["name"]
-        if station_name.upper() == "UNNAMED":
-            yield (
-                TaskStatus.REJECTED,
-                "Please set station name in configuration file "
-                f"{station_config_path}, currently unnamed.",
-                None,
-                None,
-                None,
-            )
-            return
-
-        # Check that the station is configured to transmit data over 1G
-        if station_conf["network"]["lmc"]["use_teng_integrated"]:
-            yield (
-                TaskStatus.REJECTED,
-                f"Station {station_config_path} must be configured to send "
-                "integrated data over the 1G network, and each station should "
-                "define a different destination port. Please check",
-                None,
-                None,
-                None,
-            )
-            return
+        station_name = "simulated_station_name"
 
         # Create plotting directory structure
         if not self.create_plotting_directory(plot_directory, station_name):

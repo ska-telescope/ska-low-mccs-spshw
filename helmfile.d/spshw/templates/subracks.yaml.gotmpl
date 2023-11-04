@@ -7,62 +7,59 @@
 {{- $subrack_simulators := dict}}
 
 {{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+    {{- $station_enabled := true}}
+    {{- if hasKey $station_spec "enabled"}}
+      {{- $station_enabled = $station_spec.enabled}}
+    {{- end}}
 
-{{- $station_enabled := true}}
-{{- if hasKey $station_spec "enabled"}}
-{{- $station_enabled = $station_spec.enabled}}
+    {{- $sps_spec := dig "sps" dict $station_spec}}
+    {{- $sps_enabled := $station_enabled}}
+    {{- if hasKey $sps_spec "enabled"}}
+      {{- $sps_enabled = $sps_spec.enabled}}
+    {{- end}}
+
+    {{- $subrack_specs := dig "subracks" dict $sps_spec}}
+    {{- range $subrack_id, $subrack_spec := $subrack_specs}}
+      {{- $subrack_enabled := $sps_enabled}}
+      {{- if hasKey $sps_spec "enabled"}}
+        {{- $subrack_enabled = $sps_spec.enabled}}
+      {{- end }}
+
+      {{- if $subrack_enabled}}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+        {{- $subrack_number := printf "%s-%d" $station_name (int $subrack_id)}}
+        {{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
+        {{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
+        {{- if $subrack_logging_level_defaults}}
+          {{- $_ := set $subrack_instance "logging_level_default" (first $subrack_logging_level_defaults)}}
+        {{- end }}
+
+        {{- $srmb_host := $subrack_spec.srmb_host}}
+        {{- $srmb_port := dig "srmb_port" 8081 $subrack_spec}}
+
+        {{- $subrack_simulated := dig "simulated" false $subrack_spec}}
+        {{- if $subrack_simulated}}
+          {{- $srmb_host = printf "subrack-simulator-%s" $subrack_number}}
+          {{- $_ := set $subrack_simulators $subrack_number (dict "srmb_host" $srmb_host "srmb_port" $srmb_port)}}
+        {{- end }}
+        {{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
+        {{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
+        {{- $_ := set $subrack_instances $subrack_number $subrack_instance}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
-{{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
-
-{{- range $subrack_id, $subrack_spec := $subrack_specs}}
-
-{{- $subrack_enabled := $station_enabled}}
-{{- if hasKey $subrack_spec "enabled"}}
-{{- $subrack_enabled = $subrack_spec.enabled}}
-{{- end }}
-
-{{- if $subrack_enabled}}
-{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
-{{- $subrack_number := printf "%s-%d" $station_name (int $subrack_id)}}
-{{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
-{{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
-{{- if $subrack_logging_level_defaults}}
-{{- $_ := set $subrack_instance "logging_level_default" (first $subrack_logging_level_defaults)}}
-{{- end }}
-
-{{- $srmb_host := $subrack_spec.srmb_host}}
-{{- $srmb_port := dig "srmb_port" 8081 $subrack_spec}}
-
-{{- $subrack_simulated := dig "simulated" false $subrack_spec}}
-{{- if $subrack_simulated}}
-{{- $srmb_host = printf "subrack-simulator-%s" $subrack_number}}
-{{- $_ := set $subrack_simulators $subrack_number (dict "srmb_host" $srmb_host "srmb_port" $srmb_port)}}
-{{- end }}
-{{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
-{{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
-{{- $_ := set $subrack_instances $subrack_number $subrack_instance}}
-{{- end }}
-{{- end }}
-{{- end }}
-{{- end }}
-
-{{- if $subrack_instances}}
+{{- with $subrack_instances}}
 deviceServers:
   subracks:
-{{- range $subrack_id, $subrack_spec := $subrack_instances}}
-    {{$subrack_id}}:
-{{toYaml $subrack_spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}
 
-{{- if $subrack_simulators}}
+{{- with $subrack_simulators}}
 
 simulators:
   subracks:
-{{- range $subrack_id, $subrack_spec := $subrack_simulators}}
-    {{$subrack_id}}:
-{{toYaml $subrack_spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}

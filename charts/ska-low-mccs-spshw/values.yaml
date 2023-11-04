@@ -95,7 +95,7 @@ ska-low-mccs-daq:
   image:
     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
     name: ska-low-mccs-daq
-    tag: 0.4.0-dev.c7c1aa29c
+    tag: 0.4.0-dev.c7ab71589
     pullPolicy: IfNotPresent
 
 image:

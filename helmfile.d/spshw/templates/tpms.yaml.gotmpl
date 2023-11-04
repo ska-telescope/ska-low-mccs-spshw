@@ -7,53 +7,51 @@
 {{- $tpm_simulators := dict}}
 
 {{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+    {{- $station_enabled := true}}
+    {{- if hasKey $station_spec "enabled"}}
+      {{- $station_enabled = $station_spec.enabled}}
+    {{- end }}
 
-{{- $station_enabled := true}}
-{{- if hasKey $station_spec "enabled"}}
-{{- $station_enabled = $station_spec.enabled}}
-{{- end }}
+    {{- $sps_spec := dig "sps" dict $station_spec}}
+    {{- $sps_enabled := $station_enabled}}
+    {{- if hasKey $sps_spec "enabled"}}
+      {{- $sps_enabled = $sps_spec.enabled}}
+    {{- end }}
 
-{{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
+    {{- $tpm_specs := dig "tpms" dict $sps_spec}}
+    {{- range $tpm_id, $tpm_spec := $tpm_specs}}
+      {{- $tpm_enabled := $sps_enabled}}
+      {{- if hasKey $tpm_spec "enabled"}}
+        {{- $tpm_enabled = $tpm_spec.enabled}}
+      {{- end }}
 
-{{- range $tpm_id, $tpm_spec := $tpm_specs}}
+      {{- if $tpm_enabled}}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+        {{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
 
-{{- $tpm_enabled := $station_enabled}}
-{{- if hasKey $tpm_spec "enabled"}}
-{{- $tpm_enabled = $tpm_spec.enabled}}
-{{- end }}
+        {{- $_ := set $tpm_instance "tile_id" (int $tpm_id)}}
+        {{- $_ := set $tpm_instance "subrack" (printf "%s-%d" $station_name (int $tpm_spec.subrack))}}
 
-{{- if $tpm_enabled}}
-{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
-{{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
+        {{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
+        {{- if $tpm_logging_level_defaults}}
+          {{- $_ := set $tpm_instance "logging_level_default" (first $tpm_logging_level_defaults)}}
+        {{- end }}
 
-{{- $_ := set $tpm_instance "tile_id" (int $tpm_id)}}
-{{- $_ := set $tpm_instance "subrack" (printf "%s-%d" $station_name (int $tpm_spec.subrack))}}
+        {{- $tpm_simulated := dig "simulated" false $tpm_spec}}
+        {{- if $tpm_simulated}}
+          {{- $_ := set $tpm_instance "simulation_config" 1}}
+          {{- $_ := set $tpm_instance "test_config" 1}}
+        {{- end}}
 
-{{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
-{{- if $tpm_logging_level_defaults}}
-{{- $_ := set $tpm_instance "logging_level_default" (first $tpm_logging_level_defaults)}}
-{{- end }}
-
-{{- $tpm_simulated := dig "simulated" false $tpm_spec}}
-{{- if $tpm_simulated}}
-{{- $_ := set $tpm_instance "simulation_config" 1}}
-{{- $_ := set $tpm_instance "test_config" 1}}
+        {{- $_ := set $tpm_instances (printf "%s-%02d" $station_name (int $tpm_id)) $tpm_instance}}
+      {{- end}}
+    {{- end}}
+  {{- end}}
 {{- end}}
 
-{{- $_ := set $tpm_instances (printf "%s-%02d" $station_name (int $tpm_id)) $tpm_instance}}
-{{- end}}
-
-{{- end}}
-
-{{- end}}
-{{- end}}
-
-{{- if $tpm_instances}}
+{{- with $tpm_instances}}
 deviceServers:
   tpms:
-{{- range $tpm_number, $tpm_spec := $tpm_instances}}
-    {{$tpm_number}}:
-{{toYaml $tpm_spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}

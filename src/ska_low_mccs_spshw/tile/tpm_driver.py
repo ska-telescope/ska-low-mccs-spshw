@@ -1539,14 +1539,71 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._pll_locked = pll_lock
         return pll_lock
 
+    def _collapse_regions(self: TpmDriver, regions: list[list[int]]) -> list[list[int]]:
+        """
+        Collapse the frequency regions if they are contiguous.
+
+        This is temporarily required as the tile beamformer accepts at most
+        16 regions and the current allocation/configuration structure
+        allocates individually 48 blocks of 8 channels.
+        TODO The function is not required anymore when the tile beamformer
+        firmware will accept 48 individual channel blocks.
+
+        The input list contains up to 48 blocks which represent
+        at most 16 contiguous channel regions.
+        Each block has 8 entries which represent:
+        - starting physical channel
+        - number of channels
+        - hardware beam number
+        - subarray ID
+        - subarray logical channel
+        - subarray beam ID
+        - substation ID
+        - aperture ID
+        Output blocks (up to 16) describe the same information but with
+        contiguous blocks collapsed together.
+
+        :param regions: a list encoding up to 48 blocks for up to 16 regions
+
+        :return: a list encoding up to 16 regions
+        """
+        region_collapsed = []
+        old_region = [0] * 8
+        for region in regions:
+            # find if the new record continues the previous one
+            if (
+                region[0] > 0
+                and region[0] == (old_region[0] + old_region[1])
+                and region[1] > 0
+                and region[2] == old_region[2]
+                and region[4] == (old_region[4] + old_region[1])
+            ):
+                old_region[1] += region[1]
+            else:  # not a continuation.
+                if old_region[0] > 0:
+                    region_collapsed.append(old_region)
+                old_region = region
+        # append last incomplete region if it exists
+        if old_region[0] > 0:
+            region_collapsed.append(old_region)
+        return region_collapsed
+
     def set_beamformer_regions(self: TpmDriver, regions: list[list[int]]) -> None:
         """
         Set the frequency regions to be beamformed into a single beam.
 
-        :param regions: a list encoding up to 16 regions, with each
-            region containing a start channel, the size of the region
-            (which must be a multiple of 8), and a beam index (between 0 and 7)
-            and a substation ID (not used)
+        The input list contains up to 48 blocks which represent
+        at most 16 contiguous channel regions.
+        Each block has 8 entries which represent:
+        - starting physical channel
+        - number of channels
+        - hardware beam number
+        - subarray ID
+        - subarray logical channel
+        - subarray beam ID
+        - substation ID
+
+        :param regions: a list encoding up to 48 regions
         """
         self.logger.debug("TpmDriver: set_beamformer_regions")
         # TODO: Remove when interface with station beamformer allows multiple
@@ -1558,26 +1615,11 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if len(regions[0]) == 8:
             subarray_id = regions[0][3]
             aperture_id = regions[0][7]
-        #     substation_id = regions[0][6]
-        #     for region in regions[1:]:
-        #         if (
-        #             region[3] != subarray_id
-        #             or region[6] != substation_id
-        #             or region[7] != aperture_id
-        #         ):
-        #             changed = True
-        #         region[3] = subarray_id
-        #         region[6] = substation_id
-        #         region[7] = aperture_id
-        # if changed:
-        #     self.logger.info(
-        #         "Different subarrays or substations not supported. "
-        #         "Using only first defined"
-        #     )
+        collapsed_regions = self._collapse_regions(regions)
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_beamformer_regions(regions)
+                    self.tile.set_beamformer_regions(collapsed_regions)
                     self._beamformer_table = self.tile.tpm.station_beamf[
                         0
                     ].get_channel_table()

@@ -13,15 +13,17 @@ overrides:
                 port: 50051
               subracks:
                 "1":
-                  simulated: true
+                  srmb_host: 10.0.10.64
+                  srmb_port: 8081
+                  simulated: false
               tpms:
                 "1":
-                  host: 10.0.10.201
+                  host: 10.0.10.71
                   resources:
                     requests:
                       memory: 512Mi
                 "2":
-                  host: 10.0.10.202
+                  host: 10.0.10.72
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
@@ -31,7 +33,7 @@ overrides:
                     requests:
                       memory: 512Mi
                 "3":
-                  host: 10.0.10.203
+                  host: 10.0.10.73
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
@@ -40,8 +42,18 @@ overrides:
                   resources:
                     requests:
                       memory: 512Mi
+                "4":
+                  host: 10.0.10.74
+                  port: 10000
+                  version: tpm_v1_6
+                  subrack: 1
+                  subrack_slot: 4
+                  simulated: 1
+                  resources:
+                    requests:
+                      memory: 512Mi
                 "5":
-                  host: 10.0.10.205
+                  host: 10.0.10.75
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
@@ -51,7 +63,7 @@ overrides:
                     requests:
                       memory: 512Mi
                 "6":
-                  host: 10.0.10.206
+                  host: 10.0.10.76
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
@@ -61,7 +73,7 @@ overrides:
                     requests:
                       memory: 512Mi
                 "7":
-                  host: 10.0.10.207
+                  host: 10.0.10.77
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
@@ -71,7 +83,7 @@ overrides:
                     requests:
                       memory: 512Mi
                 "8":
-                  host: 10.0.10.208
+                  host: 10.0.10.78
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1

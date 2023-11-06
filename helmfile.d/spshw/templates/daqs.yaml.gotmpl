@@ -11,66 +11,73 @@
 {{- $daqs_to_egress := dict}}
 
 {{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+    {{- $station_enabled := true}}
+    {{- if hasKey $station_spec "enabled"}}
+      {{- $station_enabled = $station_spec.enabled}}
+    {{- end }}
 
-{{- $daq_spec := dig "sps" "daq" dict $station_spec}}
-{{- $daq_enabled := pluck "enabled" $daq_spec $station_spec (dict "enabled" true) | first}}
-{{- if $daq_enabled}}
-{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
-{{- $daq_host := dig "host" (printf "daq-receiver-%s" $station_name) $daq_spec}}
-{{- $daq_port := dig "port" 50051 $daq_spec}}
-{{- $daq_receiver_interface := dig "receiver_interface" "eth0" $daq_spec}}
-{{- $daq_receiver_ip := dig "receiver_ip" "" $daq_spec}}
-{{- $daq_receiver_port := dig "receiver_port" 4660 $daq_spec}}
-{{- $daq_logging_level_defaults := pluck "logging_level_default" $daq_spec $defaults}}
+    {{- $sps_spec := dig "sps" dict $station_spec}}
+    {{- $sps_enabled := $station_enabled}}
+    {{- if hasKey $sps_spec "enabled"}}
+      {{- $sps_enabled = $sps_spec.enabled}}
+    {{- end }}
 
-{{- $daq_simulated := dig "simulated" false $daq_spec}}
-{{- if $daq_simulated}}
-{{- $daq_host = printf "daq-simulator-%s" $station_name}}
-{{- $_ := set $daq_simulators $station_id (dict "host" $daq_host "port" $daq_port)}}
-{{- else}}
-{{- $daq_ip := dig "ip" "" $daq_spec}}
-{{- if $daq_ip}}
-{{- $_ := set $daqs_to_egress $station_name $daq_spec}}
-{{- else}}
-{{ $host := printf "daq-receiver-%s" $station_name}}
-{{- $_ := set $daqs_to_launch $station_name (dict "host" $host "id" (int $station_id))}}
-{{- end}}
-{{- end}}
+    {{- $daq_spec := dig "daq" dict $sps_spec}}
+    {{- $daq_enabled := $sps_enabled}}
+    {{- if hasKey $daq_spec "enabled"}}
+      {{- $daq_enabled = $daq_spec.enabled}}
+    {{- end }}
 
-{{- $daq_instance := dict "id" $station_spec.id "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port "skuid_url" $skuid_url}}
-{{- if $daq_logging_level_defaults}}
-{{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
+    {{- if $daq_enabled}}
+      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+      {{- $daq_host := dig "host" (printf "daq-receiver-%s" $station_name) $daq_spec}}
+      {{- $daq_port := dig "port" 50051 $daq_spec}}
+      {{- $daq_receiver_interface := dig "receiver_interface" "eth0" $daq_spec}}
+      {{- $daq_receiver_ip := dig "receiver_ip" "" $daq_spec}}
+      {{- $daq_receiver_port := dig "receiver_port" 4660 $daq_spec}}
+      {{- $daq_logging_level_defaults := pluck "logging_level_default" $daq_spec $defaults}}
+
+      {{- $daq_simulated := dig "simulated" false $daq_spec}}
+      {{- if $daq_simulated}}
+        {{- $daq_host = printf "daq-simulator-%s" $station_name}}
+        {{- $_ := set $daq_simulators (toString $station_id) (dict "host" $daq_host "port" $daq_port)}}
+      {{- else}}
+        {{- $daq_ip := dig "ip" "" $daq_spec}}
+        {{- if $daq_ip}}
+          {{- $_ := set $daqs_to_egress $station_name $daq_spec}}
+        {{- else}}
+          {{ $host := printf "daq-receiver-%s" $station_name}}
+          {{- $_ := set $daqs_to_launch $station_name (dict "host" $host "id" (int $station_id))}}
+        {{- end}}
+      {{- end}}
+
+      {{- $daq_instance := dict "id" $station_spec.id "host" $daq_host "port" $daq_port "receiver_interface" $daq_receiver_interface "receiver_ip" $daq_receiver_ip "receiver_port" $daq_receiver_port "skuid_url" $skuid_url}}
+      {{- if $daq_logging_level_defaults}}
+        {{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
+      {{- end }}
+      {{- $_ := set $daq_instances (toString $station_name) $daq_instance}}
+    {{- end }}
+  {{- end }}
 {{- end }}
-{{- $_ := set $daq_instances $station_name $daq_instance}}
-{{- end }}
 
-{{- end }}
-{{- end }}
-
-{{- if $daq_instances}}
+{{- with $daq_instances}}
 deviceServers:
   daqs:
-{{- range $daq_id, $daq_spec := $daq_instances}}
-    {{quote $daq_id}}:
-{{toYaml $daq_spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}
 
-{{- if $daq_simulators}}
+{{- with $daq_simulators}}
 
 simulators:
   daqs:
-{{- range $daq_id, $daq_spec := $daq_simulators}}
-    {{quote $daq_id}}:
-{{toYaml $daq_spec | indent 6}}
-{{- end}}
+{{toYaml . | indent 4}}
 {{- end}}
 
 {{- if (or $daqs_to_launch $daqs_to_egress)}}
 ska-low-mccs-daq:
 {{- end}}
-{{- if $daqs_to_launch}}
+{{- with $daqs_to_launch}}
   storage:
     daq-data:
 {{- with $platform.cluster.daq.storage_class}}
@@ -78,7 +85,7 @@ ska-low-mccs-daq:
 {{- end}}
       size: "250Mi"
 
-{{- range $station_name, $daq_spec := $daqs_to_launch}}
+{{- range $station_name, $daq_spec := .}}
 {{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
   receivers:
     {{$station_name}}:
@@ -100,10 +107,7 @@ ska-low-mccs-daq:
 {{- end}}
 {{- end}}
 
-{{- if $daqs_to_egress}}
+{{- with $daqs_to_egress}}
   receiver_egresses:
-{{- range $station_name, $daq_spec := $daqs_to_egress}}
-    {{$station_name}}:
-{{toYaml $daq_spec | indent 6}}
-{{- end}}
+{{toYaml . | indent 4}}
 {{- end}}

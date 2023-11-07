@@ -514,6 +514,10 @@ def test_Initialise(
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "IN_PROGRESS")
     )
+    time.sleep(12)
+    for tile in mock_tile_device_proxies:
+        tile.tileProgrammingState = "Initialised"
+    time.sleep(4)
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "COMPLETED")
     )
@@ -948,6 +952,8 @@ def test_SetCspIngest(
     :param num_tiles: the number of mock tiles
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    station_device.MockSubracksOn()
+    station_device.MockTilesOn()
     station_device.SetCspIngest(
         json.dumps(
             {

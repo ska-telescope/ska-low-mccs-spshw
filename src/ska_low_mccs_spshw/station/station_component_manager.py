@@ -824,7 +824,7 @@ class SpsStationComponentManager(
                 assert proxy._proxy is not None
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
-                time.sleep(4)  # stagger initialisation by 4 seconds per tile
+                time.sleep(2)  # stagger initialisation by 2 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
             return ResultCode.FAILED

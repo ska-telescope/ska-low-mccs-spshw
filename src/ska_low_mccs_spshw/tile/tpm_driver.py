@@ -93,6 +93,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._tpm_status = TpmStatus.UNKNOWN
         # Configuration table cache
         self._beamformer_table = self.BEAMFORMER_TABLE
+        self._nof_blocks = self.BEAMFORMER_TABLE[0][1] // 8
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
@@ -305,7 +306,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
-                        ].get_channel_table()
+                        ].get_channel_table()[0 : self._nof_blocks]
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -1616,13 +1617,18 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             subarray_id = regions[0][3]
             aperture_id = regions[0][7]
         collapsed_regions = self._collapse_regions(regions)
+        nof_blocks = 0
+        for region in regions:
+            nof_blocks += region[1] // 8
+        self._nof_blocks = nof_blocks
+        self.logger.debug(f"Setting beamformer table for {self._nof_blocks} blocks")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_beamformer_regions(collapsed_regions)
                     self._beamformer_table = self.tile.tpm.station_beamf[
                         0
-                    ].get_channel_table()
+                    ].get_channel_table()[0 : self._nof_blocks]
                     self.tile.define_spead_header(
                         self._station_id,
                         subarray_id,
@@ -1651,6 +1657,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                self._nof_blocks = 1
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
@@ -1674,12 +1681,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             if acquired:
                 try:
                     self.tile.tpm.station_beamf[0].define_channel_table(
-                        [[start_channel, nof_channels, 0]]
+                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
                     self.tile.tpm.station_beamf[1].define_channel_table(
-                        [[start_channel, nof_channels, 0]]
+                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
                     self.tile.set_first_last_tile(is_first, is_last)
+                    self._nof_blocks = nof_channels // 8
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

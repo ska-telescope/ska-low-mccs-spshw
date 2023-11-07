@@ -1172,11 +1172,16 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         station_bf_1 = tile_simulator.tpm.station_beamf[0]
         station_bf_2 = tile_simulator.tpm.station_beamf[1]
 
-        for table in station_bf_1._channel_table:
-            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
+        num_blocks = nof_channels // 8
+        for block, table in enumerate(station_bf_1._channel_table[0:num_blocks]):
+            assert table == [start_channel + block * 8, 0, 0, block * 8, 0, 0, 0]
             assert len(table) < 8
-        for table in station_bf_2._channel_table:
-            assert table == [start_channel, 0, 0, 0, 0, 0, 0]
+        for table in station_bf_1._channel_table[num_blocks:]:
+            assert table == [0, 0, 0, 0, 0, 0, 0]
+        for block, table in enumerate(station_bf_2._channel_table[0:num_blocks]):
+            assert table == [start_channel + block * 8, 0, 0, block * 8, 0, 0, 0]
+        for table in station_bf_2._channel_table[num_blocks:]:
+            assert table == [0, 0, 0, 0, 0, 0, 0]
 
         assert tile_simulator._is_first == is_first
         assert tile_simulator._is_last == is_last

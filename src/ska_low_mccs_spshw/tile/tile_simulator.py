@@ -31,7 +31,7 @@ class StationBeamformer:
 
     def __init__(self: StationBeamformer):
         """Initialise the station beamformer object."""
-        self._channel_table = [[0, 0, 0, 0, 0, 0]] * 48
+        self._channel_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._nof_channels = 0
         self._is_running = False
         self._start_frame = 0

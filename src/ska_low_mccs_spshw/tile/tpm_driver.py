@@ -22,7 +22,6 @@ import threading
 import time
 from typing import Any, Callable, Optional, cast
 
-import numpy as np
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
@@ -96,7 +95,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
-        self._preadu_levels: np.ndarray[Any, np.dtype[np.float64]] = np.zeros(32)
+        self._preadu_levels: list[float] = [0.0] * 32
         self._static_delays: list[float] = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
@@ -299,7 +298,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         )
                         # self._channeliser_truncation = method_to_be_written
                         # self._csp_rounding = method_to_be_written
-                        self._preadu_levels = self._get_preadu_levels()
+                        self._preadu_levels = self.tile.get_preadu_levels()
                         self._static_delays = self._get_static_delays()
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
@@ -1420,7 +1419,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def preadu_levels(self: TpmDriver) -> np.ndarray:
+    def preadu_levels(self: TpmDriver) -> list[float]:
         """
         Get preadu levels in dB.
 
@@ -1429,7 +1428,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return copy.deepcopy(self._preadu_levels)
 
     @preadu_levels.setter
-    def preadu_levels(self: TpmDriver, levels: np.ndarray) -> None:
+    def preadu_levels(self: TpmDriver, levels: list[float]) -> None:
         """
         Set preadu levels in dB.
 
@@ -1438,56 +1437,16 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self._set_preadu_levels(levels)
-                    if any(self._get_preadu_levels() != levels):  # type: ignore
+                    self.tile.set_preadu_levels(levels)
+                    self._preadu_levels = self.tile.get_preadu_levels()
+                    if self._preadu_levels != levels:  # type: ignore
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                         return
-                    self._preadu_levels = levels
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-
-    def _set_preadu_levels(self: TpmDriver, levels: np.ndarray) -> None:
-        """
-        Get current preadu settings.
-
-        TODO This should be moved to pyaavs Tile
-        :param levels: Preadu attenuation levels in dB
-        """
-        self.logger.debug("TpmDriver: set_preadu_levels")
-        for preadu in self.tile.tpm.tpm_preadu:
-            preadu.select_low_passband()  # unimplemented on TPM 1.6
-            preadu.read_configuration()
-
-        assert set(range(len(levels))) == set(self.tile.preadu_signal_map)
-        for channel, level in enumerate(levels):
-            preadu_id = self.tile.preadu_signal_map[channel]["preadu_id"]
-            preadu_ch = self.tile.preadu_signal_map[channel]["channel"]
-            self.tile.tpm.tpm_preadu[preadu_id].set_attenuation(level, [preadu_ch])
-
-        for preadu in self.tile.tpm.tpm_preadu:
-            preadu.write_configuration()
-
-    def _get_preadu_levels(self: TpmDriver) -> np.ndarray:
-        """
-        Get current preadu settings.
-
-        :return: Preadu attenuation levels in dB
-        """
-        self.logger.debug("TpmDriver: get_preadu_levels")
-        for preadu in self.tile.tpm.tpm_preadu:
-            preadu.select_low_passband()  # unimplemented on TPM 1.6
-            preadu.read_configuration()
-
-        levels: list[float] = []
-        for channel in list(self.tile.preadu_signal_map.keys()):
-            pid = self.tile.preadu_signal_map[channel]["preadu_id"]
-            channel = self.tile.preadu_signal_map[channel]["channel"]
-            attenuation = self.tile.tpm_preadu[pid].get_attenuation()[channel]
-            levels = levels + [attenuation]
-        return np.array(levels)
 
     # TODO connect all these with real hardware probes (in poll loop)
     @property

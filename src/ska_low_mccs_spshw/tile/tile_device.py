@@ -1013,7 +1013,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype=(float,),
         max_dim_x=32,
     )
-    def preaduLevels(self: MccsTile) -> np.ndarray:
+    def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
 

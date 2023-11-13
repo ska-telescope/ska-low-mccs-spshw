@@ -1731,9 +1731,9 @@ wheel = "*"
 
 [package.source]
 type = "git"
-url = "https://bitbucket.org/lessju/pyfabil.git"
-reference = "c5e10ffde94b656e5d4439803916d50972052e42"
-resolved_reference = "c5e10ffde94b656e5d4439803916d50972052e42"
+url = "https://bitbucket.org/AlexHill/pyfabil.git"
+reference = "b948772fc94aa5f2a9f47fca01942f7ebaf0792a"
+resolved_reference = "b948772fc94aa5f2a9f47fca01942f7ebaf0792a"
 
 [[package]]
 name = "pyflakes"
@@ -3190,4 +3190,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "20da59a1e424585cb70d41f107d90880496e7fe7f240d27d88db18a43f718f87"
+content-hash = "cf016e579f840e352b490d7d31fc4c50a5df7e5f1e4becf3c37391d5d62379df"

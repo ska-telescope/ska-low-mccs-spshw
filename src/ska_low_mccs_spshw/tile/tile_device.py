@@ -1028,7 +1028,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.preadu_levels = levels
+        self.component_manager.preadu_levels = list(levels)
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: MccsTile) -> list[int]:

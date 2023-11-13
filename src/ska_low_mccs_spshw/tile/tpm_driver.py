@@ -1439,9 +1439,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 try:
                     self.tile.set_preadu_levels(levels)
                     self._preadu_levels = self.tile.get_preadu_levels()
-                    if self._preadu_levels != levels:  # type: ignore
+                    if self._preadu_levels != levels:
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
-                        return
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

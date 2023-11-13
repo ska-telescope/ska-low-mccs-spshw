@@ -52,7 +52,7 @@ class StationBeamformer:
                 raise ValueError("value passed for start_ch is not a multiple of 2")
             if item[1] % 8 != 0:
                 raise ValueError("value passed for nof_ch is a multiple by 8")
-            if not item[2] in range(48):
+            if item[2] not in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
         self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]

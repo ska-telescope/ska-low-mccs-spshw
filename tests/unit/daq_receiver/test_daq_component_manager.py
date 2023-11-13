@@ -344,12 +344,6 @@ class TestDaqComponentManager:
                 "Current DAQ config is invalid. The `append_integrated` "
                 "option must be set to false for bandpass monitoring.",
             ),
-            # (
-            #     '{"station_config_path": "station_config.yml", '
-            #     '"plot_directory": "/plot", "auto_handle_daq": "True"}',
-            #     TaskStatus.REJECTED,
-            #     "Specified configuration file (station_config.yml) does not exist.",
-            # ),
             (
                 '{"plot_directory": "invalid_directory", "auto_handle_daq": "True"}',
                 TaskStatus.FAILED,
@@ -360,26 +354,8 @@ class TestDaqComponentManager:
                 TaskStatus.REJECTED,
                 "Param `argin` must have key for `plot_directory`",
             ),
-            # (
-            #     '{"station_config_path": "blah"}',
-            #     TaskStatus.REJECTED,
-            #     "Param `argin` must have key for `plot_directory`",
-            # ),
-            # (
-            #     '{"plot_directory": "blahblah"}',
-            #     TaskStatus.REJECTED,
-            #     "Param `argin` must have key for `plot_directory`",
-            # ),
-            # (
-            #     '{"station_config_path": "nonexistent_station_config.yml", '
-            #     '"plot_directory": "/plot", "auto_handle_daq": "True"}',
-            #     TaskStatus.REJECTED,
-            #     "Specified configuration file (nonexistent_station_config.yml) "
-            #     "does not exist.",
-            # ),
             (
-                '{"station_config_path": "tests/data/default_config.yml", '
-                '"plot_directory": "/app/plot/", "auto_handle_daq": "True"}',
+                '{"plot_directory": "/app/plot/", "auto_handle_daq": "True"}',
                 TaskStatus.IN_PROGRESS,
                 "Bandpass monitor active",
             ),

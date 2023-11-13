@@ -11,52 +11,53 @@ and the station calibrators.
 {{- $instances := dict}}
 
 {{- range $device_type := list "calibration_store" "mock_field_station" "calibrator"}}
-{{- $_ := set $instances $device_type dict}}
-{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-{{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+  {{- $_ := set $instances $device_type dict}}
+  {{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
+    {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
+      {{- $station_enabled := true}}
+      {{- if hasKey $station_spec "enabled"}}
+        {{- $station_enabled = $station_spec.enabled}}
+      {{- end }}
 
-{{- $device_spec := dig "sps" $device_type dict $station_spec}}
-{{- $device_enabled := pluck "enabled" $device_spec $station_spec (dict "enabled" true) | first}}
-{{- if $device_enabled}}
-{{- $device_instance := dict}}
-{{- $device_logging_level_defaults := pluck "logging_level_default" $device_spec $defaults}}
-{{- if $device_logging_level_defaults}}
-{{- $_ := set $device_instance "logging_level_default" (first $device_logging_level_defaults)}}
-{{- end }}
-{{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
-{{- $_ := set (index $instances $device_type) $station_name $device_instance}}
-{{- end }}
+      {{- $sps_spec := dig "sps" dict $station_spec}}
+      {{- $sps_enabled := $station_enabled}}
+      {{- if hasKey $sps_spec "enabled"}}
+        {{- $sps_enabled = $sps_spec.enabled}}
+      {{- end }}
 
-{{- end }}
-{{- end }}
+      {{- $device_spec := dig $device_type dict $sps_spec}}
+      {{- $device_enabled := $sps_enabled}}
+      {{- if hasKey $device_spec "enabled"}}
+        {{- $device_enabled = $device_spec.enabled}}
+      {{- end }}
+
+      {{- if $device_enabled}}
+        {{- $device_instance := dict}}
+        {{- $device_logging_level_defaults := pluck "logging_level_default" $device_spec $defaults}}
+        {{- if $device_logging_level_defaults}}
+          {{- $_ := set $device_instance "logging_level_default" (first $device_logging_level_defaults)}}
+        {{- end }}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+        {{- $_ := set (index $instances $device_type) $station_name $device_instance}}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{- if (or $instances.calibration_store $instances.mock_field_station $instances.calibrator)}}
 deviceServers:
 {{- end }}
-{{- $calstore_instances := $instances.calibration_store}}
-{{- if $calstore_instances}}
+{{- with $instances.calibration_store}}
   calibrationstores:
-{{- range $id, $spec := $calstore_instances}}
-    {{$id}}:
-{{toYaml $spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}
 
-{{- $mockfieldstation_instances := $instances.mock_field_station}}
-{{- if $mockfieldstation_instances}}
+{{- with $instances.mock_field_station}}
   mockfieldstations:
-{{- range $id, $spec := $mockfieldstation_instances}}
-    {{$id}}:
-{{toYaml $spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}
 
-{{- $calibrator_instances := $instances.calibrator}}
-{{- if $calibrator_instances}}
+{{- with $instances.calibrator}}
   stationcalibrators:
-{{- range $id, $spec := $calibrator_instances}}
-    {{$id}}:
-{{toYaml $spec | indent 6}}
-{{- end }}
+{{toYaml . | indent 4}}
 {{- end }}

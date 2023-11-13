@@ -314,7 +314,6 @@ class DaqSimulator:
         self._stop_bandpass = False
         params: dict[str, Any] = json.loads(argin)
         try:
-            # station_config_path: str = params["station_config_path"]
             plot_directory: str = params["plot_directory"]
         except KeyError:
             yield (

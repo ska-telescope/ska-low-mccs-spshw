@@ -355,8 +355,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             and producing plots of the spectra.
 
         :param argin: A json string with keywords
-            - station_config_path
-            Path to a station configuration file.
             - plot_directory
             Directory in which to store bandpass plots.
             - monitor_rms
@@ -528,7 +526,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             "//", "/"
         )
 
-    # TODO: Would there be any mileage in combining these methods?
     def _get_scan_id(self: DaqComponentManager) -> str:
         """
         Get a unique scan ID from SKUID.

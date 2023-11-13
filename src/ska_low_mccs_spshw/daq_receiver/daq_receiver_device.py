@@ -92,10 +92,28 @@ class _StartDaqCommand(SubmittedSlowCommand):
 
 class _StartBandpassMonitorCommand(SubmittedSlowCommand):
     """
-    Class for handling the StartBandpassMonitor command.
+    Start monitoring antenna bandpasses.
 
-    #TODO: Better docstring.
-    This command starts the DAQ bandpass monitor.
+        The MccsDaqReceiver will begin monitoring antenna bandpasses
+            and producing plots of the spectra.
+
+        :param argin: A json dictionary with keywords.
+            - plot_directory
+            Directory in which to store bandpass plots.
+            - monitor_rms
+            Whether or not to additionally produce RMS plots.
+            Default: False.
+            - auto_handle_daq
+            Whether DAQ should be automatically reconfigured,
+            started and stopped without user action if necessary.
+            This set to False means we expect DAQ to already
+            be properly configured and listening for traffic
+            and DAQ will not be stopped when `StopBandpassMonitor`
+            is called.
+            Default: False.
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
     """
 
     def __init__(
@@ -134,8 +152,6 @@ class _StartBandpassMonitorCommand(SubmittedSlowCommand):
         :param args: unspecified positional arguments. This should be
             empty and is provided for typehinting purposes only.
         :param argin: A json dictionary with keywords.
-            - station_config_path
-            Path to a station configuration file.
             - plot_directory
             Directory in which to store bandpass plots.
             - monitor_rms
@@ -812,8 +828,6 @@ class MccsDaqReceiver(SKABaseDevice):
             and producing plots of the spectra.
 
         :param argin: A json dictionary with keywords.
-            - station_config_path
-            Path to a station configuration file.
             - plot_directory
             Directory in which to store bandpass plots.
             - monitor_rms

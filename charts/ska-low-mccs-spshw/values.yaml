@@ -93,15 +93,18 @@ resources:
 
 ska-low-mccs-daq:
   image:
-    registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+    # registry: artefact.skao.int
+    # name: ska-low-mccs-daq
+    # tag: 0.5.0
+    registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
     name: ska-low-mccs-daq
-    tag: 0.4.0-dev.c7c1aa29c
+    tag: 0.5.0-dirty
     pullPolicy: IfNotPresent
 
 image:
-  registry: artefact.skao.int
+  registry: docker.io/library # artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 0.10.0-dirty
+  tag: 0.11.0
   pullPolicy: IfNotPresent
 
 deviceServers: {} # e.g....
@@ -167,8 +170,3 @@ simulators: {} # e.g.
 
 pgadmin4:
   enabled: false
-
-ska-low-mccs-daq:
-  image:
-    tag: 0.4.0-dev.c9e0f5676
-    registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq

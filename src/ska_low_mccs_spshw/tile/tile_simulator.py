@@ -52,7 +52,7 @@ class StationBeamformer:
                 raise ValueError("value passed for start_ch is not a multiple of 2")
             if item[1] % 8 != 0:
                 raise ValueError("value passed for nof_ch is a multiple by 8")
-            if not item[2] in range(48):
+            if item[2] not in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
         self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]
@@ -393,42 +393,6 @@ class TileSimulator:
         self.csp_rounding = None
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
-
-        self.preadu_signal_map = {
-            0: {"preadu_id": 1, "channel": 0},
-            1: {"preadu_id": 1, "channel": 1},
-            2: {"preadu_id": 1, "channel": 2},
-            3: {"preadu_id": 1, "channel": 3},
-            4: {"preadu_id": 1, "channel": 4},
-            5: {"preadu_id": 1, "channel": 5},
-            6: {"preadu_id": 1, "channel": 6},
-            7: {"preadu_id": 1, "channel": 7},
-            8: {"preadu_id": 0, "channel": 15},
-            9: {"preadu_id": 0, "channel": 14},
-            10: {"preadu_id": 0, "channel": 13},
-            11: {"preadu_id": 0, "channel": 12},
-            12: {"preadu_id": 0, "channel": 11},
-            13: {"preadu_id": 0, "channel": 10},
-            14: {"preadu_id": 0, "channel": 9},
-            15: {"preadu_id": 0, "channel": 8},
-            16: {"preadu_id": 1, "channel": 8},
-            17: {"preadu_id": 1, "channel": 9},
-            18: {"preadu_id": 1, "channel": 10},
-            19: {"preadu_id": 1, "channel": 11},
-            20: {"preadu_id": 1, "channel": 12},
-            21: {"preadu_id": 1, "channel": 13},
-            22: {"preadu_id": 1, "channel": 14},
-            23: {"preadu_id": 1, "channel": 15},
-            24: {"preadu_id": 0, "channel": 7},
-            25: {"preadu_id": 0, "channel": 6},
-            26: {"preadu_id": 0, "channel": 5},
-            27: {"preadu_id": 0, "channel": 4},
-            28: {"preadu_id": 0, "channel": 3},
-            29: {"preadu_id": 0, "channel": 2},
-            30: {"preadu_id": 0, "channel": 1},
-            31: {"preadu_id": 0, "channel": 0},
-        }
-        # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
         """
@@ -1186,6 +1150,32 @@ class TileSimulator:
         :rtype: int
         """
         return self._station_id
+
+    def set_preadu_levels(self, levels: list[float]) -> None:
+        """
+        Set preADU attenuation levels.
+
+        :param levels: Desired attenuation levels for each ADC channel, in dB.
+        """
+        assert len(levels) == 32
+        assert self.tpm  # for mypy
+        for adc_channel, level in enumerate(levels):
+            preadu_id, preadu_ch = divmod(adc_channel, 16)
+            self.tpm.preadu[preadu_id].set_attenuation(level, [preadu_ch])
+
+    def get_preadu_levels(self) -> list[float]:
+        """
+        Get preADU attenuation levels.
+
+        :return: Attenuation levels corresponding to each ADC channel, in dB.
+        """
+        assert self.tpm  # for mypy
+        levels = []
+        for adc_channel in range(32):
+            preadu_id, preadu_ch = divmod(adc_channel, 16)
+            attenuation = self.tpm.preadu[preadu_id].get_attenuation()[preadu_ch]
+            levels.append(attenuation)
+        return levels
 
     def __getattr__(self, name: str) -> object:
         """

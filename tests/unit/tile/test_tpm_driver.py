@@ -1230,7 +1230,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Check TPM driver preADU levels
         tpm_driver.preadu_levels = [3.0] * 32
 
-        # Check exception caught
+        # Try to set more levels (33) than there are channels (32),
+        # in order to check that the TPM driver swallows exceptions.
+        # Possibly a bad idea?
         tpm_driver.preadu_levels = [3.0] * 33
 
     def test_load_calibration_coefficients(

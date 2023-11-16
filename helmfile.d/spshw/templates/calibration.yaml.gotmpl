@@ -32,12 +32,17 @@ and the station calibrators.
       {{- end }}
 
       {{- if $device_enabled}}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
         {{- $device_instance := dict}}
+        {{- if eq $device_type "calibrator"}}
+          {{- $mock_field_station_name := printf "low-mccs/mockfieldstation/%s" $station_name}}
+          {{- $calibration_store_name := printf "low-mccs/calibrationstore/%s" $station_name}}
+          {{- $device_instance = dict "field_station_trl" $mock_field_station_name "calibration_store_trl" $calibration_store_name}}
+        {{- end }}
         {{- $device_logging_level_defaults := pluck "logging_level_default" $device_spec $defaults}}
         {{- if $device_logging_level_defaults}}
           {{- $_ := set $device_instance "logging_level_default" (first $device_logging_level_defaults)}}
         {{- end }}
-        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
         {{- $_ := set (index $instances $device_type) $station_name $device_instance}}
       {{- end }}
     {{- end }}

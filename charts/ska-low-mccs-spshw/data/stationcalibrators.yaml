@@ -5,6 +5,8 @@ Defines the deployment for station calibrator Tango devices.
     stationcalibrators:
       "s1-2":
         logging_level_default: 5
+        field_station_trl: "low-mccs/fieldstation/s1-2"
+        calibration_store_trl: "low-mccs/calibrationstore/s1-2"
 
 */}}
 {{- if (hasKey .Values "deviceServers")}}
@@ -30,10 +32,10 @@ server:
               properties:
                 - name: "FieldStationName"
                   values:
-                    - {{printf "low-mccs/mockfieldstation/%s" $id}}
+                    - {{quote $this_calibrator.field_station_trl}}
                 - name: "CalibrationStoreName"
                   values:
-                    - {{printf "low-mccs/calibrationstore/%s" $id}}
+                    - {{quote $this_calibrator.calibration_store_trl}}
 {{- with $this_calibrator.logging_level_default}}
                 - name: "LoggingLevelDefault"
                   values:

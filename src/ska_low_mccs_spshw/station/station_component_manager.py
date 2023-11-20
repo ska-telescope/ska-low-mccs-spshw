@@ -400,6 +400,14 @@ class SpsStationComponentManager(
                 for power_state in list(self._tile_power_states.values())
             ):
                 evaluated_power_state = PowerState.STANDBY
+            elif all(
+                power_state == PowerState.OFF
+                for power_state in list(self._subrack_power_states.values())
+            ) and all(
+                power_state == PowerState.OFF
+                for power_state in list(self._tile_power_states.values())
+            ):
+                evaluated_power_state = PowerState.OFF
             else:
                 evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(

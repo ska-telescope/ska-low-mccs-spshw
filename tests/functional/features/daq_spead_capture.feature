@@ -7,7 +7,6 @@
 # See LICENSE for more info.
 """This module contains the features and scenarios for the daq SPEAD capture test."""
 
-@skip  # constantly failing k8s-test step in CI pipeline
 Feature: Receiving SPEAD packets.
     As a MCCS developer i want to ensure DAQ is capable of capturing SPEAD data.
 
@@ -26,6 +25,7 @@ Feature: Receiving SPEAD packets.
   Scenario Outline: Sending SPEAD packets to be captured by DAQ
       Given this test is running against station <station_name>.
       And the DAQ is available
+      And the DAQ has no consumers running
       And the Tile is available
       And the Subrack is available
       And DAQ is ready to receive <daq_modes_of_interest> data type.
@@ -35,7 +35,7 @@ Feature: Receiving SPEAD packets.
 
       Examples: modes of interest
       |    daq_modes_of_interest    |  data_type  |  no_of_tiles    |    station_name    | 
-      |   INTEGRATED_CHANNEL_DATA   |    channel  |      16         |     real-daq-1     |
+      |   INTEGRATED_CHANNEL_DATA   |   channel   |      16         |     real-daq-1     |
 
 
 

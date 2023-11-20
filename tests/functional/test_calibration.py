@@ -148,8 +148,10 @@ def empty_table(database_connection_pool: ConnectionPool) -> None:
         cx.execute("DELETE FROM tab_mccs_calib")
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="database_connection_pool")
 def database_connection_pool_fixture(
+    true_context: bool,
     database_host: str,
     database_port: int,
     database_name: str,
@@ -159,6 +161,7 @@ def database_connection_pool_fixture(
     """
     Get a connection pool for the database.
 
+    :param true_context: whether to test against an existing Tango deployment
     :param database_host: the database host
     :param database_port: the database port
     :param database_name: the database name
@@ -166,6 +169,11 @@ def database_connection_pool_fixture(
     :param database_admin_password: the database admin password
     :return: a connection pool for the database
     """
+    if not true_context:
+        pytest.xfail(
+            "Functional testing of the calibration store requires a "
+            "full deployment including a database"
+        )
     conninfo = (
         f"host={database_host} "
         f"port={database_port} "

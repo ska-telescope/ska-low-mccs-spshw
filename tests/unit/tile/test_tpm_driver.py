@@ -15,7 +15,6 @@ import time
 import unittest.mock
 from typing import Any
 
-import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus, TaskStatus
@@ -483,7 +482,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.static_delays
         tpm_driver.csp_rounding = [2] * 384
         _ = tpm_driver.csp_rounding
-        tpm_driver.preadu_levels = np.arange(0, 31, 1, dtype=int)
+        tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels
 
     def test_set_beamformer_regions(
@@ -1227,20 +1226,19 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert all(tpm_driver.preadu_levels == np.zeros(32))
+        assert tpm_driver.preadu_levels == [0.0] * 32
 
         # Set preADU levels to 3 for all channels
-        tpm_driver.preadu_levels = np.array([3.00] * 32)
+        tpm_driver.preadu_levels = [3.0] * 32
         # Read PyFABIL software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
         # Check TPM driver preADU levels
-        tpm_driver.preadu_levels = np.array([3.00] * 32)
+        tpm_driver.preadu_levels = [3.0] * 32
 
-        # Check exception caught.
-        tpm_driver._set_preadu_levels = unittest.mock.Mock(  # type: ignore[assignment]
-            side_effect=Exception("mocked exception")
-        )
-        tpm_driver.preadu_levels = np.array([3.00] * 32)
+        # Try to set more levels (33) than there are channels (32),
+        # in order to check that the TPM driver swallows exceptions.
+        # Possibly a bad idea?
+        tpm_driver.preadu_levels = [3.0] * 33
 
     def test_load_calibration_coefficients(
         self: TestTpmDriver,

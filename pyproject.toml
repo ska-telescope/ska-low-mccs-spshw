@@ -11,6 +11,14 @@ documentation = "https://developer.skatelescope.org/projects/ska-low-mccs-spshw"
 name = 'ska-nexus'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
+[[tool.poetry.source]]
+name = 'base'
+url = 'https://gitlab.com/api/v4/projects/10753328/packages/pypi/simple'
+
+[[tool.poetry.source]]
+name = 'common'
+url = 'https://gitlab.com/api/v4/projects/38627478/packages/pypi/simple'
+
 [tool.poetry.dependencies]
 python = "~3.10"
 aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "6fae204277291b96405c2a75940544942b6d4c0b", subdirectory = "python" }
@@ -19,13 +27,13 @@ fire = "^0.5.0"
 numpy = "1.25.2"
 psycopg = {extras = ["binary"], version = "^3.1.10"}
 psycopg-pool = "^3.1.7"
-pytango = "9.4.2"
+pytango = "9.5.0rc3"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
-ska-tango-base = "^0.19.1"
+ska-tango-base = { version = "0.19.1+dev.c7ec01419", source = "base" }
 ska-control-model = "^0.3.1"
-ska-low-mccs-common = "0.9.1"
+ska-low-mccs-common = { version = "0.9.1+dev.c1f577bfd", source = "common" }
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}

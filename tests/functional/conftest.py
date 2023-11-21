@@ -13,7 +13,7 @@ import os
 import queue
 import time
 from time import sleep
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 import _pytest
 import pytest
@@ -48,6 +48,49 @@ def pytest_addoption(
             "need to spin up a Tango test context"
         ),
     )
+
+
+@pytest.fixture(name="functional_test_context_generator", scope="module")
+def functional_test_context_generator_fixture(
+    true_context: bool,
+    subrack_id: int,
+    subrack_address: tuple[str, int] | None,
+    daq_id: int,
+) -> Callable:
+    """
+    Return a callable to generate a context containing the device/s under test.
+
+    :param true_context: whether to test against an existing Tango
+        deployment
+    :param subrack_id: ID of the subrack Tango device.
+    :param subrack_address: the address of a subrack server if one is
+        already running; otherwise None.
+    :param daq_id: the ID of the daq receiver
+
+    :return: a callable to generate context containing the devices under test
+    """
+
+    def _generate(
+        station_label: str, run_in_cluster_only: bool = False
+    ) -> Iterator[SpsTangoTestHarnessContext]:
+        harness = SpsTangoTestHarness(station_label)
+
+        if not true_context:
+            if run_in_cluster_only:
+                pytest.skip("This test will only run in a true context.")
+            if subrack_address is None:
+                harness.add_subrack_simulator(subrack_id)
+            harness.add_subrack_device(subrack_id, subrack_address)
+            harness.set_daq_instance()
+            harness.set_daq_device(
+                daq_id,
+                address=None,  # dynamically get address of DAQ instance
+            )
+
+        with harness as context:
+            yield context
+
+    return _generate
 
 
 @pytest.fixture(name="true_context", scope="session")

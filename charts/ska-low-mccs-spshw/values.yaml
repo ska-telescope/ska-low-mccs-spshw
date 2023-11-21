@@ -124,6 +124,8 @@ deviceServers: {} # e.g....
   # stationcalibrators:
   #   "s8-1":
   #     logging_level_default: 5
+  #     field_station_trl: "low-mccs/fieldstation/s8-1"
+  #     calibration_store_trl: "low-mccs/calibrationstore/s8-1"
   # daqs:
   #   "s8-1":
   #     id: 345

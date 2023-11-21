@@ -15,6 +15,7 @@
 * [MCCS-1783] TANGO state not being updated in MccsTile.
 * [MCCS-1781] Fix indentation bug in values file.
 * [MCCS-1777] Fix DAQ.Start task_callback error.
+* [LOW-612] Move preADU set/get methods to pyaavs.
 
 ## 0.10.0
 

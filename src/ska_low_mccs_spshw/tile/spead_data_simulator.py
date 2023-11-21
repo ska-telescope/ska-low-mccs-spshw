@@ -160,7 +160,8 @@ class SpeadDataSimulator:
                 self._nof_channel_packets,
                 self._nof_channels_per_packet * 2,
             ),
-            dtype=np.uint16,
+            # dtype=np.uint16,
+            dtype=np.float32,
         )
         self._channelised_packet_data = np.zeros(
             (
@@ -170,9 +171,9 @@ class SpeadDataSimulator:
                 self._nof_channel_packets,
                 self._nof_channels_per_packet * 2,
             ),
-            dtype=np.uint16,
+            # dtype=np.uint16,
+            dtype=np.float32,
         )
-
         for tpm in range(self._nof_tiles):
             for fpga in range(self._nof_fpgas):
                 for antenna in range(self._nof_ants_per_fpga):

@@ -915,6 +915,7 @@ class TileSimulator:
         :param seconds: When to synchronise
         """
         # Check if number of samples is a multiple of 32
+
         if number_of_samples % 32 != 0:
             new_value = (int(number_of_samples / 32) + 1) * 32
             self.logger.warning(
@@ -922,6 +923,7 @@ class TileSimulator:
             )
             number_of_samples = new_value
         self.stop_data_transmission()
+
         assert self.dst_ip
         assert self.dst_port
         self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)

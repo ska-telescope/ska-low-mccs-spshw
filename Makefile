@@ -60,7 +60,6 @@ include .make/k8s.mk
 include .make/raw.mk
 include .make/xray.mk
 
-
 ifdef CI_REGISTRY_IMAGE
 K8S_CHART_PARAMS += \
 	--selector chart=ska-low-mccs-spshw \
@@ -68,7 +67,6 @@ K8S_CHART_PARAMS += \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA)
 endif
-
 
 JUNITXML_REPORT_PATH ?= build/reports/functional-tests.xml
 CUCUMBER_JSON_PATH ?= build/reports/cucumber.json

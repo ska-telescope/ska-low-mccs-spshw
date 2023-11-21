@@ -93,9 +93,9 @@ resources:
 
 ska-low-mccs-daq:
   image:
-    registry: artefact.skao.int
+    registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
     name: ska-low-mccs-daq
-    tag: 0.5.0
+    tag: 0.5.0-dev.cfc920d91
     pullPolicy: IfNotPresent
 
 image:

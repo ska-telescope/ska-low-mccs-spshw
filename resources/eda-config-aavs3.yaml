@@ -12,11 +12,11 @@ configuration:
         code_push_event: true 
       adminMode: 
         code_push_event: true 
-      xPolBandpass
+      xPolBandpass:
         code_push_event: true 
-      yPolBandpass
+      yPolBandpass:
         code_push_event: true 
-      rmsPlot
+      rmsPlot:
         code_push_event: true 
   - class MccsSubrack
     attributes:

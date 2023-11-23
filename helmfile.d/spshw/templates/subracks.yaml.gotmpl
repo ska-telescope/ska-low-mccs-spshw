@@ -23,7 +23,7 @@
     {{- range $subrack_id, $subrack_spec := $subrack_specs}}
       {{- $subrack_enabled := $sps_enabled}}
       {{- if hasKey $sps_spec "enabled"}}
-        {{- $subrack_enabled = $sps_spec.enabled}}
+        {{- $subrack_enabled = $subrack_spec.enabled}}
       {{- end }}
 
       {{- if $subrack_enabled}}

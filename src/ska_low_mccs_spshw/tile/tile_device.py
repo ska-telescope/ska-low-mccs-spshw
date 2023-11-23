@@ -116,7 +116,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-        print("TEST BRANCH FOR TILEPROGRAMMINGSTATE BUG")
+
+        # FIXME debug log
+        self.logger.info("TEST BRANCH FOR TILEPROGRAMMINGSTATE BUG")
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()

@@ -2,7 +2,7 @@ db: databaseds.aavs3-system.svc.aavs302.lowitf.internal.skao.int:10000
 manager: low-eda/cm/01
 archiver: low-eda/es/01
 configuration:
-  - class MccsDaqReceiver
+  - class: MccsDaqReceiver
     attributes:
       state:
         code_push_event: true 
@@ -18,7 +18,7 @@ configuration:
         code_push_event: true 
       rmsPlot:
         code_push_event: true 
-  - class MccsSubrack
+  - class: MccsSubrack
     attributes:
       backplaneTemperatures:
         code_push_event: true 
@@ -42,7 +42,7 @@ configuration:
         code_push_event: true 
       tpmVoltages:
         code_push_event: true 
-  - class MccsTile
+  - class: MccsTile
     attributes:
       tileProgrammingState:
         code_push_event: true 

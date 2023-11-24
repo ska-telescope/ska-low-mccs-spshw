@@ -105,6 +105,7 @@ releases:
       - spshw/templates/subracks.yaml.gotmpl
       - spshw/templates/tpms.yaml.gotmpl
       - spshw/templates/daqs.yaml.gotmpl
+      - spshw/templates/helm-values.yaml.gotmpl
 
 {{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
 {{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}

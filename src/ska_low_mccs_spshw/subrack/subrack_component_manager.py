@@ -113,6 +113,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
+        self.logger.debug("Comms callback: %s", self._communication_state_callback)
 
     def turn_off_tpm(
         self: SubrackComponentManager,

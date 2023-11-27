@@ -1,0 +1,50 @@
+db: databaseds.aavs3-system.svc.aavs302.lowitf.internal.skao.int:10000
+manager: low-eda/cm/01
+archiver: low-eda/es/01
+configuration:
+  - class: MccsDaqReceiver
+    attributes:
+      state:
+        code_push_event: true 
+      status:
+        code_push_event: true 
+      healthState: 
+        code_push_event: true 
+      adminMode: 
+        code_push_event: true 
+      xPolBandpass:
+        code_push_event: true 
+      yPolBandpass:
+        code_push_event: true 
+      rmsPlot:
+        code_push_event: true 
+  - class: MccsSubrack
+    attributes:
+      backplaneTemperatures:
+        code_push_event: true 
+      boardTemperatures:
+        code_push_event: true 
+      boardCurrent:
+        code_push_event: true 
+      powerSupplyCurrents:
+        code_push_event: true 
+      powerSupplyPowers:
+        code_push_event: true 
+      powerSupplyVoltages:
+        code_push_event: true 
+      powerSupplyFanSpeeds:
+        code_push_event: true 
+      subrackFanSpeeds:
+        code_push_event: true 
+      tpmCurrents:
+        code_push_event: true 
+      tpmPowers:
+        code_push_event: true 
+      tpmVoltages:
+        code_push_event: true 
+  - class: MccsTile
+    attributes:
+      tileProgrammingState:
+        code_push_event: true 
+      adcPower:
+        code_push_event: true 

@@ -371,11 +371,15 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             self._device._hardware_attributes = {}
 
             self._device.set_change_event("tpmPresent", True)
+            self._device.set_archive_event("tpmPresent", True)
             self._device.set_change_event("tpmCount", True)
+            self._device.set_archive_event("tpmCount", True)
             for tpm_number in range(1, SubrackData.TPM_BAY_COUNT + 1):
                 self._device.set_change_event(f"tpm{tpm_number}PowerState", True)
+                self._device.set_archive_event(f"tpm{tpm_number}PowerState", True)
             for attribute_name in MccsSubrack._ATTRIBUTE_MAP.values():
                 self._device.set_change_event(attribute_name, True)
+                self._device.set_archive_event(attribute_name, True)
 
             message = "MccsSubrack init complete."
             self._device.logger.info(message)
@@ -387,6 +391,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
+        self.set_archive_event("healthState", True, False)
 
     def create_component_manager(self: MccsSubrack) -> SubrackComponentManager:
         """
@@ -1048,6 +1053,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
                 self._hardware_attributes[tango_attribute_name] = value
                 self.push_change_event(tango_attribute_name, value)
+                self.push_archive_event(tango_attribute_name, value)
             else:
                 special_update_method(value)
 
@@ -1083,6 +1089,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         else:
             self._hardware_attributes["boardCurrent"] = [board_current]
             self.push_change_event("boardCurrent", [board_current])
+            self.push_archive_event("boardCurrent", [board_current])
         self._update_health_data()
 
     def _update_tpm_present(

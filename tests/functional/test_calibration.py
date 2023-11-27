@@ -200,17 +200,24 @@ def calibration_solution_fixture() -> list[float]:
 
 
 @pytest.fixture(name="alternative_calibration_solutions")
-def alternative_calibration_solutions_fixture() -> dict[tuple[int, float], list[float]]:
+def alternative_calibration_solutions_fixture(
+    frequency_channel: int, outside_temperature: float
+) -> dict[tuple[int, float], list[float]]:
     """
     Fixture that provides alternative sample calibration solutions.
 
     This is used to test for when there are multiple solutions for the same inputs,
     that the correct one is retrieved.
 
+    :param outside_temperature: a fixture with an outside temperature
+    :param frequency_channel: a fixture with a calibration frequency channel
+
     :return: a sample calibration solution. The keys are tuples of the channel
         and the outside temperature, and the values are lists of calibration values
     """
     return {
+        (frequency_channel, outside_temperature): [float(1)]
+        + [0.5 * i for i in range(8)],
         (23, 25.0): [float(4)] + [0.8 * i for i in range(8)],
         (45, 25.0): [float(7)] + [1.4 * (i % 2) for i in range(8)],
         (23, 30.0): [float(1)] + [0.1 * i for i in range(8)],
@@ -218,26 +225,6 @@ def alternative_calibration_solutions_fixture() -> dict[tuple[int, float], list[
         (23, 35.0): [float(4)] + [0.9 * i for i in range(8)],
         (45, 35.0): [float(8)] + [1.4 * (i % 2) for i in range(8)],
     }
-
-
-@pytest.fixture(name="outside_temperature")
-def outside_temperature_fixture() -> float:
-    """
-    Fixture for the outside temperature.
-
-    :return: the outside temperature
-    """
-    return 25.0
-
-
-@pytest.fixture(name="frequency_channel")
-def frequency_channel_fixture() -> int:
-    """
-    Fixture for the calibration frequency channel.
-
-    :return: the frequency channel
-    """
-    return 23
 
 
 @pytest.fixture(name="unused_outside_temperature")

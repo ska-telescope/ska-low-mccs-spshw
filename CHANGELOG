@@ -2,9 +2,10 @@
 
 ## unreleased
 
+* [MCCS-1867] Fix subsystem slug used for DAQ directory structure.
+
 ## 0.11.0
 
-* [MCCS-1867] Fix subsystem slug used for DAQ directory structure.
 * [MCCS-1851] Update dependencies
 * [MCCS-1845] Support disabling SPS
 * [MCCS-1831] SKUID as a platform service

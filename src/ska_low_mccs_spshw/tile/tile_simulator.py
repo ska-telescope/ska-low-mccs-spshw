@@ -31,7 +31,7 @@ class StationBeamformer:
 
     def __init__(self: StationBeamformer):
         """Initialise the station beamformer object."""
-        self._channel_table = [[0, 0, 0, 0, 0, 0]] * 48
+        self._channel_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._nof_channels = 0
         self._is_running = False
         self._start_frame = 0
@@ -41,12 +41,21 @@ class StationBeamformer:
         """
         Define station beamformer table.
 
-        :param table: table
+        Defines the station beamformer table. Each entry in the list contains:
+        - start channel
+        - number of channels
+        - hw beam ID
+        - subarray ID
+        - subarray_logical_channel
+        - subarray_beam_id
+        - substation_id
+        - aperture_id
 
+        :param table: table of channel blocks. Entries of 8 items each:
         :raises ValueError: if wrong value passed.
         """
-        if len(table) >= 16:
-            raise ValueError("Too many values")
+        if len(table) > 48:
+            raise ValueError(f"Too many values: {len(table)} > 48")
         for item in table:
             if item[0] % 2 != 0:
                 raise ValueError("value passed for start_ch is not a multiple of 2")
@@ -55,7 +64,25 @@ class StationBeamformer:
             if item[2] not in range(48):
                 raise ValueError("value passed for beam_index is not in range [0-48]")
 
-        self._channel_table = [[table[0][0], 0, 0, 0, 0, 0, 0]]
+        block = 0
+        for item in table:
+            start_channel = item[0]
+            num_blocks = int(item[1] // 8)
+            logical_channel = item[4]
+            for i in range(num_blocks):
+                self._channel_table[block] = [
+                    start_channel + 8 * i,
+                    item[2],
+                    item[3],
+                    logical_channel + 8 * i,
+                    item[5],
+                    item[6],
+                    item[7],
+                ]
+                block += 1
+        # raise NotImplementedError
+        for i in range(block, 48):
+            self._channel_table[i] = [0] * 7
 
     def get_channel_table(self: StationBeamformer) -> list[list[int]]:
         """
@@ -390,9 +417,23 @@ class TileSimulator:
         self.dst_ip: Optional[str] = None
         self.dst_port: Optional[int] = None
         self.sync_time = 0
-        self.csp_rounding = None
+        self.csp_rounding = [0] * 48
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
+
+        self.integrated_channel_configuration = {
+            "integration_time": -1.0,
+            "first_channel": 0,
+            "last_channel": 511,
+            "current_channel": 0,
+        }
+        self.integrated_beam_configuration = {
+            "integration_time": -1.0,
+            "first_channel": 0,
+            "last_channel": 383,
+            "current_channel": 0,
+        }
+        # return self._register_map.get(str(address), 0)
 
     def get_health_status(self: TileSimulator) -> dict[str, Any]:
         """
@@ -652,7 +693,8 @@ class TileSimulator:
             frequency channels in all inputs.
         :param chan: Input channel to set
         """
-        self.logger.info("Not implemented, return without error to allow poll.")
+        self._channeliser_truncation = trunc
+        # self.logger.info("Not implemented, return without error to allow poll.")
         return
 
     def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
@@ -677,9 +719,8 @@ class TileSimulator:
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.csp_rounding = rounding
 
     def define_spead_header(
         self,
@@ -695,19 +736,18 @@ class TileSimulator:
         :param subarray_id: The ID of the subarray.
         :param aperture_id: The ID of the aperture.
         :param fpga_reference_time: The FPGA reference time used for synchronization.
-
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        self._station_id = station_id
 
     def set_beamformer_regions(self: TileSimulator, regions: list[list[int]]) -> None:
         """
         Set beamformer regions.
 
         :param regions: regions
-        :raises NotImplementedError: if not overwritten.
         """
-        raise NotImplementedError
+        assert self.tpm
+        self.tpm.station_beamf[0].define_channel_table(regions)
+        self.tpm.station_beamf[1].define_channel_table(regions)
 
     def set_first_last_tile(self: TileSimulator, is_first: bool, is_last: bool) -> None:
         """
@@ -741,18 +781,16 @@ class TileSimulator:
 
         :param antenna: Antenna number (0-15)
         :param coefs: Calibration coefficient array
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.logger.debug(f"Received calibration coefficients for antenna {antenna}")
 
     def switch_calibration_bank(self: TileSimulator, switch_time: int = 0) -> None:
         """
         Switch calibration bank.
 
         :param switch_time: switch time
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.logger.debug("Applying calibration coefficients")
 
     def set_pointing_delay(
         self: TileSimulator, delay_array: list[float], beam_index: int
@@ -762,18 +800,16 @@ class TileSimulator:
 
         :param delay_array: delay array
         :param beam_index: beam index
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.logger.debug(f"Received pointing delays for beam {beam_index}")
 
     def load_pointing_delay(self: TileSimulator, load_time: int) -> None:
         """
         Load pointing delay.
 
         :param load_time: load time
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.logger.debug("Applying pointing delays")
 
     def start_beamformer(self: TileSimulator, start_time: int, duration: int) -> bool:
         """
@@ -804,12 +840,17 @@ class TileSimulator:
         """
         Configure and start continuous integrated channel data.
 
+        TODO Implement generation of integrated packets
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.integrated_channel_configuration = {
+            "integration_time": integration_time,
+            "first_channel": first_channel,
+            "last_channel": last_channel,
+            "current_channel": first_channel,
+        }
 
     def configure_integrated_beam_data(
         self: TileSimulator,
@@ -823,17 +864,18 @@ class TileSimulator:
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
-        :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.integrated_beam_configuration = {
+            "integration_time": integration_time,
+            "first_channel": first_channel,
+            "last_channel": last_channel,
+            "current_channel": first_channel,
+        }
 
     def stop_integrated_data(self: TileSimulator) -> None:
-        """
-        Stop integrated data.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
+        """Stop integrated data."""
+        self.integrated_channel_configuration["integration_time"] = -1
+        self.integrated_beam_configuration["integration_time"] = -1
 
     def send_raw_data(
         self: TileSimulator, sync: bool, timestamp: int, seconds: int

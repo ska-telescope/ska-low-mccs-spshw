@@ -400,6 +400,14 @@ class SpsStationComponentManager(
                 for power_state in list(self._tile_power_states.values())
             ):
                 evaluated_power_state = PowerState.STANDBY
+            elif all(
+                power_state == PowerState.OFF
+                for power_state in list(self._subrack_power_states.values())
+            ) and all(
+                power_state == PowerState.OFF
+                for power_state in list(self._tile_power_states.values())
+            ):
+                evaluated_power_state = PowerState.OFF
             else:
                 evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
@@ -523,6 +531,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         self.logger.debug("Starting standby sequence")
+        result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if not all(
@@ -533,24 +542,34 @@ class SpsStationComponentManager(
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
         self.logger.debug(f"Tile power states: {self._tile_power_states.values()}")
-        if any(
-            power_state == PowerState.ON
-            for power_state in self._tile_power_states.values()
-        ):
-            with self._power_state_lock:
-                self.logger.debug("Starting off sequence on tiles")
-                results = []
-                for proxy in self._tile_proxies.values():
-                    [task_status, task_id] = proxy.off()
-                    time.sleep(2)  # stagger power on by 2 seconds per tile
-                    results.append(task_status)
-                if ResultCode.FAILED in results:
-                    result_code = ResultCode.FAILED
-                else:
-                    result_code = ResultCode.OK
+        with self._power_state_lock:
+            self.logger.debug("Starting off sequence on tiles")
+            results = []
+            for proxy in self._tile_proxies.values():
+                [task_status, task_id] = proxy.off()
+                time.sleep(2)  # stagger power on by 2 seconds per tile
+                results.append(task_status)
+            if ResultCode.FAILED in results:
+                result_code = ResultCode.FAILED
+            else:
+                result_code = ResultCode.OK
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
-            self.logger.debug("End standby")
-            task_status = TaskStatus.COMPLETED
+            timeout = 60
+            tick = 2
+            while timeout > 0:
+                if all(
+                    states == PowerState.OFF
+                    for states in self._tile_power_states.values()
+                ):
+                    break
+                timeout -= tick
+                time.sleep(tick)
+            if timeout > 0:
+                self.logger.debug("End standby")
+                task_status = TaskStatus.COMPLETED
+            else:
+                self.logger.debug("Timeout in standby")
+                task_status = TaskStatus.FAILED
         else:
             task_status = TaskStatus.FAILED
         if task_callback:
@@ -616,7 +635,9 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
-            result_code = self._initialise_tiles(task_callback, task_abort_event)
+            result_code = self._initialise_tile_parameters(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
@@ -685,8 +706,14 @@ class SpsStationComponentManager(
             result_code = ResultCode.FAILED
 
         if result_code == ResultCode.OK:
-            self.logger.debug("Initialising tiles")
-            result_code = self._initialise_tiles(task_callback, task_abort_event)
+            self.logger.debug("Re-initialising tiles")
+            result_code = self._reinitialise_tiles(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Initialising tile parameters")
+            result_code = self._initialise_tile_parameters(
+                task_callback, task_abort_event
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
@@ -733,9 +760,10 @@ class SpsStationComponentManager(
                     return ResultCode.FAILED
         # wait for subracks to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
         last_time = time.time() + timeout
         while time.time() < last_time:
-            time.sleep(2)
+            time.sleep(tick)
             if all(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
@@ -773,13 +801,10 @@ class SpsStationComponentManager(
                     return ResultCode.FAILED
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
         last_time = time.time() + timeout
         while time.time() < last_time:
-            time.sleep(2)
-            # for proxy in self._tile_proxies.values():
-            #    assert proxy._proxy is not None  # for the type checker
-            #    result_code = proxy._proxy.tileProgrammingState
-            #    results.append(result_code)
+            time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
@@ -788,7 +813,7 @@ class SpsStationComponentManager(
         return ResultCode.FAILED
 
     @check_communicating
-    def _initialise_tiles(
+    def _reinitialise_tiles(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -796,9 +821,49 @@ class SpsStationComponentManager(
         """
         Initialise tiles.
 
-        Inilitalse parameters which are individually set in each tile,
+        Initialise tiles by completely reprogram and reconfigure all internal
+        peripherals. This is required prior to station synchronization.
 
-        :TODO: MCCS-1257
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+
+        """
+        with self._power_state_lock:
+            results = []
+            for proxy in self._tile_proxies.values():
+                assert proxy._proxy is not None
+                self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
+                result_code = proxy._proxy.initialise()
+                time.sleep(2)  # stagger initialisation by 2 seconds per tile
+                results.append(result_code)
+        if ResultCode.FAILED in results:
+            return ResultCode.FAILED
+
+        # wait for tiles to come up
+        timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
+        last_time = time.time() + timeout
+        while time.time() < last_time:
+            time.sleep(tick)
+            states = self.tile_programming_state()
+            self.logger.debug(f"tileProgrammingState: {states}")
+            if all(state in ["Initialised", "Synchronised"] for state in states):
+                return ResultCode.OK
+        self.logger.error("Timed out waiting for tiles to come up")
+        return ResultCode.FAILED
+
+    @check_communicating
+    def _initialise_tile_parameters(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Initialise tile parameters.
+
+        Inilitalse parameters which are individually set in each tile,
+        after the tile has been programmed.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
@@ -1411,8 +1476,11 @@ class SpsStationComponentManager(
             base_ip3 = 0x80
         else:
             base_ip3 = 0xC0
-        proxy = list(self._tile_proxies.values())[-1]
+        (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
+        if self._tile_power_states[fqdn] != PowerState.ON:
+            return  # Do not access an unprogrammed TPM
+
         last_tile = len(self._tile_proxies) - 1
         src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
         src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"

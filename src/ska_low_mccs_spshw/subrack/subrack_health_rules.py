@@ -163,6 +163,8 @@ class SubrackHealthRules(HealthRules):
         ):
             return False
         for i, power_state in enumerate(tpm_power_states):
+            if tpm_voltages[i] is None or tpm_currents[i] is None:
+                continue  # may happen
             if power_state == PowerState.ON and (
                 tpm_voltages[i] > self._thresholds[f"{rule_str}tpm_voltage_on"]
                 or tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_on"]

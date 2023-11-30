@@ -70,10 +70,10 @@ depends_on:
   - device: sys/database/2
 image:
 {{- with .Values.image}}
-  registry: "{{.registry}}"
-  image: "{{.name}}"
-  tag: "{{.tag}}"
-  pullPolicy: "{{.pullPolicy}}"
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | coalesce .Chart.AppVersion | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
 {{- end}}
 livenessProbe:
 {{toYaml .Values.livenessProbe | indent 2 }}

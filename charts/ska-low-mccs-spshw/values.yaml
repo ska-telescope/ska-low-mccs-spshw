@@ -101,7 +101,7 @@ ska-low-mccs-daq:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 0.11.0
+  tag: ~ # defaults to chart's appVersion when empty
   pullPolicy: IfNotPresent
 
 deviceServers: {} # e.g....

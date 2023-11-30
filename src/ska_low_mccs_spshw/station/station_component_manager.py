@@ -555,14 +555,15 @@ class SpsStationComponentManager(
                 result_code = ResultCode.OK
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             timeout = 60
+            tick = 2
             while timeout > 0:
                 if all(
                     states == PowerState.OFF
                     for states in self._tile_power_states.values()
                 ):
                     break
-                timeout -= 2
-                time.sleep(2)
+                timeout -= tick
+                time.sleep(tick)
             if timeout > 0:
                 self.logger.debug("End standby")
                 task_status = TaskStatus.COMPLETED
@@ -759,9 +760,10 @@ class SpsStationComponentManager(
                     return ResultCode.FAILED
         # wait for subracks to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
         last_time = time.time() + timeout
         while time.time() < last_time:
-            time.sleep(2)
+            time.sleep(tick)
             if all(
                 power_state == PowerState.ON
                 for power_state in self._subrack_power_states.values()
@@ -799,9 +801,10 @@ class SpsStationComponentManager(
                     return ResultCode.FAILED
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
         last_time = time.time() + timeout
         while time.time() < last_time:
-            time.sleep(2)
+            time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
@@ -839,9 +842,10 @@ class SpsStationComponentManager(
 
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
+        tick = 2
         last_time = time.time() + timeout
         while time.time() < last_time:
-            time.sleep(2)
+            time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):

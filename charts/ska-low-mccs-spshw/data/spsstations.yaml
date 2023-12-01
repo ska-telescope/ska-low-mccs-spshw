@@ -62,7 +62,7 @@ image:
 {{- with .Values.image}}
   registry: {{.registry | quote}}
   image: {{.name | quote}}
-  tag: {{.tag | coalesce .Chart.AppVersion | quote}}
+  tag: {{.tag | coalesce $.Chart.AppVersion | quote}}
   pullPolicy: {{.pullPolicy | quote}}
 {{- end}}
 livenessProbe:

@@ -2,6 +2,7 @@
 
 ## unreleased
 
+* [LOW-612] Fix old pyfabil ref
 * [LOW-637] Update makefile repo and use appVersion as default tag in Helm chart
 * [MCCS-1867] Fix subsystem slug used for DAQ directory structure.
 

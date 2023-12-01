@@ -2,6 +2,9 @@
 
 ## unreleased
 
+* [LOW-637] Move pyfabil dependency from Alessio's BitBucket to SKA GitLab
+* [LOW-637] Update ska-tango-util to 0.4.9
+* [LOW-637] Update ska-low-mccs-daq to 0.6.0
 * [LOW-612] Fix old pyfabil ref
 * [LOW-637] Update makefile repo and use appVersion as default tag in Helm chart
 * [MCCS-1867] Fix subsystem slug used for DAQ directory structure.

@@ -152,7 +152,6 @@ metadata:
     {{- include "ska-low-mccs-spshw.labels" . | indent 4 }}
     component: pgadmin4-spshw
   annotations:
-    kubernetes.io/ingress.class: nginx
     nginx.ingress.kubernetes.io/configuration-snippet: |
       proxy_set_header X-Script-Name /{{ .Release.Namespace }}/pgadmin4;
       proxy_set_header X-Scheme "https";
@@ -161,6 +160,7 @@ metadata:
 {{ toYaml (coalesce .Values.global.annotations .Values.annotations) | indent 4 }}
 {{ end }}
 spec:
+  ingressClassName: nginx
   rules:
     - http:
         paths:

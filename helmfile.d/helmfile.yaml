@@ -103,7 +103,7 @@ releases:
   - name: ska-low-mccs-spshw
     namespace: ska-low-mccs
     chart: ../charts/ska-low-mccs-spshw
-    version: 0.12.0
+    version: ~0.12.0
     values:
       - values/globals.yaml.gotmpl
       - spshw/templates/spsstations.yaml.gotmpl
@@ -119,7 +119,7 @@ releases:
   - name: ska-tango-base
     namespace: ska-low-mccs
     chart: skao/ska-tango-base
-    version: 0.4.7
+    version: ~0.4.7
     values:
       - values/globals.yaml.gotmpl
 {{- end}}
@@ -130,7 +130,7 @@ releases:
   - name: ska-ser-skuid
     namespace: ska-low-mccs
     chart: skao/ska-ser-skuid
-    version: 3.3.3
+    version: ~3.3.3
     values:
       - values/skuid.yaml
 {{- end}}
@@ -152,7 +152,7 @@ releases:
   - name: taranta-dashboard
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-dashboard
-    version: 1.4.0
+    version: ~1.4.0
     values:
       - ingress:
           enabled: true
@@ -160,11 +160,11 @@ releases:
   - name: taranta-dashboard-pvc
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-dashboard-pvc
-    version: 1.4.1
+    version: ~1.4.1
   - name: taranta-auth
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-auth
-    version: 0.1.6
+    version: ~0.1.6
     values:
       - ingress:
           enabled: true
@@ -174,14 +174,14 @@ releases:
   - name: taranta
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta
-    version: 2.4.2
+    version: ~2.4.2
     values:
       - values/taranta.yaml
 
   - name: tangogql
     namespace: ska-low-mccs
     chart: skao/ska-tango-tangogql
-    version: 1.3.10
+    version: ~1.3.10
     values:
       - values/globals.yaml.gotmpl
       - ska-tango-base:

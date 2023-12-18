@@ -1,0 +1,22 @@
+platform:
+  cluster:
+    domain: lowitf.internal.skao.int
+    services:
+      tango-base:
+        tango-host: ""  # Override to empty, so we deploy ska-tango-base ourselves
+      skuid:
+        url: ""  # Override any set value, so we deploy ska-ser-skuid ourselves
+
+# Use helm_values to set arbitrary helm values.
+# These are passed through to the helm values file as-is.
+# For example,
+#
+# helm_values:
+#   image:
+#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#     tag: 0.12.0-dev.c7e00ca93
+
+#   ska-low-mccs-daq:
+#     image:
+#       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+#       tag: 0.5.0-dev.cfc920d91

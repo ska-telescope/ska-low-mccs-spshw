@@ -79,9 +79,9 @@ ska-low-mccs-daq:
 {{- end}}
       size: "250Mi"
 
+  receivers:
 {{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
 {{- range $station_name, $daq_spec := .}}
-  receivers:
     {{$station_name}}:
       host: {{$daq_spec.host}}
       id: {{$daq_spec.id}}

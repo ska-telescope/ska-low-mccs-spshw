@@ -49,6 +49,11 @@ include .make/helm.mk
 
 HELM_CHARTS_TO_PUBLISH = ska-low-mccs-spshw
 
+helm-pre-build:
+	helm repo add skao https://artefact.skao.int/repository/helm-internal
+	helm repo add bitnami https://charts.bitnami.com/bitnami
+
+
 ########################################################################
 # K8S
 ########################################################################
@@ -130,14 +135,6 @@ K8S_TEST_RUNNER_PIP_INSTALL_COMMAND = pip install ${K8S_TEST_RUNNER_PIP_INSTALL_
 endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
-
-k8s-pre-install-chart:  ## TODO: Temporary STS-357 workaround
-	curl -sSL https://github.com/helmfile/helmfile/releases/download/v0.157.0/helmfile_0.157.0_linux_amd64.tar.gz | tar -xzO helmfile > /usr/local/bin/helmfile
-	chmod +x /usr/local/bin/helmfile 
-
-k8s-pre-uninstall-chart:  ## TODO: Temporary STS-357 workaround
-	curl -sSL https://github.com/helmfile/helmfile/releases/download/v0.157.0/helmfile_0.157.0_linux_amd64.tar.gz | tar -xzO helmfile > /usr/local/bin/helmfile
-	chmod +x /usr/local/bin/helmfile 
 
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \

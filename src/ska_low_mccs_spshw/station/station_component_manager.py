@@ -37,6 +37,7 @@ from ska_low_mccs_common.component import (
 from ska_low_mccs_common.utils import threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
+from ska_telmodel.data import TMData  # type: ignore
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -200,6 +201,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         daq_trl: str,
         station_network_address: str,
+        antenna_mapping: str[2],
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -217,6 +219,7 @@ class SpsStationComponentManager(
             station's TPMs
         :param daq_trl: The TRL of this Station's DAQ Receiver.
         :param station_network_address: address prefix for station 40G subnet
+        :param antenna_mapping: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -304,6 +307,14 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
+        self._antenna_mapping: list[tuple[int, int]]
+        antenna_mapping_uri = antenna_mapping[0]
+        antenna_mapping_filepath = antenna_mapping[1]
+        tmdata = TMData(antenna_mapping_uri)
+        full_dict = tmdata[antenna_mapping_filepath].get_dict()
+
+        self._get_mappings(full_dict)
+
         super().__init__(
             logger,
             communication_state_changed_callback,
@@ -313,6 +324,20 @@ class SpsStationComponentManager(
             fault=None,
             is_configured=None,
         )
+
+    def _get_mappings(self: SpsStationComponentManager, full_dict: dict) -> None:
+        """Get mappings from TelModel.
+
+        :param full_dict: Full aavs3.yaml dictionary.
+        """
+        antennas = full_dict["platform"]["array"]["station_clusters"]["a1"]["stations"][
+            "1"
+        ]["antennas"]
+        for antenna in antennas:
+            self._antenna_mapping[int(antenna)] = (
+                antennas[antenna]["tpm_x_channel"],
+                antennas[antenna]["tpm_y_channel"],
+            )
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""

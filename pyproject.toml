@@ -80,6 +80,7 @@ typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 # ska-low-mccs-daq-interface = "^0.1.1"
 ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
+ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]
 MccsStationCalibrator = "ska_low_mccs_spshw.station_calibrator.station_calibrator_device:main"

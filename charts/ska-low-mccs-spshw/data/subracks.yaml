@@ -4,11 +4,12 @@ Defines the deployment for MccsSubrack Tango devices.
   deviceServers:
     subracks:
       s3-2-1:
-        srmb_host: 10.0.10.80
-        srmb_port: 8081
-        nodeSelector:
-          kubernetes.io/hostname: psi-node3
-        logging_level_default: 5
+        low-mccs/subrack/s3-2-1:
+          srmb_host: 10.0.10.80
+          srmb_port: 8081
+          nodeSelector:
+            kubernetes.io/hostname: psi-node3
+          logging_level_default: 5
 
 */}}
 {{- $node_selector := dict}}
@@ -18,19 +19,20 @@ name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-spshw-subrack
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_subrack := $subracks}}
-  - {{printf "subrack-%s" $key}}
+{{- range $server_key, $this_server := $subracks}}
+  - {{printf "subrack-%s" $server_key}}
 {{- end}}
 command: MccsSubrack
 server: 
   name: "MccsSubrack"
   instances:
-{{- range $key, $this_subrack := $subracks}}
-    - name: {{printf "subrack-%s" $key}}
+{{- range $server_key, $this_server := $subracks}}
+    - name: {{printf "subrack-%s" $server_key}}
       classes:
       - name: "MccsSubrack"
         devices:
-        - name: {{printf "low-mccs/subrack/%s" $key}}
+{{- range $subrack_name, $this_subrack := $this_server}}
+        - name: {{$subrack_name}}
           properties:
           - name: "SubrackIp"
             values: 
@@ -47,6 +49,7 @@ server:
 so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_subrack.nodeSelector}}
 {{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 {{- end}}
 depends_on:

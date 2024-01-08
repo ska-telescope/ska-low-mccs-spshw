@@ -16,7 +16,8 @@
     {{- $spsstation_enabled := dig "enabled" $sps_enabled $spsstation_spec}}
 
     {{- if $spsstation_enabled}}
-      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
+      {{- $spsstation_name := printf "low-mccs/spsstation/%s" $station_name}}
       {{- $spsstation_instance := dict}}
       {{- $_ := set $spsstation_instance "station_id" $station_spec.id}}
 
@@ -49,7 +50,7 @@
         {{- end }}
       {{- end }}
       {{- $_ := set $spsstation_instance "tpms" (sortAlpha $tpms)}}
-      {{- $_ := set $spsstation_instances $station_name $spsstation_instance}}
+      {{- $_ := set $spsstation_instances $station_name (dict $spsstation_name $spsstation_instance)}}
     {{- end }}
   {{- end }}
 {{- end }}

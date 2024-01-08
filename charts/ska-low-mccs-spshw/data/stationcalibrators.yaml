@@ -3,10 +3,11 @@ Defines the deployment for station calibrator Tango devices.
 
   deviceServers:
     stationcalibrators:
-      "s1-2":
-        logging_level_default: 5
-        field_station_trl: "low-mccs/fieldstation/s1-2"
-        calibration_store_trl: "low-mccs/calibrationstore/s1-2"
+      s1-2:
+        low-mccs/stationcalibrator/s1-2:
+          logging_level_default: 5
+          field_station_trl: "low-mccs/fieldstation/s1-2"
+          calibration_store_trl: "low-mccs/calibrationstore/s1-2"
 
 */}}
 {{- if (hasKey .Values "deviceServers")}}
@@ -16,19 +17,20 @@ name: "stationcalibrator-{{.Release.Name}}"
 function: ska-low-mccs-spshw-stationcalibrator-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $id := (keys $station_calibrators)}}
-  - {{printf "stationcalibrator-%s" $id}}
+{{- range $server_key := keys $station_calibrators}}
+  - {{printf "stationcalibrator-%s" $server_key}}
 {{- end}}
 command: MccsStationCalibrator
 server:
   name: "MccsStationCalibrator"
   instances:
-{{- range $id, $this_calibrator := $station_calibrators}}
-    - name: {{printf "stationcalibrator-%s" $id}}
+{{- range $server_key, $this_server := $station_calibrators}}
+    - name: {{printf "stationcalibrator-%s" $server_key}}
       classes:
         - name: "MccsStationCalibrator"
           devices:
-            - name: {{printf "low-mccs/stationcalibrator/%s" $id}}
+{{- range $calibrator_name, $this_calibrator := $this_server}}
+            - name: {{$calibrator_name}}
               properties:
                 - name: "FieldStationName"
                   values:
@@ -40,6 +42,7 @@ server:
                 - name: "LoggingLevelDefault"
                   values:
                     - {{quote .}}
+{{- end}}
 {{- end}}
 {{- end}}
 depends_on:

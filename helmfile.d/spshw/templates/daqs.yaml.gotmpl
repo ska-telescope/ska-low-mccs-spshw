@@ -24,7 +24,8 @@
     {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
 
     {{- if $daq_enabled}}
-      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
+      {{- $daq_name := printf "low-mccs/daqreceiver/%s" $station_name}}
       {{- $daq_host := dig "host" (printf "daq-receiver-%s" $station_name) $daq_spec}}
       {{- $daq_port := dig "port" 50051 $daq_spec}}
       {{- $daq_receiver_interface := dig "receiver_interface" "eth0" $daq_spec}}
@@ -50,7 +51,7 @@
       {{- if $daq_logging_level_defaults}}
         {{- $_ := set $daq_instance "logging_level_default" (first $daq_logging_level_defaults)}}
       {{- end }}
-      {{- $_ := set $daq_instances (toString $station_name) $daq_instance}}
+      {{- $_ := set $daq_instances $station_name (dict $daq_name $daq_instance)}}
     {{- end }}
   {{- end }}
 {{- end }}
@@ -69,6 +70,7 @@ simulators:
 {{- end}}
 
 {{- if (or $daqs_to_launch $daqs_to_egress)}}
+
 ska-low-mccs-daq:
 {{- end}}
 {{- with $daqs_to_launch}}

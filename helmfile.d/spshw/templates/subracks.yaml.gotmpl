@@ -18,7 +18,10 @@
       {{- $subrack_enabled := dig "enabled" $sps_enabled $subrack_spec}}
 
       {{- if $subrack_enabled}}
-        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
+      
+        {{- $server_name := printf "%s-%d" $station_name (int $subrack_id)}}
+        {{- $subrack_name := printf "low-mccs/subrack/%s" $server_name}}
         {{- $subrack_number := printf "%s-%d" $station_name (int $subrack_id)}}
         {{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
         {{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
@@ -36,7 +39,7 @@
         {{- end }}
         {{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
         {{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
-        {{- $_ := set $subrack_instances $subrack_number $subrack_instance}}
+        {{- $_ := set $subrack_instances $server_name (dict $subrack_name $subrack_instance)}}
       {{- end }}
     {{- end }}
   {{- end }}

@@ -3,15 +3,16 @@ Defines the deployment for SpsStation Tango devices.
 
   deviceServers:
     spsstations:
-      "s8-1":
-        station_id: 345
-        cabinet_network_address: 10.0.0.0
-        subracks:
-        - "s8-1-1"
-        tpms:
-        - "s8-1-10"
-        - "s8-1-13"
-        logging_level_default: 5
+      s8-1:
+        low-mccs/spsstation/s8-1:
+          station_id: 345
+          cabinet_network_address: 10.0.0.0
+          subracks:
+          - "s8-1-1"
+          tpms:
+          - "s8-1-10"
+          - "s8-1-13"
+          logging_level_default: 5
 
 */}}
 {{- $spsstations := dig "spsstations" dict .Values.deviceServers}}
@@ -20,19 +21,20 @@ name: "spsstation-{{.Release.Name}}"
 function: ska-low-mccs-spshw-spsstation
 domain: ska-low-mccs-spshw
 instances:
-{{- range $name := keys $spsstations}}
-  - {{printf "spsstation-%s" $name}}
+{{- range $server_key := keys $spsstations}}
+  - {{printf "spsstation-%s" $server_key}}
 {{- end}}
 command: SpsStation
 server:
   name: "SpsStation"
   instances:
-{{- range $name, $this_spsstation := $spsstations}}
-    - name: {{printf "spsstation-%s" $name}}
+{{- range $server_key, $this_server := $spsstations}}
+    - name: {{printf "spsstation-%s" $server_key}}
       classes:
         - name: "SpsStation"
           devices:
-            - name: {{printf "low-mccs/spsstation/%s" $name}}
+{{- range $spsstation_name, $this_spsstation := $this_server}}
+            - name: {{$spsstation_name}}
               properties:
                 - name: "StationId"
                   values:
@@ -54,6 +56,7 @@ server:
                 - name: "LoggingLevelDefault"
                   values:
                     - {{quote .}}
+{{- end}}
 {{- end}}
 {{- end}}
 depends_on:

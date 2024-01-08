@@ -6,8 +6,9 @@ so configure like this:
 
   deviceServers:
     calibrationstores:
-      "s1-2":
-        logging_level_default: 5
+      s1-2:
+        low-mccs/calibrationstore/s1-2:
+          logging_level_default: 5
 
 */}}
 {{- if (hasKey .Values "deviceServers")}}
@@ -18,19 +19,20 @@ name: calibrationstore-{{.Release.Name}}
 function: ska-low-mccs-spshw-calibrationstore-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $id := (keys $calibration_stores)}}
-  - {{printf "calibrationstore-%s" $id}}
+{{- range $server_key := keys $calibration_stores}}
+  - {{printf "calibrationstore-%s" $server_key}}
 {{- end}}
 command: MccsCalibrationStore
 server:
   name: "MccsCalibrationStore"
   instances:
-{{- range $id, $this_calibration_store := $calibration_stores}}
-    - name: {{printf "calibrationstore-%s" $id}}
+{{- range $server_key, $this_server := $calibration_stores}}
+    - name: {{printf "calibrationstore-%s" $server_key}}
       classes:
         - name: "MccsCalibrationStore"
           devices:
-            - name: {{printf "low-mccs/calibrationstore/%s" $id}}
+{{- range $calibration_store_name, $this_calibration_store := $this_server}}
+            - name: {{$calibration_store_name}}
               properties:
                 - name: "DatabaseHost"
                   values:
@@ -47,10 +49,11 @@ server:
                 - name: "DatabaseAdminPassword"
                   values:
                     - "secretpassword"
-{{- if (hasKey $this_calibration_store "logging_level_default")}}
+{{- with $this_calibration_store.logging_level_default}}
                 - name: "LoggingLevelDefault"
                   values:
-                    - {{quote $this_calibration_store.logging_level_default}}
+                    - {{quote .}}
+{{- end}}
 {{- end}}
 {{- end}}
 depends_on:

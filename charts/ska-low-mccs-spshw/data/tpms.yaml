@@ -4,17 +4,18 @@ Defines the deployment for MccsTile Tango devices.
   deviceServers:
     tpms:
       n3-2-01:
-        tile_id: 1
-        host: 10.0.10.201
-        port: 10000
-        version: tpm_v1_6
-        subrack: n3-2-1
-        subrack_slot: 1
-        simulation_config: 1
-        test_config: 1
-        logging_level_default: 5
-        nodeSelector:
-          kubernetes.io/hostname: psi-node3
+        low-mccs/tile/n3-2-01:
+          tile_id: 1
+          host: 10.0.10.201
+          port: 10000
+          version: tpm_v1_6
+          subrack: n3-2-1
+          subrack_slot: 1
+          simulation_config: 1
+          test_config: 1
+          logging_level_default: 5
+          nodeSelector:
+            kubernetes.io/hostname: psi-node3
 
 */}}
 {{- $node_selector := dict}}
@@ -24,19 +25,20 @@ name: tile-{{.Release.Name}}
 function: ska-low-mccs-spshw-tile
 domain: ska-low-mccs-spshw
 instances:
-{{- range $key, $this_tile := $tiles}}
-  - {{printf "tile-%s" $key}}
+{{- range $server_key := keys $tiles}}
+  - {{printf "tile-%s" $server_key}}
 {{- end}}
 command: MccsTile
 server: 
   name: MccsTile
   instances:
-{{- range $key, $this_tile := $tiles}}
-    - name: {{printf "tile-%s" $key}}
+{{- range $server_key, $this_server := $tiles}}
+    - name: {{printf "tile-%s" $server_key}}
       classes:
       - name: MccsTile
         devices:
-        - name: {{printf "low-mccs/tile/%s" $key}}
+{{- range $tile_name, $this_tile := $this_server}}
+        - name: {{$tile_name}}
           properties:
           - name: "TileId"
             values:
@@ -78,6 +80,7 @@ server:
 so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_tile.nodeSelector}}
 {{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 {{- end}}
 depends_on:

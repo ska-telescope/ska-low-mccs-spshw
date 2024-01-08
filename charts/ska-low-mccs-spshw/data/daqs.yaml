@@ -3,15 +3,16 @@ Defines the deployment for MccsDaqReceiver Tango devices.
 
   deviceServers:
     daqs:
-      "s8-1":
-        id: 345
-        host: daq-simulator-s8-1
-        port: 50051
-        receiver_interface: eth0
-        receiver_ip: ""
-        receiver_port: 4660
-        skuid_url: http://skuid-svc:9870/
-        logging_level_default: 5
+      s8-1:
+        low-mccs/daqreceiver/s8-1:
+          id: 345
+          host: daq-simulator-s8-1
+          port: 50051
+          receiver_interface: eth0
+          receiver_ip: ""
+          receiver_port: 4660
+          skuid_url: http://skuid-svc:9870/
+          logging_level_default: 5
 
 */}}
 {{- $daqs := dig "daqs" dict .Values.deviceServers}}
@@ -20,19 +21,20 @@ name: daq-receiver-{{.Release.Name}}
 function: ska-low-mccs-spshw-daq-tango
 domain: ska-low-mccs-spshw
 instances:
-{{- range $daq_id, $this_daq := $daqs}}
-  - {{printf "daq-%s" $daq_id}}
+{{- range $server_key := keys $daqs}}
+  - {{printf "daq-%s" $server_key}}
 {{- end}}
 command: "MccsDaqReceiver"
 server:
   name: "MccsDaqReceiver"
   instances:
-{{- range $daq_id, $this_daq := $daqs}}
-    - name: {{printf "daq-%s" $daq_id}}
+{{- range $server_key, $this_server := $daqs}}
+    - name: {{printf "daq-%s" $server_key}}
       classes:
       - name: "MccsDaqReceiver"
         devices:
-        - name: {{printf "low-mccs/daqreceiver/%s" $daq_id}}
+{{- range $daq_name, $this_daq := $this_server}}
+        - name: {{$daq_name}}
           properties:
           - name: "DaqId"
             values:
@@ -64,6 +66,7 @@ server:
           - name: "LoggingLevelDefault"
             values: 
             - {{quote .}}
+{{- end }}
 {{- end }}
 {{- end }}
 depends_on:

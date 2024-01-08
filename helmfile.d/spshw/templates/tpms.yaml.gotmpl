@@ -18,7 +18,9 @@
       {{- $tpm_enabled := dig "enabled" $sps_enabled $tpm_spec}}
 
       {{- if $tpm_enabled}}
-        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec}}
+        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
+        {{- $server_name := printf "%s-%02d" $station_name (int $tpm_id)}}
+        {{- $tpm_name := printf "low-mccs/tile/%s" $server_name}}
         {{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
 
         {{- $_ := set $tpm_instance "tile_id" (int $tpm_id)}}
@@ -35,7 +37,7 @@
           {{- $_ := set $tpm_instance "test_config" 1}}
         {{- end}}
 
-        {{- $_ := set $tpm_instances (printf "%s-%02d" $station_name (int $tpm_id)) $tpm_instance}}
+        {{- $_ := set $tpm_instances $server_name (dict $tpm_name $tpm_instance)}}
       {{- end}}
     {{- end}}
   {{- end}}

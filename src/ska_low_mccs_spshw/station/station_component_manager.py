@@ -22,7 +22,6 @@ from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
 import tango
-
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
     CommunicationStatus,
@@ -35,7 +34,6 @@ from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
 )
-
 from ska_low_mccs_common.utils import threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager

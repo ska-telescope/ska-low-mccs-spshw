@@ -22,7 +22,6 @@ from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
 import tango
-from tango import DevSource
 
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
@@ -159,7 +158,7 @@ class _TileProxy(DeviceComponentManager):
             assert self._proxy is not None  # for the type checker
             self._proxy.stationId = self._station_id
             self._proxy.logicalTileId = self._logical_tile_id
-            self._proxy.set_source(DevSource.DEV)
+            self._proxy.set_source(tango.DevSource.DEV)
             self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 

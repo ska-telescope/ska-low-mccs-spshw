@@ -70,11 +70,13 @@ def callbacks_fixture() -> MockCallableGroup:
     )
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="station_component_manager")
 def station_component_manager_fixture(
     test_context: None,
     subrack_id: int,
     tile_id: int,
+    daq_trl: str,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
 ) -> SpsStationComponentManager:
@@ -85,6 +87,7 @@ def station_component_manager_fixture(
         mock subservient devices
     :param subrack_id: ID of the subservient subrack Tango device
     :param tile_id: ID of the subservient subrack Tango device
+    :param daq_trl: Tango Resource Locator for this Station's DAQ instance.
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
 
@@ -95,6 +98,7 @@ def station_component_manager_fixture(
         1,
         [get_subrack_name(subrack_id)],
         [get_tile_name(tile_id)],
+        daq_trl,
         "10.0.0.0",
         logger,
         1,

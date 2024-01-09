@@ -40,6 +40,9 @@ server:
                 - name: "CabinetNetworkAddress"
                   values:
                     - {{quote $this_spsstation.cabinet_network_address}}
+                - name: "DaqTRL"
+                  values:
+                    - {{quote $this_spsstation.daq_trl}}
                 - name: "SubrackFQDNs"
                   values:
 {{- range $subrack := $this_spsstation.subracks}}

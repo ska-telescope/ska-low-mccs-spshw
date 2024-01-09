@@ -32,8 +32,9 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 __all__ = ["SpsStation", "main"]
 
 
+# pylint: disable=too-many-instance-attributes
 class SpsStation(SKAObsDevice):
-    """An implementation of a station beam Tango device for MCCS."""
+    """An implementation of an  SPS Station Tango device for MCCS."""
 
     # -----------------
     # Device Properties
@@ -42,6 +43,7 @@ class SpsStation(SKAObsDevice):
     TileFQDNs = device_property(dtype=(str,), default_value=[])
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
     CabinetNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
+    DaqTRL = device_property(dtype=str, default_value="")
 
     # ---------------
     # Initialisation
@@ -85,6 +87,7 @@ class SpsStation(SKAObsDevice):
             f"Initialised {device_name} device with properties:\n"
             f"\tStationId: {self.StationId}\n"
             f"\tTileFQDNs: {self.TileFQDNs}\n"
+            f"\tDaqTRL: {self.DaqTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tCabinetNetworkAddress: {self.CabinetNetworkAddress}\n"
         )
@@ -117,6 +120,7 @@ class SpsStation(SKAObsDevice):
             self.StationId,
             self.SubrackFQDNs,
             self.TileFQDNs,
+            self.DaqTRL,
             self.CabinetNetworkAddress,
             self.logger,
             self._max_workers,
@@ -288,6 +292,26 @@ class SpsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(dtype=str)
+    def daqTRL(self: SpsStation) -> str:
+        """
+        Report the Tango Resource Locator for this SpsStation's DAQ instance.
+
+        :return: Return the current DAQ TRL.
+        """
+        return self.DaqTRL
+
+    @daqTRL.write  # type: ignore[no-redef]
+    def daqTRL(self: SpsStation, value: str) -> None:
+        """
+        Set the Tango Resource Locator for this SpsStation's DAQ instance.
+
+        :param value: The new DAQ TRL.
+        """
+        self.DaqTRL = value
+        self.component_manager._daq_trl = value
+        print(f"new TRL: {self.DaqTRL}")
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:

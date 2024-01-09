@@ -174,6 +174,7 @@ class SpsStationComponentManager(
         station_id: int,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
+        daq_trl: str,
         station_network_address: str,
         logger: logging.Logger,
         max_workers: int,
@@ -190,6 +191,7 @@ class SpsStationComponentManager(
             station's subracks
         :param tile_fqdns: FQDNs of the Tango devices which manage this
             station's TPMs
+        :param daq_trl: The TRL of this Station's DAQ Receiver.
         :param station_network_address: address prefix for station 40G subnet
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -205,6 +207,7 @@ class SpsStationComponentManager(
             called when a subrack's health changed
         """
         self._station_id = station_id
+        self._daq_trl = daq_trl
         self._is_configured = False
         self._on_called = False
 

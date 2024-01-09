@@ -66,6 +66,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     patched_sps_station_device_class: type[SpsStation],
+    daq_trl: str,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
@@ -79,6 +80,7 @@ def test_context_fixture(
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
         control behaviours.
+    :param daq_trl: a Tango Resource Locator of a DAQ instance.
 
     :yields: a test context.
     """
@@ -92,6 +94,7 @@ def test_context_fixture(
         cabinet_network_address,
         subrack_ids=[1],
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
+        daq_trl=daq_trl,
         device_class=patched_sps_station_device_class,
     )
     harness.add_field_station_device(
@@ -1339,3 +1342,20 @@ def test_station_tile_attributes(
     assert getattr(station_device, attribute_name) == pytest.approx(
         final_expected_value(num_tiles)
     )
+
+
+def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
+    """
+    Test that SPSStation properly stores its DAQ TRL.
+
+    Tests that SPSStation initialises its DAQ TRL properly and is
+        able to change its value.
+
+    :param station_device: The station device to use.
+    :param daq_trl: The DAQ TRL in use.
+    """
+    assert station_device.daqTRL == daq_trl
+
+    station_device.daqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
+
+    assert station_device.daqTRL == "NEW_DAQ_TRL"

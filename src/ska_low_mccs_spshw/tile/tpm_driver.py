@@ -623,6 +623,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises BaseException: if an exception is raised
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -650,10 +652,17 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             #
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
-                self.tile.initialise(
-                    tile_id=self._tile_id,
-                    pps_delay=self._pps_delay,
-                )
+                try:
+                    self.tile.initialise(
+                        tile_id=self._tile_id,
+                        pps_delay=self._pps_delay,
+                    )
+                except BaseException as e:
+                    self.logger.error(
+                        f"Exception raised while initialising tile: {repr(e)}",
+                        exc_info=e,
+                    )
+                    raise
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
             #

@@ -36,12 +36,7 @@
       {{- $daq_spec := dig "daq" dict $sps_spec}}
       {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
       {{- if $daq_enabled}}
-        {{- $daq_simulated := dig "simulated" false $daq_spec}}
-        {{- if $daq_simulated}}
-          {{- $default_daq_trl = printf "daq-simulator-%s" $station_name}}
-        {{- else}}
-          {{- $default_daq_trl = printf "daq-receiver-%s" $station_name}}
-        {{- end}}
+        {{- $default_daq_trl = printf "low-mccs/daqreceiver/%s" $station_name}}
       {{- end}}
 
       {{- $daq_trl := dig "sps" "daq_trl" $default_daq_trl $station_spec}}

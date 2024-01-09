@@ -12,8 +12,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "6fae204277291b96405c2a75940544942b6d4c0b"
-resolved_reference = "6fae204277291b96405c2a75940544942b6d4c0b"
+reference = "eb513a09a4658d827fe30f33948b086b99e1f1ee"
+resolved_reference = "eb513a09a4658d827fe30f33948b086b99e1f1ee"
 subdirectory = "python"
 
 [[package]]
@@ -3212,4 +3212,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "3eaee940b7b33f17e7a5621771ea94b56b5356e4e062b511aa0ef75cfe18bf64"
+content-hash = "e3cff2f0e893d1c8ab67d57d0032d2c6578fc1c6113c31c378eea94cbee06aee"

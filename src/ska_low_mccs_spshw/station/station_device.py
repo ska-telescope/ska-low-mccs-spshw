@@ -311,7 +311,6 @@ class SpsStation(SKAObsDevice):
         """
         self.DaqTRL = value
         self.component_manager._daq_trl = value
-        print(f"new TRL: {self.DaqTRL}")
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:

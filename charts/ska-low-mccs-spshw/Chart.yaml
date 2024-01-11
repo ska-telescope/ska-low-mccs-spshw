@@ -9,7 +9,7 @@ dependencies:
     version: ~0.6.1
     repository: https://artefact.skao.int/repository/helm-internal
   - name: ska-tango-util
-    version: ~0.4.9
+    version: ~0.4.10
     repository: https://artefact.skao.int/repository/helm-internal
   - name: postgresql
     version: 11.6.6

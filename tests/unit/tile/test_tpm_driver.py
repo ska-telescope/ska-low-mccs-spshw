@@ -723,7 +723,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
 
         # Act
-        tpm_driver.initialise()
+        tpm_driver.initialise(pps_delay_correction=0)
 
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
@@ -893,7 +893,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         initial_last_update_tile_1 = tpm_driver._last_update_time_1
         initial_last_update_tile_2 = tpm_driver._last_update_time_2
         initial_tile_health_structure = tpm_driver._tile_health_structure
-        initial_pps_delay = tpm_driver._pps_delay
+        initial_pps_delay = tpm_driver._reported_pps_delay
         initial_adc_rms = tpm_driver._adc_rms
 
         # updated values
@@ -932,7 +932,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver._tile_health_structure["temperatures"]["FPGA1"] == fpga2_temp
         assert tpm_driver._tile_health_structure["temperatures"]["board"] == board_temp
         assert tpm_driver._tile_health_structure["voltages"]["MON_5V0"] == voltage
-        assert tpm_driver._pps_delay == pps_delay
+        assert tpm_driver._reported_pps_delay == pps_delay
         assert tpm_driver._adc_rms == adc_rms
 
         # Check that the last update time is more recent.
@@ -972,7 +972,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # we have polled and the tile is reporting that it is not programmed
 
         # Assert that the values are reset to what they were initialised to.
-        assert initial_pps_delay == tpm_driver._pps_delay
+        assert initial_pps_delay == tpm_driver._reported_pps_delay
 
     def test_initialise(
         self: TestTpmDriver,
@@ -1008,12 +1008,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time1 = tpm_driver.fpga_current_frame
         assert initial_time1 == final_time1
 
-        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
-
-        # Act
-        tpm_driver.initialise()
+        tpm_driver.initialise(pps_delay_correction=0)
 
         # Assert
+        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
@@ -1040,7 +1038,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Act
         with pytest.raises(Exception, match="mocked exception"):
-            tpm_driver.initialise()
+            tpm_driver.initialise(pps_delay_correction=0)
 
         # Check TpmStatus is UNPROGRAMMED.
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED

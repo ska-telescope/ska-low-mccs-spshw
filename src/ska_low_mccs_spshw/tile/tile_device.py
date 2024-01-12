@@ -915,21 +915,31 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     @attribute(dtype="DevLong")
     def ppsDelay(self: MccsTile) -> int:
         """
-        Return the PPS delay.
+        Return the delay between PPS and 10 MHz clock.
 
         :return: Return the PPS delay in nanoseconds
         """
         return self.component_manager.pps_delay
 
-    @ppsDelay.write  # type: ignore[no-redef]
-    def ppsDelay(self: MccsTile, delay: int) -> None:
+    @attribute(dtype="DevLong")
+    def ppsDelayCorrection(self: MccsTile) -> Optional[int]:
         """
-        Set PPS delay correction.
+        Return the correction made to the pps delay.
 
-        :param delay: PPS delay correction in nanoseconds. Value is
-            internally rounded to 1.25 ns units
+        :return: Return the PPS delay in nanoseconds
         """
-        self.component_manager.pps_delay = delay
+        return self.component_manager.pps_delay_correction
+
+    @ppsDelayCorrection.write  # type: ignore[no-redef]
+    def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
+        """
+        Set a correction to make to the pps delay.
+
+        Note: will be applied during next initialisation.
+
+        :param pps_delay_correction: a correction to apply to the pps_delay.
+        """
+        self.component_manager.pps_delay_correction = pps_delay_correction
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:

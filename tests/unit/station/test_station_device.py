@@ -1068,11 +1068,6 @@ def test_fortyGbNetworkAddress(
     ("attribute", "data", "tile_data"),
     [
         pytest.param("channeliserRounding", lambda _: [3] * 512, lambda _: [3] * 512),
-        pytest.param(
-            "ppsDelays",
-            lambda num_tiles: list(range(num_tiles)),
-            lambda i: [i],
-        ),
     ],
 )
 def test_rw_attributes(

@@ -328,6 +328,7 @@ class SpsStationComponentManager(
         self._fortygb_network_address = station_network_address
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
+        self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
@@ -1061,7 +1062,7 @@ class SpsStationComponentManager(
             tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
-            tile.ppsDelay = self._pps_delays[tile_no]
+            tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
                 json.dumps(
@@ -1211,29 +1212,51 @@ class SpsStationComponentManager(
     @property
     def pps_delays(self: SpsStationComponentManager) -> list[int]:
         """
-        Get PPS delay correction.
+        Get PPS delay.
 
-        Array of one value per tile. Defines PPS delay correction,
+        Array of one value per tile. Returns the PPS delay,
         Values are internally rounded to 1.25 ns steps
 
         :return: Array of one value per tile, in nanoseconds
         """
+        i = 0
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            self._pps_delays[i] = proxy._proxy.ppsDelay
+            i = i + 1
         return copy.deepcopy(self._pps_delays)
 
-    @pps_delays.setter
-    def pps_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    @property
+    def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:
+        """
+        Get the PPS delay correction.
+
+        :return: Array of pps delay corrections, one value per tile, in nanoseconds
+        """
+        i = 0
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
+            i = i + 1
+        return copy.deepcopy(self._pps_delay_corrections)
+
+    @pps_delay_corrections.setter
+    def pps_delay_corrections(
+        self: SpsStationComponentManager, delays: list[int]
+    ) -> None:
         """
         Set PPS delay correction.
+
+        This will be applied during the following Initialisation.
 
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        self._pps_delays = copy.deepcopy(delays)
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.ppsDelays = delays[i]
+                proxy._proxy.ppsDelayCorrection = delays[i]
             i = i + 1
 
     @property

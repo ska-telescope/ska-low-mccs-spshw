@@ -184,6 +184,84 @@ class TestStationTileIntegration:
             (initialise_id, "COMPLETED")
         )
 
+    def test_pps_delay(
+        self: TestStationTileIntegration,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that pps delays can be set and read from station to tile.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device, subrack_device, tile_device, change_event_callbacks
+        )
+        # Force a poll to get the initial values.
+        tile_device.UpdateAttributes()
+        initial_corrections = sps_station_device.ppsDelayCorrections
+
+        # set a pps Correction to apply
+        tile_under_test_pps_delay = 12
+        desired_pps_corrections = [
+            tile_under_test_pps_delay,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+        ]
+        sps_station_device.ppsDelayCorrections = desired_pps_corrections
+
+        # This pps delay correction is only applied during initialisation.
+        tile_device.UpdateAttributes()
+        pps_corrections_before_initialisation = sps_station_device.ppsDelayCorrections
+        assert (pps_corrections_before_initialisation == initial_corrections).all()
+
+        # Call initialise
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )
+        # Force a poll to get the initial values.
+        tile_device.UpdateAttributes()
+        final_corrections = sps_station_device.ppsDelayCorrections
+
+        assert np.array_equal(final_corrections, desired_pps_corrections)
+        assert tile_device.ppsDelay == tile_under_test_pps_delay
+
     def test_adc_power_change(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         tile_device: tango.DeviceProxy,

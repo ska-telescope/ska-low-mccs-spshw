@@ -106,6 +106,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
         self._subrack_communication_state = CommunicationStatus.DISABLED
         self._tpm_communication_state = CommunicationStatus.DISABLED
+        self._pps_delay_correction: int = 0
 
         if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
             self.logger.warning(
@@ -394,6 +395,31 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()
                 self._tile_time.set_reference_time(0)
+
+    @property
+    def pps_delay_correction(self: TileComponentManager) -> Optional[float]:
+        """
+        Return the delay correction as read from register.
+
+        :return: The pps delay correction.
+        """
+        return self._tpm_driver.applied_pps_correction
+
+    @pps_delay_correction.setter
+    def pps_delay_correction(
+        self: TileComponentManager, pps_delay_correction: int
+    ) -> None:
+        """
+        Set the pps delay correction to apply during next initialisation.
+
+        :param pps_delay_correction: A delay correction
+        """
+        self._pps_delay_correction = pps_delay_correction
+        self.logger.warning(
+            f"ppsDelayCorrection of {pps_delay_correction} set in software. "
+            "will be applied during tile initialisation. "
+            "check ppsDelayCorrection for register reading."
+        )
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
@@ -843,7 +869,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
-            self._tpm_driver.initialise()
+            self._tpm_driver.initialise(self._pps_delay_correction)
         # pylint: disable-next=broad-except
         except Exception as ex:
             self.logger.error(f"Exception raised while initialising Tile: {repr(ex)}")

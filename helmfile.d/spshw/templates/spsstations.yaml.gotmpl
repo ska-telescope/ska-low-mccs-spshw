@@ -33,6 +33,18 @@
       {{- end}}
       {{- $_ := set $spsstation_instance "cabinet_network_address" $cabinet_address}}
 
+      {{- $default_daq_trl := ""}}
+      {{- $daq_spec := dig "daq" dict $sps_spec}}
+      {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
+      {{- if $daq_enabled}}
+        {{- $default_daq_trl = printf "low-mccs/daqreceiver/%s" $station_name}}
+      {{- end}}
+
+      {{- $daq_trl := dig "sps" "daq_trl" $default_daq_trl $station_spec}}
+      {{- with $daq_trl}}
+        {{- $_ := set $spsstation_instance "daq_trl" .}}
+      {{- end}}
+
       {{- $subracks := list}}
       {{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
       {{- range $subrack_id, $subrack_spec := $subrack_specs}}

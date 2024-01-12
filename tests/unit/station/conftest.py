@@ -157,3 +157,13 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
 
     return PatchedSpsStationDevice
+
+
+@pytest.fixture(name="daq_trl")
+def daq_trl_fixture() -> str:
+    """
+    Return a DAQ TRL for testing purposes.
+
+    :returns: A DAQ TRL.
+    """
+    return "test/daq/trl"

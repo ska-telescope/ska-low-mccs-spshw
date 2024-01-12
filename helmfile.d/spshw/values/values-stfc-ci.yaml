@@ -29,6 +29,8 @@ overrides:
                   version: tpm_v1_6
                   subrack: 1
                   subrack_slot: 1
+              antenna_mapping:
+                ["car:ska-low-aavs3?main", "instrument/mccs-configuration/aavs3.yaml"]
 
       "real-daq":
         stations:

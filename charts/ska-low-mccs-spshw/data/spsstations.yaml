@@ -42,6 +42,11 @@ server:
                 - name: "StationId"
                   values:
                     - {{quote $this_spsstation.station_id}}
+{{- with $this_spsstation.antenna_mapping}}
+                - name: "AntennaMapping"
+                  values:
+                    - {{quote .}}
+{{- end}}
                 - name: "CabinetNetworkAddress"
                   values:
                     - {{quote $this_spsstation.cabinet_network_address}}
@@ -52,9 +57,6 @@ server:
 {{- end}}
                 - name: "SubrackFQDNs"
                   values:
-                - name: "AntennaMapping"
-                  values:
-                    - {{quote $this_spsstation.antenna_mapping}}
 {{- range $subrack := $this_spsstation.subracks}}
                     - {{printf "low-mccs/subrack/%s" $subrack}}
 {{- end}}

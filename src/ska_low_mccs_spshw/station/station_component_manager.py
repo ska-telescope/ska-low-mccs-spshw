@@ -201,7 +201,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         daq_trl: str,
         station_network_address: str,
-        antenna_mapping: str[2],
+        antenna_config: list[str],
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -219,7 +219,7 @@ class SpsStationComponentManager(
             station's TPMs
         :param daq_trl: The TRL of this Station's DAQ Receiver.
         :param station_network_address: address prefix for station 40G subnet
-        :param antenna_mapping: location of the antenna mapping file
+        :param antenna_config: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -307,13 +307,9 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: list[tuple[int, int]]
-        antenna_mapping_uri = antenna_mapping[0]
-        antenna_mapping_filepath = antenna_mapping[1]
-        tmdata = TMData(antenna_mapping_uri)
-        full_dict = tmdata[antenna_mapping_filepath].get_dict()
+        self._antenna_mapping: dict[int, tuple[float, float]] = {}
 
-        self._get_mappings(full_dict)
+        self._get_mappings(antenna_config)
 
         super().__init__(
             logger,
@@ -325,11 +321,19 @@ class SpsStationComponentManager(
             is_configured=None,
         )
 
-    def _get_mappings(self: SpsStationComponentManager, full_dict: dict) -> None:
-        """Get mappings from TelModel.
-
-        :param full_dict: Full aavs3.yaml dictionary.
+    def _get_mappings(
+        self: SpsStationComponentManager, antenna_config: list[str]
+    ) -> None:
         """
+        Get mappings from TelModel.
+
+        :param antenna_config: Repo and filepath for antenna mapping config
+        """
+        antenna_mapping_uri = antenna_config[0]
+        antenna_mapping_filepath = antenna_config[1]
+        tmdata = TMData([antenna_mapping_uri])
+        full_dict = tmdata[antenna_mapping_filepath].get_dict()
+
         antennas = full_dict["platform"]["array"]["station_clusters"]["a1"]["stations"][
             "1"
         ]["antennas"]

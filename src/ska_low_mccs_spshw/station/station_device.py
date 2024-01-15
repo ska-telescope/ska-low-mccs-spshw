@@ -44,7 +44,7 @@ class SpsStation(SKAObsDevice):
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
     CabinetNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
     DaqTRL = device_property(dtype=str, default_value="")
-    AntennaConfig = device_property(
+    AntennaConfigURI = device_property(
         dtype=(str,),
         default_value=[],
     )
@@ -94,7 +94,7 @@ class SpsStation(SKAObsDevice):
             f"\tDaqTRL: {self.DaqTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tCabinetNetworkAddress: {self.CabinetNetworkAddress}\n"
-            f"\tAntennaConfig: {self.AntennaConfig}\n"
+            f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -127,7 +127,7 @@ class SpsStation(SKAObsDevice):
             self.TileFQDNs,
             self.DaqTRL,
             self.CabinetNetworkAddress,
-            self.AntennaConfig,
+            self.AntennaConfigURI,
             self.logger,
             self._max_workers,
             self._communication_state_changed,

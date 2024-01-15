@@ -201,7 +201,7 @@ class SpsStationComponentManager(
         tile_fqdns: Sequence[str],
         daq_trl: str,
         station_network_address: str,
-        antenna_config: list[str],
+        antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -219,7 +219,7 @@ class SpsStationComponentManager(
             station's TPMs
         :param daq_trl: The TRL of this Station's DAQ Receiver.
         :param station_network_address: address prefix for station 40G subnet
-        :param antenna_config: location of the antenna mapping file
+        :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
             associated with this component manager.
@@ -309,7 +309,10 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, tuple[float, float]] = {}
 
-        self._get_mappings(antenna_config)
+        if antenna_config_uri:
+            self._get_mappings(antenna_config_uri, logger)
+        else:
+            logger.debug("No antenna mapping provided, skipping")
 
         super().__init__(
             logger,
@@ -322,25 +325,36 @@ class SpsStationComponentManager(
         )
 
     def _get_mappings(
-        self: SpsStationComponentManager, antenna_config: list[str]
+        self: SpsStationComponentManager,
+        antenna_config_uri: list[str],
+        logger: logging.Logger,
     ) -> None:
         """
         Get mappings from TelModel.
 
-        :param antenna_config: Repo and filepath for antenna mapping config
+        :param antenna_config_uri: Repo and filepath for antenna mapping config
+        :param logger: the logger to be used by this object.
+
+        Need to pass the logger through as its not been setup by the super yet.
         """
-        antenna_mapping_uri = antenna_config[0]
-        antenna_mapping_filepath = antenna_config[1]
+        antenna_mapping_uri = antenna_config_uri[0]
+        antenna_mapping_filepath = antenna_config_uri[1]
         tmdata = TMData([antenna_mapping_uri])
         full_dict = tmdata[antenna_mapping_filepath].get_dict()
 
-        antennas = full_dict["platform"]["array"]["station_clusters"]["a1"]["stations"][
-            "1"
-        ]["antennas"]
-        for antenna in antennas:
-            self._antenna_mapping[int(antenna)] = (
-                antennas[antenna]["tpm_x_channel"],
-                antennas[antenna]["tpm_y_channel"],
+        try:
+            antennas = full_dict["platform"]["array"]["station_clusters"]["a1"][
+                "stations"
+            ]["1"]["antennas"]
+            for antenna in antennas:
+                self._antenna_mapping[int(antenna)] = (
+                    antennas[antenna]["tpm_x_channel"],
+                    antennas[antenna]["tpm_y_channel"],
+                )
+        except KeyError as err:
+            logger.error(
+                "Antenna mapping dictionary structure not as expected, skipping, "
+                f"err: {err}",
             )
 
     def start_communicating(self: SpsStationComponentManager) -> None:

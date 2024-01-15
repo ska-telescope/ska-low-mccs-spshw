@@ -2,6 +2,15 @@
 
 ## unreleased
 
+## 0.12.1
+
+* [MCCS-1939] AAVS3 staging environment for MCCS repos
+* [MCCS-1829] Helmfile cannot create more than 1 daq-server.
+* [MCCS-1944] Get Chart.lock files under version control
+* [MCCS-1949] Improve ska-low-mccs-spshw chart flexibility
+* [MCCS-1881] Add property to SPSStation for a DAQ TRL
+* [SKB-272] Tile stuck in Programmed "tileprogrammingstate"
+
 ## 0.12.0
 
 * [LOW-637] Move pyfabil dependency from Alessio's BitBucket to SKA GitLab

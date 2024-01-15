@@ -311,6 +311,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
 
         if not self._is_programmed:
+            self.logger.debug("Not programmed, resetting TpmDriver internal state")
             self._pps_delay = 0
             self._fpga_reference_time = 0
             # self._beamformer_table = self.BEAMFORMER_TABLE
@@ -612,6 +613,8 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
         self._set_tpm_status(status)
+        # Poll to update internal state after erasing
+        self._poll()
 
     def _initialise(
         self: TpmDriver,
@@ -639,6 +642,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.tile.program_fpgas(self._firmware_name)
             prog_status = self.tile.is_programmed()
         self.logger.debug("Lock released")
+
         #
         # Initialisation after programming the FPGA
         #

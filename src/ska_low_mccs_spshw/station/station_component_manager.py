@@ -97,6 +97,18 @@ class _SubrackProxy(DeviceComponentManager):
             self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
+    def _update_communication_state(
+        self: _SubrackProxy,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        # If communication is established with this Tango device,
+        # configure it to use the device as the source, not the Tango attribute cache.
+        # This might be better done for all of these proxy devices in the common repo.
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            assert self._proxy is not None
+            self._proxy.set_source(tango.DevSource.DEV)
+        super()._update_communication_state(communication_state)
+
 
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
@@ -158,6 +170,18 @@ class _TileProxy(DeviceComponentManager):
             self._proxy.logicalTileId = self._logical_tile_id
             self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
+
+    def _update_communication_state(
+        self: _TileProxy,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        # If communication is established with this Tango device,
+        # configure it to use the device as the source, not the Tango attribute cache.
+        # This might be better done for all of these proxy devices in the common repo.
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            assert self._proxy is not None
+            self._proxy.set_source(tango.DevSource.DEV)
+        super()._update_communication_state(communication_state)
 
 
 # pylint: disable=too-many-instance-attributes

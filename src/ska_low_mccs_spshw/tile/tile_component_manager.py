@@ -732,9 +732,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "write_register",
     ]
 
-    def __getattr__(
-        self: TileComponentManager, name: str, default_value: Any = None
-    ) -> Any:
+    def __getattr__(self: TileComponentManager, name: str) -> Any:
         """
         Get value for an attribute not found in the usual way.
 
@@ -746,14 +744,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         manager.
 
         :param name: name of the requested attribute
-        :param default_value: value to return if the attribute is not
-            found
 
         :return: the requested attribute
+        :raises AttributeError: if the attribute is not a passthrough attribute
         """
         if name in self.__PASSTHROUGH:
             return self._get_from_hardware(name)
-        return default_value
+        raise AttributeError(f"'{type(self)}' object has no attribute '{name}'")
 
     @check_communicating
     @check_on

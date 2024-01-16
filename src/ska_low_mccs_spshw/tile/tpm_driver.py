@@ -20,6 +20,7 @@ import copy
 import logging
 import threading
 import time
+from enum import Enum
 from typing import Any, Callable, Optional, cast
 
 from pyaavs.tile import Tile
@@ -31,6 +32,21 @@ from ska_tango_base.executor import TaskExecutorComponentManager
 from .tile_data import TileData
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
+
+
+class LMCType(Enum):
+    """
+    Enum containing the data request types.
+
+    Numbers refer to the bit that flagged when sending that data type.
+    """
+
+    non = 0
+    raw = 1
+    channel = 2
+    channel_continuous = 4
+    narrowband = 8
+    beam = 16
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
@@ -101,7 +117,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
         self._is_beamformer_running = False
-        self._pending_data_requests = False
+        self._pending_data_requests = {
+            "raw": False,
+            "channel": False,
+            "channel_continuous": False,
+            "narrowband": False,
+            "beam": False,
+        }
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             TileData.TILE_MONITORING_POINTS
         )
@@ -283,9 +305,15 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
                     self._update_component_state(adc_rms=self._adc_rms)
-                    self._pending_data_requests = (
-                        self.tile.check_pending_data_requests()
-                    )
+                    fpga1_request, fpga2_request = self.tile.pending_data_requests()
+                    fpga_1_str = LMCType(fpga1_request).name
+                    fpga_2_str = LMCType(fpga2_request).name
+                    for key in self._pending_data_requests:
+                        self._pending_data_requests[key] = key in (
+                            fpga_1_str,
+                            fpga_2_str,
+                        )
+
                     # very slow update parameters. Should update by set commands
                     if (current_time - self._last_update_time_2) > time_interval_2:
                         self._last_update_time_2 = current_time
@@ -322,7 +350,13 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self._is_programmed = False
             self._is_beamformer_running = False
             self._test_generator_active = False
-            self._pending_data_requests = False
+            self._pending_data_requests = {
+                "raw": False,
+                "channel": False,
+                "channel_continuous": False,
+                "narrowband": False,
+                "beam": False,
+            }
             self._arp_table = {}
             self._fpgas_time = self.FPGAS_TIME
             self._fpga_current_frame = 0
@@ -2256,7 +2290,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._is_beamformer_running
 
     @property
-    def pending_data_requests(self: TpmDriver) -> bool:
+    def pending_data_requests(self: TpmDriver) -> dict[str, bool]:
         """
         Check for pending data requests.
 

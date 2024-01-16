@@ -457,8 +457,13 @@ class TileSimulator:
         return self._adc_rms
 
     def check_pending_data_requests(self: TileSimulator) -> bool:
-        """:return: the pending data requess flag."""
+        """:return: the pending data request flag."""
         return False
+        # return self._pending_data_requests
+
+    def pending_data_requests(self: TileSimulator) -> tuple[int, int]:
+        """:return: the pending data request."""
+        return (0, 0)
         # return self._pending_data_requests
 
     def initialise_beamformer(

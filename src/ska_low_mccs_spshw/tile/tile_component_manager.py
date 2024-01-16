@@ -601,6 +601,42 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             load_frame,
         )
 
+    def _check_operations(self: TileComponentManager, data_type: str) -> None:
+        """
+        Check to make sure operation requested is ok.
+
+        Checks to make sure that neither:
+          - Two data requests are running
+          - A request of the type requested isn't already running
+
+        :param data_type: type of data requested.
+
+        :raises ValueError: data requested is not valid
+        """
+        i = 0
+        for key in self.pending_data_requests:
+            if self.pending_data_requests[key]:
+                i = i + 1
+        two_active = i > 1
+
+        if two_active or self.pending_data_requests[data_type]:
+            time.sleep(0.2)
+            i = 0
+            for key in self.pending_data_requests:
+                if self.pending_data_requests[key]:
+                    i = i + 1
+            two_active = i > 1
+            if two_active:
+                self.logger.error("Too many send operations are active")
+                raise ValueError(
+                    "Cannot send data, Too many send operations are active"
+                )
+            if self.pending_data_requests[data_type]:
+                self.logger.error("Another send operation of the same type is active")
+                raise ValueError(
+                    "Cannot send data, another operation of the same type is active"
+                )
+
     # pylint: disable=too-many-arguments
     @check_communicating
     def send_data_samples(
@@ -637,11 +673,9 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         """
         self.logger.debug(f"send_data_samples: {data_type}")
         # Check if another operation is pending. Wait at most 0.2 seconds
-        if self.pending_data_requests:
-            time.sleep(0.2)
-            if self.pending_data_requests:
-                self.logger.error("Another send operation is active")
-                raise ValueError("Cannot send data, another send operatin active")
+
+        self._check_operations(data_type)
+
         # Check for type of data to be sent to LMC
         if start_time is None:
             timestamp = 0

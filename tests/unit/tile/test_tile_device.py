@@ -462,6 +462,7 @@ class TestMccsTile:
         change_event_callbacks["pps_present"].assert_change_event(
             0, AttrQuality.ATTR_ALARM
         )
+        assert tile_device.state() == DevState.ALARM
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(

@@ -88,7 +88,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._tile_programming_state: TpmStatus
         self._adc_rms: list[float]
         self._pps_present: Optional[bool]
-        self.tile_health_structure: dict[Any, Any] = {}
+        self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._max_workers: int = 1
 

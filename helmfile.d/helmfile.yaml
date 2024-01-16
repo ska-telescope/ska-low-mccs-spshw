@@ -103,7 +103,7 @@ releases:
   - name: ska-low-mccs-spshw
     namespace: ska-low-mccs
     chart: ../charts/ska-low-mccs-spshw
-    version: ~0.12.0
+    version: ~0.13.0
     values:
       - values/globals.yaml.gotmpl
       - spshw/templates/spsstations.yaml.gotmpl
@@ -152,7 +152,7 @@ releases:
   - name: taranta-dashboard
     namespace: ska-low-mccs
     chart: skao/ska-tango-taranta-dashboard
-    version: ~1.4.0
+    version: 1.4.1
     values:
       - ingress:
           enabled: true

@@ -2,6 +2,10 @@
 
 ## unreleased
 
+## 0.13.0
+
+* [SKB-274] Set SpsStation's proxies' source to DevSource.Dev
+
 ## 0.12.1
 
 * [MCCS-1939] AAVS3 staging environment for MCCS repos

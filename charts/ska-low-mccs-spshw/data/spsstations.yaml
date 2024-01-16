@@ -42,11 +42,9 @@ server:
                 - name: "StationId"
                   values:
                     - {{quote $this_spsstation.station_id}}
-{{- with $this_spsstation.antenna_config_uri}}
                 - name: "AntennaConfigURI"
                   values:
-                    - {{quote .}}
-{{- end}}
+{{- toYaml $this_spsstation.antenna_config_uri | nindent 20}}
                 - name: "CabinetNetworkAddress"
                   values:
                     - {{quote $this_spsstation.cabinet_network_address}}

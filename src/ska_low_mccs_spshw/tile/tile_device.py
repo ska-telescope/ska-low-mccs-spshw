@@ -891,7 +891,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param delay: PPS delay correction in nanoseconds. Value is
             internally rounded to 1.25 ns units
         """
-        self.component_manager.pps_delays = delay
+        self.component_manager.pps_delay = delay
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:

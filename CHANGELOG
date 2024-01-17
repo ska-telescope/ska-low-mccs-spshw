@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [MCCS-1957] Support deployment namespace override
+
 ## 0.13.0
 
 * [SKB-276] fix typo in MccsTile pps_delays -> pps_delay

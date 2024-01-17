@@ -4,6 +4,7 @@
 
 ## 0.13.0
 
+* [SKB-276] fix typo in MccsTile pps_delays -> pps_delay
 * [SKB-274] Set SpsStation's proxies' source to DevSource.Dev
 
 ## 0.12.1

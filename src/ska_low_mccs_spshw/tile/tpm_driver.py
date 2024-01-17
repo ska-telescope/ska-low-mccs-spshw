@@ -24,9 +24,8 @@ from typing import Any, Callable, Optional, cast
 
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_control_model import CommunicationStatus, TaskStatus
+from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
-from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -34,7 +33,7 @@ from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
+class TpmDriver(MccsBaseComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -544,35 +543,14 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._is_programmed
 
     def download_firmware(
-        self: TpmDriver, bitfile: str, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Download firmware bitfile onto the TPM as a long runnning command.
-
-        :param bitfile: a binary firmware blob
-        :param task_callback: Update task state, defaults to None
-
-        :return: TaskStatus and message
-        """
-        return self.submit_task(
-            self._download_firmware, args=[bitfile], task_callback=task_callback
-        )
-
-    def _download_firmware(
         self: TpmDriver,
         bitfile: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
         """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
         is_programmed = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
@@ -584,18 +562,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if is_programmed:
             self._firmware_name = bitfile
             self._set_tpm_status(TpmStatus.PROGRAMMED)
-
-        if task_callback:
-            if is_programmed:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The download firmware task has completed",
-                )
-            else:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result="The download firmware task has failed",
-                )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -617,19 +583,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         # Poll to update internal state after erasing
         self._poll()
 
-    def _initialise(
+    def initialise(
         self: TpmDriver,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
-        """
-        Download firmware, if not already downloaded, and initializes tile.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
+        """Download firmware, if not already downloaded, and initializes tile."""
         #
         # If not programmed, program it.
         # TODO: there is no way to check whether the TPM is already correctly
@@ -672,31 +629,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Lock released")
             self._set_tpm_status(TpmStatus.INITIALISED)
             self.logger.debug("TpmDriver: initialisation completed")
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The initialisation task has completed",
-                )
         else:
             self._set_tpm_status(TpmStatus.UNPROGRAMMED)
-            self.logger.error("TpmDriver: Cannot initialise board")
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The initialisation task has failed",
-                )
-
-    def initialise(
-        self: TpmDriver, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Download firmware, if not already downloaded, and initializes tile.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a message
-        """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+            self.logger.error("TpmDriver: Cannot initialise board Failed to Program.")
 
     @property
     def tile_id(self: TpmDriver) -> int:

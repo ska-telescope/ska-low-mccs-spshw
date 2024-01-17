@@ -10,6 +10,7 @@ Defines the deployment for SpsStation Tango devices.
           antenna_config_uri:
           - "car:ska-low-aavs3?main"
           - "instrument/mccs-configuration/aavs3.yaml"
+          - "a1"
           subracks:
           - "s8-1-1"
           tpms:

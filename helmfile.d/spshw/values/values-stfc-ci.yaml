@@ -32,6 +32,7 @@ overrides:
               antenna_config_uri:
                 uri: "car:ska-low-aavs3?main"
                 path: "instrument/mccs-configuration/aavs3.yaml"
+                station_cluster: "a1"
 
       "real-daq":
         stations:

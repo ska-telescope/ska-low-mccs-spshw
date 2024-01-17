@@ -339,13 +339,14 @@ class SpsStationComponentManager(
         """
         antenna_mapping_uri = antenna_config_uri[0]
         antenna_mapping_filepath = antenna_config_uri[1]
+        station_cluster = antenna_config_uri[2]
         tmdata = TMData([antenna_mapping_uri])
         full_dict = tmdata[antenna_mapping_filepath].get_dict()
 
         try:
-            antennas = full_dict["platform"]["array"]["station_clusters"]["a1"][
-                "stations"
-            ]["1"]["antennas"]
+            antennas = full_dict["platform"]["array"]["station_clusters"][
+                station_cluster
+            ]["stations"][str(self._station_id)]["antennas"]
             for antenna in antennas:
                 self._antenna_mapping[int(antenna)] = (
                     antennas[antenna]["tpm_x_channel"],

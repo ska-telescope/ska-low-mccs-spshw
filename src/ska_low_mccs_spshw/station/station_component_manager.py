@@ -1311,7 +1311,7 @@ class SpsStationComponentManager(
         rms_values: list[float] = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            rms_values = rms_values + proxy._proxy.adcPower
+            rms_values = rms_values + list(proxy._proxy.adcPower)
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:

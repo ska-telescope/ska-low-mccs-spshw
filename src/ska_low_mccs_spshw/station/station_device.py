@@ -1096,8 +1096,8 @@ class SpsStation(SKAObsDevice):
         """
         Set the pointing delay parameters of this Station's Tiles.
 
-        :param argin: an array containing a beam index followed by 
-            pairs of antenna delays + delay rates, delay in seconds 
+        :param argin: an array containing a beam index followed by
+            pairs of antenna delays + delay rates, delay in seconds
             and the delay rate in seconds/second
 
         :return: A tuple containing a return code and a string

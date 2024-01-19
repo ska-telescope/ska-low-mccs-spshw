@@ -2579,14 +2579,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param argin: An array containing: beam index, 
+        :param argin: An array containing: beam index,
             the delay in seconds and the delay rate in
             seconds/second, for each antenna.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :raises ValueError: if parameters are illegal or inconsistent
 
         :example:
 

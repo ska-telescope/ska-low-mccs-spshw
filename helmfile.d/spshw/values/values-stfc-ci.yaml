@@ -33,6 +33,7 @@ overrides:
                 uri: "car:ska-low-aavs3?main"
                 path: "instrument/mccs-configuration/aavs3.yaml"
                 station_cluster: "a1"
+                # Warning: Pulling configuration from different station cluster. We are pulling station cluster "a1" and deploying station cluster "ci"
 
       "real-daq":
         stations:

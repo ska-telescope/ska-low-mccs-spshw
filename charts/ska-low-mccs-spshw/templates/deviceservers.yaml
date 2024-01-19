@@ -7,9 +7,9 @@ Deploy the Tango devices. For example,
         station_id: 345
         cabinet_network_address: 10.0.0.0
         antenna_config_uri:
-        - "car:ska-low-aavs3?main"
-        - "instrument/mccs-configuration/aavs3.yaml"
-        - "a1"
+        - "reference/data/url"
+        - "internal/path/config.yaml"
+        - "s8"
         subracks:
         - "s8-1-1"
         tpms:

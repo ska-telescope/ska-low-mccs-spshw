@@ -299,7 +299,7 @@ class SpsStationComponentManager(
         self._static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
-        self._preadu_levels = [0] * 512
+        self._preadu_levels = [0.0] * 512
         self._source_port = 0xF0D0
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
@@ -1175,7 +1175,7 @@ class SpsStationComponentManager(
             proxy._proxy.cspRounding = truncation
 
     @property
-    def preadu_levels(self: SpsStationComponentManager) -> list[int]:
+    def preadu_levels(self: SpsStationComponentManager) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
 
@@ -1184,7 +1184,7 @@ class SpsStationComponentManager(
         return copy.deepcopy(self._preadu_levels)
 
     @preadu_levels.setter
-    def preadu_levels(self: SpsStationComponentManager, levels: list[int]) -> None:
+    def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 

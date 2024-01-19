@@ -413,10 +413,10 @@ class SpsStation(SKAObsDevice):
         self.component_manager.csp_rounding = rounding
 
     @attribute(
-        dtype=("DevLong",),
+        dtype=("DevDouble",),
         max_dim_x=512,
     )
-    def preaduLevels(self: SpsStation) -> list[int]:
+    def preaduLevels(self: SpsStation) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
 
@@ -425,7 +425,7 @@ class SpsStation(SKAObsDevice):
         return self.component_manager.preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
-    def preaduLevels(self: SpsStation, levels: list[int]) -> None:
+    def preaduLevels(self: SpsStation, levels: list[float]) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
 

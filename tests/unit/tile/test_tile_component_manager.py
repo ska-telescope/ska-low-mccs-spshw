@@ -376,7 +376,16 @@ class TestStaticSimulatorCommon:
             ("clock_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("sysref_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
             ("pll_locked", StaticTpmSimulator.CLOCK_SIGNALS_OK),
-            ("pending_data_requests", False),
+            (
+                "pending_data_requests",
+                {
+                    "raw": False,
+                    "channel": False,
+                    "channel_continuous": False,
+                    "narrowband": False,
+                    "beam": False,
+                },
+            ),
         ),
     )
     def test_read_attribute(

@@ -27,7 +27,7 @@ from ska_control_model import (
 )
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
-from tango import DevFailed, DeviceProxy, DevState, EventType
+from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator, TileData
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
@@ -50,6 +50,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "tile_programming_state",
         "adc_power",
+        "pps_present",
         timeout=3.0,
     )
 
@@ -397,6 +398,72 @@ class TestMccsTile:
 
         change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
 
+    def test_ppsPresent(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        static_tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test alarm is raised when pps is disconnected.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param static_tile_component_manager: A component manager.
+            (Using a BaseTpmSimulator)
+        """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        tile_device.MockTpmOn()
+
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        # Setup default tile_health_structure
+        tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
+        static_tile_component_manager._update_component_state(
+            tile_health_structure=tile_monitoring_defaults,
+        )
+
+        tile_device.subscribe_event(
+            "ppsPresent",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["pps_present"],
+        )
+        change_event_callbacks["pps_present"].assert_change_event(
+            1, AttrQuality.ATTR_VALID
+        )
+        static_tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
+
+        # Simulate disconnection the PPS.
+        tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
+        tile_monitoring_defaults["timing"]["pps"]["status"] = False
+
+        static_tile_component_manager._update_component_state(
+            tile_health_structure=tile_monitoring_defaults,
+        )
+        change_event_callbacks["pps_present"].assert_change_event(
+            0, AttrQuality.ATTR_ALARM
+        )
+        assert tile_device.state() == DevState.ALARM
+
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
@@ -436,8 +503,8 @@ class TestMccsTile:
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
             ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
             ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
+            ("ppsPresent", 1, None),
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
-            ("ppsPresent", True, None),
             ("clockPresent", True, None),
             ("sysrefPresent", True, None),
             ("pllLocked", True, None),

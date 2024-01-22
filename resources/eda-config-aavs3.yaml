@@ -48,3 +48,5 @@ configuration:
         code_push_event: true 
       adcPower:
         code_push_event: true 
+      ppsPresent:
+        code_push_event: true 

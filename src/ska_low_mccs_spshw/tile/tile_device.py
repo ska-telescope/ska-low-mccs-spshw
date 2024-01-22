@@ -87,6 +87,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._health_model: TileHealthModel
         self._tile_programming_state: TpmStatus
         self._adc_rms: list[float]
+        self._pps_present: Optional[bool]
+        self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._max_workers: int = 1
 
@@ -95,6 +97,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._tile_programming_state = TpmStatus.UNKNOWN
         self._adc_rms = [0.0] * 32
         self._max_workers = 1
+        self._pps_present = None
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -244,6 +247,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("ppsPresent", True, False)
+            self._device.set_archive_event("ppsPresent", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -369,15 +374,29 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     "tileProgrammingState", tile_programming_state.pretty_name()
                 )
         if "tile_health_structure" in state_change:
-            self._health_model.update_state(
-                tile_health_structure=state_change["tile_health_structure"]
-            )
+            tile_health_structure = state_change["tile_health_structure"]
+            if self.tile_health_structure != tile_health_structure:
+                # TODO: validate structure using schema before setting.
+                self.tile_health_structure = tile_health_structure
+                self._health_model.update_state(
+                    tile_health_structure=self.tile_health_structure
+                )
+                self.update_tile_health_attributes()
+
         if "adc_rms" in state_change:
             adc_rms = state_change["adc_rms"]
             if self._adc_rms != adc_rms:
                 self._adc_rms = adc_rms
                 self.push_change_event("adcPower", adc_rms)
                 self.push_archive_event("adcPower", adc_rms)
+
+    def update_tile_health_attributes(self: MccsTile) -> None:
+        """Update the TANGO attributes."""
+        pps_present = self.tile_health_structure["timing"]["pps"]["status"]
+        if self._pps_present != pps_present:
+            self._pps_present = pps_present
+            self.push_change_event("ppsPresent", pps_present)
+            self.push_archive_event("ppsPresent", pps_present)
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -902,14 +921,20 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.component_manager.test_generator_active
 
-    @attribute(dtype="DevBoolean")
-    def ppsPresent(self: MccsTile) -> bool:
+    @attribute(
+        dtype="DevShort",
+        min_alarm=0,
+        max_alarm=2,
+    )
+    def ppsPresent(self: MccsTile) -> bool | None:
         """
         Report if PPS signal is present at the TPM input.
 
-        :return: presence of PPS signal
+        :return: 0 if PPS signal is not present, 1 if is present.
         """
-        return self.component_manager.pps_present
+        if self._pps_present is None:
+            self._pps_present = self.component_manager.pps_present
+        return self._pps_present
 
     @attribute(dtype="DevBoolean")
     def clockPresent(self: MccsTile) -> bool:

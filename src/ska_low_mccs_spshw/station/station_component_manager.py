@@ -164,11 +164,12 @@ class _TileProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
+        if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             self._proxy.stationId = self._station_id
             self._proxy.logicalTileId = self._logical_tile_id
-            self._connecting = False
+            if self._connecting:
+                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(

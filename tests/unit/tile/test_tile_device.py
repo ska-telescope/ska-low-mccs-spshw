@@ -1380,17 +1380,25 @@ class TestMccsTileCommands:
             [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
             assert result_code == ResultCode.OK
 
-        assert not tile_device.pendingDataRequests
+        data_requests_str = tile_device.pendingDataRequests
+        data_requests = json.loads(data_requests_str)
+        for key in data_requests:
+            assert not data_requests[key]
         json_arg = json.dumps(
             {"data_type": "channel_continuous", "channel_id": 2, "n_samples": 4}
         )
         [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
         assert result_code == ResultCode.OK
         time.sleep(0.1)
-        assert tile_device.pendingDataRequests
+        data_requests_str = tile_device.pendingDataRequests
+        data_requests = json.loads(data_requests_str)
+        assert data_requests["channel_continuous"]
         tile_device.StopDataTransmission()
         time.sleep(0.1)
-        assert not tile_device.pendingDataRequests
+        data_requests_str = tile_device.pendingDataRequests
+        data_requests = json.loads(data_requests_str)
+        for key in data_requests:
+            assert not data_requests[key]
 
         invalid_channel_range_args = [
             {"data_type": "channel", "first_channel": 0, "last_channel": 512},

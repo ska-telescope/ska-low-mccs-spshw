@@ -131,7 +131,13 @@ class BaseTpmSimulator:
         self._forty_gb_core_list: list[dict[str, Any]] = []
         self._register_map = copy.deepcopy(self.REGISTER_MAP)
         self._test_generator_active = False
-        self._pending_data_requests = False
+        self._pending_data_requests = {
+            "raw": False,
+            "channel": False,
+            "channel_continuous": False,
+            "narrowband": False,
+            "beam": False,
+        }
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
@@ -810,9 +816,10 @@ class BaseTpmSimulator:
         """
         # Check for type of data to be sent to LMC
         if data_type == "channel_continuous":
-            self._pending_data_requests = True
+            self._pending_data_requests[data_type] = True
         else:
-            self._pending_data_requests = False
+            for key in self._pending_data_requests:
+                self._pending_data_requests[key] = False
         if data_type not in [
             "raw",
             "channel",
@@ -1044,7 +1051,8 @@ class BaseTpmSimulator:
     def stop_data_transmission(self: BaseTpmSimulator) -> None:
         """Stop data transmission."""
         self.logger.debug("TpmSimulator: stop_data_transmission")
-        self._pending_data_requests = False
+        for key in self._pending_data_requests:
+            self._pending_data_requests[key] = False
 
     def start_acquisition(
         self: BaseTpmSimulator,
@@ -1114,7 +1122,7 @@ class BaseTpmSimulator:
         return self._is_beamformer_running
 
     @property
-    def pending_data_requests(self: BaseTpmSimulator) -> bool:
+    def pending_data_requests(self: BaseTpmSimulator) -> dict[str, bool]:
         """
         Check for pending data requests.
 

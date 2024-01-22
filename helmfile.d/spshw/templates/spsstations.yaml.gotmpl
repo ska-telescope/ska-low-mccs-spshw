@@ -34,6 +34,21 @@
       {{- $_ := set $spsstation_instance "cabinet_network_address" $cabinet_address}}
 
       {{- $default_daq_trl := ""}}
+      {{- $antenna_config_uri_list := list}}
+      {{- $antenna_config_uri := dig "sps" "antenna_config_uri" "uri" "" $station_spec}}
+      {{- if $antenna_config_uri}}
+        {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri}}
+        {{- $antenna_config_uri_path := dig "sps" "antenna_config_uri" "path" "" $station_spec}}
+          {{- if $antenna_config_uri_path}}
+            {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri_path}}
+          {{- end}}
+        {{- $antenna_config_uri_station_cluster := dig "sps" "antenna_config_uri" "station_cluster" "" $station_spec}}
+          {{- if $antenna_config_uri_station_cluster}}
+            {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri_station_cluster}}
+          {{- end}}
+
+      {{- end}}
+      {{- $_ := set $spsstation_instance "antenna_config_uri" $antenna_config_uri_list}}
       {{- $daq_spec := dig "daq" dict $sps_spec}}
       {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
       {{- if $daq_enabled}}

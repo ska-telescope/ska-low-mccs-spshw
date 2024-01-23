@@ -251,6 +251,9 @@ class SpsStationComponentManager(
         # logical tile ID is assigned globally, is not a property assigned
         # by the station
         #
+        self._adc_power = {
+            logical_tile_id: None for logical_tile_id, _ in enumerate(tile_fqdns)
+        }
         self._tile_proxies = {
             tile_fqdn: _TileProxy(
                 tile_fqdn,
@@ -286,6 +289,11 @@ class SpsStationComponentManager(
         self._csp_ingest_address = "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
+
+        # TODO: this needs to be scaled,
+        # We are interested in more than adcPower!!
+        self.tile_attributes_to_subscribe = ["adcPower"]
+
         self._lmc_param = {
             "mode": "10G",
             "payload_length": 8192,
@@ -322,6 +330,7 @@ class SpsStationComponentManager(
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,
+            adc_powers=None,
         )
 
     def _get_mappings(
@@ -405,7 +414,74 @@ class SpsStationComponentManager(
             ):
                 self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
+                self.submit_task(self.subscribe_to_attributes)
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
+
+    def subscribe_to_attributes(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Subscribe to attributes of interest.
+
+        This will form subscriptions to attributes on subdevices
+        `MccsTile` and `MccsSubrack` if attribute not already subscribed.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        # Subscribe to Subrack attributes
+        for fqdn in self._subrack_proxies.keys():
+            self.logger.warning(
+                f"Subscriptions for subrack attributes not yet implemented {fqdn}"
+            )
+
+        # Subscribe to Tile attributes
+        for fqdn, proxy_object in self._tile_proxies.items():
+            try:
+                assert proxy_object is not None
+                if proxy_object._proxy is not None:
+                    for tile_attribute in self.tile_attributes_to_subscribe:
+                        if (
+                            tile_attribute
+                            not in proxy_object._proxy._change_event_callbacks.keys()
+                        ):
+                            proxy_object._proxy.add_change_event_callback(
+                                tile_attribute,
+                                functools.partial(
+                                    self._on_tile_attribute_change,
+                                    proxy_object._logical_tile_id,
+                                ),
+                                stateless=True,
+                            )
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.warning(
+                    "Exception raised when attempting to subscribe "
+                    f"to attribute on device{fqdn} :{repr(e)}"
+                )
+
+    def _on_tile_attribute_change(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        attribute_name = attribute_name.lower()
+        match attribute_name:
+            case "adcpower":
+                self._adc_power[logical_tile_id] = attribute_value
+                adc_powers: list[int] = []
+                for _, adc_power in self._adc_power.items():
+                    if adc_power is not None:
+                        adc_powers += adc_power.tolist()
+                self._update_component_state(adc_powers=adc_powers)
+            case _:
+                self.logger.error(
+                    f"Unrecognised tile attribute changing {attribute_name}"
+                    "Nothing is updated."
+                )
 
     def _update_communication_state(
         self: SpsStationComponentManager,

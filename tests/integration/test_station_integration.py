@@ -13,7 +13,10 @@ import gc
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+
+from ska_low_mccs_spshw.tile import TileSimulator
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -33,6 +36,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_state",
         "tile_programming_state",
         "sps_station_command_status",
+        "sps_adc_power",
         timeout=15.0,
     )
 
@@ -125,7 +129,7 @@ def test_station(
     change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
 
-class TestStationTileIntegration:  # pylint: disable=too-few-public-methods
+class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
 
     def test_initialise_can_execute(
@@ -175,3 +179,79 @@ class TestStationTileIntegration:  # pylint: disable=too-few-public-methods
         change_event_callbacks["sps_station_command_status"].assert_change_event(
             (initialise_id, "COMPLETED")
         )
+
+    def test_adc_power_change(  # pylint: disable=too-many-arguments
+        self: TestStationTileIntegration,
+        tile_device: tango.DeviceProxy,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station Initialise function executes.
+
+        This is a very simple test just just to see that the TileSimulator
+        starts counting once turned on and initialised.
+
+        TODO: Initialise does a huge number of tasks.
+        This test only check the initialise command can complete,
+        it does not check in any specifics.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device, subrack_device, tile_device, change_event_callbacks
+        )
+
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )
+
+        sps_station_device.subscribe_event(
+            "adcPower",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_adc_power"],
+        )
+        change_event_callbacks["sps_adc_power"].assert_change_event(Anything)
+
+        # Set the value in the backend TileSimulator.
+        initial_adc_powers = [12.0] + [0.0] * 31
+        tile_simulator._adc_rms = initial_adc_powers
+
+        # Force a poll on the backend simulator.
+        tile_device.UpdateAttributes()
+
+        # This will cause the Tile to push a change event.
+        # SpsStation is subscribed to this attribute and
+        # Should push a change event itself.
+        change_event_callbacks["sps_adc_power"].assert_change_event(initial_adc_powers)
+
+        # Check with different values.
+        final_adc_powers = [24.0] + [24.0] * 31
+        tile_simulator._adc_rms = final_adc_powers
+        tile_device.UpdateAttributes()
+        change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)

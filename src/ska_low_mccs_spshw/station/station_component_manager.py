@@ -414,7 +414,6 @@ class SpsStationComponentManager(
             ):
                 self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
-                self.submit_task(self.subscribe_to_attributes)
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
     def subscribe_to_attributes(
@@ -498,6 +497,7 @@ class SpsStationComponentManager(
         """
         super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
+            self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe

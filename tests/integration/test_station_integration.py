@@ -189,14 +189,10 @@ class TestStationTileIntegration:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test the sps station Initialise function executes.
+        Test the sps station adcPower gets updates.
 
-        This is a very simple test just just to see that the TileSimulator
-        starts counting once turned on and initialised.
-
-        TODO: Initialise does a huge number of tasks.
-        This test only check the initialise command can complete,
-        it does not check in any specifics.
+        This test checks that a change in the backend `tile_simulator`
+        attribute `adc_rms` is propagated all the way to the `SpsStation`.
 
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.

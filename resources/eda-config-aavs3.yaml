@@ -50,3 +50,10 @@ configuration:
         code_push_event: true 
       ppsPresent:
         code_push_event: true 
+  - class: SpsStation
+    attributes:
+      adcPower:
+        code_push_event: true 
+      state:
+        archive_period: 15000
+        polling_period: 15000

@@ -923,7 +923,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         match self._tpm_driver.is_programmed:
             case True:
                 message = "The download firmware task has completed"
-                self.logger.warning(message)
+                self.logger.info(message)
                 if task_callback:
                     task_callback(
                         status=TaskStatus.COMPLETED,

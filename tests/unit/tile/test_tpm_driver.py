@@ -619,22 +619,23 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
-
+        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
         tpm_driver.download_firmware("bitfile")
-
+        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is True
 
         # Mock a failed download.
         tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]
             return_value=False
         )
-        # Check the s
+        tpm_driver._update_attributes()
         tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
         tpm_driver.download_firmware("bitfile")
+        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
     def test_set_tile_id(
@@ -1030,12 +1031,13 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tile_simulator.tpm is not None  # for the type checker
         tile_simulator.tpm._is_programmed = False
         mocked_return = unittest.mock.MagicMock(  # type: ignore[assignment]
-            return_value=False
+            side_effect=Exception("mocked exception")
         )
         tile_simulator.program_fpgas = mocked_return  # type: ignore
 
         # Act
-        tpm_driver.initialise()
+        with pytest.raises(Exception, match="mocked exception"):
+            tpm_driver.initialise()
 
         # Check TpmStatus is UNPROGRAMMED.
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
@@ -2134,6 +2136,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tile_simulator.erase_fpga.assert_called_once()
+        tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 

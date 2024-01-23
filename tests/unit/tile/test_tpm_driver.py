@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 from pyfabil.base.definitions import LibraryError
-from ska_control_model import CommunicationStatus, TaskStatus
+from ska_control_model import CommunicationStatus
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.tile import TileSimulator, TpmDriver
@@ -619,25 +619,24 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
+        tpm_driver._check_programmed()
+        assert tpm_driver.is_programmed is False
 
-        tpm_driver.download_firmware("bitfile", callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED,
-            result="The download firmware task has completed",
-        )
+        tpm_driver.download_firmware("bitfile")
+        tpm_driver._check_programmed()
+        assert tpm_driver.is_programmed is True
+
         # Mock a failed download.
         tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]
             return_value=False
         )
-        tpm_driver.download_firmware("bitfile", callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.FAILED,
-            result="The download firmware task has failed",
-        )
+        tpm_driver._update_attributes()
+        tpm_driver._check_programmed()
+        assert tpm_driver.is_programmed is False
+
+        tpm_driver.download_firmware("bitfile")
+        tpm_driver._check_programmed()
+        assert tpm_driver.is_programmed is False
 
     def test_set_tile_id(
         self: TestTpmDriver,
@@ -718,16 +717,13 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         time.sleep(1.5)
         final_time = tpm_driver.fpgas_time
         assert initial_time == final_time
+        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
 
         # Act
-        tpm_driver.initialise(task_callback=callbacks["task"])
+        tpm_driver.initialise()
 
         # Assert
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
-        )
+        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
         initial_time1 = tpm_driver.fpgas_time
@@ -1009,14 +1005,13 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time1 = tpm_driver.fpga_current_frame
         assert initial_time1 == final_time1
 
-        tpm_driver.initialise(task_callback=callbacks["task"])
+        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
+
+        # Act
+        tpm_driver.initialise()
 
         # Assert
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
-        )
+        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
         initial_time2 = tpm_driver.fpgas_time
@@ -1029,29 +1024,23 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         time.sleep(1)
         final_time3 = tpm_driver.fpga_current_frame
         assert initial_time3 == final_time3
-        # ---------------------------------------
-        # Initialise called on a unprogrammed TPM
-        # ---------------------------------------
 
-        # Arrange
+        # -----------------------------------------
+        # Initialise called with unprogrammable TPM
+        # -----------------------------------------
         assert tile_simulator.tpm is not None  # for the type checker
         tile_simulator.tpm._is_programmed = False
         mocked_return = unittest.mock.MagicMock(  # type: ignore[assignment]
-            return_value=False
+            side_effect=Exception("mocked exception")
         )
         tile_simulator.program_fpgas = mocked_return  # type: ignore
 
         # Act
-        tpm_driver.initialise(task_callback=callbacks["task"])
-        time.sleep(0.1)
+        with pytest.raises(Exception, match="mocked exception"):
+            tpm_driver.initialise()
 
-        # Assert
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-        callbacks["task"].assert_call(
-            status=TaskStatus.COMPLETED,
-            result="The initialisation task has failed",
-        )
+        # Check TpmStatus is UNPROGRAMMED.
+        assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
     @pytest.mark.parametrize(
         "tpm_version_to_test, expected_firmware_name",
@@ -2147,6 +2136,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tile_simulator.erase_fpga.assert_called_once()
+        tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 

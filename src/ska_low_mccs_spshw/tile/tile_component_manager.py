@@ -841,23 +841,36 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self._tpm_driver.initialise()
         # pylint: disable-next=broad-except
         except Exception as ex:
-            self.logger.error(f"error {ex}")
+            self.logger.error(f"Exception raised while initialising Tile: {repr(ex)}")
             if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {repr(ex)}")
             return
 
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="Initialise tpm task aborted"
+        # Check the tpm_status and inform callbacks
+        match self._tpm_driver.tpm_status:
+            case TpmStatus.INITIALISED:
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has completed",
+                    )
+            case TpmStatus.UNPROGRAMMED:
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has failed",
+                    )
+            case _:
+                self.logger.error(
+                    "Unexpected TpmStatus following initialisation."
+                    f"{self._tpm_driver.tpm_status}."
                 )
-            return
-
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED, result="Initialise tpm task has completed"
-            )
-            return
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has failed"
+                        f"TpmStatus: {self._tpm_driver.tpm_status}",
+                    )
 
     @check_communicating
     def download_firmware(
@@ -892,36 +905,49 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param argin: can either be the design name returned or a path to a file
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
-
-        :raises NotImplementedError: Command not implemented
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             self._tpm_driver.download_firmware(argin)
-        except NotImplementedError:
-            raise
         # pylint: disable-next=broad-except
         except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED,
-                    result="Download tpm firmware task aborted",
-                )
-            return
-
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result="Download tpm firmware has completed",
+            self.logger.error(
+                f"Exception raised while downloading firmware: {repr(ex)}"
             )
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {repr(ex)}")
             return
+
+        # Check the programmed state.
+        match self._tpm_driver.is_programmed:
+            case True:
+                message = "The download firmware task has completed"
+                self.logger.info(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=message,
+                    )
+            case False:
+                message = "The download firmware task has failed"
+                self.logger.warning(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=message,
+                    )
+            case _:
+                message = (
+                    "The download firmware task has failed"
+                    " is_programmed is not returning bool"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=message,
+                    )
 
     @check_communicating
     def start_acquisition(

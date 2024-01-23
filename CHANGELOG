@@ -3,6 +3,7 @@
 ## unreleased
 
 * [MCCS-1957] Support deployment namespace override
+* [MCCS-1885] Introduce `cadence` as an argument to bandpass monitor.
 
 ## 0.13.0
 

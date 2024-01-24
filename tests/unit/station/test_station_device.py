@@ -1224,16 +1224,6 @@ def test_beamformerTable(
             lambda n: ["Synchronised", "Programmed"] * int(n / 2)
             + ([] if n % 2 == 0 else ["Synchronised"]),
         ),
-        # MCCS-1884: This is now a push change event.
-        # see tests/integration/test_station_integration.py::test_adc_power_change
-        # pytest.param(
-        #     "adcPower",
-        #     "adcPower",
-        #     lambda i: [(32 * i) + m for m in range(32)],
-        #     lambda n: list(range(32 * n)),
-        #     lambda i: [-m - (32 * i) for m in range(32)],
-        #     lambda n: [-m for m in range(32 * n)],
-        # ),
         pytest.param(
             "boardTemperaturesSummary",
             "boardTemperature",

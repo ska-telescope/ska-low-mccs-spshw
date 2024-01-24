@@ -330,7 +330,7 @@ class SpsStationComponentManager(
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,
-            adc_powers=None,
+            adc_power=None,
         )
 
     def _get_mappings(
@@ -439,23 +439,27 @@ class SpsStationComponentManager(
         # Subscribe to Tile attributes
         for fqdn, proxy_object in self._tile_proxies.items():
             try:
-                assert proxy_object is not None
-                if proxy_object._proxy is not None:
-                    for tile_attribute in self.tile_attributes_to_subscribe:
-                        if (
-                            tile_attribute
-                            not in proxy_object._proxy._change_event_callbacks.keys()
-                        ):
-                            proxy_object._proxy.add_change_event_callback(
-                                tile_attribute,
-                                functools.partial(
-                                    self._on_tile_attribute_change,
-                                    proxy_object._logical_tile_id,
-                                ),
-                                stateless=True,
-                            )
-            except Exception as e:  # pylint: disable=broad-except
+                if proxy_object._proxy is None:
+                    raise ValueError(f"proxy for {fqdn} is None " "Unable to subscribe")
+                for tile_attribute in self.tile_attributes_to_subscribe:
+                    if (
+                        tile_attribute
+                        not in proxy_object._proxy._change_event_callbacks.keys()
+                    ):
+                        proxy_object._proxy.add_change_event_callback(
+                            tile_attribute,
+                            functools.partial(
+                                self._on_tile_attribute_change,
+                                proxy_object._logical_tile_id,
+                            ),
+                            stateless=True,
+                        )
+            except ValueError as e:
                 self.logger.warning(
+                    f"unable to form subscription for {fqdn} : {repr(e)}"
+                )
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
                     "Exception raised when attempting to subscribe "
                     f"to attribute on device{fqdn} :{repr(e)}"
                 )
@@ -475,7 +479,7 @@ class SpsStationComponentManager(
                 for _, adc_power in self._adc_power.items():
                     if adc_power is not None:
                         adc_powers += adc_power.tolist()
-                self._update_component_state(adc_powers=adc_powers)
+                self._update_component_state(adc_power=adc_powers)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"

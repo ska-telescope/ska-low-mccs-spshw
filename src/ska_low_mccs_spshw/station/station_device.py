@@ -282,8 +282,8 @@ class SpsStation(SKAObsDevice):
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
-        if "adc_powers" in state_change:
-            self._adc_power = state_change.get("adc_powers")
+        if "adc_power" in state_change:
+            self._adc_power = state_change.get("adc_power")
             self.push_change_event("adcPower", self._adc_power)
             self.push_archive_event("adcPower", self._adc_power)
 

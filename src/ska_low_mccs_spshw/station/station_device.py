@@ -346,6 +346,15 @@ class SpsStation(SKAObsDevice):
         :return: json string containing antenna mappings
         """
         return json.dumps(self.component_manager._antenna_mapping)
+    
+    @attribute(dtype="DevString")
+    def antennaLocations(self: SpsStation) -> str:
+        """
+        Return the location offsets of the antennas.
+
+        :return: json string containing antenna location offsets.
+        """
+        return json.dumps(self.component_manager._antenna_locations)
 
     @attribute(
         dtype=("DevDouble",),

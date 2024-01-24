@@ -308,6 +308,7 @@ class SpsStationComponentManager(
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
         self._antenna_mapping: dict[int, tuple[float, float]] = {}
+        self._antenna_locations: dict[int, dict[str,float]] = {}
 
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
@@ -348,15 +349,19 @@ class SpsStationComponentManager(
                 station_cluster
             ]["stations"][str(self._station_id)]["antennas"]
             for antenna in antennas:
+                # Get port <-> antenna mapping.
                 self._antenna_mapping[int(antenna)] = (
                     antennas[antenna]["tpm_x_channel"],
                     antennas[antenna]["tpm_y_channel"],
                 )
+                # Get antenna location offsets.
+                self._antenna_locations[int(antenna)] = antennas[antenna]["location_offset"]
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
+
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""

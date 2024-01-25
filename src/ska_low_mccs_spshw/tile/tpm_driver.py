@@ -95,7 +95,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
-        self._preadu_levels: list[float] = [0.0] * 32
+        self._preadu_levels: Optional[list[float]] = None
         self._static_delays: list[float] = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
@@ -136,6 +136,7 @@ class TpmDriver(MccsBaseComponentManager):
             programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tile_health_structure,
             adc_rms=self._adc_rms,
+            preadu_levels=self._preadu_levels,
         )
 
         self._poll_rate = 2.0
@@ -299,6 +300,7 @@ class TpmDriver(MccsBaseComponentManager):
                         # self._channeliser_truncation = method_to_be_written
                         # self._csp_rounding = method_to_be_written
                         self._preadu_levels = self.tile.get_preadu_levels()
+                        self._update_component_state(preadu_levels=self._preadu_levels)
                         self._static_delays = self._get_static_delays()
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
@@ -1360,7 +1362,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def preadu_levels(self: TpmDriver) -> list[float]:
+    def preadu_levels(self: TpmDriver) -> Optional[list[float]]:
         """
         Get preadu levels in dB.
 
@@ -1380,6 +1382,7 @@ class TpmDriver(MccsBaseComponentManager):
                 try:
                     self.tile.set_preadu_levels(levels)
                     self._preadu_levels = self.tile.get_preadu_levels()
+                    self._update_component_state(preadu_levels=self._preadu_levels)
                     if self._preadu_levels != levels:
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                 # pylint: disable=broad-except

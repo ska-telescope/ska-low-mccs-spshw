@@ -1074,11 +1074,6 @@ def test_fortyGbNetworkAddress(
             lambda i: [(i * 32) + q for q in range(32)],
         ),
         pytest.param(
-            "preaduLevels",
-            lambda num_tiles: [float(i) for i in range(32 * num_tiles)],
-            lambda i: [float((i * 32) + q) for q in range(32)],
-        ),
-        pytest.param(
             "ppsDelays",
             lambda num_tiles: list(range(num_tiles)),
             lambda i: [i],

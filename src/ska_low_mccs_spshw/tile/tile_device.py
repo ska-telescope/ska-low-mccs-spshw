@@ -247,6 +247,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("preaduLevels", True, False)
+            self._device.set_archive_event("preaduLevels", True, False)
             self._device.set_change_event("ppsPresent", True, False)
             self._device.set_archive_event("ppsPresent", True, False)
 
@@ -389,6 +391,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self._adc_rms = adc_rms
                 self.push_change_event("adcPower", adc_rms)
                 self.push_archive_event("adcPower", adc_rms)
+
+        if "preadu_levels" in state_change:
+            preadu_levels = state_change["preadu_levels"]
+            self.push_change_event("preaduLevels", preadu_levels)
+            self.push_archive_event("preaduLevels", preadu_levels)
 
     def update_tile_health_attributes(self: MccsTile) -> None:
         """Update the TANGO attributes."""

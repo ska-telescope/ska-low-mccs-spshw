@@ -1215,7 +1215,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert tpm_driver.preadu_levels == [0.0] * 32
+        assert tpm_driver.preadu_levels is None
 
         # Set preADU levels to 3 for all channels
         tpm_driver.preadu_levels = [3.0] * 32

@@ -64,6 +64,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         tile_id: int,
+        station_id: int,
         tile: Tile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -74,6 +75,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param logger: a logger for this simulator to use
         :param tile_id: the unique ID for the tile
+        :param station_id: the unique ID for the station to which this tile belongs.
         :param tile: the tile driven by this TpmDriver
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param communication_state_changed_callback: callback to be
@@ -86,7 +88,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._hardware_lock = threading.Lock()
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
-        self._station_id = 0
+        self._station_id = station_id
         self._firmware_name = self.FIRMWARE_NAME[tpm_version]
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._tpm_status = TpmStatus.UNKNOWN

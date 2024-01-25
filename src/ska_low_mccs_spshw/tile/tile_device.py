@@ -61,6 +61,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     SubrackBay = device_property(dtype=int)  # position of TPM in subrack
 
     TileId = device_property(dtype=int, default_value=1)  # Tile ID must be nonzero
+    StationID = device_property(dtype=int, default_value=1)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
@@ -109,6 +110,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSubrackFQDN: {self.SubrackFQDN}\n"
             f"\tSubrackBay: {self.SubrackBay}\n"
             f"\tTileId: {self.TileId}\n"
+            f"\tStationId: {self.StationID}\n"
             f"\tTpmIp: {self.TpmIp}\n"
             f"\tTpmCpldPort: {self.TpmCpldPort}\n"
             f"\tTpmVersion: {self.TpmVersion}\n"
@@ -141,6 +143,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.logger,
             self._max_workers,
             self.TileId,
+            self.StationID,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,

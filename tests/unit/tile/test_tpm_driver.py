@@ -29,6 +29,7 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 def tpm_driver_fixture(
     logger: logging.Logger,
     tile_id: int,
+    station_id: int,
     tpm_version: str,
     callbacks: MockCallableGroup,
     tile_simulator: TileSimulator,
@@ -39,6 +40,7 @@ def tpm_driver_fixture(
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param callbacks: dictionary of driver callbacks.
     :param tile_simulator: The tile used by the TpmDriver.
@@ -48,6 +50,7 @@ def tpm_driver_fixture(
     return TpmDriver(
         logger,
         tile_id,
+        station_id,
         tile_simulator,
         tpm_version,
         callbacks["communication_status"],
@@ -1063,6 +1066,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         expected_firmware_name: str,
         logger: logging.Logger,
         tile_id: int,
+        station_id: int,
         callbacks: MockCallableGroup,
         tile_simulator: TileSimulator,
     ) -> None:
@@ -1074,12 +1078,14 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :param tile_id: the unique ID for the tile
+        :param station_id: the ID of the station to which the tile belongs.
         :param callbacks: dictionary of driver callbacks.
         :param tile_simulator: The tile used by the TpmDriver.
         """
         driver = TpmDriver(
             logger,
             tile_id,
+            station_id,
             tile_simulator,
             tpm_version_to_test,
             callbacks["communication_status"],

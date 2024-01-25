@@ -189,6 +189,7 @@ def patched_tile_device_class_fixture(
 def tile_component_manager_fixture(
     logger: logging.Logger,
     tile_id: int,
+    station_id: int,
     subrack_id: int,
     subrack_bay: int,
     tpm_version: str,
@@ -199,6 +200,7 @@ def tile_component_manager_fixture(
 
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_driver: a TpmDriver driving a simulated tile
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_bay: This tile's position in its subrack
@@ -215,6 +217,7 @@ def tile_component_manager_fixture(
         logger,
         max_workers,
         tile_id,
+        station_id,
         "tpm_ip",
         tpm_cpld_port,
         tpm_version,
@@ -230,6 +233,7 @@ def tile_component_manager_fixture(
 def tpm_driver_fixture(
     logger: logging.Logger,
     tile_id: int,
+    station_id: int,
     tpm_version: str,
     tile_simulator: TileSimulator,
 ) -> TpmDriver:
@@ -239,6 +243,7 @@ def tpm_driver_fixture(
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param tile_simulator: The tile used by the TpmDriver.
 
@@ -247,6 +252,7 @@ def tpm_driver_fixture(
     return TpmDriver(
         logger,
         tile_id,
+        station_id,
         tile_simulator,
         tpm_version,
         unittest.mock.Mock(),

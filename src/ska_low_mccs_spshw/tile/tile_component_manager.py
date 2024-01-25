@@ -45,7 +45,7 @@ __all__ = [
 class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,

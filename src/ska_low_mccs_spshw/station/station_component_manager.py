@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
+import numpy as np
 import tango
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
@@ -196,6 +197,24 @@ class _TileProxy(DeviceComponentManager):
             self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
 
+    def preadu_levels(self: _TileProxy) -> list[float]:
+        """
+        Return preAdu levels.
+
+        :return: preAdu levels
+        """
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.preaduLevels
+
+    def adc_power(self: _TileProxy) -> list[float]:
+        """
+        Return adcPower.
+
+        :return: adcPower
+        """
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.adcPower
+
 
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
@@ -331,6 +350,8 @@ class SpsStationComponentManager(
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
         self._antenna_mapping: dict[int, tuple[float, float]] = {}
+
+        self._equalised_levels: list[float] = []
 
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
@@ -1466,7 +1487,7 @@ class SpsStationComponentManager(
         rms_values: list[float] = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            rms_values = rms_values + list(proxy._proxy.adcPower)
+            rms_values = rms_values + list(proxy.adc_power())
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
@@ -1993,3 +2014,65 @@ class SpsStationComponentManager(
                     status=TaskStatus.FAILED, result="Start acquisition task failed"
                 )
             return
+
+    def trigger_adc_equalisation(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the trigger adc equalisation method.
+
+        This method returns immediately after it submitted
+        `self._trigger_adc_equalisation` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._trigger_adc_equalisation,
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _trigger_adc_equalisation(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Equalise adc using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        tpms = self._tile_proxies.values()
+        num_samples = 20
+        target_adc = 17
+
+        adc_data = np.empty([num_samples, 32 * len(tpms)])
+        for i in range(num_samples):
+            time.sleep(1)
+            adc_data[i] += self.adc_power()
+
+        # calculate difference in dB between current and target values
+        adc_medians = np.median(adc_data, axis=0)
+
+        # adc deltas
+        adc_deltas = 20 * np.log10(adc_medians / target_adc)
+
+        # calculate ideal attenuation
+        preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])
+        desired_levels = preadu_levels + adc_deltas
+
+        # quantise and clip to valid range
+        sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4
+
+        # apply new preADU levels to the station
+        self._equalised_levels = sanitised_levels
+
+        if task_callback:
+            task_callback(status=TaskStatus.COMPLETED)

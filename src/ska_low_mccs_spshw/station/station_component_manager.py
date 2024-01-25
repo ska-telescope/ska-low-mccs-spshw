@@ -17,6 +17,7 @@ import json
 import logging
 import threading
 import time
+import numpy as np
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
@@ -184,6 +185,97 @@ class _TileProxy(DeviceComponentManager):
             self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
 
+class _DaqProxy(DeviceComponentManager):
+    """A proxy to a subrack, for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: _DaqProxy,
+        fqdn: str,
+        station_id: int,
+        logger: logging.Logger,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param station_id: the id of the station to which this station
+            is to be assigned
+        :param logger: the logger to be used by this object.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        """
+        self._station_id = station_id
+        self._connecting = False
+
+        super().__init__(
+            fqdn,
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+        )
+
+    def start_communicating(self: _DaqProxy) -> None:
+        self._connecting = True
+        super().start_communicating()
+
+    def _device_state_changed(
+        self: _DaqProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        if self._connecting and event_value == tango.DevState.ON:
+            assert self._proxy is not None  # for the type checker
+            self._connecting = False
+        super()._device_state_changed(event_name, event_value, event_quality)
+
+    def _update_communication_state(
+        self: _DaqProxy,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        # If communication is established with this Tango device,
+        # configure it to use the device as the source, not the Tango attribute cache.
+        # This might be better done for all of these proxy devices in the common repo.
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            assert self._proxy is not None
+            self._proxy.set_source(tango.DevSource.DEV)
+            self._proxy._subscribe_change_event("xPolBandpass")
+            self._proxy._subscribe_change_event("yPolBandpass")
+            self._proxy.add_change_event_callback("xPolBandpass", self._bandpass_callback)
+            self._proxy.add_change_event_callback("yPolBandpass", self._bandpass_callback)
+        super()._update_communication_state(communication_state)
+
+    def _bandpass_callback(
+            self: _DaqProxy,
+            attribute_name: str,
+            attribute_data: Any,
+            attribute_quality: Any,
+    ) -> None:
+        """Extract bandpass data from event and call cb to update."""
+        if self._component_state_callback:
+            # if attribute_quality == ATTR_VALID:?
+            if attribute_name.lower() == "xpolbandpass":
+                self.logger.debug("Processing change event for xPolBandpass")
+                self._component_state_callback(xPolBandpass=attribute_data)
+            elif attribute_name.lower() == "ypolbandpass":
+                self.logger.debug("Processing change event for yPolBandpass")
+                self._component_state_callback(yPolBandpass=attribute_data)
+            else:
+                self.logger.error(f"Got unexpected change event for: {attribute_name}")
+
+
 
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
@@ -276,6 +368,16 @@ class SpsStationComponentManager(
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
+        self._daq_proxy = _DaqProxy(
+            self._daq_trl,
+            station_id,
+            logger,
+            max_workers,
+            functools.partial(
+                    self._device_communication_state_changed, self._daq_trl
+                ),
+            component_state_changed_callback,
+        )
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -373,6 +475,7 @@ class SpsStationComponentManager(
             tile_proxy.start_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.start_communicating()
+        self._daq_proxy.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
@@ -383,6 +486,7 @@ class SpsStationComponentManager(
             tile_proxy.stop_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.stop_communicating()
+        self._daq_proxy.stop_communicating()
 
         self._update_communication_state(CommunicationStatus.DISABLED)
         self._update_component_state(power=None, fault=None)

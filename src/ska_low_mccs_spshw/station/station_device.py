@@ -16,6 +16,7 @@ import json
 import sys
 from typing import Any, Optional, cast
 
+import numpy as np
 import tango
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_tango_base.commands import SubmittedSlowCommand
@@ -82,6 +83,7 @@ class SpsStation(SKAObsDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
+        
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -112,6 +114,9 @@ class SpsStation(SKAObsDevice):
             self._health_changed,
         )
         self.set_change_event("healthState", True, False)
+
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(511, 256), dtype=float)
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(511, 256), dtype=float)
 
     def create_component_manager(
         self: SpsStation,
@@ -280,6 +285,21 @@ class SpsStation(SKAObsDevice):
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
 
+        if "xPolBandpass" in state_change:
+            x_bandpass_data = state_change.get("xPolBandpass")
+            if isinstance(x_bandpass_data, np.ndarray):
+                self._x_bandpass_data = x_bandpass_data
+            else:
+                self.logger.error("X polarised bandpass data has incorrect format. Expected np.ndarray, got %s", type(x_bandpass_data))
+        
+        if "yPolBandpass" in state_change:
+            y_bandpass_data = state_change.get("yPolBandpass")
+            if isinstance(y_bandpass_data, np.ndarray):
+                self._y_bandpass_data = y_bandpass_data
+            else:
+                self.logger.error("Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s", type(y_bandpass_data))
+          
+
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
         Handle change in this device's health state.
@@ -298,6 +318,32 @@ class SpsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+            
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=256,  # Antennas
+        max_dim_y=511,  # Channels
+    )
+    def xPolBandpass(self: SpsStation) -> np.ndarray:
+        """
+        Read the last bandpass plot data for the x-polarisation.
+
+        :return: The last block of x-polarised bandpass data.
+        """
+        return self._x_bandpass_data
+    
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=256,  # Antennas
+        max_dim_y=511,  # Channels
+    )
+    def yPolBandpass(self: SpsStation) -> np.ndarray:
+        """
+        Read the last bandpass plot data for the y-polarisation.
+
+        :return: The last block of y-polarised bandpass data.
+        """
+        return self._y_bandpass_data
 
     @attribute(dtype=str)
     def daqTRL(self: SpsStation) -> str:

@@ -1225,14 +1225,6 @@ def test_beamformerTable(
             + ([] if n % 2 == 0 else ["Synchronised"]),
         ),
         pytest.param(
-            "adcPower",
-            "adcPower",
-            lambda i: [(32 * i) + m for m in range(32)],
-            lambda n: list(range(32 * n)),
-            lambda i: [-m - (32 * i) for m in range(32)],
-            lambda n: [-m for m in range(32 * n)],
-        ),
-        pytest.param(
             "boardTemperaturesSummary",
             "boardTemperature",
             lambda i: i,

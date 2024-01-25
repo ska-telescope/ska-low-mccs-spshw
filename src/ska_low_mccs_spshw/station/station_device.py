@@ -71,6 +71,7 @@ class SpsStation(SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
+        self._adc_power: Optional[list[float]] = None
 
     def init_device(self: SpsStation) -> None:
         """
@@ -199,6 +200,8 @@ class SpsStation(SKAObsDevice):
             self._device._version_id = version_info["version"]
 
             self._device.set_archive_event("tileProgrammingState", True, False)
+            self._device.set_change_event("adcPower", True, False)
+            self._device.set_archive_event("adcPower", True, False)
 
             super().do()
 
@@ -279,6 +282,10 @@ class SpsStation(SKAObsDevice):
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
+        if "adc_power" in state_change:
+            self._adc_power = state_change.get("adc_power")
+            self.push_change_event("adcPower", self._adc_power)
+            self.push_archive_event("adcPower", self._adc_power)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -574,7 +581,7 @@ class SpsStation(SKAObsDevice):
         return self.component_manager.tile_programming_state()
 
     @attribute(dtype=("DevDouble",), max_dim_x=512)
-    def adcPower(self: SpsStation) -> list[float]:
+    def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.
 
@@ -583,7 +590,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the ADC RMS input levels, in ADC units
         """
-        return self.component_manager.adc_power()
+        return self._adc_power
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
     def boardTemperaturesSummary(self: SpsStation) -> list[float]:

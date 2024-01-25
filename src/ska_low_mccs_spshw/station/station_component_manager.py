@@ -166,8 +166,17 @@ class _TileProxy(DeviceComponentManager):
     ) -> None:
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
-            self._proxy.stationId = self._station_id
-            self._proxy.logicalTileId = self._logical_tile_id
+            if self._proxy.stationId != self._station_id:
+                self.logger.warning(
+                    f"Expected {self._proxy.dev_name()} stationId "
+                    f"{self._station_id}, tile has stationId {self._proxy.stationid}"
+                )
+            if self._proxy.logicalTileId != self._logical_tile_id:
+                self.logger.warning(
+                    f"Expected {self._proxy.dev_name()} logicalTileId "
+                    f"{self._logical_tile_id}, tile has logicalTileID "
+                    f"{self._proxy.logicalTileId}"
+                )
             if self._connecting:
                 self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)

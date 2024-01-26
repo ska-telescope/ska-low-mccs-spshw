@@ -39,6 +39,8 @@ from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
 
+from ..tile.tile_data import TileData
+
 __all__ = ["SpsStationComponentManager"]
 
 
@@ -254,6 +256,9 @@ class SpsStationComponentManager(
         self._adc_power = {
             logical_tile_id: None for logical_tile_id, _ in enumerate(tile_fqdns)
         }
+        self._preadu_levels = {
+            logical_tile_id: None for logical_tile_id, _ in enumerate(tile_fqdns)
+        }
         self._tile_proxies = {
             tile_fqdn: _TileProxy(
                 tile_fqdn,
@@ -291,8 +296,8 @@ class SpsStationComponentManager(
         self._csp_source_port = 0xF0D0
 
         # TODO: this needs to be scaled,
-        # We are interested in more than adcPower!!
-        self.tile_attributes_to_subscribe = ["adcPower"]
+        # We are interested in more than adcPower, preaduLevels, cspRounding!!
+        self.tile_attributes_to_subscribe = ["adcPower", "preaduLevels"]
 
         self._lmc_param = {
             "mode": "10G",
@@ -310,7 +315,7 @@ class SpsStationComponentManager(
         self._static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
-        self._preadu_levels = [0.0] * 512
+        self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._source_port = 0xF0D0
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
@@ -474,12 +479,17 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
+                self.logger.info("handling change in adcpower")
                 self._adc_power[logical_tile_id] = attribute_value
                 adc_powers: list[int] = []
                 for _, adc_power in self._adc_power.items():
                     if adc_power is not None:
                         adc_powers += adc_power.tolist()
                 self._update_component_state(adc_power=adc_powers)
+            case "preadulevels":
+                self.logger.info("handling change in preaduLevels")
+                # Note: Currently all we do is update the attribute value.
+                self._preadu_levels[logical_tile_id] = attribute_value.tolist()
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"
@@ -1025,10 +1035,12 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
             assert tile is not None
-            i1 = tile_no * 32  # indexes for parameters for individual signals
-            i2 = i1 + 32
+            i1 = (
+                tile_no * TileData.ADC_CHANNELS
+            )  # indexes for parameters for individual signals
+            i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            tile.preaduLevels = self._preadu_levels[i1:i2]
+            tile.preaduLevels = self._desired_preadu_levels[i1:i2]
             tile.staticTimeDelays = self._static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
@@ -1232,8 +1244,8 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.staticTimeDelays = delays[i : i + 32]
-            i = i + 32
+                proxy._proxy.staticTimeDelays = delays[i : i + TileData.ADC_CHANNELS]
+            i = i + TileData.ADC_CHANNELS
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> list[int]:
@@ -1305,7 +1317,11 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return copy.deepcopy(self._preadu_levels)
+        preadu_levels_concatenated: list[float] = []
+        for preadu_levels in self._preadu_levels.values():
+            if preadu_levels is not None:
+                preadu_levels_concatenated += preadu_levels
+        return preadu_levels_concatenated
 
     @preadu_levels.setter
     def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
@@ -1314,13 +1330,18 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._preadu_levels = copy.deepcopy(levels)
+        self._desired_preadu_levels = copy.deepcopy(levels)
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.preaduLevels = levels[i : i + 32]
-            i = i + 32
+                proxy._proxy.preaduLevels = levels[i : i + TileData.ADC_CHANNELS]
+            else:
+                self.logger.error(
+                    f"Not setting preadu levels on {proxy._name}"
+                    "TileProgramming state not `Initialised` or `Synchronised`."
+                )
+            i = i + TileData.ADC_CHANNELS
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -1746,11 +1767,11 @@ class SpsStationComponentManager(
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """
         beam_index = delay_list[0]
-        delays_for_tile = [beam_index] + [0.0] * 32
+        delays_for_tile = [beam_index] + [0.0] * TileData.ADC_CHANNELS
         first_delay = 1
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
-            last_delay = first_delay + 32
+            last_delay = first_delay + TileData.ADC_CHANNELS
             delays_for_tile[1:33] = delay_list[first_delay:last_delay]
             tile._proxy.LoadPointingDelays(delays_for_tile)
             first_delay = last_delay

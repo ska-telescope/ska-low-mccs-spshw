@@ -9,7 +9,9 @@
 from __future__ import annotations
 
 import gc
+import time
 
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode
@@ -37,6 +39,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_programming_state",
         "sps_station_command_status",
         "sps_adc_power",
+        "tile_preadu_levels",
         timeout=15.0,
     )
 
@@ -251,3 +254,96 @@ class TestStationTileIntegration:
         tile_simulator._adc_rms = final_adc_powers
         tile_device.UpdateAttributes()
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
+
+    # pylint: disable-next=too-many-arguments
+    def test_sps_preadu_levels_coherent_with_tile_simulator(
+        self: TestStationTileIntegration,
+        tile_device: tango.DeviceProxy,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station preadulevels gets updates.
+
+        This test checks that a change in the backend `tile_simulator`
+        attribute `preadulevels` is propagated all the way to the `SpsStation`.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device, subrack_device, tile_device, change_event_callbacks
+        )
+
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )
+        tile_device.UpdateAttributes()
+
+        # Set the value in the backend TileSimulator.
+        initial_preadu_levels = [12.0] * 32
+        tile_simulator.set_preadu_levels(initial_preadu_levels)
+
+        # Subscibe to change events on the preaduLevels attribute.
+        tile_device.subscribe_event(
+            "preaduLevels",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_preadu_levels"],
+        )
+        change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
+
+        # Force a poll on the backend simulator.
+        tile_device.UpdateAttributes()
+        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
+
+        # This will cause the Tile to push a change event.
+        change_event_callbacks["tile_preadu_levels"].assert_change_event(
+            initial_preadu_levels
+        )
+
+        # Check the station updates its own map.
+        time.sleep(0.1)
+        assert sps_station_device.preaduLevels.tolist() == initial_preadu_levels
+
+        # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
+        # Finally check `SpsStation` attribute value.
+        desired_preadu_levels = np.array([24.0] * 32)
+        sps_station_device.preaduLevels = desired_preadu_levels
+
+        # Not equal because we need the MccsTile to change value.
+        assert not np.array_equal(
+            sps_station_device.preaduLevels, desired_preadu_levels
+        )
+
+        change_event_callbacks["tile_preadu_levels"].assert_change_event(
+            desired_preadu_levels.tolist()
+        )
+        assert tile_simulator.get_preadu_levels() == desired_preadu_levels.tolist()
+
+        # Check the station updates its own map.
+        time.sleep(0.1)
+        assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)

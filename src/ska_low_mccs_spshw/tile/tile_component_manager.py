@@ -720,7 +720,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "set_lmc_download",
         "set_lmc_integrated_download",
         "static_delays",
-        "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",

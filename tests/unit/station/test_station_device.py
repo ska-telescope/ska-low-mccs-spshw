@@ -1318,13 +1318,21 @@ def test_station_tile_attributes(
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for i, tile in enumerate(mock_tile_device_proxies):
-        setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
+        if tile_attribute_name == "fpgaTemperature":
+            setattr(tile, "fpga1Temperature", init_tile_attribute_values(i))
+            setattr(tile, "fpga2Temperature", init_tile_attribute_values(i))
+        else:
+            setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         init_expected_value(num_tiles)
     )
     for i, tile in enumerate(mock_tile_device_proxies):
-        setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
+        if tile_attribute_name == "fpgaTemperature":
+            setattr(tile, "fpga1Temperature", final_tile_attribute_values(i))
+            setattr(tile, "fpga2Temperature", final_tile_attribute_values(i))
+        else:
+            setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         final_expected_value(num_tiles)

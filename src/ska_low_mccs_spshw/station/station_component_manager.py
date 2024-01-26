@@ -1491,10 +1491,15 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpgaTemperature
+        fpga_1_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpga1Temperature
             for tile in self._tile_proxies.values()
         )
+        fpga_2_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpga2Temperature
+            for tile in self._tile_proxies.values()
+        )
+        fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
         return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:

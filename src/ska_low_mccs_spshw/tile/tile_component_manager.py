@@ -45,7 +45,7 @@ __all__ = [
 class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -53,6 +53,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         logger: logging.Logger,
         max_workers: int,
         tile_id: int,
+        station_id: int,
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
@@ -84,6 +85,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param logger: a logger for this object to use
         :param max_workers: nos. of worker threads
         :param tile_id: the unique ID for the tile
+        :param station_id: the unique ID for the station to which this tile belongs.
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -132,6 +134,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._tpm_driver = _tpm_driver or TpmDriver(
             logger,
             tile_id,
+            station_id,
             tile,
             tpm_version,
             self._tpm_communication_state_changed,
@@ -718,7 +721,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "set_lmc_download",
         "set_lmc_integrated_download",
         "static_delays",
-        "station_id",
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
@@ -727,6 +729,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
+        "station_id",
         # "tpm_status",
         "voltage_mon",
         "write_address",

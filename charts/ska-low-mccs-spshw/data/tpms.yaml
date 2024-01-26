@@ -43,6 +43,9 @@ server:
           - name: "TileId"
             values:
             - {{quote $this_tile.tile_id}}
+          - name: "StationId"
+            values:
+            - {{quote $this_tile.station_id}}
           - name: "SubrackFQDN"
             values:
             - {{printf "low-mccs/subrack/%s" $this_tile.subrack | quote}}

@@ -1315,7 +1315,10 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_time_delays(delays_float)
+                    if self.tile.set_time_delays(delays_float):
+                        self._static_delays = delays
+                    else:
+                        self.logger.warning("Failed to set static time delays.")
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

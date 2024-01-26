@@ -92,6 +92,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._max_workers: int = 1
+        self._static_delays: Optional[list[int]] = None
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
@@ -250,6 +251,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("staticTimeDelays", True, False)
+            self._device.set_archive_event("staticTimeDelays", True, False)
             self._device.set_change_event("preaduLevels", True, False)
             self._device.set_archive_event("preaduLevels", True, False)
             self._device.set_change_event("ppsPresent", True, False)
@@ -361,44 +364,50 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
 
-        if "programming_state" in state_change:
-            tile_programming_state = cast(
-                TpmStatus, state_change.get("programming_state")
-            )
-            message = (
-                f"programming_state callback. Old: {self._tile_programming_state}"
-                f" -> {tile_programming_state}"
-            )
-            self.logger.debug(message)
-            if self._tile_programming_state != tile_programming_state:
-                self._tile_programming_state = tile_programming_state
-                self.push_change_event(
-                    "tileProgrammingState", tile_programming_state.pretty_name()
-                )
-                self.push_archive_event(
-                    "tileProgrammingState", tile_programming_state.pretty_name()
-                )
-        if "tile_health_structure" in state_change:
-            tile_health_structure = state_change["tile_health_structure"]
-            if self.tile_health_structure != tile_health_structure:
-                # TODO: validate structure using schema before setting.
-                self.tile_health_structure = tile_health_structure
-                self._health_model.update_state(
-                    tile_health_structure=self.tile_health_structure
-                )
-                self.update_tile_health_attributes()
-
-        if "adc_rms" in state_change:
-            adc_rms = state_change["adc_rms"]
-            if self._adc_rms != adc_rms:
-                self._adc_rms = adc_rms
-                self.push_change_event("adcPower", adc_rms)
-                self.push_archive_event("adcPower", adc_rms)
-
-        if "preadu_levels" in state_change:
-            preadu_levels = state_change["preadu_levels"]
-            self.push_change_event("preaduLevels", preadu_levels)
-            self.push_archive_event("preaduLevels", preadu_levels)
+        for attribute_name, attribute_value in state_change.items():
+            match attribute_name:
+                case "programming_state":
+                    tile_programming_state = cast(TpmStatus, attribute_value)
+                    message = (
+                        "programming_state callback. "
+                        f"Old: {self._tile_programming_state}"
+                        f" -> {tile_programming_state}"
+                    )
+                    self.logger.debug(message)
+                    if self._tile_programming_state != tile_programming_state:
+                        self._tile_programming_state = tile_programming_state
+                        self.push_change_event(
+                            "tileProgrammingState", tile_programming_state.pretty_name()
+                        )
+                        self.push_archive_event(
+                            "tileProgrammingState", tile_programming_state.pretty_name()
+                        )
+                case "tile_health_structure":
+                    if self.tile_health_structure != attribute_value:
+                        # TODO: validate structure using schema before setting.
+                        self.tile_health_structure = attribute_value
+                        self._health_model.update_state(
+                            tile_health_structure=attribute_value
+                        )
+                        self.update_tile_health_attributes()
+                case "adc_rms":
+                    if self._adc_rms != attribute_value:
+                        self._adc_rms = attribute_value
+                        self.push_change_event("adcPower", attribute_value)
+                        self.push_archive_event("adcPower", attribute_value)
+                case "static_delays":
+                    if self._static_delays != attribute_value:
+                        self._static_delays = attribute_value
+                        self.push_change_event("staticTimeDelays", attribute_value)
+                        self.push_archive_event("staticTimeDelays", attribute_value)
+                case "preadu_levels":
+                    preadu_levels = state_change["preadu_levels"]
+                    self.push_change_event("preaduLevels", preadu_levels)
+                    self.push_archive_event("preaduLevels", preadu_levels)
+                case _:
+                    self.logger.warning(
+                        f"Unexpected attribute changed {attribute_name}" "Nothing is do"
+                    )
 
     def update_tile_health_attributes(self: MccsTile) -> None:
         """Update the TANGO attributes."""

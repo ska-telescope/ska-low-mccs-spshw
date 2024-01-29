@@ -24,9 +24,8 @@ from typing import Any, Callable, Optional, cast
 
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_control_model import CommunicationStatus, TaskStatus
+from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager
-from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -34,7 +33,7 @@ from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
+class TpmDriver(MccsBaseComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -64,6 +63,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self: TpmDriver,
         logger: logging.Logger,
         tile_id: int,
+        station_id: int,
         tile: Tile,
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -74,6 +74,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
 
         :param logger: a logger for this simulator to use
         :param tile_id: the unique ID for the tile
+        :param station_id: the unique ID for the station to which this tile belongs.
         :param tile: the tile driven by this TpmDriver
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param communication_state_changed_callback: callback to be
@@ -86,7 +87,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._hardware_lock = threading.Lock()
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
-        self._station_id = 0
+        self._station_id = station_id
         self._firmware_name = self.FIRMWARE_NAME[tpm_version]
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
         self._tpm_status = TpmStatus.UNKNOWN
@@ -96,7 +97,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: list[int] = self.CSP_ROUNDING
         self._forty_gb_core_list: list = []
-        self._preadu_levels: list[float] = [0.0] * 32
+        self._preadu_levels: Optional[list[float]] = None
         self._static_delays: list[float] = [0.0] * 32
         # Hardware register cache. Updated by polling thread
         self._is_programmed = False
@@ -137,6 +138,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tile_health_structure,
             adc_rms=self._adc_rms,
+            preadu_levels=self._preadu_levels,
         )
 
         self._poll_rate = 2.0
@@ -300,6 +302,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                         # self._channeliser_truncation = method_to_be_written
                         # self._csp_rounding = method_to_be_written
                         self._preadu_levels = self.tile.get_preadu_levels()
+                        self._update_component_state(preadu_levels=self._preadu_levels)
                         self._static_delays = self._get_static_delays()
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
@@ -544,35 +547,14 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         return self._is_programmed
 
     def download_firmware(
-        self: TpmDriver, bitfile: str, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Download firmware bitfile onto the TPM as a long runnning command.
-
-        :param bitfile: a binary firmware blob
-        :param task_callback: Update task state, defaults to None
-
-        :return: TaskStatus and message
-        """
-        return self.submit_task(
-            self._download_firmware, args=[bitfile], task_callback=task_callback
-        )
-
-    def _download_firmware(
         self: TpmDriver,
         bitfile: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
         """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
         is_programmed = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
@@ -584,18 +566,6 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         if is_programmed:
             self._firmware_name = bitfile
             self._set_tpm_status(TpmStatus.PROGRAMMED)
-
-        if task_callback:
-            if is_programmed:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The download firmware task has completed",
-                )
-            else:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result="The download firmware task has failed",
-                )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -617,19 +587,10 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
         # Poll to update internal state after erasing
         self._poll()
 
-    def _initialise(
+    def initialise(
         self: TpmDriver,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
     ) -> None:
-        """
-        Download firmware, if not already downloaded, and initializes tile.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
+        """Download firmware, if not already downloaded, and initializes tile."""
         #
         # If not programmed, program it.
         # TODO: there is no way to check whether the TPM is already correctly
@@ -672,31 +633,9 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
             self.logger.debug("Lock released")
             self._set_tpm_status(TpmStatus.INITIALISED)
             self.logger.debug("TpmDriver: initialisation completed")
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The initialisation task has completed",
-                )
         else:
             self._set_tpm_status(TpmStatus.UNPROGRAMMED)
-            self.logger.error("TpmDriver: Cannot initialise board")
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="The initialisation task has failed",
-                )
-
-    def initialise(
-        self: TpmDriver, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Download firmware, if not already downloaded, and initializes tile.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: A tuple containing a task status and a message
-        """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+            self.logger.error("TpmDriver: Cannot initialise board Failed to Program.")
 
     @property
     def tile_id(self: TpmDriver) -> int:
@@ -1425,7 +1364,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def preadu_levels(self: TpmDriver) -> list[float]:
+    def preadu_levels(self: TpmDriver) -> Optional[list[float]]:
         """
         Get preadu levels in dB.
 
@@ -1445,6 +1384,7 @@ class TpmDriver(MccsBaseComponentManager, TaskExecutorComponentManager):
                 try:
                     self.tile.set_preadu_levels(levels)
                     self._preadu_levels = self.tile.get_preadu_levels()
+                    self._update_component_state(preadu_levels=self._preadu_levels)
                     if self._preadu_levels != levels:
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                 # pylint: disable=broad-except

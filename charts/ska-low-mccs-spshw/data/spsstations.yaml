@@ -7,6 +7,10 @@ Defines the deployment for SpsStation Tango devices.
         low-mccs/spsstation/s8-1:
           station_id: 345
           cabinet_network_address: 10.0.0.0
+          antenna_config_uri:
+          - "car:ska-low-aavs3?main"
+          - "instrument/mccs-configuration/aavs3.yaml"
+          - "a1"
           subracks:
           - "s8-1-1"
           tpms:
@@ -39,6 +43,9 @@ server:
                 - name: "StationId"
                   values:
                     - {{quote $this_spsstation.station_id}}
+                - name: "AntennaConfigURI"
+                  values:
+{{- toYaml $this_spsstation.antenna_config_uri | nindent 20}}
                 - name: "CabinetNetworkAddress"
                   values:
                     - {{quote $this_spsstation.cabinet_network_address}}

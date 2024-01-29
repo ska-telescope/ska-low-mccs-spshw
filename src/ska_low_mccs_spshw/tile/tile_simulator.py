@@ -379,7 +379,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
-    STATION_ID = 0
+    STATION_ID = 1
     TILE_ID = 2
 
     def __init__(

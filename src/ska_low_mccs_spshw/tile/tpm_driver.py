@@ -2142,6 +2142,9 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_data_transmission()
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

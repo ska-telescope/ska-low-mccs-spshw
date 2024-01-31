@@ -423,6 +423,7 @@ class TileSimulator:
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self._active_40g_ports_setting: str = ""
+        self._pending_data_requests = False
 
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
@@ -461,8 +462,7 @@ class TileSimulator:
 
     def check_pending_data_requests(self: TileSimulator) -> bool:
         """:return: the pending data requess flag."""
-        return False
-        # return self._pending_data_requests
+        return self._pending_data_requests
 
     def initialise_beamformer(
         self: TileSimulator, start_channel: float, nof_channels: int
@@ -501,7 +501,6 @@ class TileSimulator:
         tile_id: int = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
-        active_40g_ports_setting: str = "port1-only",
     ) -> None:
         """
         Initialise tile.
@@ -511,8 +510,6 @@ class TileSimulator:
         :param pps_delay: PPS delay correction.
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
-        :param active_40g_ports_setting: which 40G port is active.
-            Possible values are port1-only, port2-only and both-ports
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -525,7 +522,6 @@ class TileSimulator:
 
         self._tile_id = tile_id
         self._station_id = station_id
-        self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
 
     def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
@@ -730,16 +726,13 @@ class TileSimulator:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
 
-    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> bool:
+    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
-
-        :return: true is write a success.
         """
         self.csp_rounding = rounding
-        return self.is_csp_write_successful
 
     def define_spead_header(
         self,

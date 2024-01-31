@@ -411,8 +411,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
         :param task_abort_event: Check for abort, defaults to None
         """
         config = self.get_configuration()
-        nof_antennas_per_tile = int(config["nof_antennas"])
         nof_channels = int(config["nof_channels"])
+        nof_antennas_max: int = 256
 
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
@@ -434,20 +434,20 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         # Reconstruct the numpy array.
                         x_bandpass_plot = np.array(
                             json.loads(response["x_bandpass_plot"][0])
-                        ).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        ).reshape((nof_channels, nof_antennas_max))
                         call_callback = True
                 if "y_bandpass_plot" in response:
                     if response["y_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
                         y_bandpass_plot = np.array(
                             json.loads(response["y_bandpass_plot"][0])
-                        ).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        ).reshape((nof_channels, nof_antennas_max))
                         call_callback = True
                 if "rms_plot" in response:
                     if response["rms_plot"] != [None]:
                         rms_plot = np.array(
                             json.loads(response["rms_plot"][0])
-                        ).reshape((nof_channels - 1, nof_antennas_per_tile))
+                        ).reshape((nof_channels, nof_antennas_max))
                         call_callback = True
                 if call_callback:
                     if self._component_state_callback is not None:
@@ -458,6 +458,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         )
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # XXX
+            self.logger.error(f"CAUGHT EXCEPTION IN BANDPASS MONITOR:\n {e}")
+            self.stop_bandpass_monitor()
             if task_callback:
                 task_callback(
                     status=TaskStatus.FAILED,

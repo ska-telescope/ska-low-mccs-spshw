@@ -30,7 +30,7 @@ from .station_obs_state_model import SpsStationObsStateModel
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
-__all__ = ["SpsStation", "main"]
+__all__ = ["SpsStation", "main", "_port_to_antenna_order"]
 
 
 # pylint: disable=too-many-instance-attributes
@@ -83,7 +83,6 @@ class SpsStation(SKAObsDevice):
         util.set_serial_model(tango.SerialModel.NO_SYNC)
         self._max_workers = 1
         super().init_device()
-        
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
@@ -115,8 +114,8 @@ class SpsStation(SKAObsDevice):
         )
         self.set_change_event("healthState", True, False)
 
-        self._x_bandpass_data: np.ndarray = np.zeros(shape=(511, 256), dtype=float)
-        self._y_bandpass_data: np.ndarray = np.zeros(shape=(511, 256), dtype=float)
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(512, 256), dtype=float)
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(512, 256), dtype=float)
 
     def create_component_manager(
         self: SpsStation,
@@ -203,6 +202,11 @@ class SpsStation(SKAObsDevice):
             )
             self._device._version_id = version_info["version"]
 
+            self._device.set_change_event("xPolBandpass", True, False)
+            self._device.set_change_event("yPolBandpass", True, False)
+
+            self._device.set_archive_event("xPolBandpass", True, False)
+            self._device.set_archive_event("yPolBandpass", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
 
             super().do()
@@ -278,6 +282,22 @@ class SpsStation(SKAObsDevice):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+
+        # Helper function to *expand* a numpy array to a shape and pad with zeros.
+        def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+            y_, x_ = shape
+            y, x = a.shape
+            y_pad = y_ - y
+            x_pad = x_ - x
+            return np.pad(
+                a,
+                (
+                    (y_pad // 2, y_pad // 2 + y_pad % 2),
+                    (x_pad // 2, x_pad // 2 + x_pad % 2),
+                ),
+                mode="constant",
+            )
+
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
 
@@ -288,17 +308,45 @@ class SpsStation(SKAObsDevice):
         if "xPolBandpass" in state_change:
             x_bandpass_data = state_change.get("xPolBandpass")
             if isinstance(x_bandpass_data, np.ndarray):
-                self._x_bandpass_data = x_bandpass_data
+                x_pol_bandpass_ordered: np.ndarray = np.zeros(
+                    shape=(512, 256), dtype=float
+                )
+                try:
+                    # Resize data to match attr.
+                    x_bandpass_data = to_shape(x_bandpass_data, (512, 256))
+                    # Change bandpass data from port order to antenna order.
+                    x_pol_bandpass_ordered = _port_to_antenna_order(self.component_manager._antenna_mapping, x_bandpass_data)
+                    self._x_bandpass_data =  x_pol_bandpass_ordered
+                    self.logger.info(f"x_bandpass_data: {x_bandpass_data}")
+                    self.logger.info(f"x_pol_bandpass_ordered: {x_pol_bandpass_ordered}")
+                except Exception as e:
+                    self.logger.error(f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}")
             else:
-                self.logger.error("X polarised bandpass data has incorrect format. Expected np.ndarray, got %s", type(x_bandpass_data))
-        
+                self.logger.error(
+                    "X polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    type(x_bandpass_data),
+                )
+
         if "yPolBandpass" in state_change:
             y_bandpass_data = state_change.get("yPolBandpass")
             if isinstance(y_bandpass_data, np.ndarray):
-                self._y_bandpass_data = y_bandpass_data
+                y_pol_bandpass_ordered: np.ndarray = np.zeros(
+                    shape=(512, 256), dtype=float
+                )
+                try:
+                    # Resize data to match attr.
+                    y_bandpass_data = to_shape(y_bandpass_data, (512, 256))
+                    # Change bandpass data from port order to antenna order.
+                    y_pol_bandpass_ordered = _port_to_antenna_order(self.component_manager._antenna_mapping, y_bandpass_data)               
+                    self._y_bandpass_data = y_pol_bandpass_ordered
+                except Exception as e:
+                    self.logger.error(f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}")
             else:
-                self.logger.error("Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s", type(y_bandpass_data))
-          
+                self.logger.error(
+                    "Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    type(y_bandpass_data),
+                )
+
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -318,11 +366,11 @@ class SpsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
-            
+
     @attribute(
         dtype=(("DevFloat",),),
         max_dim_x=256,  # Antennas
-        max_dim_y=511,  # Channels
+        max_dim_y=512,  # Channels
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -331,11 +379,11 @@ class SpsStation(SKAObsDevice):
         :return: The last block of x-polarised bandpass data.
         """
         return self._x_bandpass_data
-    
+
     @attribute(
         dtype=(("DevFloat",),),
         max_dim_x=256,  # Antennas
-        max_dim_y=511,  # Channels
+        max_dim_y=512,  # Channels
     )
     def yPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -392,7 +440,7 @@ class SpsStation(SKAObsDevice):
         :return: json string containing antenna mappings
         """
         return json.dumps(self.component_manager._antenna_mapping)
-    
+
     @attribute(dtype="DevString")
     def antennaLocations(self: SpsStation) -> str:
         """
@@ -1540,6 +1588,35 @@ class SpsStation(SKAObsDevice):
         self.component_manager.configure_test_generator(argin)
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
+def _port_to_antenna_order(antenna_mapping: dict[int, tuple[int, float, float]], data: np.ndarray) -> np.ndarray:
+    """
+    Reorder bandpass data from port order to antenna order.
+
+    Data is a 2D array expected in blocks ordered by TPM number and each block
+        is expected in TPM port order.
+
+    :param antenna_mapping: A mapping of antenna to tpm and ports.
+    :param data: Full station data in TPM and port order.
+    :returns: Full station data in Antenna order.
+    """
+    ordered_data = np.zeros(data.shape)
+    nof_antennas_per_tile = 16
+    try:
+        for antenna in range(data.shape[1]):
+            tpm_number = antenna_mapping[antenna + 1][0]
+            tile_base_index = (tpm_number -1)*nof_antennas_per_tile
+            # So long as X and Y pols are always on adjacent ports this should work.
+            tpm_port_number = antenna_mapping[antenna + 1][1]
+            port_offset = int(tpm_port_number // 2)
+            antenna_index = tile_base_index + port_offset
+            ordered_data[:,antenna] = data[:,antenna_index]
+            ports = (antenna_mapping[antenna + 1][1],antenna_mapping[antenna + 1][2])
+            print(f"Antenna {antenna+1} connected to ports {ports} on TPM {tpm_number} data extracted from data[{antenna_index}]")
+            print(f"Data extracted: {data[:,antenna_index]}")
+    except Exception as e:
+        print(f"Caught exception in SpsStation._port_to_antenna_order: {e}")
+
+    return ordered_data
 
 # ----------
 # Run server

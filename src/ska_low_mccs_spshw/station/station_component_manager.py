@@ -17,11 +17,11 @@ import json
 import logging
 import threading
 import time
-import numpy as np
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
 
+import numpy as np
 import tango
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
@@ -251,17 +251,22 @@ class _DaqProxy(DeviceComponentManager):
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
             self._proxy.set_source(tango.DevSource.DEV)
+            
+            self._proxy.add_change_event_callback(
+                "xPolBandpass", self._bandpass_callback
+            )
+            self._proxy.add_change_event_callback(
+                "yPolBandpass", self._bandpass_callback
+            )
             self._proxy._subscribe_change_event("xPolBandpass")
             self._proxy._subscribe_change_event("yPolBandpass")
-            self._proxy.add_change_event_callback("xPolBandpass", self._bandpass_callback)
-            self._proxy.add_change_event_callback("yPolBandpass", self._bandpass_callback)
         super()._update_communication_state(communication_state)
 
     def _bandpass_callback(
-            self: _DaqProxy,
-            attribute_name: str,
-            attribute_data: Any,
-            attribute_quality: Any,
+        self: _DaqProxy,
+        attribute_name: str,
+        attribute_data: Any,
+        attribute_quality: Any,
     ) -> None:
         """Extract bandpass data from event and call cb to update."""
         if self._component_state_callback:
@@ -274,7 +279,6 @@ class _DaqProxy(DeviceComponentManager):
                 self._component_state_callback(yPolBandpass=attribute_data)
             else:
                 self.logger.error(f"Got unexpected change event for: {attribute_name}")
-
 
 
 # pylint: disable=too-many-instance-attributes
@@ -373,9 +377,7 @@ class SpsStationComponentManager(
             station_id,
             logger,
             max_workers,
-            functools.partial(
-                    self._device_communication_state_changed, self._daq_trl
-                ),
+            functools.partial(self._device_communication_state_changed, self._daq_trl),
             component_state_changed_callback,
         )
         self._subrack_power_states = {
@@ -409,8 +411,8 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: dict[int, tuple[float, float]] = {}
-        self._antenna_locations: dict[int, dict[str,float]] = {}
+        self._antenna_mapping: dict[int, tuple[int, float, float]] = {}
+        self._antenna_locations: dict[int, dict[str, float]] = {}
 
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
@@ -451,19 +453,22 @@ class SpsStationComponentManager(
                 station_cluster
             ]["stations"][str(self._station_id)]["antennas"]
             for antenna in antennas:
-                # Get port <-> antenna mapping.
+                # Get tpm/port <-> antenna mapping.
                 self._antenna_mapping[int(antenna)] = (
+                    int(antennas[antenna]["tpm"]),
                     antennas[antenna]["tpm_x_channel"],
                     antennas[antenna]["tpm_y_channel"],
                 )
                 # Get antenna location offsets.
-                self._antenna_locations[int(antenna)] = antennas[antenna]["location_offset"]
+                self._antenna_locations[int(antenna)] = antennas[antenna][
+                    "location_offset"
+                ]
+            logger.debug(self._antenna_mapping)
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
-
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""

@@ -14,11 +14,12 @@ __all__ = [
     "SpsStationHealthRules",
     "SpsStationObsStateModel",
     "SpsStation",
+    "_port_to_antenna_order",
 ]
 
 
 from .station_component_manager import SpsStationComponentManager
-from .station_device import SpsStation
+from .station_device import SpsStation, _port_to_antenna_order
 from .station_health_model import SpsStationHealthModel
 from .station_health_rules import SpsStationHealthRules
 from .station_obs_state_model import SpsStationObsStateModel

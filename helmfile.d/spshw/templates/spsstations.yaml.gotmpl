@@ -26,12 +26,8 @@
         {{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
       {{- end }}
 
-      {{- $cabinet_address := "0.0.0.0"}}
-      {{- $cabinet := dig "sps" "cabinet" "" $station_spec}}
-      {{- if $cabinet}}
-        {{- $cabinet_address = index $station_cluster_spec "cabinets" $cabinet "network_address"}}
-      {{- end}}
-      {{- $_ := set $spsstation_instance "cabinet_network_address" $cabinet_address}}
+      {{- $cabinet_subnet := index $station_cluster_spec.cabinets $sps_spec.cabinet "subnet"}}
+      {{- $_ := set $spsstation_instance "cabinet_network_address" $cabinet_subnet}}
 
       {{- $default_daq_trl := ""}}
       {{- $antenna_config_uri_list := list}}

@@ -386,8 +386,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             if power_state == PowerState.ON:
                 self.logger.debug(
-                    f"Checking state of TPM after TPM ON: programmed={self.is_programmed} "
-                    f"tpm_status={self.tpm_status.name}"
+                    f"Checking state of TPM after TPM ON: programmed="
+                    f"{self.is_programmed} tpm_status={self.tpm_status.name}"
                 )
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED

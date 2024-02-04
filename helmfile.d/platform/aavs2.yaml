@@ -1,6 +1,6 @@
 platform:
   metadata:
-    version: 0.0.3
+    version: 0.0.9
     description: >
       A platform configuration specification for AAVS2.
 
@@ -20,6 +20,14 @@ platform:
     name: aavs2
     station_clusters:
       "a1":
+        cabinets:
+          "1":
+            # The cabinet subnet ought properly to be the second /25 in a /24
+            # (the first /25 is for non-science data,
+            # the second for science data).
+            # This schema is currently not followed in AAVS2,
+            # but fortunately all we need here is any vacant /25.
+            subnet: 10.0.0.0
         stations:
           "1":
             id: 1
@@ -31,6 +39,7 @@ platform:
             #   longitude: 116.670
             #   ellipsoidal_height: 376.096
             sps:
+              cabinet: "1"
               daq:
                 ip: 10.128.16.50
               tpms:

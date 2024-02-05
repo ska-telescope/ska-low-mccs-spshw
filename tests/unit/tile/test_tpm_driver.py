@@ -546,7 +546,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # This operation is performed by a poll. Done manually here for speed.
         # tpm_driver._tile_id = tile_simulator._tile_id
-        tile_simulator.initialise(0,0,0,True,False)
+        tile_simulator.initialise(0, 0, 0, True, False)
         time.sleep(0.1)
 
         tpm_driver._update_tpm_status()

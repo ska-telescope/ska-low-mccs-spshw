@@ -953,7 +953,7 @@ class TpmDriver(MccsBaseComponentManager):
         """Update the TPM register list."""
         if self.tile.tpm is None:
             self._register_list = self.REGISTER_LIST
-            return self._register_list 
+            return self._register_list
         reglist = []
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:

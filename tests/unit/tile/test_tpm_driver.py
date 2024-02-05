@@ -723,7 +723,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
 
         # Act
-        tpm_driver.initialise(pps_delay_correction=0)
+        tpm_driver.initialise()
 
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
@@ -1008,7 +1008,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time1 = tpm_driver.fpga_current_frame
         assert initial_time1 == final_time1
 
-        tpm_driver.initialise(pps_delay_correction=0)
+        tpm_driver.initialise()
 
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
@@ -1038,7 +1038,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Act
         with pytest.raises(Exception, match="mocked exception"):
-            tpm_driver.initialise(pps_delay_correction=0)
+            tpm_driver.initialise()
 
         # Check TpmStatus is UNPROGRAMMED.
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED

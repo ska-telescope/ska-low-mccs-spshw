@@ -410,7 +410,7 @@ class TileSimulator:
         )
         self._station_id = self.STATION_ID
         self._timestamp = 0
-        self._pps_delay = self.PPS_DELAY
+        self._pps_delay: int = self.PPS_DELAY
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
@@ -540,7 +540,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
 
-    def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> float:
+    def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> int:
         """
         Get the pps delay.
 

@@ -1219,11 +1219,9 @@ class SpsStationComponentManager(
 
         :return: Array of one value per tile, in nanoseconds
         """
-        i = 0
-        for proxy in self._tile_proxies.values():
+        for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
             self._pps_delays[i] = proxy._proxy.ppsDelay
-            i = i + 1
         return copy.deepcopy(self._pps_delays)
 
     @property
@@ -1233,11 +1231,10 @@ class SpsStationComponentManager(
 
         :return: Array of pps delay corrections, one value per tile, in nanoseconds
         """
-        i = 0
-        for proxy in self._tile_proxies.values():
+        for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
             self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
-            i = i + 1
+
         return copy.deepcopy(self._pps_delay_corrections)
 
     @pps_delay_corrections.setter
@@ -1252,12 +1249,10 @@ class SpsStationComponentManager(
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        i = 0
-        for proxy in self._tile_proxies.values():
+        for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
                 proxy._proxy.ppsDelayCorrection = delays[i]
-            i = i + 1
 
     @property
     def static_delays(self: SpsStationComponentManager) -> list[float]:

@@ -472,7 +472,7 @@ class SpsStation(SKAObsDevice):
         dtype=("DevLong",),
         max_dim_x=16,
     )
-    def ppsDelayCorrections(self: SpsStation) -> None:
+    def ppsDelayCorrections(self: SpsStation) -> list[int]:
         """
         Return PPS delay correction, one per tile.
 

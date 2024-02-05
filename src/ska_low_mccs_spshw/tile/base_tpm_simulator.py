@@ -448,7 +448,7 @@ class BaseTpmSimulator:
         return self._pps_delay
 
     @property
-    def applied_pps_correction(self: BaseTpmSimulator) -> float:
+    def pps_delay_correction(self: BaseTpmSimulator) -> int:
         """
         Return the PPS delay correction of the TPM.
 
@@ -456,6 +456,15 @@ class BaseTpmSimulator:
         """
         self.logger.debug("TpmSimulator: get applied_pps_correction")
         return self._pps_delay
+
+    @pps_delay_correction.setter
+    def pps_delay_correction(self: BaseTpmSimulator, pps_delay_correction: int) -> None:
+        """
+        Set the PPS delay correction of the TPM.
+
+        :param pps_delay_correction: the delay correction to apply
+        """
+        self._pps_delay = pps_delay_correction
 
     @property
     def register_list(self: BaseTpmSimulator) -> list[str]:

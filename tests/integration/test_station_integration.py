@@ -209,24 +209,9 @@ class TestStationTileIntegration:
 
         # set a pps Correction to apply
         tile_under_test_pps_delay = 12
-        desired_pps_corrections = [
-            tile_under_test_pps_delay,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-        ]
+        desired_pps_corrections = [0] * 16
+        desired_pps_corrections[0] = tile_under_test_pps_delay
+
         sps_station_device.ppsDelayCorrections = desired_pps_corrections
 
         # This pps delay correction is only applied during initialisation.

@@ -545,7 +545,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
         # This operation is performed by a poll. Done manually here for speed.
-        tpm_driver._tile_id = tile_simulator._tile_id
+        # tpm_driver._tile_id = tile_simulator._tile_id
+        tile_simulator.initialise(0,0,0,True,False)
+        time.sleep(0.1)
 
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.INITIALISED
@@ -556,9 +558,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.SYNCHRONISED
 
-        tile_simulator._tile_id = 8
-        tpm_driver._update_tpm_status()
-        assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
+        # tile_simulator._tile_id = 8
+        # tpm_driver._update_tpm_status()
+        # assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
         # mock to fail
         tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]

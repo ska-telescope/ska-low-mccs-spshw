@@ -951,8 +951,9 @@ class TpmDriver(MccsBaseComponentManager):
 
     def _get_register_list(self: TpmDriver) -> None:
         """Update the TPM register list."""
-        assert self.tile.tpm is not None  # for the type checker
-        self.logger.warning("TpmDriver: register_list too big to be transmitted")
+        if self.tile.tpm is None:
+            self._register_list = self.REGISTER_LIST
+            return self._register_list 
         reglist = []
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:

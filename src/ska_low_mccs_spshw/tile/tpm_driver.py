@@ -138,6 +138,7 @@ class TpmDriver(MccsBaseComponentManager):
             programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tile_health_structure,
             adc_rms=self._adc_rms,
+            static_delays=self._static_delays,
             preadu_levels=self._preadu_levels,
         )
 
@@ -304,6 +305,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._preadu_levels = self.tile.get_preadu_levels()
                         self._update_component_state(preadu_levels=self._preadu_levels)
                         self._static_delays = self._get_static_delays()
+                        self._update_component_state(static_delays=self._static_delays)
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.tpm.station_beamf[
@@ -1297,7 +1299,6 @@ class TpmDriver(MccsBaseComponentManager):
         """
         self.logger.debug("TpmDriver: static_delays.setter")
         self._set_time_delays(delays)
-        self._static_delays = delays
 
     def _set_time_delays(self: TpmDriver, delays: list[float]) -> None:
         """
@@ -1314,7 +1315,10 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_time_delays(delays_float)
+                    if self.tile.set_time_delays(delays_float):
+                        self._static_delays = delays
+                    else:
+                        self.logger.warning("Failed to set static time delays.")
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

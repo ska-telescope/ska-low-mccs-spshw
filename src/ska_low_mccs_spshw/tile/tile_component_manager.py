@@ -169,6 +169,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             programming_state=None,
             tile_health_structure=self._tpm_driver._tile_health_structure,
             adc_rms=self._tpm_driver._adc_rms,
+            static_delays=self._tpm_driver._static_delays,
             preadu_levels=self._tpm_driver._preadu_levels,
         )
 

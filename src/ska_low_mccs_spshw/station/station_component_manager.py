@@ -258,17 +258,19 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
+        number_of_tiles = len(tile_fqdns)
+        self._adc_power: dict[int, Optional[list[float]]] = {}
+        self._static_delays: dict[int, Optional[list[float]]] = {}
+        self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        for logical_tile_id in range(number_of_tiles):
+            self._adc_power[logical_tile_id] = None
+            self._static_delays[logical_tile_id] = None
+            self._preadu_levels[logical_tile_id] = None
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
         # by the station
         #
-        self._adc_power = {
-            logical_tile_id: None for logical_tile_id, _ in enumerate(tile_fqdns)
-        }
-        self._preadu_levels = {
-            logical_tile_id: None for logical_tile_id, _ in enumerate(tile_fqdns)
-        }
         self._tile_proxies = {
             tile_fqdn: _TileProxy(
                 tile_fqdn,
@@ -281,6 +283,7 @@ class SpsStationComponentManager(
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
+
         self._subrack_proxies = {
             subrack_fqdn: _SubrackProxy(
                 subrack_fqdn,
@@ -306,8 +309,11 @@ class SpsStationComponentManager(
         self._csp_source_port = 0xF0D0
 
         # TODO: this needs to be scaled,
-        # We are interested in more than adcPower, preaduLevels, cspRounding!!
-        self.tile_attributes_to_subscribe = ["adcPower", "preaduLevels"]
+        self.tile_attributes_to_subscribe = [
+            "adcPower",
+            "staticTimeDelays",
+            "preaduLevels",
+        ]
 
         self._lmc_param = {
             "mode": "10G",
@@ -322,7 +328,7 @@ class SpsStationComponentManager(
         self._fortygb_network_address = station_network_address
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
-        self._static_delays = [0] * 512
+        self._desired_static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
@@ -489,13 +495,14 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
-                self.logger.info("handling change in adcpower")
-                self._adc_power[logical_tile_id] = attribute_value
-                adc_powers: list[int] = []
+                self._adc_power[logical_tile_id] = attribute_value.tolist()
+                adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
                     if adc_power is not None:
-                        adc_powers += adc_power.tolist()
+                        adc_powers += adc_power
                 self._update_component_state(adc_power=adc_powers)
+            case "statictimedelays":
+                self._static_delays[logical_tile_id] = attribute_value.tolist()
             case "preadulevels":
                 self.logger.info("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
@@ -1051,7 +1058,7 @@ class SpsStationComponentManager(
             i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
             tile.preaduLevels = self._desired_preadu_levels[i1:i2]
-            tile.staticTimeDelays = self._static_delays[i1:i2]
+            tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
             tile.ppsDelay = self._pps_delays[tile_no]
@@ -1230,7 +1237,7 @@ class SpsStationComponentManager(
             i = i + 1
 
     @property
-    def static_delays(self: SpsStationComponentManager) -> list[int]:
+    def static_delays(self: SpsStationComponentManager) -> list[float]:
         """
         Get static time delay correction.
 
@@ -1240,7 +1247,11 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return copy.deepcopy(self._static_delays)
+        static_delays: list[float] = []
+        for _, static_delay in self._static_delays.items():
+            if static_delay is not None:
+                static_delays += static_delay
+        return static_delays
 
     @static_delays.setter
     def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
@@ -1249,7 +1260,7 @@ class SpsStationComponentManager(
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
-        self._static_delays = copy.deepcopy(delays)
+        self._desired_static_delays = copy.deepcopy(delays)
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker

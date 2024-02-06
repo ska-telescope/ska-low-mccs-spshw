@@ -2391,8 +2391,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
-        tile_simulator.tpm._is_programmed = True
-        tpm_driver._tpm_status = TpmStatus.INITIALISED
         tpm_driver.start_communicating()
 
         # Assert
@@ -2400,6 +2398,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             CommunicationStatus.NOT_ESTABLISHED
         )
         tpm_driver._is_programmed = True
+        tpm_driver._tpm_status = TpmStatus.INITIALISED
+        tile_simulator.tpm._is_programmed = True
+        tile_simulator._is_programmed = True
         assert tpm_driver._pending_data_requests is False
 
         tile_simulator._pending_data_requests = True

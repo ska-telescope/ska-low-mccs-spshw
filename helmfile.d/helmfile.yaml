@@ -14,9 +14,7 @@ environments:
       - platform/aa0.5/aa0-5-s8-1.yaml
       - platform/aa0.5/aa0-5-s8-6.yaml
       - platform/aa0.5/aa0-5-s9-2.yaml
-      - platform/aa0.5/aa0-5-s9-5.yaml
       - platform/aa0.5/aa0-5-s10-3.yaml
-      - platform/aa0.5/aa0-5-s10-6.yaml
       - spshw/values/values-aa0-5.yaml
   aa0.5-minikube:
     kubeContext: minikube
@@ -33,23 +31,23 @@ environments:
   aavs3-deprecated:
     kubeContext: aavs3-production  # You should be using infra-issued credentials!
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=671e5a1ce9c6b39a796ab3820b55dafc285ba554
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=5d803fa1569d911b568fed3bd7e450e442e1d8c8
       - spshw/values/values-aavs3.yaml
   aavs3-production:
     kubeContext: infra:au-itf-aavs302-k8s
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=671e5a1ce9c6b39a796ab3820b55dafc285ba554
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=5d803fa1569d911b568fed3bd7e450e442e1d8c8
       - spshw/values/values-aavs3.yaml
   aavs3-staging:
     kubeContext: low-itf
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=671e5a1ce9c6b39a796ab3820b55dafc285ba554
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=5d803fa1569d911b568fed3bd7e450e442e1d8c8
       - spshw/values/values-aavs3.yaml
       - spshw/values/values-aavs3-staging.yaml
   aavs3-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=671e5a1ce9c6b39a796ab3820b55dafc285ba554
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/helmfile.d/values/aavs3.yaml?ref=5d803fa1569d911b568fed3bd7e450e442e1d8c8
       - spshw/values/values-aavs3.yaml
       - platform/minikube.yaml
   arcetri:
@@ -67,12 +65,12 @@ environments:
   low-itf:
     kubeContext: low-itf
     values:
-      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=12e33d6b6f048de78f8d51a0a7a453b6a6131001
+      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=cbcbfd855cc88ad381e11d6086252fe75f99ca36
       - spshw/values/values-low-itf.yaml
   low-itf-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=12e33d6b6f048de78f8d51a0a7a453b6a6131001
+      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=cbcbfd855cc88ad381e11d6086252fe75f99ca36
       - spshw/values/values-low-itf.yaml
       - platform/minikube.yaml
   oxford:

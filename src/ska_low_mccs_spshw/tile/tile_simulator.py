@@ -505,7 +505,7 @@ class TileSimulator:
 
         :param station_id: station id
         :param tile_id: tile id
-        :param pps_delay: pps_delay
+        :param pps_delay: PPS delay correction.
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
         """

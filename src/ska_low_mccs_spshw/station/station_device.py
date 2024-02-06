@@ -73,6 +73,8 @@ class SpsStation(SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
 
     def init_device(self: SpsStation) -> None:
         """
@@ -114,9 +116,6 @@ class SpsStation(SKAObsDevice):
             self._health_changed,
         )
         self.set_change_event("healthState", True, False)
-
-        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
-        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
 
     def create_component_manager(
         self: SpsStation,
@@ -285,6 +284,8 @@ class SpsStation(SKAObsDevice):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        super()._component_state_changed(fault=fault, power=power)
+        self._health_model.update_state(fault=fault, power=power)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -300,9 +301,6 @@ class SpsStation(SKAObsDevice):
                 ),
                 mode="constant",
             )
-
-        super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
 
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
@@ -322,13 +320,14 @@ class SpsStation(SKAObsDevice):
                         self.component_manager._antenna_mapping, x_bandpass_data
                     )
                     self._x_bandpass_data = x_pol_bandpass_ordered
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}"
                     )
             else:
                 self.logger.error(
-                    "X polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    "X polarised bandpass data has incorrect format. "
+                    "Expected np.ndarray, got %s",
                     type(x_bandpass_data),
                 )
 
@@ -346,13 +345,14 @@ class SpsStation(SKAObsDevice):
                         self.component_manager._antenna_mapping, y_bandpass_data
                     )
                     self._y_bandpass_data = y_pol_bandpass_ordered
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}"
                     )
             else:
                 self.logger.error(
-                    "Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    "Y polarised bandpass data has incorrect format. "
+                    "Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
 
@@ -1629,7 +1629,7 @@ def _port_to_antenna_order(
             port_offset = int(tpm_port_number // 2)
             antenna_index = tile_base_index + port_offset
             ordered_data[:, antenna] = data[:, antenna_index]
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logging.log(40, f"Caught exception in SpsStation._port_to_antenna_order: {e}")
 
     return ordered_data

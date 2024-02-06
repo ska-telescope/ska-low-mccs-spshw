@@ -2396,7 +2396,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         tile_simulator._is_programmed = True
 
-
         assert tpm_driver._pending_data_requests is False
 
         tile_simulator._pending_data_requests = True

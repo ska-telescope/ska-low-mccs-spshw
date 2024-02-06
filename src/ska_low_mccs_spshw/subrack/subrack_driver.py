@@ -13,7 +13,7 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
-from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import MccsBaseComponentManager, WebHardwareClient
 from ska_tango_base.poller import PollingComponentManager
 
@@ -650,3 +650,18 @@ class SubrackDriver(
         # because ska-tango-base inappropriately pushes power=UNKNOWN,
         # but polling may have stopped because we learned that power is OFF.
         self._update_communication_state(CommunicationStatus.DISABLED)
+
+    def poll_failed(self, exception: Exception) -> None:
+        """
+        Set PowerState.UNKNOWN when polling fails.
+
+        This is a bug fix that should be upstreamed to ska-tango-base once we
+        are confident it works.
+
+        :param exception: the exception that was raised by a recent poll
+            attempt.
+        """
+        super().poll_failed(exception)
+
+        # Should this go before or after updating the communication state?
+        self._update_component_state(power=PowerState.UNKNOWN)

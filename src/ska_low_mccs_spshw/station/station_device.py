@@ -115,8 +115,8 @@ class SpsStation(SKAObsDevice):
         )
         self.set_change_event("healthState", True, False)
 
-        self._x_bandpass_data: np.ndarray = np.zeros(shape=(512, 256), dtype=float)
-        self._y_bandpass_data: np.ndarray = np.zeros(shape=(512, 256), dtype=float)
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
 
     def create_component_manager(
         self: SpsStation,
@@ -312,11 +312,11 @@ class SpsStation(SKAObsDevice):
             x_bandpass_data = state_change.get("xPolBandpass")
             if isinstance(x_bandpass_data, np.ndarray):
                 x_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(512, 256), dtype=float
+                    shape=(256, 512), dtype=int
                 )
                 try:
                     # Resize data to match attr.
-                    x_bandpass_data = to_shape(x_bandpass_data, (512, 256))
+                    x_bandpass_data = to_shape(x_bandpass_data, (256, 512))
                     # Change bandpass data from port order to antenna order.
                     x_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, x_bandpass_data
@@ -336,11 +336,11 @@ class SpsStation(SKAObsDevice):
             y_bandpass_data = state_change.get("yPolBandpass")
             if isinstance(y_bandpass_data, np.ndarray):
                 y_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(512, 256), dtype=float
+                    shape=(256, 512), dtype=int
                 )
                 try:
                     # Resize data to match attr.
-                    y_bandpass_data = to_shape(y_bandpass_data, (512, 256))
+                    y_bandpass_data = to_shape(y_bandpass_data, (256, 512))
                     # Change bandpass data from port order to antenna order.
                     y_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, y_bandpass_data

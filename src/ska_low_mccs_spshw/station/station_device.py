@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import itertools
 import json
+import logging
 import sys
 from typing import Any, Optional, cast
 
@@ -204,9 +205,11 @@ class SpsStation(SKAObsDevice):
 
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
+            self._device.set_change_event("antennaInfo", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
+            self._device.set_archive_event("antennaInfo", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
 
             super().do()
@@ -315,12 +318,14 @@ class SpsStation(SKAObsDevice):
                     # Resize data to match attr.
                     x_bandpass_data = to_shape(x_bandpass_data, (512, 256))
                     # Change bandpass data from port order to antenna order.
-                    x_pol_bandpass_ordered = _port_to_antenna_order(self.component_manager._antenna_mapping, x_bandpass_data)
-                    self._x_bandpass_data =  x_pol_bandpass_ordered
-                    self.logger.info(f"x_bandpass_data: {x_bandpass_data}")
-                    self.logger.info(f"x_pol_bandpass_ordered: {x_pol_bandpass_ordered}")
+                    x_pol_bandpass_ordered = _port_to_antenna_order(
+                        self.component_manager._antenna_mapping, x_bandpass_data
+                    )
+                    self._x_bandpass_data = x_pol_bandpass_ordered
                 except Exception as e:
-                    self.logger.error(f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}")
+                    self.logger.error(
+                        f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}"
+                    )
             else:
                 self.logger.error(
                     "X polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
@@ -337,16 +342,19 @@ class SpsStation(SKAObsDevice):
                     # Resize data to match attr.
                     y_bandpass_data = to_shape(y_bandpass_data, (512, 256))
                     # Change bandpass data from port order to antenna order.
-                    y_pol_bandpass_ordered = _port_to_antenna_order(self.component_manager._antenna_mapping, y_bandpass_data)               
+                    y_pol_bandpass_ordered = _port_to_antenna_order(
+                        self.component_manager._antenna_mapping, y_bandpass_data
+                    )
                     self._y_bandpass_data = y_pol_bandpass_ordered
                 except Exception as e:
-                    self.logger.error(f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}")
+                    self.logger.error(
+                        f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}"
+                    )
             else:
                 self.logger.error(
                     "Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
-
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -437,18 +445,25 @@ class SpsStation(SKAObsDevice):
         """
         Return the mappings of the antennas.
 
+        Returns a mapping of antenna number to
+            TPM port number.
+
         :return: json string containing antenna mappings
         """
         return json.dumps(self.component_manager._antenna_mapping)
 
     @attribute(dtype="DevString")
-    def antennaLocations(self: SpsStation) -> str:
+    def antennaInfo(self: SpsStation) -> str:
         """
-        Return the location offsets of the antennas.
+        Return antenna information.
 
-        :return: json string containing antenna location offsets.
+        Returns a json string representing a dictionary coded
+            by antenna number and presenting that antenna's
+            station_id, tile_id and location information.
+
+        :return: json string containing antenna information.
         """
-        return json.dumps(self.component_manager._antenna_locations)
+        return json.dumps(self.component_manager._antenna_info)
 
     @attribute(
         dtype=("DevDouble",),
@@ -1588,7 +1603,10 @@ class SpsStation(SKAObsDevice):
         self.component_manager.configure_test_generator(argin)
         return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
 
-def _port_to_antenna_order(antenna_mapping: dict[int, tuple[int, float, float]], data: np.ndarray) -> np.ndarray:
+
+def _port_to_antenna_order(
+    antenna_mapping: dict[int, tuple[int, int, int]], data: np.ndarray
+) -> np.ndarray:
     """
     Reorder bandpass data from port order to antenna order.
 
@@ -1596,6 +1614,7 @@ def _port_to_antenna_order(antenna_mapping: dict[int, tuple[int, float, float]],
         is expected in TPM port order.
 
     :param antenna_mapping: A mapping of antenna to tpm and ports.
+        dict[ant_id: (tpm_id, tpm_x_port, tpm_y_port)]
     :param data: Full station data in TPM and port order.
     :returns: Full station data in Antenna order.
     """
@@ -1604,19 +1623,17 @@ def _port_to_antenna_order(antenna_mapping: dict[int, tuple[int, float, float]],
     try:
         for antenna in range(data.shape[1]):
             tpm_number = antenna_mapping[antenna + 1][0]
-            tile_base_index = (tpm_number -1)*nof_antennas_per_tile
+            tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
             # So long as X and Y pols are always on adjacent ports this should work.
             tpm_port_number = antenna_mapping[antenna + 1][1]
             port_offset = int(tpm_port_number // 2)
             antenna_index = tile_base_index + port_offset
-            ordered_data[:,antenna] = data[:,antenna_index]
-            ports = (antenna_mapping[antenna + 1][1],antenna_mapping[antenna + 1][2])
-            print(f"Antenna {antenna+1} connected to ports {ports} on TPM {tpm_number} data extracted from data[{antenna_index}]")
-            print(f"Data extracted: {data[:,antenna_index]}")
+            ordered_data[:, antenna] = data[:, antenna_index]
     except Exception as e:
-        print(f"Caught exception in SpsStation._port_to_antenna_order: {e}")
+        logging.log(40, f"Caught exception in SpsStation._port_to_antenna_order: {e}")
 
     return ordered_data
+
 
 # ----------
 # Run server

@@ -377,13 +377,6 @@ class MccsDaqReceiver(SKABaseDevice):
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("rmsPlot", True, False)
 
-            # Probably want to move the archive events to SpsStation so we
-            #   can archive it after we have it in antenna order.
-            # Archived attributes should be logged to the EDA eventually.
-            self._device.set_archive_event("xPolBandpass", True, False)
-            self._device.set_archive_event("yPolBandpass", True, False)
-            self._device.set_archive_event("rmsPlot", True, False)
-
             return (ResultCode.OK, "Init command completed OK")
 
     # ----------

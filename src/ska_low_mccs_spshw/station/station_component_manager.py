@@ -19,7 +19,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, cast
+from typing import Any, Callable, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
@@ -185,6 +185,7 @@ class _TileProxy(DeviceComponentManager):
             self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
 
+
 class _DaqProxy(DeviceComponentManager):
     """A proxy to a subrack, for a station to use."""
 
@@ -251,7 +252,7 @@ class _DaqProxy(DeviceComponentManager):
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
             self._proxy.set_source(tango.DevSource.DEV)
-            
+
             self._proxy.add_change_event_callback(
                 "xPolBandpass", self._bandpass_callback
             )
@@ -411,8 +412,9 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: dict[int, tuple[int, float, float]] = {}
-        self._antenna_locations: dict[int, dict[str, float]] = {}
+        self._antenna_mapping: dict[int, tuple[int, int, int]] = {}
+        # _antenna_info is mapping of antenna_num : (station_id, tpm_id, antenna_loc)
+        self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
 
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
@@ -456,14 +458,16 @@ class SpsStationComponentManager(
                 # Get tpm/port <-> antenna mapping.
                 self._antenna_mapping[int(antenna)] = (
                     int(antennas[antenna]["tpm"]),
-                    antennas[antenna]["tpm_x_channel"],
-                    antennas[antenna]["tpm_y_channel"],
+                    int(antennas[antenna]["tpm_x_channel"]),
+                    int(antennas[antenna]["tpm_y_channel"]),
                 )
-                # Get antenna location offsets.
-                self._antenna_locations[int(antenna)] = antennas[antenna][
-                    "location_offset"
-                ]
-            logger.debug(self._antenna_mapping)
+                # Construct labels for bandpass data.
+                self._antenna_info[int(antenna)] = {
+                    "station_id": self._station_id,
+                    "tpm_id": int(antennas[antenna]["tpm"]),
+                    "antenna_location": antennas[antenna]["location_offset"],
+                }
+            logger.info(self._antenna_mapping)
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "

@@ -21,12 +21,12 @@ import numpy as np
 import pytest
 from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
+from ska_telmodel.data import TMData  # type: ignore
 from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.mocks import MockFieldStation
 from ska_low_mccs_spshw.station import SpsStation, _port_to_antenna_order
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
-from ska_telmodel.data import TMData  # type: ignore
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -1361,41 +1361,44 @@ def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
 
     assert station_device.daqTRL == "NEW_DAQ_TRL"
 
+
 def test_port_to_antenna_order(antenna_uri: list[str]) -> None:
     """
     Test that `_port_to_antenna_order` properly re-orders data.
-    """    
+
+    :param antenna_uri: Location of antenna configuration file.
+    """
     antenna_mapping_uri = antenna_uri[0]
     antenna_mapping_filepath = antenna_uri[1]
     station_cluster = antenna_uri[2]
     tmdata = TMData([antenna_mapping_uri])
     full_dict = tmdata[antenna_mapping_filepath].get_dict()
     antenna_mapping = {}
-    tpm_x_mapping = np.zeros((16,16))
-    tpm_y_mapping = np.zeros((16,16))
+    tpm_x_mapping = np.zeros((16, 16))
+    tpm_y_mapping = np.zeros((16, 16))
 
-    antennas = full_dict["platform"]["array"]["station_clusters"][
-            station_cluster
-        ]["stations"]["1"]["antennas"]
+    antennas = full_dict["platform"]["array"]["station_clusters"][station_cluster][
+        "stations"
+    ]["1"]["antennas"]
     # Create an antenna map the same way SpsStation does.
     for antenna in antennas:
         antenna_mapping[int(antenna)] = (
-                int(antennas[antenna]["tpm"]),
-                antennas[antenna]["tpm_x_channel"],
-                antennas[antenna]["tpm_y_channel"],
-            )
-        tpm = int(antennas[antenna]["tpm"])-1
+            int(antennas[antenna]["tpm"]),
+            antennas[antenna]["tpm_x_channel"],
+            antennas[antenna]["tpm_y_channel"],
+        )
+        tpm = int(antennas[antenna]["tpm"]) - 1
         x_port = antennas[antenna]["tpm_x_channel"]
         y_port = antennas[antenna]["tpm_y_channel"]
         # Create a simple dataset where map[tpm][port] = antenna_number
         # so that it's obvious if we've re-ordered it correctly or not.
-        tpm_x_mapping[tpm][x_port//2] = antenna
-        tpm_y_mapping[tpm][y_port//2] = antenna
-            
+        tpm_x_mapping[tpm][x_port // 2] = antenna
+        tpm_y_mapping[tpm][y_port // 2] = antenna
+
     # Reshape array into (:, 256) which `_port_to_antenna_order` expects.
-    reshaped_x_tpm_map = tpm_x_mapping.reshape((1,256))
+    reshaped_x_tpm_map = tpm_x_mapping.reshape((1, 256))
 
     [antenna_ordered_map] = _port_to_antenna_order(antenna_mapping, reshaped_x_tpm_map)
     for i, antenna in enumerate(antenna_ordered_map):
         # Assert we're in antenna order (and convert from 0 to 1 based numbering)
-        assert i+1 == int(antenna)
+        assert i + 1 == int(antenna)

@@ -168,6 +168,7 @@ def daq_trl_fixture() -> str:
     """
     return "test/daq/trl"
 
+
 @pytest.fixture(name="antenna_uri")
 def antenna_uri_fixture() -> list[str]:
     """
@@ -175,6 +176,4 @@ def antenna_uri_fixture() -> list[str]:
 
     :returns: A URI for antenna data.
     """
-    return ["car:ska-low-aavs3?main",
-            "instrument/mccs-configuration/aavs3.yaml",
-            "a1"]
+    return ["car:ska-low-aavs3?main", "instrument/mccs-configuration/aavs3.yaml", "a1"]

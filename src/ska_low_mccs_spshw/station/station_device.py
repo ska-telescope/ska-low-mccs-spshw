@@ -594,7 +594,7 @@ class SpsStation(SKAObsDevice):
         return self._adc_power
 
     @attribute(dtype=("DevDouble",), max_dim_x=512)
-    def equalisedLevels(self: SpsStation) -> list[float] | None:
+    def equalisedLevels(self: SpsStation) -> list[float]:
         """
         Get the equalised ADC RMS input levels for all input signals.
 

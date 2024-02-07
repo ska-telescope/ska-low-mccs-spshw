@@ -1395,10 +1395,9 @@ def test_port_to_antenna_order(antenna_uri: list[str]) -> None:
         tpm_x_mapping[tpm][x_port // 2] = antenna
         tpm_y_mapping[tpm][y_port // 2] = antenna
 
-    # Reshape array into (:, 256) which `_port_to_antenna_order` expects.
-    reshaped_x_tpm_map = tpm_x_mapping.reshape((1, 256))
+    reshaped_x_tpm_map = tpm_x_mapping.reshape((256, 1))
 
-    [antenna_ordered_map] = _port_to_antenna_order(antenna_mapping, reshaped_x_tpm_map)
+    antenna_ordered_map = _port_to_antenna_order(antenna_mapping, reshaped_x_tpm_map)
     for i, antenna in enumerate(antenna_ordered_map):
         # Assert we're in antenna order (and convert from 0 to 1 based numbering)
         assert i + 1 == int(antenna)

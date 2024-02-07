@@ -296,9 +296,9 @@ class MccsDaqReceiver(SKABaseDevice):
         self._health_model = DaqHealthModel(self._component_state_callback)
         self._received_data_mode = ""
         self._received_data_result = ""
-        self._x_bandpass_plot = np.zeros(shape=(256, 512), dtype=int)
-        self._y_bandpass_plot = np.zeros(shape=(256, 512), dtype=int)
-        self._rms_plot = np.zeros(shape=(256, 512), dtype=int)
+        self._x_bandpass_plot = np.zeros(shape=(256, 512), dtype=float)
+        self._y_bandpass_plot = np.zeros(shape=(256, 512), dtype=float)
+        self._rms_plot = np.zeros(shape=(256, 512), dtype=float)
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(self: MccsDaqReceiver) -> DaqComponentManager:
@@ -911,8 +911,8 @@ class MccsDaqReceiver(SKABaseDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,  # Antennas
-        max_dim_y=512,  # Channels
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
     )
     def xPolBandpass(self: MccsDaqReceiver) -> np.ndarray:
         """
@@ -924,8 +924,8 @@ class MccsDaqReceiver(SKABaseDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,
-        max_dim_y=512,
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
     )
     def yPolBandpass(self: MccsDaqReceiver) -> np.ndarray:
         """
@@ -937,8 +937,8 @@ class MccsDaqReceiver(SKABaseDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,
-        max_dim_y=512,
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
     )
     def rmsPlot(self: MccsDaqReceiver) -> np.ndarray:
         """

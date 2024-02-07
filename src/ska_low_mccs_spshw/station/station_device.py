@@ -115,8 +115,10 @@ class SpsStation(SKAObsDevice):
         )
         self.set_change_event("healthState", True, False)
 
-        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
-        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=int)
+        # pylint: disable=attribute-defined-outside-init
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+        # pylint: disable=attribute-defined-outside-init
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
 
     def create_component_manager(
         self: SpsStation,
@@ -285,6 +287,8 @@ class SpsStation(SKAObsDevice):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        super()._component_state_changed(fault=fault, power=power)
+        self._health_model.update_state(fault=fault, power=power)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -301,9 +305,6 @@ class SpsStation(SKAObsDevice):
                 mode="constant",
             )
 
-        super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
-
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
@@ -312,7 +313,7 @@ class SpsStation(SKAObsDevice):
             x_bandpass_data = state_change.get("xPolBandpass")
             if isinstance(x_bandpass_data, np.ndarray):
                 x_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(256, 512), dtype=int
+                    shape=(256, 512), dtype=float
                 )
                 try:
                     # Resize data to match attr.
@@ -321,14 +322,16 @@ class SpsStation(SKAObsDevice):
                     x_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, x_bandpass_data
                     )
+                    # pylint: disable=attribute-defined-outside-init
                     self._x_bandpass_data = x_pol_bandpass_ordered
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}"
                     )
             else:
                 self.logger.error(
-                    "X polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    "X polarised bandpass data has incorrect format.\
+                        Expected np.ndarray, got %s",
                     type(x_bandpass_data),
                 )
 
@@ -336,7 +339,7 @@ class SpsStation(SKAObsDevice):
             y_bandpass_data = state_change.get("yPolBandpass")
             if isinstance(y_bandpass_data, np.ndarray):
                 y_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(256, 512), dtype=int
+                    shape=(256, 512), dtype=float
                 )
                 try:
                     # Resize data to match attr.
@@ -345,14 +348,16 @@ class SpsStation(SKAObsDevice):
                     y_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, y_bandpass_data
                     )
+                    # pylint: disable=attribute-defined-outside-init
                     self._y_bandpass_data = y_pol_bandpass_ordered
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}"
                     )
             else:
                 self.logger.error(
-                    "Y polarised bandpass data has incorrect format. Expected np.ndarray, got %s",
+                    "Y polarised bandpass data has incorrect format. \
+                    Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
 
@@ -377,8 +382,8 @@ class SpsStation(SKAObsDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,  # Antennas
-        max_dim_y=512,  # Channels
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -390,8 +395,8 @@ class SpsStation(SKAObsDevice):
 
     @attribute(
         dtype=(("DevFloat",),),
-        max_dim_x=256,  # Antennas
-        max_dim_y=512,  # Channels
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
     )
     def yPolBandpass(self: SpsStation) -> np.ndarray:
         """
@@ -1621,16 +1626,18 @@ def _port_to_antenna_order(
     ordered_data = np.zeros(data.shape)
     nof_antennas_per_tile = 16
     try:
-        for antenna in range(data.shape[1]):
+        for antenna in range(data.shape[0]):
             tpm_number = antenna_mapping[antenna + 1][0]
             tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
             # So long as X and Y pols are always on adjacent ports this should work.
             tpm_port_number = antenna_mapping[antenna + 1][1]
             port_offset = int(tpm_port_number // 2)
             antenna_index = tile_base_index + port_offset
-            ordered_data[:, antenna] = data[:, antenna_index]
-    except Exception as e:
-        logging.log(40, f"Caught exception in SpsStation._port_to_antenna_order: {e}")
+            ordered_data[antenna, :] = data[antenna_index, :]
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logging.log(
+            40, f"Caught exception in SpsStation._port_to_antenna_order: {repr(e)}"
+        )
 
     return ordered_data
 

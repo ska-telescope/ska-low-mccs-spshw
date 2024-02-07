@@ -21,7 +21,6 @@ from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
-import numpy as np
 import tango
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
@@ -269,7 +268,13 @@ class _DaqProxy(DeviceComponentManager):
         attribute_data: Any,
         attribute_quality: Any,
     ) -> None:
-        """Extract bandpass data from event and call cb to update."""
+        """
+        Extract bandpass data from event and call cb to update.
+
+        :param attribute_name: Name of attribute that changed.
+        :param attribute_data: New value of attribute.
+        :param attribute_quality: Validity of attribute change.
+        """
         if self._component_state_callback:
             # if attribute_quality == ATTR_VALID:?
             if attribute_name.lower() == "xpolbandpass":

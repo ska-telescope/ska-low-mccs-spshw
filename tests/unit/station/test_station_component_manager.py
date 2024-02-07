@@ -162,12 +162,8 @@ def test_trigger_adc_equalisation(
     expected_preadu = 8.0
 
     for proxy in station_component_manager._tile_proxies.values():
-        proxy._proxy.adcPower = [  # type: ignore
-            expected_adc
-        ] * 32
-        proxy._proxy.preaduLevels = [  # type: ignore
-            expected_preadu
-        ] * 32
+        proxy._proxy.adcPower = [expected_adc] * 32  # type: ignore
+        proxy._proxy.preaduLevels = [expected_preadu] * 32  # type: ignore
 
     assert station_component_manager.preadu_levels == []
 

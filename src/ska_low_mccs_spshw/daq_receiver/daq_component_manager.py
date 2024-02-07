@@ -434,14 +434,14 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         # Reconstruct the numpy array.
                         x_bandpass_plot = np.array(
                             json.loads(response["x_bandpass_plot"][0])
-                        ).reshape((nof_channels, nof_antennas_max))
+                        ).reshape((nof_antennas_max, nof_channels))
                         call_callback = True
                 if "y_bandpass_plot" in response:
                     if response["y_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
                         y_bandpass_plot = np.array(
                             json.loads(response["y_bandpass_plot"][0])
-                        ).reshape((nof_channels, nof_antennas_max))
+                        ).reshape((nof_antennas_max, nof_channels))
                         call_callback = True
                 if "rms_plot" in response:
                     if response["rms_plot"] != [None]:

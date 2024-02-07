@@ -446,7 +446,7 @@ class TestMccsTile:
             change_event_callbacks["pps_present"],
         )
         change_event_callbacks["pps_present"].assert_change_event(
-            1, AttrQuality.ATTR_VALID
+            True, AttrQuality.ATTR_VALID
         )
         static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
@@ -460,7 +460,7 @@ class TestMccsTile:
             tile_health_structure=tile_monitoring_defaults,
         )
         change_event_callbacks["pps_present"].assert_change_event(
-            0, AttrQuality.ATTR_ALARM
+            False, AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == DevState.ALARM
 
@@ -503,7 +503,6 @@ class TestMccsTile:
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
             ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
             ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
-            ("ppsPresent", 1, None),
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
             ("clockPresent", True, None),
             ("sysrefPresent", True, None),

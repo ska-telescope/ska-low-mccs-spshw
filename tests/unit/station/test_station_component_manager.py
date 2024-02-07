@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import logging
+import random
 import unittest.mock
 from typing import Iterator
 
@@ -138,6 +139,7 @@ def test_communication(
 
     callbacks["communication_status"].assert_not_called()
 
+
 def test_trigger_adc_equalisation(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
@@ -155,17 +157,22 @@ def test_trigger_adc_equalisation(
     station_component_manager.start_communicating()
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    expected_adc = 16.0
+    expected_preadu = 8.0
+
     for proxy in station_component_manager._tile_proxies.values():
-        proxy._proxy.adcPower = [2] * 32
-        proxy._proxy.preaduLevels = [2] * 32
+        proxy._proxy.adcPower = [  # type: ignore
+            expected_adc
+        ] * 32
+        proxy._proxy.preaduLevels = [  # type: ignore
+            expected_preadu
+        ] * 32
 
-    assert station_component_manager._equalised_levels == []
-
+    assert station_component_manager.preadu_levels == []
 
     station_component_manager._trigger_adc_equalisation()
 
-    expected_levels = [0] * 32
-    # pytest.fail(f" station_component_manager._equalised_levels == {station_component_manager._equalised_levels}")
-    for i, value in enumerate(expected_levels):
-        assert station_component_manager._equalised_levels[i] == value
-
+    for value in station_component_manager._desired_preadu_levels:
+        assert value < expected_preadu + 1
+        assert value > expected_preadu - 1

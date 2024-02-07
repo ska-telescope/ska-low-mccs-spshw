@@ -593,18 +593,6 @@ class SpsStation(SKAObsDevice):
         """
         return self._adc_power
 
-    @attribute(dtype=("DevDouble",), max_dim_x=512)
-    def equalisedLevels(self: SpsStation) -> list[float]:
-        """
-        Get the equalised ADC RMS input levels for all input signals.
-
-        Returns an array of 2 values (X and Y polarizations) per antenna, 32
-        per tile, 512 per station
-
-        :return: the equalised ADC RMS input levels, in db
-        """
-        return self.component_manager._equalised_levels
-
     @attribute(dtype=("DevDouble",), max_dim_x=3)
     def boardTemperaturesSummary(self: SpsStation) -> list[float]:
         """

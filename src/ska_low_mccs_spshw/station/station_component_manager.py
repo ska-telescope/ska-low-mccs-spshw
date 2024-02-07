@@ -351,8 +351,6 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, tuple[float, float]] = {}
 
-        self._equalised_levels: list[float] = []
-
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
         else:
@@ -2072,7 +2070,7 @@ class SpsStationComponentManager(
         sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4
 
         # apply new preADU levels to the station
-        self._equalised_levels = sanitised_levels
+        self.preadu_levels = sanitised_levels
 
         if task_callback:
             task_callback(status=TaskStatus.COMPLETED)

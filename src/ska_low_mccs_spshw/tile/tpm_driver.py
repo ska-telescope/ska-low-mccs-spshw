@@ -925,6 +925,11 @@ class TpmDriver(MccsBaseComponentManager):
         :param pps_delay_correction: A delay correction
         """
         self._desired_pps_delay_correction = pps_delay_correction
+        self.logger.warning(
+            f"ppsDelayCorrection of {pps_delay_correction} set in software. "
+            "will be applied during tile initialisation. "
+            "check ppsDelayCorrection for register reading."
+        )
 
     @property
     def register_list(self: TpmDriver) -> list[str]:

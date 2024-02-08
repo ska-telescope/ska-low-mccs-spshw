@@ -396,31 +396,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 self._tile_time.set_reference_time(0)
 
     @property
-    def pps_delay_correction(self: TileComponentManager) -> Optional[float]:
-        """
-        Return the delay correction as read from register.
-
-        :return: The pps delay correction.
-        """
-        return self._tpm_driver.pps_delay_correction
-
-    @pps_delay_correction.setter
-    def pps_delay_correction(
-        self: TileComponentManager, pps_delay_correction: int
-    ) -> None:
-        """
-        Set the pps delay correction to apply during next initialisation.
-
-        :param pps_delay_correction: A delay correction
-        """
-        self._tpm_driver.pps_delay_correction = pps_delay_correction
-        self.logger.warning(
-            f"ppsDelayCorrection of {pps_delay_correction} set in software. "
-            "will be applied during tile initialisation. "
-            "check ppsDelayCorrection for register reading."
-        )
-
-    @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
         Return the TPM status.
@@ -737,6 +712,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "phase_terminal_count",
         "pll_locked",
         "pps_delay",
+        "pps_delay_correction",
         "pps_present",
         "preadu_levels",
         "read_address",

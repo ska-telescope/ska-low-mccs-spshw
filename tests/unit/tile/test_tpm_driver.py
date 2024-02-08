@@ -1012,7 +1012,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
-        assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
         initial_time2 = tpm_driver.fpgas_time

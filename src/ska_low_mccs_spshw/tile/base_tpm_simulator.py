@@ -122,7 +122,6 @@ class BaseTpmSimulator:
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
-        self._pps_delay_correction = self.PPS_DELAY
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
         self._arp_table = copy.deepcopy(self.ARP_TABLE)
@@ -274,20 +273,16 @@ class BaseTpmSimulator:
         self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
-    def initialise(
-        self: BaseTpmSimulator, tile_id: int = 0, pps_delay_correction: int = PPS_DELAY
-    ) -> None:
+    def initialise(self: BaseTpmSimulator, tile_id: int = 0) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
 
         :param tile_id: Initial value for tile ID (optional)
-        :param pps_delay_correction: Initial value for pps_delay (optional)
         """
         self.logger.debug("TpmSimulator: initialise")
         self._tile_id = tile_id
-        self._pps_delay = pps_delay_correction
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)
         self._set_tpm_status(TpmStatus.INITIALISED)
@@ -446,25 +441,6 @@ class BaseTpmSimulator:
         """
         self.logger.debug("TpmSimulator: get_pps_delay")
         return self._pps_delay
-
-    @property
-    def pps_delay_correction(self: BaseTpmSimulator) -> int:
-        """
-        Return the PPS delay correction of the TPM.
-
-        :return: PPS delay correction
-        """
-        self.logger.debug("TpmSimulator: get applied_pps_correction")
-        return self._pps_delay
-
-    @pps_delay_correction.setter
-    def pps_delay_correction(self: BaseTpmSimulator, pps_delay_correction: int) -> None:
-        """
-        Set the PPS delay correction of the TPM.
-
-        :param pps_delay_correction: the delay correction to apply
-        """
-        self._pps_delay = pps_delay_correction
 
     @property
     def register_list(self: BaseTpmSimulator) -> list[str]:

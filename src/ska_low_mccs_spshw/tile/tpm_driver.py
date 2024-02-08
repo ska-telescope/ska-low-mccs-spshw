@@ -229,14 +229,14 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: None
         """
-        wait_time = 3.0
+        wait_time = 3.0  # try every 3 seconds for max_time times
+        max_time = 20  # 60 seconds
         while not (
             (self.communication_state == CommunicationStatus.ESTABLISHED)
             | (self._stop_polling_event.is_set())
         ):
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
-            max_time = 20  # 60 seconds
             self._is_programmed = False
             while timeout < max_time:
                 with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -254,7 +254,7 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.tpm_connected()
                     return
-                time.sleep(0.5)
+                time.sleep(wait_time)
                 timeout = timeout + 1
             self.logger.error(
                 f"Connection to tile failed after {timeout*wait_time} seconds. "

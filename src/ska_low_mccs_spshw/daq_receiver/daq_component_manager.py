@@ -429,18 +429,26 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         status=TaskStatus(response["result_code"]),
                         result=response["message"],
                     )
+
+                def to_db(data: np.ndarray) -> np.ndarray:
+                    np.seterr(divide="ignore")
+                    log_data = 10 * np.log10(data)
+                    log_data[np.isneginf(log_data)] = 0.0
+                    np.seterr(divide="warn")
+                    return log_data
+
                 if "x_bandpass_plot" in response:
                     if response["x_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
-                        x_bandpass_plot = np.array(
-                            json.loads(response["x_bandpass_plot"][0])
+                        x_bandpass_plot = to_db(
+                            np.array(json.loads(response["x_bandpass_plot"][0]))
                         ).reshape((nof_antennas_max, nof_channels))
                         call_callback = True
                 if "y_bandpass_plot" in response:
                     if response["y_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
-                        y_bandpass_plot = np.array(
-                            json.loads(response["y_bandpass_plot"][0])
+                        y_bandpass_plot = to_db(
+                            np.array(json.loads(response["y_bandpass_plot"][0]))
                         ).reshape((nof_antennas_max, nof_channels))
                         call_callback = True
                 if "rms_plot" in response:

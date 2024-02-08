@@ -33,6 +33,7 @@ typing-extensions = "^4.7.1"
 future = "^0.18.3"
 # ska-low-mccs-daq-interface = "^0.1.1"
 ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
+# ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-1883" }
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -81,6 +82,7 @@ typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 # ska-low-mccs-daq-interface = "^0.1.1"
 ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
+# ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-1883" }
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]

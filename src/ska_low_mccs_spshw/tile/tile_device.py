@@ -981,7 +981,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._pps_present is False:
             self.logger.debug("no PPS signal present, raising ALARM")
             force_alarm = True
-        if force_alarm is True:
+        if force_alarm:
             return tango.DevState.ALARM
         return automatic_state_analysis
 

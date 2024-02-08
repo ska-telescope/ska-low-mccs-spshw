@@ -593,60 +593,7 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert subrack_device.adminMode == AdminMode.OFFLINE
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        subrack_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["subrack_state"],
-        )
-        change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.DISABLE
-        )
-        tile_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_state"],
-        )
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-
-        tile_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
-
-        # Tile and station both stay in UNKNOWN state
-        # because subrack is still OFFLINE
-        change_event_callbacks["tile_state"].assert_not_called()
-
-        subrack_device.adminMode = AdminMode.ONLINE
-        change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.UNKNOWN
-        )
-        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
-
-        # Now that subrack is ONLINE, it reports itself ON, and the TPM to be OFF,
-        # so MccsTile reports itself OFF
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
-
-        tile_device.On()
-
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "NotProgrammed"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Programmed"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised"
-        )
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
 
         tile_device.UpdateAttributes()
 
@@ -655,13 +602,17 @@ class TestMccsTileTpmDriver:
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
-        change_event_callbacks["pps_present"].assert_change_event(
-            True, tango.AttrQuality.ATTR_VALID
+        change_event_callbacks["pps_present"].assert_change_event(True)
+        assert (
+            tile_device.read_attribute("ppspresent").quality
+            == tango.AttrQuality.ATTR_VALID
         )
         tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
 
         tile_device.UpdateAttributes()
-        change_event_callbacks["pps_present"].assert_change_event(
-            False, tango.AttrQuality.ATTR_ALARM
+        change_event_callbacks["pps_present"].assert_change_event(False)
+        assert (
+            tile_device.read_attribute("ppspresent").quality
+            == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM

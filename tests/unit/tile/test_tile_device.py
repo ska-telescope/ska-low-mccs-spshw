@@ -26,6 +26,7 @@ from ska_control_model import (
     ResultCode,
 )
 from ska_low_mccs_common import MccsDeviceProxy
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
 
@@ -445,8 +446,10 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
-        change_event_callbacks["pps_present"].assert_change_event(
-            True, AttrQuality.ATTR_VALID
+        change_event_callbacks["pps_present"].assert_change_event(Anything)
+        change_event_callbacks["pps_present"].assert_change_event(True)
+        assert (
+            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_VALID
         )
         static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
@@ -459,8 +462,9 @@ class TestMccsTile:
         static_tile_component_manager._update_component_state(
             tile_health_structure=tile_monitoring_defaults,
         )
-        change_event_callbacks["pps_present"].assert_change_event(
-            False, AttrQuality.ATTR_ALARM
+        change_event_callbacks["pps_present"].assert_change_event(False)
+        assert (
+            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == DevState.ALARM
 

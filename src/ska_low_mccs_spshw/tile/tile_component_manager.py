@@ -140,6 +140,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self._tpm_communication_state_changed,
             self._update_component_state,
         )
+
         def _update_component_power_state(power_state: PowerState) -> None:
             self._update_component_state(power=power_state)
             self.update_tpm_power_state(power_state)
@@ -169,7 +170,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             tile_health_structure=None,
             adc_rms=None,
             preadu_levels=None,
-            static_delays=self._tpm_driver._static_delays,
+            static_delays=None,
         )
 
     def start_communicating(self: TileComponentManager) -> None:

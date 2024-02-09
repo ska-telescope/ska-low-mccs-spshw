@@ -2151,7 +2151,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # - start_connection with the component under test.
         # - update attributes in a polling loop.
         tpm_driver.start_communicating()
-
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         assert tile_simulator.tpm is not None
         # Check polling is ok

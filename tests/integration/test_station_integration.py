@@ -498,7 +498,7 @@ class TestStationTileIntegration:
             change_event_callbacks["tile_programming_state"],
         )
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
-        print("ODFLIEHNIj ")
+
         tile_device.On()
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
@@ -515,17 +515,15 @@ class TestStationTileIntegration:
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
-        print("Turnong ONLINE")
         tile_device.adminMode = AdminMode.ONLINE
 
         change_event_callbacks["tile_state"].assert_change_event(
             tango.DevState.ON, lookahead=2, consume_nonmatches=True
         )
-        print("Turnong OFFLINE")
+
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
-        print("Turnong ONLINE")
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["tile_state"].assert_change_event(
             tango.DevState.ON, lookahead=2, consume_nonmatches=True

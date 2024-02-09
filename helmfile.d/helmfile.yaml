@@ -106,7 +106,7 @@ releases:
   - name: ska-low-mccs-spshw
     namespace: {{.Namespace | default "ska-low-mccs"}}
     chart: ../charts/ska-low-mccs-spshw
-    version: ~0.13.0
+    version: ~0.14.0
     values:
       - values/globals.yaml.gotmpl
       - spshw/templates/spsstations.yaml.gotmpl

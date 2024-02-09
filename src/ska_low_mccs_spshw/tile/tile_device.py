@@ -14,6 +14,7 @@ import json
 import logging
 import os.path
 import sys
+import time
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -940,20 +941,49 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.component_manager.test_generator_active
 
-    @attribute(
-        dtype="DevShort",
-        min_alarm=0,
-        max_alarm=2,
-    )
-    def ppsPresent(self: MccsTile) -> bool | None:
+    @attribute(dtype="DevBoolean")
+    def ppsPresent(self: MccsTile) -> tuple[bool | None, float, tango.AttrQuality]:
         """
         Report if PPS signal is present at the TPM input.
 
-        :return: 0 if PPS signal is not present, 1 if is present.
+        :return: a tuple with attribute_value, time, quality
+            True if pps signal present.
+            ATTR_CHANGING if pps not yet polled,
+            ATTR_ALARM is pps not present,
+            ATTR_VALID is pps is present
         """
+        quality = tango.AttrQuality.ATTR_VALID
         if self._pps_present is None:
-            self._pps_present = self.component_manager.pps_present
-        return self._pps_present
+            self.logger.debug(
+                "We have not yet polled the attribute pps_present, "
+                "setting quality to CHANGING"
+            )
+            quality = tango.AttrQuality.ATTR_CHANGING
+        if self._pps_present is False:
+            self.logger.debug("No PPS signal present, attribute quality set to ALARM")
+            quality = tango.AttrQuality.ATTR_ALARM
+        return self._pps_present, time.time(), quality
+
+    def dev_state(self) -> tango.DevState:
+        """
+        Calculate this device state.
+
+        The base device offers some automatic state discovery.
+        However we have some attributes that require explicit
+        analysis as to whether they are in ALARM or not,
+
+        e.g. DevBoolean
+
+        :return: the 'tango.DevState' calculated
+        """
+        automatic_state_analysis: tango.DevState = super().dev_state()
+        force_alarm: bool = False
+        if self._pps_present is False:
+            self.logger.debug("no PPS signal present, raising ALARM")
+            force_alarm = True
+        if force_alarm:
+            return tango.DevState.ALARM
+        return automatic_state_analysis
 
     @attribute(dtype="DevBoolean")
     def clockPresent(self: MccsTile) -> bool:

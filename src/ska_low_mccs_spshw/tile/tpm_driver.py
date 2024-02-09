@@ -230,13 +230,14 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: None
         """
+        wait_time = 3.0  # try every 3 seconds for max_time times
+        max_time = 20  # 60 seconds
         while not (
             (self.communication_state == CommunicationStatus.ESTABLISHED)
             | (self._stop_polling_event.is_set())
         ):
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
-            max_time = 5  # 15 seconds
             self._is_programmed = False
             while timeout < max_time:
                 with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -254,14 +255,14 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.tpm_connected()
                     return
-                time.sleep(0.5)
+                time.sleep(wait_time)
                 timeout = timeout + 1
             self.logger.error(
-                f"Connection to tile failed after {timeout*3} seconds. Waiting for "
-                f"connection..."
+                f"Connection to tile failed after {timeout*wait_time} seconds. "
+                "Waiting for connection..."
             )
             self.logger.debug("Tile disconnected from tpm.")
-            time.sleep(10.0)
+            time.sleep(wait_time)
 
     def _update_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
@@ -340,13 +341,23 @@ class TpmDriver(MccsBaseComponentManager):
 
     def tpm_connected(self: TpmDriver) -> None:
         """Tile connected to tpm."""
+        # Must update programming state before calling _update_communication_state
+        # as this is used by controller.component_power_changed
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self._is_programmed = self.tile.is_programmed()
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"tpm_driver: is_programmed failed: {e}")
+            else:
+                self.logger.debug("tpm_driver: is_programmed uses current value")
         self._update_communication_state(CommunicationStatus.ESTABLISHED)
         self._update_component_state(fault=False)
         self.logger.debug("Tpm connected to tile.")
-        self._is_programmed = False
         self._update_tpm_status()  # generates a callback if status changed
         status = self.tpm_status
-        msg = f"tpm status {status}"
+        msg = f"tpm status {status.name}"
         self.logger.debug(msg)
         if status in [TpmStatus.UNPROGRAMMED, TpmStatus.PROGRAMMED]:
             # if self._check_programmed():
@@ -419,7 +430,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._is_programmed = self.tile.is_programmed()
                         if self._is_programmed is False:
                             new_status = TpmStatus.UNPROGRAMMED
-                        elif self._tile_id != self.tile.get_tile_id():
+                        elif self._check_initialised() is False:
                             new_status = TpmStatus.PROGRAMMED
                         elif self._check_channeliser_started() is False:
                             new_status = TpmStatus.INITIALISED
@@ -434,6 +445,22 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.logger.debug("tpm_driver: tpm_status uses current value")
         self._set_tpm_status(new_status)
+
+    def _check_initialised(self: TpmDriver) -> bool:
+        """
+        Return whether this TPM has been correctly initialised.
+
+        Must be run within protected block using self._hardware_lock
+        as it acceedes tile hardware registers
+
+        :return: initialisation state
+        """
+        self._fpgas_time = [
+            self.tile.get_fpga_time(Device.FPGA_1),
+            self.tile.get_fpga_time(Device.FPGA_2),
+        ]
+
+        return (self._fpgas_time[0] != 0) and (self._fpgas_time[1] != 0)
 
     @property
     def hardware_version(self: TpmDriver) -> str:
@@ -546,6 +573,8 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.debug("Lock acquired")
             self._is_programmed = self.tile.is_programmed()
         self.logger.debug("Lock released")
+        if not self._is_programmed:
+            self._register_list = self.REGISTER_LIST
         return self._is_programmed
 
     def download_firmware(
@@ -568,6 +597,7 @@ class TpmDriver(MccsBaseComponentManager):
         if is_programmed:
             self._firmware_name = bitfile
             self._set_tpm_status(TpmStatus.PROGRAMMED)
+            self._get_register_list()
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -579,6 +609,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self.tile.erase_fpga()
                     self._is_programmed = False
                     status = TpmStatus.UNPROGRAMMED
+                    self._register_list = self.REGISTER_LIST
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -916,12 +947,15 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: list of registers
         """
+        if self._register_list == self.REGISTER_LIST:
+            self._get_register_list()
         return self._register_list
 
     def _get_register_list(self: TpmDriver) -> None:
         """Update the TPM register list."""
-        assert self.tile.tpm is not None  # for the type checker
-        self.logger.warning("TpmDriver: register_list too big to be transmitted")
+        if self.tile.tpm is None:
+            self._register_list = self.REGISTER_LIST
+            return
         reglist = []
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:

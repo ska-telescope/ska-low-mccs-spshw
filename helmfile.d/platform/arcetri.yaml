@@ -29,13 +29,13 @@ platform:
                   srmb_port: 8081
               tpms:
                 "1":
-                  host: 10.0.10.225
+                  host: 10.0.10.71
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1
                   subrack_slot: 1
-                "4":
-                  host: 10.0.10.222
+                "2":
+                  host: 10.0.10.74
                   port: 10000
                   version: tpm_v1_6
                   subrack: 1

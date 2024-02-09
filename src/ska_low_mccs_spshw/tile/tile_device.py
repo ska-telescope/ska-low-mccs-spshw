@@ -2623,12 +2623,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param argin: the delay in seconds and the delay rate in
-            seconds/second.
+        :param argin: An array containing: beam index,
+            the delay in seconds and the delay rate in
+            seconds/second, for each antenna.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+
+        :example:
+
+        >>> # example delays: 16 values from -2 to +2 ns, rates = 0
+        >>> delays = [step * 0.25e-9 for step in list(range(-8, 8))]
+        >>> rates = [0.0]*16
+        >>> beam = 0.0
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> arg = [beam]
+        >>> for i in range(16):
+        >>>   arg.append(delays[i])
+        >>>   arg.append(rates[i])
+        >>> dp.command_inout("LoadPointingDelays", arg)
         """
         handler = self.get_command_object("LoadPointingDelays")
         (return_code, message) = handler(argin)

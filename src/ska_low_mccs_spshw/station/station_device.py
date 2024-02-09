@@ -1140,7 +1140,9 @@ class SpsStation(SKAObsDevice):
         """
         Set the pointing delay parameters of this Station's Tiles.
 
-        :param argin: an array containing a beam index followed by antenna delays
+        :param argin: an array containing a beam index followed by
+            pairs of antenna delays + delay rates, delay in seconds
+            and the delay rate in seconds/second
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1149,8 +1151,16 @@ class SpsStation(SKAObsDevice):
 
         :example:
 
+        >>> # example delays: 256 values from -32 to +32 ns, rates = 0
+        >>> delays = [step * 0.25e-9 for step in list(range(-128, 128))]
+        >>> rates = [0.0]*256
+        >>> beam = 0.0
         >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("LoadPointingDelays", delay_list)
+        >>> arg = [beam]
+        >>> for i in range(256)
+        >>>   arg.append(delays[i])
+        >>>   arg.append(rates[i])
+        >>> dp.command_inout("LoadPointingDelays", arg)
         """
         if len(argin) < 513:  # self._antennas_per_tile * 2 + 1:
             self.component_manager.logger.error("Insufficient parameters")

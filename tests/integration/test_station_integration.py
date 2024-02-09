@@ -388,6 +388,9 @@ class TestStationTileIntegration:
         change_event_callbacks["sps_station_command_status"].assert_change_event(
             (initialise_id, "COMPLETED")
         )
+
+        # Initialise values in the backend TileSimulator and forces update
+        tile_simulator.set_preadu_levels([0.0] * 32)
         tile_device.UpdateAttributes()
 
         # Set the value in the backend TileSimulator.

@@ -137,3 +137,37 @@ def test_communication(
     callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
 
     callbacks["communication_status"].assert_not_called()
+
+
+def test_trigger_adc_equalisation(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test the adc triggering equalisation.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    expected_adc = 16.0
+    expected_preadu = 8.0
+
+    for proxy in station_component_manager._tile_proxies.values():
+        proxy._proxy.adcPower = [expected_adc] * 32  # type: ignore
+        proxy._proxy.preaduLevels = [expected_preadu] * 32  # type: ignore
+
+    assert station_component_manager.preadu_levels == []
+
+    station_component_manager._trigger_adc_equalisation()
+
+    for value in station_component_manager._desired_preadu_levels:
+        assert value < expected_preadu + 1
+        assert value > expected_preadu - 1

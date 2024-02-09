@@ -147,6 +147,7 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("StartAcquisition", "start_acquisition"),
+            ("TriggerAdcEqualisation", "trigger_adc_equalisation"),
         ]:
             self.register_command_object(
                 command_name,
@@ -727,6 +728,27 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def TriggerAdcEqualisation(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Get the equalised ADC values.
+
+        Getting the equalised values takes up to 20 seconds (to get an average to
+        avoid spikes). So we trigger the collection and publish to dbmPowers
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("TriggerAdcEqualisation")
+        """
+        handler = self.get_command_object("TriggerAdcEqualisation")
+        (return_code, message) = handler()
         return ([return_code], [message])
 
     # -------------

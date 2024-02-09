@@ -436,3 +436,97 @@ class TestStationTileIntegration:
         # Check the station updates its own map.
         time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
+
+    def test_tile(
+        self: TestStationTileIntegration,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station preadulevels gets updates.
+
+        This test checks that a change in the backend `tile_simulator`
+        attribute `preadulevels` is propagated all the way to the `SpsStation`.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        assert subrack_device.adminMode == AdminMode.OFFLINE
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        # Since the devices are in adminMode OFFLINE,
+        # they are not even trying to monitor and control their components,
+        # so they each report state as DISABLE.
+        subrack_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_state"],
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+
+        # Tile and station both stay in UNKNOWN state
+        # because subrack is still OFFLINE
+        change_event_callbacks["tile_state"].assert_not_called()
+
+        subrack_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.UNKNOWN
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
+
+        # Now that subrack is ONLINE, it reports itself ON, and the TPM to be OFF,
+        # so MccsTile reports itself OFF
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+        print("ODFLIEHNIj ")
+        tile_device.On()
+
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "NotProgrammed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Programmed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        print("Turnong ONLINE")
+        tile_device.adminMode = AdminMode.ONLINE
+
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        print("Turnong OFFLINE")
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        print("Turnong ONLINE")
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )

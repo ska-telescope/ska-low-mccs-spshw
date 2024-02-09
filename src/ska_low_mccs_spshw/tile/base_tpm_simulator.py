@@ -107,8 +107,8 @@ class BaseTpmSimulator:
             called when the component state changes
         """
         self.logger = logger
-        self._component_state_changed_callback = component_state_changed_callback
-        self._communication_state_changed = communication_state_changed
+        self._update_component_state = component_state_changed_callback
+        self._update_communication_state = communication_state_changed
         self._is_programmed = False
         self._tpm_status = TpmStatus.UNKNOWN
         self._is_beamformer_running = False
@@ -160,28 +160,28 @@ class BaseTpmSimulator:
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
 
-        if self._communication_state_changed:
-            self._communication_state_changed(CommunicationStatus.NOT_ESTABLISHED)
-            self._communication_state_changed(CommunicationStatus.ESTABLISHED)
+        if self._update_communication_state:
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+            self._update_communication_state(CommunicationStatus.ESTABLISHED)
             self.communication_state = CommunicationStatus.ESTABLISHED
 
         if self._fail_communicate:
             raise ConnectionError("Failed to connect")
 
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback(power=PowerState.ON)
-            self._component_state_changed_callback(fault=False)
+        if self._update_component_state:
+            self._update_component_state(power=PowerState.ON)
+            self._update_component_state(fault=False)
 
     def stop_communicating(self: BaseTpmSimulator) -> None:
         """Cease monitoring the component, and break off all communication with it."""
         if self.communication_state == CommunicationStatus.DISABLED:
             return
 
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback(power=None, fault=None)
+        if self._update_component_state:
+            self._update_component_state(power=None, fault=None)
 
-        if self._communication_state_changed:
-            self._communication_state_changed(CommunicationStatus.DISABLED)
+        if self._update_communication_state:
+            self._update_communication_state(CommunicationStatus.DISABLED)
             self.communication_state = CommunicationStatus.DISABLED
 
     @property
@@ -321,8 +321,8 @@ class BaseTpmSimulator:
         self.logger.debug(f"set tpm status - old:{self._tpm_status} new:{new_status}")
         if new_status != self._tpm_status:
             self._tpm_status = new_status
-            if self._component_state_changed_callback is not None:
-                self._component_state_changed_callback(programming_state=new_status)
+            if self._update_component_state is not None:
+                self._update_component_state(programming_state=new_status)
 
     @property
     def tile_id(self: BaseTpmSimulator) -> int:

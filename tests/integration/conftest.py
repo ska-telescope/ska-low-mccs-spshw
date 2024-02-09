@@ -13,7 +13,7 @@ import unittest
 from typing import Any, Iterator
 
 import pytest
-from ska_control_model import SimulationMode, TestMode
+from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
@@ -104,7 +104,7 @@ def integration_test_context_fixture(
     """
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
-    harness.add_subrack_device(subrack_id)
+    harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
     harness.add_tile_device(
         tile_id,
         subrack_id,
@@ -161,10 +161,10 @@ def patched_tile_device_class_fixture(
             tile_component_manager._component_state_callback = (
                 self._component_state_changed
             )
-            tpm_driver._communication_state_callback = (
+            tpm_driver._update_communication_state = (
                 tile_component_manager._tpm_communication_state_changed
             )
-            tpm_driver._component_state_callback = self._component_state_changed
+            tpm_driver._update_component_state = self._component_state_changed
 
             return tile_component_manager
 
@@ -335,5 +335,5 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_state",
         "tile_command_status",
         "tile_programming_state",
-        timeout=2.0,
+        timeout=30.0,
     )

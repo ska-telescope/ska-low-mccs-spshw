@@ -25,7 +25,6 @@ from typing import Any, Callable, Optional, cast
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus
-from ska_low_mccs_common.component import MccsBaseComponentManager
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -33,7 +32,7 @@ from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsBaseComponentManager):
+class TpmDriver:
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -85,7 +84,6 @@ class TpmDriver(MccsBaseComponentManager):
         """
         self.logger = logger
         self._hardware_lock = threading.Lock()
-        self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
         self._station_id = station_id
         self._firmware_name = self.FIRMWARE_NAME[tpm_version]
@@ -128,19 +126,8 @@ class TpmDriver(MccsBaseComponentManager):
         # Hardware
         self._tpm_version = tpm_version
         self.tile = tile
-
-        super().__init__(
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-            max_workers=1,
-            fault=None,
-            programming_state=TpmStatus.UNKNOWN,
-            tile_health_structure=self._tile_health_structure,
-            adc_rms=self._adc_rms,
-            static_delays=self._static_delays,
-            preadu_levels=self._preadu_levels,
-        )
+        self._update_communication_state = communication_state_changed_callback
+        self._update_component_state = component_state_changed_callback
 
         self._poll_rate = 2.0
         self._start_polling_event = threading.Event()
@@ -155,10 +142,7 @@ class TpmDriver(MccsBaseComponentManager):
 
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
-        self.logger.debug("Start communication with the TPM...")
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        self._stop_polling_event.clear()
         self._start_polling_event.set()
 
     def stop_communicating(self: TpmDriver) -> None:
@@ -169,8 +153,6 @@ class TpmDriver(MccsBaseComponentManager):
             disconnect() method that we can call here?
         """
         self.logger.debug("Stop communication with the TPM...")
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
         self._stop_polling_event.set()
 
     def _polling_loop(self: TpmDriver) -> None:
@@ -192,37 +174,36 @@ class TpmDriver(MccsBaseComponentManager):
             # on "start" event
             self.tpm_disconnected()
             self._is_programmed = False
-            self._start_polling_event.clear()
 
     def _poll(self: TpmDriver) -> None:
-        """
-        Monitor tile connection to tpm.
-
-        :return: None
-        """
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            error_flag = False
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    try:
-                        self.tile[int(0x30000000)]
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        # polling attempt was unsuccessful
-                        self.logger.warning(f"Connection to tpm lost! : {e}")
-                        error_flag = True
-                    # polling attempt succeeded
-                    if not error_flag:
-                        self._update_attributes()
-                else:
-                    self.logger.debug("Failed to acquire lock")
-            if error_flag:
-                self.tpm_disconnected()
-                # self.update_component_state({"fault": True})
-            # wait for a polling_period
-            return
-
-        self.start_connection()
+        """Monitor tile connection to tpm."""
+        error_flag = False
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile[int(0x30000000)]
+                # pylint: disable=broad-except
+                except Exception as e:
+                    # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
+                # polling attempt succeeded
+                if not error_flag:
+                    self._update_attributes()
+            else:
+                self.logger.debug("Failed to acquire lock")
+        if error_flag:
+            # self.tpm_disconnected()
+            # self.update_component_state({"fault": True})
+            self.logger.debug(
+                "Failed Poll: setting communications NOT_ESTABLISHED"
+                "and retrying connection."
+            )
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+            self.start_connection()
+        else:
+            self._update_communication_state(CommunicationStatus.ESTABLISHED)
+        # wait for a polling_period
 
     def start_connection(self: TpmDriver) -> None:
         """
@@ -232,10 +213,7 @@ class TpmDriver(MccsBaseComponentManager):
         """
         wait_time = 3.0  # try every 3 seconds for max_time times
         max_time = 20  # 60 seconds
-        while not (
-            (self.communication_state == CommunicationStatus.ESTABLISHED)
-            | (self._stop_polling_event.is_set())
-        ):
+        while not self._stop_polling_event.is_set():
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
             self._is_programmed = False
@@ -381,7 +359,22 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
+        if self._start_polling_event.is_set():
+            if self._stop_polling_event.is_set():
+                self.logger.warning(
+                    "Request to stop and start poll at the same time, Stopping poll"
+                )
+                self._start_polling_event.clear()
+            else:
+                self.logger.warning(
+                    "A request to start communication "
+                    "sent before communication stopped "
+                    "Continue communication."
+                )
+                return
+
         self._update_communication_state(CommunicationStatus.DISABLED)
+        self._start_polling_event.clear()
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -421,29 +414,27 @@ class TpmDriver(MccsBaseComponentManager):
     def _update_tpm_status(self: TpmDriver) -> None:
         """Update the value of _tpm_status according to hardware state."""
         new_status = self._tpm_status
-        if self.communication_state != CommunicationStatus.ESTABLISHED:
-            new_status = TpmStatus.UNCONNECTED
-        else:
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    try:
-                        self._is_programmed = self.tile.is_programmed()
-                        if self._is_programmed is False:
-                            new_status = TpmStatus.UNPROGRAMMED
-                        elif self._check_initialised() is False:
-                            new_status = TpmStatus.PROGRAMMED
-                        elif self._check_channeliser_started() is False:
-                            new_status = TpmStatus.INITIALISED
-                        else:
-                            new_status = TpmStatus.SYNCHRONISED
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
-                        # TODO This must be handled in the connection loop
-                        # when implemented
-                        new_status = TpmStatus.UNCONNECTED
-                else:
-                    self.logger.debug("tpm_driver: tpm_status uses current value")
+
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self._is_programmed = self.tile.is_programmed()
+                    if self._is_programmed is False:
+                        new_status = TpmStatus.UNPROGRAMMED
+                    elif self._check_initialised() is False:
+                        new_status = TpmStatus.PROGRAMMED
+                    elif self._check_channeliser_started() is False:
+                        new_status = TpmStatus.INITIALISED
+                    else:
+                        new_status = TpmStatus.SYNCHRONISED
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
+                    # TODO This must be handled in the connection loop
+                    # when implemented
+                    new_status = TpmStatus.UNCONNECTED
+            else:
+                self.logger.debug("tpm_driver: tpm_status uses current value")
         self._set_tpm_status(new_status)
 
     def _check_initialised(self: TpmDriver) -> bool:

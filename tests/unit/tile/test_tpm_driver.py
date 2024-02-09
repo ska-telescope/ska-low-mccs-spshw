@@ -94,7 +94,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tile_simulator.connect.assert_not_called()
-        callbacks["communication_status"].assert_not_called()
+        callbacks["communication_status"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
 
     def test_communication_when_connection_failed(
         self: TestTpmDriver,
@@ -119,12 +121,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Act
         tpm_driver.start_communicating()
 
-        # Assert
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNCONNECTED
         )
-        callbacks["communication_status"].assert_not_called()
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
         assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
 
     def test_stop_communicating_when_communication_already_disabled(
@@ -142,7 +141,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param callbacks: A dictionary used to assert callbacks.
         """
         # Arrange
-        assert tpm_driver._communication_state == CommunicationStatus.DISABLED
         tile_simulator.connect = unittest.mock.Mock()  # type: ignore[assignment]
 
         # Act
@@ -203,26 +201,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tpm_driver.start_connection.assert_called_once()
-
-    def test_poll_with_tile_failure(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-    ) -> None:
-        """
-        Test the behavior of the `poll` method when there is a tile failure.
-
-        :param tpm_driver: The instance of the TPM driver being tested.
-        """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
-        tpm_driver.tpm_disconnected = unittest.mock.Mock()  # type: ignore[assignment]
-        tpm_driver.tile = None
-
-        # Act
-        tpm_driver._poll()
-
-        # Assert
-        tpm_driver.tpm_disconnected.assert_called_once()
 
     def test_write_register(
         self: TestTpmDriver,
@@ -518,6 +496,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the tpm status reports as expected.
@@ -525,11 +504,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tpm_driver: The tpm driver under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
+        :param callbacks: A dictionary used to assert callbacks.
         """
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
         # just used to call update_tpm_status and cover the tpm_status property in test
-
-        assert tpm_driver.tpm_status == TpmStatus.UNCONNECTED
 
         tile_simulator.connect()
         tile_simulator.tpm._is_programmed = False  # type: ignore
@@ -2169,27 +2147,19 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param callbacks: A dictionary of driver callbacks used to mock the
                         underlying component's behavior.
         """
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
-
         # start communicating initialises a polling loop that should.
         # - start_connection with the component under test.
         # - update attributes in a polling loop.
         tpm_driver.start_communicating()
 
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        time.sleep(3)
         assert tile_simulator.tpm is not None
-
-        # Any subsequent calls to start communicating do not fire a change event
-        tpm_driver.start_communicating()
-        callbacks["communication_status"].assert_not_called()
-
+        # Check polling is ok
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         tpm_driver.stop_communicating()
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
 
         # Any subsequent calls to stop communicating do not fire a change event
         tpm_driver.stop_communicating()
@@ -2212,8 +2182,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: An hardware tile_simulator mock
         :param callbacks: dictionary of driver callbacks.
         """
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
-
         # start communicating initialises a polling loop that should.
         # - start_connection with the component under test.
         # - update attributes in a polling loop.

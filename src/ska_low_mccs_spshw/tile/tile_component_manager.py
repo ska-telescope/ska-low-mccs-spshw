@@ -140,7 +140,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self._tpm_communication_state_changed,
             self._update_component_state,
         )
-
         def _update_component_power_state(power_state: PowerState) -> None:
             self._update_component_state(power=power_state)
             self.update_tpm_power_state(power_state)
@@ -167,10 +166,10 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             fault=None,
             power=PowerState.UNKNOWN,
             programming_state=None,
-            tile_health_structure=self._tpm_driver._tile_health_structure,
-            adc_rms=self._tpm_driver._adc_rms,
+            tile_health_structure=None,
+            adc_rms=None,
+            preadu_levels=None,
             static_delays=self._tpm_driver._static_delays,
-            preadu_levels=self._tpm_driver._preadu_levels,
         )
 
     def start_communicating(self: TileComponentManager) -> None:
@@ -238,12 +237,14 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         # Pass this as a callback, rather than the method that is calls,
         # so that self._tpm_driver is resolved when the
         # callback is called, not when it is registered.
+        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
         self._tpm_driver.start_communicating()
 
     def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
         # Pass this as a callback, rather than the method that is calls,
         # so that self._tpm_driver is resolved when the
         # callback is called, not when it is registered.
+        self._update_component_state(power=PowerState.UNKNOWN)
         self._tpm_driver.stop_communicating()
 
     # TODO: Convert this to a LRC. This doesn't need to be done right now.

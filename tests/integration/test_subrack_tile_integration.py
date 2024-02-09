@@ -191,7 +191,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         )
 
         # The tile device receives this event too.
-        # TODO: it transitions straight to ON without going through UNKNOWN. Why?
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
         # Now we power off all the TPMs using the subrack,

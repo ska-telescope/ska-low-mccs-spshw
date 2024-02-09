@@ -293,12 +293,12 @@ def dynamic_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
-        DynamicTpmSimulator(logger, callbacks["component_state"]),
+        DynamicTpmSimulator(logger),
     )
-    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+    component_manager._tpm_driver._update_communication_state = (  # type: ignore
         component_manager._tpm_communication_state_changed
     )
-    component_manager._tpm_driver._component_state_changed_callback = (
+    component_manager._tpm_driver._update_component_state = (
         component_manager._update_component_state
     )
     return component_manager
@@ -355,10 +355,10 @@ def static_tile_component_manager_fixture(
         callbacks["component_state"],
         StaticTpmSimulator(logger, callbacks["component_state"]),
     )
-    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+    component_manager._tpm_driver._update_communication_state = (  # type: ignore
         component_manager._tpm_communication_state_changed
     )
-    component_manager._tpm_driver._component_state_changed_callback = (
+    component_manager._tpm_driver._update_component_state = (
         component_manager._update_component_state
     )
     return component_manager

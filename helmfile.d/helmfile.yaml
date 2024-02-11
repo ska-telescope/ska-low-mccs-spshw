@@ -62,8 +62,13 @@ environments:
       - platform/gmrt.yaml
       - spshw/values/values-gmrt.yaml
       - platform/minikube.yaml
-  low-itf:
+  low-itf-deprecated:  # You should be using infra-issued credentials!
     kubeContext: low-itf
+    values:
+      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=cbcbfd855cc88ad381e11d6086252fe75f99ca36
+      - spshw/values/values-low-itf.yaml
+  low-itf:
+    kubeContext: infra:au-itf-k8s-master01-k8s
     values:
       - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=cbcbfd855cc88ad381e11d6086252fe75f99ca36
       - spshw/values/values-low-itf.yaml

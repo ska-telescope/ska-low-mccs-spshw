@@ -156,9 +156,7 @@ class TpmDriver(MccsBaseComponentManager):
     def start_communicating(self: TpmDriver) -> None:
         """Establish communication with the TPM."""
         self.logger.debug("Start communication with the TPM...")
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        self._stop_polling_event.clear()
         self._start_polling_event.set()
 
     def stop_communicating(self: TpmDriver) -> None:
@@ -169,8 +167,7 @@ class TpmDriver(MccsBaseComponentManager):
             disconnect() method that we can call here?
         """
         self.logger.debug("Stop communication with the TPM...")
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
+        self._start_polling_event.clear()
         self._stop_polling_event.set()
 
     def _polling_loop(self: TpmDriver) -> None:
@@ -192,7 +189,6 @@ class TpmDriver(MccsBaseComponentManager):
             # on "start" event
             self.tpm_disconnected()
             self._is_programmed = False
-            self._start_polling_event.clear()
 
     def _poll(self: TpmDriver) -> None:
         """
@@ -217,9 +213,9 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.logger.debug("Failed to acquire lock")
             if error_flag:
-                self.tpm_disconnected()
-                # self.update_component_state({"fault": True})
-            # wait for a polling_period
+                self.tpm_disconnected(intentional_disconnect=False)
+            else:
+                self._update_communication_state(CommunicationStatus.ESTABLISHED)
             return
 
         self.start_connection()
@@ -232,10 +228,8 @@ class TpmDriver(MccsBaseComponentManager):
         """
         wait_time = 3.0  # try every 3 seconds for max_time times
         max_time = 20  # 60 seconds
-        while not (
-            (self.communication_state == CommunicationStatus.ESTABLISHED)
-            | (self._stop_polling_event.is_set())
-        ):
+        while not self._stop_polling_event.is_set():
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             self.logger.debug("Trying to connect to tpm...")
             timeout = 0
             self._is_programmed = False
@@ -261,8 +255,6 @@ class TpmDriver(MccsBaseComponentManager):
                 f"Connection to tile failed after {timeout*wait_time} seconds. "
                 "Waiting for connection..."
             )
-            self.logger.debug("Tile disconnected from tpm.")
-            time.sleep(wait_time)
 
     def _update_attributes(self: TpmDriver) -> None:
         """Update key hardware attributes."""
@@ -369,8 +361,12 @@ class TpmDriver(MccsBaseComponentManager):
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
 
-    def tpm_disconnected(self: TpmDriver) -> None:
-        """Tile disconnected to tpm."""
+    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = True) -> None:
+        """
+        Tile disconnected to tpm.
+
+        :param intentional_disconnect: True if disconnection was expected.
+        """
         self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
@@ -381,7 +377,31 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
+        if self._start_polling_event.is_set():
+            if self._stop_polling_event.is_set():
+                self.logger.warning(
+                    "Request to stop and start poll at the same time, Stopping poll"
+                )
+                self._start_polling_event.clear()
+            else:
+                self.logger.warning(
+                    "A request to start communication "
+                    "sent before communication stopped "
+                    "Continue communication."
+                )
+                if not intentional_disconnect:
+                    self.logger.error(
+                        "Tpm not connected: setting communications NOT_ESTABLISHED"
+                        "and attempt connection."
+                    )
+                    self._update_communication_state(
+                        CommunicationStatus.NOT_ESTABLISHED
+                    )
+                    self.start_connection()
+                return
+
         self._update_communication_state(CommunicationStatus.DISABLED)
+        self._start_polling_event.clear()
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:

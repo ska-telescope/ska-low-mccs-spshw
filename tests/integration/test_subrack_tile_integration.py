@@ -572,6 +572,38 @@ class TestMccsTileTpmDriver:
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
 
+    def test_tile_state_rediscovery(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test tile can be turned OFFLINE and ONLINE and rediscover state.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+
     def test_pps_present(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,

@@ -245,6 +245,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         # so that self._tpm_driver is resolved when the
         # callback is called, not when it is registered.
         self._tpm_driver.stop_communicating()
+        self._update_component_state(power=PowerState.UNKNOWN)
 
     # TODO: Convert this to a LRC. This doesn't need to be done right now.
     #       This needs an instantiation of a new class derived from

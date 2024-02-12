@@ -70,7 +70,12 @@ class TestTileComponentManager:
         elif power_state == PowerState.OFF:
             pass  # test harness starts with TPM off
         elif power_state == PowerState.ON:
-            tile_component_manager._tpm_power_state_changed(PowerState.ON)
+            # If poll succeeds it reports ESTABLISHED.
+            # If poll fails it reports NOT_ESTABLISHED
+            # Should we just pass here?
+            tile_component_manager._update_communication_state(
+                CommunicationStatus.ESTABLISHED
+            )
             callbacks["communication_status"].assert_call(
                 CommunicationStatus.ESTABLISHED
             )

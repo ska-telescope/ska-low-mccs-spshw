@@ -87,6 +87,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # Arrange
         tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        # ensure TileSimulator is ready for connection.
+        tile_simulator.connect()
+        # Mock method to check not called again.
         tile_simulator.connect = unittest.mock.Mock()  # type: ignore[assignment]
 
         # Act
@@ -118,6 +121,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Act
         tpm_driver.start_communicating()
+        # TpmDriver is configured for a 60 second timeout
+        time.sleep(60)
 
         # Assert
         callbacks["communication_status"].assert_call(

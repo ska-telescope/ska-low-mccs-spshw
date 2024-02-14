@@ -58,7 +58,7 @@ class TpmDriver(MccsBaseComponentManager):
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-statements
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
@@ -113,7 +113,9 @@ class TpmDriver(MccsBaseComponentManager):
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._current_frame = 0
-        self._pps_delay = 0
+        self._reported_pps_delay: Optional[int] = None
+        self._corrected_pps_delay: Optional[int] = None
+        self._desired_pps_delay_correction: int = 0
         self._test_generator_active = False
         self._arp_table: dict[int, list[int]] = {}
         self._fpgas_time = [0, 0]
@@ -293,7 +295,12 @@ class TpmDriver(MccsBaseComponentManager):
                     # very slow update parameters. Should update by set commands
                     if (current_time - self._last_update_time_2) > time_interval_2:
                         self._last_update_time_2 = current_time
-                        self._pps_delay = self.tile.get_pps_delay()
+                        self._reported_pps_delay = self.tile.get_pps_delay(
+                            enable_correction=False
+                        )
+                        self._corrected_pps_delay = self.tile.get_pps_delay(
+                            enable_correction=True
+                        )
                         self._is_beamformer_running = self.tile.beamformer_is_running()
                         self._fpga_reference_time = self.tile[
                             "fpga1.pps_manager.sync_time_val"
@@ -318,7 +325,7 @@ class TpmDriver(MccsBaseComponentManager):
 
         if not self._is_programmed:
             self.logger.debug("Not programmed, resetting TpmDriver internal state")
-            self._pps_delay = 0
+            self._reported_pps_delay = None
             self._fpga_reference_time = 0
             # self._beamformer_table = self.BEAMFORMER_TABLE
             # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
@@ -620,10 +627,8 @@ class TpmDriver(MccsBaseComponentManager):
         # Poll to update internal state after erasing
         self._poll()
 
-    def initialise(
-        self: TpmDriver,
-    ) -> None:
-        """Download firmware, if not already downloaded, and initializes tile."""
+    def initialise(self: TpmDriver) -> None:
+        """Download firmware, if not already downloaded, and initialises tile."""
         #
         # If not programmed, program it.
         # TODO: there is no way to check whether the TPM is already correctly
@@ -649,9 +654,13 @@ class TpmDriver(MccsBaseComponentManager):
             #
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
+                self.logger.info(
+                    "initialising tile with a "
+                    f"pps correction of {self._desired_pps_delay_correction}"
+                )
                 self.tile.initialise(
                     tile_id=self._tile_id,
-                    pps_delay=self._pps_delay,
+                    pps_delay=self._desired_pps_delay_correction,
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -920,25 +929,38 @@ class TpmDriver(MccsBaseComponentManager):
         return self._fpga_current_frame
 
     @property
-    def pps_delay(self: TpmDriver) -> float:
+    def pps_delay(self: TpmDriver) -> Optional[int]:
         """
-        Return the last measured PPS delay of the TPM.
+        Return last measured delay between PPS and 10 MHz clock.
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
-        return self._pps_delay
+        return self._reported_pps_delay
 
-    @pps_delay.setter  # type: ignore[no-redef]
-    def pps_delay(self: TpmDriver, value: int) -> None:
+    @property
+    def pps_delay_correction(self: TpmDriver) -> Optional[int]:
         """
-        Set PPS delay.
+        Return last measured ppsdelay correction.
 
-        PPS delay correction, applied during initialisation.
-        Must be set before initialise()
-
-        :param value: PPS delay correction (nanoseconds). Rounded to 1.25 ns units
+        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
-        self._pps_delay = value
+        assert self._corrected_pps_delay is not None
+        assert self._reported_pps_delay is not None
+        return self._corrected_pps_delay - self._reported_pps_delay
+
+    @pps_delay_correction.setter
+    def pps_delay_correction(self: TpmDriver, pps_delay_correction: int) -> None:
+        """
+        Set a delay correction to the ppsdelay.
+
+        :param pps_delay_correction: A delay correction
+        """
+        self._desired_pps_delay_correction = pps_delay_correction
+        self.logger.warning(
+            f"ppsDelayCorrection of {pps_delay_correction} set in software. "
+            "will be applied during tile initialisation. "
+            "check ppsDelayCorrection for register reading."
+        )
 
     @property
     def register_list(self: TpmDriver) -> list[str]:

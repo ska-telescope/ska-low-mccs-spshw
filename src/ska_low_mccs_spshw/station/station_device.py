@@ -465,19 +465,33 @@ class SpsStation(SKAObsDevice):
         """
         Get PPS delay correction, one per tile.
 
-        :return: Array of PPS delay correction in nanoseconds, one value per tile.
+        :return: Array of PPS delay in nanoseconds, one value per tile.
         """
         return self.component_manager.pps_delays
 
-    @ppsDelays.write  # type: ignore[no-redef]
-    def ppsDelays(self: SpsStation, delays: list[int]) -> None:
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=16,
+    )
+    def ppsDelayCorrections(self: SpsStation) -> list[int]:
+        """
+        Return PPS delay correction, one per tile.
+
+        :return: Array of PPS delay correction in nanoseconds, one value per tile.
+        """
+        return self.component_manager.pps_delay_corrections
+
+    @ppsDelayCorrections.write  # type: ignore[no-redef]
+    def ppsDelayCorrections(self: SpsStation, delays: list[int]) -> None:
         """
         Set PPS delay correction, one per tile.
+
+        Note: this will be set in the next initialisation.
 
         :param delays: PPS delay correction in nanoseconds, one value per tile.
             Values are internally rounded to 1.25 ns units.
         """
-        self.component_manager.pps_delays = delays
+        self.component_manager.pps_delay_corrections = delays
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:

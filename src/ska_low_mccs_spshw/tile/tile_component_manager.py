@@ -716,6 +716,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "phase_terminal_count",
         "pll_locked",
         "pps_delay",
+        "pps_delay_correction",
         "pps_present",
         "preadu_levels",
         "read_address",

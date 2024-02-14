@@ -399,6 +399,7 @@ class TileSimulator:
         self._is_first = False
         self._is_last = False
         self._tile_id = self.TILE_ID
+        self.pps_correction = 0
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
@@ -409,7 +410,7 @@ class TileSimulator:
         )
         self._station_id = self.STATION_ID
         self._timestamp = 0
-        self._pps_delay = self.PPS_DELAY
+        self._pps_delay: int = self.PPS_DELAY
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
@@ -504,7 +505,7 @@ class TileSimulator:
 
         :param station_id: station id
         :param tile_id: tile id
-        :param pps_delay: pps_delay
+        :param pps_delay: PPS delay correction.
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
         """
@@ -512,7 +513,8 @@ class TileSimulator:
         # define if the tile is the first or last in the station_beamformer
         # for station_beamf in self.tpm._station_beamf:
         # station_beamf.set_first_last_tile(is_first_tile, is_last_tile)
-
+        self.logger.info(f"delay correction set to {pps_delay}")
+        self.pps_correction = pps_delay
         self._is_first = is_first_tile
         self._is_last = is_last_tile
 
@@ -538,8 +540,16 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
 
-    def get_pps_delay(self: TileSimulator) -> float:
-        """:return: the pps delay."""
+    def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> int:
+        """
+        Get the pps delay.
+
+        :param enable_correction: enable correction.
+
+        :return: the pps delay.
+        """
+        if enable_correction:
+            return self._pps_delay + self.pps_correction
         return self._pps_delay
 
     def is_programmed(self: TileSimulator) -> Optional[bool]:

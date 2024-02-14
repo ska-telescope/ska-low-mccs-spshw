@@ -177,6 +177,11 @@ class TestTileOrchestrator:
                 {},
                 None,
             ),
+            "set_tpm_communication_disabled": (
+                {"tpm_communication_state": CommunicationStatus.DISABLED},
+                {},
+                None,
+            ),
             "start_communicating_with_subrack": (
                 {},
                 {"start_communicating_with_subrack": []},
@@ -193,7 +198,7 @@ class TestTileOrchestrator:
                 None,
             ),
             "stop_communicating_with_tpm": (
-                {"tpm_communication_state": CommunicationStatus.DISABLED},
+                {},
                 {"stop_communicating_with_tpm": []},
                 None,
             ),
@@ -655,6 +660,9 @@ class TestTileOrchestrator:
                 ),
                 Stimulus.TPM_COMMS_ESTABLISHED: lambda tc: tc.update_tpm_communication_state(  # noqa E501
                     CommunicationStatus.ESTABLISHED
+                ),
+                Stimulus.TPM_COMMS_DISABLE: lambda tc: tc.update_tpm_communication_state(  # noqa E501
+                    CommunicationStatus.DISABLED
                 ),
             }[stimulus](tile_orchestrator)
 

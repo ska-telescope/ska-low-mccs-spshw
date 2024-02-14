@@ -74,6 +74,9 @@ class Stimulus(enum.IntEnum):
     TPM_COMMS_ESTABLISHED = 12
     """Communications with the TPM is established."""
 
+    TPM_COMMS_DISABLE = 13
+    """Communications with the TPM is disabled."""
+
 
 StateTupleType = Union[
     tuple[CommunicationStatus],
@@ -139,12 +142,15 @@ class TileOrchestrator:
     :language: yaml
     """
 
-    RULES: dict[
-        tuple[str, str]
-        | tuple[str, str, bool | None, str]
-        | tuple[str, str, bool | None, str, str],
-        list[str],
-    ] | None = None  # will be populated the first time the class gets instantiated.
+    RULES: (
+        dict[
+            tuple[str, str]
+            | tuple[str, str, bool | None, str]
+            | tuple[str, str, bool | None, str, str],
+            list[str],
+        ]
+        | None
+    ) = None  # will be populated the first time the class gets instantiated.
 
     @classmethod
     def _load_rules(
@@ -453,7 +459,7 @@ class TileOrchestrator:
         """
         with self.__lock:
             if communication_state == CommunicationStatus.DISABLED:
-                pass
+                self._act(Stimulus.TPM_COMMS_DISABLE)
                 # This will only occur as a result of the orchestrator calling
                 # stop_communicating_with_tpm, which is synchronous and deterministic,
                 # so the orchestrator already knows that # communication has been
@@ -580,7 +586,6 @@ class TileOrchestrator:
         self._subrack_communication_state = CommunicationStatus.NOT_ESTABLISHED
 
     def _stop_communicating_with_tpm(self: TileOrchestrator) -> None:
-        self._tpm_communication_state = CommunicationStatus.DISABLED
         self._stop_communicating_with_tpm_callback()
 
     def _set_tpm_communication_not_established(self: TileOrchestrator) -> None:
@@ -588,3 +593,6 @@ class TileOrchestrator:
 
     def _set_tpm_communication_established(self: TileOrchestrator) -> None:
         self._tpm_communication_state = CommunicationStatus.ESTABLISHED
+
+    def _set_tpm_communication_disabled(self: TileOrchestrator) -> None:
+        self._tpm_communication_state = CommunicationStatus.DISABLED

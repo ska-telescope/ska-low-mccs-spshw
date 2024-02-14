@@ -115,6 +115,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, DISABLED]: []  # unlikely race condition
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, DISABLED]: []  # unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, DISABLED]: []  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS NO_SUPPLY
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, NO_SUPPLY]: [report_communication_disabled]  # already online and trying to establish communications
@@ -129,6 +130,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, NO_SUPPLY]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, NO_SUPPLY]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, NO_SUPPLY]: []  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, NO_SUPPLY]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS ON, TPM IS NO_SUPPLY
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ON, NO_SUPPLY]: [report_communication_disabled, set_no_desire]
@@ -143,6 +145,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ON, NO_SUPPLY]: [set_subrack_communication_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ON, NO_SUPPLY]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, NO_SUPPLY]: []  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ON, NO_SUPPLY]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS NO_SUPPLY
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, NO_SUPPLY]: [report_communication_disabled]
@@ -157,6 +160,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, NO_SUPPLY]: [start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, NO_SUPPLY]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, NO_SUPPLY]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, NO_SUPPLY]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS NO_SUPPLY
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, NO_SUPPLY]: [report_communication_disabled, set_no_desire]
@@ -171,6 +175,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, NO_SUPPLY]: [report_tpm_power_unknown, set_no_desire, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, NO_SUPPLY]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ON, NO_SUPPLY]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, NO_SUPPLY]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS OFF
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, "OFF"]: [report_communication_disabled]
@@ -185,6 +190,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, "OFF"]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, "OFF"]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, "OFF"]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, "OFF"]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS ON, TPM IS OFF
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ON, "OFF"]: [report_communication_disabled, set_no_desire]
@@ -199,6 +205,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ON, "OFF"]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ON, "OFF"]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, "OFF"]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ON, "OFF"]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS OFF
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "OFF"]: [stop_communicating_with_subrack, report_communication_disabled, report_tpm_power_unknown]
@@ -213,6 +220,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "OFF"]: [set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "OFF"]: []  # extremely unlikely race condition
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "OFF"]: [set_tpm_communication_established, report_communication_established, report_tpm_on]  # extremely unlikely race condition
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, "OFF"]: [report_tpm_on]
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS ON, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, "ON", DISABLED]: [report_communication_disabled]
@@ -227,6 +235,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, "ON", DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, "ON", DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS ON, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -241,6 +250,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_subrack_communication_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE,  NOT_ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS ON, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, "ON", ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -255,6 +265,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, "ON", ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", ESTABLISHED]: [set_tpm_communication_not_established, report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, "ON", ESTABLISHED]: []  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, "ON", ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS ON, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, "ON", DISABLED]: [set_no_desire]
@@ -269,6 +280,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, "ON", DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, "ON", DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS ON, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, "ON", NOT_ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -283,6 +295,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, "ON", NOT_ESTABLISHED]: [set_subrack_communication_established, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, "ON", NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS ON, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, "ON", ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -297,6 +310,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, "ON", ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", ESTABLISHED]: [set_tpm_communication_not_established, report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, "ON", ESTABLISHED]: []  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, "ON", ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS OFF, TPM IS ON, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, OFF, "ON", ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -311,6 +325,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, OFF, "ON", ESTABLISHED]: []
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, OFF, "ON", ESTABLISHED]: [set_tpm_communication_not_established, report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, OFF, "ON", ESTABLISHED]: []  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, OFF, "ON", ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS ON, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "ON", DISABLED]: []
@@ -325,6 +340,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", DISABLED]: [set_tpm_communication_not_established, start_communicating_with_tpm]  # TODO: Is this an impossible state?
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, "ON", DISABLED]: [report_tpm_power_unknown, report_communication_disabled]
 
 # SUBRACK COMMS ESTABLISHED, TPM IS ON, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -339,12 +355,13 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, "ON", NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS ON, TPM COMMS ESTABLISHED
-!!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "ON", ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
+!!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, "ON", ESTABLISHED]: [stop_communicating_with_tpm]
 !!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, "ON", ESTABLISHED]: []  # already online
 !!python/tuple [DESIRE_ON, ESTABLISHED, ~, "ON", ESTABLISHED]: []  # already on
-!!python/tuple [DESIRE_OFF, ESTABLISHED, ~, "ON", ESTABLISHED]: [stop_communicating_with_tpm, turn_tpm_off]
+!!python/tuple [DESIRE_OFF, ESTABLISHED, ~, "ON", ESTABLISHED]: [turn_tpm_off]
 !!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", ESTABLISHED]: [set_subrack_communication_not_established]
 !!python/tuple [SUBRACK_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", ESTABLISHED]: []  # we already knew that
 !!python/tuple [SUBRACK_SAYS_TPM_UNKNOWN, ESTABLISHED, ~, "ON", ESTABLISHED]: [report_tpm_power_unknown]
@@ -353,6 +370,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, "ON", ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, "ON", ESTABLISHED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, "ON", ESTABLISHED]: []  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, "ON", ESTABLISHED]: [report_tpm_power_unknown, set_tpm_communication_disabled, report_communication_disabled]
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, UNKNOWN, DISABLED]: []
@@ -367,6 +385,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -381,6 +400,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -395,6 +415,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [report_tpm_on]  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_no_desire, report_communication_disabled]
@@ -409,6 +430,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, DISABLED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -423,6 +445,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [set_subrack_communication_established, report_tpm_on, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -437,6 +460,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [set_subrack_communication_established, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [report_tpm_on]  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_no_desire, report_communication_disabled]
@@ -451,6 +475,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_subrack_communication_established, set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ON, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -465,6 +490,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS NOT ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, NOT_ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -479,10 +505,11 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, NOT_ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [set_subrack_communication_established]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, NOT_ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, NOT_ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_communication_disabled]
-!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: []  # already online
+!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: [start_communicating_with_tpm]
 !!python/tuple [DESIRE_ON, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_desired_on]
 !!python/tuple [DESIRE_OFF, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_desired_off]
 !!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_subrack_communication_not_established]
@@ -493,6 +520,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -507,6 +535,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [start_communicating_with_tpm]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, report_communication_disabled]
@@ -521,6 +550,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [report_tpm_on]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: [report_tpm_on]  # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ~, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_no_desire, report_communication_disabled]
@@ -535,6 +565,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_tpm_communication_not_established, start_communicating_with_tpm, turn_tpm_off]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, OFF, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -549,6 +580,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [report_tpm_on, turn_tpm_off, stop_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, OFF, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS OFF, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -563,6 +595,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [report_tpm_on, turn_tpm_off, stop_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: [report_tpm_on] # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, OFF, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_no_desire, report_communication_disabled]
@@ -577,6 +610,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_tpm_communication_not_established, start_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_tpm_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, DISABLED]: [set_tpm_communication_established, report_communication_established, report_tpm_on, set_no_desire]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, UNKNOWN, DISABLED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS NOT ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -591,6 +625,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [start_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: []  # we already knew that
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: [set_tpm_communication_established, report_communication_established, report_tpm_on]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, UNKNOWN, NOT_ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS UNKNOWN, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -605,6 +640,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [report_tpm_on, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [set_tpm_communication_not_established, report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: [report_tpm_on, set_no_desire] # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, UNKNOWN, ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS ON, TPM COMMS ESTABLISHED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, "ON", ESTABLISHED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -618,6 +654,7 @@
 !!python/tuple [SUBRACK_SAYS_TPM_OFF, ESTABLISHED, ON, "ON", ESTABLISHED]: [report_tpm_off, stop_communicating_with_tpm, turn_tpm_on, set_no_desire]
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, "ON", ESTABLISHED]: [report_tpm_on, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, "ON", ESTABLISHED]: [set_tpm_communication_not_established, report_communication_not_established]
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, "ON", ESTABLISHED]: []
 
 # SUBRACK COMMS ESTABLISHED, DESIRED IS ON, TPM IS ON, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ON, "ON", DISABLED]: [stop_communicating_with_tpm, set_no_desire, report_communication_disabled]
@@ -632,3 +669,4 @@
 !!python/tuple [SUBRACK_SAYS_TPM_ON, ESTABLISHED, ON, "ON", DISABLED]: [report_tpm_on, start_communicating_with_tpm, set_no_desire]
 !!python/tuple [TPM_COMMS_NOT_ESTABLISHED, ESTABLISHED, ON, "ON", DISABLED]: [report_communication_not_established]
 !!python/tuple [TPM_COMMS_ESTABLISHED, ESTABLISHED, ON, "ON", DISABLED]: [report_tpm_on, set_no_desire] # we already knew that
+!!python/tuple [TPM_COMMS_DISABLE, ESTABLISHED, ON, "ON", DISABLED]: []

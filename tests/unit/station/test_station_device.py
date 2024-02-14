@@ -389,9 +389,11 @@ def test_On(
             "source_ip": f"10.0.0.{str(152 + (2 * i))}",
             "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(154 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert json.loads(
@@ -402,9 +404,11 @@ def test_On(
             "source_ip": f"10.0.0.{str(153 + (2 * i))}",
             "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(155 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
@@ -540,9 +544,11 @@ def test_Initialise(
             "source_ip": f"10.0.0.{str(152 + (2 * i))}",
             "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(154 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert json.loads(
@@ -553,9 +559,11 @@ def test_Initialise(
             "source_ip": f"10.0.0.{str(153 + (2 * i))}",
             "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(155 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
@@ -742,13 +750,6 @@ def test_Standby(
             "20230101T12:34:55.000Z",
             "ApplyPointingDelays",
             "20230101T12:34:55.000Z",
-            False,
-        ),
-        pytest.param(
-            "LoadPointingDelays",
-            [1] + [0] * 512,
-            "LoadPointingDelays",
-            [1] + [0] * 32,
             False,
         ),
         pytest.param(

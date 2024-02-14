@@ -7,12 +7,15 @@
 """This module contains the tests of the tile component manage."""
 from __future__ import annotations
 
+import copy
 import logging
+import random
 import unittest.mock
 from typing import Iterator
 
 import pytest
 from ska_control_model import CommunicationStatus
+from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.station import SpsStationComponentManager
@@ -68,6 +71,32 @@ def callbacks_fixture() -> MockCallableGroup:
         "subrack_health",
         timeout=5.0,
     )
+
+
+@pytest.fixture(name="station_label")
+def station_label_fixture() -> str:
+    """
+    Station label for use in testing.
+
+    :returns: a station label for use in testing.
+    """
+    return "ci-1"
+
+
+@pytest.fixture(name="mock_tile_proxy")
+def mock_tile_proxy_fixture(
+    tile_id: int, station_label: str, logger: logging.Logger
+) -> MccsDeviceProxy:
+    """
+    Proxy to the device which the component manager has been given.
+
+    :param tile_id: the id of the tile which the component manager has been given.
+    :param station_label: the label of the station.
+    :param logger: a logger for use in testing.
+
+    :returns: A proxy to the device which the component manager has been given.
+    """
+    return MccsDeviceProxy(get_tile_name(tile_id, station_label), logger)
 
 
 # pylint: disable=too-many-arguments
@@ -171,3 +200,68 @@ def test_trigger_adc_equalisation(
     for value in station_component_manager._desired_preadu_levels:
         assert value < expected_preadu + 1
         assert value > expected_preadu - 1
+
+
+def test_load_pointing_delays(
+    station_component_manager: SpsStationComponentManager,
+    mock_tile_proxy: MccsDeviceProxy,
+    tile_id: int,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test mapping in load pointing delays.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param mock_tile_proxy: mock tile which the component manager has been given.
+    :param tile_id: id of the tile which the component manager has been given.
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # First we need an example mapping for our antennas, we only have 1 tile in tests,
+    # but lets pretend we have a whole station
+    channels = list(range(16))
+
+    # Let's make sure we've got a random assignment of antennas to channels
+    random.shuffle(channels)
+    antenna_no = 1
+    for tpm in range(1, 16 + 1):
+        for channel in channels:
+            station_component_manager._antenna_mapping[antenna_no] = (
+                tpm,
+                channel * 2,
+                channel * 2 + 1,
+            )
+            antenna_no += 1
+
+    # We have a mapping, lets give an argument, this arg
+    # is un-realistic but useful for testing
+    antenna_order_delays = [float(x) for x in range(513)]
+
+    station_component_manager.load_pointing_delays(copy.deepcopy(antenna_order_delays))
+
+    # The zero-th element should be the zero-th element of the original input
+    expected_tile_arg = [antenna_order_delays[0]] + [0.0] * 32
+
+    # The rest of the args should be pairs of (delay, delay_rate) for each channel
+    for channel in range(16):
+        for antenna_no, (
+            tile_no,
+            y_channel,
+            x_channel,
+        ) in station_component_manager._antenna_mapping.items():
+            if tile_no == tile_id and int(y_channel / 2) == channel:
+                delay, delay_rate = (
+                    antenna_order_delays[antenna_no * 2 - 1],
+                    antenna_order_delays[antenna_no * 2],
+                )
+        expected_tile_arg[2 * channel + 1] = delay
+        expected_tile_arg[2 * channel + 2] = delay_rate
+
+    mock_tile_proxy.LoadPointingDelays.assert_next_call(expected_tile_arg)

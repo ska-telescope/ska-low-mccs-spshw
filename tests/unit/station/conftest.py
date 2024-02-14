@@ -41,6 +41,7 @@ def mock_tile_builder_fixture() -> MockDeviceBuilder:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     return builder
 
 

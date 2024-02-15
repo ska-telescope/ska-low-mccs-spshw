@@ -1805,16 +1805,15 @@ class SpsStationComponentManager(
         antenna_order_delays: list[float],
     ) -> dict[int, list[float]]:
         beam_index = antenna_order_delays[0]
-        # Lets find out which tiles we have deployed
-        tile_trls = self._tile_proxies.keys()
 
         # pre-allocate arrays for each of our tiles
         tile_delays: dict[int, list] = {}
         # element 0: beam index
         # odd elements: delay
         # even elements: delay rate
-        for tile_trl in tile_trls:
-            tile_no = int(tile_trl.split("-")[-1])
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = tile_proxy._proxy.logicalTileId
             tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
 
         # remove element 0 from antenna_order_delays to aid in indexing,
@@ -1826,7 +1825,7 @@ class SpsStationComponentManager(
         assert len(antenna_order_delays) % 2 == 0
 
         # Loop through each pair of delay/delay rates
-        for antenna_no in range(int(len(antenna_order_delays) / 2)):
+        for antenna_no in range(len(antenna_order_delays) // 2):
             delay = antenna_order_delays[antenna_no * 2]
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
@@ -1857,11 +1856,11 @@ class SpsStationComponentManager(
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
 
-        for tile_trl, tile in self._tile_proxies.items():
-            tile_no = int(tile_trl.split("-")[-1])
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = tile_proxy._proxy.logicalTileId
             delays_for_tile = tile_delays[tile_no]
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.LoadPointingDelays(delays_for_tile)
+            tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
     def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
         """

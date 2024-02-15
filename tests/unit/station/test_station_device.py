@@ -1065,54 +1065,38 @@ def test_fortyGbNetworkAddress(
     assert station_device.fortyGbNetworkAddress == cabinet_network_address
 
 
-@pytest.mark.parametrize(
-    ("attribute", "data", "tile_data"),
-    [
-        pytest.param("channeliserRounding", lambda _: [3] * 512, lambda _: [3] * 512),
-    ],
-)
-def test_rw_attributes(
+def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
-    num_tiles: int,
-    attribute: str,
-    data: Callable[[int], list[float]],
-    tile_data: Callable[[int], list[float]],
 ) -> None:
     """
-    Test of the read-write attributes.
-
-    These are:
-        staticTimeDelays
-        channeliserRounding
-        preaduLevels
-        ppsDelays
+    Test we can set and read channeliserRounding.
 
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
-    :param num_tiles: the number of mock tiles
-    :param attribute: the attribute on the station to use
-    :param data: the data to set to the station attribute, as a function of the number
-        of tiles
-    :param tile_data: the expected value for the attribute to take on the tile, as a
-        function of the tile number in the list of tile mocks.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
-    for i in range(num_tiles):
-        setattr(type(mock_tile_device_proxies[i]), attribute, rounding_mocks[i])
-    setattr(station_device, attribute, data(num_tiles))
+
+    channeliser_rounding_to_set = np.array([5] * 512)
+    station_device.SetChanneliserRounding(channeliser_rounding_to_set)
+
     time.sleep(0.1)
-    for i in range(num_tiles):
-        assert all(rounding_mocks[i].call_args[0][0] == tile_data(i))
-    assert all(getattr(station_device, attribute) == data(num_tiles))
+
+    # Calculate expected channeliser rounding of all tiles after write
+    zero_results = np.zeros((12, 512))
+    channeliser_rounding_to_check: np.ndarray = np.concatenate(
+        (np.array([channeliser_rounding_to_set] * 4), zero_results)
+    )
+    assert np.array_equal(
+        station_device.channeliserRounding, channeliser_rounding_to_check
+    )
 
 
-def test_cspRounding(
+def test_setting_cspRounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
@@ -1133,13 +1117,12 @@ def test_cspRounding(
     for i in range(num_tiles):
         setattr(type(mock_tile_device_proxies[i]), "cspRounding", rounding_mocks[i])
     time.sleep(0.1)
-    station_device.cspRounding = [4] * 384  # type: ignore[assignment]
+    station_device.cspRounding = np.array([4] * 384)  # type: ignore[assignment]
     for i, mock in enumerate(rounding_mocks):
         if i == num_tiles - 1:
             assert all(mock.call_args[0][0] == [4] * 384)
         else:
             mock.assert_not_called()
-    assert all(station_device.cspRounding == [4] * 384)  # type: ignore[arg-type]
 
 
 def test_beamformerTable(

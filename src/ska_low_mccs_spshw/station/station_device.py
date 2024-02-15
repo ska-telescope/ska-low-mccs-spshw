@@ -17,6 +17,7 @@ import sys
 from typing import Any, Optional, cast
 
 import tango
+from numpy import ndarray
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
@@ -148,6 +149,7 @@ class SpsStation(SKAObsDevice):
             ("Initialise", "initialise"),
             ("StartAcquisition", "start_acquisition"),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation"),
+            ("SetChanneliserRounding", "set_channeliser_rounding"),
         ]:
             self.register_command_object(
                 command_name,
@@ -383,10 +385,11 @@ class SpsStation(SKAObsDevice):
         self.component_manager.static_delays = delays
 
     @attribute(
-        dtype=("DevLong",),
-        max_dim_x=512,
+        dtype=(("DevLong",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=16,  # Tiles
     )
-    def channeliserRounding(self: SpsStation) -> list[int]:
+    def channeliserRounding(self: SpsStation) -> ndarray:
         """
         Channeliser rounding.
 
@@ -394,19 +397,9 @@ class SpsStation(SKAObsDevice):
         Valid values 0-7 Same value applies to all antennas and
         polarizations
 
-        :returns: list of 512 values, one per channel.
+        :returns: A list of 512 values for every tile, one per channel.
         """
         return self.component_manager.channeliser_rounding
-
-    @channeliserRounding.write  # type: ignore[no-redef]
-    def channeliserRounding(self: SpsStation, truncation: list[int]) -> None:
-        """
-        Set channeliser rounding.
-
-        :param truncation: List with either a single value (applies to all channels)
-            or a list of 512 values. Range 0 (no truncation) to 7
-        """
-        self.component_manager.channeliser_rounding = truncation
 
     @attribute(
         dtype=("DevLong",),
@@ -722,6 +715,31 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("Initialise")
         (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @command(dtype_in=("DevLong",), dtype_out="DevVarLongStringArray")
+    def SetChanneliserRounding(
+        self: SpsStation, channeliser_rounding: ndarray
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the ChanneliserRounding to all Tiles in this Station.
+
+        Number of LS bits dropped in each channeliser frequency channel.
+        Valid values 0-7 Same value applies to all antennas and
+        polarizations
+
+        :param channeliser_rounding: list of 512 values, one per channel.
+            this will apply to all Tiles in this station.
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/station/aavs3")
+            >>> dp.command_inout("SetChanneliserRounding", np.array([2]*512))
+        """
+        handler = self.get_command_object("SetChanneliserRounding")
+        (return_code, message) = handler(channeliser_rounding)
         return ([return_code], [message])
 
     @command(

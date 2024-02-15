@@ -417,6 +417,7 @@ class TileSimulator:
         self._polling_thread.start()
         self.dst_ip: Optional[str] = None
         self.dst_port: Optional[int] = None
+        self._is_csp_write_successful: bool = True
         self.sync_time = 0
         self.csp_rounding = [0] * 48
         self._adc_rms: list[float] = list(self.ADC_RMS)
@@ -724,13 +725,16 @@ class TileSimulator:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
 
-    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> None:
+    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> bool:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+
+        :return: true is write a success.
         """
         self.csp_rounding = rounding
+        return self._is_csp_write_successful
 
     def define_spead_header(
         self,

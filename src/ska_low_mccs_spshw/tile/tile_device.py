@@ -256,6 +256,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("staticTimeDelays", True, False)
             self._device.set_change_event("preaduLevels", True, False)
             self._device.set_archive_event("preaduLevels", True, False)
+            self._device.set_change_event("cspRounding", True, False)
+            self._device.set_change_event("channeliserRounding", True, False)
             self._device.set_change_event("ppsPresent", True, False)
             self._device.set_archive_event("ppsPresent", True, False)
 
@@ -405,6 +407,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     preadu_levels = state_change["preadu_levels"]
                     self.push_change_event("preaduLevels", preadu_levels)
                     self.push_archive_event("preaduLevels", preadu_levels)
+                case "csp_rounding":
+                    self.logger.error("called Tile device")
+                    _csp_rounding = state_change["csp_rounding"]
+                    self.push_change_event("cspRounding", _csp_rounding)
+                case "channeliser_rounding":
+                    self.logger.error("called Tile device")
+                    _channeliser_rounding = state_change["channeliser_rounding"]
+                    self.push_change_event("channeliserRounding", _channeliser_rounding)
                 case _:
                     self.logger.warning(
                         f"Unexpected attribute changed {attribute_name}" "Nothing is do"
@@ -1078,7 +1088,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype=("DevLong",),
         max_dim_x=384,
     )
-    def cspRounding(self: MccsTile) -> list[int]:
+    def cspRounding(self: MccsTile) -> np.ndarray:
         """
         CSP formatter rounding.
 

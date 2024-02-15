@@ -41,6 +41,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "sps_adc_power",
         "tile_static_delays",
         "tile_preadu_levels",
+        "tile_csp_rounding",
+        "tile_channeliser_rounding",
         timeout=15.0,
     )
 
@@ -499,3 +501,165 @@ class TestStationTileIntegration:
         # Check the station updates its own map.
         time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
+
+    # pylint: disable-next=too-many-arguments
+    def test_csp_rounding(
+        self: TestStationTileIntegration,
+        tile_device: tango.DeviceProxy,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station cspRounding gets updates.
+
+        This test checks that a change in the backend `tile_simulator`
+        attribute `cspRounding` is propagated all the way to the `SpsStation`.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device, subrack_device, tile_device, change_event_callbacks
+        )
+
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )
+        # Subscibe to change events on the preaduLevels attribute.
+        tile_device.subscribe_event(
+            "cspRounding",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_csp_rounding"],
+        )
+        change_event_callbacks["tile_csp_rounding"].assert_change_event(Anything)
+
+        csp_to_check = np.array([5] * 384)
+        tile_device.cspRounding = csp_to_check
+
+        # This will cause the Tile to push a change event.
+        change_event_callbacks["tile_csp_rounding"].assert_change_event(
+            csp_to_check.tolist()
+        )
+
+        # mock failure
+        tile_simulator._is_csp_write_successful = False
+
+        tile_device.cspRounding = [10] * 384
+
+        change_event_callbacks["tile_csp_rounding"].assert_not_called()
+
+        # Check that the station agrees on the lase value pushed by tile.
+        assert np.array_equal(sps_station_device.cspRounding, csp_to_check)
+        tile_simulator._is_csp_write_successful = True
+
+        # check we can set from SpsStation.
+        value_to_write = np.array([10] * 384)
+        sps_station_device.cspRounding = value_to_write
+
+        change_event_callbacks["tile_csp_rounding"].assert_change_event(
+            value_to_write.tolist()
+        )
+
+        assert np.array_equal(sps_station_device.cspRounding, value_to_write)
+
+    # pylint: disable-next=too-many-arguments
+    def test_channeliser_rounding(
+        self: TestStationTileIntegration,
+        tile_device: tango.DeviceProxy,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the sps station cspRounding gets updates.
+
+        This test checks that a change in the backend `tile_simulator`
+        attribute `cspRounding` is propagated all the way to the `SpsStation`.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        test_station(
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            change_event_callbacks,
+        )
+
+        sps_station_device.subscribe_event(
+            "longRunningCommandStatus",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["sps_station_command_status"],
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+
+        ([result_code], [initialise_id]) = sps_station_device.Initialise()
+
+        assert result_code == ResultCode.QUEUED
+
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "QUEUED")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["sps_station_command_status"].assert_change_event(
+            (initialise_id, "COMPLETED")
+        )
+        tile_device.channeliserRounding = np.array([10] * 512)
+        # Subscibe to change events on the preaduLevels attribute.
+        tile_device.subscribe_event(
+            "channeliserRounding",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_channeliser_rounding"],
+        )
+        change_event_callbacks["tile_channeliser_rounding"].assert_change_event(
+            [10] * 512
+        )
+
+        channeliser_rounding_to_set = np.array([5] * 512)
+        sps_station_device.SetChanneliserRounding(channeliser_rounding_to_set)
+        zero_results = np.zeros((15, 512))
+
+        # This will cause the Tile to push a change event.
+        change_event_callbacks["tile_channeliser_rounding"].assert_change_event(
+            channeliser_rounding_to_set.tolist()
+        )
+
+        # Check that the single Tile in this test context is set
+        # all others report the default `0.` values
+        channeliser_rounding_to_check: np.ndarray = np.concatenate(
+            (np.array([channeliser_rounding_to_set]), zero_results)
+        )
+
+        # Check that the station agrees on the lase value pushed by tile.
+        assert np.array_equal(
+            sps_station_device.channeliserRounding, channeliser_rounding_to_check
+        )

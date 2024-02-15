@@ -516,6 +516,7 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
+                self.logger.debug("handling change in adcpower")
                 self._adc_power[logical_tile_id] = attribute_value.tolist()
                 adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
@@ -525,7 +526,7 @@ class SpsStationComponentManager(
             case "statictimedelays":
                 self._static_delays[logical_tile_id] = attribute_value.tolist()
             case "preadulevels":
-                self.logger.info("handling change in preaduLevels")
+                self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
             case _:
@@ -1307,7 +1308,7 @@ class SpsStationComponentManager(
             i = i + TileData.ADC_CHANNELS
 
     @property
-    def channeliser_rounding(self: SpsStationComponentManager) -> list[int]:
+    def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
         """
         Channeliser rounding.
 
@@ -1315,31 +1316,23 @@ class SpsStationComponentManager(
         Valid values 0-7 Same value applies to all antennas and
         polarizations
 
-        :returns: list of 512 values, one per channel.
+        :returns: list of 512 values for each Tile, one per channel.
         """
-        return copy.deepcopy(self._channeliser_rounding)
+        channeliser_roundings: np.ndarray = np.zeros([16, 512])
 
-    @channeliser_rounding.setter
-    def channeliser_rounding(
-        self: SpsStationComponentManager, truncation: list[int]
-    ) -> None:
-        """
-        Set channeliser rounding.
-
-        :param truncation: List with either a single value (applies to all channels)
-            or a list of 512 values. Range 0 (no truncation) to 7
-        """
-        self._channeliser_rounding = copy.deepcopy(truncation)
-        for proxy in self._tile_proxies.values():
+        for tile_idx, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(
-                    f"Writing truncation  {truncation[0]} in {proxy._proxy.name()}"
+            try:
+                channeliser_roundings[tile_idx, :] = proxy._proxy.channeliserRounding
+            except ValueError as e:
+                self.logger.error(
+                    f"unable to update array with {proxy._name} "
+                    f"channeliserRounding attribute: {repr(e)}"
                 )
-                proxy._proxy.channeliserRounding = truncation
+        return channeliser_roundings
 
     @property
-    def csp_rounding(self: SpsStationComponentManager) -> list[int]:
+    def csp_rounding(self: SpsStationComponentManager) -> list[int] | None:
         """
         CSP formatter rounding.
 
@@ -1350,7 +1343,9 @@ class SpsStationComponentManager(
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return copy.deepcopy(self._csp_rounding)
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        return proxy._proxy.cspRounding
 
     @csp_rounding.setter
     def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
@@ -2080,6 +2075,74 @@ class SpsStationComponentManager(
                     status=TaskStatus.FAILED, result="Start acquisition task failed"
                 )
             return
+
+    @check_communicating
+    def set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._set_channeliser_rounding,
+            args=[channeliser_rounding],
+            task_callback=task_callback,
+        )
+
+    def _set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        result_code = ResultCode.OK
+        message = ""
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
+                try:
+                    proxy._proxy.channeliserRounding = channeliser_rounding
+                except tango.DevFailed:
+                    self.logger.warning(
+                        f"Failed to load truncation for {proxy._proxy.name()}"
+                    )
+                    message = "Failed to set channeliserRounding for 1 or more Tiles."
+                    result_code = ResultCode.FAILED
+            else:
+                message += (
+                    "unable to set channeliserRounding for 1 or more tiles. "
+                    "Tile not Initialised. "
+                )
+                result_code = ResultCode.FAILED
+
+        if not message:
+            message = "channeliserRounding loaded into all Tiles successfully."
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result_code, message),
+            )
 
     def trigger_adc_equalisation(
         self: SpsStationComponentManager,

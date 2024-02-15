@@ -1831,9 +1831,7 @@ class SpsStationComponentManager(
 
             # Fetch which tpm this antenna belongs to
             tile_no = self._antenna_mapping[antenna_no + 1][0]
-            channel = int(
-                self._antenna_mapping[antenna_no + 1][1] / 2
-            )  # y channel, even
+            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
 
             # We may have mapping for devices we don't have deployed
             if tile_no in tile_delays:

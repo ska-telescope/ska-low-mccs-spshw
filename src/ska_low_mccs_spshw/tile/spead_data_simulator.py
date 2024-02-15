@@ -305,8 +305,7 @@ class SpeadDataSimulator:
                                 self._channelised_packet_data,
                             )
                 time.sleep(sleep_between_antennas)
-
-        self._timestamp += 1
+                self._timestamp += 1_000_000_000  # 1e9ns = 1s
 
     def _transmit_packet(  # pylint: disable=too-many-locals
         self: SpeadDataSimulator,

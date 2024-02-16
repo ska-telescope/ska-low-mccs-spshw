@@ -293,14 +293,8 @@ class TpmDriver(MccsBaseComponentManager):
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
                     self._update_component_state(adc_rms=self._adc_rms)
-                    self.logger.error(
-                        f"MINE - update key attributes pre self._pending_data_requests == {self._pending_data_requests}"
-                    )
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
-                    )
-                    self.logger.error(
-                        f"MINE - update key attributes post self._pending_data_requests == {self._pending_data_requests}"
                     )
                     # very slow update parameters. Should update by set commands
                     if (current_time - self._last_update_time_2) > time_interval_2:
@@ -1915,6 +1909,11 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_integrated_data()
+                    time.sleep(0.2)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2147,15 +2146,10 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.logger.error(
-                        f"MINE - stop data transmission pre self._pending_data_requests == {self._pending_data_requests}"
-                    )
                     self.tile.stop_data_transmission()
+                    time.sleep(0.2)
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
-                    )
-                    self.logger.error(
-                        f"MINE - stop data transmission post self._pending_data_requests == {self._pending_data_requests}"
                     )
                 # pylint: disable=broad-except
                 except Exception as e:

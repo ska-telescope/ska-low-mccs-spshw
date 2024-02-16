@@ -33,14 +33,18 @@ def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
 
 
 @pytest.fixture(name="mock_tile_builder")
-def mock_tile_builder_fixture() -> MockDeviceBuilder:
+def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     """
     Fixture that provides a builder for a mock MccsTile device.
+
+    :param tile_id: ID of the tile under test.
 
     :return: a mock MccsSubrack device builder.
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
+    builder.add_attribute("logicalTileId", tile_id)
     return builder
 
 

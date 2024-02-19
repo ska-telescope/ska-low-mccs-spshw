@@ -769,6 +769,21 @@ class SpsStation(SKAObsDevice):
     # Fast Commands
     # -------------
 
+    @command(dtype_out="DevVarLongStringArray")
+    def UpdateCalibration(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Pull cable lengths from TelModel and update static delays.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        """
+        self.component_manager.static_delays = (
+            self.component_manager._calculate_static_delays()
+        )
+        return ([ResultCode.OK], ["UpdateCalibration command completed OK"])
+
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",

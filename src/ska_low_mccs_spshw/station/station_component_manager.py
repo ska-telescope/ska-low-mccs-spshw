@@ -17,6 +17,7 @@ import json
 import logging
 import threading
 import time
+from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, cast
@@ -43,6 +44,11 @@ from ska_telmodel.data import TMData  # type: ignore
 from ..tile.tile_data import TileData
 
 __all__ = ["SpsStationComponentManager"]
+
+# Refractive index of optical fibre:
+# https://en.wikipedia.org/wiki/Optical_fiber#Refractive_index
+N_INDEX = 1.44
+C = 299_792_458  # m/s
 
 
 class _SubrackProxy(DeviceComponentManager):
@@ -356,8 +362,8 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: dict[int, tuple[int, int, int]] = {}
-
+        self._antenna_mapping: dict[int, tuple[int, int, int, int]] = {}
+        self._cable_lengths: dict[int, float] = {}
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
         else:
@@ -402,12 +408,114 @@ class SpsStationComponentManager(
                     int(antennas[antenna]["tpm"]),
                     antennas[antenna]["tpm_x_channel"],
                     antennas[antenna]["tpm_y_channel"],
+                    int(antennas[antenna]["smartbox"]),
                 )
+            smartboxes = full_dict["platform"]["array"]["station_clusters"][
+                station_cluster
+            ]["stations"][str(self._station_id)]["pasd"]["smartboxes"]
+            for smartbox in smartboxes:
+                self._cable_lengths[int(smartbox)] = smartboxes[smartbox][
+                    "cable_length"
+                ]
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
+
+    # pylint: disable=too-many-locals
+    def _calculate_static_delays(
+        self: SpsStationComponentManager,
+    ) -> list[float]:
+        # Get cable lengths, m
+        cable_lengths = self._cable_lengths
+
+        # get speed of light in cables, m/s
+        cable_light_speed = C / N_INDEX
+
+        # Convert cable lengths to delays, s
+        smartbox_order_delays = {
+            smartbox_id: cable_length / cable_light_speed
+            for smartbox_id, cable_length in cable_lengths.items()
+        }
+        # Convert smartbox order delays to antenna order delays
+        antenna_order_delays = [0.0] * 256
+        smartbox_mapping = self._get_antennas_on_smartboxes()
+        for smartbox_id, antenna_list in smartbox_mapping.items():
+            delays_for_antenna = smartbox_order_delays[smartbox_id]
+            for antenna in antenna_list:
+                antenna_order_delays[int(antenna) - 1] = delays_for_antenna
+        # Calculate delays for each tile, in channel order
+        # 2 polarisations * 16 channels * 16 tpms = 512
+        tile_order_delays = [0.0] * 512
+        for antenna_no, antenna_mapping in self._antenna_mapping.items():
+            tile_no = antenna_mapping[0] - 1
+            channel_x_no = antenna_mapping[1]
+            channel_y_no = antenna_mapping[2]
+            tile_order_delays[tile_no * TileData.ADC_CHANNELS + channel_x_no] = (
+                antenna_order_delays[antenna_no - 1]
+            ) * 1e9  # ns
+            tile_order_delays[tile_no * TileData.ADC_CHANNELS + channel_y_no] = (
+                antenna_order_delays[antenna_no - 1]
+            ) * 1e9  # ns
+
+        # Shift delays by the shortest delay
+        shortest_dalay = min(tile_order_delays)
+
+        tile_order_delays = [
+            tile_order_delay - shortest_dalay for tile_order_delay in tile_order_delays
+        ]
+        return tile_order_delays
+
+    def _get_antennas_on_smartboxes(
+        self: SpsStationComponentManager,
+    ) -> dict[int, list]:
+        smartbox_mapping = defaultdict(list)
+
+        for antenna, antenna_mapping in self._antenna_mapping.items():
+            smartbox_id = antenna_mapping[3]
+            smartbox_mapping[smartbox_id].append(int(antenna))
+        return smartbox_mapping
+
+    def _calculate_delays_per_tile(
+        self: SpsStationComponentManager,
+        antenna_order_delays: list[float],
+    ) -> dict[int, list[float]]:
+        beam_index = antenna_order_delays[0]
+
+        # pre-allocate arrays for each of our tiles
+        tile_delays: dict[int, list] = {}
+        # element 0: beam index
+        # odd elements: delay
+        # even elements: delay rate
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = tile_proxy._proxy.logicalTileId
+            tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
+
+        # remove element 0 from antenna_order_delays to aid in indexing,
+        # we have used it now
+        antenna_order_delays = antenna_order_delays[1:]
+
+        # This array should now be of even length as it corresponds to pairs of
+        # delay/delay rates
+        assert len(antenna_order_delays) % 2 == 0
+
+        # Loop through each pair of delay/delay rates
+        for antenna_no in range(len(antenna_order_delays) // 2):
+            delay = antenna_order_delays[antenna_no * 2]
+            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
+
+            # Fetch which tpm this antenna belongs to
+            tile_no = self._antenna_mapping[antenna_no + 1][0]
+            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
+
+            # We may have mapping for devices we don't have deployed
+            if tile_no in tile_delays:
+                tile_delays[tile_no][(channel) * 2 + 1] = delay
+                tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
+
+        return tile_delays
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
@@ -1302,8 +1410,10 @@ class SpsStationComponentManager(
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
+            start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
+            end_entry = (proxy._proxy.logicalTileId + 1) * TileData.ADC_CHANNELS
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.staticTimeDelays = delays[i : i + TileData.ADC_CHANNELS]
+                proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
             i = i + TileData.ADC_CHANNELS
 
     @property
@@ -1817,46 +1927,6 @@ class SpsStationComponentManager(
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
             tile._proxy.ApplyCalibration(switch_time)
-
-    def _calculate_delays_per_tile(
-        self: SpsStationComponentManager,
-        antenna_order_delays: list[float],
-    ) -> dict[int, list[float]]:
-        beam_index = antenna_order_delays[0]
-
-        # pre-allocate arrays for each of our tiles
-        tile_delays: dict[int, list] = {}
-        # element 0: beam index
-        # odd elements: delay
-        # even elements: delay rate
-        for tile_proxy in self._tile_proxies.values():
-            assert tile_proxy._proxy is not None
-            tile_no = tile_proxy._proxy.logicalTileId
-            tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
-
-        # remove element 0 from antenna_order_delays to aid in indexing,
-        # we have used it now
-        antenna_order_delays = antenna_order_delays[1:]
-
-        # This array should now be of even length as it corresponds to pairs of
-        # delay/delay rates
-        assert len(antenna_order_delays) % 2 == 0
-
-        # Loop through each pair of delay/delay rates
-        for antenna_no in range(len(antenna_order_delays) // 2):
-            delay = antenna_order_delays[antenna_no * 2]
-            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
-
-            # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1][0]
-            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
-
-            # We may have mapping for devices we don't have deployed
-            if tile_no in tile_delays:
-                tile_delays[tile_no][(channel) * 2 + 1] = delay
-                tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
-
-        return tile_delays
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]

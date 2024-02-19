@@ -459,11 +459,17 @@ class SpsStationComponentManager(
                 antenna_order_delays[antenna_no - 1]
             ) * 1e9  # ns
 
-        # Shift delays by the shortest delay
-        shortest_dalay = min(tile_order_delays)
+        # We want to artificially extend our shortest delays to match our longest delays
+        # our shortest delays have the shortest cables, we want to 'add cable' to these
+        # such that we pretend the signals all came from a cable length = longest cable
+        # length.
+
+        # So the longest delay will not need any calibration, but every shorter delay
+        # will need delays added to make them up to the longest delay.
+        longest_delay = max(tile_order_delays)
 
         tile_order_delays = [
-            tile_order_delay - shortest_dalay for tile_order_delay in tile_order_delays
+            longest_delay - tile_order_delay for tile_order_delay in tile_order_delays
         ]
         return tile_order_delays
 

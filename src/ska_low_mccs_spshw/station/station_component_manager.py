@@ -2122,7 +2122,7 @@ class SpsStationComponentManager(
         adc_data = np.empty([num_samples, 32 * len(tpms)])
         for i in range(num_samples):
             time.sleep(1)
-            adc_data[i] += self.adc_power()
+            adc_data[i] = self.adc_power()
 
         # calculate difference in dB between current and target values
         adc_medians = np.median(adc_data, axis=0)

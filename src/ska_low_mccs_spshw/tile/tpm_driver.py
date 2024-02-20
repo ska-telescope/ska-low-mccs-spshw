@@ -661,6 +661,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")

@@ -1093,6 +1093,7 @@ class SpsStationComponentManager(
         self._set_beamformer_table()
         return ResultCode.OK
 
+    # pylint: disable=too-many-locals
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
@@ -1125,54 +1126,66 @@ class SpsStationComponentManager(
             base_ip3 = 0xC0
         last_tile = len(tiles) - 1
         tile = 0
+        num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*tile}"
-            dst_ip = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+26+2*tile}"
+            src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*tile}"
+            src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*tile}"
+            dst_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+26+2*tile}"
+            dst_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+27+2*tile}"
+            src_ip_list = [src_ip1, src_ip2]
+            dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
             src_mac = self._base_mac_address + base_ip3 + 24 + 2 * tile
-            if tile == last_tile:
-                dst_ip = self._csp_ingest_address
-                dst_port_1 = self._csp_ingest_port
-                dst_port_2 = dst_port_1
-            self.logger.debug(f"Tile {tile}: 40G: {src_ip} -> {dst_ip}")
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": 0,
-                        "arp_table_entry": 0,
-                        "source_ip": src_ip,
-                        "source_mac": src_mac,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip,
-                        "destination_port": dst_port_1,
-                        "rx_port_filter": dst_port_1,
-                    }
+            self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
+            self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
+
+            for core in range(num_cores):
+                src_ip = src_ip_list[core]
+                dst_ip = dst_ip_list[core]
+
+                if tile == last_tile:
+                    dst_ip = self._csp_ingest_address
+                    dst_port_1 = self._csp_ingest_port
+                    dst_port_2 = dst_port_1
+
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 0,
+                            "source_ip": src_ip,
+                            "source_mac": src_mac,
+                            "source_port": self._source_port,
+                            "destination_ip": dst_ip,
+                            "destination_port": dst_port_1,
+                            "rx_port_filter": dst_port_1,
+                        }
+                    )
                 )
-            )
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": 0,
-                        "arp_table_entry": 2,
-                        "source_ip": src_ip,
-                        "source_mac": src_mac,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip,
-                        "destination_port": dst_port_2,
-                    }
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 2,
+                            "source_ip": src_ip,
+                            "source_mac": src_mac,
+                            "source_port": self._source_port,
+                            "destination_ip": dst_ip,
+                            "destination_port": dst_port_2,
+                        }
+                    )
                 )
-            )
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": 0,
-                        "arp_table_entry": 1,
-                        "rx_port_filter": dst_port_1 + 2,
-                    }
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 1,
+                            "rx_port_filter": dst_port_1 + 2,
+                        }
+                    )
                 )
-            )
             proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
             proxy._proxy.SetLmcIntegratedDownload(
                 json.dumps(

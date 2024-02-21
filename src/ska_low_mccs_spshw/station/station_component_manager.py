@@ -1149,7 +1149,8 @@ class SpsStationComponentManager(
                     dst_ip = self._csp_ingest_address
                     dst_port_1 = self._csp_ingest_port
                     dst_port_2 = dst_port_1
-
+                
+                # ARP Table Entry 0 of each 40G core specifies destination for station beam packets
                 proxy._proxy.Configure40GCore(
                     json.dumps(
                         {
@@ -1164,6 +1165,13 @@ class SpsStationComponentManager(
                         }
                     )
                 )
+                # Also configure entry 2 with the same settings
+                # Required for operation with single 40G connection to each TPM
+                # With two connections, each core uses arp table entry 0 for station beam transmission 
+                # to the next tile in the chain and lastly to CSP.
+                # Two FPGAs = Two Simultaneous Daisy chains (a chain of FPGA1s and a chain of FPGA2s)
+                # With one 40G connection, Master FPGA uses arp table entry 0, Slave FPGA uses arp table entry 2 to achieve the same
+                # functionality but with a single core.
                 proxy._proxy.Configure40GCore(
                     json.dumps(
                         {
@@ -1177,6 +1185,8 @@ class SpsStationComponentManager(
                         }
                     )
                 )
+                # Set RX port filter for RX channel 1
+                # Required for operation with single 40G connection to each TPM
                 proxy._proxy.Configure40GCore(
                     json.dumps(
                         {

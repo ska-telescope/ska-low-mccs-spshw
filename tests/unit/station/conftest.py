@@ -16,6 +16,7 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
+from tests.harness import get_tile_name
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -45,6 +46,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.set_state(tango.DevState.ON)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", tile_id)
+    builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
     return builder
 
 

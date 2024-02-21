@@ -1831,7 +1831,7 @@ class SpsStationComponentManager(
         # even elements: delay rate
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-            tile_no = tile_proxy._proxy.logicalTileId
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
             tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
 
         # remove element 0 from antenna_order_delays to aid in indexing,
@@ -1874,7 +1874,7 @@ class SpsStationComponentManager(
 
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-            tile_no = tile_proxy._proxy.logicalTileId
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
             delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 

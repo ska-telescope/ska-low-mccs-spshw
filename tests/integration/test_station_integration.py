@@ -47,96 +47,110 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-def test_station(
-    sps_station_device: tango.DeviceProxy,
-    subrack_device: tango.DeviceProxy,
-    tile_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Test SPS station integration with subservient subrack and tile.
-
-    :param sps_station_device: the station Tango device under test.
-    :param subrack_device: the subrack Tango device under test.
-    :param tile_device: the tile Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
-    """
-    assert sps_station_device.adminMode == AdminMode.OFFLINE
-    assert subrack_device.adminMode == AdminMode.OFFLINE
-    assert tile_device.adminMode == AdminMode.OFFLINE
-
-    # Since the devices are in adminMode OFFLINE,
-    # they are not even trying to monitor and control their components,
-    # so they each report state as DISABLE.
-    sps_station_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["station_state"],
-    )
-    change_event_callbacks["station_state"].assert_change_event(tango.DevState.DISABLE)
-    subrack_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["subrack_state"],
-    )
-    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.DISABLE)
-    tile_device.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["tile_state"],
-    )
-    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-
-    sps_station_device.adminMode = AdminMode.ONLINE
-
-    change_event_callbacks["station_state"].assert_change_event(tango.DevState.UNKNOWN)
-
-    # Station stays in UNKNOWN state
-    # because subrack and tile devices are still OFFLINE
-    change_event_callbacks["station_state"].assert_not_called()
-
-    tile_device.adminMode = AdminMode.ONLINE
-    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
-
-    # Tile and station both stay in UNKNOWN state
-    # because subrack is still OFFLINE
-    change_event_callbacks["tile_state"].assert_not_called()
-    change_event_callbacks["station_state"].assert_not_called()
-
-    subrack_device.adminMode = AdminMode.ONLINE
-    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.UNKNOWN)
-    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
-
-    # Now that subrack is ONLINE, it reports itself ON, and the TPM to be OFF,
-    # so MccsTile reports itself OFF
-    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-
-    # When the subracks are on but the tiles are off,
-    # the station is in STANDBY.
-    change_event_callbacks["station_state"].assert_change_event(tango.DevState.STANDBY)
-    change_event_callbacks["station_state"].assert_not_called()
-
-    tile_device.subscribe_event(
-        "tileProgrammingState",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["tile_programming_state"],
-    )
-    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
-
-    tile_device.On()
-
-    change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed"
-    )
-    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
-    change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
-    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
-    change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
-
-
 class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
+
+    def turn_station_on(
+        self: TestStationTileIntegration,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test SPS station integration with subservient subrack and tile.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        assert sps_station_device.adminMode == AdminMode.OFFLINE
+        assert subrack_device.adminMode == AdminMode.OFFLINE
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        # Since the devices are in adminMode OFFLINE,
+        # they are not even trying to monitor and control their components,
+        # so they each report state as DISABLE.
+        sps_station_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["station_state"],
+        )
+        change_event_callbacks["station_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+        subrack_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_state"],
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        sps_station_device.adminMode = AdminMode.ONLINE
+
+        change_event_callbacks["station_state"].assert_change_event(
+            tango.DevState.UNKNOWN
+        )
+
+        # Station stays in UNKNOWN state
+        # because subrack and tile devices are still OFFLINE
+        change_event_callbacks["station_state"].assert_not_called()
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+
+        # Tile and station both stay in UNKNOWN state
+        # because subrack is still OFFLINE
+        change_event_callbacks["tile_state"].assert_not_called()
+        change_event_callbacks["station_state"].assert_not_called()
+
+        subrack_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.UNKNOWN
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
+
+        # Now that subrack is ONLINE, it reports itself ON, and the TPM to be OFF,
+        # so MccsTile reports itself OFF
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
+        # When the subracks are on but the tiles are off,
+        # the station is in STANDBY.
+        change_event_callbacks["station_state"].assert_change_event(
+            tango.DevState.STANDBY
+        )
+        change_event_callbacks["station_state"].assert_not_called()
+
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+        tile_device.On()
+
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "NotProgrammed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Programmed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
     def test_initialise_can_execute(
         self: TestStationTileIntegration,
@@ -161,7 +175,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
 
@@ -202,7 +216,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
         # Force a poll to get the initial values.
@@ -271,7 +285,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
 
@@ -343,7 +357,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
 
@@ -429,7 +443,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
 
@@ -525,7 +539,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device, subrack_device, tile_device, change_event_callbacks
         )
 
@@ -566,7 +580,7 @@ class TestStationTileIntegration:
         )
 
         # mock failure
-        tile_simulator._is_csp_write_successful = False
+        tile_simulator.is_csp_write_successful = False
 
         tile_device.cspRounding = [10] * 384
 
@@ -574,7 +588,7 @@ class TestStationTileIntegration:
 
         # Check that the station agrees on the lase value pushed by tile.
         assert np.array_equal(sps_station_device.cspRounding, csp_to_check)
-        tile_simulator._is_csp_write_successful = True
+        tile_simulator.is_csp_write_successful = True
 
         # check we can set from SpsStation.
         value_to_write = np.array([10] * 384)
@@ -586,7 +600,6 @@ class TestStationTileIntegration:
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
 
-    # pylint: disable-next=too-many-arguments
     def test_channeliser_rounding(
         self: TestStationTileIntegration,
         tile_device: tango.DeviceProxy,
@@ -606,7 +619,7 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        test_station(
+        self.turn_station_on(
             sps_station_device,
             subrack_device,
             tile_device,

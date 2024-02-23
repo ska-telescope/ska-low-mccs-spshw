@@ -1099,24 +1099,39 @@ def test_write_read_channeliser_rounding(
 def test_setting_cspRounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
     num_tiles: int,
 ) -> None:
     """
     Test for the cspRounding attribute.
 
     :param station_device: The station device to use
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Set the last tile with a different cspRounding.
+    mock_tile_device_proxies[-1].cspRounding = [6] * 384
+
+    assert all(station_device.cspRounding == [6] * 384)
+
     rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
     for i in range(num_tiles):
         setattr(type(mock_tile_device_proxies[i]), "cspRounding", rounding_mocks[i])
-    time.sleep(0.1)
     station_device.cspRounding = np.array([4] * 384)  # type: ignore[assignment]
     for i, mock in enumerate(rounding_mocks):
         if i == num_tiles - 1:

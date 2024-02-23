@@ -96,7 +96,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._beamformer_table = self.BEAMFORMER_TABLE
         self._nof_blocks = self.BEAMFORMER_TABLE[0][1] // 8
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-        self._csp_rounding: Optional[list[int]] = self.CSP_ROUNDING
+        self._csp_rounding: Optional[np.ndarray] = np.array(self.CSP_ROUNDING)
         self._forty_gb_core_list: list = []
         self._preadu_levels: Optional[list[float]] = None
         self._static_delays: list[float] = [0.0] * 32
@@ -1388,7 +1388,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def csp_rounding(self: TpmDriver) -> Optional[list[int]]:
+    def csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
         """
         Read the cached value for the final rounding in the CSP samples.
 
@@ -1398,24 +1398,21 @@ class TpmDriver(MccsBaseComponentManager):
         return self._csp_rounding
 
     @csp_rounding.setter
-    def csp_rounding(self: TpmDriver, rounding: np.ndarray) -> None:
+    def csp_rounding(self: TpmDriver, rounding: np.ndarray | int) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         if isinstance(rounding, int):
-            desired_csp_rounding = [rounding] * 384
+            desired_csp_rounding = np.array([rounding] * 384)
         elif len(rounding) == 1:
-            desired_csp_rounding = [rounding[0]] * 384
+            desired_csp_rounding = np.array([rounding[0]] * 384)
         else:
-            if isinstance(rounding, np.ndarray):
-                desired_csp_rounding = rounding.tolist()
-            else:
-                desired_csp_rounding = rounding
+            desired_csp_rounding = rounding
         self._set_csp_rounding(desired_csp_rounding)
 
-    def _set_csp_rounding(self: TpmDriver, rounding: list[int]) -> None:
+    def _set_csp_rounding(self: TpmDriver, rounding: np.ndarray) -> None:
         """
         Set output rounding for CSP.
 
@@ -1428,7 +1425,9 @@ class TpmDriver(MccsBaseComponentManager):
                     write_successful = self.tile.set_csp_rounding(rounding[0])
                     if write_successful:
                         self._csp_rounding = rounding
-                        self._update_component_state(csp_rounding=self._csp_rounding)
+                        self._update_component_state(
+                            csp_rounding=self._csp_rounding.tolist()
+                        )
                     else:
                         self.logger.warning("Setting the cspRounding failed ")
 

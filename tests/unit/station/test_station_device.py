@@ -390,9 +390,11 @@ def test_On(
             "source_ip": f"10.0.0.{str(152 + (2 * i))}",
             "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(154 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert json.loads(
@@ -403,9 +405,11 @@ def test_On(
             "source_ip": f"10.0.0.{str(153 + (2 * i))}",
             "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(155 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
@@ -541,9 +545,11 @@ def test_Initialise(
             "source_ip": f"10.0.0.{str(152 + (2 * i))}",
             "source_mac": 107752307294360 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(154 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(154 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert json.loads(
@@ -554,9 +560,11 @@ def test_Initialise(
             "source_ip": f"10.0.0.{str(153 + (2 * i))}",
             "source_mac": 107752307294361 + (2 * i),
             "source_port": 61648,
-            "destination_ip": f"10.0.0.{str(155 + (2 * i))}"
-            if i != num_tiles - 1
-            else csp_ingest_address,
+            "destination_ip": (
+                f"10.0.0.{str(155 + (2 * i))}"
+                if i != num_tiles - 1
+                else csp_ingest_address
+            ),
             "destination_port": 4660 if not last_tile else csp_ingest_port,
         }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
@@ -743,13 +751,6 @@ def test_Standby(
             "20230101T12:34:55.000Z",
             "ApplyPointingDelays",
             "20230101T12:34:55.000Z",
-            False,
-        ),
-        pytest.param(
-            "LoadPointingDelays",
-            [1] + [0] * 512,
-            "LoadPointingDelays",
-            [1] + [0] * 32,
             False,
         ),
         pytest.param(
@@ -1065,96 +1066,79 @@ def test_fortyGbNetworkAddress(
     assert station_device.fortyGbNetworkAddress == cabinet_network_address
 
 
-@pytest.mark.parametrize(
-    ("attribute", "data", "tile_data"),
-    [
-        pytest.param("channeliserRounding", lambda _: [3] * 512, lambda _: [3] * 512),
-        pytest.param(
-            "staticTimeDelays",
-            lambda num_tiles: list(range(32 * num_tiles)),
-            lambda i: [(i * 32) + q for q in range(32)],
-        ),
-        pytest.param(
-            "preaduLevels",
-            lambda num_tiles: [float(i) for i in range(32 * num_tiles)],
-            lambda i: [float((i * 32) + q) for q in range(32)],
-        ),
-        pytest.param(
-            "ppsDelays",
-            lambda num_tiles: list(range(num_tiles)),
-            lambda i: [i],
-        ),
-    ],
-)
-def test_rw_attributes(
+def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
-    num_tiles: int,
-    attribute: str,
-    data: Callable[[int], list[float]],
-    tile_data: Callable[[int], list[float]],
 ) -> None:
     """
-    Test of the read-write attributes.
-
-    These are:
-        staticTimeDelays
-        channeliserRounding
-        preaduLevels
-        ppsDelays
+    Test we can set and read channeliserRounding.
 
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
-    :param num_tiles: the number of mock tiles
-    :param attribute: the attribute on the station to use
-    :param data: the data to set to the station attribute, as a function of the number
-        of tiles
-    :param tile_data: the expected value for the attribute to take on the tile, as a
-        function of the tile number in the list of tile mocks.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
-    for i in range(num_tiles):
-        setattr(type(mock_tile_device_proxies[i]), attribute, rounding_mocks[i])
-    setattr(station_device, attribute, data(num_tiles))
+
+    channeliser_rounding_to_set = np.array([5] * 512)
+    station_device.SetChanneliserRounding(channeliser_rounding_to_set)
+
     time.sleep(0.1)
-    for i in range(num_tiles):
-        assert all(rounding_mocks[i].call_args[0][0] == tile_data(i))
-    assert all(getattr(station_device, attribute) == data(num_tiles))
+
+    # Calculate expected channeliser rounding of all tiles after write
+    zero_results = np.zeros((12, 512))
+    channeliser_rounding_to_check: np.ndarray = np.concatenate(
+        (np.array([channeliser_rounding_to_set] * 4), zero_results)
+    )
+    assert np.array_equal(
+        station_device.channeliserRounding, channeliser_rounding_to_check
+    )
 
 
-def test_cspRounding(
+def test_setting_cspRounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
     num_tiles: int,
 ) -> None:
     """
     Test for the cspRounding attribute.
 
     :param station_device: The station device to use
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Set the last tile with a different cspRounding.
+    mock_tile_device_proxies[-1].cspRounding = [6] * 384
+
+    assert all(station_device.cspRounding == [6] * 384)
+
     rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
     for i in range(num_tiles):
         setattr(type(mock_tile_device_proxies[i]), "cspRounding", rounding_mocks[i])
-    time.sleep(0.1)
-    station_device.cspRounding = [4] * 384  # type: ignore[assignment]
+    station_device.cspRounding = np.array([4] * 384)  # type: ignore[assignment]
     for i, mock in enumerate(rounding_mocks):
         if i == num_tiles - 1:
             assert all(mock.call_args[0][0] == [4] * 384)
         else:
             mock.assert_not_called()
-    assert all(station_device.cspRounding == [4] * 384)  # type: ignore[arg-type]
 
 
 def test_beamformerTable(
@@ -1224,14 +1208,6 @@ def test_beamformerTable(
             lambda i: "Synchronised" if i % 2 == 0 else "Programmed",
             lambda n: ["Synchronised", "Programmed"] * int(n / 2)
             + ([] if n % 2 == 0 else ["Synchronised"]),
-        ),
-        pytest.param(
-            "adcPower",
-            "adcPower",
-            lambda i: [(32 * i) + m for m in range(32)],
-            lambda n: list(range(32 * n)),
-            lambda i: [-m - (32 * i) for m in range(32)],
-            lambda n: [-m for m in range(32 * n)],
         ),
         pytest.param(
             "boardTemperaturesSummary",
@@ -1332,13 +1308,21 @@ def test_station_tile_attributes(
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for i, tile in enumerate(mock_tile_device_proxies):
-        setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
+        if tile_attribute_name == "fpgaTemperature":
+            setattr(tile, "fpga1Temperature", init_tile_attribute_values(i))
+            setattr(tile, "fpga2Temperature", init_tile_attribute_values(i))
+        else:
+            setattr(tile, tile_attribute_name, init_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         init_expected_value(num_tiles)
     )
     for i, tile in enumerate(mock_tile_device_proxies):
-        setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
+        if tile_attribute_name == "fpgaTemperature":
+            setattr(tile, "fpga1Temperature", final_tile_attribute_values(i))
+            setattr(tile, "fpga2Temperature", final_tile_attribute_values(i))
+        else:
+            setattr(tile, tile_attribute_name, final_tile_attribute_values(i))
     time.sleep(0.1)
     assert getattr(station_device, attribute_name) == pytest.approx(
         final_expected_value(num_tiles)

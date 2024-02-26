@@ -19,6 +19,7 @@ from typing import Any, Optional, cast
 
 import numpy as np
 import tango
+from numpy import ndarray
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
 from ska_tango_base.commands import SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
@@ -73,6 +74,7 @@ class SpsStation(SKAObsDevice):
         self._health_model: SpsStationHealthModel
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
+        self._adc_power: Optional[list[float]] = None
 
     def init_device(self: SpsStation) -> None:
         """
@@ -153,6 +155,8 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("StartAcquisition", "start_acquisition"),
+            ("TriggerAdcEqualisation", "trigger_adc_equalisation"),
+            ("SetChanneliserRounding", "set_channeliser_rounding"),
         ]:
             self.register_command_object(
                 command_name,
@@ -213,6 +217,8 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("yPolBandpass", True, False)
             self._device.set_archive_event("antennaInfo", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
+            self._device.set_change_event("adcPower", True, False)
+            self._device.set_archive_event("adcPower", True, False)
 
             super().do()
 
@@ -308,6 +314,10 @@ class SpsStation(SKAObsDevice):
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
+        if "adc_power" in state_change:
+            self._adc_power = state_change.get("adc_power")
+            self.push_change_event("adcPower", self._adc_power)
+            self.push_archive_event("adcPower", self._adc_power)
 
         if "xPolBandpass" in state_change:
             x_bandpass_data = state_change.get("xPolBandpass")
@@ -498,10 +508,11 @@ class SpsStation(SKAObsDevice):
         self.component_manager.static_delays = delays
 
     @attribute(
-        dtype=("DevLong",),
-        max_dim_x=512,
+        dtype=(("DevLong",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=16,  # Tiles
     )
-    def channeliserRounding(self: SpsStation) -> list[int]:
+    def channeliserRounding(self: SpsStation) -> ndarray:
         """
         Channeliser rounding.
 
@@ -509,19 +520,9 @@ class SpsStation(SKAObsDevice):
         Valid values 0-7 Same value applies to all antennas and
         polarizations
 
-        :returns: list of 512 values, one per channel.
+        :returns: A list of 512 values for every tile, one per channel.
         """
         return self.component_manager.channeliser_rounding
-
-    @channeliserRounding.write  # type: ignore[no-redef]
-    def channeliserRounding(self: SpsStation, truncation: list[int]) -> None:
-        """
-        Set channeliser rounding.
-
-        :param truncation: List with either a single value (applies to all channels)
-            or a list of 512 values. Range 0 (no truncation) to 7
-        """
-        self.component_manager.channeliser_rounding = truncation
 
     @attribute(
         dtype=("DevLong",),
@@ -580,19 +581,33 @@ class SpsStation(SKAObsDevice):
         """
         Get PPS delay correction, one per tile.
 
-        :return: Array of PPS delay correction in nanoseconds, one value per tile.
+        :return: Array of PPS delay in nanoseconds, one value per tile.
         """
         return self.component_manager.pps_delays
 
-    @ppsDelays.write  # type: ignore[no-redef]
-    def ppsDelays(self: SpsStation, delays: list[int]) -> None:
+    @attribute(
+        dtype=("DevLong",),
+        max_dim_x=16,
+    )
+    def ppsDelayCorrections(self: SpsStation) -> list[int]:
+        """
+        Return PPS delay correction, one per tile.
+
+        :return: Array of PPS delay correction in nanoseconds, one value per tile.
+        """
+        return self.component_manager.pps_delay_corrections
+
+    @ppsDelayCorrections.write  # type: ignore[no-redef]
+    def ppsDelayCorrections(self: SpsStation, delays: list[int]) -> None:
         """
         Set PPS delay correction, one per tile.
+
+        Note: this will be set in the next initialisation.
 
         :param delays: PPS delay correction in nanoseconds, one value per tile.
             Values are internally rounded to 1.25 ns units.
         """
-        self.component_manager.pps_delays = delays
+        self.component_manager.pps_delay_corrections = delays
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:
@@ -697,7 +712,7 @@ class SpsStation(SKAObsDevice):
         return self.component_manager.tile_programming_state()
 
     @attribute(dtype=("DevDouble",), max_dim_x=512)
-    def adcPower(self: SpsStation) -> list[float]:
+    def adcPower(self: SpsStation) -> list[float] | None:
         """
         Get the ADC RMS input levels for all input signals.
 
@@ -706,7 +721,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the ADC RMS input levels, in ADC units
         """
-        return self.component_manager.adc_power()
+        return self._adc_power
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
     def boardTemperaturesSummary(self: SpsStation) -> list[float]:
@@ -825,6 +840,31 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
+    @command(dtype_in=("DevLong",), dtype_out="DevVarLongStringArray")
+    def SetChanneliserRounding(
+        self: SpsStation, channeliser_rounding: ndarray
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the ChanneliserRounding to all Tiles in this Station.
+
+        Number of LS bits dropped in each channeliser frequency channel.
+        Valid values 0-7 Same value applies to all antennas and
+        polarizations
+
+        :param channeliser_rounding: list of 512 values, one per channel.
+            this will apply to all Tiles in this station.
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/station/aavs3")
+            >>> dp.command_inout("SetChanneliserRounding", np.array([2]*512))
+        """
+        handler = self.get_command_object("SetChanneliserRounding")
+        (return_code, message) = handler(channeliser_rounding)
+        return ([return_code], [message])
+
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
@@ -843,6 +883,27 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def TriggerAdcEqualisation(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Get the equalised ADC values.
+
+        Getting the equalised values takes up to 20 seconds (to get an average to
+        avoid spikes). So we trigger the collection and publish to dbmPowers
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("TriggerAdcEqualisation")
+        """
+        handler = self.get_command_object("TriggerAdcEqualisation")
+        (return_code, message) = handler()
         return ([return_code], [message])
 
     # -------------
@@ -1234,7 +1295,9 @@ class SpsStation(SKAObsDevice):
         """
         Set the pointing delay parameters of this Station's Tiles.
 
-        :param argin: an array containing a beam index followed by antenna delays
+        :param argin: an array containing a beam index followed by
+            pairs of antenna delays + delay rates, delay in seconds
+            and the delay rate in seconds/second
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1243,8 +1306,16 @@ class SpsStation(SKAObsDevice):
 
         :example:
 
+        >>> # example delays: 256 values from -32 to +32 ns, rates = 0
+        >>> delays = [step * 0.25e-9 for step in list(range(-128, 128))]
+        >>> rates = [0.0]*256
+        >>> beam = 0.0
         >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> dp.command_inout("LoadPointingDelays", delay_list)
+        >>> arg = [beam]
+        >>> for i in range(256)
+        >>>   arg.append(delays[i])
+        >>>   arg.append(rates[i])
+        >>> dp.command_inout("LoadPointingDelays", arg)
         """
         if len(argin) < 513:  # self._antennas_per_tile * 2 + 1:
             self.component_manager.logger.error("Insufficient parameters")

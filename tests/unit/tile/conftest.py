@@ -191,6 +191,7 @@ def tile_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     tile_id: int,
+    station_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -206,6 +207,7 @@ def tile_component_manager_fixture(
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -222,6 +224,7 @@ def tile_component_manager_fixture(
         logger,
         max_workers,
         tile_id,
+        station_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -250,6 +253,7 @@ def dynamic_tile_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     tile_id: int,
+    station_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -264,6 +268,7 @@ def dynamic_tile_component_manager_fixture(
         with a single mock subrack device.
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -280,6 +285,7 @@ def dynamic_tile_component_manager_fixture(
         logger,
         max_workers,
         tile_id,
+        station_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
@@ -306,6 +312,7 @@ def static_tile_component_manager_fixture(
     logger: logging.Logger,
     max_workers: int,
     tile_id: int,
+    station_id: int,
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
@@ -321,6 +328,7 @@ def static_tile_component_manager_fixture(
     :param test_mode: the initial test mode of this component manager
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which the tile belongs.
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -337,6 +345,7 @@ def static_tile_component_manager_fixture(
         logger,
         max_workers,
         tile_id,
+        station_id,
         tpm_ip,
         tpm_cpld_port,
         tpm_version,

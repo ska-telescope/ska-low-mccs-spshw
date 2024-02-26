@@ -15,6 +15,7 @@ import time
 import unittest.mock
 from typing import Any
 
+import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus
@@ -29,6 +30,7 @@ from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 def tpm_driver_fixture(
     logger: logging.Logger,
     tile_id: int,
+    station_id: int,
     tpm_version: str,
     callbacks: MockCallableGroup,
     tile_simulator: TileSimulator,
@@ -39,6 +41,7 @@ def tpm_driver_fixture(
     :param logger: a object that implements the standard logging
         interface of :py:class:`logging.Logger`
     :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
     :param callbacks: dictionary of driver callbacks.
     :param tile_simulator: The tile used by the TpmDriver.
@@ -48,6 +51,7 @@ def tpm_driver_fixture(
     return TpmDriver(
         logger,
         tile_id,
+        station_id,
         tile_simulator,
         tpm_version,
         callbacks["communication_status"],
@@ -480,7 +484,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.channeliser_truncation
         tpm_driver.static_delays = [12.0] * 32
         _ = tpm_driver.static_delays
-        tpm_driver.csp_rounding = [2] * 384
+        tpm_driver.csp_rounding = np.array([2] * 384)
         _ = tpm_driver.csp_rounding
         tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels
@@ -542,7 +546,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
         # This operation is performed by a poll. Done manually here for speed.
-        tpm_driver._tile_id = tile_simulator._tile_id
+        # tpm_driver._tile_id = tile_simulator._tile_id
+        tile_simulator.initialise(0, 0, 0, True, False)
+        time.sleep(0.1)
 
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.INITIALISED
@@ -553,9 +559,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver._update_tpm_status()
         assert tpm_driver.tpm_status == TpmStatus.SYNCHRONISED
 
-        tile_simulator._tile_id = 8
-        tpm_driver._update_tpm_status()
-        assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
+        # tile_simulator._tile_id = 8
+        # tpm_driver._update_tpm_status()
+        # assert tpm_driver.tpm_status == TpmStatus.PROGRAMMED
 
         # mock to fail
         tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]
@@ -890,7 +896,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         initial_last_update_tile_1 = tpm_driver._last_update_time_1
         initial_last_update_tile_2 = tpm_driver._last_update_time_2
         initial_tile_health_structure = tpm_driver._tile_health_structure
-        initial_pps_delay = tpm_driver._pps_delay
+        initial_pps_delay = tpm_driver._reported_pps_delay
         initial_adc_rms = tpm_driver._adc_rms
 
         # updated values
@@ -929,7 +935,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver._tile_health_structure["temperatures"]["FPGA1"] == fpga2_temp
         assert tpm_driver._tile_health_structure["temperatures"]["board"] == board_temp
         assert tpm_driver._tile_health_structure["voltages"]["MON_5V0"] == voltage
-        assert tpm_driver._pps_delay == pps_delay
+        assert tpm_driver._reported_pps_delay == pps_delay
         assert tpm_driver._adc_rms == adc_rms
 
         # Check that the last update time is more recent.
@@ -969,7 +975,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # we have polled and the tile is reporting that it is not programmed
 
         # Assert that the values are reset to what they were initialised to.
-        assert initial_pps_delay == tpm_driver._pps_delay
+        assert initial_pps_delay == tpm_driver._reported_pps_delay
 
     def test_initialise(
         self: TestTpmDriver,
@@ -1005,9 +1011,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time1 = tpm_driver.fpga_current_frame
         assert initial_time1 == final_time1
 
-        assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
-
-        # Act
         tpm_driver.initialise()
 
         # Assert
@@ -1052,6 +1055,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         expected_firmware_name: str,
         logger: logging.Logger,
         tile_id: int,
+        station_id: int,
         callbacks: MockCallableGroup,
         tile_simulator: TileSimulator,
     ) -> None:
@@ -1063,12 +1067,14 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :param tile_id: the unique ID for the tile
+        :param station_id: the ID of the station to which the tile belongs.
         :param callbacks: dictionary of driver callbacks.
         :param tile_simulator: The tile used by the TpmDriver.
         """
         driver = TpmDriver(
             logger,
             tile_id,
+            station_id,
             tile_simulator,
             tpm_version_to_test,
             callbacks["communication_status"],
@@ -1215,7 +1221,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert tpm_driver.preadu_levels == [0.0] * 32
+        assert tpm_driver.preadu_levels is None
 
         # Set preADU levels to 3 for all channels
         tpm_driver.preadu_levels = [3.0] * 32

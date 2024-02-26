@@ -273,20 +273,16 @@ class BaseTpmSimulator:
         self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
-    def initialise(
-        self: BaseTpmSimulator, tile_id: int = 0, pps_delay: int = PPS_DELAY
-    ) -> None:
+    def initialise(self: BaseTpmSimulator, tile_id: int = 0) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
 
         :param tile_id: Initial value for tile ID (optional)
-        :param pps_delay: Initial value for pps_delay (optional)
         """
         self.logger.debug("TpmSimulator: initialise")
         self._tile_id = tile_id
-        self._pps_delay = pps_delay
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)
         self._set_tpm_status(TpmStatus.INITIALISED)

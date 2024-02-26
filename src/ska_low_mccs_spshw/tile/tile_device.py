@@ -14,6 +14,7 @@ import json
 import logging
 import os.path
 import sys
+import time
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -61,6 +62,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     SubrackBay = device_property(dtype=int)  # position of TPM in subrack
 
     TileId = device_property(dtype=int, default_value=1)  # Tile ID must be nonzero
+    StationID = device_property(dtype=int, default_value=1)
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
@@ -91,6 +93,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._max_workers: int = 1
+        self._static_delays: Optional[list[int]] = None
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
@@ -109,6 +112,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSubrackFQDN: {self.SubrackFQDN}\n"
             f"\tSubrackBay: {self.SubrackBay}\n"
             f"\tTileId: {self.TileId}\n"
+            f"\tStationId: {self.StationID}\n"
             f"\tTpmIp: {self.TpmIp}\n"
             f"\tTpmCpldPort: {self.TpmCpldPort}\n"
             f"\tTpmVersion: {self.TpmVersion}\n"
@@ -141,6 +145,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.logger,
             self._max_workers,
             self.TileId,
+            self.StationID,
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
@@ -247,6 +252,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("staticTimeDelays", True, False)
+            self._device.set_archive_event("staticTimeDelays", True, False)
+            self._device.set_change_event("preaduLevels", True, False)
+            self._device.set_archive_event("preaduLevels", True, False)
+            self._device.set_change_event("cspRounding", True, False)
+            self._device.set_change_event("channeliserRounding", True, False)
             self._device.set_change_event("ppsPresent", True, False)
             self._device.set_archive_event("ppsPresent", True, False)
 
@@ -356,39 +367,56 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
 
-        if "programming_state" in state_change:
-            tile_programming_state = cast(
-                TpmStatus, state_change.get("programming_state")
-            )
-            message = (
-                f"programming_state callback. Old: {self._tile_programming_state}"
-                f" -> {tile_programming_state}"
-            )
-            self.logger.debug(message)
-            if self._tile_programming_state != tile_programming_state:
-                self._tile_programming_state = tile_programming_state
-                self.push_change_event(
-                    "tileProgrammingState", tile_programming_state.pretty_name()
-                )
-                self.push_archive_event(
-                    "tileProgrammingState", tile_programming_state.pretty_name()
-                )
-        if "tile_health_structure" in state_change:
-            tile_health_structure = state_change["tile_health_structure"]
-            if self.tile_health_structure != tile_health_structure:
-                # TODO: validate structure using schema before setting.
-                self.tile_health_structure = tile_health_structure
-                self._health_model.update_state(
-                    tile_health_structure=self.tile_health_structure
-                )
-                self.update_tile_health_attributes()
-
-        if "adc_rms" in state_change:
-            adc_rms = state_change["adc_rms"]
-            if self._adc_rms != adc_rms:
-                self._adc_rms = adc_rms
-                self.push_change_event("adcPower", adc_rms)
-                self.push_archive_event("adcPower", adc_rms)
+        for attribute_name, attribute_value in state_change.items():
+            match attribute_name:
+                case "programming_state":
+                    tile_programming_state = cast(TpmStatus, attribute_value)
+                    message = (
+                        "programming_state callback. "
+                        f"Old: {self._tile_programming_state}"
+                        f" -> {tile_programming_state}"
+                    )
+                    self.logger.debug(message)
+                    if self._tile_programming_state != tile_programming_state:
+                        self._tile_programming_state = tile_programming_state
+                        self.push_change_event(
+                            "tileProgrammingState", tile_programming_state.pretty_name()
+                        )
+                        self.push_archive_event(
+                            "tileProgrammingState", tile_programming_state.pretty_name()
+                        )
+                case "tile_health_structure":
+                    if self.tile_health_structure != attribute_value:
+                        # TODO: validate structure using schema before setting.
+                        self.tile_health_structure = attribute_value
+                        self._health_model.update_state(
+                            tile_health_structure=attribute_value
+                        )
+                        self.update_tile_health_attributes()
+                case "adc_rms":
+                    if self._adc_rms != attribute_value:
+                        self._adc_rms = attribute_value
+                        self.push_change_event("adcPower", attribute_value)
+                        self.push_archive_event("adcPower", attribute_value)
+                case "static_delays":
+                    if self._static_delays != attribute_value:
+                        self._static_delays = attribute_value
+                        self.push_change_event("staticTimeDelays", attribute_value)
+                        self.push_archive_event("staticTimeDelays", attribute_value)
+                case "preadu_levels":
+                    preadu_levels = state_change["preadu_levels"]
+                    self.push_change_event("preaduLevels", preadu_levels)
+                    self.push_archive_event("preaduLevels", preadu_levels)
+                case "csp_rounding":
+                    _csp_rounding = state_change["csp_rounding"]
+                    self.push_change_event("cspRounding", _csp_rounding)
+                case "channeliser_rounding":
+                    _channeliser_rounding = state_change["channeliser_rounding"]
+                    self.push_change_event("channeliserRounding", _channeliser_rounding)
+                case _:
+                    self.logger.warning(
+                        f"Unexpected attribute changed {attribute_name}" "Nothing is do"
+                    )
 
     def update_tile_health_attributes(self: MccsTile) -> None:
         """Update the TANGO attributes."""
@@ -896,21 +924,31 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     @attribute(dtype="DevLong")
     def ppsDelay(self: MccsTile) -> int:
         """
-        Return the PPS delay.
+        Return the delay between PPS and 10 MHz clock.
 
         :return: Return the PPS delay in nanoseconds
         """
         return self.component_manager.pps_delay
 
-    @ppsDelay.write  # type: ignore[no-redef]
-    def ppsDelay(self: MccsTile, delay: int) -> None:
+    @attribute(dtype="DevLong")
+    def ppsDelayCorrection(self: MccsTile) -> Optional[int]:
         """
-        Set PPS delay correction.
+        Return the correction made to the pps delay.
 
-        :param delay: PPS delay correction in nanoseconds. Value is
-            internally rounded to 1.25 ns units
+        :return: Return the PPS delay in nanoseconds
         """
-        self.component_manager.pps_delay = delay
+        return self.component_manager.pps_delay_correction
+
+    @ppsDelayCorrection.write  # type: ignore[no-redef]
+    def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
+        """
+        Set a correction to make to the pps delay.
+
+        Note: will be applied during next initialisation.
+
+        :param pps_delay_correction: a correction to apply to the pps_delay.
+        """
+        self.component_manager.pps_delay_correction = pps_delay_correction
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:
@@ -921,20 +959,49 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.component_manager.test_generator_active
 
-    @attribute(
-        dtype="DevShort",
-        min_alarm=0,
-        max_alarm=2,
-    )
-    def ppsPresent(self: MccsTile) -> bool | None:
+    @attribute(dtype="DevBoolean")
+    def ppsPresent(self: MccsTile) -> tuple[bool | None, float, tango.AttrQuality]:
         """
         Report if PPS signal is present at the TPM input.
 
-        :return: 0 if PPS signal is not present, 1 if is present.
+        :return: a tuple with attribute_value, time, quality
+            True if pps signal present.
+            ATTR_CHANGING if pps not yet polled,
+            ATTR_ALARM is pps not present,
+            ATTR_VALID is pps is present
         """
+        quality = tango.AttrQuality.ATTR_VALID
         if self._pps_present is None:
-            self._pps_present = self.component_manager.pps_present
-        return self._pps_present
+            self.logger.debug(
+                "We have not yet polled the attribute pps_present, "
+                "setting quality to CHANGING"
+            )
+            quality = tango.AttrQuality.ATTR_CHANGING
+        if self._pps_present is False:
+            self.logger.debug("No PPS signal present, attribute quality set to ALARM")
+            quality = tango.AttrQuality.ATTR_ALARM
+        return self._pps_present, time.time(), quality
+
+    def dev_state(self) -> tango.DevState:
+        """
+        Calculate this device state.
+
+        The base device offers some automatic state discovery.
+        However we have some attributes that require explicit
+        analysis as to whether they are in ALARM or not,
+
+        e.g. DevBoolean
+
+        :return: the 'tango.DevState' calculated
+        """
+        automatic_state_analysis: tango.DevState = super().dev_state()
+        force_alarm: bool = False
+        if self._pps_present is False:
+            self.logger.debug("no PPS signal present, raising ALARM")
+            force_alarm = True
+        if force_alarm:
+            return tango.DevState.ALARM
+        return automatic_state_analysis
 
     @attribute(dtype="DevBoolean")
     def clockPresent(self: MccsTile) -> bool:
@@ -1019,7 +1086,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype=("DevLong",),
         max_dim_x=384,
     )
-    def cspRounding(self: MccsTile) -> list[int]:
+    def cspRounding(self: MccsTile) -> Optional[np.ndarray]:
         """
         CSP formatter rounding.
 
@@ -1033,7 +1100,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.csp_rounding
 
     @cspRounding.write  # type: ignore[no-redef]
-    def cspRounding(self: MccsTile, rounding: list[int]) -> None:
+    def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
         """
         Set CSP formatter rounding.
 
@@ -2604,12 +2671,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         The delay_array specifies the delay and delay rate for each antenna. beam_index
         specifies which beam is desired (range 0-7)
 
-        :param argin: the delay in seconds and the delay rate in
-            seconds/second.
+        :param argin: An array containing: beam index,
+            the delay in seconds and the delay rate in
+            seconds/second, for each antenna.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+
+        :example:
+
+        >>> # example delays: 16 values from -2 to +2 ns, rates = 0
+        >>> delays = [step * 0.25e-9 for step in list(range(-8, 8))]
+        >>> rates = [0.0]*16
+        >>> beam = 0.0
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> arg = [beam]
+        >>> for i in range(16):
+        >>>   arg.append(delays[i])
+        >>>   arg.append(rates[i])
+        >>> dp.command_inout("LoadPointingDelays", arg)
         """
         handler = self.get_command_object("LoadPointingDelays")
         (return_code, message) = handler(argin)

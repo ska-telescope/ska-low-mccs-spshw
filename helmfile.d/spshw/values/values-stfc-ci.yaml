@@ -10,10 +10,14 @@ overrides:
   array:
     station_clusters:
       "ci":
+        cabinets:
+          "1":
+            subnet: 10.0.0.0
         stations:
           "1":
             id: 1
             sps:
+              cabinet: "1"
               daq:
                 simulated: true
               subracks:
@@ -36,10 +40,14 @@ overrides:
                 # Warning: Pulling configuration from different station cluster. We are pulling station cluster "a1" and deploying station cluster "ci"
 
       "real-daq":
+        cabinets:
+          "1":
+            subnet: 10.1.0.0
         stations:
           "1":
             id: 1
             sps:
+              cabinet: "1"
               daq:
                 simulated: false
               subracks:

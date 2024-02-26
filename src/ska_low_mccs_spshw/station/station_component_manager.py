@@ -21,6 +21,7 @@ from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
+import numpy as np
 import tango
 from pyfabil.base.utils import ip2long
 from ska_control_model import (
@@ -38,6 +39,8 @@ from ska_low_mccs_common.utils import threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
+
+from ..tile.tile_data import TileData
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -165,11 +168,21 @@ class _TileProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
+        if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
-            self._proxy.stationId = self._station_id
-            self._proxy.logicalTileId = self._logical_tile_id
-            self._connecting = False
+            if self._proxy.stationId != self._station_id:
+                self.logger.warning(
+                    f"Expected {self._proxy.dev_name()} stationId "
+                    f"{self._station_id}, tile has stationId {self._proxy.stationid}"
+                )
+            if self._proxy.logicalTileId != self._logical_tile_id:
+                self.logger.warning(
+                    f"Expected {self._proxy.dev_name()} logicalTileId "
+                    f"{self._logical_tile_id}, tile has logicalTileID "
+                    f"{self._proxy.logicalTileId}"
+                )
+            if self._connecting:
+                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
@@ -183,6 +196,24 @@ class _TileProxy(DeviceComponentManager):
             assert self._proxy is not None
             self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
+
+    def preadu_levels(self: _TileProxy) -> list[float]:
+        """
+        Return preAdu levels.
+
+        :return: preAdu levels
+        """
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.preaduLevels
+
+    def adc_power(self: _TileProxy) -> list[float]:
+        """
+        Return adcPower.
+
+        :return: adcPower
+        """
+        assert self._proxy is not None  # for the type checker
+        return self._proxy.adcPower
 
 
 class _DaqProxy(DeviceComponentManager):
@@ -348,6 +379,14 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
+        number_of_tiles = len(tile_fqdns)
+        self._adc_power: dict[int, Optional[list[float]]] = {}
+        self._static_delays: dict[int, Optional[list[float]]] = {}
+        self._preadu_levels: dict[int, Optional[list[float]]] = {}
+        for logical_tile_id in range(number_of_tiles):
+            self._adc_power[logical_tile_id] = None
+            self._static_delays[logical_tile_id] = None
+            self._preadu_levels[logical_tile_id] = None
         # TODO
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
@@ -365,6 +404,7 @@ class SpsStationComponentManager(
             )
             for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
         }
+
         self._subrack_proxies = {
             subrack_fqdn: _SubrackProxy(
                 subrack_fqdn,
@@ -396,6 +436,14 @@ class SpsStationComponentManager(
         self._csp_ingest_address = "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
+
+        # TODO: this needs to be scaled,
+        self.tile_attributes_to_subscribe = [
+            "adcPower",
+            "staticTimeDelays",
+            "preaduLevels",
+        ]
+
         self._lmc_param = {
             "mode": "10G",
             "payload_length": 8192,
@@ -409,10 +457,11 @@ class SpsStationComponentManager(
         self._fortygb_network_address = station_network_address
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
-        self._static_delays = [0] * 512
+        self._pps_delay_corrections = [0] * 16
+        self._desired_static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
-        self._preadu_levels = [0.0] * 512
+        self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._source_port = 0xF0D0
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
@@ -434,6 +483,7 @@ class SpsStationComponentManager(
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,
+            adc_power=None,
         )
 
     def _get_mappings(
@@ -530,6 +580,83 @@ class SpsStationComponentManager(
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
+    def subscribe_to_attributes(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Subscribe to attributes of interest.
+
+        This will form subscriptions to attributes on subdevices
+        `MccsTile` and `MccsSubrack` if attribute not already subscribed.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        """
+        # Subscribe to Subrack attributes
+        for fqdn in self._subrack_proxies.keys():
+            self.logger.warning(
+                f"Subscriptions for subrack attributes not yet implemented {fqdn}"
+            )
+
+        # Subscribe to Tile attributes
+        for fqdn, proxy_object in self._tile_proxies.items():
+            try:
+                if proxy_object._proxy is None:
+                    raise ValueError(f"proxy for {fqdn} is None " "Unable to subscribe")
+                for tile_attribute in self.tile_attributes_to_subscribe:
+                    if (
+                        tile_attribute
+                        not in proxy_object._proxy._change_event_callbacks.keys()
+                    ):
+                        proxy_object._proxy.add_change_event_callback(
+                            tile_attribute,
+                            functools.partial(
+                                self._on_tile_attribute_change,
+                                proxy_object._logical_tile_id,
+                            ),
+                            stateless=True,
+                        )
+            except ValueError as e:
+                self.logger.warning(
+                    f"unable to form subscription for {fqdn} : {repr(e)}"
+                )
+            except Exception as e:  # pylint: disable=broad-except
+                self.logger.error(
+                    "Exception raised when attempting to subscribe "
+                    f"to attribute on device{fqdn} :{repr(e)}"
+                )
+
+    def _on_tile_attribute_change(
+        self: SpsStationComponentManager,
+        logical_tile_id: int,
+        attribute_name: str,
+        attribute_value: Any,
+        attribute_quality: tango.AttrQuality,
+    ) -> None:
+        attribute_name = attribute_name.lower()
+        match attribute_name:
+            case "adcpower":
+                self.logger.debug("handling change in adcpower")
+                self._adc_power[logical_tile_id] = attribute_value.tolist()
+                adc_powers: list[float] = []
+                for _, adc_power in self._adc_power.items():
+                    if adc_power is not None:
+                        adc_powers += adc_power
+                self._update_component_state(adc_power=adc_powers)
+            case "statictimedelays":
+                self._static_delays[logical_tile_id] = attribute_value.tolist()
+            case "preadulevels":
+                self.logger.debug("handling change in preaduLevels")
+                # Note: Currently all we do is update the attribute value.
+                self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+            case _:
+                self.logger.error(
+                    f"Unrecognised tile attribute changing {attribute_name}"
+                    "Nothing is updated."
+                )
+
     def _update_communication_state(
         self: SpsStationComponentManager,
         communication_state: CommunicationStatus,
@@ -545,6 +672,7 @@ class SpsStationComponentManager(
         """
         super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
+            self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe
@@ -1068,14 +1196,16 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
             assert tile is not None
-            i1 = tile_no * 32  # indexes for parameters for individual signals
-            i2 = i1 + 32
+            i1 = (
+                tile_no * TileData.ADC_CHANNELS
+            )  # indexes for parameters for individual signals
+            i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            tile.preaduLevels = self._preadu_levels[i1:i2]
-            tile.staticTimeDelays = self._static_delays[i1:i2]
+            tile.preaduLevels = self._desired_preadu_levels[i1:i2]
+            tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
-            tile.ppsDelay = self._pps_delays[tile_no]
+            tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
                 json.dumps(
@@ -1225,33 +1355,50 @@ class SpsStationComponentManager(
     @property
     def pps_delays(self: SpsStationComponentManager) -> list[int]:
         """
-        Get PPS delay correction.
+        Get PPS delay.
 
-        Array of one value per tile. Defines PPS delay correction,
+        Array of one value per tile. Returns the PPS delay,
         Values are internally rounded to 1.25 ns steps
 
         :return: Array of one value per tile, in nanoseconds
         """
+        for i, proxy in enumerate(self._tile_proxies.values()):
+            assert proxy._proxy is not None  # for the type checker
+            self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
 
-    @pps_delays.setter
-    def pps_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    @property
+    def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:
+        """
+        Get the PPS delay correction.
+
+        :return: Array of pps delay corrections, one value per tile, in nanoseconds
+        """
+        for i, proxy in enumerate(self._tile_proxies.values()):
+            assert proxy._proxy is not None  # for the type checker
+            self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
+
+        return copy.deepcopy(self._pps_delay_corrections)
+
+    @pps_delay_corrections.setter
+    def pps_delay_corrections(
+        self: SpsStationComponentManager, delays: list[int]
+    ) -> None:
         """
         Set PPS delay correction.
+
+        This will be applied during the following Initialisation.
 
         :param delays: Array of one value per tile, in nanoseconds.
             Values are internally rounded to 1.25 ns steps
         """
-        self._pps_delays = copy.deepcopy(delays)
-        i = 0
-        for proxy in self._tile_proxies.values():
+        for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.ppsDelays = delays[i]
-            i = i + 1
+                proxy._proxy.ppsDelayCorrection = delays[i]
 
     @property
-    def static_delays(self: SpsStationComponentManager) -> list[int]:
+    def static_delays(self: SpsStationComponentManager) -> list[float]:
         """
         Get static time delay correction.
 
@@ -1261,7 +1408,11 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return copy.deepcopy(self._static_delays)
+        static_delays: list[float] = []
+        for _, static_delay in self._static_delays.items():
+            if static_delay is not None:
+                static_delays += static_delay
+        return static_delays
 
     @static_delays.setter
     def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
@@ -1270,16 +1421,16 @@ class SpsStationComponentManager(
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
-        self._static_delays = copy.deepcopy(delays)
+        self._desired_static_delays = copy.deepcopy(delays)
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.staticTimeDelays = delays[i : i + 32]
-            i = i + 32
+                proxy._proxy.staticTimeDelays = delays[i : i + TileData.ADC_CHANNELS]
+            i = i + TileData.ADC_CHANNELS
 
     @property
-    def channeliser_rounding(self: SpsStationComponentManager) -> list[int]:
+    def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
         """
         Channeliser rounding.
 
@@ -1287,31 +1438,23 @@ class SpsStationComponentManager(
         Valid values 0-7 Same value applies to all antennas and
         polarizations
 
-        :returns: list of 512 values, one per channel.
+        :returns: list of 512 values for each Tile, one per channel.
         """
-        return copy.deepcopy(self._channeliser_rounding)
+        channeliser_roundings: np.ndarray = np.zeros([16, 512])
 
-    @channeliser_rounding.setter
-    def channeliser_rounding(
-        self: SpsStationComponentManager, truncation: list[int]
-    ) -> None:
-        """
-        Set channeliser rounding.
-
-        :param truncation: List with either a single value (applies to all channels)
-            or a list of 512 values. Range 0 (no truncation) to 7
-        """
-        self._channeliser_rounding = copy.deepcopy(truncation)
-        for proxy in self._tile_proxies.values():
+        for tile_idx, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(
-                    f"Writing truncation  {truncation[0]} in {proxy._proxy.name()}"
+            try:
+                channeliser_roundings[tile_idx, :] = proxy._proxy.channeliserRounding
+            except ValueError as e:
+                self.logger.error(
+                    f"unable to update array with {proxy._name} "
+                    f"channeliserRounding attribute: {repr(e)}"
                 )
-                proxy._proxy.channeliserRounding = truncation
+        return channeliser_roundings
 
     @property
-    def csp_rounding(self: SpsStationComponentManager) -> list[int]:
+    def csp_rounding(self: SpsStationComponentManager) -> list[int] | None:
         """
         CSP formatter rounding.
 
@@ -1322,7 +1465,9 @@ class SpsStationComponentManager(
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return copy.deepcopy(self._csp_rounding)
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        return proxy._proxy.cspRounding
 
     @csp_rounding.setter
     def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
@@ -1348,7 +1493,11 @@ class SpsStationComponentManager(
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return copy.deepcopy(self._preadu_levels)
+        preadu_levels_concatenated: list[float] = []
+        for preadu_levels in self._preadu_levels.values():
+            if preadu_levels is not None:
+                preadu_levels_concatenated += preadu_levels
+        return preadu_levels_concatenated
 
     @preadu_levels.setter
     def preadu_levels(self: SpsStationComponentManager, levels: list[float]) -> None:
@@ -1357,13 +1506,18 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._preadu_levels = copy.deepcopy(levels)
+        self._desired_preadu_levels = copy.deepcopy(levels)
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.preaduLevels = levels[i : i + 32]
-            i = i + 32
+                proxy._proxy.preaduLevels = levels[i : i + TileData.ADC_CHANNELS]
+            else:
+                self.logger.error(
+                    f"Not setting preadu levels on {proxy._name}"
+                    "TileProgramming state not `Initialised` or `Synchronised`."
+                )
+            i = i + TileData.ADC_CHANNELS
 
     @property
     def beamformer_table(self: SpsStationComponentManager) -> list[list[int]]:
@@ -1478,7 +1632,7 @@ class SpsStationComponentManager(
         rms_values: list[float] = []
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            rms_values = rms_values + list(proxy._proxy.adcPower)
+            rms_values = rms_values + list(proxy.adc_power())
         return rms_values
 
     def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
@@ -1503,10 +1657,15 @@ class SpsStationComponentManager(
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpgaTemperature
+        fpga_1_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpga1Temperature
             for tile in self._tile_proxies.values()
         )
+        fpga_2_temperatures = list(
+            tile._proxy is not None and tile._proxy.fpga2Temperature
+            for tile in self._tile_proxies.values()
+        )
+        fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
         return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
     def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
@@ -1776,6 +1935,46 @@ class SpsStationComponentManager(
             assert tile._proxy is not None  # for the type checker
             tile._proxy.ApplyCalibration(switch_time)
 
+    def _calculate_delays_per_tile(
+        self: SpsStationComponentManager,
+        antenna_order_delays: list[float],
+    ) -> dict[int, list[float]]:
+        beam_index = antenna_order_delays[0]
+
+        # pre-allocate arrays for each of our tiles
+        tile_delays: dict[int, list] = {}
+        # element 0: beam index
+        # odd elements: delay
+        # even elements: delay rate
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
+            tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
+
+        # remove element 0 from antenna_order_delays to aid in indexing,
+        # we have used it now
+        antenna_order_delays = antenna_order_delays[1:]
+
+        # This array should now be of even length as it corresponds to pairs of
+        # delay/delay rates
+        assert len(antenna_order_delays) % 2 == 0
+
+        # Loop through each pair of delay/delay rates
+        for antenna_no in range(len(antenna_order_delays) // 2):
+            delay = antenna_order_delays[antenna_no * 2]
+            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
+
+            # Fetch which tpm this antenna belongs to
+            tile_no = self._antenna_mapping[antenna_no + 1][0]
+            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
+
+            # We may have mapping for devices we don't have deployed
+            if tile_no in tile_delays:
+                tile_delays[tile_no][(channel) * 2 + 1] = delay
+                tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
+
+        return tile_delays
+
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
     ) -> None:
@@ -1788,15 +1987,13 @@ class SpsStationComponentManager(
 
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """
-        beam_index = delay_list[0]
-        delays_for_tile = [beam_index] + [0.0] * 32
-        first_delay = 1
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            last_delay = first_delay + 32
-            delays_for_tile[1:33] = delay_list[first_delay:last_delay]
-            tile._proxy.LoadPointingDelays(delays_for_tile)
-            first_delay = last_delay
+        tile_delays = self._calculate_delays_per_tile(delay_list)
+
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
+            delays_for_tile = tile_delays[tile_no]
+            tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
     def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
         """
@@ -2000,3 +2197,133 @@ class SpsStationComponentManager(
                     status=TaskStatus.FAILED, result="Start acquisition task failed"
                 )
             return
+
+    @check_communicating
+    def set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._set_channeliser_rounding,
+            args=[channeliser_rounding],
+            task_callback=task_callback,
+        )
+
+    def _set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        result_code = ResultCode.OK
+        message = ""
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
+                try:
+                    proxy._proxy.channeliserRounding = channeliser_rounding
+                except tango.DevFailed:
+                    self.logger.warning(
+                        f"Failed to load truncation for {proxy._proxy.name()}"
+                    )
+                    message = "Failed to set channeliserRounding for 1 or more Tiles."
+                    result_code = ResultCode.FAILED
+            else:
+                message += (
+                    "unable to set channeliserRounding for 1 or more tiles. "
+                    "Tile not Initialised. "
+                )
+                result_code = ResultCode.FAILED
+
+        if not message:
+            message = "channeliserRounding loaded into all Tiles successfully."
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result_code, message),
+            )
+
+    def trigger_adc_equalisation(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the trigger adc equalisation method.
+
+        This method returns immediately after it submitted
+        `self._trigger_adc_equalisation` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._trigger_adc_equalisation,
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _trigger_adc_equalisation(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Equalise adc using slow command.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        tpms = self._tile_proxies.values()
+        num_samples = 20
+        target_adc = 17
+
+        adc_data = np.empty([num_samples, 32 * len(tpms)])
+        for i in range(num_samples):
+            time.sleep(1)
+            adc_data[i] = self.adc_power()
+
+        # calculate difference in dB between current and target values
+        adc_medians = np.median(adc_data, axis=0)
+
+        # adc deltas
+        adc_deltas = 20 * np.log10(adc_medians / target_adc)
+
+        # calculate ideal attenuation
+        preadu_levels = np.concatenate([t.preadu_levels() for t in tpms])
+        desired_levels = preadu_levels + adc_deltas
+
+        # quantise and clip to valid range
+        sanitised_levels = (desired_levels * 4).round().clip(0, 127) / 4
+
+        # apply new preADU levels to the station
+        self.preadu_levels = sanitised_levels
+
+        if task_callback:
+            task_callback(status=TaskStatus.COMPLETED)

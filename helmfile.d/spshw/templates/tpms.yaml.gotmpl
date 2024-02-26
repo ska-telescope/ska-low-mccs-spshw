@@ -14,6 +14,18 @@
     {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
 
     {{- $tpm_specs := dig "tpms" dict $sps_spec}}
+    {{- $tile_id := 0}}
+    {{- $tile_ids := dict}}
+    {{- $tpm_keys := list}}
+    {{- range $tpm_key :=  keys $tpm_specs}}
+      {{- $tpm_keys = append $tpm_keys (printf "%2d" (int $tpm_key))}}
+    {{- end}}
+    {{- $tpm_keys = $tpm_keys | sortAlpha}}
+    {{- range $tpm_id := $tpm_keys}}
+      {{- $_ := set $tile_ids $tpm_id $tile_id}}
+      {{- $tile_id = add $tile_id 1}}
+    {{- end}}
+    
     {{- range $tpm_id, $tpm_spec := $tpm_specs}}
       {{- $tpm_enabled := dig "enabled" $sps_enabled $tpm_spec}}
 
@@ -23,8 +35,9 @@
         {{- $tpm_name := printf "low-mccs/tile/%s" $server_name}}
         {{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
 
-        {{- $_ := set $tpm_instance "tile_id" (int $tpm_id)}}
+        {{- $_ := set $tpm_instance "tile_id" (get (printf "%2d" (int $tpm_id)) $tile_ids )}}
         {{- $_ := set $tpm_instance "subrack" (printf "%s-%d" $station_name (int $tpm_spec.subrack))}}
+        {{- $_ := set $tpm_instance "station_id" $station_spec.id}}
 
         {{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
         {{- if $tpm_logging_level_defaults}}

@@ -17,6 +17,8 @@ import tango
 from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
+from ska_low_mccs_spshw.tile import TileSimulator
+
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
 
@@ -36,6 +38,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_state",
         "tile_command_status",
         "tile_programming_state",
+        "pps_present",
         timeout=2.0,
     )
 
@@ -568,3 +571,48 @@ class TestMccsTileTpmDriver:
 
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
+
+    def test_pps_present(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test alarm is raised when pps is disconnected.
+
+        This tests from the TileSimulator to the Tango interface.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        tile_device.UpdateAttributes()
+
+        tile_device.subscribe_event(
+            "ppsPresent",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["pps_present"],
+        )
+        change_event_callbacks["pps_present"].assert_change_event(True)
+        assert (
+            tile_device.read_attribute("ppspresent").quality
+            == tango.AttrQuality.ATTR_VALID
+        )
+        tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
+
+        tile_device.UpdateAttributes()
+        change_event_callbacks["pps_present"].assert_change_event(False)
+        assert (
+            tile_device.read_attribute("ppspresent").quality
+            == tango.AttrQuality.ATTR_ALARM
+        )
+        assert tile_device.state() == tango.DevState.ALARM

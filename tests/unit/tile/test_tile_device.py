@@ -430,23 +430,24 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-        tile_device.MockTpmOn()
-
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
-
         # Setup default tile_health_structure
         tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
         static_tile_component_manager._update_component_state(
             tile_health_structure=tile_monitoring_defaults,
         )
 
+        tile_device.MockTpmOn()
+
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
         tile_device.subscribe_event(
             "ppsPresent",
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
-        change_event_callbacks["pps_present"].assert_change_event(
-            1, AttrQuality.ATTR_VALID
+        change_event_callbacks["pps_present"].assert_change_event(True)
+        assert (
+            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_VALID
         )
         static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
@@ -459,8 +460,9 @@ class TestMccsTile:
         static_tile_component_manager._update_component_state(
             tile_health_structure=tile_monitoring_defaults,
         )
-        change_event_callbacks["pps_present"].assert_change_event(
-            0, AttrQuality.ATTR_ALARM
+        change_event_callbacks["pps_present"].assert_change_event(False)
+        assert (
+            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == DevState.ALARM
 
@@ -503,7 +505,6 @@ class TestMccsTile:
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
             ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
             ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
-            ("ppsPresent", 1, None),
             ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
             ("clockPresent", True, None),
             ("sysrefPresent", True, None),

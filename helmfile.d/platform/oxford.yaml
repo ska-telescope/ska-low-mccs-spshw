@@ -1,6 +1,6 @@
 platform:
   metadata:
-    version: 0.0.3
+    version: 0.0.9
     description: A platform configuration specification for Oxford
 
   # cluster:  specified by minikube.yaml
@@ -11,7 +11,12 @@ platform:
       "o1":
         cabinets:
           "1":
-            network_address: 10.0.0.0
+            # The cabinet subnet ought properly to be the second /25 in a /24
+            # (the first /25 is for non-science data,
+            # the second for science data).
+            # This schema is not followed in Oxford,
+            # but fortunately all we need here is any vacant /25.
+            subnet: 10.0.0.0
         stations:
           "1":
             id: 1

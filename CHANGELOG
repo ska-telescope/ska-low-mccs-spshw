@@ -2,7 +2,25 @@
 
 ## unreleased
 
+## 0.14.0
+
 * [MCCS-1957] Support deployment namespace override
+* [SKB-280] Change type of SpsStation.preadulevels from int to float
+* [SKB-278] Handle numpy arrays in SpsStationComponentManager.adc_power()
+* [MCCS-1925] Update ppsPresent to push change events
+* [MCCS-1880] Implement mechanism in SpsStation to retrieve antenna locations
+* [MCCS-1959] Remove TaskExcecutorComponentManager base class from TpmDriver
+* [MCCS-1884] Update SpsStation adcPower to push change and archive events
+* [MCCS-1885] Add 'cadence' as arg to bandpass monitor
+* [MCCS-1961] Update preaduLevels to push change events
+* [SKB-273], [MCCS-1960] Add StationID as tango device property on MccsTile, set TileID property to be continuous 0-15
+* [MCCS-1961] Fix FPGA Temperature Summary on SpsStation
+* [MCCS-1966] Use infa-issued credentials for AAVS3
+* [MCCS-1961] Update statis tile delays attribute to push
+* [MCCS-1975] cabinet subnet handling
+* [MCCS-1905] Latest TPM Firmware, AAVS-System and PyFABIL (sbf510 bitfiles)
+* [MCCS-1918] Implement ADC equalisation in MCCS as tango command
+* [MCCS-1764] MccsTIle bugs corrected
 
 ## 0.13.0
 

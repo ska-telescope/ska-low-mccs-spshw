@@ -87,7 +87,7 @@ ska-low-mccs-daq:
     {{$station_name}}:
       host: {{$daq_spec.host}}
       id: {{$daq_spec.id}}
-      storage: daq-data
+      # storage: daq-data
 {{- with (pick $cluster_daq_spec "annotations" "node_selector" "affinity" "tolerations" "runtime_class" "gpu_limit")}}
 {{toYaml . | indent 6}}
 {{- end}}

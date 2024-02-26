@@ -68,6 +68,7 @@ def test_context_fixture(
     mock_tile_device_proxies: list[unittest.mock.Mock],
     patched_sps_station_device_class: type[SpsStation],
     daq_trl: str,
+    daq_id: int,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
@@ -82,6 +83,7 @@ def test_context_fixture(
         that has been patched with extra commands that mock system under
         control behaviours.
     :param daq_trl: a Tango Resource Locator of a DAQ instance.
+    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: a test context.
     """
@@ -101,6 +103,9 @@ def test_context_fixture(
     harness.add_field_station_device(
         device_class=MockFieldStation,
     )
+
+    harness.set_daq_instance()
+    harness.set_daq_device(daq_id=daq_id, address=None)
 
     with harness as context:
         yield context

@@ -418,7 +418,9 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         config = self.get_configuration()
         nof_channels = int(config["nof_channels"])
-        nof_antennas_max: int = 256
+        nof_antennas = int(config["nof_antennas"])
+        nof_tiles = int(config["nof_tiles"])
+        nof_ants_present = nof_tiles * nof_antennas
 
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
@@ -448,20 +450,20 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         # Reconstruct the numpy array.
                         x_bandpass_plot = to_db(
                             np.array(json.loads(response["x_bandpass_plot"][0]))
-                        ).reshape((nof_antennas_max, nof_channels))
+                        ).reshape((nof_ants_present, nof_channels))
                         call_callback = True
                 if "y_bandpass_plot" in response:
                     if response["y_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
                         y_bandpass_plot = to_db(
                             np.array(json.loads(response["y_bandpass_plot"][0]))
-                        ).reshape((nof_antennas_max, nof_channels))
+                        ).reshape((nof_ants_present, nof_channels))
                         call_callback = True
                 if "rms_plot" in response:
                     if response["rms_plot"] != [None]:
                         rms_plot = np.array(
                             json.loads(response["rms_plot"][0])
-                        ).reshape((nof_antennas_max, nof_channels))
+                        ).reshape((nof_ants_present, nof_channels))
                         call_callback = True
                 if call_callback:
                     if self._component_state_callback is not None:

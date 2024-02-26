@@ -43,6 +43,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_preadu_levels",
         "tile_csp_rounding",
         "tile_channeliser_rounding",
+        "daq_state",
         timeout=15.0,
     )
 
@@ -55,6 +56,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -63,13 +65,25 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         assert sps_station_device.adminMode == AdminMode.OFFLINE
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
+        assert daq_device.adminMode == AdminMode.OFFLINE
 
+        daq_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["daq_state"],
+        )
+        change_event_callbacks["daq_state"].assert_change_event(tango.DevState.DISABLE)
+        daq_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["daq_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2
+        )
         # Since the devices are in adminMode OFFLINE,
         # they are not even trying to monitor and control their components,
         # so they each report state as DISABLE.
@@ -157,6 +171,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -172,11 +187,16 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -205,6 +225,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -213,11 +234,16 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
         # Force a poll to get the initial values.
         tile_device.UpdateAttributes()
@@ -269,6 +295,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -282,11 +309,16 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -341,6 +373,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -354,11 +387,16 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -427,6 +465,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -440,11 +479,16 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -523,6 +567,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -536,11 +581,16 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -605,6 +655,7 @@ class TestStationTileIntegration:
         tile_device: tango.DeviceProxy,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -616,6 +667,7 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -623,6 +675,7 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            daq_device,
             change_event_callbacks,
         )
 

@@ -289,8 +289,8 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.add_change_event_callback(
                 "yPolBandpass", self._bandpass_callback
             )
-            self._proxy._subscribe_change_event("xPolBandpass")
-            self._proxy._subscribe_change_event("yPolBandpass")
+            # self._proxy._subscribe_change_event("xPolBandpass")
+            # self._proxy._subscribe_change_event("yPolBandpass")
         super()._update_communication_state(communication_state)
 
     def _bandpass_callback(
@@ -366,6 +366,7 @@ class SpsStationComponentManager(
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
         """
+        self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
         self._daq_trl = daq_trl
         self._is_configured = False
@@ -418,14 +419,19 @@ class SpsStationComponentManager(
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
-        self._daq_proxy = _DaqProxy(
-            self._daq_trl,
-            station_id,
-            logger,
-            max_workers,
-            functools.partial(self._device_communication_state_changed, self._daq_trl),
-            component_state_changed_callback,
-        )
+        if self._daq_trl is not None:
+            # TODO: Detect a bad daq trl.
+            self._daq_proxy = _DaqProxy(
+                self._daq_trl,
+                station_id,
+                logger,
+                max_workers,
+                functools.partial(
+                    self._device_communication_state_changed, self._daq_trl
+                ),
+                functools.partial(self._daq_state_changed, self._daq_trl),
+            )
+            self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -539,7 +545,8 @@ class SpsStationComponentManager(
             tile_proxy.start_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.start_communicating()
-        self._daq_proxy.start_communicating()
+        if self._daq_proxy is not None:
+            self._daq_proxy.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
@@ -550,7 +557,8 @@ class SpsStationComponentManager(
             tile_proxy.stop_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.stop_communicating()
-        self._daq_proxy.stop_communicating()
+        if self._daq_proxy is not None:
+            self._daq_proxy.stop_communicating()
 
         self._update_communication_state(CommunicationStatus.DISABLED)
         self._update_component_state(power=None, fault=None)
@@ -702,6 +710,26 @@ class SpsStationComponentManager(
                 self._evaluate_power_state()
         if health is not None:
             self._subrack_health_changed_callback(fqdn, health)
+
+    @threadsafe
+    def _daq_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        if power is not None:
+            with self._power_state_lock:
+                self._daq_power_state[fqdn] = power
+                self._evaluate_power_state()
+        if "xPolBandpass" in state_change:
+            x_bandpass_data = state_change.get("xPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(xPolBandpass=x_bandpass_data)
+        if "yPolBandpass" in state_change:
+            y_bandpass_data = state_change.get("yPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(yPolBandpass=y_bandpass_data)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,

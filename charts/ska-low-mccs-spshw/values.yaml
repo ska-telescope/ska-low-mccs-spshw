@@ -92,9 +92,9 @@ resources:
     memory: 50Mi
 
 image:
-  registry: artefact.skao.int
+  registry: docker.io/library # artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: ~ # defaults to chart's appVersion when empty
+  tag: 0.13.0-dirty # defaults to chart's appVersion when empty
   pullPolicy: IfNotPresent
 
 deviceServers: {} # e.g....

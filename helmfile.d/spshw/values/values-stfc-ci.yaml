@@ -19,7 +19,7 @@ overrides:
             sps:
               cabinet: "1"
               daq:
-                simulated: true
+                simulated: false
               subracks:
                 "1":
                   simulated: true
@@ -63,17 +63,21 @@ overrides:
                   version: tpm_v1_6
                   subrack: 1
                   subrack_slot: 1
+              antenna_config_uri:
+                uri: "car:ska-low-aavs3?main"
+                path: "instrument/mccs-configuration/aavs3.yaml"
+                station_cluster: "a1"
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,
 #
-# helm_values:
-#   image:
-#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.11.0-dev.cc21201e6
+helm_values:
+  # image:
+  #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+  #   tag: 0.11.0-dev.cc21201e6
 
-#   ska-low-mccs-daq:
-#     image:
-#       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-#       tag: 0.5.0-dev.cfc920d91
+  ska-low-mccs-daq:
+    image:
+      registry: docker.io/library
+      tag: 0.6.1-dirty

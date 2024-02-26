@@ -28,6 +28,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     tile_id: int,
     mock_tile_device_proxy: unittest.mock.Mock,
+    daq_id: int,
 ) -> Iterator[None]:
     """
     Yield into a context in which Tango is running, with mock devices.
@@ -45,6 +46,7 @@ def test_context_fixture(
     :param tile_id: ID of the tile Tango device to be mocked
     :param mock_tile_device_proxy: a mock tile device proxy
         that has been configured with the required subrack behaviours.
+    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: into a context in which Tango is running, with a mock
         subrack device.
@@ -52,6 +54,8 @@ def test_context_fixture(
     harness = SpsTangoTestHarness()
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
     harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
+    harness.set_daq_instance()
+    harness.set_daq_device(daq_id=daq_id, address=None)
     with harness:
         yield
 

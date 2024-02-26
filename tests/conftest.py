@@ -253,6 +253,18 @@ def daq_id_fixture() -> int:
     return 1
 
 
+@pytest.fixture(name="daq_trl")
+def daq_trl_fixture(daq_id: str) -> str:
+    """
+    Return a DAQ TRL for testing purposes.
+
+    :param daq_id: The ID of this DAQ device.
+
+    :returns: A DAQ TRL.
+    """
+    return f"low-mccs/daqreceiver/ci-{daq_id}"
+
+
 @pytest.fixture(name="calibration_solutions")
 def calibration_solutions_fixture(
     frequency_channel: int, outside_temperature: float

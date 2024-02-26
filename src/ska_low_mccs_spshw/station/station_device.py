@@ -84,7 +84,7 @@ class SpsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1
+        self._max_workers = 3
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -293,6 +293,7 @@ class SpsStation(SKAObsDevice):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        bandpass_data_shape = (256, 512)
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
 
@@ -323,17 +324,19 @@ class SpsStation(SKAObsDevice):
             x_bandpass_data = state_change.get("xPolBandpass")
             if isinstance(x_bandpass_data, np.ndarray):
                 x_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(256, 512), dtype=float
+                    shape=bandpass_data_shape, dtype=float
                 )
                 try:
                     # Resize data to match attr.
-                    x_bandpass_data = to_shape(x_bandpass_data, (256, 512))
+                    x_bandpass_data = to_shape(x_bandpass_data, bandpass_data_shape)
                     # Change bandpass data from port order to antenna order.
                     x_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, x_bandpass_data
                     )
                     # pylint: disable=attribute-defined-outside-init
                     self._x_bandpass_data = x_pol_bandpass_ordered
+                    self.push_change_event("xPolBandpass", x_pol_bandpass_ordered)
+                    self.push_archive_event("xPolBandpass", x_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION X BANDPASS:\n {e}"
@@ -349,17 +352,19 @@ class SpsStation(SKAObsDevice):
             y_bandpass_data = state_change.get("yPolBandpass")
             if isinstance(y_bandpass_data, np.ndarray):
                 y_pol_bandpass_ordered: np.ndarray = np.zeros(
-                    shape=(256, 512), dtype=float
+                    shape=bandpass_data_shape, dtype=float
                 )
                 try:
                     # Resize data to match attr.
-                    y_bandpass_data = to_shape(y_bandpass_data, (256, 512))
+                    y_bandpass_data = to_shape(y_bandpass_data, bandpass_data_shape)
                     # Change bandpass data from port order to antenna order.
                     y_pol_bandpass_ordered = _port_to_antenna_order(
                         self.component_manager._antenna_mapping, y_bandpass_data
                     )
                     # pylint: disable=attribute-defined-outside-init
                     self._y_bandpass_data = y_pol_bandpass_ordered
+                    self.push_change_event("yPolBandpass", y_pol_bandpass_ordered)
+                    self.push_archive_event("yPolBandpass", y_pol_bandpass_ordered)
                 except Exception as e:  # pylint: disable=broad-exception-caught
                     self.logger.error(
                         f"CAUGHT EXCEPTION SETTING STATION Y BANDPASS:\n {e}"
@@ -1692,8 +1697,13 @@ def _port_to_antenna_order(
     :param antenna_mapping: A mapping of antenna to tpm and ports.
         dict[ant_id: (tpm_id, tpm_x_port, tpm_y_port)]
     :param data: Full station data in TPM and port order.
-    :returns: Full station data in Antenna order.
+    :returns: Full station data in Antenna order or `None` if the operation failed.
     """
+    if antenna_mapping == {}:
+        logging.log(
+            20, "No antenna mapping provided, returning data unmodified and exiting."
+        )
+        return data
     ordered_data = np.zeros(data.shape)
     nof_antennas_per_tile = 16
     try:
@@ -1705,6 +1715,9 @@ def _port_to_antenna_order(
             port_offset = int(tpm_port_number // 2)
             antenna_index = tile_base_index + port_offset
             ordered_data[antenna, :] = data[antenna_index, :]
+    except KeyError as key_err:
+        # Generally we'll get here when we have fewer than 256 antennas.
+        pass
     except Exception as e:  # pylint: disable=broad-exception-caught
         logging.log(
             40, f"Caught exception in SpsStation._port_to_antenna_order: {repr(e)}"

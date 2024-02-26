@@ -482,7 +482,7 @@
 
 # SUBRACK COMMS ESTABLISHED, TPM IS UNKNOWN, TPM COMMS DISABLED
 !!python/tuple [DESIRE_OFFLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: [report_communication_disabled]
-!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: [start_communicating_with_tpm]
+!!python/tuple [DESIRE_ONLINE, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_tpm_communication_not_established, start_communicating_with_tpm]
 !!python/tuple [DESIRE_ON, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_desired_on]
 !!python/tuple [DESIRE_OFF, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_desired_off]
 !!python/tuple [SUBRACK_COMMS_NOT_ESTABLISHED, ESTABLISHED, ~, UNKNOWN, DISABLED]: [set_subrack_communication_not_established]

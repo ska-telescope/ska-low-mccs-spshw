@@ -192,7 +192,7 @@ class TpmDriver(MccsBaseComponentManager):
 
             # "stop" event received; update state, then back to top of loop i.e. block
             # on "start" event
-            self.tpm_disconnected()
+            self.tpm_disconnected(intentional_disconnect=True)
             self._is_programmed = False
             self._start_polling_event.clear()
 
@@ -377,7 +377,7 @@ class TpmDriver(MccsBaseComponentManager):
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
 
-    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = True) -> None:
+    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = False) -> None:
         """
         Tile disconnected to tpm.
 

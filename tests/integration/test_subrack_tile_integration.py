@@ -641,6 +641,8 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_change_event(
             tango.DevState.ON, lookahead=2, consume_nonmatches=True
         )
+        assert tile_device.state() == tango.DevState.ON
+        change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
@@ -652,6 +654,8 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_change_event(
             tango.DevState.OFF, lookahead=2, consume_nonmatches=True
         )
+        assert tile_device.state() == tango.DevState.OFF
+        change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
         change_event_callbacks["tile_state"].assert_not_called()
@@ -664,6 +668,7 @@ class TestMccsTileTpmDriver:
         tile_device.on()
 
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
-
+        assert tile_device.state() == tango.DevState.ON
+        change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)

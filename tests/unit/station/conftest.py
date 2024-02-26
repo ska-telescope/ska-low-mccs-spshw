@@ -44,6 +44,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("cspRounding", [2] * 384)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))

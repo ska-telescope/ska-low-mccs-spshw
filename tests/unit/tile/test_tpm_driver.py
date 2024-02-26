@@ -15,6 +15,7 @@ import time
 import unittest.mock
 from typing import Any
 
+import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus
@@ -483,7 +484,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.channeliser_truncation
         tpm_driver.static_delays = [12.0] * 32
         _ = tpm_driver.static_delays
-        tpm_driver.csp_rounding = [2] * 384
+        tpm_driver.csp_rounding = np.array([2] * 384)
         _ = tpm_driver.csp_rounding
         tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels

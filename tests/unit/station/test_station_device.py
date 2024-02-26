@@ -391,7 +391,7 @@ def test_On(
                 "core_id": core,
                 "arp_table_entry": 0,
                 "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i),
+                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -409,7 +409,7 @@ def test_On(
                 "core_id": core,
                 "arp_table_entry": 2,
                 "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i),
+                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -564,7 +564,7 @@ def test_Initialise(
                 "core_id": core,
                 "arp_table_entry": 0,
                 "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i),
+                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -582,7 +582,7 @@ def test_Initialise(
                 "core_id": core,
                 "arp_table_entry": 2,
                 "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i),
+                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"

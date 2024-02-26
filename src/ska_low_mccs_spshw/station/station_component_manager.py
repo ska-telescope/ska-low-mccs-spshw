@@ -1158,7 +1158,7 @@ class SpsStationComponentManager(
                             "core_id": core,
                             "arp_table_entry": 0,
                             "source_ip": src_ip,
-                            "source_mac": src_mac,
+                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_1,
@@ -1182,7 +1182,7 @@ class SpsStationComponentManager(
                             "core_id": core,
                             "arp_table_entry": 2,
                             "source_ip": src_ip,
-                            "source_mac": src_mac,
+                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_2,
@@ -1756,13 +1756,11 @@ class SpsStationComponentManager(
         last_tile = len(self._tile_proxies) - 1
         src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
         src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"
-        dst_ip1 = self._csp_ingest_address
-        dst_ip2 = self._csp_ingest_address
         dst_port = self._csp_ingest_port
         src_ip_list = [src_ip1, src_ip2]
         src_mac = self._base_mac_address + base_ip3 + 24 + 2 * last_tile
-        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip1}")
-        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip2}")
+        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip}")
+        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip}")
         for core in range(num_cores):
             src_ip = src_ip_list[core]
             proxy._proxy.Configure40GCore(

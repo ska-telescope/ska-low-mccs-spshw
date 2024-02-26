@@ -1168,7 +1168,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._forty_gb_core_list = []
         if core_id == -1 or core_id is None:
             for icore in range(2):
-                for arp_table_entry_id in range(2):
+                for arp_table_entry_id in range(4):
                     dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )

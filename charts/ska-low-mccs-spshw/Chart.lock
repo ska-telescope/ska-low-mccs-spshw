@@ -1,12 +1,12 @@
 dependencies:
 - name: ska-low-mccs-daq
   repository: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
-  version: 0.6.1-dev.cc7f8eecd
+  version: 0.6.1-dev.c34ca017f
 - name: ska-tango-util
   repository: https://artefact.skao.int/repository/helm-internal
   version: 0.4.10
 - name: postgresql
   repository: https://charts.bitnami.com/bitnami
   version: 11.6.6
-digest: sha256:3402176d2c96a69a33146b2013ccc87ea0356a3733b8fdc6275a07c5097ad178
-generated: "2024-02-15T17:27:48.305706434Z"
+digest: sha256:4508341c85c7e3ed9b1277d88d27b84d5eea42ad9501a43e96d5146a3760e253
+generated: "2024-02-27T08:15:00.121208972+08:00"

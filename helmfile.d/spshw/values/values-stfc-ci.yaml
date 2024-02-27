@@ -49,7 +49,7 @@ overrides:
             sps:
               cabinet: "1"
               daq:
-                simulated: false
+                simulated: true
               subracks:
                 "1":
                   simulated: true
@@ -72,12 +72,12 @@ overrides:
 # These are passed through to the helm values file as-is.
 # For example,
 #
-helm_values:
-  # image:
-  #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-  #   tag: 0.11.0-dev.cc21201e6
+# helm_values:
+#   # image:
+#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#   #   tag: 0.11.0-dev.cc21201e6
 
-  ska-low-mccs-daq:
-    image:
-      registry: docker.io/library
-      tag: 0.6.1-dirty
+#   ska-low-mccs-daq:
+#     image:
+#       registry: docker.io/library
+#       tag: 0.6.1-dirty

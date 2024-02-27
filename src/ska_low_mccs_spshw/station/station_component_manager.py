@@ -326,7 +326,7 @@ class SpsStationComponentManager(
 
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-statements
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,

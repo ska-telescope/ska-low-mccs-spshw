@@ -51,6 +51,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
 class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
 
+    # pylint: disable=too-many-arguments
     def turn_station_on(
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
@@ -166,6 +167,7 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
+    # pylint: disable=too-many-arguments
     def test_initialise_can_execute(
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
@@ -220,6 +222,7 @@ class TestStationTileIntegration:
             (initialise_id, "COMPLETED")
         )
 
+    # pylint: disable=too-many-arguments
     def test_pps_delay(
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
@@ -650,6 +653,7 @@ class TestStationTileIntegration:
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
 
+    # pylint: disable=too-many-arguments
     def test_channeliser_rounding(
         self: TestStationTileIntegration,
         tile_device: tango.DeviceProxy,

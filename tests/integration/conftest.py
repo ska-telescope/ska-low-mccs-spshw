@@ -92,6 +92,7 @@ def daq_id_fixture() -> int:
     return 1
 
 
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="integration_test_context")
 def integration_test_context_fixture(
     subrack_id: int,

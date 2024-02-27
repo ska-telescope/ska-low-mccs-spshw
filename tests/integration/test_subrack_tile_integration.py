@@ -629,6 +629,7 @@ class TestMccsTileTpmDriver:
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
 
+    # pylint: disable=too-many-arguments
     def test_pps_present(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -682,6 +683,7 @@ class TestMccsTileTpmDriver:
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -689,10 +691,13 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, subrack_device, daq_device, change_event_callbacks
+        )
 
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)

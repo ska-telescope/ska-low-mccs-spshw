@@ -382,7 +382,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             task_callback=task_callback,
         )
 
-    # pylint: disable = too-many-branches
+    # pylint: disable = too-many-branches, too-many-locals
     @check_communicating
     def _start_bandpass_monitor(
         self: DaqComponentManager,

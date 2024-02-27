@@ -1715,7 +1715,7 @@ def _port_to_antenna_order(
             port_offset = int(tpm_port_number // 2)
             antenna_index = tile_base_index + port_offset
             ordered_data[antenna, :] = data[antenna_index, :]
-    except KeyError as key_err:
+    except KeyError:
         # Generally we'll get here when we have fewer than 256 antennas.
         pass
     except Exception as e:  # pylint: disable=broad-exception-caught

@@ -209,6 +209,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "station_calibrator_state",
         "data_received_callback",
         "tile_adminMode",
+        "device_state",
         timeout=30.0,
     )
 

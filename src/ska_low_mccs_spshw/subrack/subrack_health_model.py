@@ -11,20 +11,21 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ska_control_model import HealthState
-from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
+from ska_low_mccs_common.health import HealthModel, HealthChangedCallbackProtocol
 
 from .subrack_health_rules import SubrackHealthRules
 
 __all__ = ["SubrackHealthModel"]
 
 
-class SubrackHealthModel(BaseHealthModel):
+class SubrackHealthModel(HealthModel):
     """A health model for a subrack."""
 
     def __init__(
         self: SubrackHealthModel,
         component_state_changed_callback: HealthChangedCallbackProtocol,
         thresholds: Optional[dict[str, Any]] = None,
+        ignore_power_state: bool = False,
     ) -> None:
         """
         Initialise a new instance.
@@ -35,9 +36,9 @@ class SubrackHealthModel(BaseHealthModel):
         :param thresholds: Thresholds for the subrack device.
         """
         self._health_rules = SubrackHealthRules(thresholds)
-        super().__init__(component_state_changed_callback)
+        super().__init__(component_state_changed_callback, ignore_power_state=ignore_power_state)
 
-    def update_data(self: BaseHealthModel, new_states: dict) -> None:
+    def update_data(self: SubrackHealthModel, new_states: dict) -> None:
         """
         Update this health model with state relevant to evaluating health.
 

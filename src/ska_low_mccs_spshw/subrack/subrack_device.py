@@ -389,7 +389,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self._health_changed)
+        self._health_model = SubrackHealthModel(self._health_changed, ignore_power_state=True)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
@@ -1144,6 +1144,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             "tpm_power_states": self._tpm_power_states,
             "desired_fan_speeds": self._desired_fan_speeds,
             "clock_reqs": self.clock_presence,
+            "tpm_present": self._tpm_present,
         }
         self._health_model.update_data(data)
 

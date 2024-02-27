@@ -112,6 +112,7 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self._health_changed,
+            ignore_power_state=True,
         )
         self.set_change_event("healthState", True, False)
 

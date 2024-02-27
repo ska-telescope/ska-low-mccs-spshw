@@ -25,7 +25,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^0.19.1"
 ska-control-model = "^0.3.1"
-ska-low-mccs-common = "0.9.1"
+ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev = "10421d04ea5c689b10dda4e1a88d59f862d11777" }
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}

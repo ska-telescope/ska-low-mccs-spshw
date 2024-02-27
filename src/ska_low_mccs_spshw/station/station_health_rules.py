@@ -47,14 +47,12 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if FAILED is a valid state
         """
-        if subrack_healths or tile_healths:
-            return (
-                self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-                >= self._thresholds["tile_failed"]
-                or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-                >= self._thresholds["subrack_failed"]
-            )
-        return False
+        return (
+            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            >= self._thresholds["tile_failed"]
+            or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            >= self._thresholds["subrack_failed"]
+        )
 
     def degraded_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
@@ -68,14 +66,12 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if DEGRADED is a valid state
         """
-        if subrack_healths or tile_healths:
-            return (
-                self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-                >= self._thresholds["tile_degraded"]
-                or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-                >= self._thresholds["subrack_degraded"]
-            )
-        return True
+        return (
+            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            >= self._thresholds["tile_degraded"]
+            or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            >= self._thresholds["subrack_degraded"]
+        )
 
     def healthy_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
@@ -89,14 +85,12 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if OK is a valid state
         """
-        if subrack_healths or tile_healths:
-            return (
-                self.get_fraction_in_states(tile_healths, DEGRADED_STATES)
-                < self._thresholds["tile_degraded"]
-                and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES)
-                < self._thresholds["subrack_degraded"]
-            )
-        return True
+        return (
+            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            < self._thresholds["tile_degraded"]
+            and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            < self._thresholds["subrack_degraded"]
+        )
 
     @property
     def default_thresholds(self: HealthRules) -> dict[str, float]:

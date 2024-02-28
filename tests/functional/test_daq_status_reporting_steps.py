@@ -95,7 +95,6 @@ def admin_mode_set_to_value(
             "daq_state", tango.DevState.DISABLE, lookahead=5
         )
         assert daq_receiver.state() == tango.DevState.DISABLE
-    print(f"daq state after adminmode: {daq_receiver.state()}")
 
 
 @given(parsers.cfparse("the MccsDaqReceiver HealthState is '{health_state}'"))
@@ -214,6 +213,8 @@ def ensure_no_consumers_running(daq_receiver: tango.DeviceProxy) -> None:
 
     :param daq_receiver: A proxy to the MccsDaqReceiver device under test.
     """
+    print(f"daq state: {daq_receiver.state()}")
+    print(f"daq adminMode: {daq_receiver.adminMode}")
     status = json.loads(daq_receiver.DaqStatus())
     if status["Running Consumers"] != []:
         daq_receiver.Stop()  # Stops *all* consumers.

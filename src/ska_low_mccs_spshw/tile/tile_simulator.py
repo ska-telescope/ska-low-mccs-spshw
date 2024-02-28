@@ -422,6 +422,7 @@ class TileSimulator:
         self.csp_rounding = [0] * 48
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
+        self._active_40g_ports_setting: str = ""
 
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
@@ -500,6 +501,7 @@ class TileSimulator:
         tile_id: int = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
+        active_40g_ports_setting: str = "port1-only",
     ) -> None:
         """
         Initialise tile.
@@ -509,6 +511,8 @@ class TileSimulator:
         :param pps_delay: PPS delay correction.
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
+        :param active_40g_ports_setting: which 40G port is active.
+            Possible values are port1-only, port2-only and both-ports
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -521,6 +525,7 @@ class TileSimulator:
 
         self._tile_id = tile_id
         self._station_id = station_id
+        self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
 
     def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:

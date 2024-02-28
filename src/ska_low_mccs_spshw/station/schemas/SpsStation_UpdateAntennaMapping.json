@@ -1,0 +1,31 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/UpdateAntennaMapping.json",
+    "title": "SpsStation UpdateAntennaMapping schema",
+    "description": "Schema for SpsStation's UpdateAntennaMapping command",
+    "type": "object",
+    "properties": {
+        "antennaMapping": {
+            "type": "array",
+            "minItems": 256,
+            "maxItems": 256,
+            "items": {
+                "type": "object",
+                "properties": {
+                    "tpm": {
+                        "type": "integer"
+                    },
+                    "tpm_x_channel": {
+                        "type": "integer"
+                    },
+                    "tpm_y_channel": {
+                        "type": "integer"
+                    }
+                }
+            }
+        }
+    },
+    "required": [
+        "antennaMapping"
+    ]
+}

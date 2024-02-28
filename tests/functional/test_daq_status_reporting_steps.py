@@ -89,10 +89,13 @@ def admin_mode_set_to_value(
         change_event_callbacks.assert_change_event(
             "daq_state", tango.DevState.ON, lookahead=5
         )
+        assert daq_receiver.state() == tango.DevState.ON
     elif AdminMode[admin_mode_value] == AdminMode.OFFLINE:
         change_event_callbacks.assert_change_event(
             "daq_state", tango.DevState.DISABLE, lookahead=5
         )
+        assert daq_receiver.state() == tango.DevState.DISABLE
+    print(f"daq state after adminmode: {daq_receiver.state()}")
 
 
 @given(parsers.cfparse("the MccsDaqReceiver HealthState is '{health_state}'"))

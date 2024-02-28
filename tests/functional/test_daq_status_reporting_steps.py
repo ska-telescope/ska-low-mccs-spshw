@@ -213,8 +213,6 @@ def ensure_no_consumers_running(daq_receiver: tango.DeviceProxy) -> None:
 
     :param daq_receiver: A proxy to the MccsDaqReceiver device under test.
     """
-    print(f"daq state: {daq_receiver.state()}")
-    print(f"daq adminMode: {daq_receiver.adminMode}")
     status = json.loads(daq_receiver.DaqStatus())
     if status["Running Consumers"] != []:
         daq_receiver.Stop()  # Stops *all* consumers.

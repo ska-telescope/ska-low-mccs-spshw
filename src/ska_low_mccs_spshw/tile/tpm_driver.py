@@ -672,6 +672,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -1178,7 +1179,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._forty_gb_core_list = []
         if core_id == -1 or core_id is None:
             for icore in range(2):
-                for arp_table_entry_id in range(2):
+                for arp_table_entry_id in range(4):
                     dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )

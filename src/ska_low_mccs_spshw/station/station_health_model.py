@@ -11,14 +11,14 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 from ska_control_model import HealthState
-from ska_low_mccs_common.health import HealthModel, HealthChangedCallbackProtocol
+from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 from .station_health_rules import SpsStationHealthRules
 
 __all__ = ["SpsStationHealthModel"]
 
 
-class SpsStationHealthModel(HealthModel):
+class SpsStationHealthModel(BaseHealthModel):
     """A health model for a Sps station."""
 
     def __init__(
@@ -27,7 +27,6 @@ class SpsStationHealthModel(HealthModel):
         tile_fqdns: Sequence[str],
         health_changed_callback: HealthChangedCallbackProtocol,
         thresholds: Optional[dict[str, float]] = None,
-        ignore_power_state: bool = False,
     ) -> None:
         """
         Initialise a new instance.
@@ -46,7 +45,7 @@ class SpsStationHealthModel(HealthModel):
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
         self._health_rules = SpsStationHealthRules(thresholds)
-        super().__init__(health_changed_callback, ignore_power_state=ignore_power_state)
+        super().__init__(health_changed_callback)
 
     def subrack_health_changed(
         self: SpsStationHealthModel,

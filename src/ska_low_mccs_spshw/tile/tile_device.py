@@ -15,7 +15,6 @@ import logging
 import os.path
 import sys
 import time
-import traceback
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -128,7 +127,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = TileHealthModel(self._health_changed, ignore_power_state=True)
+        self._health_model = TileHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
@@ -365,11 +364,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
-        print(f"state fchane with power {power}")
-        #if power == None:
-        #    traceback.print_stack()
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         for attribute_name, attribute_value in state_change.items():
             match attribute_name:
@@ -1176,6 +1175,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
 
     @attribute(dtype=HealthState)
     def temperatureHealth(self: MccsTile) -> HealthState:

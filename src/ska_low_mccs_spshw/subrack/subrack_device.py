@@ -389,7 +389,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self._health_changed, ignore_power_state=True)
+        self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
@@ -603,6 +603,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
 
     @attribute(dtype=int, label="TPM count", abs_change=1)
     def tpmCount(self: MccsSubrack) -> int:
@@ -1045,7 +1046,10 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         **kwargs: Any,
     ) -> None:
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         for key, value in kwargs.items():
             special_update_method = getattr(self, f"_update_{key}", None)

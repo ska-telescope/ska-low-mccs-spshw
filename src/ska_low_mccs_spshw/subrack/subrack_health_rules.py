@@ -107,12 +107,9 @@ class SubrackHealthRules(HealthRules):
             np.subtract(old_power_supply_volts, power_supply_volts)
         )
 
-        res= (tpm_vol_drop - power_sup_vol_drop) > self._thresholds[
+        return (tpm_vol_drop - power_sup_vol_drop) > self._thresholds[
             f"{rule_str}voltage_drop"
         ]
-        if res:
-            print("Voltage drops too high")
-        return res
 
     def _check_current_diff(
         self: SubrackHealthRules,
@@ -139,7 +136,6 @@ class SubrackHealthRules(HealthRules):
             abs(sum(power_supply_currents) - total_current)
             > self._thresholds[f"{rule_str}max_current_diff"]
         ):
-            print("Current diff too great")
             return True
         return False
 
@@ -157,6 +153,7 @@ class SubrackHealthRules(HealthRules):
         :param tpm_power_states: List of the power states of the tpms.
         :param tpm_voltages: The voltages of the tpms.
         :param tpm_currents: The currents of the tpms.
+        :param tpm_present: List of whether a tpm is present.
         :param rule_str: The type of error threshold to be checking against.
 
         :return: True if any of the thresholds are breached.
@@ -174,18 +171,15 @@ class SubrackHealthRules(HealthRules):
                 tpm_voltages[i] > self._thresholds[f"{rule_str}tpm_voltage_on"]
                 or tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_on"]
             ):
-                print(f"Tpm voltage {i} exceeds on limit")
                 return True
             if power_state == PowerState.STANDBY and (
                 tpm_voltages[i] > self._thresholds[f"{rule_str}tpm_voltage_standby"]
                 or tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_standby"]
             ):
-                print(f"tpm voltage {i} exceeds standby limit")
                 return True
             if power_state in [PowerState.OFF, PowerState.NO_SUPPLY] and (
                 tpm_voltages[i] > 0 or tpm_currents[i] > 0
             ):
-                print(f"tpm off {i} but powered")
                 return True
         return False
 
@@ -214,7 +208,7 @@ class SubrackHealthRules(HealthRules):
         if subrack_health == HealthState.UNKNOWN:
             return True
         # tpm power state is messed up atm
-        #for i, power_state in enumerate(state["tpm_power_states"]):
+        # for i, power_state in enumerate(state["tpm_power_states"]):
         #    if power_state == PowerState.UNKNOWN:
         #        return True
         return False

@@ -14,14 +14,14 @@ import copy
 from typing import Any, Optional
 
 from ska_control_model import HealthState
-from ska_low_mccs_common.health import HealthModel, HealthChangedCallbackProtocol
+from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 from .tile_health_rules import TileHealthRules
 
 __all__ = ["TileHealthModel"]
 
 
-class TileHealthModel(HealthModel):
+class TileHealthModel(BaseHealthModel):
     """
     A health model for a tile.
 
@@ -33,7 +33,6 @@ class TileHealthModel(HealthModel):
         self: TileHealthModel,
         health_changed_callback: HealthChangedCallbackProtocol,
         thresholds: Optional[dict[str, Any]] = None,
-        ignore_power_state: bool = False,
     ) -> None:
         """
         Initialise a new instance.
@@ -44,7 +43,7 @@ class TileHealthModel(HealthModel):
         :param thresholds: the threshold parameters for the health rules
         """
         self._health_rules = TileHealthRules(thresholds)
-        super().__init__(health_changed_callback, ignore_power_state=ignore_power_state)
+        super().__init__(health_changed_callback)
 
     def evaluate_health(
         self: TileHealthModel,

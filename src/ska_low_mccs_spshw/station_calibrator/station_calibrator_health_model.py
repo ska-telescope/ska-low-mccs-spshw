@@ -6,12 +6,12 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """An implementation of a health model for a station calibrator."""
-from ska_low_mccs_common.health import HealthModel
+from ska_low_mccs_common.health import BaseHealthModel
 
 __all__ = ["StationCalibratorHealthModel"]
 
 
-class StationCalibratorHealthModel(HealthModel):
+class StationCalibratorHealthModel(BaseHealthModel):
     """
     A health model for a station calibrator.
 

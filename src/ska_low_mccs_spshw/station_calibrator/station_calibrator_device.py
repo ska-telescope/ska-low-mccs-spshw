@@ -65,7 +65,10 @@ class MccsStationCalibrator(SKABaseDevice):
     def _init_state_model(self: MccsStationCalibrator) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = StationCalibratorHealthModel(self._health_changed, ignore_power_state=True)
+        self._health_model = StationCalibratorHealthModel(
+            self._health_changed,
+            ignore_power_state=True,
+        )
         self.set_change_event("healthState", True, False)
 
     def create_component_manager(

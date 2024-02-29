@@ -32,12 +32,12 @@ class SubrackSimulator(SubrackProtocol):
     ATTRIBUTE_METADATA: Final[dict[str, AttributeMetadataType]] = {
         "tpm_present": {
             "length": SubrackData.TPM_BAY_COUNT,
-            "default": [True] * SubrackData.TPM_BAY_COUNT,
+            "default": [True] + ([False] * (SubrackData.TPM_BAY_COUNT - 1)),
             "writable": False,
         },
         "tpm_on_off": {
             "length": SubrackData.TPM_BAY_COUNT,
-            "default": [False] * SubrackData.TPM_BAY_COUNT,
+            "default": [True] + ([False] * (SubrackData.TPM_BAY_COUNT - 1)),
             "writable": False,
         },
         "backplane_temperatures": {
@@ -62,7 +62,7 @@ class SubrackSimulator(SubrackProtocol):
         },
         "power_supply_currents": {
             "length": 2,
-            "default": [4.2, 5.8],
+            "default": [2.2, 2.8],
             "writable": False,
         },
         "power_supply_voltages": {

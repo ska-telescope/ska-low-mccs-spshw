@@ -112,7 +112,6 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self._health_changed,
-            ignore_power_state=True,
         )
         self.set_change_event("healthState", True, False)
 
@@ -281,7 +280,10 @@ class SpsStation(SKAObsDevice):
         :param state_change: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
@@ -693,6 +695,7 @@ class SpsStation(SKAObsDevice):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
 
     # -------------
     # Slow Commands

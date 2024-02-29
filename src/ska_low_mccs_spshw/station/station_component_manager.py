@@ -427,6 +427,19 @@ class SpsStationComponentManager(
     def _calculate_static_delays(
         self: SpsStationComponentManager,
     ) -> list[float]:
+        """
+        Calculate initial static delays for basic calibration.
+
+        We want to artificially extend our shortest delays to match our longest delays
+        our shortest delays have the shortest cables, we want to 'add cable' to these
+        such that we pretend the signals all came from a cable length = longest cable
+        length.
+
+        So the longest delay will not need any calibration, but every shorter delay
+        will need delays added to make them up to the longest delay.
+
+        :returns: list of static delays in tile/channel order
+        """
         # Get cable lengths, m
         cable_lengths = self._cable_lengths
 
@@ -445,6 +458,7 @@ class SpsStationComponentManager(
             delays_for_antenna = smartbox_order_delays[smartbox_id]
             for antenna in antenna_list:
                 antenna_order_delays[int(antenna) - 1] = delays_for_antenna
+
         # Calculate delays for each tile, in channel order
         # 2 polarisations * 16 channels * 16 tpms = 512
         tile_order_delays = [0.0] * 512
@@ -459,13 +473,6 @@ class SpsStationComponentManager(
                 antenna_order_delays[antenna_no - 1]
             ) * 1e9  # ns
 
-        # We want to artificially extend our shortest delays to match our longest delays
-        # our shortest delays have the shortest cables, we want to 'add cable' to these
-        # such that we pretend the signals all came from a cable length = longest cable
-        # length.
-
-        # So the longest delay will not need any calibration, but every shorter delay
-        # will need delays added to make them up to the longest delay.
         longest_delay = max(tile_order_delays)
 
         tile_order_delays = [
@@ -514,7 +521,10 @@ class SpsStationComponentManager(
 
             # Fetch which tpm this antenna belongs to
             tile_no = self._antenna_mapping[antenna_no + 1][0]
-            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
+
+            # y channel, even. This could be liable to change, if you have an
+            # off-by-one error, this could be a likely culprit.
+            channel = self._antenna_mapping[antenna_no + 1][2] // 2
 
             # We may have mapping for devices we don't have deployed
             if tile_no in tile_delays:
@@ -1449,14 +1459,12 @@ class SpsStationComponentManager(
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
         self._desired_static_delays = copy.deepcopy(delays)
-        i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
             end_entry = (proxy._proxy.logicalTileId + 1) * TileData.ADC_CHANNELS
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
                 proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
-            i = i + TileData.ADC_CHANNELS
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:

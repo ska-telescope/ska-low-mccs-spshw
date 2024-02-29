@@ -279,7 +279,11 @@ def daq_configure(
         poll_until_state_change(daq_device, tango.DevState.ON, 5)
 
     # Configure DAQ
-    daq_device.Configure(json.dumps(daq_config))
+    print(f"1 - DAQ CONFIG: {daq_device.GetConfiguration()}")
+    print(f"Configuring DAQ with: {daq_config}")
+    res = daq_device.Configure(json.dumps(daq_config))
+    print(f"configure command result: {res}")
+    print(f"2 - DAQ CONFIG: {daq_device.GetConfiguration()}")
 
 
 @given("the DAQ is started with the integrated channel data consumer")

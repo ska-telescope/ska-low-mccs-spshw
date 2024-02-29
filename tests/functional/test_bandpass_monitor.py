@@ -348,6 +348,12 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_long_running_command_result"],
     )
+    # Did the commands fail?
+    time.sleep(2)
+    print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
+    print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")
+    print(f"longRunningCommandsInQueue: {daq_device.longRunningCommandsInQueue}")
+    print(f"longRunningCommandProgress: {daq_device.longRunningCommandProgress}")
     change_event_callbacks["daq_long_running_command_result"].assert_change_event(
         (
             start_bandpass_result[1][0],

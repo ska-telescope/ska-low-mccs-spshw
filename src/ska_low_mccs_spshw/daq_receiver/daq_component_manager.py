@@ -432,6 +432,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
                 call_callback: bool = (
                     False  # Only call the callback if we have something to say.
                 )
+                print(f"GOT RESPONSE: {response}")
                 if task_callback is not None:
                     task_callback(
                         status=TaskStatus(response["result_code"]),

@@ -348,7 +348,13 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_long_running_command_result"],
     )
-    # Did the commands fail?
+    # Command gets REJECTED - investimagation time.
+    # 4 Possibilities
+    # 1) Append Integrated is set to True (Should be False)
+    # 2) INTEGRATED_CHANNEL_DATA consumer not running
+    # 3) No plot directory supplied
+    # 4) Already active
+    print(f"Daq config: {daq_device.GetConfiguration()}")
     time.sleep(2)
     print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
     print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")

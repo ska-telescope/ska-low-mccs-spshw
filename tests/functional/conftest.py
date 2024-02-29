@@ -236,6 +236,7 @@ def poll_until_consumer_running(
     :param wanted_consumer: the consumer we're waiting for
     :param no_of_iters: number of times to iterate
     """
+    assert int(daq.adminMode) == 0
     status = json.loads(daq.DaqStatus())
     for consumer in status["Running Consumers"]:
         if wanted_consumer in consumer:

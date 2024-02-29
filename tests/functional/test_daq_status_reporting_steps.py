@@ -274,9 +274,11 @@ def start_all_consumers(
     :param all_available_consumers: A list of all DaqModes/consumers.
     """
     assert daq_receiver.adminMode == AdminMode.ONLINE
-    daq_receiver.Start(
+    res = daq_receiver.Start(
         json.dumps({"modes_to_start": ",".join(all_available_consumers)})
     )
+    print(f"result of Daq.Start: {res}")
+    print(f"daq state: {daq_receiver.state()}")
     for consumer in all_available_consumers:
         poll_until_consumer_running(daq_receiver, consumer)
 

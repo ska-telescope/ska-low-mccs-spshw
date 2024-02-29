@@ -3,13 +3,14 @@ Defines the deployment for MccsTile Tango devices.
 
   deviceServers:
     tpms:
-      n3-2-01:
-        low-mccs/tile/n3-2-01:
+      s8-1-01:
+        low-mccs/tile/s8-1-01:
           tile_id: 1
+          station_id: 345
           host: 10.0.10.201
           port: 10000
           version: tpm_v1_6
-          subrack: n3-2-1
+          subrack: s8-1-1
           subrack_slot: 1
           simulation_config: 1
           test_config: 1

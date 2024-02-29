@@ -296,7 +296,7 @@ def test_On(
     change_event_callbacks["state"].assert_not_called()
 
     csp_ingest_address = "123.234.123.234"
-    csp_ingest_port = 1234
+    csp_ingest_port = 4660
 
     station_device.SetCspIngest(
         json.dumps(
@@ -377,40 +377,58 @@ def test_On(
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         if last_tile:
-            num_configures = 4
+            num_csp_ingest_configures = 6
         else:
-            num_configures = 2
+            num_csp_ingest_configures = 0
+        num_configures = 6 + num_csp_ingest_configures
         assert len(tile.Configure40GCore.mock_calls) == num_configures
-        assert json.loads(
-            tile.Configure40GCore.mock_calls[0 if not last_tile else 2].args[0]
-        ) == {
-            "core_id": 0,
-            "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(152 + (2 * i))}",
-            "source_mac": 107752307294360 + (2 * i),
-            "source_port": 61648,
-            "destination_ip": (
-                f"10.0.0.{str(154 + (2 * i))}"
-                if i != num_tiles - 1
-                else csp_ingest_address
-            ),
-            "destination_port": 4660 if not last_tile else csp_ingest_port,
-        }
-        assert json.loads(
-            tile.Configure40GCore.mock_calls[1 if not last_tile else 3].args[0]
-        ) == {
-            "core_id": 1,
-            "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(153 + (2 * i))}",
-            "source_mac": 107752307294361 + (2 * i),
-            "source_port": 61648,
-            "destination_ip": (
-                f"10.0.0.{str(155 + (2 * i))}"
-                if i != num_tiles - 1
-                else csp_ingest_address
-            ),
-            "destination_port": 4660 if not last_tile else csp_ingest_port,
-        }
+        for core in range(2):
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 0,
+                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                "source_mac": 107752307294360 + (2 * i) + core,
+                "source_port": 61648,
+                "destination_ip": (
+                    f"10.0.0.{str(154 + (2 * i) + core)}"
+                    if i != num_tiles - 1
+                    else csp_ingest_address
+                ),
+                "destination_port": csp_ingest_port,
+                "rx_port_filter": csp_ingest_port,
+            }
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + 1 + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 2,
+                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                "source_mac": 107752307294360 + (2 * i) + core,
+                "source_port": 61648,
+                "destination_ip": (
+                    f"10.0.0.{str(154 + (2 * i) + core)}"
+                    if i != num_tiles - 1
+                    else csp_ingest_address
+                ),
+                "destination_port": csp_ingest_port + 2
+                if not last_tile
+                else csp_ingest_port,
+            }
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + 2 + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 1,
+                "rx_port_filter": csp_ingest_port + 2,
+            }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
         assert json.loads(tile.ConfigureStationBeamformer.mock_calls[0].args[0]) == {
             "is_first": (i == 0),
@@ -488,7 +506,7 @@ def test_Initialise(
     change_event_callbacks["state"].assert_not_called()
 
     csp_ingest_address = "123.234.123.234"
-    csp_ingest_port = 1234
+    csp_ingest_port = 4660
 
     station_device.SetCspIngest(
         json.dumps(
@@ -532,40 +550,58 @@ def test_Initialise(
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         if last_tile:
-            num_configures = 4
+            num_csp_ingest_configures = 6
         else:
-            num_configures = 2
+            num_csp_ingest_configures = 0
+        num_configures = 6 + num_csp_ingest_configures
         assert len(tile.Configure40GCore.mock_calls) == num_configures
-        assert json.loads(
-            tile.Configure40GCore.mock_calls[0 if not last_tile else 2].args[0]
-        ) == {
-            "core_id": 0,
-            "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(152 + (2 * i))}",
-            "source_mac": 107752307294360 + (2 * i),
-            "source_port": 61648,
-            "destination_ip": (
-                f"10.0.0.{str(154 + (2 * i))}"
-                if i != num_tiles - 1
-                else csp_ingest_address
-            ),
-            "destination_port": 4660 if not last_tile else csp_ingest_port,
-        }
-        assert json.loads(
-            tile.Configure40GCore.mock_calls[1 if not last_tile else 3].args[0]
-        ) == {
-            "core_id": 1,
-            "arp_table_entry": 0,
-            "source_ip": f"10.0.0.{str(153 + (2 * i))}",
-            "source_mac": 107752307294361 + (2 * i),
-            "source_port": 61648,
-            "destination_ip": (
-                f"10.0.0.{str(155 + (2 * i))}"
-                if i != num_tiles - 1
-                else csp_ingest_address
-            ),
-            "destination_port": 4660 if not last_tile else csp_ingest_port,
-        }
+        for core in range(2):
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 0,
+                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                "source_mac": 107752307294360 + (2 * i) + core,
+                "source_port": 61648,
+                "destination_ip": (
+                    f"10.0.0.{str(154 + (2 * i) + core)}"
+                    if i != num_tiles - 1
+                    else csp_ingest_address
+                ),
+                "destination_port": csp_ingest_port,
+                "rx_port_filter": csp_ingest_port,
+            }
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + 1 + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 2,
+                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                "source_mac": 107752307294360 + (2 * i) + core,
+                "source_port": 61648,
+                "destination_ip": (
+                    f"10.0.0.{str(154 + (2 * i) + core)}"
+                    if i != num_tiles - 1
+                    else csp_ingest_address
+                ),
+                "destination_port": csp_ingest_port + 2
+                if not last_tile
+                else csp_ingest_port,
+            }
+            assert json.loads(
+                tile.Configure40GCore.mock_calls[
+                    num_csp_ingest_configures + 2 + (3 * core)
+                ].args[0]
+            ) == {
+                "core_id": core,
+                "arp_table_entry": 1,
+                "rx_port_filter": csp_ingest_port + 2,
+            }
         assert len(tile.ConfigureStationBeamformer.mock_calls) == 1
         assert json.loads(tile.ConfigureStationBeamformer.mock_calls[0].args[0]) == {
             "is_first": (i == 0),
@@ -974,25 +1010,38 @@ def test_SetCspIngest(
         if i != num_tiles - 1:
             tile.Configure40GCore.assert_not_called()
         else:
-            assert len(tile.Configure40GCore.mock_calls) == 2
-            assert json.loads(tile.Configure40GCore.mock_calls[0].args[0]) == {
-                "core_id": 0,
-                "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(152 + (2 * i))}",
-                "source_mac": 107752307294360 + (2 * i),
-                "source_port": 61648,
-                "destination_ip": "123.123.234.234",
-                "destination_port": 1234,
-            }
-            assert json.loads(tile.Configure40GCore.mock_calls[1].args[0]) == {
-                "core_id": 1,
-                "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(153 + (2 * i))}",
-                "source_mac": 107752307294361 + (2 * i),
-                "source_port": 61648,
-                "destination_ip": "123.123.234.234",
-                "destination_port": 1234,
-            }
+            assert len(tile.Configure40GCore.mock_calls) == 6
+            for core in range(2):
+                assert json.loads(
+                    tile.Configure40GCore.mock_calls[(3 * core)].args[0]
+                ) == {
+                    "core_id": core,
+                    "arp_table_entry": 0,
+                    "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                    "source_mac": 107752307294360 + (2 * i) + core,
+                    "source_port": 61648,
+                    "destination_ip": "123.123.234.234",
+                    "destination_port": 1234,
+                    "rx_port_filter": 1234,
+                }
+                assert json.loads(
+                    tile.Configure40GCore.mock_calls[1 + (3 * core)].args[0]
+                ) == {
+                    "core_id": core,
+                    "arp_table_entry": 2,
+                    "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
+                    "source_mac": 107752307294360 + (2 * i) + core,
+                    "source_port": 61648,
+                    "destination_ip": "123.123.234.234",
+                    "destination_port": 1234,
+                }
+                assert json.loads(
+                    tile.Configure40GCore.mock_calls[2 + (3 * core)].args[0]
+                ) == {
+                    "core_id": core,
+                    "arp_table_entry": 1,
+                    "rx_port_filter": 1236,
+                }
 
 
 @pytest.mark.parametrize(
@@ -1065,81 +1114,79 @@ def test_fortyGbNetworkAddress(
     assert station_device.fortyGbNetworkAddress == cabinet_network_address
 
 
-@pytest.mark.parametrize(
-    ("attribute", "data", "tile_data"),
-    [
-        pytest.param("channeliserRounding", lambda _: [3] * 512, lambda _: [3] * 512),
-    ],
-)
-def test_rw_attributes(
+def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
-    num_tiles: int,
-    attribute: str,
-    data: Callable[[int], list[float]],
-    tile_data: Callable[[int], list[float]],
 ) -> None:
     """
-    Test of the read-write attributes.
-
-    These are:
-        staticTimeDelays
-        channeliserRounding
-        preaduLevels
-        ppsDelays
+    Test we can set and read channeliserRounding.
 
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
-    :param num_tiles: the number of mock tiles
-    :param attribute: the attribute on the station to use
-    :param data: the data to set to the station attribute, as a function of the number
-        of tiles
-    :param tile_data: the expected value for the attribute to take on the tile, as a
-        function of the tile number in the list of tile mocks.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
-    for i in range(num_tiles):
-        setattr(type(mock_tile_device_proxies[i]), attribute, rounding_mocks[i])
-    setattr(station_device, attribute, data(num_tiles))
+
+    channeliser_rounding_to_set = np.array([5] * 512)
+    station_device.SetChanneliserRounding(channeliser_rounding_to_set)
+
     time.sleep(0.1)
-    for i in range(num_tiles):
-        assert all(rounding_mocks[i].call_args[0][0] == tile_data(i))
-    assert all(getattr(station_device, attribute) == data(num_tiles))
+
+    # Calculate expected channeliser rounding of all tiles after write
+    zero_results = np.zeros((12, 512))
+    channeliser_rounding_to_check: np.ndarray = np.concatenate(
+        (np.array([channeliser_rounding_to_set] * 4), zero_results)
+    )
+    assert np.array_equal(
+        station_device.channeliserRounding, channeliser_rounding_to_check
+    )
 
 
-def test_cspRounding(
+def test_setting_cspRounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
     num_tiles: int,
 ) -> None:
     """
     Test for the cspRounding attribute.
 
     :param station_device: The station device to use
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Set the last tile with a different cspRounding.
+    mock_tile_device_proxies[-1].cspRounding = [6] * 384
+
+    assert all(station_device.cspRounding == [6] * 384)
+
     rounding_mocks = [unittest.mock.PropertyMock() for _ in range(num_tiles)]
     for _, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
     for i in range(num_tiles):
         setattr(type(mock_tile_device_proxies[i]), "cspRounding", rounding_mocks[i])
-    time.sleep(0.1)
-    station_device.cspRounding = [4] * 384  # type: ignore[assignment]
+    station_device.cspRounding = np.array([4] * 384)  # type: ignore[assignment]
     for i, mock in enumerate(rounding_mocks):
         if i == num_tiles - 1:
             assert all(mock.call_args[0][0] == [4] * 384)
         else:
             mock.assert_not_called()
-    assert all(station_device.cspRounding == [4] * 384)  # type: ignore[arg-type]
 
 
 def test_beamformerTable(

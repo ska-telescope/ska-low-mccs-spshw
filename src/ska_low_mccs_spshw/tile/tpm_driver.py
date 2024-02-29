@@ -22,6 +22,7 @@ import threading
 import time
 from typing import Any, Callable, Optional, cast
 
+import numpy as np
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
 from ska_control_model import CommunicationStatus
@@ -95,7 +96,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._beamformer_table = self.BEAMFORMER_TABLE
         self._nof_blocks = self.BEAMFORMER_TABLE[0][1] // 8
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-        self._csp_rounding: list[int] = self.CSP_ROUNDING
+        self._csp_rounding: Optional[np.ndarray] = np.array(self.CSP_ROUNDING)
         self._forty_gb_core_list: list = []
         self._preadu_levels: Optional[list[float]] = None
         self._static_delays: list[float] = [0.0] * 32
@@ -142,6 +143,8 @@ class TpmDriver(MccsBaseComponentManager):
             adc_rms=self._adc_rms,
             static_delays=self._static_delays,
             preadu_levels=self._preadu_levels,
+            csp_rounding=None,
+            channeliser_rounding=None,
         )
 
         self._poll_rate = 2.0
@@ -192,7 +195,7 @@ class TpmDriver(MccsBaseComponentManager):
 
             # "stop" event received; update state, then back to top of loop i.e. block
             # on "start" event
-            self.tpm_disconnected()
+            self.tpm_disconnected(intentional_disconnect=True)
             self._is_programmed = False
             self._start_polling_event.clear()
 
@@ -219,9 +222,10 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.logger.debug("Failed to acquire lock")
             if error_flag:
-                self.tpm_disconnected()
-                # self.update_component_state({"fault": True})
-            # wait for a polling_period
+                self.tpm_disconnected(intentional_disconnect=False)
+            else:
+                self._update_communication_state(CommunicationStatus.ESTABLISHED)
+
             return
 
         self.start_connection()
@@ -376,8 +380,12 @@ class TpmDriver(MccsBaseComponentManager):
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
 
-    def tpm_disconnected(self: TpmDriver) -> None:
-        """Tile disconnected to tpm."""
+    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = False) -> None:
+        """
+        Tile disconnected to tpm.
+
+        :param intentional_disconnect: True if disconnection was expected.
+        """
         self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
@@ -388,7 +396,10 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
-        self._update_communication_state(CommunicationStatus.DISABLED)
+        if intentional_disconnect:
+            self._update_communication_state(CommunicationStatus.DISABLED)
+        else:
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -661,6 +672,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -1167,7 +1179,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._forty_gb_core_list = []
         if core_id == -1 or core_id is None:
             for icore in range(2):
-                for arp_table_entry_id in range(2):
+                for arp_table_entry_id in range(4):
                     dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )
@@ -1305,6 +1317,9 @@ class TpmDriver(MccsBaseComponentManager):
                 for chan in range(32):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
+                        self._update_component_state(
+                            channeliser_rounding=copy.deepcopy(trunc)
+                        )
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1382,31 +1397,31 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def csp_rounding(self: TpmDriver) -> list[int]:
+    def csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
         """
         Read the cached value for the final rounding in the CSP samples.
 
         Need to be specfied only for the last tile
         :return: Final rounding for the CSP samples. Up to 384 values
         """
-        return copy.deepcopy(self._csp_rounding)
+        return self._csp_rounding
 
     @csp_rounding.setter
-    def csp_rounding(self: TpmDriver, rounding: list[int] | int) -> None:
+    def csp_rounding(self: TpmDriver, rounding: np.ndarray | int) -> None:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
         if isinstance(rounding, int):
-            self._csp_rounding = [rounding] * 384
+            desired_csp_rounding = np.array([rounding] * 384)
         elif len(rounding) == 1:
-            self._csp_rounding = [rounding[0]] * 384
+            desired_csp_rounding = np.array([rounding[0]] * 384)
         else:
-            self._csp_rounding = rounding
-        self._set_csp_rounding(self._csp_rounding)
+            desired_csp_rounding = rounding
+        self._set_csp_rounding(desired_csp_rounding)
 
-    def _set_csp_rounding(self: TpmDriver, rounding: list[int]) -> None:
+    def _set_csp_rounding(self: TpmDriver, rounding: np.ndarray) -> None:
         """
         Set output rounding for CSP.
 
@@ -1416,7 +1431,15 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_csp_rounding(rounding[0])
+                    write_successful = self.tile.set_csp_rounding(rounding[0])
+                    if write_successful:
+                        self._csp_rounding = rounding
+                        self._update_component_state(
+                            csp_rounding=self._csp_rounding.tolist()
+                        )
+                    else:
+                        self.logger.warning("Setting the cspRounding failed ")
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1886,6 +1909,11 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_integrated_data()
+                    time.sleep(0.2)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2119,6 +2147,10 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_data_transmission()
+                    time.sleep(0.2)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

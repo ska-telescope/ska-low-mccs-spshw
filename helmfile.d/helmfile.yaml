@@ -39,7 +39,7 @@ environments:
       - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=f8d67d88872af0672133aaff7cab2ce5b00ea472
       - spshw/values/values-aavs3.yaml
   aavs3-staging:
-    kubeContext: low-itf
+    kubeContext: infra:au-itf-k8s-master01-k8s
     values:
       - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=f8d67d88872af0672133aaff7cab2ce5b00ea472
       - spshw/values/values-aavs3.yaml
@@ -87,12 +87,12 @@ environments:
   psi-low:
     kubeContext: psi-low
     values:
-      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=c8c06f0337458247133e144c91d0b3567e51c3e8
+      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=3a4d8033b5c790c926d4d8cfd4e08179dedcd0c0
       - spshw/values/values-psi-low.yaml
   psi-low-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=c8c06f0337458247133e144c91d0b3567e51c3e8
+      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=3a4d8033b5c790c926d4d8cfd4e08179dedcd0c0
       - spshw/values/values-psi-low.yaml
       - platform/minikube.yaml
       - spshw/values/values-psi-low-minikube.yaml
@@ -106,6 +106,8 @@ repositories:
     url: https://charts.bitnami.com/bitnami
   - name: jupyterhub
     url: https://jupyterhub.github.io/helm-chart
+  - name: ska-low-mccs-daq
+    url: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
 
 releases:
   - name: ska-low-mccs-spshw

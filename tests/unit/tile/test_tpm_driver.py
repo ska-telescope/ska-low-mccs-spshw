@@ -15,6 +15,7 @@ import time
 import unittest.mock
 from typing import Any
 
+import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus
@@ -483,7 +484,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.channeliser_truncation
         tpm_driver.static_delays = [12.0] * 32
         _ = tpm_driver.static_delays
-        tpm_driver.csp_rounding = [2] * 384
+        tpm_driver.csp_rounding = np.array([2] * 384)
         _ = tpm_driver.csp_rounding
         tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels
@@ -2374,3 +2375,36 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # test register that returns list
         read_value = tpm_driver.read_register("mocked_list")
         assert read_value == []
+
+    def test_update_pending_data_requests(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test stopping data transmission updates the pending data requests.
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: The mocked tile_simulator
+        :param callbacks: dictionary of driver callbacks.
+        """
+        tile_simulator.connect()
+        assert tile_simulator.tpm is not None
+        tpm_driver._is_programmed = True
+        tpm_driver._tpm_status = TpmStatus.INITIALISED
+        tile_simulator.tpm._is_programmed = True
+        tile_simulator._is_programmed = True
+
+        assert tpm_driver._pending_data_requests is False
+
+        tile_simulator._pending_data_requests = True
+
+        tpm_driver._update_attributes()
+
+        assert tpm_driver._pending_data_requests is True
+        tile_simulator._pending_data_requests = False
+
+        tpm_driver.stop_data_transmission()
+
+        assert tpm_driver._pending_data_requests is False

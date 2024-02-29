@@ -171,6 +171,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             adc_rms=self._tpm_driver._adc_rms,
             static_delays=self._tpm_driver._static_delays,
             preadu_levels=self._tpm_driver._preadu_levels,
+            csp_rounding=None,
+            channeliser_rounding=None,
         )
 
     def start_communicating(self: TileComponentManager) -> None:
@@ -650,7 +652,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             time.sleep(0.2)
             if self.pending_data_requests:
                 self.logger.error("Another send operation is active")
-                raise ValueError("Cannot send data, another send operatin active")
+                raise ValueError("Cannot send data, another send operation active")
         # Check for type of data to be sent to LMC
         if start_time is None:
             timestamp = 0

@@ -1,0 +1,402 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "$comment": "schema for ska-low-mccs-spshw chart values file",
+  "type": "object",
+  "properties": {
+    "image": {
+      "type": "object",
+      "properties": {
+        "registry": {
+          "$comment": "registry is a URI, but could be scheme-less",
+          "type": "string",
+          "pattern": "^(https?://)?[a-z0-9-.]+(/[a-z0-9-_/.]+)?$"
+        },
+        "tag": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "string",
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-dev\\.c[0-9a-f]{8})?$"
+            }
+          ],
+          "type": ["string", "null"]
+        },
+        "pullPolicy": {
+          "type": "string",
+          "pattern": "^(Always|Never|IfNotPresent)$"
+        }
+      }
+    },
+    "deviceServers": {
+      "type": "object",
+      "properties": {
+        "spsstations": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "station_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 512
+                },
+                "cabinet_network_address": {
+                  "type": "string",
+                  "format": "ipv4"
+                },
+                "antenna_config_uri": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "subracks": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "tpms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              },
+              "required": [
+                "station_id",
+                "cabinet_network_address",
+                "antenna_config_uri",
+                "subracks",
+                "tpms"
+              ]
+            }
+          }
+        },
+        "calibrationstores": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          }
+        },
+        "mockfieldstations": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              },
+              "required": [],
+              "additionalProperties": false
+            }
+          }
+        },
+        "stationcalibrators": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "field_station_trl": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+                },
+                "calibration_store_trl": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+                },
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              },
+              "required": ["field_station_trl", "calibration_store_trl"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "daqs": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 512
+                },
+                "host": {
+                  "type": "string",
+                  "format": "hostname"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "receiver_interface": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9]+$"
+                },
+                "receiver_ip": {
+                  "type": "string",
+                  "oneOf": [
+                    {"format": "ipv4"},
+                    {"maxLength": 0}
+                  ]
+                },
+                "receiver_port": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "skuid_url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                }
+              },
+              "required": [
+                "id",
+                "host",
+                "port",
+                "receiver_interface",
+                "receiver_ip",
+                "receiver_port"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "subracks": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "srmb_host": {
+                  "type": "string",
+                  "format": "hostname"
+                },
+                "srmb_port": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                },
+                "nodeSelector": {
+                  "type": "object"
+                }
+              },
+              "required": ["srmb_host", "srmb_port"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "tpms": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "propertyNames": {
+              "$comment": "device TRL",
+              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+            },
+            "additionalProperties": {
+              "properties": {
+                "tile_id": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 15
+                },
+                "station_id": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 512
+                },
+                "host": {
+                  "type": "string",
+                  "format": "ipv4"
+                },
+                "port": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "version": {
+                  "enum": ["tpm_v1_2", "tpm_v1_6"]
+                },
+                "subrack": {
+                  "type": "string"
+                },
+                "subrack_slot": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 16
+                },
+                "simulation_config": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "test_config": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "logging_level_default": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 5
+                },
+                "nodeSelector": {
+                  "type": "object"
+                }
+              },
+              "required": [
+                "tile_id",
+                "station_id",
+                "host",
+                "port",
+                "version",
+                "subrack",
+                "subrack_slot"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "simulators": {
+      "type": "object",
+      "properties": {
+        "daqs": {
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "host": {
+                "type": "string",
+                "format": "hostname"
+              },
+              "port": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": ["host", "port"],
+            "additionalProperties": false
+          }
+        },
+        "subracks": {
+          "type": "object",
+          "propertyNames": {
+            "$comment": "Slug used to construct server name, k8s pods, etc",
+            "format": "hostname"
+          },
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "srmb_host": {
+                "type": "string",
+                "format": "hostname"
+              },
+              "srmb_port": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            "required": ["srmb_host", "srmb_port"],
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

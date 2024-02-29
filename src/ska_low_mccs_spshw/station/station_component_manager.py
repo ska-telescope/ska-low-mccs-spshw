@@ -630,6 +630,7 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
+                self.logger.debug("handling change in adcpower")
                 self._adc_power[logical_tile_id] = attribute_value.tolist()
                 adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
@@ -639,7 +640,7 @@ class SpsStationComponentManager(
             case "statictimedelays":
                 self._static_delays[logical_tile_id] = attribute_value.tolist()
             case "preadulevels":
-                self.logger.info("handling change in preaduLevels")
+                self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
             case _:
@@ -1207,6 +1208,7 @@ class SpsStationComponentManager(
         self._set_beamformer_table()
         return ResultCode.OK
 
+    # pylint: disable=too-many-locals
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
@@ -1239,46 +1241,80 @@ class SpsStationComponentManager(
             base_ip3 = 0xC0
         last_tile = len(tiles) - 1
         tile = 0
+        num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
             src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*tile}"
             src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*tile}"
             dst_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+26+2*tile}"
             dst_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+27+2*tile}"
-            dst_port = self._destination_port
+            src_ip_list = [src_ip1, src_ip2]
+            dst_ip_list = [dst_ip1, dst_ip2]
+            dst_port_1 = self._destination_port
+            dst_port_2 = dst_port_1 + 2
             src_mac = self._base_mac_address + base_ip3 + 24 + 2 * tile
-            if tile == last_tile:
-                dst_ip1 = self._csp_ingest_address
-                dst_ip2 = self._csp_ingest_address
-                dst_port = self._csp_ingest_port
             self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
             self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": 0,
-                        "arp_table_entry": 0,
-                        "source_ip": src_ip1,
-                        "source_mac": src_mac,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip1,
-                        "destination_port": dst_port,
-                    }
+
+            for core in range(num_cores):
+                src_ip = src_ip_list[core]
+                dst_ip = dst_ip_list[core]
+
+                if tile == last_tile:
+                    dst_ip = self._csp_ingest_address
+                    dst_port_1 = self._csp_ingest_port
+                    dst_port_2 = dst_port_1
+
+                # ARP Table Entry 0 of each 40G core specifies destination
+                # for station beam packets
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 0,
+                            "source_ip": src_ip,
+                            "source_mac": src_mac + core,
+                            "source_port": self._source_port,
+                            "destination_ip": dst_ip,
+                            "destination_port": dst_port_1,
+                            "rx_port_filter": dst_port_1,
+                        }
+                    )
                 )
-            )
-            proxy._proxy.Configure40GCore(
-                json.dumps(
-                    {
-                        "core_id": 1,
-                        "arp_table_entry": 0,
-                        "source_ip": src_ip2,
-                        "source_mac": src_mac + 1,
-                        "source_port": self._source_port,
-                        "destination_ip": dst_ip2,
-                        "destination_port": dst_port,
-                    }
+                # Also configure entry 2 with the same settings
+                # Required for operation with single 40G connection to each TPM
+                # With two connections, each core uses arp table entry 0
+                # for station beam transmission to the next tile in the chain
+                # and lastly to CSP.
+                # Two FPGAs = Two Simultaneous Daisy chains
+                # (a chain of FPGA1s and a chain of FPGA2s)
+                # With one 40G connection, Master FPGA uses arp table entry 0,
+                # Slave FPGA uses arp table entry 2 to achieve the same functionality
+                # but with a single core.
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 2,
+                            "source_ip": src_ip,
+                            "source_mac": src_mac + core,
+                            "source_port": self._source_port,
+                            "destination_ip": dst_ip,
+                            "destination_port": dst_port_2,
+                        }
+                    )
                 )
-            )
+                # Set RX port filter for RX channel 1
+                # Required for operation with single 40G connection to each TPM
+                proxy._proxy.Configure40GCore(
+                    json.dumps(
+                        {
+                            "core_id": core,
+                            "arp_table_entry": 1,
+                            "rx_port_filter": dst_port_1 + 2,
+                        }
+                    )
+                )
             proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
             proxy._proxy.SetLmcIntegratedDownload(
                 json.dumps(
@@ -1423,7 +1459,7 @@ class SpsStationComponentManager(
             i = i + TileData.ADC_CHANNELS
 
     @property
-    def channeliser_rounding(self: SpsStationComponentManager) -> list[int]:
+    def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
         """
         Channeliser rounding.
 
@@ -1431,31 +1467,23 @@ class SpsStationComponentManager(
         Valid values 0-7 Same value applies to all antennas and
         polarizations
 
-        :returns: list of 512 values, one per channel.
+        :returns: list of 512 values for each Tile, one per channel.
         """
-        return copy.deepcopy(self._channeliser_rounding)
+        channeliser_roundings: np.ndarray = np.zeros([16, 512])
 
-    @channeliser_rounding.setter
-    def channeliser_rounding(
-        self: SpsStationComponentManager, truncation: list[int]
-    ) -> None:
-        """
-        Set channeliser rounding.
-
-        :param truncation: List with either a single value (applies to all channels)
-            or a list of 512 values. Range 0 (no truncation) to 7
-        """
-        self._channeliser_rounding = copy.deepcopy(truncation)
-        for proxy in self._tile_proxies.values():
+        for tile_idx, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
-            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(
-                    f"Writing truncation  {truncation[0]} in {proxy._proxy.name()}"
+            try:
+                channeliser_roundings[tile_idx, :] = proxy._proxy.channeliserRounding
+            except ValueError as e:
+                self.logger.error(
+                    f"unable to update array with {proxy._name} "
+                    f"channeliserRounding attribute: {repr(e)}"
                 )
-                proxy._proxy.channeliserRounding = truncation
+        return channeliser_roundings
 
     @property
-    def csp_rounding(self: SpsStationComponentManager) -> list[int]:
+    def csp_rounding(self: SpsStationComponentManager) -> list[int] | None:
         """
         CSP formatter rounding.
 
@@ -1466,7 +1494,9 @@ class SpsStationComponentManager(
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return copy.deepcopy(self._csp_rounding)
+        proxy = list(self._tile_proxies.values())[-1]
+        assert proxy._proxy is not None  # for the type checker
+        return proxy._proxy.cspRounding
 
     @csp_rounding.setter
     def csp_rounding(self: SpsStationComponentManager, truncation: list[int]) -> None:
@@ -1833,41 +1863,65 @@ class SpsStationComponentManager(
         if self._tile_power_states[fqdn] != PowerState.ON:
             return  # Do not access an unprogrammed TPM
 
+        num_cores = 2
         last_tile = len(self._tile_proxies) - 1
         src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
         src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"
-        dst_ip1 = self._csp_ingest_address
-        dst_ip2 = self._csp_ingest_address
         dst_port = self._csp_ingest_port
+        src_ip_list = [src_ip1, src_ip2]
         src_mac = self._base_mac_address + base_ip3 + 24 + 2 * last_tile
-        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip1}")
-        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip2}")
-        proxy._proxy.Configure40GCore(
-            json.dumps(
-                {
-                    "core_id": 0,
-                    "arp_table_entry": 0,
-                    "source_ip": src_ip1,
-                    "source_mac": src_mac,
-                    "source_port": self._source_port,
-                    "destination_ip": dst_ip1,
-                    "destination_port": dst_port,
-                }
+        self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip}")
+        self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip}")
+        for core in range(num_cores):
+            src_ip = src_ip_list[core]
+            proxy._proxy.Configure40GCore(
+                json.dumps(
+                    {
+                        "core_id": core,
+                        "arp_table_entry": 0,
+                        "source_ip": src_ip,
+                        "source_mac": src_mac + core,
+                        "source_port": self._source_port,
+                        "destination_ip": dst_ip,
+                        "destination_port": dst_port,
+                        "rx_port_filter": dst_port,
+                    }
+                )
             )
-        )
-        proxy._proxy.Configure40GCore(
-            json.dumps(
-                {
-                    "core_id": 1,
-                    "arp_table_entry": 0,
-                    "source_ip": src_ip2,
-                    "source_mac": src_mac + 1,
-                    "source_port": self._source_port,
-                    "destination_ip": dst_ip2,
-                    "destination_port": dst_port,
-                }
+            # Also configure entry 2 with the same settings
+            # Required for operation with single 40G connection to each TPM
+            # With two connections, each core uses arp table entry 0
+            # for station beam transmission to the next tile in the chain
+            # and lastly to CSP.
+            # Two FPGAs = Two Simultaneous Daisy chains
+            # (a chain of FPGA1s and a chain of FPGA2s)
+            # With one 40G connection, Master FPGA uses arp table entry 0,
+            # Slave FPGA uses arp table entry 2 to achieve the same functionality
+            # but with a single core.
+            proxy._proxy.Configure40GCore(
+                json.dumps(
+                    {
+                        "core_id": core,
+                        "arp_table_entry": 2,
+                        "source_ip": src_ip,
+                        "source_mac": src_mac + core,
+                        "source_port": self._source_port,
+                        "destination_ip": dst_ip,
+                        "destination_port": dst_port,
+                    }
+                )
             )
-        )
+            # Set RX port filter for RX channel 1
+            # Required for operation with single 40G connection to each TPM
+            proxy._proxy.Configure40GCore(
+                json.dumps(
+                    {
+                        "core_id": core,
+                        "arp_table_entry": 1,
+                        "rx_port_filter": dst_port + 2,
+                    }
+                )
+            )
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
@@ -1950,7 +2004,7 @@ class SpsStationComponentManager(
 
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-            tile_no = tile_proxy._proxy.logicalTileId
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
             delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
@@ -2157,6 +2211,74 @@ class SpsStationComponentManager(
                 )
             return
 
+    @check_communicating
+    def set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._set_channeliser_rounding,
+            args=[channeliser_rounding],
+            task_callback=task_callback,
+        )
+
+    def _set_channeliser_rounding(
+        self: SpsStationComponentManager,
+        channeliser_rounding: np.ndarray,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Set the channeliserRounding in all Tiles.
+
+        :param channeliser_rounding: the number of LS bits dropped in
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        result_code = ResultCode.OK
+        message = ""
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
+                self.logger.debug(f"Writing truncation in {proxy._proxy.name()}")
+                try:
+                    proxy._proxy.channeliserRounding = channeliser_rounding
+                except tango.DevFailed:
+                    self.logger.warning(
+                        f"Failed to load truncation for {proxy._proxy.name()}"
+                    )
+                    message = "Failed to set channeliserRounding for 1 or more Tiles."
+                    result_code = ResultCode.FAILED
+            else:
+                message += (
+                    "unable to set channeliserRounding for 1 or more tiles. "
+                    "Tile not Initialised. "
+                )
+                result_code = ResultCode.FAILED
+
+        if not message:
+            message = "channeliserRounding loaded into all Tiles successfully."
+
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result_code, message),
+            )
+
     def trigger_adc_equalisation(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -2198,7 +2320,7 @@ class SpsStationComponentManager(
         adc_data = np.empty([num_samples, 32 * len(tpms)])
         for i in range(num_samples):
             time.sleep(1)
-            adc_data[i] += self.adc_power()
+            adc_data[i] = self.adc_power()
 
         # calculate difference in dB between current and target values
         adc_medians = np.median(adc_data, axis=0)

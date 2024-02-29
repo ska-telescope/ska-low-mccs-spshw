@@ -84,7 +84,7 @@ class SpsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 3
+        self._max_workers = 1
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__

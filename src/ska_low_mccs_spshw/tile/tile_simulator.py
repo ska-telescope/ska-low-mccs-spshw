@@ -423,6 +423,7 @@ class TileSimulator:
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self._active_40g_ports_setting: str = ""
+        self._pending_data_requests = False
 
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
@@ -461,8 +462,7 @@ class TileSimulator:
 
     def check_pending_data_requests(self: TileSimulator) -> bool:
         """:return: the pending data requess flag."""
-        return False
-        # return self._pending_data_requests
+        return self._pending_data_requests
 
     def initialise_beamformer(
         self: TileSimulator, start_channel: float, nof_channels: int

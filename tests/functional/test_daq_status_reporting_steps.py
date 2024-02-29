@@ -273,6 +273,7 @@ def start_all_consumers(
     :param daq_receiver: A proxy to the MccsDaqReceiver device under test.
     :param all_available_consumers: A list of all DaqModes/consumers.
     """
+    assert daq_receiver.adminMode == AdminMode.ONLINE
     daq_receiver.Start(
         json.dumps({"modes_to_start": ",".join(all_available_consumers)})
     )

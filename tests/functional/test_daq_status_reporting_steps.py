@@ -274,7 +274,7 @@ def start_all_consumers(
     :param all_available_consumers: A list of all DaqModes/consumers.
     """
     assert daq_receiver.adminMode == AdminMode.ONLINE
-    res = daq_receiver.Start(
+    daq_receiver.Start(
         json.dumps({"modes_to_start": ",".join(all_available_consumers)})
     )
     for consumer in all_available_consumers:

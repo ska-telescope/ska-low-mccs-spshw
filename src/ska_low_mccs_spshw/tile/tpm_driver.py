@@ -195,7 +195,7 @@ class TpmDriver(MccsBaseComponentManager):
 
             # "stop" event received; update state, then back to top of loop i.e. block
             # on "start" event
-            self.tpm_disconnected()
+            self.tpm_disconnected(intentional_disconnect=True)
             self._is_programmed = False
             self._start_polling_event.clear()
 
@@ -222,9 +222,10 @@ class TpmDriver(MccsBaseComponentManager):
                 else:
                     self.logger.debug("Failed to acquire lock")
             if error_flag:
-                self.tpm_disconnected()
-                # self.update_component_state({"fault": True})
-            # wait for a polling_period
+                self.tpm_disconnected(intentional_disconnect=False)
+            else:
+                self._update_communication_state(CommunicationStatus.ESTABLISHED)
+
             return
 
         self.start_connection()
@@ -379,8 +380,12 @@ class TpmDriver(MccsBaseComponentManager):
         else:
             self.logger.debug("Tpm initialised. Initialisation skipped")
 
-    def tpm_disconnected(self: TpmDriver) -> None:
-        """Tile disconnected to tpm."""
+    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = False) -> None:
+        """
+        Tile disconnected to tpm.
+
+        :param intentional_disconnect: True if disconnection was expected.
+        """
         self.logger.debug("Tile disconnecting from tpm.")
         self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
@@ -391,7 +396,10 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             time.sleep(0.5)
         self.logger.debug("Tile disconnected from tpm.")
-        self._update_communication_state(CommunicationStatus.DISABLED)
+        if intentional_disconnect:
+            self._update_communication_state(CommunicationStatus.DISABLED)
+        else:
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -664,6 +672,7 @@ class TpmDriver(MccsBaseComponentManager):
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -1170,7 +1179,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._forty_gb_core_list = []
         if core_id == -1 or core_id is None:
             for icore in range(2):
-                for arp_table_entry_id in range(2):
+                for arp_table_entry_id in range(4):
                     dict_to_append = self._get_40g_core_configuration(
                         icore, arp_table_entry_id
                     )
@@ -1900,6 +1909,11 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_integrated_data()
+                    time.sleep(0.2)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
+
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2133,6 +2147,10 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.stop_data_transmission()
+                    time.sleep(0.2)
+                    self._pending_data_requests = (
+                        self.tile.check_pending_data_requests()
+                    )
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

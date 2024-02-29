@@ -616,3 +616,59 @@ class TestMccsTileTpmDriver:
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
+
+    def test_tile_state_rediscovery(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test tile can be turned OFFLINE and ONLINE and rediscover state.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        assert tile_device.state() == tango.DevState.ON
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2, consume_nonmatches=True
+        )
+        tile_device.off()
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
+        assert tile_device.state() == tango.DevState.OFF
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+        change_event_callbacks["tile_state"].assert_not_called()
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_state"].assert_change_event(
+            tango.DevState.OFF, lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_device.on()
+
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        assert tile_device.state() == tango.DevState.ON
+        change_event_callbacks["tile_state"].assert_not_called()
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)

@@ -32,9 +32,9 @@ scenarios("./features/health.feature")
 
 @scenario(
     "features/health.feature",
-    "Failed when monitoring point is out of bounds",
+    "Failed when tile monitoring point is out of bounds",
 )
-def test_failed_when_monitoring_point_is_out_of_bounds(
+def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     device_proxies: dict[str, tango.DeviceProxy]
 ) -> None:
     """
@@ -46,6 +46,24 @@ def test_failed_when_monitoring_point_is_out_of_bounds(
     :param device_proxies: dictionary of proxies with device name as a key.
     """
     device_proxies["Tile"].healthModelParams = "{}"
+
+
+@scenario(
+    "features/health.feature",
+    "Failed when subrack monitoring point is out of bounds",
+)
+def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
+    device_proxies: dict[str, tango.DeviceProxy]
+) -> None:
+    """
+    Reset Subrack health parameters.
+
+    Any code in this scenario method is run at the *end* of the
+    scenario.
+
+    :param device_proxies: dictionary of proxies with device name as a key.
+    """
+    device_proxies["Subrack"].healthModelParams = "{}"
 
 
 @pytest.fixture(name="station_name")
@@ -181,7 +199,7 @@ def device_verify_attribute(
             "FAILED": HealthState.FAILED,
             "UNKNOWN": HealthState.UNKNOWN,
         }[value]
-    timeout = 50
+    timeout = 10
     device_value = None
     for _ in range(timeout):
         if attribute == "state":
@@ -205,5 +223,21 @@ def set_tile_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> None
         "temperatures": {"board": {"min": 100, "max": 170}},
     }
     tile_device = device_proxies["Tile"]
-    print(tile_device)
     tile_device.healthModelParams = json.dumps(new_board_params)
+
+
+@when("the Subrack board temperature thresholds are adjusted")
+def set_subrack_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+    """
+    Set the board temperature thresholds of the Subrack.
+
+    :param device_proxies: dictionary of device proxies.
+    """
+    new_board_params = {
+        "failed_max_board_temp": 170.0,
+        "degraded_max_board_temp": 160.0,
+        "failed_min_board_temp": 110.0,
+        "degraded_min_board_temp": 120.0,
+    }
+    subrack_device = device_proxies["Subrack"]
+    subrack_device.healthModelParams = json.dumps(new_board_params)

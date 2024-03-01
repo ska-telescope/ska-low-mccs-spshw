@@ -72,7 +72,10 @@ class TestNoSupply:
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
             status=TaskStatus.FAILED,
-            message="Poll failed: This power supply simulator has no power supply.",
+            result=(
+                ResultCode.FAILED,
+                "Poll failed: This power supply simulator has no power supply.",
+            ),
         )
         callbacks["task"].assert_not_called()
         callbacks["component_state"].assert_not_called()
@@ -142,7 +145,10 @@ class TestUnknown:
 
         callbacks["task"].assert_call(
             status=TaskStatus.FAILED,
-            message="Poll failed: No communication with power supply.",
+            result=(
+                ResultCode.FAILED,
+                "Poll failed: No communication with power supply.",
+            ),
         )
         callbacks["task"].assert_not_called()
         callbacks["component_state"].assert_not_called()

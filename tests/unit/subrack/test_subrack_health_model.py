@@ -52,6 +52,7 @@ class TestSubrackHealthModel:
                         PowerState.ON,
                         PowerState.ON,
                     ],
+                    "tpm_present": [True, True, True, True],
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
@@ -98,6 +99,7 @@ class TestSubrackHealthModel:
                         PowerState.ON,
                         PowerState.ON,
                     ],
+                    "tpm_present": [True, True, True, True],
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
@@ -124,6 +126,7 @@ class TestSubrackHealthModel:
                         PowerState.ON,
                         PowerState.ON,
                     ],
+                    "tpm_present": [True, True, True, True],
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
@@ -142,6 +145,7 @@ class TestSubrackHealthModel:
                         PowerState.ON,
                         PowerState.ON,
                     ],
+                    "tpm_present": [True, True, True, True],
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
@@ -168,6 +172,7 @@ class TestSubrackHealthModel:
                         PowerState.ON,
                         PowerState.ON,
                     ],
+                    "tpm_present": [True, True, True, True],
                     "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
@@ -289,6 +294,7 @@ class TestSubrackHealthModel:
             ],
             "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
             "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+            "tpm_present": [True, True, True, True],
         }
         if init_thresholds:
             health_model.health_params = init_thresholds

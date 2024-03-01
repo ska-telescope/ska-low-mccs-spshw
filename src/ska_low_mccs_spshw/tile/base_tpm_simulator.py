@@ -169,7 +169,6 @@ class BaseTpmSimulator:
             raise ConnectionError("Failed to connect")
 
         if self._component_state_changed_callback:
-            print("power on")
             self._component_state_changed_callback(power=PowerState.ON)
             self._component_state_changed_callback(fault=False)
 

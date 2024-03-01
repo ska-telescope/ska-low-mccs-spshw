@@ -279,11 +279,7 @@ def daq_configure(
         poll_until_state_change(daq_device, tango.DevState.ON, 5)
 
     # Configure DAQ
-    print(f"1 - DAQ CONFIG: {daq_device.GetConfiguration()}")
-    print(f"Configuring DAQ with: {daq_config}")
-    res = daq_device.Configure(json.dumps(daq_config))
-    print(f"configure command result: {res}")
-    print(f"2 - DAQ CONFIG: {daq_device.GetConfiguration()}")
+    daq_device.Configure(json.dumps(daq_config))
 
 
 @given("the DAQ is started with the integrated channel data consumer")
@@ -358,9 +354,9 @@ def daq_bandpass_monitor_running(
     # 2) INTEGRATED_CHANNEL_DATA consumer not running       NOPE
     # 3) No plot directory supplied                         NOPE - Can see it above.
     # 4) Already active                                     NOPE
+    time.sleep(2)
     print(f"Daq config: {daq_device.GetConfiguration()}")
     print(f"Daq Status: {daq_device.DaqStatus()}")  # Reveals 2 and 4.
-    time.sleep(2)
     print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
     print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")
     print(f"longRunningCommandsInQueue: {daq_device.longRunningCommandsInQueue}")

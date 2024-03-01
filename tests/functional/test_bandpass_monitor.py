@@ -354,11 +354,12 @@ def daq_bandpass_monitor_running(
     )
     # Command gets REJECTED - investimagation time.
     # 4 Possibilities
-    # 1) Append Integrated is set to True (Should be False)
-    # 2) INTEGRATED_CHANNEL_DATA consumer not running
-    # 3) No plot directory supplied
-    # 4) Already active
+    # 1) Append Integrated is set to True (Should be False) Must be? :S
+    # 2) INTEGRATED_CHANNEL_DATA consumer not running       NOPE
+    # 3) No plot directory supplied                         NOPE - Can see it above.
+    # 4) Already active                                     NOPE
     print(f"Daq config: {daq_device.GetConfiguration()}")
+    print(f"Daq Status: {daq_device.DaqStatus()}")  # Reveals 2 and 4.
     time.sleep(2)
     print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
     print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")

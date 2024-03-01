@@ -550,12 +550,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             if start_frame < 0:
                 self.logger.error(f"start_beamformer: Invalid time {start_time}")
                 raise ValueError(f"Invalid time {start_time}")
-            if (start_frame - self.fpga_current_frame) < 20:
-                self.logger.error("start_beamformer: time not enough in the future")
-                self.logger.error(
+            self.logger.info(
+                    f"Starting beamformer | "
                     f"Start frame {start_frame} "
                     f"current frame {self.fpga_current_frame}"
                 )
+            if (start_frame - self.fpga_current_frame) < 20:
+                self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
         self._tpm_driver.start_beamformer(
             start_frame, duration, subarray_beam_id, scan_id

@@ -13,7 +13,7 @@ import unittest
 from typing import Any, Iterator
 
 import pytest
-from ska_control_model import SimulationMode, TestMode
+from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
@@ -104,7 +104,7 @@ def integration_test_context_fixture(
     """
     harness = SpsTangoTestHarness()
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
-    harness.add_subrack_device(subrack_id)
+    harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
     harness.add_tile_device(
         tile_id,
         subrack_id,

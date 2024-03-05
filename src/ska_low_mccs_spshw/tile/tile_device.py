@@ -101,6 +101,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._adc_rms = [0.0] * 32
         self._max_workers = 1
         self._pps_present = None
+        self._pps_delay_correction = 0
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -364,6 +365,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        self.logger.debug(f"called with {state_change}")
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
 
@@ -385,7 +387,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.push_archive_event(
                             "tileProgrammingState", tile_programming_state.pretty_name()
                         )
+                case "global_status_alarms":
+                    if attribute_value.get("I2C_access_alm",0) != 0:
+                        self.logger.error("I2C_access_alm pushed to TANGO but nothing implemented.")
+                    if attribute_value.get("temperature_alm",0) != 0:
+                        self.logger.error("temperature_alm pushed to TANGO but nothing implemented.")
+                    if attribute_value.get("voltage_alm",0) != 0:
+                        self.logger.error("voltage_alm pushed to TANGO but nothing implemented.")
+                    if attribute_value.get("SEM_wd",0) != 0:
+                        self.logger.error("SEM_wd pushed to TANGO but nothing implemented.")
+                    if attribute_value.get("MCU_wd",0) != 0:
+                        self.logger.error("MCU_wd pushed to TANGO but nothing implemented.")
                 case "tile_health_structure":
+                    self.logger.error("tile_health_structure called")
                     if self.tile_health_structure != attribute_value:
                         # TODO: validate structure using schema before setting.
                         self.tile_health_structure = attribute_value
@@ -413,6 +427,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 case "channeliser_rounding":
                     _channeliser_rounding = state_change["channeliser_rounding"]
                     self.push_change_event("channeliserRounding", _channeliser_rounding)
+                case "pps_delay_corrected":
+                    self._pps_delay_correction = state_change["pps_delay_corrected"]
                 case _:
                     self.logger.warning(
                         f"Unexpected attribute changed {attribute_name}" "Nothing is do"
@@ -859,7 +875,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        return self.component_manager.adc_rms
+        return self._adc_rms
 
     @attribute(dtype="DevLong")
     def currentTileBeamformerFrame(self: MccsTile) -> int:
@@ -937,7 +953,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Return the PPS delay in nanoseconds
         """
-        return self.component_manager.pps_delay_correction
+        return self._pps_delay_correction
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
     def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
@@ -948,7 +964,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param pps_delay_correction: a correction to apply to the pps_delay.
         """
-        self.component_manager.pps_delay_correction = pps_delay_correction
+        self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:

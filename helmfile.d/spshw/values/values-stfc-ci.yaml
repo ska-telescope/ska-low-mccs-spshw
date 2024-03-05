@@ -39,30 +39,30 @@ overrides:
                 station_cluster: "a1"
                 # Warning: Pulling configuration from different station cluster. We are pulling station cluster "a1" and deploying station cluster "ci"
 
-      "real-daq":
-        cabinets:
-          "1":
-            subnet: 10.1.0.0
-        stations:
-          "1":
-            id: 1
-            sps:
-              cabinet: "1"
-              daq:
-                simulated: false
-              subracks:
-                "1":
-                  simulated: true
-                  srmb_host: srmb-1
-                  srmb_port: 8081
-              tpms:
-                "10":
-                  simulated: true
-                  host: 10.0.10.201
-                  port: 10000
-                  version: tpm_v1_6
-                  subrack: 1
-                  subrack_slot: 1
+      # "real-daq":
+      #   cabinets:
+      #     "1":
+      #       subnet: 10.1.0.0
+      #   stations:
+      #     "1":
+      #       id: 1
+      #       sps:
+      #         cabinet: "1"
+      #         daq:
+      #           simulated: false
+      #         subracks:
+      #           "1":
+      #             simulated: true
+      #             srmb_host: srmb-1
+      #             srmb_port: 8081
+      #         tpms:
+      #           "10":
+      #             simulated: true
+      #             host: 10.0.10.201
+      #             port: 10000
+      #             version: tpm_v1_6
+      #             subrack: 1
+      #             subrack_slot: 1
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.

@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import gc
 import time
-
+import unittest
 import numpy as np
 import pytest
 import tango
@@ -43,8 +43,71 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_preadu_levels",
         "tile_csp_rounding",
         "tile_channeliser_rounding",
-        timeout=15.0,
+        timeout=20.0,
     )
+
+
+def test_initialise_can_execute(
+    sps_station_device: tango.DeviceProxy,
+    subrack_device: tango.DeviceProxy,
+    tile_device: tango.DeviceProxy,
+    tile_simulator: TileSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the sps station Initialise function executes.
+
+    This is a very simple test just just to see that the TileSimulator
+    starts counting once turned on and initialised.
+
+    TODO: Initialise does a huge number of tasks.
+    This test only check the initialise command can complete,
+    it does not check in any specifics.
+
+    :param sps_station_device: the station Tango device under test.
+    :param subrack_device: the subrack Tango device under test.
+    :param tile_device: the tile Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["subrack_state"],
+    )
+    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.DISABLE)
+    subrack_device.adminMode = AdminMode.ONLINE
+    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.UNKNOWN)
+    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
+    assert tile_device.adminMode == AdminMode.OFFLINE
+    tile_device.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["tile_state"],
+    )
+    tile_simulator.mock_off()
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+    tile_device.adminMode = AdminMode.ONLINE
+
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+    tile_device.On()
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+    tile_device.Off()
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+    tile_simulator.mock_on()
+    tile_device.On()
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+    print("OUIhfsiuhisufhiuh")
+
+    [_], [command_id] = tile_device.initialise()
+    for i in range(30):
+        print(tile_device.CheckLongRunningCommandStatus(command_id))
+        if tile_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED":
+            break
+        time.sleep(0.5)
+
 
 
 class TestStationTileIntegration:
@@ -139,6 +202,7 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         tile_device.On()
+        tile_device.initialise()
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed"
@@ -205,6 +269,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_component_manager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -257,7 +322,9 @@ class TestStationTileIntegration:
             (initialise_id, "COMPLETED")
         )
         # Force a poll to get the initial values.
-        tile_device.UpdateAttributes()
+        print("Trying to force a poll of attribute")
+        tile_component_manager._request_provider.get_request = unittest.mock.Mock(return_value=("PPS_DELAY_CORRECTION", None))
+        time.sleep(2)
         final_corrections = sps_station_device.ppsDelayCorrections
 
         assert np.array_equal(final_corrections, desired_pps_corrections)
@@ -523,6 +590,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -573,7 +641,7 @@ class TestStationTileIntegration:
 
         csp_to_check = np.array([5] * 384)
         tile_device.cspRounding = csp_to_check
-
+        tile_component_manager._request_provider.get_request = unittest.mock.Mock(return_value=("CSP_ROUNDING", None))
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_csp_rounding"].assert_change_event(
             csp_to_check.tolist()

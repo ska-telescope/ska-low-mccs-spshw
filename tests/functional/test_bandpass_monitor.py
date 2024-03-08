@@ -327,6 +327,7 @@ def daq_bandpass_monitor_running(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
+    print(f"Daq Status (Before Monitoring): {daq_device.DaqStatus()}")
     daq_device.subscribe_event(
         "xPolBandpass",
         tango.EventType.CHANGE_EVENT,
@@ -437,6 +438,8 @@ def daq_bandpasses_saved(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
+    print(f"Daq Device: {daq_device}")
+    print(f"Daq Status: {daq_device.DaqStatus()}")
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     assert np.count_nonzero(daq_device.xPolBandpass) > 0
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)

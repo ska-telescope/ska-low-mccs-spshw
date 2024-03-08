@@ -439,12 +439,14 @@ def daq_bandpasses_saved(
     """
     print(f"Daq Device: {daq_device}")
     print(f"Daq Status: {daq_device.DaqStatus()}")
-    try:
-        q_size = change_event_callbacks["daq_xPolBandpass"]._queue.qsize()
-        print(f"daq_xPolBandpass Q size: {q_size}")
-    except Exception:  # pylint: disable = broad-exception-caught
-        q_size = change_event_callbacks._queue.qsize()
-        print(f">>>change event Q size: {q_size}")
+
+    q_size = change_event_callbacks._queue.qsize()
+    print(f">>>change event Q size: {q_size}")
+    while q_size > 0:
+        q_item = change_event_callbacks._queue.get()
+        print(f"Got item from queue: {q_item}")
+        q_size -= 1
+
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     assert np.count_nonzero(daq_device.xPolBandpass) > 0
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)

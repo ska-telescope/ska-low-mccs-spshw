@@ -80,4 +80,4 @@ helm_values:
   ska-low-mccs-daq:
     image:
       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-      tag: 0.6.1-dev.ceccc9616
+      tag: 0.6.1-dev.cc946a65b

@@ -355,7 +355,6 @@ def daq_bandpass_monitor_running(
     # 2) INTEGRATED_CHANNEL_DATA consumer not running       NOPE
     # 3) No plot directory supplied                         NOPE - Can see it above.
     # 4) Already active                                     NOPE
-    time.sleep(2)
     print(f"Daq config: {daq_device.GetConfiguration()}")
     print(f"Daq Status: {daq_device.DaqStatus()}")  # Reveals 2 and 4.
     print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
@@ -440,6 +439,12 @@ def daq_bandpasses_saved(
     """
     print(f"Daq Device: {daq_device}")
     print(f"Daq Status: {daq_device.DaqStatus()}")
+    try:
+        q_size = change_event_callbacks["daq_xPolBandpass"]._queue.qsize()
+        print(f"daq_xPolBandpass Q size: {q_size}")
+    except Exception:  # pylint: disable = broad-exception-caught
+        q_size = change_event_callbacks._queue.qsize()
+        print(f">>>change event Q size: {q_size}")
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     assert np.count_nonzero(daq_device.xPolBandpass) > 0
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)

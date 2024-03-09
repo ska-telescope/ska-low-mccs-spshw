@@ -14,7 +14,7 @@ platform:
               longitude: 116.747333
               ellipsoidal_height: 357.0
             sps:
-              cabinet: "s9-1"
+              network_address: 10.22.1.128
               subracks:
                 "1":
                   srmb_host: 10.137.0.144

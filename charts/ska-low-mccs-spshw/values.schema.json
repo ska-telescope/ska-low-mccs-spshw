@@ -50,7 +50,7 @@
                   "minimum": 1,
                   "maximum": 512
                 },
-                "cabinet_network_address": {
+                "station_network_address": {
                   "type": "string",
                   "format": "ipv4"
                 },
@@ -80,7 +80,7 @@
               },
               "required": [
                 "station_id",
-                "cabinet_network_address",
+                "station_network_address",
                 "antenna_config_uri",
                 "subracks",
                 "tpms"

@@ -368,7 +368,7 @@ def daq_bandpass_monitor_running(
             '"Bandpass monitor active"',
         ),
         lookahead=12,
-        # consume_nonmatches=True,
+        consume_nonmatches=True,
     )
     verify_bandpass_state(daq_device, True)
 

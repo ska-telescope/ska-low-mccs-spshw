@@ -71,7 +71,7 @@ def daq_interface(
 
 
 @pytest.fixture(name="daq_config")
-def daq_config_fixture(interface: str) -> dict[str, Any]:
+def daq_config_fixture(interface: str, plot_directory: str) -> dict[str, Any]:
     """
     Get the config to configure the daq with.
 
@@ -79,7 +79,7 @@ def daq_config_fixture(interface: str) -> dict[str, Any]:
     :return: the config to configure the DAQ with.
     """
     return {
-        "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
+        "directory": plot_directory,
         "nof_tiles": 1,
         "append_integrated": False,
         "receiver_interface": interface,
@@ -338,9 +338,6 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_yPolBandpass"],
     )
-    print(
-        f"Q size after bandpass subscription: {change_event_callbacks._queue.qsize()}"
-    )
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
     argin = json.dumps(
@@ -364,12 +361,6 @@ def daq_bandpass_monitor_running(
     print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")
     print(f"longRunningCommandsInQueue: {daq_device.longRunningCommandsInQueue}")
     print(f"longRunningCommandProgress: {daq_device.longRunningCommandProgress}")
-    q_size = change_event_callbacks._queue.qsize()
-    print(f">>>change event Q size: {q_size}")
-    while q_size > 0:
-        q_item = change_event_callbacks._queue.get()
-        print(f"Got item from queue: {q_item}")
-        q_size -= 1
     change_event_callbacks["daq_long_running_command_result"].assert_change_event(
         (
             start_bandpass_result[1][0],

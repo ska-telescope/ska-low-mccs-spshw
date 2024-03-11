@@ -9,20 +9,12 @@ platform:
     name: oxford
     station_clusters:
       "o1":
-        cabinets:
-          "1":
-            # The cabinet subnet ought properly to be the second /25 in a /24
-            # (the first /25 is for non-science data,
-            # the second for science data).
-            # This schema is not followed in Oxford,
-            # but fortunately all we need here is any vacant /25.
-            subnet: 10.0.0.0
         stations:
           "1":
             id: 1
             name: oxford
             sps:
-              cabinet: "1"
+              network_address: 10.0.0.152
               daq:
                 ip: 172.17.6.145
               tpms:

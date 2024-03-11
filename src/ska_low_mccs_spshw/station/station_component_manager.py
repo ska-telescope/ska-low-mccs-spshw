@@ -1114,31 +1114,27 @@ class SpsStationComponentManager(
         """
         tiles = list(self._tile_proxies.values())
         #
-        # Configure 40G ports. IP address is determined by cabinet IP
-        # 40G subnet is upper /25 part of /24 cabinet network
-        # Each TPM has 2 IP addresses starting at address 24
+        # Configure 40G ports.
+        # Each TPM has 2 IP addresses starting at the provided address
         # Each TPM 40G port point to the corresponding
         # Last TPM uses CSP ingest address and port
         #
-        base_ip = self._fortygb_network_address.split(".")
-        if self._station_id % 2 == 1:
-            base_ip3 = 0x80
-        else:
-            base_ip3 = 0xC0
+        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
+        base_ip3 = int(ip_tail)
         last_tile = len(tiles) - 1
         tile = 0
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*tile}"
-            src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*tile}"
-            dst_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+26+2*tile}"
-            dst_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+27+2*tile}"
+            src_ip1 = f"{ip_head}.{base_ip3+2*tile}"
+            src_ip2 = f"{ip_head}.{base_ip3+2*tile+1}"
+            dst_ip1 = f"{ip_head}.{base_ip3+2*tile+2}"
+            dst_ip2 = f"{ip_head}.{base_ip3+2*tile+3}"
             src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
-            src_mac = self._base_mac_address + base_ip3 + 24 + 2 * tile
+            src_mac = self._base_mac_address + 2 * tile
             self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
             self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
 
@@ -1737,11 +1733,10 @@ class SpsStationComponentManager(
         self._csp_ingest_address = dst_ip
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
-        base_ip = self._fortygb_network_address.split(".")
-        if self._station_id % 2 == 1:
-            base_ip3 = 0x80
-        else:
-            base_ip3 = 0xC0
+
+        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
+        base_ip3 = int(ip_tail)
+
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
@@ -1749,11 +1744,11 @@ class SpsStationComponentManager(
 
         num_cores = 2
         last_tile = len(self._tile_proxies) - 1
-        src_ip1 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+24+2*last_tile}"
-        src_ip2 = f"{base_ip[0]}.{base_ip[1]}.{base_ip[2]}.{base_ip3+25+2*last_tile}"
+        src_ip1 = f"{ip_head}.{base_ip3+2*last_tile}"
+        src_ip2 = f"{ip_head}.{base_ip3+2*last_tile+1}"
         dst_port = self._csp_ingest_port
         src_ip_list = [src_ip1, src_ip2]
-        src_mac = self._base_mac_address + base_ip3 + 24 + 2 * last_tile
+        src_mac = self._base_mac_address + 2 * last_tile
         self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip}")
         self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip}")
         for core in range(num_cores):

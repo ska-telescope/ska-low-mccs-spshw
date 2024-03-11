@@ -15,7 +15,7 @@ platform:
               longitude: 116.670233065
               ellipsoidal_height: 359.495
             sps:
-              network_address: 10.21.3.192
+              network_address: 10.21.3.216
               daq:
                 receiver_interface: net1
               subracks:

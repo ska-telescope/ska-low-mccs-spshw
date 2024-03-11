@@ -57,7 +57,7 @@ def station_network_address_fixture() -> str:
 
     :return: the station network address
     """
-    return "10.0.0.128"
+    return "10.0.0.152"
 
 
 @pytest.fixture(name="test_context")

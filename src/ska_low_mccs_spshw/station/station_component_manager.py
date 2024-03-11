@@ -1196,7 +1196,7 @@ class SpsStationComponentManager(
         tiles = list(self._tile_proxies.values())
         #
         # Configure 40G ports.
-        # Each TPM has 2 IP addresses starting at address 24
+        # Each TPM has 2 IP addresses starting at the provided address
         # Each TPM 40G port point to the corresponding
         # Last TPM uses CSP ingest address and port
         #
@@ -1207,15 +1207,15 @@ class SpsStationComponentManager(
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = f"{ip_head}.{base_ip3+24+2*tile}"
-            src_ip2 = f"{ip_head}.{base_ip3+25+2*tile}"
-            dst_ip1 = f"{ip_head}.{base_ip3+26+2*tile}"
-            dst_ip2 = f"{ip_head}.{base_ip3+27+2*tile}"
+            src_ip1 = f"{ip_head}.{base_ip3+2*tile}"
+            src_ip2 = f"{ip_head}.{base_ip3+2*tile+1}"
+            dst_ip1 = f"{ip_head}.{base_ip3+2*tile+2}"
+            dst_ip2 = f"{ip_head}.{base_ip3+2*tile+3}"
             src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
-            src_mac = self._base_mac_address + 24 + 2 * tile
+            src_mac = self._base_mac_address + 2 * tile
             self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
             self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
 
@@ -1825,11 +1825,11 @@ class SpsStationComponentManager(
 
         num_cores = 2
         last_tile = len(self._tile_proxies) - 1
-        src_ip1 = f"{ip_head}.{base_ip3+24+2*last_tile}"
-        src_ip2 = f"{ip_head}.{base_ip3+25+2*last_tile}"
+        src_ip1 = f"{ip_head}.{base_ip3+2*last_tile}"
+        src_ip2 = f"{ip_head}.{base_ip3+2*last_tile+1}"
         dst_port = self._csp_ingest_port
         src_ip_list = [src_ip1, src_ip2]
-        src_mac = self._base_mac_address + 24 + 2 * last_tile
+        src_mac = self._base_mac_address + 2 * last_tile
         self.logger.debug(f"Tile {last_tile}: 40G#1: {src_ip1} -> {dst_ip}")
         self.logger.debug(f"Tile {last_tile}: 40G#2: {src_ip2} -> {dst_ip}")
         for core in range(num_cores):

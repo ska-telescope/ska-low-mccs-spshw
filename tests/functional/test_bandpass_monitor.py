@@ -414,6 +414,12 @@ def daq_received_data(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
+    q_size = change_event_callbacks._queue.qsize()
+    print(f">>>change event Q size: {q_size}")
+    while q_size > 0:
+        q_item = change_event_callbacks._queue.get()
+        print(f"Got item from queue: {q_item}")
+        q_size -= 1
     change_event_callbacks["data_received_callback"].assert_change_event(
         ("integrated_channel", Anything)
     )
@@ -437,6 +443,10 @@ def daq_bandpasses_saved(
 
     q_size = change_event_callbacks._queue.qsize()
     print(f">>>change event Q size: {q_size}")
+    while q_size > 0:
+        q_item = change_event_callbacks._queue.get()
+        print(f"Got item from queue: {q_item}")
+        q_size -= 1
 
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(
         Anything, lookahead=20

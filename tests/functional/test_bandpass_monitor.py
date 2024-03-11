@@ -76,6 +76,7 @@ def daq_config_fixture(interface: str, plot_directory: str) -> dict[str, Any]:
     Get the config to configure the daq with.
 
     :param interface: The interface to send/listen on.
+    :param plot_directory: The directory for DAQ to use.
     :return: the config to configure the DAQ with.
     """
     return {

@@ -433,6 +433,7 @@ class MccsDaqReceiver(SKABaseDevice):
         :param rms_plot: A filepath for an rms plot.
         :param kwargs: Other state changes of device.
         """
+        print(f"IN DAQ CPT STATE CHANGED WITH: {locals()}")
         if fault:
             self.op_state_model.perform_action("component_fault")
             self._health_model.component_fault(True)
@@ -482,6 +483,7 @@ class MccsDaqReceiver(SKABaseDevice):
         :param file_name: the name of the file that the data was saved to
         :param metadata: the metadata for the data received
         """
+        print(f"DAQ RECEIVED DATA: {locals()}")
         self.logger.info(
             "Data of type %s has been written to file %s", data_mode, file_name
         )

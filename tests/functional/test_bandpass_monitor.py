@@ -71,16 +71,15 @@ def daq_interface(
 
 
 @pytest.fixture(name="daq_config")
-def daq_config_fixture(interface: str, plot_directory: str) -> dict[str, Any]:
+def daq_config_fixture(interface: str) -> dict[str, Any]:
     """
     Get the config to configure the daq with.
 
     :param interface: The interface to send/listen on.
-    :param plot_directory: The directory for DAQ to use.
     :return: the config to configure the DAQ with.
     """
     return {
-        "directory": plot_directory,
+        "directory": "/product/test_eb_id/ska-low-mccs/test_scan_id/",
         "nof_tiles": 1,
         "append_integrated": False,
         "receiver_interface": interface,
@@ -350,14 +349,8 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_long_running_command_result"],
     )
-    # Command gets REJECTED - investimagation time.
-    # 4 Possibilities
-    # 1) Append Integrated is set to True (Should be False) Must be? :S
-    # 2) INTEGRATED_CHANNEL_DATA consumer not running       NOPE
-    # 3) No plot directory supplied                         NOPE - Can see it above.
-    # 4) Already active                                     NOPE
     print(f"Daq config: {daq_device.GetConfiguration()}")
-    print(f"Daq Status: {daq_device.DaqStatus()}")  # Reveals 2 and 4.
+    print(f"Daq Status: {daq_device.DaqStatus()}")
     print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
     print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")
     print(f"longRunningCommandsInQueue: {daq_device.longRunningCommandsInQueue}")
@@ -440,6 +433,7 @@ def daq_bandpasses_saved(
     """
     print(f"Daq Device: {daq_device}")
     print(f"Daq Status: {daq_device.DaqStatus()}")
+    print(f"Daq Config: {daq_device.GetConfiguration()}")
 
     q_size = change_event_callbacks._queue.qsize()
     print(f">>>change event Q size: {q_size}")

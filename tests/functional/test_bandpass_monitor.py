@@ -338,6 +338,9 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_yPolBandpass"],
     )
+    print(
+        f"Q size after bandpass subscription: {change_event_callbacks._queue.qsize()}"
+    )
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
     argin = json.dumps(

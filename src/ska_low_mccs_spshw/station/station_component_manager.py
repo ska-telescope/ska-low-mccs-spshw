@@ -306,6 +306,7 @@ class _DaqProxy(DeviceComponentManager):
         :param attribute_data: New value of attribute.
         :param attribute_quality: Validity of attribute change.
         """
+        print(f"Processing change event for: {attribute_name.lower()}")
         if self._component_state_callback:
             # if attribute_quality == ATTR_VALID:?
             if attribute_name.lower() == "xpolbandpass":

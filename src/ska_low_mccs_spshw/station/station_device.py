@@ -212,13 +212,13 @@ class SpsStation(SKAObsDevice):
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
+            self._device.set_change_event("adcPower", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
             self._device.set_archive_event("antennaInfo", True, False)
-            self._device.set_archive_event("tileProgrammingState", True, False)
-            self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_archive_event("tileProgrammingState", True, False)
 
             super().do()
 

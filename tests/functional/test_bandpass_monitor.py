@@ -327,7 +327,6 @@ def daq_bandpass_monitor_running(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
-    print(f"Daq Status (Before Monitoring): {daq_device.DaqStatus()}")
     daq_device.subscribe_event(
         "xPolBandpass",
         tango.EventType.CHANGE_EVENT,
@@ -349,18 +348,6 @@ def daq_bandpass_monitor_running(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["daq_long_running_command_result"],
     )
-    # Command gets REJECTED - investimagation time.
-    # 4 Possibilities
-    # 1) Append Integrated is set to True (Should be False) Must be? :S
-    # 2) INTEGRATED_CHANNEL_DATA consumer not running       NOPE
-    # 3) No plot directory supplied                         NOPE - Can see it above.
-    # 4) Already active                                     NOPE
-    print(f"Daq config: {daq_device.GetConfiguration()}")
-    print(f"Daq Status: {daq_device.DaqStatus()}")  # Reveals 2 and 4.
-    print(f"longRunningCommandResult: {daq_device.longRunningCommandResult}")
-    print(f"longRunningCommandStatus: {daq_device.longRunningCommandStatus}")
-    print(f"longRunningCommandsInQueue: {daq_device.longRunningCommandsInQueue}")
-    print(f"longRunningCommandProgress: {daq_device.longRunningCommandProgress}")
     change_event_callbacks["daq_long_running_command_result"].assert_change_event(
         (
             start_bandpass_result[1][0],
@@ -437,16 +424,6 @@ def daq_bandpasses_saved(
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
-    print(f"Daq Device: {daq_device}")
-    print(f"Daq Status: {daq_device.DaqStatus()}")
-
-    q_size = change_event_callbacks._queue.qsize()
-    print(f">>>change event Q size: {q_size}")
-    while q_size > 0:
-        q_item = change_event_callbacks._queue.get()
-        print(f"Got item from queue: {q_item}")
-        q_size -= 1
-
     change_event_callbacks["daq_xPolBandpass"].assert_change_event(Anything)
     assert np.count_nonzero(daq_device.xPolBandpass) > 0
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)

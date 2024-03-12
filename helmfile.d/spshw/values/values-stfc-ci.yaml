@@ -73,11 +73,11 @@ overrides:
 # For example,
 #
 helm_values:
-#   # image:
-#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#   #   tag: 0.11.0-dev.cc21201e6
+  # image:
+  #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+  #   tag: 0.11.0-dev.cc21201e6
 
   ska-low-mccs-daq:
     image:
       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-      tag: 0.6.1-dev.cc946a65b
+      tag: 0.6.1-dev.c72446f19

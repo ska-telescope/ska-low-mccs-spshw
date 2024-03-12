@@ -390,6 +390,13 @@ class TestDaqComponentManager:
         :param x_pol_bandpass_test_data: A NumPy array of simulated x-pol bandpass data.
         :param y_pol_bandpass_test_data: A NumPy array of simulated y-pol bandpass data.
         """
+        # Pad test data with zeros to match attr shape.
+        x_pol_bandpass_test_data = daq_component_manager._to_shape(
+            x_pol_bandpass_test_data, (256, 512)
+        )
+        y_pol_bandpass_test_data = daq_component_manager._to_shape(
+            y_pol_bandpass_test_data, (256, 512)
+        )
         daq_component_manager.start_communicating()
         callbacks["communication_state"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
@@ -411,14 +418,6 @@ class TestDaqComponentManager:
             status = json.loads(daq_component_manager.daq_status())
             assert status["Bandpass Monitor"]
 
-            # Helper func to convert to power (same as in daq cpt mgr)
-            def to_db(data: np.ndarray) -> np.ndarray:
-                np.seterr(divide="ignore")
-                log_data = 10 * np.log10(data)
-                log_data[np.isneginf(log_data)] = 0.0
-                np.seterr(divide="warn")
-                return log_data
-
             for _ in range(3):
                 callbacks["task"].assert_call(
                     status=expected_status, result="plot sent", lookahead=5
@@ -432,10 +431,12 @@ class TestDaqComponentManager:
                 received_y_pol_data = args_dict["y_bandpass_plot"]
 
                 assert np.array_equal(
-                    to_db(x_pol_bandpass_test_data), received_x_pol_data
+                    daq_component_manager._to_db(x_pol_bandpass_test_data),
+                    received_x_pol_data,
                 )
                 assert np.array_equal(
-                    to_db(y_pol_bandpass_test_data), received_y_pol_data
+                    daq_component_manager._to_db(y_pol_bandpass_test_data),
+                    received_y_pol_data,
                 )
 
                 # The following assertion doesn't work properly with numpy arrays.

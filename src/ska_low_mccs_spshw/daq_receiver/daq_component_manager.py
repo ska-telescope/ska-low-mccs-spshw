@@ -14,7 +14,7 @@ import random
 import threading
 from datetime import date
 from pathlib import PurePath
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Final, Optional
 
 import numpy as np
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
@@ -30,6 +30,8 @@ SUBSYSTEM_SLUG = "ska-low-mccs"
 # pylint: disable=abstract-method,too-many-instance-attributes
 class DaqComponentManager(TaskExecutorComponentManager):
     """A component manager for a DaqReceiver."""
+
+    NOF_ANTS_PER_STATION: Final = 256
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -382,7 +384,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             task_callback=task_callback,
         )
 
-    # pylint: disable = too-many-branches, too-many-locals
+    # pylint: disable = too-many-branches
     @check_communicating
     def _start_bandpass_monitor(
         self: DaqComponentManager,
@@ -418,9 +420,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         config = self.get_configuration()
         nof_channels = int(config["nof_channels"])
-        nof_antennas = int(config["nof_antennas"])
-        nof_tiles = int(config["nof_tiles"])
-        nof_ants_present = nof_tiles * nof_antennas
 
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
@@ -451,20 +450,20 @@ class DaqComponentManager(TaskExecutorComponentManager):
                         # Reconstruct the numpy array.
                         x_bandpass_plot = to_db(
                             np.array(json.loads(response["x_bandpass_plot"][0]))
-                        ).reshape((nof_ants_present, nof_channels))
+                        ).reshape((self.NOF_ANTS_PER_STATION, nof_channels))
                         call_callback = True
                 if "y_bandpass_plot" in response:
                     if response["y_bandpass_plot"] != [None]:
                         # Reconstruct the numpy array.
                         y_bandpass_plot = to_db(
                             np.array(json.loads(response["y_bandpass_plot"][0]))
-                        ).reshape((nof_ants_present, nof_channels))
+                        ).reshape((self.NOF_ANTS_PER_STATION, nof_channels))
                         call_callback = True
                 if "rms_plot" in response:
                     if response["rms_plot"] != [None]:
                         rms_plot = np.array(
                             json.loads(response["rms_plot"][0])
-                        ).reshape((nof_ants_present, nof_channels))
+                        ).reshape((self.NOF_ANTS_PER_STATION, nof_channels))
                         call_callback = True
                 if call_callback:
                     if self._component_state_callback is not None:

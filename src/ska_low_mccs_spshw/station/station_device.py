@@ -334,6 +334,10 @@ class SpsStation(SKAObsDevice):
                         self.component_manager._antenna_mapping, x_bandpass_data
                     )
                     # pylint: disable=attribute-defined-outside-init
+                    print(f"Shape self._x_bandpass_data: {self._x_bandpass_data.shape}")
+                    print(
+                        f"Shape x_pol_bandpass_ordered: {x_pol_bandpass_ordered.shape}"
+                    )
                     self._x_bandpass_data = x_pol_bandpass_ordered
                     self.push_change_event("xPolBandpass", x_pol_bandpass_ordered)
                     self.push_archive_event("xPolBandpass", x_pol_bandpass_ordered)

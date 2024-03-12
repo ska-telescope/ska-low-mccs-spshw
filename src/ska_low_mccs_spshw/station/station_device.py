@@ -45,7 +45,7 @@ class SpsStation(SKAObsDevice):
     StationId = device_property(dtype=int, default_value=0)
     TileFQDNs = device_property(dtype=(str,), default_value=[])
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
-    CabinetNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
+    StationNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
         dtype=(str,),
@@ -97,7 +97,7 @@ class SpsStation(SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tDaqTRL: {self.DaqTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
-            f"\tCabinetNetworkAddress: {self.CabinetNetworkAddress}\n"
+            f"\tStationNetworkAddress: {self.StationNetworkAddress}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -135,7 +135,7 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self.DaqTRL,
-            self.CabinetNetworkAddress,
+            self.StationNetworkAddress,
             self.AntennaConfigURI,
             self.logger,
             self._max_workers,
@@ -639,7 +639,7 @@ class SpsStation(SKAObsDevice):
     @attribute(dtype="DevString")
     def fortyGbNetworkAddress(self: SpsStation) -> str:
         """
-        Get 40Gb network address for cabinet subnet.
+        Get 40Gb network address for this station.
 
         :return: IP subnet address
         """

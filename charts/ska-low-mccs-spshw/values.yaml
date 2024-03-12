@@ -102,7 +102,7 @@ deviceServers: {} # e.g....
   #   s8-1:
   #     low-mccs/daqreceiver/s8-1:
   #       station_id: 345
-  #       cabinet_network_address: 10.0.0.0
+  #       station_network_address: 10.0.0.152
   #       antenna_config_uri:
   #       - "car:ska-low-aavs3?main"
   #       - "instrument/mccs-configuration/aavs3.yaml"

@@ -20,6 +20,7 @@ cache:
 
 stages:
   - build
+  - lint
   - test
   - test-psi-low
   - publish

@@ -555,7 +555,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 f"Start frame {start_frame} "
                 f"current frame {self.fpga_current_frame} "
                 f"Tiletimeref {self._tile_time._ref_time} "
-                f"Tpmdriver {self._tpm_driver.tile._timestamp}"
             )
             if (start_frame - self.fpga_current_frame) < 20:
                 self.logger.error("start_beamformer: time not enough in the future")

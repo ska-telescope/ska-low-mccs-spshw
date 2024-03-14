@@ -19,7 +19,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, cast
+from typing import Any, Callable, Generator, Optional, Sequence, cast
 
 import numpy as np
 import tango
@@ -374,6 +374,7 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+    # pylint: disable=too-many-locals
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],
@@ -389,14 +390,41 @@ class SpsStationComponentManager(
         """
         antenna_mapping_uri = antenna_config_uri[0]
         antenna_mapping_filepath = antenna_config_uri[1]
-        station_cluster = antenna_config_uri[2]
+        this_station_cluster_id = antenna_config_uri[2]
         tmdata = TMData([antenna_mapping_uri])
         full_dict = tmdata[antenna_mapping_filepath].get_dict()
 
+        def _find_by_key(data: dict, target: str) -> Generator:
+            for key, value in data.items():
+                if key == target:
+                    yield value
+                elif isinstance(value, dict):
+                    yield from _find_by_key(value, target)
+
+        # Dig through the yaml we loaded in intil we find the stations key.
+        # For each time we find a station config, check the station id,
+        # if the station id is correct, get the antenna config of that station
+        # we assume there's only 1 antennas entry for each station.
+        station_clusters = []
+        stations = []
+        # Get all the station clusters.
+        for station_cluster in _find_by_key(full_dict, "station_clusters"):
+            station_clusters.append(station_cluster)
+
+        # Look through all the found station clusters, find this station cluster.
+        for station_cluster in station_clusters:
+            for station_cluster_id, station_cluster_config in station_cluster.items():
+                if station_cluster_id == this_station_cluster_id:
+                    for station in _find_by_key(station_cluster_config, "stations"):
+                        stations.append(station)
+
+        # Look through all the stations on this cluster, find antennas on this station.
+        for station in stations:
+            for station_id, station_config in station.items():
+                if station_id == str(self._station_id):
+                    antennas = next(_find_by_key(station_config, "antennas"))
+
         try:
-            antennas = full_dict["platform"]["array"]["station_clusters"][
-                station_cluster
-            ]["stations"][str(self._station_id)]["antennas"]
             for antenna in antennas:
                 self._antenna_mapping[int(antenna)] = (
                     int(antennas[antenna]["tpm"]),

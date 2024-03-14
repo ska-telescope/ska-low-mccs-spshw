@@ -9,7 +9,9 @@ overrides:
                 "1":
                   nodeSelector: []
               tpms:
-                "10":
+                "5":
                   nodeSelector: []
-                "13":
+                "7":
+                  nodeSelector: []
+                "8":
                   nodeSelector: []

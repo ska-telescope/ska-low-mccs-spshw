@@ -5,7 +5,7 @@ Deploy the Tango devices. For example,
     spsstations:
       "s8-1":
         station_id: 345
-        cabinet_network_address: 10.0.0.0
+        station_network_address: 10.0.0.152
         antenna_config_uri:
         - "reference/data/url"
         - "internal/path/config.yaml"

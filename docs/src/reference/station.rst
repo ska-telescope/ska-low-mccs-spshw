@@ -32,13 +32,9 @@ Important parameters (Tango properties) for initialisation are:
     the Station only control subrack power state and checks for subrack
     device health.
 
-  * *CabinetNetworkAddress* The net address for the cabinet subnet. Each cabinet,
-    implementing SPS for two consecutive stations,
-    has assigned a /24 subnet, divided into two /25 subnets respectively for
-    control and science data transport. This property specifies the net address
-    for the /25 data subnet. The Station assigns network addresses to the Tile
-    40G ports using this address, the Tile sequence number and the LS bit of the
-    StationId.
+  * *StationNetworkAddress* The net address for the start of the station address block
+    reserved for data. The station assigns network addresses to the tile 40G ports
+    using this address and the Tile sequence number.
 
 The device construction instantiates device proxies for the managed MccsTile
 and MccsSubrack devices. When the Station is put Online, these proxies connect

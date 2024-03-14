@@ -408,86 +408,43 @@ class SpsStationComponentManager(
                     int(antennas[antenna]["tpm"]),
                     antennas[antenna]["tpm_x_channel"],
                     antennas[antenna]["tpm_y_channel"],
-                    int(antennas[antenna]["smartbox"]),
+                    antennas[antenna]["delays"],
                 )
-            smartboxes = full_dict["platform"]["array"]["station_clusters"][
-                station_cluster
-            ]["stations"][str(self._station_id)]["pasd"]["smartboxes"]
-            for smartbox in smartboxes:
-                self._cable_lengths[int(smartbox)] = smartboxes[smartbox][
-                    "cable_length"
-                ]
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
 
-    # pylint: disable=too-many-locals
     def _calculate_static_delays(
         self: SpsStationComponentManager,
     ) -> list[float]:
         """
-        Calculate initial static delays for basic calibration.
-
-        We want to artificially extend our shortest delays to match our longest delays
-        our shortest delays have the shortest cables, we want to 'add cable' to these
-        such that we pretend the signals all came from a cable length = longest cable
-        length.
-
-        So the longest delay will not need any calibration, but every shorter delay
-        will need delays added to make them up to the longest delay.
+        Fetch static delays from the TelModel config.
 
         :returns: list of static delays in tile/channel order
         """
-        # Get cable lengths, m
-        cable_lengths = self._cable_lengths
-
-        # get speed of light in cables, m/s
-        cable_light_speed = C / N_INDEX
-
-        # Convert cable lengths to delays, s
-        smartbox_order_delays = {
-            smartbox_id: cable_length / cable_light_speed
-            for smartbox_id, cable_length in cable_lengths.items()
-        }
-        # Convert smartbox order delays to antenna order delays
-        antenna_order_delays = [0.0] * 256
-        smartbox_mapping = self._get_antennas_on_smartboxes()
-        for smartbox_id, antenna_list in smartbox_mapping.items():
-            delays_for_antenna = smartbox_order_delays[smartbox_id]
-            for antenna in antenna_list:
-                antenna_order_delays[int(antenna) - 1] = delays_for_antenna
-
-        # Calculate delays for each tile, in channel order
-        # 2 polarisations * 16 channels * 16 tpms = 512
-        tile_order_delays = [0.0] * 512
-        for antenna_no, antenna_mapping in self._antenna_mapping.items():
-            tile_no = antenna_mapping[0] - 1
-            channel_x_no = antenna_mapping[1]
-            channel_y_no = antenna_mapping[2]
-            tile_order_delays[tile_no * TileData.ADC_CHANNELS + channel_x_no] = (
-                antenna_order_delays[antenna_no - 1]
-            ) * 1e9  # ns
-            tile_order_delays[tile_no * TileData.ADC_CHANNELS + channel_y_no] = (
-                antenna_order_delays[antenna_no - 1]
-            ) * 1e9  # ns
-
-        longest_delay = max(tile_order_delays)
-
-        tile_order_delays = [
-            longest_delay - tile_order_delay for tile_order_delay in tile_order_delays
+        tile_delays = [
+            [0 for _ in range(TileData.ADC_CHANNELS)]
+            for _ in range(len(self._tile_proxies))
         ]
-        return tile_order_delays
+        for antenna_config in self._antenna_mapping.values():
+            tile_delays[antenna_config[0]][antenna_config[1]] = antenna_config[3]
+            tile_delays[antenna_config[0]][antenna_config[2]] = antenna_config[3]
+        return [
+            channel_delay
+            for channel_delays in tile_delays
+            for channel_delay in channel_delays
+        ]
 
     def _get_antennas_on_smartboxes(
         self: SpsStationComponentManager,
     ) -> dict[int, list]:
         smartbox_mapping = defaultdict(list)
 
-        for antenna, antenna_mapping in self._antenna_mapping.items():
+        for antenna_id, antenna_mapping in self._antenna_mapping.items():
             smartbox_id = antenna_mapping[3]
-            smartbox_mapping[smartbox_id].append(int(antenna))
+            smartbox_mapping[smartbox_id].append(int(antenna_id))
         return smartbox_mapping
 
     def _calculate_delays_per_tile(

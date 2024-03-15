@@ -391,7 +391,7 @@ class SpsStationComponentManager(
             elif isinstance(value, dict):
                 yield from self._find_by_key(value, target)
 
-    # pylint: disable=too-many-locals
+    # pylint: disable=too-many-locals, too-many-branches
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],

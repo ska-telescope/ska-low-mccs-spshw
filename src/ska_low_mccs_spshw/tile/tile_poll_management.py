@@ -7,9 +7,10 @@
 # See LICENSE for more info.
 """This module implements polling management for a PaSD bus."""
 
-from .tpm_status import TpmStatus
 import logging
 from typing import Any, Callable, Iterator, Optional, Sequence
+
+from .tpm_status import TpmStatus
 
 
 def off_tpm_read_request_iterator() -> Iterator[str]:
@@ -25,6 +26,7 @@ def off_tpm_read_request_iterator() -> Iterator[str]:
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
+
 
 def unconnected_tpm_read_request_iterator() -> Iterator[str]:
     """
@@ -85,9 +87,11 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CSP_ROUNDING"
+        yield "CHANNELISER_ROUNDING"
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
+
 
 def initialised_tpm_read_request_iterator() -> Iterator[str]:
     """
@@ -102,6 +106,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CSP_ROUNDING"
+        yield "CHANNELISER_ROUNDING"
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
@@ -119,7 +124,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "STATION_ID"
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
-
 
 
 class TileRequestProvider:
@@ -145,16 +149,25 @@ class TileRequestProvider:
             with any given device
         :param logger: a logger.
         """
-        self._programmed_tpm_read_request_iterator = programmed_tpm_read_request_iterator()
-        self._initialised_tpm_read_request_iterator = initialised_tpm_read_request_iterator()
+        self._programmed_tpm_read_request_iterator = (
+            programmed_tpm_read_request_iterator()
+        )
+        self._initialised_tpm_read_request_iterator = (
+            initialised_tpm_read_request_iterator()
+        )
         self._off_tpm_read_request_iterator = off_tpm_read_request_iterator()
         self._unknown_tpm_read_request_iterator = unknown_tpm_read_request_iterator()
-        self._unconnected_tpm_read_request_iterator = unconnected_tpm_read_request_iterator()
-        self._unprogrammed_tpm_read_request_iterator = unprogrammed_tpm_read_request_iterator()
+        self._unconnected_tpm_read_request_iterator = (
+            unconnected_tpm_read_request_iterator()
+        )
+        self._unprogrammed_tpm_read_request_iterator = (
+            unprogrammed_tpm_read_request_iterator()
+        )
         self.initialise_request = None
+        self.start_acquisition_request = None
         self._desire_connection = False
         self._firmware_download_request = None
-        self._check_global_alarms=False
+        self._check_global_alarms = False
 
     def desire_connection(self) -> None:
         """
@@ -166,13 +179,12 @@ class TileRequestProvider:
         self._desire_connection = True
 
     def firmware_download_request(self, request: Any) -> None:
-        """ Register a request to initialize a device."""
+        """Register a request to initialize a device."""
         self._firmware_download_request = request
 
     def check_global_status_alarms(self) -> None:
-        """ Register a request to initialize a device."""
+        """Register a request to initialize a device."""
         self._check_global_alarms = True
-
 
     def desire_initialise(self, request: Any) -> None:
         """
@@ -182,6 +194,15 @@ class TileRequestProvider:
             This is 0 for the FNDH, otherwise a smartbox number.
         """
         self.initialise_request = request
+
+    def desire_start_acquisition(self, request: Any) -> None:
+        """
+        Register a request to initialize a device.
+
+        :param device_id: the device number.
+            This is 0 for the FNDH, otherwise a smartbox number.
+        """
+        self.start_acquisition_request = request
 
     def get_request(self, tpm_status: TpmStatus) -> tuple[str, Any] | None:
         """
@@ -193,12 +214,11 @@ class TileRequestProvider:
         if self._check_global_alarms:
             self._check_global_alarms = False
             return "CHECK_CPLD_COMMS", None
-
         # we can always attempt a connection to TPM.
         if self._desire_connection:
             self._desire_connection = False
             return "CONNECT", None
-        
+
         match tpm_status:
             case TpmStatus.OFF:
                 return next(self._off_tpm_read_request_iterator), None
@@ -217,9 +237,6 @@ class TileRequestProvider:
                     return request
                 return next(self._unprogrammed_tpm_read_request_iterator), None
             case TpmStatus.PROGRAMMED:
-                if self._desire_connection:
-                    self._desire_connection = False
-                    return "CONNECT", None
                 if self.initialise_request:
                     request = self.initialise_request
                     self.initialise_request = None
@@ -230,9 +247,6 @@ class TileRequestProvider:
                     return request
                 return next(self._programmed_tpm_read_request_iterator), None
             case TpmStatus.INITIALISED:
-                if self._desire_connection:
-                    self._desire_connection = False
-                    return "CONNECT", None
                 if self.initialise_request:
                     request = self.initialise_request
                     self.initialise_request = None
@@ -240,6 +254,10 @@ class TileRequestProvider:
                 if self._firmware_download_request:
                     request = self._firmware_download_request
                     self._firmware_download_request = None
+                    return request
+                if self.start_acquisition_request:
+                    request = self.start_acquisition_request
+                    self.start_acquisition_request = None
                     return request
                 return next(self._initialised_tpm_read_request_iterator), None
             case TpmStatus.SYNCHRONISED:
@@ -250,6 +268,10 @@ class TileRequestProvider:
                 if self._firmware_download_request:
                     request = self._firmware_download_request
                     self._firmware_download_request = None
+                    return request
+                if self.start_acquisition_request:
+                    request = self.start_acquisition_request
+                    self.start_acquisition_request = None
                     return request
                 return next(self._initialised_tpm_read_request_iterator), None
             case _:

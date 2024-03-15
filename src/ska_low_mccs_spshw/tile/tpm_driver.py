@@ -18,6 +18,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import logging
+import random
 import threading
 import time
 from typing import Any, Callable, Optional, cast
@@ -25,10 +26,11 @@ from typing import Any, Callable, Optional, cast
 import numpy as np
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_control_model import CommunicationStatus, TaskStatus
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tile_data import TileData
+from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
 
@@ -107,6 +109,7 @@ class TpmDriver(TaskExecutorComponentManager):
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             TileData.TILE_MONITORING_POINTS
         )
+        self._tile_time = TileTime(0)
         self._tile_health_structure["voltages"]["MON_5V0"] = 5.0
         self._tile_health_structure["temperatures"]["board"] = self.BOARD_TEMPERATURE
         self._tile_health_structure["temperatures"]["FPGA0"] = self.FPGA1_TEMPERATURE
@@ -190,7 +193,7 @@ class TpmDriver(TaskExecutorComponentManager):
             # self.tile.enable_health_monitoring()
 
             while not self._stop_polling_event.is_set():
-                self._poll()
+                # self._poll()
                 self._stop_polling_event.wait(self._poll_rate)
 
             # "stop" event received; update state, then back to top of loop i.e. block
@@ -400,13 +403,13 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: the TPM status
         """
-        if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
-            # The status in unknown, either because it has not been tested or
-            # because it comes from an unconnected state.
-            # try to determine the status. Successive tests until one fails
-            # if self.power_state != PowerState.ON:
-            #     self._tpm_status = TpmStatus.OFF
-            self._update_tpm_status()
+        # if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
+        # The status in unknown, either because it has not been tested or
+        # because it comes from an unconnected state.
+        # try to determine the status. Successive tests until one fails
+        # if self.power_state != PowerState.ON:
+        #     self._tpm_status = TpmStatus.OFF
+        self._update_tpm_status()
         return self._tpm_status
 
     @tpm_status.setter
@@ -426,7 +429,7 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         if new_status != self._tpm_status:
             self._tpm_status = new_status
-            #self._update_component_state(programming_state=new_status)
+            # self._update_component_state(programming_state=new_status)
 
     def _update_tpm_status(self: TpmDriver) -> None:
         """Update the value of _tpm_status according to hardware state."""
@@ -434,6 +437,7 @@ class TpmDriver(TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
+                    self.logger.error(f"Are we programmed? {self.tile.is_programmed()}")
                     self._is_programmed = self.tile.is_programmed()
                     if self._is_programmed is False:
                         new_status = TpmStatus.UNPROGRAMMED
@@ -587,24 +591,87 @@ class TpmDriver(TaskExecutorComponentManager):
     def download_firmware(
         self: TpmDriver,
         bitfile: str,
-    ) -> None:
+        task_callback: Callable,
+    ) -> tuple[TaskStatus, str]:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
         """
-        is_programmed = False
-        with self._hardware_lock:
-            self.logger.debug("Lock acquired")
-            self.logger.debug("TpmDriver: download_firmware")
-            self.tile.program_fpgas(bitfile)
-            is_programmed = self.tile.is_programmed()
-        self.logger.debug("Lock released")
-        self._is_programmed = is_programmed
-        if is_programmed:
-            self._firmware_name = bitfile
-            self._set_tpm_status(TpmStatus.PROGRAMMED)
-            self._get_register_list()
+        return self.submit_task(
+            self._download_firmware,
+            args=[bitfile],
+            task_callback=task_callback,
+        )
+
+    def _download_firmware(
+        self: TpmDriver,
+        bitfile: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Download tpm firmware using slow command.
+
+        :param argin: can either be the design name returned or a path to a file
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self._hardware_lock:
+                self.logger.debug("Lock acquired")
+                self.logger.debug("TpmDriver: download_firmware")
+                self.tile.program_fpgas(bitfile)
+                is_programmed = self.tile.is_programmed()
+            self.logger.debug("Lock released")
+            self._is_programmed = is_programmed
+            if is_programmed:
+                self._firmware_name = bitfile
+                self._set_tpm_status(TpmStatus.PROGRAMMED)
+                self._get_register_list()
+        # pylint: disable-next=broad-except
+        except Exception as ex:
+            self.logger.error(
+                f"Exception raised while downloading firmware: {repr(ex)}"
+            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, f"Exception: {repr(ex)}"),
+                )
+            return
+
+        # Check the programmed state.
+        match self._is_programmed:
+            case True:
+                message = "The download firmware task has completed"
+                self.logger.info(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.OK, message),
+                    )
+            case False:
+                message = "The download firmware task has failed"
+                self.logger.warning(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.FAILED, message),
+                    )
+            case _:
+                message = (
+                    "The download firmware task has failed"
+                    " is_programmed is not returning bool"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(ResultCode.FAILED, message),
+                    )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -625,28 +692,34 @@ class TpmDriver(TaskExecutorComponentManager):
         self._set_tpm_status(status)
         # TODO: decide whether or not to remove this workaround once SKB-272 is resolved
         # Poll to update internal state after erasing
-        #self._poll()
+        # self._poll()
 
     def initialise(
-            self: TpmDriver, 
-            task_callback,
-            program_fpga,
-            pps_delay_correction,
-        ) -> None:
+        self: TpmDriver,
+        program_fpga: bool,
+        pps_delay_correction: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """Download firmware, if not already downloaded, and initialises tile."""
         #
         # If not programmed, program it.
         # TODO: there is no way to check whether the TPM is already correctly
         # initialised. If it is, re-initialising it is bad.
         #
-        self.logger.info(f"Calling initialise with {program_fpga}: {task_callback}: {pps_delay_correction}")
-        return self.submit_task(self._initialise, args=[program_fpga, pps_delay_correction], task_callback=task_callback)
-    
+        if task_callback is not None:
+            self.logger.info(
+                f"Calling initialise with {program_fpga}: {task_callback}: {pps_delay_correction}"
+            )
+        return self.submit_task(
+            self._initialise,
+            args=[program_fpga, pps_delay_correction],
+            task_callback=task_callback,
+        )
 
     def _initialise(
         self: TpmDriver,
-        program_fpga,
-        pps_delay_correction,
+        program_fpga: bool,
+        pps_delay_correction: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -659,7 +732,15 @@ class TpmDriver(TaskExecutorComponentManager):
         self.logger.debug("initialised called")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
-
+        #     self.logger.error("progress....")
+        #     time.sleep(random.randint(1, 3))
+        #     task_callback(
+        #         status=TaskStatus.COMPLETED,
+        #         result="The initialisation task has failed",
+        #     )
+        #     self.logger.error("done....")
+        #     return
+        # return
         if program_fpga:
             try:
                 self.erase_fpga()
@@ -670,7 +751,6 @@ class TpmDriver(TaskExecutorComponentManager):
                         result=f"Tile Connection Error {comm_err}",
                     )
                 raise comm_err
-
 
         prog_status = False
         with self._hardware_lock:
@@ -745,6 +825,7 @@ class TpmDriver(TaskExecutorComponentManager):
                         result="The initialisation task has failed"
                         f"TpmStatus: {self.tpm_status}",
                     )
+        self.logger.info(f"Initialise ended at: {time.time()}")
 
     @property
     def tile_id(self: TpmDriver) -> int:
@@ -922,6 +1003,19 @@ class TpmDriver(TaskExecutorComponentManager):
         return self._adc_rms
 
     @property
+    def fpga_time(self: TpmDriver) -> str:
+        """
+        Return FPGA internal time in UTC format.
+
+        :return: FPGA internal time
+        """
+        return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
+
+    def frame_from_utc_time(self: TpmDriver, utc_time: str) -> int:
+        """Return the frame from utc time."""
+        return self._tile_time.frame_from_utc_time(utc_time)
+
+    @property
     def fpgas_time(self: TpmDriver) -> list[int]:
         """
         Return the FPGAs clock time.
@@ -969,6 +1063,35 @@ class TpmDriver(TaskExecutorComponentManager):
         return self._fpga_reference_time
 
     @property
+    def fpga_frame_time(self: TpmDriver) -> str:
+        """
+        Return FPGA frame time in UTC format.
+
+        frame time is the timestamp for the current frame being processed.
+        Value reported here refers to the ADC frames, but the total processing
+        delay is < 1ms and thus irrelevant on the timescales of MCCS response time
+
+        :return: FPGA reference time
+        """
+        reference_time = self.fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_frame(self.fpga_current_frame)
+
+    @property
+    def formatted_fpga_reference_time(self: TpmDriver) -> str:
+        """
+        Return FPGA reference time in UTC format.
+
+        Reference time is set as part of start_observation.
+        It represents the timestamp  for the first frame
+
+        :return: FPGA reference time
+        """
+        reference_time = self.fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_timestamp(reference_time)
+
+    @property
     def fpga_current_frame(self: TpmDriver) -> int:
         """
         Return the FPGA current frame counter.
@@ -1002,7 +1125,8 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
-        return self._reported_pps_delay
+        # TODO: Hardware lock
+        return self.tile.get_pps_delay(enable_correction=False)
 
     @property
     def pps_delay_correction(self: TpmDriver) -> Optional[int]:
@@ -1011,9 +1135,13 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
         """
-        assert self._corrected_pps_delay is not None
-        assert self._reported_pps_delay is not None
-        return self._corrected_pps_delay - self._reported_pps_delay
+        # TODO: Hardware lock
+        self.logger.error(
+            f"gettting ppsdelay correction. {self.tile.get_pps_delay(enable_correction=True) - self.tile.get_pps_delay(enable_correction=False)}"
+        )
+        return self.tile.get_pps_delay(
+            enable_correction=True
+        ) - self.tile.get_pps_delay(enable_correction=False)
 
     @pps_delay_correction.setter
     def pps_delay_correction(self: TpmDriver, pps_delay_correction: int) -> None:
@@ -1372,9 +1500,7 @@ class TpmDriver(TaskExecutorComponentManager):
                 for chan in range(32):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_component_state(
-                            channeliser_rounding=copy.deepcopy(trunc)
-                        )
+                        self._channeliser_truncation = trunc
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1451,7 +1577,6 @@ class TpmDriver(TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
-
     def get_csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
         self.logger.error(f"oiasudhasiudh {self._csp_rounding}")
         return self._csp_rounding.tolist()
@@ -1511,6 +1636,23 @@ class TpmDriver(TaskExecutorComponentManager):
         :return: cached values of Preadu attenuation level in dB
         """
         return copy.deepcopy(self._preadu_levels)
+
+
+    def get_preadu_levels(self: TpmDriver) -> None:
+        """
+        Set preadu levels in dB.
+
+        :param levels: Preadu attenuation levels in dB
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    return self.tile.get_preadu_levels()
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
 
     @preadu_levels.setter
     def preadu_levels(self: TpmDriver, levels: list[float]) -> None:
@@ -2206,6 +2348,77 @@ class TpmDriver(TaskExecutorComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
+        self: TpmDriver,
+        task_callback: Callable,
+        start_time: bool,
+        delay: int,
+    ) -> tuple[TaskStatus, str]:
+        """Start_acquisition."""
+
+        return self.submit_task(
+            self._start_acquisition,
+            args=[start_time, delay],
+            task_callback=task_callback,
+        )
+
+    def _start_acquisition(
+        self: TpmDriver,
+        start_time: Optional[int] = None,
+        delay: Optional[int] = 2,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start acquisition using slow command.
+
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :raises NotImplementedError: Command not implemented
+        """
+        success = False
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            success = self.try_start_acquisition(  # type: ignore[assignment]
+                start_time, delay
+            )
+        except NotImplementedError:
+            raise
+        # pylint: disable-next=broad-except
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Start acquisition task aborted"
+                )
+            return
+
+        if success:
+            self._tile_time.set_reference_time(self.fpga_reference_time)
+        else:
+            self._tile_time.set_reference_time(0)
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Start acquisition has completed"),
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, "Start acquisition task failed"),
+                )
+            return
+
+    def try_start_acquisition(
         self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
     ) -> bool:
         """
@@ -2219,7 +2432,7 @@ class TpmDriver(TaskExecutorComponentManager):
         :returns: if data acquisition started correctly
         """
         started = False
-        self.logger.debug(
+        self.logger.error(
             f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
         )
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:

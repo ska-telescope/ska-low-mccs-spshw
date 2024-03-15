@@ -8,6 +8,7 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
 
+import copy
 import importlib  # allow forward references in type hints
 import itertools
 import json
@@ -92,16 +93,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._pps_present: Optional[bool]
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
+        self._pps_delay_correction: Optional[int]
+        self._pps_delay: Optional[int]
         self._max_workers: int = 1
-        self._static_delays: Optional[list[int]] = None
+        self._static_delays: Optional[list[int]]
+        self._channeliser_rounding: list[int]
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
         self._tile_programming_state = TpmStatus.UNKNOWN
         self._adc_rms = [0.0] * 32
+        self._static_delays = [0] * 32
         self._max_workers = 1
         self._pps_present = None
         self._pps_delay_correction = 0
+        self._channeliser_rounding = [0] * 512
+        self._pps_delay = 0
+        self._preadu_levels = [0.0] * 32
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -154,6 +162,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
+            # self._tile_device_state_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -261,6 +270,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_change_event("channeliserRounding", True, False)
             self._device.set_change_event("ppsPresent", True, False)
             self._device.set_archive_event("ppsPresent", True, False)
+            self._device.set_change_event("ppsDelayCorrection", True, False)
+            self._device.set_archive_event("ppsDelayCorrection", True, False)
+            self._device.set_change_event("ppsDelay", True, False)
+            self._device.set_archive_event("ppsDelay", True, False)
 
             return (ResultCode.OK, "Init command completed OK")
 
@@ -365,11 +378,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
-        self.logger.debug(f"called with {state_change}")
+        self.logger.error(f"Power changed to {power}")
+        print(f"Power changed to {power}")
         super()._component_state_changed(fault=fault, power=power)
+        self.logger.error(f"Power {power} pushed")
+        print(f"Power {power} pushed")
         self._health_model.update_state(fault=fault, power=power)
 
-        for attribute_name, attribute_value in state_change.items():
+        capture_dict = copy.deepcopy(state_change)
+        for attribute_name, attribute_value in capture_dict.items():
             match attribute_name:
                 case "programming_state":
                     tile_programming_state = cast(TpmStatus, attribute_value)
@@ -388,18 +405,28 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                             "tileProgrammingState", tile_programming_state.pretty_name()
                         )
                 case "global_status_alarms":
-                    if attribute_value.get("I2C_access_alm",0) != 0:
-                        self.logger.error("I2C_access_alm pushed to TANGO but nothing implemented.")
-                    if attribute_value.get("temperature_alm",0) != 0:
-                        self.logger.error("temperature_alm pushed to TANGO but nothing implemented.")
-                    if attribute_value.get("voltage_alm",0) != 0:
-                        self.logger.error("voltage_alm pushed to TANGO but nothing implemented.")
-                    if attribute_value.get("SEM_wd",0) != 0:
-                        self.logger.error("SEM_wd pushed to TANGO but nothing implemented.")
-                    if attribute_value.get("MCU_wd",0) != 0:
-                        self.logger.error("MCU_wd pushed to TANGO but nothing implemented.")
+                    if attribute_value.get("I2C_access_alm", 0) != 0:
+                        self.logger.error(
+                            "I2C_access_alm pushed to TANGO but nothing implemented."
+                        )
+                    if attribute_value.get("temperature_alm", 0) != 0:
+                        self.logger.error(
+                            "temperature_alm pushed to TANGO but nothing implemented."
+                        )
+                    if attribute_value.get("voltage_alm", 0) != 0:
+                        self.logger.error(
+                            "voltage_alm pushed to TANGO but nothing implemented."
+                        )
+                    if attribute_value.get("SEM_wd", 0) != 0:
+                        self.logger.error(
+                            "SEM_wd pushed to TANGO but nothing implemented."
+                        )
+                    if attribute_value.get("MCU_wd", 0) != 0:
+                        self.logger.error(
+                            "MCU_wd pushed to TANGO but nothing implemented."
+                        )
                 case "tile_health_structure":
-                    self.logger.error("tile_health_structure called")
+                    self.logger.error(f"tile_health_structure called {attribute_value}")
                     if self.tile_health_structure != attribute_value:
                         # TODO: validate structure using schema before setting.
                         self.tile_health_structure = attribute_value
@@ -418,21 +445,143 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.push_change_event("staticTimeDelays", attribute_value)
                         self.push_archive_event("staticTimeDelays", attribute_value)
                 case "preadu_levels":
-                    preadu_levels = state_change["preadu_levels"]
-                    self.push_change_event("preaduLevels", preadu_levels)
-                    self.push_archive_event("preaduLevels", preadu_levels)
+                    self._preadu_levels = capture_dict["preadu_levels"]
+                    self.push_change_event("preaduLevels", self._preadu_levels)
+                    self.push_archive_event("preaduLevels", self._preadu_levels)
                 case "csp_rounding":
-                    _csp_rounding = state_change["csp_rounding"]
-                    self.push_change_event("cspRounding", _csp_rounding)
+                    self._csp_rounding = capture_dict["csp_rounding"]
+                    self.push_change_event("cspRounding", self._csp_rounding)
                 case "channeliser_rounding":
-                    _channeliser_rounding = state_change["channeliser_rounding"]
-                    self.push_change_event("channeliserRounding", _channeliser_rounding)
+                    self._channeliser_rounding = capture_dict["channeliser_rounding"]
+                    self.push_change_event(
+                        "channeliserRounding", self._channeliser_rounding
+                    )
                 case "pps_delay_corrected":
-                    self._pps_delay_correction = state_change["pps_delay_corrected"]
+                    self._pps_delay_correction = capture_dict["pps_delay_corrected"]
+                    self.logger.error(
+                        f"pps delay corrction changes {self._pps_delay_correction}"
+                    )
+                    self.push_change_event(
+                        "ppsDelayCorrection", self._pps_delay_correction
+                    )
+                    self.push_change_event(
+                        "ppsDelayCorrection", self._pps_delay_correction
+                    )
+                case "pps_delay":
+                    self._pps_delay = capture_dict["pps_delay"]
+                    self.push_change_event("ppsDelay", self._pps_delay)
+                    self.push_change_event("ppsDelay", self._pps_delay)
                 case _:
                     self.logger.warning(
                         f"Unexpected attribute changed {attribute_name}" "Nothing is do"
                     )
+
+    # def _tile_device_state_callback(  # type: ignore[override]
+    #     self: MccsTile,
+    #     *,
+    #     fault: Optional[bool] = None,
+    #     power: Optional[PowerState] = None,
+    #     **state_change: Any,
+    # ) -> None:
+    #     """
+    #     Handle change in the state of the component.
+
+    #     This is a callback hook, called by the component manager when
+    #     the state of the component changes.
+
+    #     :param fault: whether the component is in fault or not
+    #     :param power: the power state of the component
+    #     :param state_change: other state updates
+    #     """
+    #     self.logger.error("diddd")
+    #     capture_dict = copy.deepcopy(state_change)
+    #     for attribute_name, attribute_value in capture_dict.items():
+    #         match attribute_name:
+    #             case "programming_state":
+    #                 tile_programming_state = cast(TpmStatus, attribute_value)
+    #                 message = (
+    #                     "programming_state callback. "
+    #                     f"Old: {self._tile_programming_state}"
+    #                     f" -> {tile_programming_state}"
+    #                 )
+    #                 self.logger.debug(message)
+    #                 if self._tile_programming_state != tile_programming_state:
+    #                     self._tile_programming_state = tile_programming_state
+    #                     self.push_change_event(
+    #                         "tileProgrammingState", tile_programming_state.pretty_name()
+    #                     )
+    #                     self.push_archive_event(
+    #                         "tileProgrammingState", tile_programming_state.pretty_name()
+    #                     )
+    #             case "global_status_alarms":
+    #                 if attribute_value.get("I2C_access_alm", 0) != 0:
+    #                     self.logger.error(
+    #                         "I2C_access_alm pushed to TANGO but nothing implemented."
+    #                     )
+    #                 if attribute_value.get("temperature_alm", 0) != 0:
+    #                     self.logger.error(
+    #                         "temperature_alm pushed to TANGO but nothing implemented."
+    #                     )
+    #                 if attribute_value.get("voltage_alm", 0) != 0:
+    #                     self.logger.error(
+    #                         "voltage_alm pushed to TANGO but nothing implemented."
+    #                     )
+    #                 if attribute_value.get("SEM_wd", 0) != 0:
+    #                     self.logger.error(
+    #                         "SEM_wd pushed to TANGO but nothing implemented."
+    #                     )
+    #                 if attribute_value.get("MCU_wd", 0) != 0:
+    #                     self.logger.error(
+    #                         "MCU_wd pushed to TANGO but nothing implemented."
+    #                     )
+    #             case "tile_health_structure":
+    #                 self.logger.error(f"tile_health_structure called {attribute_value}")
+    #                 if self.tile_health_structure != attribute_value:
+    #                     # TODO: validate structure using schema before setting.
+    #                     self.tile_health_structure = attribute_value
+    #                     self._health_model.update_state(
+    #                         tile_health_structure=attribute_value
+    #                     )
+    #                     self.update_tile_health_attributes()
+    #             case "adc_rms":
+    #                 if self._adc_rms != attribute_value:
+    #                     self._adc_rms = attribute_value
+    #                     self.push_change_event("adcPower", attribute_value)
+    #                     self.push_archive_event("adcPower", attribute_value)
+    #             case "static_delays":
+    #                 if self._static_delays != attribute_value:
+    #                     self._static_delays = attribute_value
+    #                     self.push_change_event("staticTimeDelays", attribute_value)
+    #                     self.push_archive_event("staticTimeDelays", attribute_value)
+    #             case "preadu_levels":
+    #                 self._preadu_levels = capture_dict["preadu_levels"]
+    #                 self.push_change_event("preaduLevels", self._preadu_levels)
+    #                 self.push_archive_event("preaduLevels", self._preadu_levels)
+    #             case "csp_rounding":
+    #                 self._csp_rounding = capture_dict["csp_rounding"]
+    #                 self.push_change_event("cspRounding", self._csp_rounding)
+    #             case "channeliser_rounding":
+    #                 _channeliser_rounding = capture_dict["channeliser_rounding"]
+    #                 self.push_change_event("channeliserRounding", _channeliser_rounding)
+    #             case "pps_delay_corrected":
+    #                 self._pps_delay_correction = capture_dict["pps_delay_corrected"]
+    #                 self.logger.error(
+    #                     f"pps delay corrction changes {self._pps_delay_correction}"
+    #                 )
+    #                 self.push_change_event(
+    #                     "ppsDelayCorrection", self._pps_delay_correction
+    #                 )
+    #                 self.push_change_event(
+    #                     "ppsDelayCorrection", self._pps_delay_correction
+    #                 )
+    #             case "pps_delay":
+    #                 self._pps_delay = capture_dict["pps_delay"]
+    #                 self.push_change_event("ppsDelay", self._pps_delay)
+    #                 self.push_change_event("ppsDelay", self._pps_delay)
+    #             case _:
+    #                 self.logger.warning(
+    #                     f"Unexpected attribute changed {attribute_name}" "Nothing is do"
+    #                 )
 
     def update_tile_health_attributes(self: MccsTile) -> None:
         """Update the TANGO attributes."""
@@ -654,9 +803,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: a string describing the programming state of the tile
         """
-        status = self.component_manager.tpm_status
-        self._tile_programming_state = status
-        return status.pretty_name()
+        return self._tile_programming_state.pretty_name()
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:
@@ -815,7 +962,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the FPGA timestamp, in UTC format
         """
-        return self.component_manager.fpga_reference_time
+        return self.component_manager.formatted_fpga_reference_time
 
     @attribute(dtype="DevString")
     def fpgaFrameTime(self: MccsTile) -> str:
@@ -944,7 +1091,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Return the PPS delay in nanoseconds
         """
-        return self.component_manager.pps_delay
+        return self._pps_delay
 
     @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> Optional[int]:
@@ -1060,7 +1207,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :returns: list of 512 values, one per channel.
         """
-        return self.component_manager.channeliser_truncation
+        return self._channeliser_rounding
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -1086,7 +1233,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.static_delays
+        return self._static_delays
 
     @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
@@ -1113,7 +1260,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return self.component_manager.csp_rounding
+        return self._csp_rounding
 
     @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
@@ -1135,7 +1282,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.preadu_levels
+        return self._preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:

@@ -161,6 +161,7 @@ class _TileProxy(DeviceComponentManager):
     def start_communicating(self: _TileProxy) -> None:
         self._connecting = True
         super().start_communicating()
+        self.logger.error("Start communicatins in station")
 
     def _device_state_changed(
         self: _TileProxy,

@@ -161,10 +161,13 @@ def patched_tile_device_class_fixture(
             tile_component_manager._component_state_callback = (
                 self._component_state_changed
             )
-            tpm_driver._communication_state_callback = (
-                tile_component_manager._tpm_communication_state_changed
-            )
-            tpm_driver._component_state_callback = self._component_state_changed
+            # tile_component_manager._tile_device_state_callback = (
+            #     self._tile_device_state_callback
+            # )
+            # tpm_driver._communication_state_callback = (
+            #     tile_component_manager._tpm_communication_state_changed
+            # )
+            # tpm_driver._component_state_callback = self._component_state_changed
 
             return tile_component_manager
 

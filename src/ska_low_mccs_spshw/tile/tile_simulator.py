@@ -9,10 +9,11 @@
 """An implementation of a Tile simulator."""
 
 from __future__ import annotations  # allow forward references in type hints
-import random
+
 import copy
 import functools
 import logging
+import random
 import re
 import threading
 import time
@@ -23,6 +24,7 @@ from pyfabil.base.definitions import Device, LibraryError
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
 from .tile_data import TileData
+from .utils import acquire_timeout
 
 __all__ = ["DynamicTileSimulator", "TileSimulator"]
 
@@ -456,9 +458,11 @@ class TileSimulator:
         self._is_first = False
         self._is_last = False
         self._tile_id = self.TILE_ID
+        self.pps_correction = 0
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self._lock = threading.Lock()
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
@@ -467,18 +471,20 @@ class TileSimulator:
         )
         self._station_id = self.STATION_ID
         self._timestamp = 0
-        self._pps_delay = self.PPS_DELAY
+        self._pps_delay: int = self.PPS_DELAY
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
-        self.is_csp_write_successful: bool = True
         self._polling_thread.start()
         self.dst_ip: Optional[str] = None
         self.dst_port: Optional[int] = None
+        self.is_csp_write_successful: bool = True
         self.sync_time = 0
         self.csp_rounding = [0] * 48
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
+        self._active_40g_ports_setting: str = ""
+        self._pending_data_requests = False
 
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
@@ -500,6 +506,7 @@ class TileSimulator:
 
         :return: mocked fetch of health.
         """
+        # self.logger.error(f"dasdopijoi {self._tile_health_structure}")
         return copy.deepcopy(self._tile_health_structure)
 
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
@@ -515,25 +522,23 @@ class TileSimulator:
     @connected
     def get_adc_rms(self: TileSimulator) -> list[float]:
         """:return: the mock ADC rms values."""
-        print(f"dosijdoisjd {self._adc_rms}")
         return self._adc_rms
 
     @connected
     def check_pending_data_requests(self: TileSimulator) -> bool:
         """:return: the pending data requess flag."""
-        return False
-        # return self._pending_data_requests
+        return self._pending_data_requests
 
     @connected
     def check_global_status_alarms(self: TileSimulator) -> dict:
         return {
-            'I2C_access_alm': 0,
-            'temperature_alm': 0,
-            'voltage_alm': 0,
-            'SEM_wd': 0,
-            'MCU_wd': 0,
-            }
-    
+            "I2C_access_alm": 0,
+            "temperature_alm": 0,
+            "voltage_alm": 0,
+            "SEM_wd": 0,
+            "MCU_wd": 0,
+        }
+
     @connected
     def initialise_beamformer(
         self: TileSimulator, start_channel: float, nof_channels: int
@@ -558,12 +563,14 @@ class TileSimulator:
 
         :param firmware_name: firmware_name
         """
+        assert self.tpm
         self.tpm._is_programmed = True  # type: ignore
 
     @connected
     def erase_fpga(self: TileSimulator) -> None:
         """Erase the fpga firmware."""
         assert self.tpm
+        self.logger.error("Erase FPGA")
         self.tpm._is_programmed = False
 
     def initialise(
@@ -573,30 +580,33 @@ class TileSimulator:
         tile_id: int = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
+        active_40g_ports_setting: str = "port1-only",
     ) -> None:
         """
         Initialise tile.
 
         :param station_id: station id
         :param tile_id: tile id
-        :param pps_delay: pps_delay
+        :param pps_delay: PPS delay correction.
         :param is_first_tile: is the first tile in chain
         :param is_last_tile: is the lase tile in chain
+        :param active_40g_ports_setting: which 40G port is active.
+            Possible values are port1-only, port2-only and both-ports
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
         # for station_beamf in self.tpm._station_beamf:
         # station_beamf.set_first_last_tile(is_first_tile, is_last_tile)
-
+        self.logger.info(f"delay correction set to {pps_delay}")
+        self.pps_correction = pps_delay
         self._is_first = is_first_tile
         self._is_last = is_last_tile
-
-
-        time.sleep(random.randint(2, 20))
-
         self._tile_id = tile_id
         self._station_id = station_id
+        self._active_40g_ports_setting = active_40g_ports_setting
+        time.sleep(random.randint(2, 10))
         self._start_polling_event.set()
+        self.logger.info("Waited.............")
 
     @connected
     def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
@@ -619,8 +629,16 @@ class TileSimulator:
         self._station_id = station_id
 
     @connected
-    def get_pps_delay(self: TileSimulator, enable_correction=False) -> float:
-        """:return: the pps delay."""
+    def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> int:
+        """
+        Get the pps delay.
+
+        :param enable_correction: enable correction.
+
+        :return: the pps delay.
+        """
+        if enable_correction:
+            return self._pps_delay + self.pps_correction
         return self._pps_delay
 
     def is_programmed(self: TileSimulator) -> Optional[bool]:
@@ -632,7 +650,7 @@ class TileSimulator:
         if self.tpm:
             return self.tpm._is_programmed
         else:
-            return None
+            raise Exception("Failed to connect.")
 
     @connected
     def configure_40g_core(
@@ -771,6 +789,7 @@ class TileSimulator:
         :param key: key
         :return: mocked item at address
         """
+        assert self.tpm
         return self.tpm[key]  # type: ignore
 
     @connected
@@ -781,6 +800,7 @@ class TileSimulator:
         :param key: key
         :param value: value
         """
+        assert self.tpm
         self.tpm[key] = value  # type: ignore
 
     @connected
@@ -819,14 +839,17 @@ class TileSimulator:
         return self.get_fpga_timestamp()
 
     @connected
-    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> None:
+    def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> bool:
         """
         Set the final rounding in the CSP samples, one value per beamformer channel.
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
+
+        :return: true is write a success.
         """
         self.logger.error(f"Set with ... {rounding}")
-        self.csp_rounding = rounding
+        if self.is_csp_write_successful:
+            self.csp_rounding = rounding
         return self.is_csp_write_successful
 
     @connected
@@ -935,6 +958,7 @@ class TileSimulator:
 
         :return: true if the beamformer was started successfully.
         """
+        assert self.tpm
         if self.beamformer_is_running():
             return False
         self.tpm.beam1.start()  # type: ignore
@@ -944,6 +968,7 @@ class TileSimulator:
     @connected
     def stop_beamformer(self: TileSimulator) -> None:
         """Stop beamformer."""
+        assert self.tpm
         self.tpm.beam1.stop()  # type: ignore
         self.tpm.beam2.stop()  # type: ignore
 
@@ -1132,6 +1157,7 @@ class TileSimulator:
             sync_time = start_time + delay
 
         self.sync_time = sync_time  # type: ignore
+        assert self.tpm
         self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
 
     @connected
@@ -1217,7 +1243,9 @@ class TileSimulator:
     @connected
     def get_fpga_timestamp(self: TileSimulator) -> int:
         """:return: timestamp."""
-        return self._timestamp
+        with acquire_timeout(self._lock, timeout=0.4) as acquired:
+            if acquired:
+                return self._timestamp
 
     @connected
     def test_generator_input_select(self: TileSimulator, inputs: Any) -> None:
@@ -1233,19 +1261,29 @@ class TileSimulator:
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
         while True:
-            self._start_polling_event.wait()
-            time_utc = time.time()
-            self._fpgatime = int(time_utc)
-            if self.sync_time > 0 and self.sync_time < time_utc:
-                self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
-                reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
-                reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
-                self.tpm[reg1] = 1  # type: ignore
-                self.tpm[reg2] = 1  # type: ignore
+            with acquire_timeout(self._lock, timeout=0.4) as acquired:
+                if acquired:
+                    try:
+                        self._start_polling_event.wait()
+                        time_utc = time.time()
+                        self._fpgatime = int(time_utc)
+                        if self.sync_time > 0 and self.sync_time < time_utc:
+                            self._timestamp = int(
+                                (time_utc - self.sync_time) / (256 * 1.08e-6)
+                            )
+                            reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
+                            reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
+                            if self.tpm:
+                                self.tpm[reg1] = 1  # type: ignore
+                                self.tpm[reg2] = 1  # type: ignore
 
-            self.fpgas_time[0] = int(time_utc)
-            self.fpgas_time[1] = int(time_utc)
-            time.sleep(0.1)
+                        self.fpgas_time[0] = int(time_utc)
+                        self.fpgas_time[1] = int(time_utc)
+                        time.sleep(0.1)
+                    except Exception as e:
+                        self.logger.error(f"fdfhdiufh {repr(e)}")
+                else:
+                    self.logger.error("Failed to acquire lock")
 
     @connected
     def get_arp_table(self: TileSimulator) -> dict[str, Any]:
@@ -1297,6 +1335,7 @@ class TileSimulator:
 
         :return: is the beam is running
         """
+        assert self.tpm
         return (
             self.tpm.beam1.is_running()  # type: ignore
             and self.tpm.beam2.is_running()  # type: ignore

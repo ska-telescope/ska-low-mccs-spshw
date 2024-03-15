@@ -737,7 +737,6 @@ class SpsStationComponentManager(
         """
         self.logger.debug("Starting standby sequence")
         result_code = ResultCode.OK  # default if nothing to do
-        message: str = ""
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         if not all(
@@ -780,6 +779,7 @@ class SpsStationComponentManager(
                 message = "Standby command timeout."
         else:
             task_status = TaskStatus.FAILED
+            message = ""
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
 

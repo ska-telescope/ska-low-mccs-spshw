@@ -414,8 +414,23 @@ class SpsStationComponentManager(
         antenna_mapping_uri = antenna_config_uri[0]
         antenna_mapping_filepath = antenna_config_uri[1]
         this_station_cluster_id = antenna_config_uri[2]
-        tmdata = TMData([antenna_mapping_uri])
-        full_dict = tmdata[antenna_mapping_filepath].get_dict()
+
+        try:
+            tmdata = TMData([antenna_mapping_uri])
+        # pylint: disable=broad-except
+        except Exception as e:
+            logger.error(f"Unable to create TMData object, check uri. Error: {e}")
+            return
+
+        try:
+            full_dict = tmdata[antenna_mapping_filepath].get_dict()
+        # pylint: disable=broad-except
+        except Exception as e:
+            logger.error(
+                "Unable to create dictionary from imported TMData,"
+                f"check uploaded TelModel data. Error: {e}"
+            )
+            return
 
         station_clusters = []
         stations = []

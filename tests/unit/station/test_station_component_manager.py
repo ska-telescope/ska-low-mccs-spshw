@@ -139,6 +139,20 @@ def station_component_manager_fixture(
     )
 
 
+@pytest.fixture(name="generic_nested_dict")
+def generic_nested_dict_fixture() -> dict:
+    """
+    Return fixture for generic nested dict.
+
+    :returns: generic nested dict.
+    """
+    return {
+        "key1": {"key2": {"key3": [1, 2, 3, 4, 5]}},
+        "key4": {"key5": "some string", "key6": ["string1", "string2"]},
+        "key3": [6, 7, 8, 9, 10],
+    }
+
+
 @pytest.mark.forked
 def test_communication(
     station_component_manager: SpsStationComponentManager,
@@ -265,3 +279,33 @@ def test_load_pointing_delays(
         expected_tile_arg[2 * channel + 2] = delay_rate
 
     mock_tile_proxy.LoadPointingDelays.assert_next_call(expected_tile_arg)
+
+
+def test_find_by_key(
+    station_component_manager: SpsStationComponentManager, generic_nested_dict: dict
+) -> None:
+    """
+    Check that the _find_by_key method is able to traverse a generic nested dictionary.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param generic_nested_dict: generic nested dict for use in the test.
+    """
+    results = []
+    for value in station_component_manager._find_by_key(generic_nested_dict, "key3"):
+        results.append(value)
+    assert results[0] == [1, 2, 3, 4, 5]
+    assert results[1] == [6, 7, 8, 9, 10]
+
+    assert (
+        next(station_component_manager._find_by_key(generic_nested_dict, "key5"))
+        == "some string"
+    )
+
+    assert next(
+        station_component_manager._find_by_key(generic_nested_dict, "key2")
+    ) == {"key3": [1, 2, 3, 4, 5]}
+
+    assert next(
+        station_component_manager._find_by_key(generic_nested_dict, "key4")
+    ) == {"key5": "some string", "key6": ["string1", "string2"]}

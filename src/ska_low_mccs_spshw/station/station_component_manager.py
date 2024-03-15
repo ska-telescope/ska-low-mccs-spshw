@@ -374,6 +374,23 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+    def _find_by_key(
+        self: SpsStationComponentManager, data: dict, target: str
+    ) -> Generator:
+        """
+        Traverse nested dictionary, yield next value for given target.
+
+        :param data: generic nested dictionary to traverse through.
+        :param target: key to find the next value of.
+
+        :yields: the next value for given key.
+        """
+        for key, value in data.items():
+            if key == target:
+                yield value
+            elif isinstance(value, dict):
+                yield from self._find_by_key(value, target)
+
     # pylint: disable=too-many-locals
     def _get_mappings(
         self: SpsStationComponentManager,
@@ -394,35 +411,49 @@ class SpsStationComponentManager(
         tmdata = TMData([antenna_mapping_uri])
         full_dict = tmdata[antenna_mapping_filepath].get_dict()
 
-        def _find_by_key(data: dict, target: str) -> Generator:
-            for key, value in data.items():
-                if key == target:
-                    yield value
-                elif isinstance(value, dict):
-                    yield from _find_by_key(value, target)
-
-        # Dig through the yaml we loaded in intil we find the stations key.
-        # For each time we find a station config, check the station id,
-        # if the station id is correct, get the antenna config of that station
-        # we assume there's only 1 antennas entry for each station.
         station_clusters = []
         stations = []
+        antennas = {}
+
         # Get all the station clusters.
-        for station_cluster in _find_by_key(full_dict, "station_clusters"):
+        for station_cluster in self._find_by_key(full_dict, "station_clusters"):
             station_clusters.append(station_cluster)
+
+        if len(station_clusters) == 0:
+            logger.error(
+                f"Couldn't find station cluster {this_station_cluster_id} "
+                "in imported TMData."
+            )
+            return
 
         # Look through all the found station clusters, find this station cluster.
         for station_cluster in station_clusters:
             for station_cluster_id, station_cluster_config in station_cluster.items():
                 if station_cluster_id == this_station_cluster_id:
-                    for station in _find_by_key(station_cluster_config, "stations"):
+                    for station in self._find_by_key(
+                        station_cluster_config, "stations"
+                    ):
                         stations.append(station)
+
+        if len(stations) == 0:
+            logger.error(
+                f"Couldn't find station {self._station_id} "
+                f"in cluster {this_station_cluster_id} in imported TMData."
+            )
+            return
 
         # Look through all the stations on this cluster, find antennas on this station.
         for station in stations:
             for station_id, station_config in station.items():
                 if station_id == str(self._station_id):
-                    antennas = next(_find_by_key(station_config, "antennas"))
+                    antennas = next(self._find_by_key(station_config, "antennas"))
+
+        if len(antennas) == 0:
+            logger.error(
+                f"Couldn't find antennas on station {self._station_id}, "
+                f"cluster {this_station_cluster_id}"
+            )
+            return
 
         try:
             for antenna in antennas:

@@ -1124,9 +1124,6 @@ class TileSimulator:
             self._fpgatime = int(time_utc)
             if self.sync_time > 0 and self.sync_time < time_utc:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
-                print(f"Updating timestamp to {self._timestamp}")
-                print(f"Utc time is {time_utc}")
-                print(f"Sync time is {self.sync_time}")
                 reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
                 reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
                 if self.tpm:

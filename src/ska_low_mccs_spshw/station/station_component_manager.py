@@ -484,7 +484,7 @@ class SpsStationComponentManager(
                 f"err: {err}",
             )
 
-    def _calculate_static_delays(
+    def _update_static_delays(
         self: SpsStationComponentManager,
     ) -> list[float]:
         """

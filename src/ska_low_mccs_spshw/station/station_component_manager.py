@@ -17,7 +17,6 @@ import json
 import logging
 import threading
 import time
-from collections import defaultdict
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, cast
@@ -44,11 +43,6 @@ from ska_telmodel.data import TMData  # type: ignore
 from ..tile.tile_data import TileData
 
 __all__ = ["SpsStationComponentManager"]
-
-# Refractive index of optical fibre:
-# https://en.wikipedia.org/wiki/Optical_fiber#Refractive_index
-N_INDEX = 1.44
-C = 299_792_458  # m/s
 
 
 class _SubrackProxy(DeviceComponentManager):
@@ -230,7 +224,7 @@ class SpsStationComponentManager(
 
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
@@ -283,6 +277,7 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
+        self._tile_id_mapping: dict[str, int] = {}
         number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
@@ -295,9 +290,9 @@ class SpsStationComponentManager(
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
         # by the station
-        #
-        self._tile_proxies = {
-            tile_fqdn: _TileProxy(
+        self._tile_proxies: dict[str, _TileProxy] = {}
+        for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
+            self._tile_proxies[tile_fqdn] = _TileProxy(
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
@@ -306,8 +301,7 @@ class SpsStationComponentManager(
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
-            for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
-        }
+            self._tile_id_mapping[tile_fqdn.split("-")[-1]] = logical_tile_id
 
         self._subrack_proxies = {
             subrack_fqdn: _SubrackProxy(
@@ -362,7 +356,7 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: dict[int, tuple[int, int, int, int]] = {}
+        self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
@@ -478,12 +472,12 @@ class SpsStationComponentManager(
 
         try:
             for antenna in antennas:
-                self._antenna_mapping[int(antenna)] = (
-                    int(antennas[antenna]["tpm"]),
-                    antennas[antenna]["tpm_x_channel"],
-                    antennas[antenna]["tpm_y_channel"],
-                    antennas[antenna]["delays"],
-                )
+                self._antenna_mapping[int(antenna)] = {
+                    "tpm": int(antennas[antenna]["tpm"]),
+                    "tpm_x_channel": antennas[antenna]["tpm_x_channel"],
+                    "tpm_y_channel": antennas[antenna]["tpm_y_channel"],
+                    "delays": antennas[antenna]["delays"],
+                }
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
@@ -503,23 +497,27 @@ class SpsStationComponentManager(
             for _ in range(len(self._tile_proxies))
         ]
         for antenna_config in self._antenna_mapping.values():
-            tile_delays[antenna_config[0]][antenna_config[1]] = antenna_config[3]
-            tile_delays[antenna_config[0]][antenna_config[2]] = antenna_config[3]
+            try:
+                tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
+            except KeyError:
+                self.logger.debug(
+                    f"Mapping for tile {antenna_config['tpm']} present, "
+                    "but device not deployed. Skipping."
+                )
+                continue
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delays"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delays"]
+        for tile_no, tile in enumerate(tile_delays):
+            self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
             channel_delay
             for channel_delays in tile_delays
             for channel_delay in channel_delays
         ]
-
-    def _get_antennas_on_smartboxes(
-        self: SpsStationComponentManager,
-    ) -> dict[int, list]:
-        smartbox_mapping = defaultdict(list)
-
-        for antenna_id, antenna_mapping in self._antenna_mapping.items():
-            smartbox_id = antenna_mapping[3]
-            smartbox_mapping[smartbox_id].append(int(antenna_id))
-        return smartbox_mapping
 
     def _calculate_delays_per_tile(
         self: SpsStationComponentManager,
@@ -551,11 +549,10 @@ class SpsStationComponentManager(
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
             # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1][0]
-
-            # y channel, even. This could be liable to change, if you have an
-            # off-by-one error, this could be a likely culprit.
-            channel = self._antenna_mapping[antenna_no + 1][2] // 2
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
+            channel = (
+                self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
+            )  # y channel, even
 
             # We may have mapping for devices we don't have deployed
             if tile_no in tile_delays:
@@ -797,9 +794,9 @@ class SpsStationComponentManager(
             if fqdn is None:
                 # pylint: disable-next=attribute-defined-outside-init
                 self.power_state = power_state
-            elif fqdn in self._subrack_proxies.keys():
+            elif fqdn in self._subrack_proxies:
                 self._subrack_proxies[fqdn]._power_state = power_state
-            elif fqdn in self._tile_proxies.keys():
+            elif fqdn in self._tile_proxies:
                 self._tile_proxies[fqdn]._power_state = power_state
             else:
                 raise ValueError(

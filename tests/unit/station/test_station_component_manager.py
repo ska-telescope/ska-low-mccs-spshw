@@ -247,12 +247,12 @@ def test_load_pointing_delays(
     antenna_no = 1
     for tpm in range(1, 16 + 1):
         for channel in channels:
-            station_component_manager._antenna_mapping[antenna_no] = (
-                tpm,
-                channel * 2,
-                channel * 2 + 1,
-                1,
-            )
+            station_component_manager._antenna_mapping[antenna_no] = {
+                "tpm": tpm,
+                "tpm_y_channel": channel * 2,
+                "tpm_x_channel": channel * 2 + 1,
+                "delays": 1,
+            }
             antenna_no += 1
 
     # We have a mapping, lets give an argument, this arg
@@ -266,12 +266,12 @@ def test_load_pointing_delays(
 
     # The rest of the args should be pairs of (delay, delay_rate) for each channel
     for channel in range(16):
-        for antenna_no, (
-            tile_no,
-            y_channel,
-            _,
-            _,
+        for (
+            antenna_no,
+            antenna_config,
         ) in station_component_manager._antenna_mapping.items():
+            tile_no = antenna_config["tpm"]
+            y_channel = antenna_config["tpm_y_channel"]
             if tile_no == tile_id and int(y_channel / 2) == channel:
                 delay, delay_rate = (
                     antenna_order_delays[antenna_no * 2 - 1],

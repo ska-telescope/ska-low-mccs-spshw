@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "2cf110fa0c7e5bc58dae38deb31fa64ca261b364"
-resolved_reference = "2cf110fa0c7e5bc58dae38deb31fa64ca261b364"
+reference = "1bfd63322b166e21918ce7c220b8b828565b36b8"
+resolved_reference = "1bfd63322b166e21918ce7c220b8b828565b36b8"
 subdirectory = "python"
 [[package]]
 name = "alabaster"
@@ -3559,4 +3559,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "ea5f948d2db5644885d46b63c61e387bbe5cfe2c0e0616f000b7be7cf159f144"
+content-hash = "6e797b2fe2d52eb1a16c0329ed09d66320192d16759fc2d4978354773744e98e"

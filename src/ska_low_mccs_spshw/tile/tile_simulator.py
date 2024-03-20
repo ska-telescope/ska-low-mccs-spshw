@@ -1126,8 +1126,9 @@ class TileSimulator:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
                 reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
                 reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
-                self.tpm[reg1] = 1  # type: ignore
-                self.tpm[reg2] = 1  # type: ignore
+                if self.tpm:
+                    self.tpm[reg1] = 1
+                    self.tpm[reg2] = 1
 
             self.fpgas_time[0] = int(time_utc)
             self.fpgas_time[1] = int(time_utc)

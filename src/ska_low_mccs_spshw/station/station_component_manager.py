@@ -832,6 +832,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         results = [proxy.off() for proxy in self._subrack_proxies.values()]
@@ -846,10 +847,14 @@ class SpsStationComponentManager(
             for (result, _) in results
         ):
             task_status = TaskStatus.COMPLETED
+            result_code = ResultCode.OK
+            message = "Off Command Completed"
         else:
             task_status = TaskStatus.FAILED
+            result_code = ResultCode.FAILED
+            message = "Off Command Failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def standby(
@@ -919,13 +924,16 @@ class SpsStationComponentManager(
             if timeout > 0:
                 self.logger.debug("End standby")
                 task_status = TaskStatus.COMPLETED
+                message = "Standby command completed."
             else:
                 self.logger.debug("Timeout in standby")
                 task_status = TaskStatus.FAILED
+                message = "Standby command timeout."
         else:
             task_status = TaskStatus.FAILED
+            message = ""
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     def on(
         self: SpsStationComponentManager,
@@ -957,6 +965,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1004,11 +1013,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
+            message = "On Command Completed"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
+            message = "On Command failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     def initialise(
         self: SpsStationComponentManager,
@@ -1039,6 +1050,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         self.logger.debug("Starting initialise sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1080,11 +1092,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
+            message = "Initialisation Complete"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
+            message = "Initialisation Failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def _turn_on_subracks(
@@ -2234,11 +2248,12 @@ class SpsStationComponentManager(
             if success:
                 task_callback(
                     status=TaskStatus.COMPLETED,
-                    result="Start acquisition has completed",
+                    result=(ResultCode.OK, "Start acquisition has completed"),
                 )
             else:
                 task_callback(
-                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, "Start acquisition task failed"),
                 )
             return
 
@@ -2370,4 +2385,7 @@ class SpsStationComponentManager(
         self.preadu_levels = sanitised_levels
 
         if task_callback:
-            task_callback(status=TaskStatus.COMPLETED)
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "ADC equalisation complete."),
+            )

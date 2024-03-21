@@ -23,7 +23,6 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
-from ska_low_mccs_spshw.mocks import MockFieldStation
 from ska_low_mccs_spshw.station import SpsStation
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
@@ -96,10 +95,6 @@ def test_context_fixture(
         daq_trl=daq_trl,
         device_class=patched_sps_station_device_class,
     )
-    harness.add_field_station_device(
-        device_class=MockFieldStation,
-    )
-
     with harness as context:
         yield context
 
@@ -117,55 +112,6 @@ def station_device_fixture(
     :yield: the station Tango device under test.
     """
     yield test_context.get_sps_station_device()
-
-
-@pytest.fixture(name="field_station_device")
-def field_station_device_fixture(
-    test_context: SpsTangoTestHarnessContext,
-) -> DeviceProxy:
-    """
-    Fixture that returns the field station Tango device under test.
-
-    :param test_context: a Tango test context
-        containing an SPS station and mock subservient devices.
-
-    :yield: the station Tango device under test.
-    """
-    yield test_context.get_field_station_device()
-
-
-def test_mock_field_station(
-    field_station_device: DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Test basic functionality of the mock field station.
-
-    :param field_station_device: the Field station Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
-    """
-    assert (
-        field_station_device.outsideTemperature
-        == MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
-    )
-
-    field_station_device.subscribe_event(
-        "outsideTemperature",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["outsideTemperature"],
-    )
-    change_event_callbacks["outsideTemperature"].assert_change_event(
-        MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
-    )
-
-    mocked_outside_temperature = 37.2
-
-    field_station_device.MockOutsideTemperatureChange(mocked_outside_temperature)
-
-    change_event_callbacks["outsideTemperature"].assert_change_event(
-        mocked_outside_temperature
-    )
 
 
 def test_Off(

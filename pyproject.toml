@@ -17,8 +17,6 @@ aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = 
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
 numpy = "1.25.2"
-psycopg = {extras = ["binary"], version = "^3.1.10"}
-psycopg-pool = "^3.1.7"
 pytango = "9.4.2"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
@@ -84,9 +82,6 @@ ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]
-MccsStationCalibrator = "ska_low_mccs_spshw.station_calibrator.station_calibrator_device:main"
-MccsCalibrationStore = "ska_low_mccs_spshw.calibration_store.calibration_store_device:main"
-MockFieldStation = "ska_low_mccs_spshw.mocks.mock_field_station_device:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"

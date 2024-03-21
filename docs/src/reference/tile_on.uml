@@ -31,7 +31,8 @@ tile_component_manager -> tpmdriver: status_monitor_request
 tpmdriver -> aavs: status_monitor_request
 tpmdriver <- aavs: status_monitor_result
 tile_component_manager <- tpmdriver: status_monitor_result
-tile <- tile_component_manager: update_device attributes
+tile_component_manager -> tile_component_manager: evaluate_state(subrack_says_power, poll_result)
+tile <- tile_component_manager: update device state \n    and attributes
 end
 
 tile <- tpmdriver: initialise_lrc_result

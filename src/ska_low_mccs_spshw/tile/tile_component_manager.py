@@ -49,20 +49,6 @@ from dataclasses import dataclass
 from ska_tango_base.poller import PollingComponentManager
 
 
-class TileAttribute:
-    def __init__(self, name, logger, validator=None):
-        self.value = None
-        self.name = name
-        self.validator = validator
-        self.logger = logger
-
-    def update(self, value):
-        self.logger.error(
-            f"Updated attribute with {value}, {time.time()}, {tango.AttrQuality.ATTR_VALID}"
-        )
-        self.value = value, time.time(), tango.AttrQuality.ATTR_VALID
-
-
 class TileRequest:
     """
     Class representing an action to be performed by a poll.
@@ -75,30 +61,38 @@ class TileRequest:
     """
 
     def __init__(
-        self, name, command_object, publish=False, validator=None, *args, **kwargs
-    ):
+        self: TileRequest,
+        name: str,
+        command_object: Any,
+        *args: Any,
+        publish: bool = False,
+        **kwargs: Any,
+    ) -> None:
         self.name = name
         self.publish = publish
         self._command_object = command_object
-        self.validator = validator
         self._args = args
         self._kwargs = kwargs
 
-    def is_result_lrc(self, result):
+    def is_result_lrc(self: TileRequest, result: Any) -> bool:
+        """
+        Check if the command result is a LongRunningCommand.
+
+        :param result: the result.
+
+        :return: True is it is a LondRunningCommand.
+        """
         try:
             task_status, command_id = result
             command_id_pattern = re.compile(r"^\d+\.\d+_\d+_.*$")
             command_id_pattern.match(command_id)
             assert command_id_pattern.match(command_id) is not None
             TaskStatus(task_status)
-        except ValueError as e:
+        except Exception:  # pylint: disable=broad-except
             return False
-        except AssertionError as e:
-            return False
-        except Exception as e:
-            return False
+        return True
 
-    def __call__(self):
+    def __call__(self: TileRequest) -> Any:
         if callable(self._command_object):
             result = self._command_object(*self._args, **self._kwargs)
         else:
@@ -203,7 +197,7 @@ class TileComponentManager(PollingComponentManager):
                 + " not valid. Trying to read version from board, which must be on"
             )
             tpm_version = ""
-        self._request_provider = None
+        self._request_provider: Optional[TileRequestProvider] = None
         if simulation_mode == SimulationMode.TRUE:
             if test_mode == TestMode.TEST:
                 tile = TileSimulator(logger)
@@ -230,23 +224,6 @@ class TileComponentManager(PollingComponentManager):
             self._update_component_state,
         )
 
-        # def _update_component_power_state(power_state: PowerState) -> None:
-        #     self._update_component_state(power=power_state)
-        #     self.update_tpm_power_state(power_state)
-
-        # self._tile_orchestrator = TileOrchestrator(
-        #     self._start_communicating_with_subrack,
-        #     self._stop_communicating_with_subrack,
-        #     self._start_communicating_with_tpm,
-        #     self._stop_communicating_with_tpm,
-        #     self._turn_off_tpm,
-        #     self._turn_on_tpm,
-        #     self._update_communication_state,
-        #     _update_component_power_state,
-        #     logger,
-        # )
-        self.attribute = {}
-
         super().__init__(
             logger,
             communication_state_changed_callback,
@@ -256,7 +233,7 @@ class TileComponentManager(PollingComponentManager):
             tile_health_structure=None,
             pll_locked=None,
             global_status_alarms=None,
-            programming_state=TpmStatus.UNKNOWN,
+            programming_state=TpmStatus.UNKNOWN.pretty_name(),
             pps_delay_corrected=0,
             pps_delay=None,
             csp_rounding=None,
@@ -281,30 +258,34 @@ class TileComponentManager(PollingComponentManager):
         """
         assert self._request_provider is not None
 
-        self.logger.info(f"Getting request for {TpmStatus(self.tpm_status).name}")
-        self._update_component_state(programming_state=self.tpm_status)
+        tpm_status: TpmStatus = self.tpm_status
+        self.logger.info(f"Getting request for state {TpmStatus(tpm_status).name:-^40}")
+        self._update_component_state(programming_state=tpm_status.pretty_name())
 
-        request_spec = self._request_provider.get_request(self.tpm_status)
+        request_spec = self._request_provider.get_request(tpm_status)
 
-        self.logger.info(f"Request is {request_spec}")
+        # If already a request simply return.
         if isinstance(request_spec, TileRequest):
             self.logger.error("Already a request return")
             return request_spec
 
         if request_spec is None:
             return None
+
+        self.logger.info(f"Request is {request_spec}")
+
         match request_spec:
             case ("CHECK_CPLD_COMMS", None):
                 self.logger.error("get check_global_status_alarms")
                 request = TileRequest(
                     "global_status_alarms",
-                    self._tpm_driver.tile.check_global_status_alarms,
-                    True,
+                    self._tpm_driver.check_global_status_alarms,
+                    publish=True,
                 )
             case ("CONNECT", None):
                 error_flag = False
                 try:
-                    self._tpm_driver.tile[int(0x30000000)]
+                    self._tpm_driver.ping()
                     # pylint: disable=broad-except
                 except Exception as e:
                     # polling attempt was unsuccessful
@@ -312,105 +293,85 @@ class TileComponentManager(PollingComponentManager):
                     self._request_provider.check_global_status_alarms()
                     error_flag = True
                 if error_flag:
-                    request = TileRequest("connect", self._tpm_driver.tile.connect)
+                    request = TileRequest("connect", self._tpm_driver.connect)
                 else:
                     request = TileRequest(
                         "global_status_alarms",
-                        self._tpm_driver.tile.check_global_status_alarms,
-                        True,
+                        self._tpm_driver.check_global_status_alarms,
+                        publish=True,
                     )
-                self.logger.error(
-                    f"comm state: {self.communication_state} comp state:  {self.component_state}"
-                )
             case ("IS_PROGRAMMED", request):
-                self.logger.error("get IS_PROGRAMMED")
                 request = TileRequest(
-                    "is_programmed", self._tpm_driver.tile.is_programmed
+                    "is_programmed", self._tpm_driver._check_programmed
                 )
             case ("HEALTH_STATUS", None):
-                self.logger.error("get health")
                 request = TileRequest(
                     "tile_health_structure",
-                    self._tpm_driver.tile.get_health_status,
-                    True,
+                    self._tpm_driver.get_health_status,
+                    publish=True,
                 )
             case ("ADC_RMS", None):
-                self.logger.error("get adc")
                 request = TileRequest(
-                    "adc_rms", self._tpm_driver.tile.get_adc_rms, True
+                    "adc_rms", self._tpm_driver.get_adc_rms, publish=True
                 )
             case ("PLL_LOCKED", None):
-                self.logger.error("get pll")
                 request = TileRequest(
-                    "pll_locked", self._tpm_driver._check_pll_locked, True
+                    "pll_locked", self._tpm_driver._check_pll_locked, publish=True
                 )
             case ("PENDING_DATA_REQUESTS", None):
-                self.logger.error("get data requests")
                 request = TileRequest(
                     "pending_data_requests",
-                    self._tpm_driver.tile.check_pending_data_requests,
-                    False,
+                    self._tpm_driver.check_pending_data_requests,
+                    publish=False,
                 )
             case ("PPS_DELAY", None):
-                self.logger.error("get pps delay")
                 request = TileRequest(
                     "pps_delay",
                     self._tpm_driver.pps_delay,
                     publish=True,
                 )
             case ("PPS_DELAY_CORRECTION", None):
-                self.logger.error("get pps delay corrected")
                 request = TileRequest(
                     "pps_delay_corrected",
                     command_object=self._tpm_driver.pps_delay_correction,
                     publish=True,
                 )
             case ("IS_BEAMFORMER_RUNNING", None):
-                self.logger.info("get IS_BEAMFORMER_RUNNING")
                 request = TileRequest(
-                    "beamformer_running", self._tpm_driver.tile.beamformer_is_running
+                    "beamformer_running", self._tpm_driver.beamformer_is_running
                 )
             case ("PHASE_TERMINAL_COUNT", None):
-                self.logger.error("get PHASE_TERMINAL_COUNT")
                 request = TileRequest(
                     "phase_terminal_count",
-                    self._tpm_driver.tile.get_phase_terminal_count,
+                    self._tpm_driver.phase_terminal_count,
                 )
             case ("PREADU_LEVELS", None):
-                self.logger.error("get PREADU_LEVELS")
                 request = TileRequest(
-                    "preadu_levels", self._tpm_driver.get_preadu_levels, True
+                    "preadu_levels", self._tpm_driver.preadu_levels, publish=True
                 )
             case ("STATIC_DELAYS", None):
-                self.logger.error("get STATIC_DELAYS")
                 request = TileRequest(
-                    "static_delays", self._tpm_driver._get_static_delays, True
+                    "static_delays", self._tpm_driver._get_static_delays, publish=True
                 )
             case ("STATION_ID", None):
-                self.logger.error("get STATION_ID")
-                request = TileRequest(
-                    "station_id", self._tpm_driver.tile.get_station_id
-                )
+                request = TileRequest("station_id", self._tpm_driver.get_station_id)
             case ("TILE_ID", None):
-                self.logger.error("get TILE_ID")
                 request = TileRequest("tile_id", self._tpm_driver.get_tile_id)
             case ("CSP_ROUNDING", None):
-                self.logger.error("get CSP_ROUNDING")
                 request = TileRequest(
-                    "csp_rounding", self._tpm_driver.get_csp_rounding, True
+                    "csp_rounding", self._tpm_driver.get_csp_rounding, publish=True
                 )
             case ("CHANNELISER_ROUNDING", None):
-                self.logger.error("get CHANNELISER_ROUNDING")
                 request = TileRequest(
                     "channeliser_rounding",
                     self._tpm_driver.channeliser_truncation,
-                    True,
+                    publish=True,
                 )
-            # case ("BEAMFORMER_TABLE", None):
-            #     self.logger.error(f"get BEAMFORMER_TABLE")
-            #     request = TileRequest("pll_locked", self._tpm_driver.get_beamformer_table)
+            case ("BEAMFORMER_TABLE", None):
+                request = TileRequest(
+                    "beamformer_table", self._tpm_driver.get_beamformer_table
+                )
             case ("FPGA_REFERENCE_TIME", None):
-                self.logger.error("get FPGA_REFERENCE_TIME")
                 request = TileRequest(
                     "fpga_reference_time",
                     self._tpm_driver.formatted_fpga_reference_time,
@@ -434,9 +395,10 @@ class TileComponentManager(PollingComponentManager):
 
         :return: responses to queries in this poll
         """
+        self.logger.info(f"Executing request {poll_request.name}")
         return TileResponse(poll_request.name, poll_request(), poll_request.publish)
 
-    def poll_failed(self: TileComponentManager, exception_code: Exception) -> None:
+    def poll_failed(self: TileComponentManager, exception: Exception) -> None:
         """
         Handle the receipt of new polling values.
 
@@ -446,21 +408,18 @@ class TileComponentManager(PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
+        assert self._request_provider
         self.logger.error("Failed poll")
 
         self._update_component_state(power=self._subrack_says_tpm_power)
 
-        match exception_code:
+        match exception:
             case ConnectionError():
-                self.logger.warning(
-                    f"ConnectionError found {exception_code}, retry......"
-                )
+                self.logger.warning(f"ConnectionError found {exception}, retry......")
                 self._request_provider.desire_connection()
                 # if subrack says off report OFF.
             case LibraryError():
-                self.logger.warning(
-                    f"ConnectionError found {exception_code}, retry......"
-                )
+                self.logger.warning(f"ConnectionError found {exception}, retry......")
                 self.logger.info(f"subrack says {self._subrack_says_tpm_power}")
                 if self._subrack_says_tpm_power in [PowerState.OFF, PowerState.UNKNOWN]:
                     self.logger.info(
@@ -472,7 +431,7 @@ class TileComponentManager(PollingComponentManager):
                 # This could be a overheating of the FPGA??
                 self.logger.error("Unexpected error found")
             case _:
-                self.logger.error(f"Unexpected error found: {repr(exception_code)}")
+                self.logger.error(f"Unexpected error found: {repr(exception)}")
 
     def poll_succeeded(self: TileComponentManager, poll_response: TileResponse) -> None:
         """
@@ -490,25 +449,15 @@ class TileComponentManager(PollingComponentManager):
         # self.logger.error(f"Handling results of successful poll. {poll_response}")
         super().poll_succeeded(poll_response)
 
-        # time.sleep(0.1)
-        # TODO: store locally
-        # self.logger.error(f"dddsdsdsdsdsd: {poll_response.command}")
-        # self.logger.error(f"type {type(poll_response)}")
-        # self.logger.error(f"type2 {type(poll_response.publish)}")
-        # self.logger.error(f"type3 {type(self._update_component_state)}")
-        # self._update_component_state(power=self._subrack_says_tpm_power)
         if poll_response.publish:
             self._update_component_state(
                 power=self._subrack_says_tpm_power,
                 **{poll_response.command: poll_response.data},
             )
-        # # time to avoid deletion of data before push
-        # time.sleep(2)
-        # self.logger.error("iudshiuhud")
 
     def polling_started(self: TileComponentManager) -> None:
         """Define actions to be taken when polling starts."""
-        self.logger.info("Connecting to server and commencing to poll...")
+        self.logger.info("Starting polling...")
         self._request_provider = TileRequestProvider()
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack_poller()
@@ -518,7 +467,7 @@ class TileComponentManager(PollingComponentManager):
         self.logger.info("Stopping polling and closing connection to the server...")
         self._request_provider = None
         super().polling_stopped()
-        self._update_component_state(programming_state=TpmStatus.UNKNOWN)
+        self._update_component_state(programming_state=TpmStatus.UNKNOWN.pretty_name())
 
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None
@@ -530,11 +479,9 @@ class TileComponentManager(PollingComponentManager):
 
         :return: a result code and a unique_id or message.
         """
-        self.logger.error("Called on after polling")
         subrack_on_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOffTpm", self.logger
         )
-        self.logger.error("about to call")
         subrack_on_command_proxy(self._subrack_tpm_id, task_callback=task_callback)
 
         return TaskStatus.QUEUED, ""
@@ -550,13 +497,10 @@ class TileComponentManager(PollingComponentManager):
 
         :return: a result code and a unique_id or message.
         """
-        # if task_callback:
-        #     task_callback(status=TaskStatus.QUEUED)
-        #     task_callback(status=TaskStatus.IN_PROGRESS)
         subrack_on_command_proxy = MccsCommandProxy(
             self._subrack_fqdn, "PowerOnTpm", self.logger
         )
-        self.logger.error("about to call")
+
         subrack_on_command_proxy(self._subrack_tpm_id)
 
         request = TileRequest(
@@ -566,9 +510,9 @@ class TileComponentManager(PollingComponentManager):
             pps_delay_correction=self._pps_delay_correction,
             task_callback=task_callback,
         )
-
+        assert self._request_provider
+        self.logger.info("Initialise command placed in poll QUEUE")
         self._request_provider.desire_initialise(request)
-        # task_callback(status=TaskStatus.QUEUED)
         return TaskStatus.QUEUED, ""
 
     def _start_communicating_with_subrack_poller(self: TileComponentManager) -> None:
@@ -897,15 +841,16 @@ class TileComponentManager(PollingComponentManager):
         )
 
     __PASSTHROUGH = [
-        "adc_rms",  # Polled
+        "adc_rms",
         "fpga_time",
         "arp_table",
         "beamformer_table",
         "formatted_fpga_reference_time",
-        "board_temperature",  # Polled
+        "pps_delay_correction",
+        "board_temperature",
         "channeliser_truncation",
         "pending_data_requests",
-        "clock_present",  # Polled
+        "clock_present",
         "configure_40g_core",
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
@@ -915,29 +860,29 @@ class TileComponentManager(PollingComponentManager):
         "firmware_available",
         "firmware_name",
         "firmware_version",
-        "fpga1_temperature",  # Polled
-        "fpga2_temperature",  # Polled
-        "fpgas_time",  # Polled
+        "fpga1_temperature",
+        "fpga2_temperature",
+        "fpgas_time",
         "fpga_current_frame",
         "fpga_frame_time",
         "get_40g_configuration",
-        "voltages",  # Polled
-        "temperatures",  # Polled
-        "currents",  # Polled
-        "timing",  # Polled
-        "io",  # Polled
-        "dsp",  # Polled
+        "voltages",
+        "temperatures",
+        "currents",
+        "timing",
+        "io",
+        "dsp",
         "hardware_version",
         "initialise_beamformer",
-        "is_beamformer_running",  # Polled
-        "is_programmed",  # Polled
+        "is_beamformer_running",
+        "is_programmed",
         "load_calibration_coefficients",
         "load_pointing_delays",
         "phase_terminal_count",
-        "pll_locked",  # Polled
-        "pps_delay",  # Polled
-        "pps_present",  # Polled
-        "preadu_levels",  # Polled
+        "pll_locked",
+        "pps_delay",
+        "pps_present",
+        "preadu_levels",
         "read_address",
         "read_register",
         "register_list",
@@ -953,10 +898,10 @@ class TileComponentManager(PollingComponentManager):
         "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
-        "tile_id",  # Polled
-        "station_id",  # Polled
-        "tpm_status",  # Polled
-        "voltage_mon",  # Polled
+        "tile_id",
+        "station_id",
+        "tpm_status",
+        "voltage_mon",
         "write_address",
         "write_register",
     ]
@@ -1042,6 +987,7 @@ class TileComponentManager(PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        assert self._request_provider
         self.logger.info(f"Initialise called at: {time.time()}")
         request = TileRequest(
             name="initialise",
@@ -1052,77 +998,8 @@ class TileComponentManager(PollingComponentManager):
         )
 
         self._request_provider.desire_initialise(request)
-        # if task_callback:
-        #     task_callback(status=TaskStatus.QUEUED)
         return TaskStatus.QUEUED, "Initialise added to request provider."
-        # self._tpm_driver.initialise()
-        #         program_fpga=program_fpga,
-        #         pps_delay_correction=self._pps_delay_correction,
-        #         task_callback=task_callback,
-        # )
-        # if program_fpga:
-        #     try:
-        #         self._tpm_driver.erase_fpga()
-        #     except ConnectionError as comm_err:
-        #         return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
 
-        # try:
-        #     return self.submit_task(self._initialise, task_callback=task_callback)
-        # except ConnectionError as comm_err:
-
-    #         return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
-
-    # def _initialise(
-    #     self: TileComponentManager,
-    #     task_callback: Optional[Callable] = None,
-    #     task_abort_event: Optional[threading.Event] = None,
-    # ) -> None:
-    #     """
-    #     Initialise the tpm using slow command.
-
-    #     :param task_callback: Update task state, defaults to None
-    #     :param task_abort_event: Check for abort, defaults to None
-    #     """
-
-    #     self._request_provider.desire_initialise(task_callback)
-
-    #     if task_callback:
-    #         task_callback(status=TaskStatus.IN_PROGRESS)
-    #     try:
-    #         self._request_provider.desire_initialise(task_callback)
-    #         # wait on TpmStatus
-    #     # pylint: disable-next=broad-except
-    #     except Exception as ex:
-    #         self.logger.error(f"Exception raised while initialising Tile: {repr(ex)}")
-    #         if task_callback:
-    #             task_callback(status=TaskStatus.FAILED, result=f"Exception: {repr(ex)}")
-    #         return
-
-    #     # Check the tpm_status and inform callbacks
-    #     match self._tpm_driver.tpm_status:
-    #         case TpmStatus.INITIALISED:
-    #             if task_callback:
-    #                 task_callback(
-    #                     status=TaskStatus.COMPLETED,
-    #                     result="The initialisation task has completed",
-    #                 )
-    #         case TpmStatus.UNPROGRAMMED:
-    #             if task_callback:
-    #                 task_callback(
-    #                     status=TaskStatus.COMPLETED,
-    #                     result="The initialisation task has failed",
-    #                 )
-    #         case _:
-    #             self.logger.error(
-    #                 "Unexpected TpmStatus following initialisation."
-    #                 f"{self._tpm_driver.tpm_status}."
-    #             )
-    #             if task_callback:
-    #                 task_callback(
-    #                     status=TaskStatus.COMPLETED,
-    #                     result="The initialisation task has failed"
-    #                     f"TpmStatus: {self._tpm_driver.tpm_status}",
-    #                 )
     def set_pps_delay_correction(
         self: TileComponentManager,
         correction: int,
@@ -1144,6 +1021,7 @@ class TileComponentManager(PollingComponentManager):
             file
         :param task_callback: Update task state, defaults to None
         """
+        assert self._request_provider
         request = TileRequest(
             name="download_firmware",
             command_object=self._tpm_driver.download_firmware,
@@ -1170,6 +1048,7 @@ class TileComponentManager(PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        assert self._request_provider
         request = TileRequest(
             name="start_acquisition",
             command_object=self._tpm_driver.start_acquisition,
@@ -1178,7 +1057,6 @@ class TileComponentManager(PollingComponentManager):
             task_callback=task_callback,
         )
         self._request_provider.desire_start_acquisition(request)
-        # task_callback(status=TaskStatus.QUEUED)
         return TaskStatus.QUEUED, "start_acquistion added to request provider."
 
     @check_communicating

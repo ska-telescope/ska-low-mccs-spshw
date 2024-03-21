@@ -598,7 +598,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the ADC RMS input levels, in ADC units
         """
-        return self._adc_power
+        return self.component_manager.adc_power()
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
     def boardTemperaturesSummary(self: SpsStation) -> list[float]:

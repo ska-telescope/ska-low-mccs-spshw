@@ -682,7 +682,7 @@ class TestMccsTileTpmDriver:
                 }
             )
         )
-        tile_device.UpdateAttributes()
+
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected
@@ -734,8 +734,6 @@ class TestMccsTileTpmDriver:
         """
         self.setup_devices(tile_device, subrack_device, change_event_callbacks)
 
-        tile_device.UpdateAttributes()
-
         tile_device.subscribe_event(
             "ppsPresent",
             tango.EventType.CHANGE_EVENT,
@@ -748,7 +746,6 @@ class TestMccsTileTpmDriver:
         )
         tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
 
-        tile_device.UpdateAttributes()
         change_event_callbacks["pps_present"].assert_change_event(False)
         assert (
             tile_device.read_attribute("ppspresent").quality

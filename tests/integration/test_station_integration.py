@@ -301,7 +301,7 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
         # Force a poll to get the initial values.
-        tile_device.UpdateAttributes()
+
         initial_corrections = sps_station_device.ppsDelayCorrections
 
         # set a pps Correction to apply
@@ -312,7 +312,7 @@ class TestStationTileIntegration:
         sps_station_device.ppsDelayCorrections = desired_pps_corrections
 
         # This pps delay correction is only applied during initialisation.
-        tile_device.UpdateAttributes()
+
         pps_corrections_before_initialisation = sps_station_device.ppsDelayCorrections
         assert (pps_corrections_before_initialisation == initial_corrections).all()
 
@@ -407,7 +407,6 @@ class TestStationTileIntegration:
         tile_simulator._adc_rms = initial_adc_powers
 
         # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
 
         # This will cause the Tile to push a change event.
         # SpsStation is subscribed to this attribute and
@@ -417,7 +416,7 @@ class TestStationTileIntegration:
         # Check with different values.
         final_adc_powers = [24.0] + [24.0] * 31
         tile_simulator._adc_rms = final_adc_powers
-        tile_device.UpdateAttributes()
+
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
@@ -499,9 +498,6 @@ class TestStationTileIntegration:
         final_static_delays = np.array([1.25] + [0.0] * 31)
         sps_station_device.staticTimeDelays = final_static_delays
 
-        # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
-
         change_event_callbacks["tile_static_delays"].assert_change_event(
             final_static_delays.tolist()
         )
@@ -559,7 +555,6 @@ class TestStationTileIntegration:
 
         # Initialise values in the backend TileSimulator and forces update
         tile_simulator.set_preadu_levels([0.0] * 32)
-        tile_device.UpdateAttributes()
 
         # Set the value in the backend TileSimulator.
         initial_preadu_levels = [12.0] * 32
@@ -574,7 +569,7 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
         # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
+
         assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
 
         # This will cause the Tile to push a change event.

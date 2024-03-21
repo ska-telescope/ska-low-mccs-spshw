@@ -485,7 +485,7 @@ class TileSimulator:
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
-
+        self._phase_terminal_count = 2
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
             "first_channel": 0,
@@ -1242,7 +1242,11 @@ class TileSimulator:
 
     @connected
     def get_fpga_timestamp(self: TileSimulator) -> int:
-        """:return: timestamp."""
+        """
+        Get timestamp from FPGA.
+
+        :return: the simulated timestamp
+        """
         with acquire_timeout(self._lock, timeout=0.4) as acquired:
             if acquired:
                 return self._timestamp
@@ -1362,9 +1366,7 @@ class TileSimulator:
     @connected
     def get_phase_terminal_count(self: TileSimulator) -> None:
         """Get PPS phase terminal count."""
-        self.logger.info(
-            "Not implemented, returning to allow polling loop to complete."
-        )
+        return self._phase_terminal_count
 
     @connected
     def get_station_id(self: TileSimulator) -> int:

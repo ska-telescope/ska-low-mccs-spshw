@@ -117,6 +117,7 @@ markers = ["XTP-25768",
 "XTP-17871",
 "XTP-17875",
 "XTP-17876",
+"XTP-34316",
 ]
 
 [tool.coverage.paths]

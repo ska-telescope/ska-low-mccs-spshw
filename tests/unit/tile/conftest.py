@@ -13,13 +13,15 @@ import unittest.mock
 from typing import Callable, Iterator
 
 import pytest
+import tango
 from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_tango_testing.mock import MockCallableGroup
 from tango.server import command
 
-from ska_low_mccs_spshw import MccsTile
+from ska_low_mccs_spshw import MccsSubrack, MccsTile
 from ska_low_mccs_spshw.tile import (
+    BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
     TileComponentManager,
@@ -101,7 +103,7 @@ def mock_subrack_device_proxy_fixture(
     :return: a mock MccsSubrack device.
     """
     builder = MockDeviceBuilder()
-    builder.add_attribute(f"tpm{subrack_tpm_id}PowerState", initial_tpm_power_state)
+    builder.add_attribute("tpm1PowerState", initial_tpm_power_state)
     builder.add_result_command("PowerOnTpm", ResultCode.OK)
     builder.add_result_command("PowerOffTpm", ResultCode.OK)
     return builder()
@@ -183,9 +185,21 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
+@pytest.fixture(name="mock_tpm")
+def mock_tpm_fixture(logger: logging.logging) -> str:
+    """
+    Return the TPM version.
+
+    :return: the TPM version
+    """
+    return BaseTpmSimulator(
+        logger, unittest.mock.MagicMock(), unittest.mock.MagicMock()
+    )
+
+
 # pylint: disable=too-many-arguments
-@pytest.fixture(name="tile_component_manager")
-def tile_component_manager_fixture(
+@pytest.fixture(name="plain_tile_component_manager")
+def plain_tile_component_manager_fixture(
     test_context: SpsTangoTestHarnessContext,
     test_mode: TestMode,
     logger: logging.Logger,
@@ -232,6 +246,60 @@ def tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+    )
+
+
+# pylint: disable=too-many-arguments
+@pytest.fixture(name="tile_component_manager")
+def tile_component_manager_fixture(
+    test_context: SpsTangoTestHarnessContext,
+    test_mode: TestMode,
+    logger: logging.Logger,
+    max_workers: int,
+    tile_id: int,
+    station_id: int,
+    tpm_ip: str,
+    tpm_cpld_port: int,
+    tpm_version: str,
+    subrack_id: int,
+    subrack_tpm_id: int,
+    callbacks: MockCallableGroup,
+    mock_tpm,
+) -> TileComponentManager:
+    """
+    Return a tile component manager (in simulation and test mode as specified).
+
+    :param test_context: a test context in which Tango is running,
+        with a single mock subrack device.
+    :param test_mode: the initial test mode of this component manager
+    :param logger: the logger to be used by this object.
+    :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
+    :param tpm_ip: the IP address of the tile
+    :param tpm_cpld_port: the port at which the tile is accessed for control
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param subrack_id: ID of the subrack that controls power to this tile
+    :param subrack_tpm_id: This tile's position in its subrack
+    :param max_workers: nos. of worker threads
+    :param callbacks: dictionary of driver callbacks.
+
+    :return: a TPM component manager in the specified simulation mode.
+    """
+    return TileComponentManager(
+        SimulationMode.TRUE,
+        test_mode,
+        logger,
+        max_workers,
+        tile_id,
+        station_id,
+        tpm_ip,
+        tpm_cpld_port,
+        tpm_version,
+        get_subrack_name(subrack_id),
+        subrack_tpm_id,
+        callbacks["communication_status"],
+        callbacks["component_state"],
+        mock_tpm,
     )
 
 
@@ -366,12 +434,13 @@ def static_tile_component_manager_fixture(
 
 @pytest.fixture(name="patched_tile_device_class")
 def patched_tile_device_class_fixture(
-    static_tile_component_manager: TileComponentManager,
+    plain_tile_component_manager: TileComponentManager,
+    tile_id: int,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
-    :param static_tile_component_manager: A mock component manager.
+    :param plain_tile_component_manager: A mock component manager.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -400,14 +469,14 @@ def patched_tile_device_class_fixture(
 
             :return: a mock component manager
             """
-            static_tile_component_manager.set_communication_state_callback(
+            plain_tile_component_manager.set_communication_state_callback(
                 self._communication_state_changed,
             )
-            static_tile_component_manager.set_component_state_callback(
+            plain_tile_component_manager.set_component_state_callback(
                 self._component_state_changed,
             )
 
-            return static_tile_component_manager
+            return plain_tile_component_manager
 
         @command()
         def MockTpmOff(self: PatchedTileDevice) -> None:
@@ -417,7 +486,11 @@ def patched_tile_device_class_fixture(
             Make the tile device think it has received a state change
             event from its subrack indicating that the suback is now ON.
             """
-            self.component_manager._tpm_power_state_changed(PowerState.OFF)
+            self.component_manager._subrack_says_tpm_power_changed(
+                f"tpm{tile_id}PowerState",
+                PowerState.OFF,
+                tango.EventType.CHANGE_EVENT,
+            )
 
         @command()
         def MockTpmNoSupply(self: PatchedTileDevice) -> None:
@@ -428,11 +501,19 @@ def patched_tile_device_class_fixture(
             event from its subrack indicating that the subrack is now
             OFF.
             """
-            self.component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
+            self.component_manager._subrack_says_tpm_power_changed(
+                f"tpm{tile_id}PowerState",
+                PowerState.NO_SUPPLY,
+                tango.EventType.CHANGE_EVENT,
+            )
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
             """Mock power on the tpm."""
-            self.component_manager._tpm_power_state_changed(PowerState.ON)
+            self.component_manager._subrack_says_tpm_power_changed(
+                f"tpm{tile_id}PowerState",
+                PowerState.ON,
+                tango.EventType.CHANGE_EVENT,
+            )
 
     return PatchedTileDevice

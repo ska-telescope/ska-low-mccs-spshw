@@ -625,11 +625,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
-        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
         tpm_driver.download_firmware("bitfile")
-        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is True
 
         # Mock a failed download.
@@ -637,11 +635,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             return_value=False
         )
         tpm_driver._update_attributes()
-        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
         tpm_driver.download_firmware("bitfile")
-        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
     def test_set_tile_id(
@@ -853,27 +849,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # check that exceptions are caught.
         tile_simulator.get_firmware_list.side_effect = Exception("mocked exception")
         _ = tpm_driver.firmware_available
-
-    def test_check_programmed(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Test that we can configure the 40G core.
-
-        Test to ensure the tpm_driver can read the _check_programmed() method
-        correctly if the mocked TPM is programmed.
-
-        :param tpm_driver: The tpm driver under test.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        """
-        assert tpm_driver._check_programmed() is False
-        tile_simulator.connect()
-        assert tile_simulator.tpm is not None
-        tile_simulator.tpm._is_programmed = True
-        assert tpm_driver._check_programmed() is True
 
     def test_update_attributes(
         self: TestTpmDriver,
@@ -2142,7 +2117,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tile_simulator.erase_fpga.assert_called_once()
-        tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 

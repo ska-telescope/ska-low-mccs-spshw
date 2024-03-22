@@ -8,6 +8,7 @@
 """This module implements polling management for a PaSD bus."""
 
 import logging
+import time
 from typing import Any, Callable, Iterator, Optional, Sequence
 
 from .tpm_status import TpmStatus
@@ -163,11 +164,12 @@ class TileRequestProvider:
         self._unprogrammed_tpm_read_request_iterator = (
             unprogrammed_tpm_read_request_iterator()
         )
-        self.initialise_request = None
+        self.initialise_request: Optional[Any] = None
         self.start_acquisition_request = None
         self._desire_connection = False
         self._firmware_download_request = None
         self._check_global_alarms = False
+        self.command_wipe_time: dict[str, float] = {}
 
     def desire_connection(self) -> None:
         """
@@ -186,14 +188,20 @@ class TileRequestProvider:
         """Register a request to initialize a device."""
         self._check_global_alarms = True
 
-    def desire_initialise(self, request: Any) -> None:
+    def desire_initialise(
+        self, request: Any, wipe_time: Optional[float] = None
+    ) -> None:
         """
         Register a request to initialize a device.
 
         :param device_id: the device number.
             This is 0 for the FNDH, otherwise a smartbox number.
+        :param wipe_time: the approx time at which to wipe this command.
         """
         self.initialise_request = request
+        if wipe_time is None:
+            wipe_time = time.time() + 60
+        self.command_wipe_time["initialise"] = wipe_time
 
     def desire_start_acquisition(self, request: Any) -> None:
         """
@@ -211,6 +219,15 @@ class TileRequestProvider:
         :return: a tuple consisting of the name of the communication
             and any arguments or extra information.
         """
+        for command, wipe_time in self.command_wipe_time.items():
+            if time.time() > wipe_time:
+                match command:
+                    case "initialise":
+                        if self.initialise_request:
+                            print("dsdsdsdsd ALLL")
+                            self.initialise_request.abort()
+                            self.initialise_request = None
+
         if self._check_global_alarms:
             self._check_global_alarms = False
             return "CHECK_CPLD_COMMS", None

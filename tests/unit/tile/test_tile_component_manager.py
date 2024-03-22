@@ -15,11 +15,19 @@ from typing import Any
 
 import pytest
 import pytest_mock
-from ska_control_model import CommunicationStatus, PowerState, TaskStatus, TestMode
+import tango
+from ska_control_model import (
+    CommunicationStatus,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+    TestMode,
+)
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.tile import (
+    BaseTpmSimulator,
     DynamicTpmSimulator,
     StaticTpmSimulator,
     TileComponentManager,
@@ -37,15 +45,18 @@ class TestTileComponentManager:
     itself.
     """
 
-    @pytest.mark.parametrize("power_state", list(PowerState))
-    def test_communication(
+    @pytest.mark.parametrize("power_state", PowerState)
+    def test_communication_when_tpm_not_reachable(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
         power_state: PowerState,
+        tile_id: int,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+        mock_tpm: BaseTpmSimulator,
     ) -> None:
         """
-        Test communication between the tile component manager and its tile.
+        Test communication with a unreachable TPM.
 
         :param tile_component_manager: the tile component manager
             under test
@@ -53,28 +64,42 @@ class TestTileComponentManager:
         :param power_state: the power mode of the TPM when we break off
             comms
         """
+        mock_tpm.mock_off()
+        mock_tpm.power_locked = True
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
+
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
-
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+
+        # Dynamically configure mock return
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
+
         tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
 
-        if power_state == PowerState.UNKNOWN:
-            tile_component_manager._tpm_power_state_changed(PowerState.UNKNOWN)
-        elif power_state == PowerState.NO_SUPPLY:
-            tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
-        elif power_state == PowerState.OFF:
-            pass  # test harness starts with TPM off
-        elif power_state == PowerState.ON:
-            tile_component_manager._tpm_power_state_changed(PowerState.ON)
-            callbacks["communication_status"].assert_call(
-                CommunicationStatus.ESTABLISHED
-            )
+        match power_state:
+            case PowerState.ON:
+                callbacks["component_state"].assert_call(power=power_state, lookahead=2)
+                callbacks["component_state"].assert_call(
+                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+                )
+                callbacks["component_state"].assert_not_called()
 
+            case PowerState.UNKNOWN:
+                callbacks["component_state"].assert_not_called()
+            case _:
+                # OFF, NO_SUPPLY, STANDBY
+                callbacks["component_state"].assert_call(power=power_state, lookahead=2)
+                callbacks["component_state"].assert_call(
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=2
+                )
+                callbacks["component_state"].assert_not_called()
+
+        callbacks["communication_status"].assert_not_called()
         tile_component_manager.stop_communicating()
 
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
@@ -82,41 +107,102 @@ class TestTileComponentManager:
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
-    def test_state_with_adminode(
+    @pytest.mark.parametrize("power_state", PowerState)
+    def test_communication_when_tpm_reachable(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
+        power_state: PowerState,
+        tile_id: int,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+        mock_tpm: BaseTpmSimulator,
     ) -> None:
         """
-        Test `TileComponentManager` gets updated as expected.
-
-        The `TileComponentManager` should report the power and communication state
-        of the device under control:
-        - when `start_communicating` is called the `TileComponentManager` should
-        transition to the state of the device under test.
-        - when `stop_communicating` is called the `TileComponentManager` should
-        transition to UNKNOWN since connection to the subrack is lost.
+        Test communication with a reachable TPM.
 
         :param tile_component_manager: the tile component manager
             under test
         :param callbacks: dictionary of driver callbacks.
+        :param power_state: the power mode of the TPM when we break off
+            comms
         """
+        # Mock the Tpm to be unconnectable and the subrack to return select POWER
+        mock_tpm.mock_on()
+        mock_tpm.power_locked = True
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
+
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
+        # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+
+        # Dynamically configure mock return
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
+
         tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["communication_status"].assert_not_called()
 
-        # Stop communicating will break the connection with the subrack
-        # therefore component state becomes UNKNOWN
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        match power_state:
+            case PowerState.ON:
+                callbacks["component_state"].assert_call(power=power_state, lookahead=3)
+                callbacks["component_state"].assert_call(
+                    **{
+                        "global_status_alarms": {
+                            "I2C_access_alm": 0,
+                            "temperature_alm": 0,
+                            "voltage_alm": 0,
+                            "SEM_wd": 0,
+                            "MCU_wd": 0,
+                        }
+                    },
+                    lookahead=3,
+                )
+                callbacks["component_state"].assert_call(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+                )
+            case PowerState.UNKNOWN:
+                # We start in UNKNOWN so no need to assert
+                callbacks["component_state"].assert_call(
+                    **{
+                        "global_status_alarms": {
+                            "I2C_access_alm": 0,
+                            "temperature_alm": 0,
+                            "voltage_alm": 0,
+                            "SEM_wd": 0,
+                            "MCU_wd": 0,
+                        }
+                    }
+                )
+                callbacks["component_state"].assert_not_called()
+            case _:
+                # OFF, NO_SUPPLY, STANDBY
+                callbacks["component_state"].assert_call(power=power_state, lookahead=3)
+                callbacks["component_state"].assert_call(
+                    **{
+                        "global_status_alarms": {
+                            "I2C_access_alm": 0,
+                            "temperature_alm": 0,
+                            "voltage_alm": 0,
+                            "SEM_wd": 0,
+                            "MCU_wd": 0,
+                        }
+                    },
+                    lookahead=3,
+                )
+                callbacks["component_state"].assert_call(
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
+                )
+                callbacks["component_state"].assert_not_called()
+
         tile_component_manager.stop_communicating()
+
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
-        callbacks["component_state"].assert_not_called()
+        assert (
+            tile_component_manager.communication_state == CommunicationStatus.DISABLED
+        )
 
     # TODO: find out if TPM has standby mode, and if so add this case
     @pytest.mark.parametrize(
@@ -143,6 +229,9 @@ class TestTileComponentManager:
         callbacks: MockCallableGroup,
         first_power_state: PowerState,
         second_power_state: PowerState,
+        mock_subrack_device_proxy: unittest.mock.Mock,
+        tile_id: int,
+        mock_tpm: BaseTpmSimulator,
     ) -> None:
         """
         Test handling of notifications of TPM power mode changes from the subrack.
@@ -153,6 +242,11 @@ class TestTileComponentManager:
         :param first_power_state: the power mode of the initial event
         :param second_power_state: the power mode of the subsequent event
         """
+        if first_power_state == PowerState.ON:
+            mock_tpm._fail_communicate = False
+        else:
+            mock_tpm._fail_communicate = True
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=first_power_state)
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
@@ -168,8 +262,6 @@ class TestTileComponentManager:
             == CommunicationStatus.NOT_ESTABLISHED
         )
 
-        tile_component_manager._tpm_power_state_changed(first_power_state)
-
         if first_power_state == PowerState.ON:
             callbacks["communication_status"].assert_call(
                 CommunicationStatus.ESTABLISHED
@@ -177,8 +269,15 @@ class TestTileComponentManager:
         else:
             callbacks["communication_status"].assert_not_called()
 
-        tile_component_manager._tpm_power_state_changed(second_power_state)
-
+        if second_power_state == PowerState.ON:
+            mock_tpm._fail_communicate = False
+        else:
+            mock_tpm._fail_communicate = True
+        tile_component_manager._subrack_says_tpm_power_changed(
+            f"tpm{tile_id}powerstate",
+            second_power_state,
+            tango.EventType.CHANGE_EVENT,
+        )
         if first_power_state != PowerState.ON and second_power_state == PowerState.ON:
             callbacks["communication_status"].assert_call(
                 CommunicationStatus.ESTABLISHED
@@ -192,6 +291,7 @@ class TestTileComponentManager:
         callbacks: MockCallableGroup,
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
+        tile_id: int,
     ) -> None:
         """
         Test that we can turn the TPM on and off when the subrack is on.
@@ -203,26 +303,41 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         """
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.OFF)
         tile_component_manager.start_communicating()
 
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.OFF.pretty_name()
+        )
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
 
-        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
+        callbacks["component_state"].assert_not_called()
 
         tile_component_manager.on()
-        # TODO: This is still an old-school MockCallable because -common
-        mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_state_changed(PowerState.ON)
-
-        # TODO: this may be a bug, why do we need a sleep?
-        time.sleep(0.3)
+        # Manually report the Subrack turning on
+        tile_component_manager._subrack_says_tpm_power_changed(
+            f"tpm{tile_id}powerstate",
+            PowerState.ON,
+            tango.EventType.CHANGE_EVENT,
+        )
+        # If we are on we can ESTABLISH a connection
+        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
 
         tile_component_manager.off()
-        # TODO: This is still an old-school MockCallable because -common
-        mock_subrack_device_proxy.PowerOffTpm.assert_next_call(subrack_tpm_id)
-        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
+        # Manually report the Subrack turning on
+        tile_component_manager._subrack_says_tpm_power_changed(
+            f"tpm{tile_id}powerstate",
+            PowerState.OFF,
+            tango.EventType.CHANGE_EVENT,
+        )
+        callbacks["component_state"].assert_call(
+            power=PowerState.OFF, lookahead=10, consume_nonmatches=True
+        )
+        callbacks["component_state"].assert_not_called()
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
@@ -230,6 +345,8 @@ class TestTileComponentManager:
         subrack_tpm_id: int,
         mock_subrack_device_proxy: unittest.mock.Mock,
         callbacks: MockCallableGroup,
+        mock_tpm: BaseTpmSimulator,
+        tile_id: int,
     ) -> None:  # noqa: DAR401
         """
         Test that eventual consistency semantics of the on command.
@@ -247,20 +364,12 @@ class TestTileComponentManager:
             subrack device.
         :param callbacks: dictionary of mock callbacks
         """
+        mock_tpm.mock_off()
         tile_component_manager.on(task_callback=callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
-
-        # TODO: WHY are we receiving FAILED twice?!!
-        for _ in range(2):
-            call_details = callbacks["task"].assert_call(
-                status=TaskStatus.FAILED,
-                exception=Anything,
-            )
-            with pytest.raises(
-                ConnectionError, match="TPM cannot be turned off / on when not online."
-            ):
-                raise call_details["exception"]
+        callbacks["task"].assert_call(
+            status=TaskStatus.REJECTED,
+            result=(ResultCode.REJECTED, "No request provider"),
+        )
 
         callbacks["task"].assert_not_called()
 
@@ -273,25 +382,35 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_not_called()
 
         # mock an event from subrack announcing it to be turned off
-        tile_component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
-
+        tile_component_manager._subrack_says_tpm_power_changed(
+            f"tpm{tile_id}powerstate",
+            PowerState.NO_SUPPLY,
+            tango.EventType.CHANGE_EVENT,
+        )
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
-        result_code, message = tile_component_manager.on()
-        assert result_code == TaskStatus.QUEUED
-        assert message == "Task queued"
+        result_code, message = tile_component_manager.on(callbacks["task"])
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+        assert result_code == TaskStatus.STAGING
+        assert message == "Task staged"
         time.sleep(0.2)
 
-        # no action taken initially because the subrack is switched off
-        mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
+        # We initially submit the on command to the Subrack and place a
+        # Initialise command in the queue.
+        mock_subrack_device_proxy.PowerOnTpm.assert_last_call()
 
         # mock an event from subrack announcing it to be turned on
-        tile_component_manager._tpm_power_state_changed(PowerState.OFF)
+        tile_component_manager._subrack_says_tpm_power_changed(
+            f"tpm{tile_id}powerstate",
+            PowerState.ON,
+            tango.EventType.CHANGE_EVENT,
+        )
 
-        # now that the tile has been notified that the subrack is on,
-        # it tells it to turn on its TPM
-        # TODO: This is still an old-school MockCallable because -common
-        mock_subrack_device_proxy.PowerOnTpm.assert_next_call(subrack_tpm_id)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
+        )
 
 
 class TestStaticSimulatorCommon:
@@ -347,11 +466,23 @@ class TestStaticSimulatorCommon:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False, lookahead=3)
-        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        static_tile_component_manager.on(task_callback=callbacks["task"])
+        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
         callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED
+            programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
+        )
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has completed",
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED, lookahead=9
         )
         return static_tile_component_manager
 
@@ -402,7 +533,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value", "expected_component_value"),
         (
-            ("fpga_reference_time", 0, "1970-01-01T00:00:00.000000Z"),
+            ("formatted_fpga_reference_time", 0, "1970-01-01T00:00:00.000000Z"),
             ("fpga_frame_time", None, "1970-01-01T00:00:00.000000Z"),
         ),
     )
@@ -501,7 +632,6 @@ class TestStaticSimulatorCommon:
             ("load_pointing_delays", 2),
             ("configure_integrated_channel_data", 3),
             ("configure_integrated_beam_data", 3),
-            ("start_acquisition", 0),
             ("stop_integrated_data", 0),
             ("set_lmc_integrated_download", 3),
             ("post_synchronisation", 0),
@@ -527,7 +657,6 @@ class TestStaticSimulatorCommon:
         :param num_args: the number of args the command takes
         """
         lrc_list = [
-            "start_acquisition",
             "post_synchronisation",
         ]
         args = [mocker.Mock()] * num_args
@@ -553,59 +682,60 @@ class TestStaticSimulatorCommon:
         """
         tile.set_lmc_download("10G", 1024, "10.0.10.1")
 
-    @pytest.mark.parametrize(
-        ("command_name", "implemented"),
-        (
-            ("apply_calibration", False),
-            ("apply_pointing_delays", False),
-            ("start_beamformer", True),
-        ),
-    )
-    def test_timed_command(
-        self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
-        command_name: str,
-        implemented: bool,
-    ) -> None:
-        """
-        Test of commands that require a UTC time.
+    # @pytest.mark.parametrize(
+    #     ("command_name", "implemented"),
+    #     (
+    #         ("apply_calibration", False),
+    #         ("apply_pointing_delays", False),
+    #         ("start_beamformer", True),
+    #     ),
+    # )
+    # def test_timed_command(
+    #     self: TestStaticSimulatorCommon,
+    #     tile: TileComponentManager,
+    #     command_name: str,
+    #     implemented: bool,
+    # ) -> None:
+    #     """
+    #     Test of commands that require a UTC time.
 
-        Since the commands don't really do
-        anything, these tests simply check that the command can be called.
+    #     Since the commands don't really do
+    #     anything, these tests simply check that the command can be called.
 
-        :param tile: the tile class object under test.
-        :param command_name: the name of the command under test
-        :param implemented: the command is implemented, does not raise error
-        """
-        # Use ISO formatted time for component manager, numeric for drivers
-        # Must also set FPGA sync time in driver
-        #
-        if self.tile_name == "tile_component_manager":
-            args = "2022-11-10T12:34:56.0Z"
-            dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
-            timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
-            # TODO: there is no fpga_sync_time method.
-            # tile._tpm_driver.fpga_sync_time = timestamp
-            # assert tile._tpm_driver.fpga_sync_time == timestamp
-            tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
-        else:
-            args = "123456"
+    #     :param tile: the tile class object under test.
+    #     :param command_name: the name of the command under test
+    #     :param implemented: the command is implemented, does not raise error
+    #     """
+    #     # Use ISO formatted time for component manager, numeric for drivers
+    #     # Must also set FPGA sync time in driver
+    #     #
+    #     if self.tile_name == "tile_component_manager":
+    #         args = "2022-11-10T12:34:56.0Z"
+    #         dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
+    #         timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
+    #         # TODO: there is no fpga_sync_time method.
+    #         # tile._tpm_driver.fpga_sync_time = timestamp
+    #         # assert tile._tpm_driver.fpga_sync_time == timestamp
+    #         tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
+    #     else:
+    #         args = "123456"
 
-        if implemented:
-            getattr(tile, command_name)()
-            getattr(tile, command_name)(0)
-            getattr(tile, command_name)(args)
-        else:
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)()
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)(0)
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)(args)
+    #     if implemented:
+    #         getattr(tile, command_name)()
+    #         getattr(tile, command_name)(0)
+    #         getattr(tile, command_name)(args)
+    #     else:
+    #         with pytest.raises(NotImplementedError):
+    #             getattr(tile, command_name)()
+    #         with pytest.raises(NotImplementedError):
+    #             getattr(tile, command_name)(0)
+    #         with pytest.raises(NotImplementedError):
+    #             getattr(tile, command_name)(args)
 
     def test_initialise(
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test of the initialise command, which programs the TPM.
@@ -613,11 +743,14 @@ class TestStaticSimulatorCommon:
         :param tile: the tile class object under test.
         """
         tile.erase_fpga()
-        time.sleep(0.2)
         assert not tile.is_programmed
-        time.sleep(0.2)
-        tile.initialise()
-        time.sleep(2)
+        tile.initialise(callbacks["task"])
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED, result="The initialisation task has completed"
+        )
         assert tile.is_programmed
         assert tile.firmware_name == "itpm_v1_6.bit"
 
@@ -625,6 +758,7 @@ class TestStaticSimulatorCommon:
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test.
@@ -637,12 +771,16 @@ class TestStaticSimulatorCommon:
         :param mocker: fixture that wraps unittest.mock
         """
         tile.erase_fpga()
-        time.sleep(0.2)
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
-        time.sleep(0.2)
-        tile.download_firmware(mock_bitfile)
-        time.sleep(0.2)
+        tile.download_firmware(mock_bitfile, callbacks["task"])
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="Firmware successfully downloaded",
+        )
         assert tile.is_programmed
 
     @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
@@ -875,32 +1013,75 @@ class TestDynamicSimulatorCommon:
         """
         return PowerState.ON
 
+    # @pytest.fixture()
+    # def tile(
+    #     self: TestDynamicSimulatorCommon,
+    #     dynamic_tile_component_manager: TileComponentManager,
+    #     callbacks: MockCallableGroup,
+    # ) -> TileComponentManager:
+    #     """
+    #     Return the tile component under test. (Driving a DynamicTpmSimulator).
+
+    #     :param dynamic_tile_component_manager: the tile component manager (
+    #         Driving a DynamicTpmSimulator)
+    #     :param callbacks: dictionary of driver callbacks.
+
+    #     :return: the tile class object under test
+    #     """
+    #     dynamic_tile_component_manager.start_communicating()
+
+    #     callbacks["communication_status"].assert_call(
+    #         CommunicationStatus.NOT_ESTABLISHED
+    #     )
+    #     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    #     callbacks["component_state"].assert_call(power=PowerState.ON)
+    #     callbacks["component_state"].assert_call(fault=False)
+    #     callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+    #     callbacks["component_state"].assert_call(
+    #         programming_state=TpmStatus.INITIALISED
+    #     )
+    #     return dynamic_tile_component_manager
+
     @pytest.fixture()
     def tile(
-        self: TestDynamicSimulatorCommon,
+        self: TestStaticSimulatorCommon,
         dynamic_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
-        Return the tile component under test. (Driving a DynamicTpmSimulator).
+        Return the tile component under test (Driving a StaticTpmSimulator).
 
-        :param dynamic_tile_component_manager: the tile component manager (
-            Driving a DynamicTpmSimulator)
+        :param static_tile_component_manager: the tile component manager (
+            driving a StaticTpmSimulator)
         :param callbacks: dictionary of driver callbacks.
 
         :return: the tile class object under test
         """
-        dynamic_tile_component_manager.start_communicating()
+        # pylint: disable=attribute-defined-outside-init
+        self.tile_name = "tile_component_manager"
 
+        dynamic_tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
-        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        dynamic_tile_component_manager.on(task_callback=callbacks["task"])
+        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
         callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED
+            programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
+        )
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has completed",
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED, lookahead=9
         )
         return dynamic_tile_component_manager
 

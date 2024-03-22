@@ -29,6 +29,7 @@ from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tile_data import TileData
+from .tile_simulator import TileSimulator
 from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
@@ -154,57 +155,57 @@ class TpmDriver(TaskExecutorComponentManager):
         Get the health status from TPM.
 
         :return: a dictionary containing multiple monitoring points.
-        """
-        return self.tile.get_health_status()
 
-    def get_adc_rms(self: TpmDriver) -> list[float]:
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        Return the adc_rms.
-
-        :return: a list containing the adcPowers
-        """
-        self.logger.error("getting the adcpower")
-        return self.tile.get_adc_rms()
-
-    def check_pending_data_requests(self: TpmDriver) -> bool:
-        """
-        Check for any pending data requests.
-
-        :return: true if there are pending data requests.
-        """
-        return self.tile.check_pending_data_requests()
-
-    def beamformer_is_running(self: TpmDriver) -> bool:
-        """
-        Check if beamformer is running.
-
-        :return: true if the beamformer is running
-        """
-        return self.tile.beamformer_is_running()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()
+        raise TimeoutError("Failed to acquire lock in time")
 
     def get_station_id(self: TpmDriver) -> int:
         """
         Return the station id.
 
         :return: the station id
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self.tile.get_station_id()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_station_id()
+        raise TimeoutError("Failed to acquire lock in time")
 
     def get_beamformer_table(self: TpmDriver) -> list[int]:
         """
         Return the beamformer table.
 
         :return: the beamformer table
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self.tile.tpm.station_beamf[0].get_channel_table()[0 : self._nof_blocks]
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.tpm.station_beamf[0].get_channel_table()[
+                    0 : self._nof_blocks
+                ]
+        raise TimeoutError("Failed to acquire lock in time")
 
     def ping(self: TpmDriver) -> None:
-        """Check we can connect to the TPM."""
-        self.tile[int(0x30000000)]
+        """
+        Check we can connect to the TPM.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile[int(0x30000000)]
+        raise TimeoutError("Failed to acquire lock in time")
 
     def connect(self: TpmDriver) -> None:
         """Check we can connect to the TPM."""
-        self.tile.connect()
+        with self._hardware_lock:
+            self.tile.connect()
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -378,16 +379,6 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: whether this TPM is programmed
         """
-        return self._is_programmed
-
-    def _check_programmed(self: TpmDriver) -> bool:
-        """
-        Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
-
-        Actually checks hardware for this, and updates local variables
-
-        :return: whether this TPM is programmed
-        """
         if self.tile.tpm is None:
             return False
         with self._hardware_lock:
@@ -404,9 +395,10 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: a dictionary with global health alarms.
         """
-        with self._hardware_lock:
-            self.logger.debug("Lock acquired")
-            return self.tile.check_global_status_alarms()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.check_global_status_alarms()
+        raise TimeoutError("Failed to acquire lock in time")
 
     def download_firmware(
         self: TpmDriver,
@@ -813,8 +805,13 @@ class TpmDriver(TaskExecutorComponentManager):
         Return the last measured RMS power of the TPM's analog-to-digital converter.
 
         :return: the RMS power of the TPM's ADC
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self.get_adc_rms()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_adc_rms()
+        raise TimeoutError("Failed to acquire lock in time")
 
     @property
     def fpga_time(self: TpmDriver) -> str:
@@ -874,7 +871,10 @@ class TpmDriver(TaskExecutorComponentManager):
         :return: the FPGA_1 reference time, in Unix seconds
         """
         self.logger.debug("TpmDriver: fpga_reference_time")
-        return self._fpga_reference_time
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile["fpga1.pps_manager.sync_time_val"]
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @property
     def fpga_frame_time(self: TpmDriver) -> str:
@@ -890,6 +890,14 @@ class TpmDriver(TaskExecutorComponentManager):
         reference_time = self.fpga_reference_time
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
+
+    def mock_on(self: TpmDriver) -> None:
+        if isinstance(self.tile, TileSimulator):
+            self.tile.mock_on()
+
+    def mock_off(self: TpmDriver) -> None:
+        if isinstance(self.tile, TileSimulator):
+            self.tile.mock_off()
 
     @property
     def formatted_fpga_reference_time(self: TpmDriver) -> str:
@@ -938,9 +946,13 @@ class TpmDriver(TaskExecutorComponentManager):
         Return last measured delay between PPS and 10 MHz clock.
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        # TODO: Hardware lock
-        return self.tile.get_pps_delay(enable_correction=False)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_pps_delay(enable_correction=False)
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @property
     def pps_delay_correction(self: TpmDriver) -> Optional[int]:
@@ -948,14 +960,18 @@ class TpmDriver(TaskExecutorComponentManager):
         Return last measured ppsdelay correction.
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        # TODO: Hardware lock
-        self.logger.error(
-            f"gettting ppsdelay correction. {self.tile.get_pps_delay(enable_correction=True) - self.tile.get_pps_delay(enable_correction=False)}"
-        )
-        return self.tile.get_pps_delay(
-            enable_correction=True
-        ) - self.tile.get_pps_delay(enable_correction=False)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.logger.error(
+                    f"gettting ppsdelay correction. {self.tile.get_pps_delay(enable_correction=True) - self.tile.get_pps_delay(enable_correction=False)}"
+                )
+                return self.tile.get_pps_delay(
+                    enable_correction=True
+                ) - self.tile.get_pps_delay(enable_correction=False)
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @pps_delay_correction.setter
     def pps_delay_correction(self: TpmDriver, pps_delay_correction: int) -> None:
@@ -1234,9 +1250,10 @@ class TpmDriver(TaskExecutorComponentManager):
         :return: list of core id and arp table populated
         """
         self.logger.debug("TpmDriver: arp_table")
-        with self._hardware_lock:
-            self._arp_table = self.tile.get_arp_table()
-        return self._arp_table
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_arp_table()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     def set_lmc_download(
         self: TpmDriver,
@@ -1330,19 +1347,22 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         self.logger.debug("TpmDriver: get_time_delays")
         delays = []
-        try:
-            for i in range(16):
-                delays.append(
-                    (self.tile[f"fpga1.test_generator.delay_{i}"] - 128) * 1.25
-                )
-            for i in range(16):
-                delays.append(
-                    (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
-                )
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-        return delays
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    for i in range(16):
+                        delays.append(
+                            (self.tile[f"fpga1.test_generator.delay_{i}"] - 128) * 1.25
+                        )
+                    for i in range(16):
+                        delays.append(
+                            (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
+                        )
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                return delays
+        raise TimeoutError("Failed to acquire lock in time reading static_delays")
 
     @property
     def static_delays(self: TpmDriver) -> list[float]:
@@ -1453,7 +1473,8 @@ class TpmDriver(TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    return self.tile.get_preadu_levels()
+                    levels = self.tile.get_preadu_levels()
+                    return levels
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1466,7 +1487,7 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :param levels: Preadu attenuation levels in dB
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_preadu_levels(levels)
@@ -1515,20 +1536,13 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: True if PLL is locked. Checked in poll loop, cached
         """
-        return self._pll_locked
-
-    def _check_pll_locked(self: TpmDriver) -> bool:
-        """
-        Check in hardware if PLL is locked.
-
-        Requires to be run inside a thread protected code block
-        TODO To be moved in pyaavs.Tile
-        :return: True if PPS is locked
-        """
-        pll_status = self.tile.tpm["pll", 0x508]
-        pll_lock = pll_status in [0xF2, 0xE7]
-        self._pll_locked = pll_lock
-        return pll_lock
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                pll_status = self.tile.tpm["pll", 0x508]
+                pll_lock = pll_status in [0xF2, 0xE7]
+                self._pll_locked = pll_lock
+                return pll_lock
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     def _collapse_regions(self: TpmDriver, regions: list[list[int]]) -> list[list[int]]:
         """
@@ -2350,8 +2364,13 @@ class TpmDriver(TaskExecutorComponentManager):
         Whether the beamformer is currently running.
 
         :return: whether the beamformer is currently running
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self._is_beamformer_running
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.beamformer_is_running()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @property
     def pending_data_requests(self: TpmDriver) -> bool:
@@ -2360,8 +2379,10 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: whether there are pending send data requests
         """
-        self.logger.debug("TpmDriver: _pending_data_requests")
-        return self._pending_data_requests
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.check_pending_data_requests()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -2375,11 +2396,15 @@ class TpmDriver(TaskExecutorComponentManager):
         Return the phase terminal count.
 
         :return: the phase terminal count
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get_phase_terminal_count")
         self.logger.debug("TpmDriver: get_phase_terminal_count is simulated")
-        with self._hardware_lock:
-            return self.tile.get_phase_terminal_count()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_phase_terminal_count()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @phase_terminal_count.setter  # type: ignore[no-redef]
     def phase_terminal_count(self: TpmDriver, value: int) -> None:

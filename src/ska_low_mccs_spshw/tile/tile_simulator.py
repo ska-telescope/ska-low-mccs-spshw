@@ -17,7 +17,7 @@ import random
 import re
 import threading
 import time
-from typing import Any, Callable, List, Optional, Protocol, TypeVar, Union, cast
+from typing import Any, Callable, List, Optional, TypeVar, Union, cast
 
 from pyfabil.base.definitions import Device, LibraryError
 
@@ -57,20 +57,15 @@ def connected(func: Wrapped) -> Wrapped:
         **kwargs: Any,
     ) -> Any:
         """
-        Wrapper that checks the TPM is connected before allowing the wrapped method to
-        proceed.
+        Check the TPM is connected.
 
         :param self: the method called
-        :type self: object
         :param args: positional arguments to the wrapped method
-        :type args: list
         :param kwargs: keyword arguments to the wrapped method
-        :type kwargs: dict
-
-        :raises LibraryError: if the TPM is not connected
 
         :return: whatever the wrapped method returns
-        :rtype: object
+
+        :raises LibraryError: if the TPM is not connected
         """
         if self.mock_connection_success is False:
             self.logger.warning(
@@ -418,7 +413,8 @@ class TileSimulator:
     """
 
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
-    STATIC_DELAYS = [0.0] * 32
+    CSP_ROUNDING: list[int] = [2] * 384
+    STATIC_DELAYS = [-160.0] * 32
     PREADU_LEVELS = [0.0] * 32
     CLOCK_SIGNALS_OK = True
 
@@ -431,7 +427,7 @@ class TileSimulator:
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
     PPS_DELAY = 12
-    PHASE_TERMINAL_COUNT = 0
+    PHASE_TERMINAL_COUNT = 2
     FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -480,12 +476,19 @@ class TileSimulator:
         self.dst_port: Optional[int] = None
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
-        self.csp_rounding = [0] * 48
+        self.csp_rounding = self.CSP_ROUNDING
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
-        self._phase_terminal_count = 2
+        self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
+        self._global_status_alarms: dict[str, int] = {
+            "I2C_access_alm": 0,
+            "temperature_alm": 0,
+            "voltage_alm": 0,
+            "SEM_wd": 0,
+            "MCU_wd": 0,
+        }
         self.integrated_channel_configuration = {
             "integration_time": -1.0,
             "first_channel": 0,
@@ -530,14 +533,13 @@ class TileSimulator:
         return self._pending_data_requests
 
     @connected
-    def check_global_status_alarms(self: TileSimulator) -> dict:
-        return {
-            "I2C_access_alm": 0,
-            "temperature_alm": 0,
-            "voltage_alm": 0,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
+    def check_global_status_alarms(self: TileSimulator) -> dict[str, int]:
+        """
+        Check global status alarms.
+
+        :return: a dictionary with the simulated alarm status.
+        """
+        return copy.deepcopy(self._global_status_alarms)
 
     @connected
     def initialise_beamformer(
@@ -604,7 +606,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
-        time.sleep(random.randint(2, 10))
+        time.sleep(random.randint(1, 10))
         self._start_polling_event.set()
         self.logger.info("Waited.............")
 
@@ -646,6 +648,8 @@ class TileSimulator:
         Return whether the mock has been implemented.
 
         :return: the mocked programmed state
+
+        :raises Exception: when you fail to connect
         """
         if self.tpm:
             return self.tpm._is_programmed
@@ -764,11 +768,17 @@ class TileSimulator:
         return
 
     def connect(self: TileSimulator) -> None:
-        """Fake a connection by constructing the TPM."""
+        """
+        Fake a connection by constructing the TPM.
+
+        :raises ConnectionError: if the simulator is mocking
+            a connection fault.
+        """
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
             self.logger.info("Paadsdsd")
-            self.tpm = MockTpm(self.logger)
+            if self.tpm is None:
+                self.tpm = MockTpm(self.logger)
         else:
             raise ConnectionError("Failed to connect")
 
@@ -820,18 +830,24 @@ class TileSimulator:
         return
 
     @connected
-    def set_time_delays(self: TileSimulator, delays: list[float]) -> None:
+    def set_time_delays(self: TileSimulator, delays: list[float]) -> bool:
         """
         Set coarse zenith delay for input ADC streams.
 
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
         """
+        if len(delays) != 32:
+            self.logger.error(
+                "Invalid delays specfied (must be a number or list of numbers of length 32)"
+            )
+            return False
         for i in range(16):
             self[f"fpga1.test_generator.delay_{i}"] = int(delays[i] / 1.25 + 0.5) + 128
             self[f"fpga2.test_generator.delay_{i}"] = (
                 int(delays[i + 16] / 1.25 + 0.5) + 128
             )
+        return True
 
     @connected
     def current_tile_beamformer_frame(self: TileSimulator) -> int:
@@ -1247,9 +1263,7 @@ class TileSimulator:
 
         :return: the simulated timestamp
         """
-        with acquire_timeout(self._lock, timeout=0.4) as acquired:
-            if acquired:
-                return self._timestamp
+        return self._timestamp
 
     @connected
     def test_generator_input_select(self: TileSimulator, inputs: Any) -> None:
@@ -1364,8 +1378,12 @@ class TileSimulator:
         raise NotImplementedError
 
     @connected
-    def get_phase_terminal_count(self: TileSimulator) -> None:
-        """Get PPS phase terminal count."""
+    def get_phase_terminal_count(self: TileSimulator) -> int:
+        """
+        Get PPS phase terminal count.
+
+        :return: the simulated phase terminal count.
+        """
         return self._phase_terminal_count
 
     @connected

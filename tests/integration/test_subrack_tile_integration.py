@@ -151,7 +151,9 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -320,7 +322,9 @@ class TestMccsTileTpmDriver:
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -456,6 +460,9 @@ class TestMccsTileTpmDriver:
         assert result_code == ResultCode.QUEUED
 
         change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
+        change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
         change_event_callbacks["tile_command_status"].assert_change_event(
@@ -563,7 +570,9 @@ class TestMccsTileTpmDriver:
             json.dumps({"delay": delay_time})
         )
         assert "StartAcquisition" in command_id.split("_")[-1]
-
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (command_id, TaskStatus.STAGING.name)
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (command_id, TaskStatus.QUEUED.name)
         )
@@ -835,7 +844,9 @@ class TestMccsTileTpmDriver:
         ([result_code], [initialise_id]) = tile_device.Initialise()
 
         # assert result_code == ResultCode.QUEUED
-
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (initialise_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (initialise_id, "QUEUED")
         )

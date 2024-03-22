@@ -545,7 +545,9 @@ def then_solution_stored(
                 "Solution not found in database for "
                 f"channel {frequency_channel}, temperature {outside_temperature}"
             )
-        assert row["calibration"] == pytest.approx(calibration_solution)
+        assert row["calibration"] == pytest.approx(  # type: ignore[call-overload]
+            calibration_solution
+        )
 
 
 @then("existing data is not overwritten")
@@ -582,7 +584,7 @@ def then_existing_data_not_overwritten(
                 "Solution not found in database for "
                 f"channel {frequency_channel}, temperature {outside_temperature}"
             )
-        assert row["calibration"] == pytest.approx(
+        assert row["calibration"] == pytest.approx(  # type: ignore[call-overload]
             calibration_solutions[(frequency_channel, outside_temperature)]
         )
 

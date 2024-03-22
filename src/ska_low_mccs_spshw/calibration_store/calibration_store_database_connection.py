@@ -136,7 +136,7 @@ class CalibrationStoreDatabaseConnection:
                 row = result.fetchone()
                 if row is None:
                     return []
-                return row["calibration"]
+                return row["calibration"]  # type: ignore[call-overload]
         except PoolClosed as exc:
             self._logger.info("Pool closed already.")
             self._connection_tries += 1

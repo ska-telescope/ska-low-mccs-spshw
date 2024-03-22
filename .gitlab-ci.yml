@@ -57,8 +57,8 @@ include:
     file: 'gitlab-ci/includes/k8s.gitlab-ci.yml'
 
   # xray -- not importing template for now, because it comes with unwanted rules
-  # - project: 'ska-telescope/templates-repository'
-  #   file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
 psi-low-k8s-test:
   stage: test-psi-low

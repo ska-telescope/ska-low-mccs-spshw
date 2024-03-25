@@ -537,8 +537,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info("Initialise command placed in poll QUEUE")
         self._request_provider.desire_initialise(request)
         if task_callback:
-            task_callback(status=TaskStatus.STAGING)
-        return TaskStatus.STAGING, "Task staged"
+            task_callback(status=TaskStatus.QUEUED)
+        return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack_poller(self: TileComponentManager) -> None:
         """
@@ -996,7 +996,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     #
     # Long running commands
     #
-    @check_communicating
+    # @check_communicating
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1013,20 +1013,34 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
-        assert self._request_provider
-        self.logger.info(f"Initialise called at: {time.time()}")
-        request = TileRequest(
-            name="initialise",
-            command_object=self._tpm_driver.initialise,
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
+                )
+            raise ConnectionError(
+                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Communication with component is not established."
+            )
+        return self._tpm_driver.initialise(
             program_fpga=program_fpga,
             pps_delay_correction=self._pps_delay_correction,
             task_callback=task_callback,
         )
+        # assert self._request_provider
+        # self.logger.info(f"Initialise called at: {time.time()}")
+        # request = TileRequest(
+        #     name="initialise",
+        #     command_object=self._tpm_driver.initialise,
+        #     program_fpga=program_fpga,
+        #     pps_delay_correction=self._pps_delay_correction,
+        #     task_callback=task_callback,
+        # )
 
-        self._request_provider.desire_initialise(request)
-        if task_callback:
-            task_callback(status=TaskStatus.STAGING)
-        return TaskStatus.QUEUED, "Initialise added to request provider."
+        # self._request_provider.desire_initialise(request)
+        # if task_callback:
+        #     task_callback(status=TaskStatus.STAGING)
+        # return TaskStatus.QUEUED, "Initialise added to request provider."
 
     def set_pps_delay_correction(
         self: TileComponentManager,
@@ -1039,7 +1053,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self._pps_delay_correction = correction
 
-    @check_communicating
+    # @check_communicating
     def download_firmware(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable]
     ) -> None:
@@ -1061,17 +1075,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 "Cannot execute 'TileComponentManager.start_acquisition'. "
                 "Communication with component is not established."
             )
-        assert self._request_provider
-        request = TileRequest(
-            name="download_firmware",
-            command_object=self._tpm_driver.download_firmware,
+        return self._tpm_driver.download_firmware(
             bitfile=argin,
             task_callback=task_callback,
         )
-        self._request_provider.firmware_download_request(request)
-        if task_callback:
-            task_callback(status=TaskStatus.STAGING)
-        return TaskStatus.QUEUED, "download firmware added to request provider."
+        # assert self._request_provider
+        # request = TileRequest(
+        #     name="download_firmware",
+        #     command_object=self._tpm_driver.download_firmware,
+        #     bitfile=argin,
+        #     task_callback=task_callback,
+        # )
+        # self._request_provider.firmware_download_request(request)
+        # if task_callback:
+        #     task_callback(status=TaskStatus.STAGING)
+        # return TaskStatus.QUEUED, "download firmware added to request provider."
 
     def start_acquisition(
         self: TileComponentManager,
@@ -1098,19 +1116,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 "Cannot execute 'TileComponentManager.start_acquisition'. "
                 "Communication with component is not established."
             )
-
-        assert self._request_provider
-        request = TileRequest(
-            name="start_acquisition",
-            command_object=self._tpm_driver.start_acquisition,
-            start_time=start_time,
-            delay=delay,
-            task_callback=task_callback,
+        return self._tpm_driver.start_acquisition(
+            start_time=start_time, delay=delay, task_callback=task_callback
         )
-        self._request_provider.desire_start_acquisition(request)
-        if task_callback:
-            task_callback(status=TaskStatus.STAGING)
-        return TaskStatus.QUEUED, "start_acquistion added to request provider."
+        # assert self._request_provider
+        # request = TileRequest(
+        #     name="start_acquisition",
+        #     command_object=self._tpm_driver.start_acquisition,
+        #     start_time=start_time,
+        #     delay=delay,
+        #     task_callback=task_callback,
+        # )
+        # self._request_provider.desire_start_acquisition(request)
+        # if task_callback:
+        #     task_callback(status=TaskStatus.STAGING)
+        # return TaskStatus.QUEUED, "start_acquistion added to request provider."
 
     @check_communicating
     def post_synchronisation(

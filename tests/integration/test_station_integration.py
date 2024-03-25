@@ -15,7 +15,7 @@ import unittest
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode
+from ska_control_model import AdminMode, ResultCode, TaskStatus
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -417,6 +417,7 @@ class TestStationTileIntegration:
         final_adc_powers = [24.0] + [24.0] * 31
         tile_simulator._adc_rms = final_adc_powers
 
+        change_event_callbacks["sps_adc_power"].assert_not_called()
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
@@ -512,6 +513,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -555,7 +557,9 @@ class TestStationTileIntegration:
 
         # Initialise values in the backend TileSimulator and forces update
         tile_simulator.set_preadu_levels([0.0] * 32)
-
+        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
+            return_value=("PREADU_LEVELS", None)
+        )
         # Set the value in the backend TileSimulator.
         initial_preadu_levels = [12.0] * 32
         tile_simulator.set_preadu_levels(initial_preadu_levels)
@@ -578,14 +582,12 @@ class TestStationTileIntegration:
         )
 
         # Check the station updates its own map.
-        time.sleep(0.1)
         assert sps_station_device.preaduLevels.tolist() == initial_preadu_levels
 
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
         # Finally check `SpsStation` attribute value.
         desired_preadu_levels = np.array([24.0] * 32)
         sps_station_device.preaduLevels = desired_preadu_levels
-
         # Not equal because we need the MccsTile to change value.
         assert not np.array_equal(
             sps_station_device.preaduLevels, desired_preadu_levels

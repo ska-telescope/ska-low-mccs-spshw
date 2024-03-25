@@ -151,9 +151,9 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
+        # change_event_callbacks["tile_command_status"].assert_change_event(
+        #     (on_command_id, "STAGING")
+        # )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -322,9 +322,9 @@ class TestMccsTileTpmDriver:
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
+        # change_event_callbacks["tile_command_status"].assert_change_event(
+        #     (on_command_id, "STAGING")
+        # )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -459,9 +459,9 @@ class TestMccsTileTpmDriver:
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
+        # change_event_callbacks["tile_command_status"].assert_change_event(
+        #     (on_command_id, "STAGING")
+        # )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -472,6 +472,7 @@ class TestMccsTileTpmDriver:
             "NotProgrammed", lookahead=2, consume_nonmatches=True
         )
         print("ON CALLED: NotProgrammed")
+
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Programmed"
         )
@@ -570,9 +571,7 @@ class TestMccsTileTpmDriver:
             json.dumps({"delay": delay_time})
         )
         assert "StartAcquisition" in command_id.split("_")[-1]
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (command_id, TaskStatus.STAGING.name)
-        )
+
         change_event_callbacks["tile_command_status"].assert_change_event(
             (command_id, TaskStatus.QUEUED.name)
         )
@@ -620,9 +619,9 @@ class TestMccsTileTpmDriver:
             "core_id": 1,
             "arp_table_entry": 0,
         }
+        time.sleep(2)
         result_str = tile_device.Get40GCoreConfiguration(json.dumps(arg))
         result = json.loads(result_str)
-
         # check is a subset
         assert config.items() <= result.items()
 
@@ -661,6 +660,7 @@ class TestMccsTileTpmDriver:
             match="ValueError: Invalid core id or arp table id specified",
         ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
+        time.sleep(2)
 
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
@@ -695,6 +695,7 @@ class TestMccsTileTpmDriver:
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected
+        time.sleep(2)
 
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
@@ -843,10 +844,8 @@ class TestMccsTileTpmDriver:
         # time.sleep(16)
         ([result_code], [initialise_id]) = tile_device.Initialise()
 
-        # assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (initialise_id, "STAGING")
-        )
+        assert result_code == ResultCode.QUEUED
+
         change_event_callbacks["tile_command_status"].assert_change_event(
             (initialise_id, "QUEUED")
         )

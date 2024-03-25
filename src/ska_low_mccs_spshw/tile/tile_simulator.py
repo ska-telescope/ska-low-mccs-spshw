@@ -606,7 +606,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
-        time.sleep(random.randint(1, 10))
+        time.sleep(random.randint(3, 10))
         self._start_polling_event.set()
         self.logger.info("Waited.............")
 
@@ -686,7 +686,9 @@ class TileSimulator:
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
         """
-        assert core_id in [0, 1]
+        if core_id not in [0, 1]:
+            raise ValueError(f"Invalid core_id, must be 0 or 1 it is {core_id}")
+
         core_dict = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,

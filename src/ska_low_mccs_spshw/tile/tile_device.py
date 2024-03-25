@@ -409,9 +409,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.push_archive_event("tileProgrammingState", attribute_value)
                 case "global_status_alarms":
                     # TODO: MCCS-2037
-                    self.logger.error(
-                        "Functionality not implemented."
-                    )
+                    self.logger.error("Functionality not implemented.")
                 case "tile_health_structure":
                     # TODO: Handle this better.
                     self.logger.error(f"tile_health_structure called {attribute_value}")

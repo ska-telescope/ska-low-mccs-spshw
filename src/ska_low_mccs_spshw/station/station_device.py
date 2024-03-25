@@ -787,6 +787,21 @@ class SpsStation(SKAObsDevice):
     # Fast Commands
     # -------------
 
+    @command(dtype_out="DevVarLongStringArray")
+    def UpdateStaticDelays(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Update static delays from TelModel.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        """
+        self.component_manager.static_delays = (
+            self.component_manager._update_static_delays()
+        )
+        return ([ResultCode.OK], ["UpdateStaticDelays command completed OK"])
+
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",

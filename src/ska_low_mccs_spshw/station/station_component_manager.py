@@ -289,8 +289,6 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.add_change_event_callback(
                 "yPolBandpass", self._bandpass_callback
             )
-            # self._proxy._subscribe_change_event("xPolBandpass")
-            # self._proxy._subscribe_change_event("yPolBandpass")
         super()._update_communication_state(communication_state)
 
     def _bandpass_callback(
@@ -307,7 +305,6 @@ class _DaqProxy(DeviceComponentManager):
         :param attribute_quality: Validity of attribute change.
         """
         if self._component_state_callback:
-            # if attribute_quality == ATTR_VALID:?
             if attribute_name.lower() == "xpolbandpass":
                 self.logger.debug("Processing change event for xPolBandpass")
                 self._component_state_callback(xPolBandpass=attribute_data)
@@ -315,7 +312,10 @@ class _DaqProxy(DeviceComponentManager):
                 self.logger.debug("Processing change event for yPolBandpass")
                 self._component_state_callback(yPolBandpass=attribute_data)
             else:
-                self.logger.error(f"Got unexpected change event for: {attribute_name}")
+                self.logger.error(
+                    f"Got unexpected change event for: {attribute_name} "
+                    "in DaqProxy._bandpass_callback."
+                )
 
 
 # pylint: disable=too-many-instance-attributes
@@ -491,6 +491,55 @@ class SpsStationComponentManager(
             is_configured=None,
             adc_power=None,
         )
+
+    def _port_to_antenna_order(
+        self: SpsStationComponentManager,
+        antenna_mapping: dict[int, tuple[int, int, int]],
+        data: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Reorder bandpass data from port order to antenna order.
+
+        Data is a 2D array expected in blocks ordered by TPM number and each block
+            is expected in TPM port order.
+
+        :param antenna_mapping: A mapping of antenna to tpm and ports.
+            dict[ant_id: (tpm_id, tpm_x_port, tpm_y_port)]
+        :param data: Full station data in TPM and port order.
+        :returns: Full station data in Antenna order or `None` if the operation failed.
+        """
+        if antenna_mapping == {}:
+            self.logger.warning(
+                "No antenna mapping provided, returning data unmodified and exiting.",
+            )
+            return data
+        ordered_data = np.zeros(data.shape)
+        nof_antennas_per_tile = TileData.ANTENNA_COUNT
+        skipped_antennas: bool = False
+        try:
+            for antenna in range(data.shape[0]):
+                tpm_number = antenna_mapping[antenna + 1][0]
+                tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
+                # So long as X and Y pols are always on adjacent ports this should work.
+                tpm_port_number = antenna_mapping[antenna + 1][1]
+                port_offset = int(tpm_port_number // 2)
+                antenna_index = tile_base_index + port_offset
+                ordered_data[antenna, :] = data[antenna_index, :]
+        except KeyError:
+            # Generally we'll get here when we have fewer than 256 antennas.
+            # Keep a note if we skipped some but don't flood the logs.
+            skipped_antennas = True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.logger.error(
+                "Caught exception in "
+                f"SpsStationComponentManager._port_to_antenna_order: {repr(e)}"
+            )
+        if skipped_antennas:
+            self.logger.warning(
+                "Data remapped but some antennas that were not found were skipped."
+            )
+
+        return ordered_data
 
     def _get_mappings(
         self: SpsStationComponentManager,

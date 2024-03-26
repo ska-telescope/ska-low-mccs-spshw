@@ -19,7 +19,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any, Callable, Optional, Sequence, Union, cast
+from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
@@ -326,7 +326,7 @@ class SpsStationComponentManager(
 
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-    # pylint: disable=too-many-arguments, too-many-statements
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
@@ -380,6 +380,7 @@ class SpsStationComponentManager(
 
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
+        self._tile_id_mapping: dict[str, int] = {}
         number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
@@ -392,9 +393,9 @@ class SpsStationComponentManager(
         # tile proxies should be a list (ordered, indexable) not a dictionary.
         # logical tile ID is assigned globally, is not a property assigned
         # by the station
-        #
-        self._tile_proxies = {
-            tile_fqdn: _TileProxy(
+        self._tile_proxies: dict[str, _TileProxy] = {}
+        for logical_tile_id, tile_fqdn in enumerate(tile_fqdns):
+            self._tile_proxies[tile_fqdn] = _TileProxy(
                 tile_fqdn,
                 station_id,
                 logical_tile_id,
@@ -403,8 +404,7 @@ class SpsStationComponentManager(
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
-            for logical_tile_id, tile_fqdn in enumerate(tile_fqdns)
-        }
+            self._tile_id_mapping[tile_fqdn.split("-")[-1]] = logical_tile_id
 
         self._subrack_proxies = {
             subrack_fqdn: _SubrackProxy(
@@ -472,10 +472,10 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
-        self._antenna_mapping: dict[int, tuple[int, int, int]] = {}
-        # _antenna_info is mapping of antenna_num : (station_id, tpm_id, antenna_loc)
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
 
+        self._antenna_mapping: dict[int, dict[str, int]] = {}
+        self._cable_lengths: dict[int, float] = {}
         if antenna_config_uri:
             self._get_mappings(antenna_config_uri, logger)
         else:
@@ -494,7 +494,7 @@ class SpsStationComponentManager(
 
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
-        antenna_mapping: dict[int, tuple[int, int, int]],
+        antenna_mapping: dict[int, dict[str, int]],
         data: np.ndarray,
     ) -> np.ndarray:
         """
@@ -518,10 +518,10 @@ class SpsStationComponentManager(
         skipped_antennas: bool = False
         try:
             for antenna in range(data.shape[0]):
-                tpm_number = antenna_mapping[antenna + 1][0]
+                tpm_number = antenna_mapping[antenna + 1]["tpm"]
                 tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
                 # So long as X and Y pols are always on adjacent ports this should work.
-                tpm_port_number = antenna_mapping[antenna + 1][1]
+                tpm_port_number = antenna_mapping[antenna + 1]["tpm_x_channel"]
                 port_offset = int(tpm_port_number // 2)
                 antenna_index = tile_base_index + port_offset
                 ordered_data[antenna, :] = data[antenna_index, :]
@@ -541,6 +541,24 @@ class SpsStationComponentManager(
 
         return ordered_data
 
+    def _find_by_key(
+        self: SpsStationComponentManager, data: dict, target: str
+    ) -> Generator:
+        """
+        Traverse nested dictionary, yield next value for given target.
+
+        :param data: generic nested dictionary to traverse through.
+        :param target: key to find the next value of.
+
+        :yields: the next value for given key.
+        """
+        for key, value in data.items():
+            if key == target:
+                yield value
+            elif isinstance(value, dict):
+                yield from self._find_by_key(value, target)
+
+    # pylint: disable=too-many-locals, too-many-branches
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],
@@ -556,33 +574,165 @@ class SpsStationComponentManager(
         """
         antenna_mapping_uri = antenna_config_uri[0]
         antenna_mapping_filepath = antenna_config_uri[1]
-        station_cluster = antenna_config_uri[2]
-        tmdata = TMData([antenna_mapping_uri])
-        full_dict = tmdata[antenna_mapping_filepath].get_dict()
+        this_station_cluster_id = antenna_config_uri[2]
 
         try:
-            antennas = full_dict["platform"]["array"]["station_clusters"][
-                station_cluster
-            ]["stations"][str(self._station_id)]["antennas"]
+            tmdata = TMData([antenna_mapping_uri])
+        # pylint: disable=broad-except
+        except Exception as e:
+            logger.error(f"Unable to create TMData object, check uri. Error: {e}")
+            return
+
+        try:
+            full_dict = tmdata[antenna_mapping_filepath].get_dict()
+        # pylint: disable=broad-except
+        except Exception as e:
+            logger.error(
+                "Unable to create dictionary from imported TMData,"
+                f"check uploaded TelModel data. Error: {e}"
+            )
+            return
+
+        station_clusters = []
+        stations = []
+        antennas = {}
+
+        # Get all the station clusters.
+        for station_cluster in self._find_by_key(full_dict, "station_clusters"):
+            station_clusters.append(station_cluster)
+
+        if len(station_clusters) == 0:
+            logger.error(
+                f"Couldn't find station cluster {this_station_cluster_id} "
+                "in imported TMData."
+            )
+            return
+
+        # Look through all the found station clusters, find this station cluster.
+        for station_cluster in station_clusters:
+            for station_cluster_id, station_cluster_config in station_cluster.items():
+                if station_cluster_id == this_station_cluster_id:
+                    for station in self._find_by_key(
+                        station_cluster_config, "stations"
+                    ):
+                        stations.append(station)
+
+        if len(stations) == 0:
+            logger.error(
+                f"Couldn't find station {self._station_id} "
+                f"in cluster {this_station_cluster_id} in imported TMData."
+            )
+            return
+
+        # Look through all the stations on this cluster, find antennas on this station.
+        for station in stations:
+            for station_id, station_config in station.items():
+                if station_id == str(self._station_id):
+                    antennas = next(self._find_by_key(station_config, "antennas"))
+
+        if len(antennas) == 0:
+            logger.error(
+                f"Couldn't find antennas on station {self._station_id}, "
+                f"cluster {this_station_cluster_id}"
+            )
+            return
+
+        try:
             for antenna in antennas:
-                # Get tpm/port <-> antenna mapping.
-                self._antenna_mapping[int(antenna)] = (
-                    int(antennas[antenna]["tpm"]),
-                    int(antennas[antenna]["tpm_x_channel"]),
-                    int(antennas[antenna]["tpm_y_channel"]),
-                )
+                self._antenna_mapping[int(antenna)] = {
+                    "tpm": int(antennas[antenna]["tpm"]),
+                    "tpm_x_channel": antennas[antenna]["tpm_x_channel"],
+                    "tpm_y_channel": antennas[antenna]["tpm_y_channel"],
+                    "delays": antennas[antenna]["delays"],
+                }
                 # Construct labels for bandpass data.
                 self._antenna_info[int(antenna)] = {
                     "station_id": self._station_id,
                     "tpm_id": int(antennas[antenna]["tpm"]),
                     "antenna_location": antennas[antenna]["location_offset"],
                 }
-            logger.info(self._antenna_mapping)
         except KeyError as err:
             logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
+
+    def _update_static_delays(
+        self: SpsStationComponentManager,
+    ) -> list[float]:
+        """
+        Fetch static delays from the TelModel config.
+
+        :returns: list of static delays in tile/channel order
+        """
+        tile_delays = [
+            [0 for _ in range(TileData.ADC_CHANNELS)]
+            for _ in range(len(self._tile_proxies))
+        ]
+        for antenna_config in self._antenna_mapping.values():
+            try:
+                tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
+            except KeyError:
+                self.logger.debug(
+                    f"Mapping for tile {antenna_config['tpm']} present, "
+                    "but device not deployed. Skipping."
+                )
+                continue
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delays"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delays"]
+        for tile_no, tile in enumerate(tile_delays):
+            self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
+        return [
+            channel_delay
+            for channel_delays in tile_delays
+            for channel_delay in channel_delays
+        ]
+
+    def _calculate_delays_per_tile(
+        self: SpsStationComponentManager,
+        antenna_order_delays: list[float],
+    ) -> dict[int, list[float]]:
+        beam_index = antenna_order_delays[0]
+
+        # pre-allocate arrays for each of our tiles
+        tile_delays: dict[int, list] = {}
+        # element 0: beam index
+        # odd elements: delay
+        # even elements: delay rate
+        for tile_proxy in self._tile_proxies.values():
+            assert tile_proxy._proxy is not None
+            tile_no = tile_proxy._proxy.logicalTileId
+            tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
+
+        # remove element 0 from antenna_order_delays to aid in indexing,
+        # we have used it now
+        antenna_order_delays = antenna_order_delays[1:]
+
+        # This array should now be of even length as it corresponds to pairs of
+        # delay/delay rates
+        assert len(antenna_order_delays) % 2 == 0
+
+        # Loop through each pair of delay/delay rates
+        for antenna_no in range(len(antenna_order_delays) // 2):
+            delay = antenna_order_delays[antenna_no * 2]
+            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
+
+            # Fetch which tpm this antenna belongs to
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
+            channel = (
+                self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
+            )  # y channel, even
+
+            # We may have mapping for devices we don't have deployed
+            if tile_no in tile_delays:
+                tile_delays[tile_no][(channel) * 2 + 1] = delay
+                tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
+
+        return tile_delays
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
@@ -841,9 +991,9 @@ class SpsStationComponentManager(
             if fqdn is None:
                 # pylint: disable-next=attribute-defined-outside-init
                 self.power_state = power_state
-            elif fqdn in self._subrack_proxies.keys():
+            elif fqdn in self._subrack_proxies:
                 self._subrack_proxies[fqdn]._power_state = power_state
-            elif fqdn in self._tile_proxies.keys():
+            elif fqdn in self._tile_proxies:
                 self._tile_proxies[fqdn]._power_state = power_state
             else:
                 raise ValueError(
@@ -879,6 +1029,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         results = [proxy.off() for proxy in self._subrack_proxies.values()]
@@ -893,10 +1044,14 @@ class SpsStationComponentManager(
             for (result, _) in results
         ):
             task_status = TaskStatus.COMPLETED
+            result_code = ResultCode.OK
+            message = "Off Command Completed"
         else:
             task_status = TaskStatus.FAILED
+            result_code = ResultCode.FAILED
+            message = "Off Command Failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def standby(
@@ -966,13 +1121,16 @@ class SpsStationComponentManager(
             if timeout > 0:
                 self.logger.debug("End standby")
                 task_status = TaskStatus.COMPLETED
+                message = "Standby command completed."
             else:
                 self.logger.debug("Timeout in standby")
                 task_status = TaskStatus.FAILED
+                message = "Standby command timeout."
         else:
             task_status = TaskStatus.FAILED
+            message = ""
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     def on(
         self: SpsStationComponentManager,
@@ -1004,6 +1162,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         self.logger.debug("Starting on sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1051,11 +1210,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
+            message = "On Command Completed"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
+            message = "On Command failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     def initialise(
         self: SpsStationComponentManager,
@@ -1086,6 +1247,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        message: str = ""
         self.logger.debug("Starting initialise sequence")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1127,11 +1289,13 @@ class SpsStationComponentManager(
         if result_code in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]:
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
+            message = "Initialisation Complete"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
+            message = "Initialisation Failed"
         if task_callback:
-            task_callback(status=task_status)
+            task_callback(status=task_status, result=(result_code, message))
 
     @check_communicating
     def _turn_on_subracks(
@@ -1530,12 +1694,12 @@ class SpsStationComponentManager(
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
         self._desired_static_delays = copy.deepcopy(delays)
-        i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
+            start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
+            end_entry = (proxy._proxy.logicalTileId + 1) * TileData.ADC_CHANNELS
             if proxy._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                proxy._proxy.staticTimeDelays = delays[i : i + TileData.ADC_CHANNELS]
-            i = i + TileData.ADC_CHANNELS
+                proxy._proxy.staticTimeDelays = delays[start_entry:end_entry]
 
     @property
     def channeliser_rounding(self: SpsStationComponentManager) -> np.ndarray:
@@ -2066,46 +2230,6 @@ class SpsStationComponentManager(
             assert tile._proxy is not None  # for the type checker
             tile._proxy.ApplyCalibration(switch_time)
 
-    def _calculate_delays_per_tile(
-        self: SpsStationComponentManager,
-        antenna_order_delays: list[float],
-    ) -> dict[int, list[float]]:
-        beam_index = antenna_order_delays[0]
-
-        # pre-allocate arrays for each of our tiles
-        tile_delays: dict[int, list] = {}
-        # element 0: beam index
-        # odd elements: delay
-        # even elements: delay rate
-        for tile_proxy in self._tile_proxies.values():
-            assert tile_proxy._proxy is not None
-            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
-            tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
-
-        # remove element 0 from antenna_order_delays to aid in indexing,
-        # we have used it now
-        antenna_order_delays = antenna_order_delays[1:]
-
-        # This array should now be of even length as it corresponds to pairs of
-        # delay/delay rates
-        assert len(antenna_order_delays) % 2 == 0
-
-        # Loop through each pair of delay/delay rates
-        for antenna_no in range(len(antenna_order_delays) // 2):
-            delay = antenna_order_delays[antenna_no * 2]
-            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
-
-            # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1][0]
-            channel = self._antenna_mapping[antenna_no + 1][2] // 2  # y channel, even
-
-            # We may have mapping for devices we don't have deployed
-            if tile_no in tile_delays:
-                tile_delays[tile_no][(channel) * 2 + 1] = delay
-                tile_delays[tile_no][(channel) * 2 + 2] = delay_rate
-
-        return tile_delays
-
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
     ) -> None:
@@ -2321,11 +2445,12 @@ class SpsStationComponentManager(
             if success:
                 task_callback(
                     status=TaskStatus.COMPLETED,
-                    result="Start acquisition has completed",
+                    result=(ResultCode.OK, "Start acquisition has completed"),
                 )
             else:
                 task_callback(
-                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, "Start acquisition task failed"),
                 )
             return
 
@@ -2457,4 +2582,7 @@ class SpsStationComponentManager(
         self.preadu_levels = sanitised_levels
 
         if task_callback:
-            task_callback(status=TaskStatus.COMPLETED)
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "ADC equalisation complete."),
+            )

@@ -238,7 +238,7 @@ def tile_component_manager_fixture(
         TestMode.TEST,
         logger,
         max_workers,
-        tile_id,
+        tile_id - 1,
         station_id,
         "tpm_ip",
         tpm_cpld_port,
@@ -273,7 +273,7 @@ def tpm_driver_fixture(
     """
     return TpmDriver(
         logger,
-        tile_id,
+        tile_id - 1,
         station_id,
         tile_simulator,
         tpm_version,

@@ -18,7 +18,6 @@ import pytest
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
-from ska_telmodel.data import TMData  # type: ignore
 
 from ska_low_mccs_spshw.station import SpsStationComponentManager
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
@@ -114,6 +113,7 @@ def station_component_manager_fixture(
     daq_trl: str,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
+    antenna_uri: list[str],
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -125,7 +125,7 @@ def station_component_manager_fixture(
     :param daq_trl: Tango Resource Locator for this Station's DAQ instance.
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
-
+    :param antenna_uri: Location of antenna configuration file.
 
     :return: a station component manager.
     """
@@ -135,7 +135,7 @@ def station_component_manager_fixture(
         [get_tile_name(tile_id)],
         daq_trl,
         "10.0.0.0",
-        [],
+        antenna_uri,
         logger,
         1,
         callbacks["communication_status"],
@@ -289,7 +289,6 @@ def test_load_pointing_delays(
     mock_tile_proxy.LoadPointingDelays.assert_next_call(expected_tile_arg)
 
 
-# pylint: disable=too-many-locals
 def test_port_to_antenna_order(
     station_component_manager: SpsStationComponentManager, antenna_uri: list[str]
 ) -> None:
@@ -300,38 +299,20 @@ def test_port_to_antenna_order(
         under test
     :param antenna_uri: Location of antenna configuration file.
     """
-    antenna_mapping_uri = antenna_uri[0]
-    antenna_mapping_filepath = antenna_uri[1]
-    station_cluster = antenna_uri[2]
-    tmdata = TMData([antenna_mapping_uri])
-    full_dict = tmdata[antenna_mapping_filepath].get_dict()
-    antenna_mapping = {}
-    tpm_x_mapping = np.zeros((16, 16))
-    tpm_y_mapping = np.zeros((16, 16))
+    assert station_component_manager._antenna_mapping != {}
 
-    antennas = full_dict["platform"]["array"]["station_clusters"][station_cluster][
-        "stations"
-    ]["1"]["antennas"]
-    # Create an antenna map the same way SpsStation does.
-    for antenna in antennas:
-        antenna_mapping[int(antenna)] = {
-            "tpm": int(antennas[antenna]["tpm"]),
-            "tpm_x_channel": antennas[antenna]["tpm_x_channel"],
-            "tpm_y_channel": antennas[antenna]["tpm_y_channel"],
-            "delays": antennas[antenna]["delays"],
-        }
-        tpm = int(antennas[antenna]["tpm"]) - 1
-        x_port = antennas[antenna]["tpm_x_channel"]
-        y_port = antennas[antenna]["tpm_y_channel"]
+    tpm_x_mapping = np.zeros((16, 16))
+    for antenna, antenna_info in station_component_manager._antenna_mapping.items():
+        tpm = int(antenna_info["tpm"]) - 1
+        x_port = antenna_info["tpm_x_channel"]
         # Create a simple dataset where map[tpm][port] = antenna_number
         # so that it's obvious if we've re-ordered it correctly or not.
         tpm_x_mapping[tpm][x_port // 2] = antenna
-        tpm_y_mapping[tpm][y_port // 2] = antenna
 
     reshaped_x_tpm_map = tpm_x_mapping.reshape((256, 1))
 
     antenna_ordered_map = station_component_manager._port_to_antenna_order(
-        antenna_mapping, reshaped_x_tpm_map
+        station_component_manager._antenna_mapping, reshaped_x_tpm_map
     )
     for i, antenna in enumerate(antenna_ordered_map):
         # Assert we're in antenna order (and convert from 0 to 1 based numbering)

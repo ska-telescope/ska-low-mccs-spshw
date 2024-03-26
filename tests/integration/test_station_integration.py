@@ -123,6 +123,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -175,6 +176,7 @@ class TestStationTileIntegration:
         )
         # Station stays in UNKNOWN state
         # because subrack and tile devices are still OFFLINE
+        tile_simulator.mock_off()
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
 
@@ -212,9 +214,6 @@ class TestStationTileIntegration:
         tile_device.On()
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Unconnected"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed"
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
@@ -231,6 +230,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -253,6 +253,7 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             change_event_callbacks,
         )
 
@@ -282,6 +283,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -298,6 +300,7 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             change_event_callbacks,
         )
         # Force a poll to get the initial values.
@@ -354,6 +357,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: tile_component_manager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -371,7 +375,11 @@ class TestStationTileIntegration:
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            tile_simulator,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -417,7 +425,9 @@ class TestStationTileIntegration:
         final_adc_powers = [24.0] + [24.0] * 31
         tile_simulator._adc_rms = final_adc_powers
 
-        change_event_callbacks["sps_adc_power"].assert_not_called()
+        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
+            return_value=("ADC_RMS", None)
+        )
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
@@ -444,7 +454,11 @@ class TestStationTileIntegration:
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            tile_simulator,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -531,7 +545,11 @@ class TestStationTileIntegration:
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            tile_simulator,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -627,7 +645,11 @@ class TestStationTileIntegration:
             callbacks with asynchrony support.
         """
         self.turn_station_on(
-            sps_station_device, subrack_device, tile_device, change_event_callbacks
+            sps_station_device,
+            subrack_device,
+            tile_device,
+            tile_simulator,
+            change_event_callbacks,
         )
 
         sps_station_device.subscribe_event(
@@ -694,6 +716,7 @@ class TestStationTileIntegration:
         tile_device: tango.DeviceProxy,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -713,6 +736,7 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             change_event_callbacks,
         )
 

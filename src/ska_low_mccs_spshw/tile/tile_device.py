@@ -1173,9 +1173,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: list of up to 7*48 values
         """
-        return list(
-            itertools.chain.from_iterable(self.component_manager.beamformer_table)
-        )
+        table = copy.deepcopy(self.component_manager.beamformer_table)
+        return list(itertools.chain.from_iterable(table))
+        # return list(itertools.chain.from_iterable([[2, 0, 0, 0, 0, 0, 0]]))
 
     @attribute(
         dtype="DevString",

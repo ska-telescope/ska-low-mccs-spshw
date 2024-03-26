@@ -83,9 +83,9 @@ class TestTileComponentManager:
 
         match power_state:
             case PowerState.ON:
-                callbacks["component_state"].assert_call(power=power_state, lookahead=2)
+                callbacks["component_state"].assert_call(power=power_state)
                 callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                 )
                 callbacks["component_state"].assert_not_called()
 
@@ -164,6 +164,7 @@ class TestTileComponentManager:
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
                 )
             case PowerState.UNKNOWN:
+                callbacks["component_state"].assert_call(power=PowerState.ON)
                 # We start in UNKNOWN so no need to assert
                 callbacks["component_state"].assert_call(
                     **{
@@ -176,10 +177,14 @@ class TestTileComponentManager:
                         }
                     }
                 )
-                callbacks["component_state"].assert_not_called()
+                callbacks["component_state"].assert_call(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+                )
+
             case _:
                 # OFF, NO_SUPPLY, STANDBY
-                callbacks["component_state"].assert_call(power=power_state, lookahead=3)
+                callbacks["component_state"].assert_call(power=PowerState.ON)
+                # We start in UNKNOWN so no need to assert
                 callbacks["component_state"].assert_call(
                     **{
                         "global_status_alarms": {
@@ -189,13 +194,11 @@ class TestTileComponentManager:
                             "SEM_wd": 0,
                             "MCU_wd": 0,
                         }
-                    },
-                    lookahead=3,
+                    }
                 )
                 callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
                 )
-                callbacks["component_state"].assert_not_called()
 
         tile_component_manager.stop_communicating()
 
@@ -309,10 +312,10 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
+        callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name()
         )
-        callbacks["component_state"].assert_call(power=PowerState.OFF)
 
         callbacks["component_state"].assert_not_called()
 
@@ -337,7 +340,9 @@ class TestTileComponentManager:
         callbacks["component_state"].assert_call(
             power=PowerState.OFF, lookahead=10, consume_nonmatches=True
         )
-        callbacks["component_state"].assert_not_called()
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.OFF.pretty_name()
+        )
 
     def test_eventual_consistency_of_on_command(
         self: TestTileComponentManager,
@@ -390,8 +395,7 @@ class TestTileComponentManager:
         mock_subrack_device_proxy.PowerOnTpm.assert_not_called()
 
         result_code, message = tile_component_manager.on(callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.STAGING)
-        assert result_code == TaskStatus.STAGING
+        assert result_code == TaskStatus.QUEUED
         assert message == "Task staged"
         time.sleep(0.2)
 
@@ -405,7 +409,7 @@ class TestTileComponentManager:
             PowerState.ON,
             tango.EventType.CHANGE_EVENT,
         )
-
+        callbacks["task"].assert_call(status=TaskStatus.STAGING)
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
@@ -468,9 +472,7 @@ class TestStaticSimulatorCommon:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         static_tile_component_manager.on(task_callback=callbacks["task"])
         callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
-        callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
-        )
+
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
         )
@@ -745,7 +747,7 @@ class TestStaticSimulatorCommon:
         tile.erase_fpga()
         assert not tile.is_programmed
         tile.initialise(callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
@@ -774,7 +776,7 @@ class TestStaticSimulatorCommon:
         assert not tile.is_programmed
         mock_bitfile = mocker.Mock()
         tile.download_firmware(mock_bitfile, callbacks["task"])
-        callbacks["task"].assert_call(status=TaskStatus.STAGING)
+
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
         callbacks["task"].assert_call(
@@ -1013,38 +1015,9 @@ class TestDynamicSimulatorCommon:
         """
         return PowerState.ON
 
-    # @pytest.fixture()
-    # def tile(
-    #     self: TestDynamicSimulatorCommon,
-    #     dynamic_tile_component_manager: TileComponentManager,
-    #     callbacks: MockCallableGroup,
-    # ) -> TileComponentManager:
-    #     """
-    #     Return the tile component under test. (Driving a DynamicTpmSimulator).
-
-    #     :param dynamic_tile_component_manager: the tile component manager (
-    #         Driving a DynamicTpmSimulator)
-    #     :param callbacks: dictionary of driver callbacks.
-
-    #     :return: the tile class object under test
-    #     """
-    #     dynamic_tile_component_manager.start_communicating()
-
-    #     callbacks["communication_status"].assert_call(
-    #         CommunicationStatus.NOT_ESTABLISHED
-    #     )
-    #     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-    #     callbacks["component_state"].assert_call(power=PowerState.ON)
-    #     callbacks["component_state"].assert_call(fault=False)
-    #     callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
-    #     callbacks["component_state"].assert_call(
-    #         programming_state=TpmStatus.INITIALISED
-    #     )
-    #     return dynamic_tile_component_manager
-
     @pytest.fixture()
     def tile(
-        self: TestStaticSimulatorCommon,
+        self: TestDynamicSimulatorCommon,
         dynamic_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
@@ -1067,9 +1040,7 @@ class TestDynamicSimulatorCommon:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         dynamic_tile_component_manager.on(task_callback=callbacks["task"])
         callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
-        callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
-        )
+
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
         )

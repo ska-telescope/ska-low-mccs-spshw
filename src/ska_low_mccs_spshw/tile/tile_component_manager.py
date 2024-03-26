@@ -375,7 +375,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
             case ("BEAMFORMER_TABLE", None):
                 request = TileRequest(
-                    "beamformer_table", self._tpm_driver.get_beamformer_table
+                    "beamformer_table", self._tpm_driver.beamformer_table
                 )
             case ("FPGA_REFERENCE_TIME", None):
                 request = TileRequest(
@@ -404,11 +404,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info(f"Executing request {poll_request.name}")
         return TileResponse(poll_request.name, poll_request(), poll_request.publish)
 
-    def evaluate_state(self, subrack_says, tpm_status):
-        if tpm_status == TpmStatus.UNCONNECTED:
-            return
-        self._update_component_state(power=self._subrack_says_tpm_power)
-
     def poll_failed(self: TileComponentManager, exception: Exception) -> None:
         """
         Handle the receipt of new polling values.
@@ -416,15 +411,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         This is a hook called by the poller when values have been read
         during a poll.
 
+        SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.UNKNOWN
+        SUBRACK_SAY_TPM_OFF         ->  PowerState.OFF
+        SUBRACK_SAY_TPM_ON          ->  PowerState.ON
+        SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.NO_SUPPLY
+
         :param poll_response: response to the pool, including any values
             read.
         """
         assert self._request_provider
         self.logger.error("Failed poll")
 
-        self.evaluate_state(self._subrack_says_tpm_power, self.tpm_status)
-
-        # self._update_component_state(power=self._subrack_says_tpm_power)
+        self.power_state = self._subrack_says_tpm_power
+        self._update_component_state(power=self._subrack_says_tpm_power)
 
         match exception:
             case ConnectionError():
@@ -432,6 +431,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._request_provider.desire_connection()
                 # if subrack says off report OFF.
             case LibraryError():
+                # Called when unconnected TPM.
                 self.logger.warning(f"ConnectionError found {exception}, retry......")
                 self.logger.info(f"subrack says {self._subrack_says_tpm_power}")
                 if self._subrack_says_tpm_power in [PowerState.OFF, PowerState.UNKNOWN]:
@@ -442,7 +442,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 # self._request_provider.desire_connection()
             case BoardError():
                 # This could be a overheating of the FPGA??
-                self.logger.error("Unexpected error found")
+                self.logger.error("BoardError: check global status alarms")
             case _:
                 self.logger.error(f"Unexpected error found: {repr(exception)}")
 
@@ -453,6 +453,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         This is a hook called by the poller when values have been read
         during a poll.
 
+        SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.ON, DevState.UNKNOWN
+        SUBRACK_SAY_TPM_OFF         ->  PowerState.ON, DevState.ALARM
+        SUBRACK_SAY_TPM_ON          ->  PowerState.ON, DevState.ON
+        SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.ON, DevState.ALARM
+
         :param poll_response: response to the pool, including any values
             read.
         """
@@ -462,10 +467,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # self.logger.error(f"Handling results of successful poll. {poll_response}")
         super().poll_succeeded(poll_response)
 
-        # self._update_component_state(power=self._subrack_says_tpm_power)
-        self.evaluate_state(self._subrack_says_tpm_power, self.tpm_status)
+        self.power_state = PowerState.ON
+        self._update_component_state(power=PowerState.ON)
+
         if poll_response.publish:
-            self._update_component_state(
+            self._update_component_state(  # type: ignore[misc]
                 **{poll_response.command: poll_response.data},
             )
 
@@ -475,9 +481,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack_poller()
         time.sleep(0.1)
-        self.power_state = getattr(
-            self._subrack_proxy, f"tpm{self._subrack_tpm_id}PowerState"
-        )
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Define actions to be taken when polling stops."""
@@ -526,7 +529,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
 
         subrack_on_command_proxy(self._subrack_tpm_id)
-
+        if task_callback:
+            task_callback(status=TaskStatus.STAGING)
         request = TileRequest(
             name="initialise",
             command_object=self._tpm_driver.initialise,
@@ -536,8 +540,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         self.logger.info("Initialise command placed in poll QUEUE")
         self._request_provider.desire_initialise(request)
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
+        # Return QUEUED as STAGING Results in a SegFault.
         return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack_poller(self: TileComponentManager) -> None:
@@ -606,7 +609,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
         self._subrack_says_tpm_power = event_value
-        self.power_state = event_value
         if event_value == PowerState.UNKNOWN:
             self.logger.error("SUBRACK SAYS POWER IS UNKNOWN")
         self.logger.error("dsdsd")
@@ -636,11 +638,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             status = TpmStatus.UNKNOWN
         elif self.power_state != PowerState.ON:
             status = TpmStatus.OFF
-        elif self.communication_state != CommunicationStatus.ESTABLISHED:
-            status = TpmStatus.UNCONNECTED
         else:
             status = self._tpm_driver.tpm_status
-            self.logger.info(f"asking tpmDriver the TpmStatus {status}")
+            self.logger.info(f"TpmDriver says the TpmStatus {status}")
         return status
 
     @property

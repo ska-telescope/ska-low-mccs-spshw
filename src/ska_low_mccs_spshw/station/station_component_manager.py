@@ -169,6 +169,7 @@ class _TileProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
+        self.logger.error(f"the attr {event_name}changed to {event_value}")
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             if self._proxy.stationId != self._station_id:
@@ -554,13 +555,13 @@ class SpsStationComponentManager(
             self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
-    @threadsafe
     def _tile_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
     ) -> None:
+        self.logger.error(f"fqdn : {fqdn}, power: {power}, health {health}")
         if power is not None:
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power

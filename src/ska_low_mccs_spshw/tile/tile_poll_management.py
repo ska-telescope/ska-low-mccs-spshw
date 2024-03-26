@@ -227,14 +227,13 @@ class TileRequestProvider:
                             print("dsdsdsdsd ALLL")
                             self.initialise_request.abort()
                             self.initialise_request = None
-
+        if self._desire_connection:
+            self._desire_connection = False
+            return "CONNECT", None
         if self._check_global_alarms:
             self._check_global_alarms = False
             return "CHECK_CPLD_COMMS", None
         # we can always attempt a connection to TPM.
-        if self._desire_connection:
-            self._desire_connection = False
-            return "CONNECT", None
 
         match tpm_status:
             case TpmStatus.OFF:

@@ -176,7 +176,7 @@ class TpmDriver(TaskExecutorComponentManager):
                 return self.tile.get_station_id()
         raise TimeoutError("Failed to acquire lock in time")
 
-    def get_beamformer_table(self: TpmDriver) -> list[int]:
+    def get_beamformer_table(self: TpmDriver) -> list[list[int]]:
         """
         Return the beamformer table.
 
@@ -184,12 +184,11 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-            if acquired:
-                return self.tile.tpm.station_beamf[0].get_channel_table()[
-                    0 : self._nof_blocks
-                ]
-        raise TimeoutError("Failed to acquire lock in time")
+        # with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        #     if acquired:
+        return self.tile.tpm.station_beamf[0].get_channel_table()[0 : self._nof_blocks]
+
+        # raise TimeoutError("Failed to acquire lock in time")
 
     def ping(self: TpmDriver) -> None:
         """
@@ -1714,7 +1713,15 @@ class TpmDriver(TaskExecutorComponentManager):
         * substation_id - (int) Substation
         * aperture_id:  ID of the aperture (station*100+substation?)
         """
-        return self.get_beamformer_table()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    return self.tile.tpm.station_beamf[0].get_channel_table()[
+                        0 : self._nof_blocks
+                    ]
+                except Exception as e:
+                    self.logger.error("Exception raisd")
+        raise TimeoutError("dsadasoidjo")
 
     def load_calibration_coefficients(
         self: TpmDriver, antenna: int, calibration_coefficients: list[complex]
@@ -2379,9 +2386,12 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: whether there are pending send data requests
         """
+        self.logger.error("odisajdoijasodij")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                return self.tile.check_pending_data_requests()
+                ff = self.tile.check_pending_data_requests()
+                self.logger.error(f"odisajdoijasodij:dd {ff}")
+                return ff
         raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     #

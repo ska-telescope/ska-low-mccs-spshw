@@ -19,14 +19,14 @@ import threading
 import time
 from typing import Any, Callable, List, Optional, TypeVar, Union, cast
 
-from pyfabil.base.definitions import Device, LibraryError
+from pyfabil.base.definitions import Device, LibraryError, RegisterInfo
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
 from .tile_data import TileData
 from .utils import acquire_timeout
 
-__all__ = ["DynamicTileSimulator", "TileSimulator"]
+__all__ = ["DynamicTileSimulator", "TileSimulator", "MockTpm"]
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
@@ -236,12 +236,26 @@ class MockTpm:
 
         :return: registers found at address.
         """
+        self.logger.error("Finding register")
         matches = []
-        for k in self._register_map.keys():
+        for k, v in self._register_map.items():
             if isinstance(k, int):
                 pass
             elif re.search(str(address), k) is not None:
-                matches.append(k)
+                reg_info = RegisterInfo(
+                    k,
+                    0x00,
+                    "int",
+                    "fpga_x",
+                    "READ_WRITE",
+                    "/24",
+                    "30",
+                    "2",
+                    v,
+                    2048,
+                    "mocked values",
+                )
+                matches.append(reg_info)
         return matches
 
     @property
@@ -1114,7 +1128,8 @@ class TileSimulator:
         :param seconds: When to synchronise
         :raises NotImplementedError: if not overwritten
         """
-        raise NotImplementedError
+        self.logger.error("sending data aaa")
+        self._pending_data_requests = True
 
     @connected
     def send_channelised_data_narrowband(
@@ -1160,6 +1175,7 @@ class TileSimulator:
     def stop_data_transmission(self: TileSimulator) -> None:
         """Stop data transmission."""
         self.spead_data_simulator.stop_sending_data()
+        self._pending_data_requests = False
 
     @connected
     def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
@@ -1265,6 +1281,7 @@ class TileSimulator:
 
         :return: the simulated timestamp
         """
+        # with self._lock:
         return self._timestamp
 
     @connected

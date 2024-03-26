@@ -53,6 +53,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: tango.Deviceproxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -107,6 +108,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
         change_event_callbacks["tile_state"].assert_not_called()
 
+        tile_simulator.mock_off()
         tile_device.adminMode = AdminMode.ONLINE
 
         # Before the tile device tries to connect with its TPM,
@@ -151,9 +153,9 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        # change_event_callbacks["tile_command_status"].assert_change_event(
-        #     (on_command_id, "STAGING")
-        # )
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -351,6 +353,7 @@ class TestMccsTileTpmDriver:
     def setup_devices(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -406,6 +409,7 @@ class TestMccsTileTpmDriver:
 
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
         change_event_callbacks["tile_state"].assert_not_called()
+        tile_simulator.mock_off()
         tile_device.adminMode = AdminMode.ONLINE
 
         # Before the tile device tries to connect with its TPM,
@@ -459,9 +463,9 @@ class TestMccsTileTpmDriver:
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
 
-        # change_event_callbacks["tile_command_status"].assert_change_event(
-        #     (on_command_id, "STAGING")
-        # )
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -508,6 +512,7 @@ class TestMccsTileTpmDriver:
     def test_start_acquisition(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -519,7 +524,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         delay_time = 2  # seconds
         [[result_code], [message]] = tile_device.StartAcquisition(
@@ -544,6 +551,7 @@ class TestMccsTileTpmDriver:
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -555,7 +563,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         with pytest.raises(
             tango.DevFailed,
@@ -593,6 +603,7 @@ class TestMccsTileTpmDriver:
     def test_configure_40g_core(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -604,7 +615,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         config = {
             "core_id": 1,
@@ -628,6 +641,7 @@ class TestMccsTileTpmDriver:
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -639,7 +653,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         # Load a bad configuration.
         bad_config = {
@@ -665,6 +681,7 @@ class TestMccsTileTpmDriver:
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -679,7 +696,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         tile_device.ConfigureStationBeamformer(
             json.dumps(
@@ -695,11 +714,11 @@ class TestMccsTileTpmDriver:
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected
-        time.sleep(2)
 
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -711,7 +730,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         initial_level = tile_device.preadulevels
 
@@ -742,7 +763,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         tile_device.subscribe_event(
             "ppsPresent",
@@ -833,7 +856,9 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        self.setup_devices2(tile_device, subrack_device, change_event_callbacks)
+        self.setup_devices(
+            tile_device, tile_simulator, subrack_device, change_event_callbacks
+        )
 
         # set a pps Correction to apply
         tile_under_test_pps_delay = 12

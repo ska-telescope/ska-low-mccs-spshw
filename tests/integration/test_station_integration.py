@@ -15,11 +15,15 @@ import unittest
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode
+from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from tests.test_tools import (
+    execute_lrc_to_complettion,
+    wait_for_completed_command_to_clear_from_queue,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -44,7 +48,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_preadu_levels",
         "tile_csp_rounding",
         "tile_channeliser_rounding",
-        timeout=25.0,
+        "track_lrc_command",
+        timeout=7.0,
     )
 
 
@@ -93,28 +98,30 @@ def test_initialise_can_execute(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["tile_state"],
     )
-    tile_simulator.mock_off()
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+    # Turn adminMode ONLINE with the TPM mocked to be OFF
+    tile_simulator.mock_off()
     tile_device.adminMode = AdminMode.ONLINE
 
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+    # Check we can turn on the TPM
     tile_device.On()
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
     tile_device.Off()
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+
     tile_simulator.mock_on()
     tile_device.On()
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
-    print("OUIhfsiuhisufhiuh")
-
     [_], [command_id] = tile_device.initialise()
     for i in range(30):
-        print(tile_device.CheckLongRunningCommandStatus(command_id))
         if tile_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED":
             break
         time.sleep(0.5)
+    wait_for_completed_command_to_clear_from_queue(tile_device)
 
 
 class TestStationTileIntegration:
@@ -152,6 +159,7 @@ class TestStationTileIntegration:
             change_event_callbacks["tile_state"],
         )
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
         sps_station_device.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
@@ -168,12 +176,8 @@ class TestStationTileIntegration:
         change_event_callbacks["subrack_state"].assert_change_event(
             tango.DevState.DISABLE
         )
-        time.sleep(1)
-        print(f"The staion state {sps_station_device.state()}")
         sps_station_device.adminMode = AdminMode.ONLINE
-        print(f"The staion state {sps_station_device.state()}")
 
-        print(f"The staion state {sps_station_device.state()}")
         # change_event_callbacks["station_state"].assert_not_called()
         change_event_callbacks["station_state"].assert_change_event(
             tango.DevState.UNKNOWN
@@ -183,8 +187,6 @@ class TestStationTileIntegration:
         tile_simulator.mock_off()
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
-
-        print(f"tile state is now {tile_device.state()}")
 
         # Tile and station both stay in UNKNOWN state
         # because subrack is still OFFLINE
@@ -229,6 +231,9 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
+
     def test_initialise_can_execute(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
@@ -262,27 +267,13 @@ class TestStationTileIntegration:
             tile_simulator,
             change_event_callbacks,
         )
-
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
+        # Check that the initialise LRC executes to COMPLETION
+        execute_lrc_to_complettion(
+            change_event_callbacks, sps_station_device, "Initialise", None
         )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
-        )
+        assert tile_device.tileProgrammingState == "Initialised"
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_pps_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -329,28 +320,10 @@ class TestStationTileIntegration:
         assert (pps_corrections_before_initialisation == initial_corrections).all()
 
         # Call initialise
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         # Force a poll to get the initial values.
-        print("Trying to force a poll of attribute")
         request_provider = tile_component_manager._request_provider
         assert request_provider is not None
         request_provider.get_request = (  # type: ignore[method-assign]
@@ -361,6 +334,8 @@ class TestStationTileIntegration:
 
         assert np.array_equal(final_corrections, desired_pps_corrections)
         # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_adc_power_change(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -394,25 +369,8 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
 
         sps_station_device.subscribe_event(
@@ -443,6 +401,8 @@ class TestStationTileIntegration:
             unittest.mock.Mock(return_value=("ADC_RMS", None))
         )
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -476,26 +436,10 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
 
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
-        )
         tile_device.subscribe_event(
             "staticTimeDelays",
             tango.EventType.CHANGE_EVENT,
@@ -534,6 +478,8 @@ class TestStationTileIntegration:
         time.sleep(0.1)
 
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_sps_preadu_levels_coherent_with_tile_simulator(
@@ -568,25 +514,8 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
 
         # Initialise values in the backend TileSimulator and forces update
@@ -638,6 +567,8 @@ class TestStationTileIntegration:
         # Check the station updates its own map.
         time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_csp_rounding(
@@ -672,25 +603,8 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
@@ -733,6 +647,8 @@ class TestStationTileIntegration:
         )
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_channeliser_rounding(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -766,25 +682,8 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         tile_device.channeliserRounding = np.array([10] * 512)
 
@@ -824,3 +723,5 @@ class TestStationTileIntegration:
         assert np.array_equal(
             sps_station_device.channeliserRounding, channeliser_rounding_to_check
         )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)

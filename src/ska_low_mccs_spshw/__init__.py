@@ -26,10 +26,12 @@ __all__ = [
     "SpsStation",
     "MccsStationCalibrator",
     "MccsCalibrationStore",
+    "MccsCommandProxy",
     "version",
 ]
 
 from .calibration_store import MccsCalibrationStore
+from .command_proxy import MccsCommandProxy
 from .daq_receiver import MccsDaqReceiver
 from .station import SpsStation
 from .station_calibrator import MccsStationCalibrator

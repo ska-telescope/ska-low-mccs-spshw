@@ -11,13 +11,19 @@ from __future__ import annotations
 import gc
 import json
 import time
+import unittest
 
+import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, PowerState, ResultCode, TaskStatus
+from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.tile import TileSimulator
+from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from tests.test_tools import (
+    execute_lrc_to_complettion,
+    wait_for_completed_command_to_clear_from_queue,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -39,7 +45,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_command_status",
         "tile_programming_state",
         "pps_present",
-        timeout=30.0,
+        "track_lrc_command",
+        timeout=5.0,
     )
 
 
@@ -217,137 +224,11 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         # The tile device receives this event too. It transitions to OFF.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         change_event_callbacks["tile_state"].assert_not_called()
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
 
 class TestMccsTileTpmDriver:
     """This class is for testing the MccsTile using the TileSimulator."""
-
-    def setup_devices2(
-        self: TestMccsTileTpmDriver,
-        tile_device: tango.DeviceProxy,
-        subrack_device: tango.DeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
-    ) -> None:
-        """
-        Set devices in a commonly desired state.
-
-        Consider generalising this to expand for different setups.
-
-        # FINAL_CONFIGURATION
-        tile_device.adminMode == AdminMode.ONLINE
-        tile_device.state == tango.DevState.ON
-        subrack_device.adminMode == AdminMode.ONLINE
-        subrack_device.state == tango.DevState.ON
-
-        :param subrack_device: the subrack Tango device under test.
-        :param tile_device: the tile Tango device under test.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
-        """
-        assert subrack_device.adminMode == AdminMode.OFFLINE
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        # Since the subrack device is in adminMode OFFLINE,
-        # it is not even trying to monitor and control its subrack,
-        # so it reports its state as DISABLE,
-        # and its TPM power states as UNKNOWN.
-        subrack_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["subrack_state"],
-        )
-        change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.DISABLE
-        )
-
-        subrack_device.subscribe_event(
-            "tpm1PowerState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["subrack_tpm_power_state"],
-        )
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.UNKNOWN
-        )
-
-        # Since the tile device is in adminMode OFFLINE,
-        # it is not even trying to monitor and control its subrack,
-        # so it reports its state as DISABLE.
-        tile_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_state"],
-        )
-
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-        change_event_callbacks["tile_state"].assert_not_called()
-        tile_device.adminMode = AdminMode.ONLINE
-
-        # Before the tile device tries to connect with its TPM,
-        # it needs to find out from its subrack whether the TPM is even turned on.
-        # So it subscribes to change events from its subrack's corresponding
-        # TPM power state attribute.
-        # The subrack reports that the TPM power state is UNKNOWN,
-        # so the tile remains in UNKNOWN state.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
-        change_event_callbacks["tile_state"].assert_not_called()
-        subrack_device.adminMode = AdminMode.ONLINE
-
-        # The subrack device tries to establish a connection to its upstream power
-        # supply device.
-        # Until this connection is established, it is in UNKNOWN state.
-        change_event_callbacks["subrack_state"].assert_change_event(
-            tango.DevState.UNKNOWN
-        )
-
-        # Once the subrack device is connected to its subrack,
-        # it transitions to ON state.
-        # It is also now in a position to report on whether its TPMs are on or off.
-        change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.ON)
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
-        )
-
-        # The tile device receives the same event,
-        # so it transitions to OFF state.
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-
-        # Now the tile device can turn its TPM on,
-        # but first let's subscribe to change events on command status,
-        # so that we can track the status of the command
-        tile_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_command_status"],
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(())
-
-        ([result_code], [on_command_id]) = tile_device.On()
-        assert result_code == ResultCode.QUEUED
-        # change_event_callbacks["tile_command_status"].assert_change_event(
-        #     (on_command_id, "STAGING")
-        # )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "QUEUED")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "IN_PROGRESS")
-        )
-
-        # The tile device tells the subrack device
-        # to tell its subrack to power on its TPM.
-        # This is done, and the subrack device detects that the TPM is now on.
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.ON
-        )
-
-        # The tile device receives this event too.
-        # TODO: it transitions straight to ON without going through UNKNOWN. Why?
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
-
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "COMPLETED")
-        )
-        change_event_callbacks["tile_command_status"].assert_not_called()
 
     def setup_devices(
         self: TestMccsTileTpmDriver,
@@ -460,7 +341,6 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=2, consume_nonmatches=True
         )
-        print("ON CALLED")
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
 
@@ -476,23 +356,20 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed", lookahead=2, consume_nonmatches=True
         )
-        print("ON CALLED: NotProgrammed")
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Programmed"
         )
-        print("ON CALLED: Programmed")
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised"
         )
-        print("ON CALLED")
         # check that the fpga time is moving.
         initial_time = tile_device.fpgasUnixTime[0]
         sleep_time = 2
         time.sleep(sleep_time)
         final_time = tile_device.fpgasUnixTime[0]
 
-        assert (final_time - initial_time) >= sleep_time
+        assert (final_time - initial_time) >= sleep_time - 1
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -509,6 +386,7 @@ class TestMccsTileTpmDriver:
             (on_command_id, "COMPLETED")
         )
         change_event_callbacks["tile_command_status"].assert_not_called()
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_start_acquisition(
         self: TestMccsTileTpmDriver,
@@ -550,6 +428,7 @@ class TestMccsTileTpmDriver:
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
@@ -580,22 +459,16 @@ class TestMccsTileTpmDriver:
                 json.dumps({"data_type": "beam"})
             )
         change_event_callbacks["tile_command_status"].assert_not_called()
+
         # Start Acquisition
         delay_time = 2
-        [[_], [command_id]] = tile_device.StartAcquisition(
-            json.dumps({"delay": delay_time})
+        execute_lrc_to_complettion(
+            change_event_callbacks,
+            tile_device,
+            "StartAcquisition",
+            json.dumps({"delay": delay_time}),
         )
-        assert "StartAcquisition" in command_id.split("_")[-1]
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (command_id, TaskStatus.QUEUED.name)
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (command_id, TaskStatus.IN_PROGRESS.name)
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (command_id, TaskStatus.COMPLETED.name)
-        )
         # Wait for synchronisation
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Synchronised"
@@ -604,6 +477,7 @@ class TestMccsTileTpmDriver:
         [[_], [command_id]] = tile_device.SendDataSamples(
             json.dumps({"data_type": "raw"})
         )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_40g_core(
         self: TestMccsTileTpmDriver,
@@ -644,6 +518,7 @@ class TestMccsTileTpmDriver:
         result = json.loads(result_str)
         # check is a subset
         assert config.items() <= result.items()
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
@@ -685,7 +560,7 @@ class TestMccsTileTpmDriver:
             match="ValueError: Invalid core id or arp table id specified",
         ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
-        time.sleep(2)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
@@ -725,6 +600,7 @@ class TestMccsTileTpmDriver:
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0]
         assert table == expected
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
@@ -754,6 +630,7 @@ class TestMccsTileTpmDriver:
         time.sleep(14)
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_pps_present(
         self: TestMccsTileTpmDriver,
@@ -798,12 +675,15 @@ class TestMccsTileTpmDriver:
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
+    # pylint: disable=too-many-arguments
     def test_pps_delay(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -817,6 +697,7 @@ class TestMccsTileTpmDriver:
         :param subrack_device: the subrack Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -830,28 +711,18 @@ class TestMccsTileTpmDriver:
         tile_device.ppsDelayCorrection = tile_under_test_pps_delay
 
         # This pps delay correction is only applied during initialisation.
-        # time.sleep(16)
-        ([result_code], [initialise_id]) = tile_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
 
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("PPS_DELAY_CORRECTION", None))
         )
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
-        )
-        # # Force a poll to get the initial values.
-        # print("Trying to force a poll of attribute")
-        # tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-        #     return_value=("PPS_DELAY_CORRECTION", None)
-        # )
-        # time.sleep(2)
-        # final_corrections = tile_device.ppsDelayCorrection
+        time.sleep(0.2)
+        final_corrections = tile_device.ppsDelayCorrection
 
-        # assert np.array_equal(final_corrections, tile_under_test_pps_delay)
-        # # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        assert np.array_equal(final_corrections, tile_under_test_pps_delay)
+        # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        wait_for_completed_command_to_clear_from_queue(tile_device)

@@ -32,6 +32,7 @@ from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_tango_base.base import check_communicating, check_on
 from ska_tango_base.poller import PollingComponentManager
 
+from ..command_proxy import MccsCommandProxy
 from .base_tpm_simulator import BaseTpmSimulator
 from .tile_poll_management import TileRequestProvider
 from .tile_simulator import DynamicTileSimulator, TileSimulator
@@ -243,7 +244,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            2.0,
+            0.1,
             adc_rms=None,
             tile_health_structure=None,
             pll_locked=None,
@@ -503,8 +504,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: a result code and a unique_id or message.
         """
-        assert self._subrack_proxy is not None  # for the type checker
-        self._subrack_proxy.PowerOffTpm(self._subrack_tpm_id)
+        subrack_off_command_proxy = MccsCommandProxy(
+            self._subrack_fqdn, "PowerOffTpm", self.logger
+        )
+        subrack_off_command_proxy(self._subrack_tpm_id, task_callback=task_callback)
+
         return TaskStatus.QUEUED, ""
 
     def on(
@@ -530,8 +534,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 "Cannot execute 'TileComponentManager.start_acquisition'. "
                 "Communication with component is not established."
             )
-        assert self._subrack_proxy is not None  # for the type checker
-        self._subrack_proxy.PowerOnTpm(self._subrack_tpm_id)
+        subrack_on_command_proxy = MccsCommandProxy(
+            self._subrack_fqdn, "PowerOnTpm", self.logger
+        )
+
+        subrack_on_command_proxy(self._subrack_tpm_id)
+
         if task_callback:
             task_callback(status=TaskStatus.STAGING)
         request = TileRequest(

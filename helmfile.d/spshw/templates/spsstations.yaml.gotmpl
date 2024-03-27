@@ -5,75 +5,68 @@
 
 {{- $spsstation_instances := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
-    {{- $station_enabled := dig "enabled" true $station_spec}}
+{{- range $station_name, $station_spec := $platform.array.stations}}
+  {{- $station_enabled := dig "enabled" true $station_spec}}
 
-    {{- $sps_spec := dig "sps" (dict "enabled" false) $station_spec}}
-    {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
+  {{- $sps_spec := dig "sps" (dict "enabled" false) $station_spec}}
+  {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
 
-    {{- $spsstation_spec := dig "sps_station" dict $sps_spec}}
-    {{- $spsstation_enabled := dig "enabled" $sps_enabled $spsstation_spec}}
+  {{- $spsstation_spec := dig "sps_station" dict $sps_spec}}
+  {{- $spsstation_enabled := dig "enabled" $sps_enabled $spsstation_spec}}
 
-    {{- if $spsstation_enabled}}
-      {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
-      {{- $spsstation_name := printf "low-mccs/spsstation/%s" $station_name}}
-      {{- $spsstation_instance := dict}}
-      {{- $_ := set $spsstation_instance "station_id" $station_spec.id}}
+  {{- if $spsstation_enabled}}
+    {{- $spsstation_trl := printf "low-mccs/spsstation/%s" $station_name}}
+    {{- $spsstation_instance := dict}}
+    {{- $_ := set $spsstation_instance "station_id" $station_spec.id}}
 
-      {{- $spsstation_logging_level_defaults := pluck "logging_level_default" $spsstation_spec $defaults}}
-      {{- if $spsstation_logging_level_defaults}}
-        {{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
-      {{- end }}
-
-      {{- $_ := set $spsstation_instance "station_network_address" $sps_spec.network_address}}
-
-      {{- $default_daq_trl := ""}}
-      {{- $antenna_config_uri_list := list}}
-      {{- $antenna_config_uri := dig "sps" "antenna_config_uri" "uri" "" $station_spec}}
-      {{- if $antenna_config_uri}}
-        {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri}}
-        {{- $antenna_config_uri_path := dig "sps" "antenna_config_uri" "path" "" $station_spec}}
-          {{- if $antenna_config_uri_path}}
-            {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri_path}}
-          {{- end}}
-        {{- $antenna_config_uri_station_cluster := dig "sps" "antenna_config_uri" "station_cluster" "" $station_spec}}
-          {{- if $antenna_config_uri_station_cluster}}
-            {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri_station_cluster}}
-          {{- end}}
-
-      {{- end}}
-      {{- $_ := set $spsstation_instance "antenna_config_uri" $antenna_config_uri_list}}
-      {{- $daq_spec := dig "daq" dict $sps_spec}}
-      {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
-      {{- if $daq_enabled}}
-        {{- $default_daq_trl = printf "low-mccs/daqreceiver/%s" $station_name}}
-      {{- end}}
-
-      {{- $daq_trl := dig "sps" "daq_trl" $default_daq_trl $station_spec}}
-      {{- with $daq_trl}}
-        {{- $_ := set $spsstation_instance "daq_trl" .}}
-      {{- end}}
-
-      {{- $subracks := list}}
-      {{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
-      {{- range $subrack_id, $subrack_spec := $subrack_specs}}
-        {{- if (dig "enabled" true $subrack_spec)}}
-          {{- $subracks = append $subracks (printf "%s-%d" $station_name (int $subrack_id))}}
-        {{- end }}
-      {{- end }}
-      {{- $_ := set $spsstation_instance "subracks" (sortAlpha $subracks)}}
-
-      {{- $tpms := list}}
-      {{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
-      {{- range $tpm_id, $tpm_spec := $tpm_specs}}
-        {{- if (dig "enabled" true $tpm_spec)}}
-          {{- $tpms = append $tpms (printf "%s-%02d" $station_name (int $tpm_id))}}
-        {{- end }}
-      {{- end }}
-      {{- $_ := set $spsstation_instance "tpms" (sortAlpha $tpms)}}
-      {{- $_ := set $spsstation_instances $station_name (dict $spsstation_name $spsstation_instance)}}
+    {{- $spsstation_logging_level_defaults := pluck "logging_level_default" $spsstation_spec $defaults}}
+    {{- if $spsstation_logging_level_defaults}}
+      {{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
     {{- end }}
+
+    {{- $_ := set $spsstation_instance "station_network_address" $sps_spec.network_address}}
+
+    {{- $antenna_config_uri_list := list}}
+    {{- $antenna_config_uri := dig "sps" "antenna_config_uri" "uri" "" $station_spec}}
+    {{- if $antenna_config_uri}}
+      {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri}}
+      {{- $antenna_config_uri_path := dig "sps" "antenna_config_uri" "path" "" $station_spec}}
+      {{- if $antenna_config_uri_path}}
+        {{- $antenna_config_uri_list = append $antenna_config_uri_list $antenna_config_uri_path}}
+      {{- end}}
+    {{- end}}
+    {{- $_ := set $spsstation_instance "antenna_config_uri" $antenna_config_uri_list}}
+
+    {{- $default_daq_trl := ""}}
+    {{- $daq_spec := dig "daq" dict $sps_spec}}
+    {{- $daq_enabled := dig "enabled" $sps_enabled $daq_spec}}
+    {{- if $daq_enabled}}
+      {{- $default_daq_trl = printf "low-mccs/daqreceiver/%s" $station_name}}
+    {{- end}}
+
+    {{- $daq_trl := dig "sps" "daq_trl" $default_daq_trl $station_spec}}
+    {{- with $daq_trl}}
+      {{- $_ := set $spsstation_instance "daq_trl" .}}
+    {{- end}}
+
+    {{- $subracks := list}}
+    {{- $subrack_specs := dig "sps" "subracks" dict $station_spec}}
+    {{- range $subrack_name, $subrack_spec := $subrack_specs}}
+      {{- if (dig "enabled" true $subrack_spec)}}
+        {{- $subracks = append $subracks (printf "low-mccs/subrack/%s-%s" $station_name $subrack_name)}}
+      {{- end }}
+    {{- end }}
+    {{- $_ := set $spsstation_instance "subracks" (sortAlpha $subracks)}}
+
+    {{- $tpms := list}}
+    {{- $tpm_specs := dig "sps" "tpms" dict $station_spec}}
+    {{- range $tpm_name, $tpm_spec := $tpm_specs}}
+      {{- if (dig "enabled" true $tpm_spec)}}
+        {{- $tpms = append $tpms (printf "low-mccs/tile/%s-%s" $station_name $tpm_name)}}
+      {{- end }}
+    {{- end }}
+    {{- $_ := set $spsstation_instance "tpms" (sortAlpha $tpms)}}
+    {{- $_ := set $spsstation_instances $station_name (dict $spsstation_trl $spsstation_instance)}}
   {{- end }}
 {{- end }}
 

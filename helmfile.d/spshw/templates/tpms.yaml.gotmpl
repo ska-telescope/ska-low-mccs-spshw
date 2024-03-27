@@ -6,52 +6,49 @@
 {{- $tpm_instances := dict}}
 {{- $tpm_simulators := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
-    {{- $station_enabled := dig "enabled" true $station_spec}}
+{{- range $station_name, $station_spec := $platform.array.stations}}
+  {{- $station_enabled := dig "enabled" true $station_spec}}
 
-    {{- $sps_spec := dig "sps" dict $station_spec}}
-    {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
+  {{- $sps_spec := dig "sps" dict $station_spec}}
+  {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
 
-    {{- $tpm_specs := dig "tpms" dict $sps_spec}}
-    {{- $tile_id := 0}}
-    {{- $tile_ids := dict}}
-    {{- $tpm_keys := list}}
-    {{- range $tpm_key :=  keys $tpm_specs}}
-      {{- $tpm_keys = append $tpm_keys (printf "%2d" (int $tpm_key))}}
-    {{- end}}
-    {{- $tpm_keys = $tpm_keys | sortAlpha}}
-    {{- range $tpm_id := $tpm_keys}}
-      {{- $_ := set $tile_ids $tpm_id $tile_id}}
-      {{- $tile_id = add $tile_id 1}}
-    {{- end}}
+  {{- $tpm_specs := dig "tpms" dict $sps_spec}}
+  {{- $tile_id := 0}}
+  {{- $tile_ids := dict}}
+  {{- $tpm_keys := list}}
+  {{- range $tpm_key :=  keys $tpm_specs}}
+    {{- $tpm_keys = append $tpm_keys (printf "%2d" (int $tpm_key))}}
+  {{- end}}
+  {{- $tpm_keys = $tpm_keys | sortAlpha}}
+  {{- range $tpm_id := $tpm_keys}}
+    {{- $_ := set $tile_ids $tpm_id $tile_id}}
+    {{- $tile_id = add $tile_id 1}}
+  {{- end}}
     
-    {{- range $tpm_id, $tpm_spec := $tpm_specs}}
-      {{- $tpm_enabled := dig "enabled" $sps_enabled $tpm_spec}}
+  {{- range $tpm_name, $tpm_spec := $tpm_specs}}
+    {{- $tpm_enabled := dig "enabled" $sps_enabled $tpm_spec}}
 
-      {{- if $tpm_enabled}}
-        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
-        {{- $server_name := printf "%s-%02d" $station_name (int $tpm_id)}}
-        {{- $tpm_name := printf "low-mccs/tile/%s" $server_name}}
-        {{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
+    {{- if $tpm_enabled}}
+      {{- $server_name := printf "%s-%s" $station_name $tpm_name}}
+      {{- $tpm_trl := printf "low-mccs/tile/%s" $server_name}}
+      {{- $tpm_instance := pick $tpm_spec "host" "port" "version" "subrack_slot" "nodeSelector"}}
 
-        {{- $_ := set $tpm_instance "tile_id" (get (printf "%2d" (int $tpm_id)) $tile_ids )}}
-        {{- $_ := set $tpm_instance "subrack" (printf "%s-%d" $station_name (int $tpm_spec.subrack))}}
-        {{- $_ := set $tpm_instance "station_id" $station_spec.id}}
+      {{- $_ := set $tpm_instance "tile_id" $tpm_spec.id}}
+      {{- $_ := set $tpm_instance "subrack" (printf "%s-%s" $station_name $tpm_spec.subrack)}}
+      {{- $_ := set $tpm_instance "station_id" $station_spec.id}}
 
-        {{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
-        {{- if $tpm_logging_level_defaults}}
-          {{- $_ := set $tpm_instance "logging_level_default" (first $tpm_logging_level_defaults)}}
-        {{- end }}
+      {{- $tpm_logging_level_defaults := pluck "logging_level_default" $tpm_spec $defaults}}
+      {{- if $tpm_logging_level_defaults}}
+        {{- $_ := set $tpm_instance "logging_level_default" (first $tpm_logging_level_defaults)}}
+      {{- end }}
 
-        {{- $tpm_simulated := dig "simulated" false $tpm_spec}}
-        {{- if $tpm_simulated}}
-          {{- $_ := set $tpm_instance "simulation_config" 1}}
-          {{- $_ := set $tpm_instance "test_config" 1}}
-        {{- end}}
-
-        {{- $_ := set $tpm_instances $server_name (dict $tpm_name $tpm_instance)}}
+      {{- $tpm_simulated := dig "simulated" false $tpm_spec}}
+      {{- if $tpm_simulated}}
+        {{- $_ := set $tpm_instance "simulation_config" 1}}
+        {{- $_ := set $tpm_instance "test_config" 1}}
       {{- end}}
+
+      {{- $_ := set $tpm_instances $server_name (dict $tpm_trl $tpm_instance)}}
     {{- end}}
   {{- end}}
 {{- end}}

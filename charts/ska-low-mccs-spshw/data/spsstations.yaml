@@ -12,10 +12,10 @@ Defines the deployment for SpsStation Tango devices.
           - "instrument/mccs-configuration/aavs3.yaml"
           - "a1"
           subracks:
-          - "s8-1-1"
+          - "low-mccs/subrack/s8-1-sr1"
           tpms:
-          - "s8-1-10"
-          - "s8-1-13"
+          - "low-mccs/tile/s8-1-tpm10"
+          - "low-mccs/tile/s8-1-tpm13"
           logging_level_default: 5
 
 */}}
@@ -56,14 +56,10 @@ server:
 {{- end}}
                 - name: "SubrackFQDNs"
                   values:
-{{- range $subrack := $this_spsstation.subracks}}
-                    - {{printf "low-mccs/subrack/%s" $subrack}}
-{{- end}}
+{{toYaml $this_spsstation.subracks | indent 20}}
                 - name: "TileFQDNs"
                   values:
-{{- range $tpm := $this_spsstation.tpms}}
-                    - {{printf "low-mccs/tile/%s" $tpm}}
-{{- end}}
+{{toYaml $this_spsstation.tpms | indent 20}}
 {{- with $this_spsstation.logging_level_default}}
                 - name: "LoggingLevelDefault"
                   values:

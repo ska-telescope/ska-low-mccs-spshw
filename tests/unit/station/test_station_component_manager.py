@@ -290,15 +290,19 @@ def test_load_pointing_delays(
 
 
 def test_port_to_antenna_order(
-    station_component_manager: SpsStationComponentManager, antenna_uri: list[str]
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
 ) -> None:
     """
     Test that `port_to_antenna_order` properly re-orders data.
 
     :param station_component_manager: the SPS station component manager
         under test
-    :param antenna_uri: Location of antenna configuration file.
+    :param callbacks: dictionary of driver callbacks.
     """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     assert station_component_manager._antenna_mapping != {}
 
     tpm_x_mapping = np.zeros((16, 16))

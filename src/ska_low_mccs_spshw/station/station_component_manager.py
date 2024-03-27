@@ -477,6 +477,7 @@ class SpsStationComponentManager(
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
         if antenna_config_uri:
+            logger.debug("Retrieving antenna mapping.")
             self._get_mappings(antenna_config_uri, logger)
         else:
             logger.debug("No antenna mapping provided, skipping")

@@ -256,11 +256,9 @@ def daq_id_fixture() -> int:
 
 
 @pytest.fixture(name="daq_trl")
-def daq_trl_fixture(daq_id: str) -> str:
+def daq_trl_fixture() -> str:
     """
     Return a DAQ TRL for testing purposes.
-
-    :param daq_id: The ID of this DAQ device.
 
     :returns: A DAQ TRL.
     """

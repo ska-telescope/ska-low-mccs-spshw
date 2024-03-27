@@ -15,7 +15,7 @@ import unittest
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode, TaskStatus
+from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
@@ -68,6 +68,8 @@ def test_initialise_can_execute(
     :param sps_station_device: the station Tango device under test.
     :param subrack_device: the subrack Tango device under test.
     :param tile_device: the tile Tango device under test.
+    :param tile_simulator: the backend tile simulator. This is
+        what tile_device is observing.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
@@ -118,7 +120,7 @@ def test_initialise_can_execute(
 class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
 
-    def turn_station_on(
+    def turn_station_on(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
@@ -132,6 +134,8 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -225,7 +229,7 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
-    def test_initialise_can_execute(
+    def test_initialise_can_execute(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
@@ -246,6 +250,8 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -278,7 +284,7 @@ class TestStationTileIntegration:
             (initialise_id, "COMPLETED")
         )
 
-    def test_pps_delay(
+    def test_pps_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
@@ -293,6 +299,9 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -342,8 +351,10 @@ class TestStationTileIntegration:
         )
         # Force a poll to get the initial values.
         print("Trying to force a poll of attribute")
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("PPS_DELAY_CORRECTION", None)
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("PPS_DELAY_CORRECTION", None))
         )
         time.sleep(2)
         final_corrections = sps_station_device.ppsDelayCorrections
@@ -357,7 +368,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
-        tile_component_manager: tile_component_manager,
+        tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -371,6 +382,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -425,8 +437,10 @@ class TestStationTileIntegration:
         final_adc_powers = [24.0] + [24.0] * 31
         tile_simulator._adc_rms = final_adc_powers
 
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("ADC_RMS", None)
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("ADC_RMS", None))
         )
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
 
@@ -450,6 +464,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -492,10 +507,10 @@ class TestStationTileIntegration:
         initial_static_delays = np.array([12.5] + [0.0] * 31)
         tile_simulator.set_time_delays(initial_static_delays.tolist())
 
-        # Force a poll on the backend simulator.
-        # tile_device.UpdateAttributes()
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("STATIC_DELAYS", None)
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("STATIC_DELAYS", None))
         )
         time.sleep(1)
         # This will cause the Tile to push a change event.
@@ -541,6 +556,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -575,8 +591,11 @@ class TestStationTileIntegration:
 
         # Initialise values in the backend TileSimulator and forces update
         tile_simulator.set_preadu_levels([0.0] * 32)
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("PREADU_LEVELS", None)
+
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("PREADU_LEVELS", None))
         )
         # Set the value in the backend TileSimulator.
         initial_preadu_levels = [12.0] * 32
@@ -641,6 +660,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -682,8 +702,11 @@ class TestStationTileIntegration:
 
         csp_to_check = np.array([5] * 384)
         tile_device.cspRounding = csp_to_check
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("CSP_ROUNDING", None)
+
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("CSP_ROUNDING", None))
         )
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_csp_rounding"].assert_change_event(
@@ -711,7 +734,7 @@ class TestStationTileIntegration:
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
 
-    def test_channeliser_rounding(
+    def test_channeliser_rounding(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         tile_device: tango.DeviceProxy,
         sps_station_device: tango.DeviceProxy,
@@ -729,6 +752,9 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -761,8 +787,11 @@ class TestStationTileIntegration:
             (initialise_id, "COMPLETED")
         )
         tile_device.channeliserRounding = np.array([10] * 512)
-        tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-            return_value=("CHANNELISER_ROUNDING", None)
+
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("CHANNELISER_ROUNDING", None))
         )
         time.sleep(1)
         # Subscibe to change events on the preaduLevels attribute.

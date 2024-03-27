@@ -61,7 +61,7 @@ class TpmDriver(TaskExecutorComponentManager):
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
 
-    # pylint: disable=too-many-arguments, too-many-statements
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
@@ -181,14 +181,8 @@ class TpmDriver(TaskExecutorComponentManager):
         Return the beamformer table.
 
         :return: the beamformer table
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        # with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-        #     if acquired:
         return self.tile.tpm.station_beamf[0].get_channel_table()[0 : self._nof_blocks]
-
-        # raise TimeoutError("Failed to acquire lock in time")
 
     def ping(self: TpmDriver) -> None:
         """
@@ -198,7 +192,7 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                self.tile[int(0x30000000)]
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
         raise TimeoutError("Failed to acquire lock in time")
 
     def connect(self: TpmDriver) -> None:
@@ -393,6 +387,8 @@ class TpmDriver(TaskExecutorComponentManager):
         Check global status alarms.
 
         :return: a dictionary with global health alarms.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -402,7 +398,7 @@ class TpmDriver(TaskExecutorComponentManager):
     def download_firmware(
         self: TpmDriver,
         bitfile: str,
-        task_callback: Callable,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Download the provided firmware bitfile onto the TPM.
@@ -427,7 +423,7 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         Download tpm firmware using slow command.
 
-        :param argin: can either be the design name returned or a path to a file
+        :param bitfile: can either be the design name returned or a path to a file
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -514,16 +510,17 @@ class TpmDriver(TaskExecutorComponentManager):
         pps_delay_correction: int,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
-        """Download firmware, if not already downloaded, and initialises tile."""
-        #
-        # If not programmed, program it.
-        # TODO: there is no way to check whether the TPM is already correctly
-        # initialised. If it is, re-initialising it is bad.
-        #
-        if task_callback is not None:
-            self.logger.info(
-                f"Calling initialise with {program_fpga}: {task_callback}: {pps_delay_correction}"
-            )
+        """
+        Initialise the TPM.
+
+        :param program_fpga: True if we want to program the fpge before
+            initialisation.
+        :param pps_delay_correction: the delay correction to apply to the
+            pps signal.
+        :param task_callback: Update task state, defaults to None
+
+        :returns: a TaskStatus and message from command submission.
+        """
         return self.submit_task(
             self._initialise,
             args=[program_fpga, pps_delay_correction],
@@ -538,10 +535,17 @@ class TpmDriver(TaskExecutorComponentManager):
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
-        Initialise the tpm using slow command.
+        Initialise the TPM.
 
+        :param program_fpga: True if we want to program the fpge before
+            initialisation.
+        :param pps_delay_correction: the delay correction to apply to the
+            pps signal.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+
+        :raises ConnectionError: raised if we faile to commect with the
+            TPM.
         """
         self.logger.debug("initialised called")
         if task_callback:
@@ -822,7 +826,13 @@ class TpmDriver(TaskExecutorComponentManager):
         return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
 
     def frame_from_utc_time(self: TpmDriver, utc_time: str) -> int:
-        """Return the frame from utc time."""
+        """
+        Return the frame from utc time.
+
+        :param utc_time: the time in utc format.
+
+        :returns: the frame from utc time.
+        """
         return self._tile_time.frame_from_utc_time(utc_time)
 
     @property
@@ -868,6 +878,8 @@ class TpmDriver(TaskExecutorComponentManager):
         to UTC time
 
         :return: the FPGA_1 reference time, in Unix seconds
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: fpga_reference_time")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -891,10 +903,12 @@ class TpmDriver(TaskExecutorComponentManager):
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
     def mock_on(self: TpmDriver) -> None:
+        """Mock a TPM in the OFF state."""
         if isinstance(self.tile, TileSimulator):
             self.tile.mock_on()
 
     def mock_off(self: TpmDriver) -> None:
+        """Mock a TPM in the OFF state."""
         if isinstance(self.tile, TileSimulator):
             self.tile.mock_off()
 
@@ -964,9 +978,6 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                self.logger.error(
-                    f"gettting ppsdelay correction. {self.tile.get_pps_delay(enable_correction=True) - self.tile.get_pps_delay(enable_correction=False)}"
-                )
                 return self.tile.get_pps_delay(
                     enable_correction=True
                 ) - self.tile.get_pps_delay(enable_correction=False)
@@ -1247,6 +1258,8 @@ class TpmDriver(TaskExecutorComponentManager):
         LMC with only one ARP.
 
         :return: list of core id and arp table populated
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: arp_table")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1343,6 +1356,8 @@ class TpmDriver(TaskExecutorComponentManager):
 
         Requires to be run inside a thread protected block
         :return: list of static delays, from the hardware, in ns
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get_time_delays")
         delays = []
@@ -1410,18 +1425,18 @@ class TpmDriver(TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
-    def get_csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
-        return self._csp_rounding.tolist()
-
     @property
-    def csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
+    def csp_rounding(self: TpmDriver) -> Optional[list[int]]:
         """
         Read the cached value for the final rounding in the CSP samples.
 
         Need to be specfied only for the last tile
+
         :return: Final rounding for the CSP samples. Up to 384 values
         """
-        return self.get_csp_rounding()
+        if isinstance(self._csp_rounding, np.ndarray):
+            return self._csp_rounding.tolist()
+        return None
 
     @csp_rounding.setter
     def csp_rounding(self: TpmDriver, rounding: np.ndarray | int) -> None:
@@ -1534,6 +1549,8 @@ class TpmDriver(TaskExecutorComponentManager):
         Check if ADC clock PLL is locked.
 
         :return: True if PLL is locked. Checked in poll loop, cached
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -1712,6 +1729,8 @@ class TpmDriver(TaskExecutorComponentManager):
         * subarray_beam_id - (int) ID of the subarray beam
         * substation_id - (int) Substation
         * aperture_id:  ID of the aperture (station*100+substation?)
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -1719,7 +1738,7 @@ class TpmDriver(TaskExecutorComponentManager):
                     return self.tile.tpm.station_beamf[0].get_channel_table()[
                         0 : self._nof_blocks
                     ]
-                except Exception as e:
+                except Exception:  # pylint: disable=broad-except
                     self.logger.error("Exception raisd")
         raise TimeoutError("dsadasoidjo")
 
@@ -2175,12 +2194,19 @@ class TpmDriver(TaskExecutorComponentManager):
 
     def start_acquisition(
         self: TpmDriver,
-        task_callback: Callable,
-        start_time: bool,
-        delay: int,
+        delay: Optional[int] = 2,
+        start_time: Optional[str] = None,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
-        """Start_acquisition."""
+        """
+        Start_acquisition.
 
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+
+        :returns: a TaskStatus and a message.
+        """
         return self.submit_task(
             self._start_acquisition,
             args=[start_time, delay],
@@ -2385,6 +2411,8 @@ class TpmDriver(TaskExecutorComponentManager):
         Check for pending data requests.
 
         :return: whether there are pending send data requests
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.error("odisajdoijasodij")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -2549,4 +2577,5 @@ class TpmDriver(TaskExecutorComponentManager):
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
+                self.logger.warning("Failed to acquire hardware lock")
                 self.logger.warning("Failed to acquire hardware lock")

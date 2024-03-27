@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -10,7 +11,6 @@ from __future__ import annotations
 
 import time
 import unittest.mock
-from datetime import datetime, timezone
 from typing import Any
 
 import pytest
@@ -24,7 +24,6 @@ from ska_control_model import (
     TestMode,
 )
 from ska_tango_testing.mock import MockCallableGroup
-from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.tile import (
     BaseTpmSimulator,
@@ -46,7 +45,7 @@ class TestTileComponentManager:
     """
 
     @pytest.mark.parametrize("power_state", PowerState)
-    def test_communication_when_tpm_not_reachable(
+    def test_communication_when_tpm_not_reachable(  # pylint: disable=too-many-arguments
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
@@ -63,6 +62,10 @@ class TestTileComponentManager:
         :param callbacks: dictionary of driver callbacks.
         :param power_state: the power mode of the TPM when we break off
             comms
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        :param mock_tpm: a mock tpm to test
+        :param tile_id: the logical tile id
         """
         mock_tpm.mock_off()
         mock_tpm.power_locked = True
@@ -108,7 +111,7 @@ class TestTileComponentManager:
         )
 
     @pytest.mark.parametrize("power_state", PowerState)
-    def test_communication_when_tpm_reachable(
+    def test_communication_when_tpm_reachable(  # pylint: disable=too-many-arguments
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
@@ -125,6 +128,10 @@ class TestTileComponentManager:
         :param callbacks: dictionary of driver callbacks.
         :param power_state: the power mode of the TPM when we break off
             comms
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        :param mock_tpm: a mock tpm to test
+        :param tile_id: the logical tile id
         """
         # Mock the Tpm to be unconnectable and the subrack to return select POWER
         mock_tpm.mock_on()
@@ -226,7 +233,7 @@ class TestTileComponentManager:
             PowerState.ON,
         ],
     )
-    def test_power_state_changes(
+    def test_power_state_changes(  # pylint: disable=too-many-arguments
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
@@ -244,6 +251,10 @@ class TestTileComponentManager:
         :param callbacks: dictionary of driver callbacks.
         :param first_power_state: the power mode of the initial event
         :param second_power_state: the power mode of the subsequent event
+        :param tile_id: the logical tile id
+        :param mock_subrack_device_proxy: a mock device proxy to a
+            subrack device.
+        :param mock_tpm: a mock tpm to test
         """
         if first_power_state == PowerState.ON:
             mock_tpm._fail_communicate = False
@@ -288,7 +299,7 @@ class TestTileComponentManager:
         else:
             callbacks["communication_status"].assert_not_called()
 
-    def test_off_on(
+    def test_off_on(  # pylint: disable=too-many-arguments
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
@@ -305,6 +316,7 @@ class TestTileComponentManager:
         :param subrack_tpm_id: This tile's position in its subrack
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
+        :param tile_id: the logical tile id
         """
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.OFF)
         tile_component_manager.start_communicating()
@@ -344,7 +356,7 @@ class TestTileComponentManager:
             programming_state=TpmStatus.OFF.pretty_name()
         )
 
-    def test_eventual_consistency_of_on_command(
+    def test_eventual_consistency_of_on_command(  # pylint: disable=too-many-arguments
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         subrack_tpm_id: int,
@@ -368,9 +380,12 @@ class TestTileComponentManager:
         :param mock_subrack_device_proxy: a mock device proxy to a
             subrack device.
         :param callbacks: dictionary of mock callbacks
+        :param mock_tpm: a mock tpm to test
+        :param tile_id: the logical tile id
         """
         mock_tpm.mock_off()
-        tile_component_manager.on(task_callback=callbacks["task"])
+        with pytest.raises(ConnectionError):
+            tile_component_manager.on(task_callback=callbacks["task"])
         callbacks["task"].assert_call(
             status=TaskStatus.REJECTED,
             result=(ResultCode.REJECTED, "No request provider"),
@@ -671,7 +686,6 @@ class TestStaticSimulatorCommon:
     def test_set_lmc_download(
         self: TestStaticSimulatorCommon,
         tile: TileComponentManager,
-        mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
         Test of set_lmc_download command.
@@ -679,7 +693,6 @@ class TestStaticSimulatorCommon:
         Since the commands don't really do
         anything, these tests simply check that the command can be called.
 
-        :param mocker: fixture that wraps unittest.mock
         :param tile: the tile class object under test.
         """
         tile.set_lmc_download("10G", 1024, "10.0.10.1")
@@ -743,6 +756,7 @@ class TestStaticSimulatorCommon:
         Test of the initialise command, which programs the TPM.
 
         :param tile: the tile class object under test.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile.erase_fpga()
         assert not tile.is_programmed
@@ -771,6 +785,7 @@ class TestStaticSimulatorCommon:
 
         :param tile: the tile class object under test.
         :param mocker: fixture that wraps unittest.mock
+        :param callbacks: dictionary of driver callbacks.
         """
         tile.erase_fpga()
         assert not tile.is_programmed
@@ -1022,10 +1037,10 @@ class TestDynamicSimulatorCommon:
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
-        Return the tile component under test (Driving a StaticTpmSimulator).
+        Return the tile component under test (Driving a DynamicTpmSimulator).
 
-        :param static_tile_component_manager: the tile component manager (
-            driving a StaticTpmSimulator)
+        :param dynamic_tile_component_manager: the tile component manager (
+            driving a DynamicTpmSimulator)
         :param callbacks: dictionary of driver callbacks.
 
         :return: the tile class object under test

@@ -11,16 +11,13 @@ from __future__ import annotations
 import gc
 import json
 import time
-import unittest
 
-import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, PowerState, ResultCode, TaskStatus
-from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from ska_low_mccs_spshw.tile import TileSimulator
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -68,6 +65,8 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -370,6 +369,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -521,6 +522,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -560,6 +563,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -612,6 +617,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -650,6 +657,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -693,6 +702,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -727,6 +738,8 @@ class TestMccsTileTpmDriver:
 
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -786,60 +799,11 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.state() == tango.DevState.ALARM
 
-    # def test_pps_delay(
-    #     self: TestMccsTileTpmDriver,
-    #     tile_device: tango.DeviceProxy,
-    #     subrack_device: tango.DeviceProxy,
-    #     tile_simulator: TileSimulator,
-    #     tile_component_manager: TileComponentManager,
-    #     change_event_callbacks: MockTangoEventCallbackGroup,
-    # ) -> None:
-    #     """
-    #     Test alarm is raised when pps is disconnected.
-
-    #     This tests from the TileSimulator to the Tango interface.
-
-    #     :param tile_device: fixture that provides a
-    #         :py:class:`tango.DeviceProxy` to the device under test, in a
-    #         :py:class:`tango.test_context.DeviceTestContext`.
-    #     :param subrack_device: the subrack Tango device under test.
-    #     :param tile_simulator: the backend tile simulator. This is
-    #         what tile_device is observing.
-    #     :param change_event_callbacks: dictionary of Tango change event
-    #         callbacks with asynchrony support.
-    #     """
-    #     self.setup_devices(tile_device, subrack_device, change_event_callbacks)
-
-    #     tile_device.subscribe_event(
-    #         "ppsPresent",
-    #         tango.EventType.CHANGE_EVENT,
-    #         change_event_callbacks["pps_present"],
-    #     )
-    #     change_event_callbacks["pps_present"].assert_change_event(True)
-    #     assert (
-    #         tile_device.read_attribute("ppspresent").quality
-    #         == tango.AttrQuality.ATTR_VALID
-    #     )
-    #     tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
-    #     print(
-    #         f'fsdaf {tile_simulator._tile_health_structure["timing"]["pps"]["status"]}'
-    #     )
-    #     tile_component_manager._request_provider.get_request = unittest.mock.Mock(
-    #         return_value=("HEALTH_STATUS", None)
-    #     )
-    #     change_event_callbacks["pps_present"].assert_change_event(False)
-    #     assert (
-    #         tile_device.read_attribute("ppspresent").quality
-    #         == tango.AttrQuality.ATTR_ALARM
-    #     )
-    #     assert tile_device.state() == tango.DevState.ALARM
-
     def test_pps_delay(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
-        tile_component_manager: TileComponentManager,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """

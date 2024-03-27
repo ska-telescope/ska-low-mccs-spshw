@@ -28,13 +28,11 @@ def wait_for_completed_command_to_clear_from_queue(
     device_proxy: tango.DeviceProxy,
 ) -> None:
     """
-    Wait for Long Running Commands to clear.
+    Wait for Long Running Commands to clear from queue.
 
     A completed command is expected to clear after 10 seconds.
 
     :param device_proxy: device proxy for use in the test.
-
-    :returns: a callable to wait for clearing of LRCs queue on device
     """
     # base class clears after 10 seconds
     count = 0

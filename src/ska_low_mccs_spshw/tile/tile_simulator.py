@@ -699,6 +699,8 @@ class TileSimulator:
         :param rx_port_filter: Filter for incoming packets
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
+
+        :raises ValueError: when the core_id is not [0,1]
         """
         if core_id not in [0, 1]:
             raise ValueError(f"Invalid core_id, must be 0 or 1 it is {core_id}")
@@ -852,10 +854,13 @@ class TileSimulator:
 
         :param delays: the delay in input streams, specified in nanoseconds.
             A positive delay adds delay to the signal stream
+
+        :returns: True if command executed to completion.
         """
         if len(delays) != 32:
             self.logger.error(
-                "Invalid delays specfied (must be a number or list of numbers of length 32)"
+                "Invalid delays specfied (must be a number "
+                "or list of numbers of length 32)"
             )
             return False
         for i in range(16):
@@ -1126,9 +1131,8 @@ class TileSimulator:
         :param wait_seconds: Wait time before sending data
         :param timestamp: When to start
         :param seconds: When to synchronise
-        :raises NotImplementedError: if not overwritten
         """
-        self.logger.error("sending data aaa")
+        self.logger.warning("Send Channelised Data not Implemented.")
         self._pending_data_requests = True
 
     @connected

@@ -19,7 +19,7 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from ska_tango_testing.mock import MockCallableGroup
 from tango.server import command
 
-from ska_low_mccs_spshw import MccsSubrack, MccsTile
+from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
     BaseTpmSimulator,
     DynamicTpmSimulator,
@@ -186,9 +186,11 @@ def tpm_version_fixture() -> str:
 
 
 @pytest.fixture(name="mock_tpm")
-def mock_tpm_fixture(logger: logging.logging) -> str:
+def mock_tpm_fixture(logger: logging.Logger) -> BaseTpmSimulator:
     """
     Return the TPM version.
+
+    :param logger: the logger to be used by this object.
 
     :return: the TPM version
     """
@@ -264,7 +266,7 @@ def tile_component_manager_fixture(
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
-    mock_tpm,
+    mock_tpm: BaseTpmSimulator,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -282,6 +284,7 @@ def tile_component_manager_fixture(
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
     :param callbacks: dictionary of driver callbacks.
+    :param mock_tpm: The mock_tpm fixture
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -441,6 +444,7 @@ def patched_tile_device_class_fixture(
     Return a tile device class patched with extra methods for testing.
 
     :param plain_tile_component_manager: A mock component manager.
+    :param tile_id: the unique ID for the tile
 
     :return: a tile device class patched with extra methods for testing.
 

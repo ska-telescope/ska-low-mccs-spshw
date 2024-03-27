@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import copy
-import datetime
 import importlib  # allow forward references in type hints
 import itertools
 import json
@@ -18,7 +17,7 @@ import os.path
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Final, Optional, cast
+from typing import Any, Callable, Final, Optional
 
 import numpy as np
 import tango

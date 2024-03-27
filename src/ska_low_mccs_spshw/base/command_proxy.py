@@ -85,7 +85,7 @@ class LRCResultObserverThread(threading.Thread):
         try:
             command_id = change_event.attr_value.value[0]
             result_code, message = json.loads(change_event.attr_value.value[1])
-        except Exception as e:  # pylint: disable=broad-except
+        except Exception:  # pylint: disable=broad-except
             return False
         if command_id != self.command_id:
             # The wrong command_id, ignore

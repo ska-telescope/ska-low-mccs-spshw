@@ -17,7 +17,7 @@ import time
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
-from ska_control_model import CommunicationStatus, PowerState, TaskStatus
+from ska_control_model import CommunicationStatus, TaskStatus
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -166,13 +166,11 @@ class BaseTpmSimulator:
 
     def ping(self: BaseTpmSimulator) -> None:
         """
-        Check we can connect to the TPM
+        Check we can connect to the TPM.
 
         :raises ConnectionError: when we fail to connect to the TPM.
         """
-        if not self._fail_communicate:
-            return
-        else:
+        if self._fail_communicate:
             raise ConnectionError("Failed to connect")
 
     def check_global_status_alarms(self: BaseTpmSimulator) -> dict:
@@ -180,21 +178,20 @@ class BaseTpmSimulator:
         Check global status alarms.
 
         :return: a dictionary with global health alarms.
-        """
-        if not self._fail_communicate:
-            return self._global_status_alarm
-        else:
-            raise ConnectionError("Failed to connect")
-
-    def connect(self: BaseTpmSimulator) -> None:
-        """
-        Check we can connect to the TPM
 
         :raises ConnectionError: when we fail to connect to the TPM.
         """
-        if not self._fail_communicate:
-            return
-        else:
+        if self._fail_communicate:
+            raise ConnectionError("Failed to connect")
+        return self._global_status_alarm
+
+    def connect(self: BaseTpmSimulator) -> None:
+        """
+        Check we can connect to the TPM.
+
+        :raises ConnectionError: when we fail to connect to the TPM.
+        """
+        if self._fail_communicate:
             raise ConnectionError("Failed to connect")
 
     def get_health_status(self: BaseTpmSimulator) -> dict[str, Any]:
@@ -205,24 +202,21 @@ class BaseTpmSimulator:
         """
         return self._tile_health_structure
 
-    def get_csp_rounding(self: BaseTpmSimulator) -> int:
-        return self.csp_rounding
-
     def get_station_id(self: BaseTpmSimulator) -> int:
         """
         Return the station id.
 
         :return: the station id
         """
-        return self.tile.get_station_id()
+        return self._station_id
 
-    def get_beamformer_table(self: BaseTpmSimulator) -> list[int]:
+    def get_beamformer_table(self: BaseTpmSimulator) -> list[list[int]]:
         """
         Return the beamformer table.
 
         :return: the beamformer table
         """
-        return self.tile.tpm.station_beamf[0].get_channel_table()[0 : self._nof_blocks]
+        return self._beamformer_table
 
     @property
     def firmware_available(
@@ -278,17 +272,25 @@ class BaseTpmSimulator:
         return self._is_programmed
 
     def mock_on(self: BaseTpmSimulator) -> None:
+        """Simulate a power ON of the TPM."""
         self.logger.error("Mocking on")
         if not self.power_locked:
             self._fail_communicate = False
 
     def mock_off(self: BaseTpmSimulator) -> None:
+        """Simulate a power OFFs of the TPM."""
         self.logger.error("Mocking off")
         if not self.power_locked:
             self._fail_communicate = True
 
     def frame_from_utc_time(self: BaseTpmSimulator, utc_time: str) -> int:
-        """Return the frame from utc time."""
+        """
+        Return the frame from utc time.
+
+        :param utc_time: the time in UTC format
+
+        :returns: the from from utc time.
+        """
         return 4
 
     @property
@@ -309,6 +311,8 @@ class BaseTpmSimulator:
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: the bitfile to be downloaded
+        :param task_callback: A callback to call with updates of the
+            command progress.
         """
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
@@ -351,7 +355,12 @@ class BaseTpmSimulator:
 
         The simulator will emulate programming the firmware.
 
-        :param tile_id: Initial value for tile ID (optional)
+        :param program_fpga: True if we want to program the fpga.
+        :param pps_delay_correction: the delay correction to
+            apply to the pps signal.
+        :param task_callback: A callback to call with updates of the
+            command progress.
+        :param task_abort_event: Check for abort, defaults to None
         """
         print(f"program_fpga {program_fpga}")
         print(f"task_callback {task_callback}")
@@ -1154,8 +1163,9 @@ class BaseTpmSimulator:
 
     def start_acquisition(
         self: BaseTpmSimulator,
-        start_time: Optional[int] = None,
+        start_time: Optional[str] = None,
         delay: Optional[int] = 2,
+        task_callback: Optional[Callable] = None,
     ) -> None:
         """
         Start data acquisition.
@@ -1163,6 +1173,8 @@ class BaseTpmSimulator:
         :param start_time: the time at which to start data acquisition,
             defaults to None
         :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """

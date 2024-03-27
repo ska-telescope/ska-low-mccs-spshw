@@ -7,9 +7,8 @@
 # See LICENSE for more info.
 """This module implements polling management for a PaSD bus."""
 
-import logging
 import time
-from typing import Any, Callable, Iterator, Optional, Sequence
+from typing import Any, Iterator, Optional
 
 from .tpm_status import TpmStatus
 
@@ -127,7 +126,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "BEAMFORMER_TABLE"
 
 
-class TileRequestProvider:
+class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
     """
     A class that determines the next communication with the PaSD, across all devices.
 
@@ -143,13 +142,7 @@ class TileRequestProvider:
     """
 
     def __init__(self) -> None:
-        """
-        Initialise a new instance.
-
-        :param min_ticks: minimum number of ticks between communications
-            with any given device
-        :param logger: a logger.
-        """
+        """Initialise a new instance."""
         self._programmed_tpm_read_request_iterator = (
             programmed_tpm_read_request_iterator()
         )
@@ -172,16 +165,16 @@ class TileRequestProvider:
         self.command_wipe_time: dict[str, float] = {}
 
     def desire_connection(self) -> None:
-        """
-        Register a request to initialize a device.
-
-        :param device_id: the device number.
-            This is 0 for the FNDH, otherwise a smartbox number.
-        """
+        """Register a request to initialize a device."""
         self._desire_connection = True
 
     def firmware_download_request(self, request: Any) -> None:
-        """Register a request to initialize a device."""
+        """
+        Register a request to initialize a device.
+
+        :param request: The download_firmware command to execute on
+            a poll.
+        """
         self._firmware_download_request = request
 
     def check_global_status_alarms(self) -> None:
@@ -194,8 +187,8 @@ class TileRequestProvider:
         """
         Register a request to initialize a device.
 
-        :param device_id: the device number.
-            This is 0 for the FNDH, otherwise a smartbox number.
+        :param request: The initialise command to execute on
+            a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
         self.initialise_request = request
@@ -207,14 +200,18 @@ class TileRequestProvider:
         """
         Register a request to initialize a device.
 
-        :param device_id: the device number.
-            This is 0 for the FNDH, otherwise a smartbox number.
+        :param request: the start_acquisition request to
+            execute on a poll.
         """
         self.start_acquisition_request = request
 
-    def get_request(self, tpm_status: TpmStatus) -> tuple[str, Any] | None:
+    def get_request(  # pylint: disable=too-many-return-statements, too-many-branches
+        self, tpm_status: TpmStatus
+    ) -> tuple[str, Any] | None:
         """
         Get a description of the next communication with the PaSD bus.
+
+        :param tpm_status: the tpm_status at the time of the request.
 
         :return: a tuple consisting of the name of the communication
             and any arguments or extra information.

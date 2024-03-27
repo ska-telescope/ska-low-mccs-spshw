@@ -15,7 +15,6 @@ import time
 import unittest.mock
 from typing import Any
 
-import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
 from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
@@ -356,7 +355,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.channeliser_truncation
         tpm_driver.static_delays = [12.0] * 32
         _ = tpm_driver.static_delays
-        tpm_driver.csp_rounding = np.array([2] * 384)
+        tpm_driver.csp_rounding = [2] * 384
         _ = tpm_driver.csp_rounding
         tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels
@@ -1297,7 +1296,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         ):
             tpm_driver.send_data_samples("raw", **mocked_input_params)
 
-        start_time = int(time.time() + 3.0)
+        start_time = str(time.time() + 3.0)
         tpm_driver.start_acquisition(start_time=start_time, delay=1)
 
         # we require timestamp to be in future
@@ -1962,9 +1961,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         tile_simulator._tile_health_structure["temperature"]["FPGA0"] = 41.0
 
-        poll_time = tpm_driver._poll_rate
-        time.sleep(poll_time + 0.5)
-
         post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
             "FPGA0"
         ]
@@ -1980,8 +1976,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator._tile_health_structure["temperature"]["FPGA0"] = (
             tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
         )
-
-        time.sleep(poll_time + 0.5)
 
         post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
             "FPGA0"
@@ -2045,6 +2039,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         Validate that it can be called without error.
 
+        :param tile_simulator: An hardware tile_simulator mock
         :param tpm_driver: The TPM driver instance being tested.
         :param attribute: The attribute to be read.
         """

@@ -16,7 +16,6 @@ import pytest
 from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
-from tango.server import command
 
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import (
@@ -161,28 +160,8 @@ def patched_tile_device_class_fixture(
             tile_component_manager._component_state_callback = (
                 self._component_state_changed
             )
-            # tile_component_manager._tile_device_state_callback = (
-            #     self._tile_device_state_callback
-            # )
-            # tpm_driver._communication_state_callback = (
-            #     tile_component_manager._tpm_communication_state_changed
-            # )
-            # tpm_driver._component_state_callback = self._component_state_changed
 
             return tile_component_manager
-
-        @command()
-        def UpdateAttributes(self: PatchedTileDevice) -> None:
-            """
-            Call update_attributes on the TpmDriver.
-
-            Note: attributes are updated dependent on the time passed since
-            the last read. Here the last update time is set to
-            zero meaning they can be updated (assuming device state permits).
-            """
-            tpm_driver._last_update_time_1 = 0.0
-            tpm_driver._last_update_time_2 = 0.0
-            tpm_driver._update_attributes()
 
     return PatchedTileDevice
 

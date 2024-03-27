@@ -15,18 +15,14 @@ from __future__ import annotations
 
 import enum
 import logging
-import time
 from typing import Any
 
 import pytest
 import tango
 from _pytest.python_api import ApproxBase
-from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 TPM_BAY_COUNT = 8
 MAX_SUBRACK_FAN_SPEED = 8000.0
-
-__all__ = ["TestTools"]
 
 
 # TODO: [MCCS-1328] We don't want to import anything from ska-low-mccs-spshw here,
@@ -350,76 +346,3 @@ def database_admin_password_fixture() -> str:
     :return: the database admin password
     """
     return "secretpassword"
-
-
-class TestTools:
-    """oidsjod"""
-
-    def wait_for_completed_command_to_clear_from_queue(
-        cls: TestTools,
-        device_proxy: tango.DeviceProxy,
-    ) -> None:
-        """
-        Wait for Long Running Commands to clear.
-
-        A completed command is expected to clear after 10 seconds.
-
-        :param device_proxy: device proxy for use in the test.
-
-        :returns: a callable to wait for clearing of LRCs queue on device
-        """
-        # base class clears after 10 seconds
-        count = 0
-        timeout = 20
-
-        while device_proxy.longRunningCommandsInQueue != ():
-            time.sleep(0.5)
-            count += 1
-            if count == timeout:
-                if device_proxy.longRunningCommandsInQueue != ():
-                    pytest.fail(
-                        f"LRCs still in queue after {timeout} seconds: "
-                        f"{device_proxy.dev_name()} : "
-                        f"{device_proxy.longRunningCommandsInQueue}"
-                    )
-
-
-def execute_lrc_to_complettion(
-    change_event_callbacks: MockTangoEventCallbackGroup,
-    device_proxy: tango.DeviceProxy,
-    command_name: str,
-    command_arguments: Any,
-) -> None:
-    """
-    Execute a LRC to completion.
-
-    :param device_proxy: fixture that provides a
-        :py:class:`tango.DeviceProxy` to the device under test, in a
-        :py:class:`tango.test_context.DeviceTestContext`.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
-    :param command_name: the name of the device command under test
-    :param command_arguments: argument to the command (optional)
-    """
-    subscription_id = device_proxy.subscribe_event(
-        "longrunningcommandstatus",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["track_lrc_command"],
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(Anything)
-    [[task_status], [command_id]] = getattr(device_proxy, command_name)(
-        command_arguments
-    )
-
-    assert task_status == TaskStatus.IN_PROGRESS
-    assert command_name in command_id.split("_")[-1]
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "QUEUED")
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "IN_PROGRESS")
-    )
-    change_event_callbacks["track_lrc_command"].assert_change_event(
-        (command_id, "COMPLETED")
-    )
-    device_proxy.unsubscribe_event(subscription_id)

@@ -61,6 +61,16 @@ class TileRequest:
         publish: bool = False,
         **kwargs: Any,
     ) -> None:
+        """
+        Initialise a new request for execution in a poll.
+
+        :param name: Name of the command to excute
+        :param command_object: The object to call
+        :param args: optional arguments to pass
+        :param publish: Whether to publish the results of
+            poll to the TANGO device on poll_success
+        :param kwargs: Optional kwargs
+        """
         self.name = name
         self.publish = publish
         self._command_object = command_object
@@ -94,6 +104,11 @@ class TileRequest:
         return True
 
     def __call__(self: TileRequest) -> Any:
+        """
+        Execute the command object.
+
+        :return: the data from the command
+        """
         if callable(self._command_object):
             result = self._command_object(*self._args, **self._kwargs)
         else:

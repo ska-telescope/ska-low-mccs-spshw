@@ -39,9 +39,7 @@ from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus
 
-__all__ = [
-    "TileComponentManager",
-]
+__all__ = ["TileComponentManager", "TileRequest", "TileResponse"]
 
 
 class TileRequest:

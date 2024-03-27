@@ -26,7 +26,13 @@ from .spead_data_simulator import SpeadDataSimulator
 from .tile_data import TileData
 from .utils import acquire_timeout
 
-__all__ = ["DynamicTileSimulator", "TileSimulator", "MockTpm"]
+__all__ = [
+    "DynamicTileSimulator",
+    "TileSimulator",
+    "MockTpm",
+    "PreAdu",
+    "StationBeamformer",
+]
 
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 

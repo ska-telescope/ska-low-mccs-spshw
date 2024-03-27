@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-# This is a temporary file until we release ska-low-mccs-common v0.10.0
+# This is a temporary file until we release ska-low-mccs-common
 """This module implements a MccsCommandProxy."""
 from __future__ import annotations
 

@@ -16,16 +16,16 @@ python = "~3.10"
 aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "4d255f07db3c82408c376fb6d2ffefa4631f09d5", subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
-numpy = "1.25.2"
+numpy = "^1.26.4"
 psycopg = {extras = ["binary"], version = "^3.1.10"}
 psycopg-pool = "^3.1.7"
 pytango = "9.4.2"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
-ska-tango-base = "^0.19.1"
-ska-control-model = "0.3.1"
-ska-low-mccs-common = "0.9.1"
+ska-tango-base = "^0.20.0"
+ska-control-model = "^0.3.1"
+ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", branch="main" }
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}

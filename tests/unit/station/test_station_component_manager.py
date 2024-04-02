@@ -247,11 +247,12 @@ def test_load_pointing_delays(
     antenna_no = 1
     for tpm in range(1, 16 + 1):
         for channel in channels:
-            station_component_manager._antenna_mapping[antenna_no] = (
-                tpm,
-                channel * 2,
-                channel * 2 + 1,
-            )
+            station_component_manager._antenna_mapping[antenna_no] = {
+                "tpm": tpm,
+                "tpm_y_channel": channel * 2,
+                "tpm_x_channel": channel * 2 + 1,
+                "delays": 1,
+            }
             antenna_no += 1
 
     # We have a mapping, lets give an argument, this arg
@@ -265,11 +266,12 @@ def test_load_pointing_delays(
 
     # The rest of the args should be pairs of (delay, delay_rate) for each channel
     for channel in range(16):
-        for antenna_no, (
-            tile_no,
-            y_channel,
-            x_channel,
+        for (
+            antenna_no,
+            antenna_config,
         ) in station_component_manager._antenna_mapping.items():
+            tile_no = antenna_config["tpm"]
+            y_channel = antenna_config["tpm_y_channel"]
             if tile_no == tile_id and int(y_channel / 2) == channel:
                 delay, delay_rate = (
                     antenna_order_delays[antenna_no * 2 - 1],
@@ -309,3 +311,54 @@ def test_find_by_key(
     assert next(
         station_component_manager._find_by_key(generic_nested_dict, "key4")
     ) == {"key5": "some string", "key6": ["string1", "string2"]}
+
+
+def test_get_static_delays(
+    station_component_manager: SpsStationComponentManager,
+    tile_id: int,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test getting static delays from dummy TelModel.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param tile_id: id of the tile which the component manager has been given.
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # First we need an example mapping for our antennas, we only have 1 tile in tests,
+    # but lets pretend we have a whole station
+    channels = list(range(16))
+
+    # Let's make sure we've got a random assignment of antennas to channels
+    random.shuffle(channels)
+
+    antenna_no = 1
+    for tpm in range(1, 16 + 1):
+        for channel in channels:
+            station_component_manager._antenna_mapping[antenna_no] = {
+                "tpm": tpm,
+                "tpm_y_channel": channel * 2,
+                "tpm_x_channel": channel * 2 + 1,
+                "delays": antenna_no // 2,
+            }
+            antenna_no += 1
+
+    static_delays = station_component_manager._update_static_delays()
+    expected_static_delays = [0 for _ in range(32)]
+    for antenna, antenna_config in station_component_manager._antenna_mapping.items():
+        if int(antenna_config["tpm"]) == tile_id:
+            expected_static_delays[antenna_config["tpm_y_channel"]] = antenna_config[
+                "delays"
+            ]
+            expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
+                "delays"
+            ]
+    assert static_delays == expected_static_delays

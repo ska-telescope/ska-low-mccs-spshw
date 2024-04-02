@@ -320,7 +320,7 @@ def test_port_to_antenna_order(
     )
     for i, antenna in enumerate(antenna_ordered_map):
         # Assert we're in antenna order (and convert from 0 to 1 based numbering)
-        assert i + 1 == int(antenna)
+        assert i == int(antenna)
 
 
 def test_find_by_key(

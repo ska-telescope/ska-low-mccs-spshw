@@ -173,4 +173,8 @@ def antenna_uri_fixture() -> list[str]:
 
     :returns: A URI for antenna data.
     """
-    return ["car:ska-low-aavs3?main", "instrument/mccs-configuration/aavs3.yaml", "a1"]
+    return [
+        "car:ska-low-aavs3?main",
+        "instrument/mccs-configuration/aavs3.yaml",
+        "aavs3",
+    ]

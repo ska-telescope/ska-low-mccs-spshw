@@ -476,11 +476,6 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
-        if antenna_config_uri:
-            logger.debug("Retrieving antenna mapping.")
-            self._get_mappings(antenna_config_uri, logger)
-        else:
-            logger.debug("No antenna mapping provided, skipping")
 
         super().__init__(
             logger,
@@ -492,6 +487,12 @@ class SpsStationComponentManager(
             is_configured=None,
             adc_power=None,
         )
+
+        if antenna_config_uri:
+            logger.debug("Retrieving antenna mapping.")
+            self._get_mappings(antenna_config_uri)
+        else:
+            logger.debug("No antenna mapping provided, skipping")
 
     def _port_to_antenna_order(
         self: SpsStationComponentManager,
@@ -519,10 +520,10 @@ class SpsStationComponentManager(
         skipped_antennas: bool = False
         try:
             for antenna in range(data.shape[0]):
-                tpm_number = antenna_mapping[antenna + 1]["tpm"]
+                tpm_number = int(antenna_mapping[antenna]["tpm"])
                 tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
                 # So long as X and Y pols are always on adjacent ports this should work.
-                tpm_port_number = antenna_mapping[antenna + 1]["tpm_x_channel"]
+                tpm_port_number = antenna_mapping[antenna]["tpm_x_channel"]
                 port_offset = int(tpm_port_number // 2)
                 antenna_index = tile_base_index + port_offset
                 ordered_data[antenna, :] = data[antenna_index, :]
@@ -559,101 +560,83 @@ class SpsStationComponentManager(
             elif isinstance(value, dict):
                 yield from self._find_by_key(value, target)
 
-    # pylint: disable=too-many-locals, too-many-branches
+    # pylint: disable=too-many-locals
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],
-        logger: logging.Logger,
     ) -> None:
         """
         Get mappings from TelModel.
 
         :param antenna_config_uri: Repo and filepath for antenna mapping config
-        :param logger: the logger to be used by this object.
-
-        Need to pass the logger through as its not been setup by the super yet.
         """
         antenna_mapping_uri = antenna_config_uri[0]
         antenna_mapping_filepath = antenna_config_uri[1]
-        this_station_cluster_id = antenna_config_uri[2]
+        this_station_cluster = antenna_config_uri[2]
 
         try:
             tmdata = TMData([antenna_mapping_uri])
         # pylint: disable=broad-except
         except Exception as e:
-            logger.error(f"Unable to create TMData object, check uri. Error: {e}")
+            self.logger.error(f"Unable to create TMData object, check uri. Error: {e}")
             return
 
         try:
             full_dict = tmdata[antenna_mapping_filepath].get_dict()
         # pylint: disable=broad-except
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Unable to create dictionary from imported TMData,"
                 f"check uploaded TelModel data. Error: {e}"
             )
             return
 
-        station_clusters = []
         stations = []
         antennas = {}
 
-        # Get all the station clusters.
-        for station_cluster in self._find_by_key(full_dict, "station_clusters"):
-            station_clusters.append(station_cluster)
-
-        if len(station_clusters) == 0:
-            logger.error(
-                f"Couldn't find station cluster {this_station_cluster_id} "
-                "in imported TMData."
-            )
-            return
-
-        # Look through all the found station clusters, find this station cluster.
-        for station_cluster in station_clusters:
-            for station_cluster_id, station_cluster_config in station_cluster.items():
-                if station_cluster_id == this_station_cluster_id:
-                    for station in self._find_by_key(
-                        station_cluster_config, "stations"
-                    ):
-                        stations.append(station)
+        # Get all the stations
+        for station in self._find_by_key(full_dict, "stations"):
+            stations.append(station)
 
         if len(stations) == 0:
-            logger.error(
-                f"Couldn't find station {self._station_id} "
-                f"in cluster {this_station_cluster_id} in imported TMData."
+            self.logger.error(
+                f"Couldn't find station {this_station_cluster} in imported TMData."
             )
             return
 
         # Look through all the stations on this cluster, find antennas on this station.
         for station in stations:
             for station_id, station_config in station.items():
-                if station_id == str(self._station_id):
+                if (station_id == this_station_cluster) and (
+                    station_config["id"] == self._station_id
+                ):
                     antennas = next(self._find_by_key(station_config, "antennas"))
 
         if len(antennas) == 0:
-            logger.error(
+            self.logger.error(
                 f"Couldn't find antennas on station {self._station_id}, "
-                f"cluster {this_station_cluster_id}"
+                f"cluster {this_station_cluster}"
             )
             return
 
         try:
-            for antenna in antennas:
-                self._antenna_mapping[int(antenna)] = {
-                    "tpm": int(antennas[antenna]["tpm"]),
-                    "tpm_x_channel": antennas[antenna]["tpm_x_channel"],
-                    "tpm_y_channel": antennas[antenna]["tpm_y_channel"],
-                    "delays": antennas[antenna]["delays"],
+            for _, antenna_config in antennas.items():
+                antenna_number = antenna_config["eep"] - 1  # 0 based numbering
+                tpm_number = antenna_config["tpm"].split("tpm")[-1]
+                self._antenna_mapping[antenna_number] = {
+                    "tpm": tpm_number,
+                    "tpm_x_channel": antenna_config["tpm_x_channel"],
+                    "tpm_y_channel": antenna_config["tpm_y_channel"],
+                    "delays": antenna_config["delays"],
                 }
                 # Construct labels for bandpass data.
-                self._antenna_info[int(antenna)] = {
+                self._antenna_info[antenna_number] = {
                     "station_id": self._station_id,
-                    "tpm_id": int(antennas[antenna]["tpm"]),
-                    "antenna_location": antennas[antenna]["location_offset"],
+                    "tpm_id": tpm_number,
+                    "antenna_location": antenna_config["location_offset"],
                 }
         except KeyError as err:
-            logger.error(
+            self.logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )

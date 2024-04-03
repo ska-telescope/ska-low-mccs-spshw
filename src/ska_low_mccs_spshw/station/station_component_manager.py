@@ -404,7 +404,9 @@ class SpsStationComponentManager(
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
-            self._tile_id_mapping[tile_fqdn.split("-")[-1]] = logical_tile_id
+            # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
+            # But this code should not be relying on assumptions about TRL structure
+            self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
             subrack_fqdn: _SubrackProxy(
@@ -560,7 +562,6 @@ class SpsStationComponentManager(
             elif isinstance(value, dict):
                 yield from self._find_by_key(value, target)
 
-    # pylint: disable=too-many-locals
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],
@@ -570,9 +571,11 @@ class SpsStationComponentManager(
 
         :param antenna_config_uri: Repo and filepath for antenna mapping config
         """
-        antenna_mapping_uri = antenna_config_uri[0]
-        antenna_mapping_filepath = antenna_config_uri[1]
-        this_station_cluster = antenna_config_uri[2]
+        (
+            antenna_mapping_uri,
+            antenna_mapping_filepath,
+            this_station_cluster,
+        ) = antenna_config_uri
 
         try:
             tmdata = TMData([antenna_mapping_uri])
@@ -591,20 +594,15 @@ class SpsStationComponentManager(
             )
             return
 
-        stations = []
-        antennas = {}
-
-        # Get all the stations
-        for station in self._find_by_key(full_dict, "stations"):
-            stations.append(station)
-
-        if len(stations) == 0:
+        stations = list(self._find_by_key(full_dict, "stations"))
+        if not stations:
             self.logger.error(
-                f"Couldn't find station {this_station_cluster} in imported TMData."
+                f"Couldn't find station {self._station_id} in imported TMData."
             )
             return
 
         # Look through all the stations on this cluster, find antennas on this station.
+        antennas = {}
         for station in stations:
             for station_id, station_config in station.items():
                 if (station_id == this_station_cluster) and (
@@ -612,11 +610,8 @@ class SpsStationComponentManager(
                 ):
                     antennas = next(self._find_by_key(station_config, "antennas"))
 
-        if len(antennas) == 0:
-            self.logger.error(
-                f"Couldn't find antennas on station {self._station_id}, "
-                f"cluster {this_station_cluster}"
-            )
+        if not antennas:
+            self.logger.error(f"Couldn't find antennas on station {self._station_id}.")
             return
 
         try:
@@ -649,10 +644,7 @@ class SpsStationComponentManager(
 
         :returns: list of static delays in tile/channel order
         """
-        tile_delays = [
-            [0 for _ in range(TileData.ADC_CHANNELS)]
-            for _ in range(len(self._tile_proxies))
-        ]
+        tile_delays = [[0] * TileData.ADC_CHANNELS] * len(self._tile_proxies)
         for antenna_config in self._antenna_mapping.values():
             try:
                 tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
@@ -2230,7 +2222,10 @@ class SpsStationComponentManager(
 
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1])
+
+            # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
+            # But this code should not be depending on assumptions about TRL structure
+            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
             delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 

@@ -68,13 +68,15 @@
                 "subracks": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
                   }
                 },
                 "tpms": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
                   }
                 },
                 "logging_level_default": {

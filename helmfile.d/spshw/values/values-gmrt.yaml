@@ -4,21 +4,19 @@ defaults:
 
 overrides:
   array:
-    station_clusters:
-      "g1":
-        stations:
-          "1":
-            sps:
-              daq:
-                simulated: true
-              subracks:
-                "1":
-                  simulated: true
-              tpms:
-                "10":
-                  simulated: true
-                "13":
-                  simulated: true  
+    stations:
+      gmrt:
+        sps:
+          daq:
+            simulated: true
+          subracks:
+            sr1:
+              simulated: true
+          tpms:
+            tpm10:
+              simulated: true
+            tpm13:
+              simulated: true  
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.

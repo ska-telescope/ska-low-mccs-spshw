@@ -3,6 +3,10 @@ environments:
     kubeContext: minikube
     values:
       - platform/minikube.yaml
+  stfc-ci-minikube:
+    values:
+      - spshw/values/values-stfc-ci.yaml
+      - platform/minikube.yaml
   stfc-ci:
     values:
       - platform/minikube.yaml

@@ -3,6 +3,7 @@ defaults:
 
 platform:
   cluster:
+  domain: techops.internal.skao.int
     daq:
       storage_class: nfss1
 

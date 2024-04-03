@@ -521,7 +521,7 @@ class SpsStationComponentManager(
         nof_antennas_per_tile = TileData.ANTENNA_COUNT
         skipped_antennas: bool = False
         try:
-            for antenna in range(data.shape[0]):
+            for antenna in range(1, data.shape[0] + 1):  # 1 based antenna numbering
                 tpm_number = int(antenna_mapping[antenna]["tpm"])
                 tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
                 # So long as X and Y pols are always on adjacent ports this should work.
@@ -616,8 +616,8 @@ class SpsStationComponentManager(
 
         try:
             for _, antenna_config in antennas.items():
-                antenna_number = antenna_config["eep"] - 1  # 0 based numbering
-                tpm_number = antenna_config["tpm"].split("tpm")[-1]
+                antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
+                tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
                 self._antenna_mapping[antenna_number] = {
                     "tpm": tpm_number,
                     "tpm_x_channel": antenna_config["tpm_x_channel"],

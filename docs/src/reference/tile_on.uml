@@ -1,0 +1,45 @@
+@startuml
+participant "TANGO Interface" as user
+participant "MccsTile" as tile
+participant "TileComponentManager" as tile_component_manager
+participant "TilePollManagement" as tpl
+participant "MccsSubrack" as subrack
+participant "TpmDriver" as tpmdriver
+participant "aavs-system.tile \n (or TileSimilator)" as aavs
+
+
+user -> tile: On()
+tile -> tile_component_manager: On(task_callback)
+tile_component_manager -> subrack: On()
+tile_component_manager -> tpl: desire_initialise(task_callback)
+
+
+loop polling loop
+tile_component_manager -> tpl: get_request(tpmStatus)
+tile_component_manager <- tpl: initialise_request
+end
+tile_component_manager -> tpmdriver: Initialise(initialise_request)
+tpmdriver -> aavs: Initialise(initialise_request)
+tpmdriver <- aavs: initialise_result
+
+loop polling loop
+tile_component_manager -> tpmdriver: calculate_tpm_status()
+tile_component_manager <- tpmdriver: tpmStatus
+tile_component_manager -> tpl: get_request(tpmStatus)
+tile_component_manager <- tpl: status_monitor_request
+tile_component_manager -> tpmdriver: status_monitor_request
+tpmdriver -> aavs: status_monitor_request
+tpmdriver <- aavs: status_monitor_result
+tile_component_manager <- tpmdriver: status_monitor_result
+tile_component_manager -> tile_component_manager: evaluate_state(subrack_says_power, poll_result)
+tile <- tile_component_manager: update device state \n    and attributes
+end
+
+tile <- tpmdriver: initialise_lrc_result
+
+
+user -> tile: longRunningCommandResult
+user <- tile: longRunningCommandResult
+
+
+@enduml

@@ -25,16 +25,18 @@ from typing import Any, Callable, Optional, cast
 import numpy as np
 from pyaavs.tile import Tile
 from pyfabil.base.definitions import Device, LibraryError
-from ska_control_model import CommunicationStatus
-from ska_low_mccs_common.component import MccsBaseComponentManager
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
+from ska_tango_base.executor import TaskExecutorComponentManager
 
 from .tile_data import TileData
+from .tile_simulator import TileSimulator
+from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import acquire_timeout, int2ip
 
 
 # pylint: disable=too-many-lines, too-many-instance-attributes, too-many-public-methods
-class TpmDriver(MccsBaseComponentManager):
+class TpmDriver(TaskExecutorComponentManager):
     """Hardware driver for a TPM."""
 
     # TODO Remove all unnecessary variables and constants after
@@ -59,7 +61,7 @@ class TpmDriver(MccsBaseComponentManager):
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
 
-    # pylint: disable=too-many-arguments, too-many-statements
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TpmDriver,
         logger: logging.Logger,
@@ -107,6 +109,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
             TileData.TILE_MONITORING_POINTS
         )
+        self._tile_time = TileTime(0)
         self._tile_health_structure["voltages"]["MON_5V0"] = 5.0
         self._tile_health_structure["temperatures"]["board"] = self.BOARD_TEMPERATURE
         self._tile_health_structure["temperatures"]["FPGA0"] = self.FPGA1_TEMPERATURE
@@ -147,259 +150,59 @@ class TpmDriver(MccsBaseComponentManager):
             channeliser_rounding=None,
         )
 
-        self._poll_rate = 2.0
-        self._start_polling_event = threading.Event()
-        self._stop_polling_event = threading.Event()
-        # Update thread
-        self._last_update_time_1 = 0.0
-        self._last_update_time_2 = 0.0
-        self._polling_thread = threading.Thread(
-            target=self._polling_loop, name="tpm_polling_thread", daemon=True
-        )
-        self._polling_thread.start()  # doesn't start polling, only starts the thread
-
-    def start_communicating(self: TpmDriver) -> None:
-        """Establish communication with the TPM."""
-        self.logger.debug("Start communication with the TPM...")
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-        self._start_polling_event.set()
-
-    def stop_communicating(self: TpmDriver) -> None:
+    def get_health_status(self: TpmDriver) -> dict:
         """
-        Stop communicating with the TPM.
+        Get the health status from TPM.
 
-        :todo: is there a better way to do this? Should Tile16 have a
-            disconnect() method that we can call here?
+        :return: a dictionary containing multiple monitoring points.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("Stop communication with the TPM...")
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
-        self._stop_polling_event.set()
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_health_status()
+        raise TimeoutError("Failed to read health status, lock not acquired")
 
-    def _polling_loop(self: TpmDriver) -> None:
-        while True:
-            # block on "start" event
-            self._start_polling_event.wait()
-
-            # "start" event received; update state then poll until "stop" event received
-            self._stop_polling_event.clear()
-
-            # Is it useful?
-            # self.tile.enable_health_monitoring()
-
-            while not self._stop_polling_event.is_set():
-                self._poll()
-                self._stop_polling_event.wait(self._poll_rate)
-
-            # "stop" event received; update state, then back to top of loop i.e. block
-            # on "start" event
-            self.tpm_disconnected(intentional_disconnect=True)
-            self._is_programmed = False
-            self._start_polling_event.clear()
-
-    def _poll(self: TpmDriver) -> None:
+    def get_station_id(self: TpmDriver) -> int:
         """
-        Monitor tile connection to tpm.
+        Return the station id.
 
-        :return: None
+        :return: the station id
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            error_flag = False
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    try:
-                        self.tile[int(0x30000000)]
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        # polling attempt was unsuccessful
-                        self.logger.warning(f"Connection to tpm lost! : {e}")
-                        error_flag = True
-                    # polling attempt succeeded
-                    if not error_flag:
-                        self._update_attributes()
-                else:
-                    self.logger.debug("Failed to acquire lock")
-            if error_flag:
-                self.tpm_disconnected(intentional_disconnect=False)
-            else:
-                self._update_communication_state(CommunicationStatus.ESTABLISHED)
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_station_id()
+        raise TimeoutError("Failed to read station_id, lock not acquired")
 
-            return
-
-        self.start_connection()
-
-    def start_connection(self: TpmDriver) -> None:
+    def get_beamformer_table(self: TpmDriver) -> list[list[int]]:
         """
-        Try to connect tile to tpm.
+        Return the beamformer table.
 
-        :return: None
+        :return: the beamformer table
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        wait_time = 3.0  # try every 3 seconds for max_time times
-        max_time = 20  # 60 seconds
-        while not (
-            (self.communication_state == CommunicationStatus.ESTABLISHED)
-            | (self._stop_polling_event.is_set())
-        ):
-            self.logger.debug("Trying to connect to tpm...")
-            timeout = 0
-            self._is_programmed = False
-            while timeout < max_time:
-                with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                    if acquired:
-                        self.logger.debug("Lock acquired")
-                        try:
-                            self.tile.connect()
-                        # pylint: disable=broad-except
-                        except Exception:
-                            self.logger.debug("Failed to communicate with tile")
-                    else:
-                        self.logger.debug("Failed to acquire lock")
-                if self.tile.tpm is None:
-                    self._set_tpm_status(TpmStatus.UNCONNECTED)
-                else:
-                    self.tpm_connected()
-                    return
-                time.sleep(wait_time)
-                timeout = timeout + 1
-            self.logger.error(
-                f"Connection to tile failed after {timeout*wait_time} seconds. "
-                "Waiting for connection..."
-            )
-            self.logger.debug("Tile disconnected from tpm.")
-            time.sleep(wait_time)
-
-    def _update_attributes(self: TpmDriver) -> None:
-        """Update key hardware attributes."""
-        current_time = time.time()
-        time_interval_1 = 5.0
-        time_interval_2 = 30.0
-        try:
-            self._is_programmed = self.tile.is_programmed()
-            if self._is_programmed:
-                self.logger.debug("Updating key hardware attributes...")
-                # slow update parameters
-                if (current_time - self._last_update_time_1) > time_interval_1:
-                    self._last_update_time_1 = current_time
-                    # self._clock_present = method_to_be_written
-                    self._pll_locked = self._check_pll_locked()
-                    self._tile_health_structure = self.tile.get_health_status()
-                    self._update_component_state(
-                        tile_health_structure=self._tile_health_structure
-                    )
-                # Commands checked only when initialised
-                # Potential crash if polled on a uninitialised board
-                if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
-                    self._adc_rms = self.tile.get_adc_rms()
-                    self._update_component_state(adc_rms=self._adc_rms)
-                    self._pending_data_requests = (
-                        self.tile.check_pending_data_requests()
-                    )
-                    # very slow update parameters. Should update by set commands
-                    if (current_time - self._last_update_time_2) > time_interval_2:
-                        self._last_update_time_2 = current_time
-                        self._reported_pps_delay = self.tile.get_pps_delay(
-                            enable_correction=False
-                        )
-                        self._corrected_pps_delay = self.tile.get_pps_delay(
-                            enable_correction=True
-                        )
-                        self._is_beamformer_running = self.tile.beamformer_is_running()
-                        self._fpga_reference_time = self.tile[
-                            "fpga1.pps_manager.sync_time_val"
-                        ]
-                        self._phase_terminal_count = (
-                            self.tile.get_phase_terminal_count()
-                        )
-                        # self._channeliser_truncation = method_to_be_written
-                        # self._csp_rounding = method_to_be_written
-                        self._preadu_levels = self.tile.get_preadu_levels()
-                        self._update_component_state(preadu_levels=self._preadu_levels)
-                        self._static_delays = self._get_static_delays()
-                        self._update_component_state(static_delays=self._static_delays)
-                        self._station_id = self.tile.get_station_id()
-                        self._tile_id = self.tile.get_tile_id()
-                        self._beamformer_table = self.tile.tpm.station_beamf[
-                            0
-                        ].get_channel_table()[0 : self._nof_blocks]
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.debug(f"Failed to update key hardware attributes: {e}")
-
-        if not self._is_programmed:
-            self.logger.debug("Not programmed, resetting TpmDriver internal state")
-            self._reported_pps_delay = None
-            self._fpga_reference_time = 0
-            # self._beamformer_table = self.BEAMFORMER_TABLE
-            # self._channeliser_truncation = self.CHANNELISER_TRUNCATION
-            # self._csp_rounding = self.CSP_ROUNDING
-            # self._preadu_levels = [0.0] * 32
-            # self._static_delays = [0.0] * 32
-            self._is_programmed = False
-            self._is_beamformer_running = False
-            self._test_generator_active = False
-            self._pending_data_requests = False
-            self._arp_table = {}
-            self._fpgas_time = self.FPGAS_TIME
-            self._fpga_current_frame = 0
-            self._current_tile_beamformer_frame = 0
-            self._tile_health_structure["timing"]["pps"]["status"] = True
-            self._clock_present = True
-            self._sysref_present = True
-            self._pll_locked = True
-            self._register_list = self.REGISTER_LIST
-
-    def tpm_connected(self: TpmDriver) -> None:
-        """Tile connected to tpm."""
-        # Must update programming state before calling _update_communication_state
-        # as this is used by controller.component_power_changed
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                try:
-                    self._is_programmed = self.tile.is_programmed()
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(f"tpm_driver: is_programmed failed: {e}")
-            else:
-                self.logger.debug("tpm_driver: is_programmed uses current value")
-        self._update_communication_state(CommunicationStatus.ESTABLISHED)
-        self._update_component_state(fault=False)
-        self.logger.debug("Tpm connected to tile.")
-        self._update_tpm_status()  # generates a callback if status changed
-        status = self.tpm_status
-        msg = f"tpm status {status.name}"
-        self.logger.debug(msg)
-        if status in [TpmStatus.UNPROGRAMMED, TpmStatus.PROGRAMMED]:
-            # if self._check_programmed():
-            #    self._tpm_status = TpmStatus.PROGRAMMED
-            #    self._is_programmed = True
-            # if self._is_programmed:
-            self.logger.debug("Tpm not initialised. Initialise it.")
-            # self._initialise()
-        else:
-            self.logger.debug("Tpm initialised. Initialisation skipped")
+                return self.tile.tpm.station_beamf[0].get_channel_table()[
+                    0 : self._nof_blocks
+                ]
+        raise TimeoutError(
+            "Failed to read beamformer table, did not acquire lock in time"
+        )
 
-    def tpm_disconnected(self: TpmDriver, intentional_disconnect: bool = False) -> None:
-        """
-        Tile disconnected to tpm.
+    def ping(self: TpmDriver) -> None:
+        """Check we can communicate with TPM."""
+        with self._hardware_lock:
+            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
 
-        :param intentional_disconnect: True if disconnection was expected.
-        """
-        self.logger.debug("Tile disconnecting from tpm.")
-        self._set_tpm_status(TpmStatus.UNCONNECTED)
-        self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
-        while self.tile.tpm is not None:
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    self.tile.tpm = None
-            self.logger.warning("Failed to acquire hardware lock")
-            time.sleep(0.5)
-        self.logger.debug("Tile disconnected from tpm.")
-        if intentional_disconnect:
-            self._update_communication_state(CommunicationStatus.DISABLED)
-        else:
-            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+    def connect(self: TpmDriver) -> None:
+        """Check we can connect to the TPM."""
+        with self._hardware_lock:
+            self.tile.connect()
+            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
 
     @property
     def tpm_status(self: TpmDriver) -> TpmStatus:
@@ -408,13 +211,7 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: the TPM status
         """
-        if self._tpm_status in [TpmStatus.UNKNOWN, TpmStatus.UNCONNECTED]:
-            # The status in unknown, either because it has not been tested or
-            # because it comes from an unconnected state.
-            # try to determine the status. Successive tests until one fails
-            # if self.power_state != PowerState.ON:
-            #     self._tpm_status = TpmStatus.OFF
-            self._update_tpm_status()
+        self._update_tpm_status()
         return self._tpm_status
 
     @tpm_status.setter
@@ -434,34 +231,30 @@ class TpmDriver(MccsBaseComponentManager):
         """
         if new_status != self._tpm_status:
             self._tpm_status = new_status
-            self._update_component_state(programming_state=new_status)
 
     def _update_tpm_status(self: TpmDriver) -> None:
         """Update the value of _tpm_status according to hardware state."""
         new_status = self._tpm_status
-        if self.communication_state != CommunicationStatus.ESTABLISHED:
-            new_status = TpmStatus.UNCONNECTED
-        else:
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
-                    try:
-                        self._is_programmed = self.tile.is_programmed()
-                        if self._is_programmed is False:
-                            new_status = TpmStatus.UNPROGRAMMED
-                        elif self._check_initialised() is False:
-                            new_status = TpmStatus.PROGRAMMED
-                        elif self._check_channeliser_started() is False:
-                            new_status = TpmStatus.INITIALISED
-                        else:
-                            new_status = TpmStatus.SYNCHRONISED
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
-                        # TODO This must be handled in the connection loop
-                        # when implemented
-                        new_status = TpmStatus.UNCONNECTED
-                else:
-                    self.logger.debug("tpm_driver: tpm_status uses current value")
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self._is_programmed = self.tile.is_programmed()
+                    if self._is_programmed is False:
+                        new_status = TpmStatus.UNPROGRAMMED
+                    elif self._check_initialised() is False:
+                        new_status = TpmStatus.PROGRAMMED
+                    elif self._check_channeliser_started() is False:
+                        new_status = TpmStatus.INITIALISED
+                    else:
+                        new_status = TpmStatus.SYNCHRONISED
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"tpm_driver: tpm_status failed: {e}")
+                    # TODO This must be handled in the connection loop
+                    # when implemented
+                    new_status = TpmStatus.UNCONNECTED
+            else:
+                self.logger.debug("tpm_driver: tpm_status uses current value")
         self._set_tpm_status(new_status)
 
     def _check_initialised(self: TpmDriver) -> bool:
@@ -575,16 +368,6 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: whether this TPM is programmed
         """
-        return self._is_programmed
-
-    def _check_programmed(self: TpmDriver) -> bool:
-        """
-        Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
-
-        Actually checks hardware for this, and updates local variables
-
-        :return: whether this TPM is programmed
-        """
         if self.tile.tpm is None:
             return False
         with self._hardware_lock:
@@ -595,27 +378,106 @@ class TpmDriver(MccsBaseComponentManager):
             self._register_list = self.REGISTER_LIST
         return self._is_programmed
 
+    def check_global_status_alarms(self: TpmDriver) -> dict:
+        """
+        Check global status alarms.
+
+        :return: a dictionary with global health alarms.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.check_global_status_alarms()
+        raise TimeoutError("Failed to acquire lock in time")
+
     def download_firmware(
         self: TpmDriver,
         bitfile: str,
-    ) -> None:
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: a binary firmware blob
+        :param task_callback: a callback to call to inform progress of command
+
+        :return: the result of submitting a task.
         """
-        is_programmed = False
-        with self._hardware_lock:
-            self.logger.debug("Lock acquired")
-            self.logger.debug("TpmDriver: download_firmware")
-            self.tile.program_fpgas(bitfile)
-            is_programmed = self.tile.is_programmed()
-        self.logger.debug("Lock released")
-        self._is_programmed = is_programmed
-        if is_programmed:
-            self._firmware_name = bitfile
-            self._set_tpm_status(TpmStatus.PROGRAMMED)
-            self._get_register_list()
+        return self.submit_task(
+            self._download_firmware,
+            args=[bitfile],
+            task_callback=task_callback,
+        )
+
+    def _download_firmware(
+        self: TpmDriver,
+        bitfile: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Download tpm firmware using slow command.
+
+        :param bitfile: can either be the design name returned or a path to a file
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            with self._hardware_lock:
+                self.logger.debug("Lock acquired")
+                self.logger.debug("TpmDriver: download_firmware")
+                self.tile.program_fpgas(bitfile)
+                is_programmed = self.tile.is_programmed()
+            self.logger.debug("Lock released")
+            self._is_programmed = is_programmed
+            if is_programmed:
+                self._firmware_name = bitfile
+                self._set_tpm_status(TpmStatus.PROGRAMMED)
+                self._get_register_list()
+        # pylint: disable-next=broad-except
+        except Exception as ex:
+            self.logger.error(
+                f"Exception raised while downloading firmware: {repr(ex)}"
+            )
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, f"Exception: {repr(ex)}"),
+                )
+            return
+
+        # Check the programmed state.
+        match self._is_programmed:
+            case True:
+                message = "The download firmware task has completed"
+                self.logger.info(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.OK, message),
+                    )
+            case False:
+                message = "The download firmware task has failed"
+                self.logger.warning(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.FAILED, message),
+                    )
+            case _:
+                message = (
+                    "The download firmware task has failed"
+                    " is_programmed is not returning bool"
+                )
+                self.logger.error(message)
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(ResultCode.FAILED, message),
+                    )
 
     def erase_fpga(self: TpmDriver) -> None:
         """Erase FPGA programming to reduce FPGA power consumption."""
@@ -634,17 +496,63 @@ class TpmDriver(MccsBaseComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
         self._set_tpm_status(status)
-        # TODO: decide whether or not to remove this workaround once SKB-272 is resolved
-        # Poll to update internal state after erasing
-        self._poll()
 
-    def initialise(self: TpmDriver) -> None:
-        """Download firmware, if not already downloaded, and initialises tile."""
-        #
-        # If not programmed, program it.
-        # TODO: there is no way to check whether the TPM is already correctly
-        # initialised. If it is, re-initialising it is bad.
-        #
+    def initialise(
+        self: TpmDriver,
+        program_fpga: bool,
+        pps_delay_correction: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Initialise the TPM.
+
+        :param program_fpga: True if we want to program the fpga before
+            initialisation.
+        :param pps_delay_correction: the delay correction to apply to the
+            pps signal.
+        :param task_callback: Update task state, defaults to None
+
+        :returns: a TaskStatus and message from command submission.
+        """
+        return self.submit_task(
+            self._initialise,
+            args=[program_fpga, pps_delay_correction],
+            task_callback=task_callback,
+        )
+
+    def _initialise(
+        self: TpmDriver,
+        program_fpga: bool,
+        pps_delay_correction: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Initialise the TPM.
+
+        :param program_fpga: True if we want to program the fpga before
+            initialisation.
+        :param pps_delay_correction: the delay correction to apply to the
+            pps signal.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        :raises ConnectionError: raised if we fail to connect with the
+            TPM.
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        if program_fpga:
+            try:
+                self.erase_fpga()
+            except ConnectionError as comm_err:
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.ABORTED,
+                        result=f"Tile Connection Error {comm_err}",
+                    )
+                raise comm_err
+
         prog_status = False
         with self._hardware_lock:
             self.logger.debug("Lock acquired")
@@ -667,11 +575,11 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.debug("Lock acquired")
                 self.logger.info(
                     "initialising tile with a "
-                    f"pps correction of {self._desired_pps_delay_correction}"
+                    f"pps correction of {pps_delay_correction}"
                 )
                 self.tile.initialise(
                     tile_id=self._tile_id,
-                    pps_delay=self._desired_pps_delay_correction,
+                    pps_delay=pps_delay_correction,
                     active_40g_ports_setting="port1-only",
                 )
                 self.tile.set_station_id(0, 0)
@@ -690,6 +598,34 @@ class TpmDriver(MccsBaseComponentManager):
         else:
             self._set_tpm_status(TpmStatus.UNPROGRAMMED)
             self.logger.error("TpmDriver: Cannot initialise board Failed to Program.")
+
+        # Check the tpm_status and inform task callback
+        match self._tpm_status:
+            case TpmStatus.INITIALISED:
+                self.logger.info("Initialise routine complete.")
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has completed",
+                    )
+            case TpmStatus.UNPROGRAMMED:
+                self.logger.info("Initialise routine failed, Unprogrammed.")
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has failed",
+                    )
+            case _:
+                self.logger.info(
+                    "Unexpected TpmStatus following initialisation."
+                    f"{self._tpm_status}."
+                )
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation task has failed"
+                        f"TpmStatus: {self._tpm_status}",
+                    )
 
     @property
     def tile_id(self: TpmDriver) -> int:
@@ -863,8 +799,32 @@ class TpmDriver(MccsBaseComponentManager):
         Return the last measured RMS power of the TPM's analog-to-digital converter.
 
         :return: the RMS power of the TPM's ADC
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self._adc_rms
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_adc_rms()
+        raise TimeoutError("Failed to read adc_rms, did not acquire lock in time.")
+
+    @property
+    def fpga_time(self: TpmDriver) -> str:
+        """
+        Return FPGA internal time in UTC format.
+
+        :return: FPGA internal time
+        """
+        return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
+
+    def frame_from_utc_time(self: TpmDriver, utc_time: str) -> int:
+        """
+        Return the frame from utc time.
+
+        :param utc_time: the time in utc format.
+
+        :returns: the frame from utc time.
+        """
+        return self._tile_time.frame_from_utc_time(utc_time)
 
     @property
     def fpgas_time(self: TpmDriver) -> list[int]:
@@ -909,9 +869,65 @@ class TpmDriver(MccsBaseComponentManager):
         to UTC time
 
         :return: the FPGA_1 reference time, in Unix seconds
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: fpga_reference_time")
-        return self._fpga_reference_time
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile["fpga1.pps_manager.sync_time_val"]
+        raise TimeoutError(
+            "Failed to read fpga reference time, did not acquire lock in time."
+        )
+
+    @property
+    def fpga_frame_time(self: TpmDriver) -> str:
+        """
+        Return FPGA frame time in UTC format.
+
+        frame time is the timestamp for the current frame being processed.
+        Value reported here refers to the ADC frames, but the total processing
+        delay is < 1ms and thus irrelevant on the timescales of MCCS response time
+
+        :return: FPGA reference time
+        """
+        reference_time = self.fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_frame(self.fpga_current_frame)
+
+    def mock_on(self: TpmDriver) -> None:
+        """
+        Mock a TPM in the OFF state.
+
+        Note: This method is needed because the Subrack Simulator and TileSimulator are
+        not connected.
+        """
+        if isinstance(self.tile, TileSimulator):
+            self.tile.mock_on()
+
+    def mock_off(self: TpmDriver) -> None:
+        """
+        Mock a TPM in the OFF state.
+
+        Note: This method is needed because the Subrack Simulator and TileSimulator are
+        not connected.
+        """
+        if isinstance(self.tile, TileSimulator):
+            self.tile.mock_off()
+
+    @property
+    def formatted_fpga_reference_time(self: TpmDriver) -> str:
+        """
+        Return FPGA reference time in UTC format.
+
+        Reference time is set as part of start_observation.
+        It represents the timestamp  for the first frame
+
+        :return: FPGA reference time
+        """
+        reference_time = self.fpga_reference_time
+        self._tile_time.set_reference_time(reference_time)
+        return self._tile_time.format_time_from_timestamp(reference_time)
 
     @property
     def fpga_current_frame(self: TpmDriver) -> int:
@@ -946,8 +962,13 @@ class TpmDriver(MccsBaseComponentManager):
         Return last measured delay between PPS and 10 MHz clock.
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self._reported_pps_delay
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_pps_delay(enable_correction=False)
+        raise TimeoutError("Failed to read pps_delay, did not acquire lock in time.")
 
     @property
     def pps_delay_correction(self: TpmDriver) -> Optional[int]:
@@ -955,23 +976,16 @@ class TpmDriver(MccsBaseComponentManager):
         Return last measured ppsdelay correction.
 
         :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
-        """
-        assert self._corrected_pps_delay is not None
-        assert self._reported_pps_delay is not None
-        return self._corrected_pps_delay - self._reported_pps_delay
 
-    @pps_delay_correction.setter
-    def pps_delay_correction(self: TpmDriver, pps_delay_correction: int) -> None:
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        Set a delay correction to the ppsdelay.
-
-        :param pps_delay_correction: A delay correction
-        """
-        self._desired_pps_delay_correction = pps_delay_correction
-        self.logger.warning(
-            f"ppsDelayCorrection of {pps_delay_correction} set in software. "
-            "will be applied during tile initialisation. "
-            "check ppsDelayCorrection for register reading."
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_pps_delay(
+                    enable_correction=True
+                ) - self.tile.get_pps_delay(enable_correction=False)
+        raise TimeoutError(
+            "Failed to read pps_delay correction, failed to acquire lock in time."
         )
 
     @property
@@ -1235,11 +1249,14 @@ class TpmDriver(MccsBaseComponentManager):
         LMC with only one ARP.
 
         :return: list of core id and arp table populated
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: arp_table")
-        with self._hardware_lock:
-            self._arp_table = self.tile.get_arp_table()
-        return self._arp_table
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_arp_table()
+        raise TimeoutError("Failed to read spr table, lock not acquired in time.")
 
     def set_lmc_download(
         self: TpmDriver,
@@ -1317,9 +1334,7 @@ class TpmDriver(MccsBaseComponentManager):
                 for chan in range(32):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_component_state(
-                            channeliser_rounding=copy.deepcopy(trunc)
-                        )
+                        self._channeliser_truncation = trunc
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1332,22 +1347,27 @@ class TpmDriver(MccsBaseComponentManager):
 
         Requires to be run inside a thread protected block
         :return: list of static delays, from the hardware, in ns
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get_time_delays")
         delays = []
-        try:
-            for i in range(16):
-                delays.append(
-                    (self.tile[f"fpga1.test_generator.delay_{i}"] - 128) * 1.25
-                )
-            for i in range(16):
-                delays.append(
-                    (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
-                )
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-        return delays
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                try:
+                    for i in range(16):
+                        delays.append(
+                            (self.tile[f"fpga1.test_generator.delay_{i}"] - 128) * 1.25
+                        )
+                    for i in range(16):
+                        delays.append(
+                            (self.tile[f"fpga2.test_generator.delay_{i}"] - 128) * 1.25
+                        )
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                return delays
+        raise TimeoutError("Failed to read static_delays, lock not acquired in time.")
 
     @property
     def static_delays(self: TpmDriver) -> list[float]:
@@ -1356,7 +1376,7 @@ class TpmDriver(MccsBaseComponentManager):
 
         :return: static delay, in samples one per TPM input
         """
-        return copy.deepcopy(self._static_delays)
+        return self._get_static_delays()
 
     @static_delays.setter  # type: ignore[no-redef, attr-defined]
     def static_delays(self: TpmDriver, delays: list[float]) -> None:
@@ -1397,14 +1417,17 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def csp_rounding(self: TpmDriver) -> Optional[np.ndarray]:
+    def csp_rounding(self: TpmDriver) -> Optional[list[int]]:
         """
         Read the cached value for the final rounding in the CSP samples.
 
         Need to be specfied only for the last tile
+
         :return: Final rounding for the CSP samples. Up to 384 values
         """
-        return self._csp_rounding
+        if isinstance(self._csp_rounding, np.ndarray):
+            return self._csp_rounding.tolist()
+        return None
 
     @csp_rounding.setter
     def csp_rounding(self: TpmDriver, rounding: np.ndarray | int) -> None:
@@ -1434,9 +1457,6 @@ class TpmDriver(MccsBaseComponentManager):
                     write_successful = self.tile.set_csp_rounding(rounding[0])
                     if write_successful:
                         self._csp_rounding = rounding
-                        self._update_component_state(
-                            csp_rounding=self._csp_rounding.tolist()
-                        )
                     else:
                         self.logger.warning("Setting the cspRounding failed ")
 
@@ -1452,8 +1472,18 @@ class TpmDriver(MccsBaseComponentManager):
         Get preadu levels in dB.
 
         :return: cached values of Preadu attenuation level in dB
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return copy.deepcopy(self._preadu_levels)
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                try:
+                    levels = self.tile.get_preadu_levels()
+                    return levels
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+        raise TimeoutError("Failed to read preadulevels, lock not acquire in time.")
 
     @preadu_levels.setter
     def preadu_levels(self: TpmDriver, levels: list[float]) -> None:
@@ -1462,12 +1492,11 @@ class TpmDriver(MccsBaseComponentManager):
 
         :param levels: Preadu attenuation levels in dB
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
             if acquired:
                 try:
                     self.tile.set_preadu_levels(levels)
-                    self._preadu_levels = self.tile.get_preadu_levels()
-                    self._update_component_state(preadu_levels=self._preadu_levels)
+                    self._preadu_levels = self.preadu_levels
                     if self._preadu_levels != levels:
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                 # pylint: disable=broad-except
@@ -1510,21 +1539,18 @@ class TpmDriver(MccsBaseComponentManager):
         Check if ADC clock PLL is locked.
 
         :return: True if PLL is locked. Checked in poll loop, cached
-        """
-        return self._pll_locked
 
-    def _check_pll_locked(self: TpmDriver) -> bool:
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        Check in hardware if PLL is locked.
-
-        Requires to be run inside a thread protected code block
-        TODO To be moved in pyaavs.Tile
-        :return: True if PPS is locked
-        """
-        pll_status = self.tile.tpm["pll", 0x508]
-        pll_lock = pll_status in [0xF2, 0xE7]
-        self._pll_locked = pll_lock
-        return pll_lock
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                pll_status = self.tile.tpm["pll", 0x508]
+                pll_lock = pll_status in [0xF2, 0xE7]
+                self._pll_locked = pll_lock
+                return pll_lock
+        raise TimeoutError(
+            "Failed to read pll locked register, lock not acquired in time."
+        )
 
     def _collapse_regions(self: TpmDriver, regions: list[list[int]]) -> list[list[int]]:
         """
@@ -1695,8 +1721,20 @@ class TpmDriver(MccsBaseComponentManager):
         * subarray_beam_id - (int) ID of the subarray beam
         * substation_id - (int) Substation
         * aperture_id:  ID of the aperture (station*100+substation?)
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return copy.deepcopy(self._beamformer_table)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    return self.tile.tpm.station_beamf[0].get_channel_table()[
+                        0 : self._nof_blocks
+                    ]
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.error("Exception raisd")
+        raise TimeoutError(
+            "Reading the beamformer table failed: Lock not acquired in time."
+        )
 
     def load_calibration_coefficients(
         self: TpmDriver, antenna: int, calibration_coefficients: list[complex]
@@ -2158,6 +2196,84 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
+        self: TpmDriver,
+        delay: Optional[int] = 2,
+        start_time: Optional[str] = None,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Start_acquisition.
+
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+
+        :returns: a TaskStatus and a message.
+        """
+        return self.submit_task(
+            self._start_acquisition,
+            args=[start_time, delay],
+            task_callback=task_callback,
+        )
+
+    def _start_acquisition(
+        self: TpmDriver,
+        start_time: Optional[int] = None,
+        delay: Optional[int] = 2,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Start acquisition using slow command.
+
+        :param start_time: the time at which to start data acquisition, defaults to None
+        :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :raises NotImplementedError: Command not implemented
+        """
+        success = False
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        try:
+            success = self.try_start_acquisition(  # type: ignore[assignment]
+                start_time, delay
+            )
+        except NotImplementedError:
+            raise
+        # pylint: disable-next=broad-except
+        except Exception as ex:
+            self.logger.error(f"error {ex}")
+            if task_callback:
+                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
+            return
+
+        if task_abort_event and task_abort_event.is_set():
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result="Start acquisition task aborted"
+                )
+            return
+
+        if success:
+            self._tile_time.set_reference_time(self.fpga_reference_time)
+        else:
+            self._tile_time.set_reference_time(0)
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Start acquisition has completed"),
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(ResultCode.FAILED, "Start acquisition task failed"),
+                )
+            return
+
+    def try_start_acquisition(
         self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
     ) -> bool:
         """
@@ -2284,8 +2400,13 @@ class TpmDriver(MccsBaseComponentManager):
         Whether the beamformer is currently running.
 
         :return: whether the beamformer is currently running
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return self._is_beamformer_running
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.beamformer_is_running()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @property
     def pending_data_requests(self: TpmDriver) -> bool:
@@ -2293,9 +2414,13 @@ class TpmDriver(MccsBaseComponentManager):
         Check for pending data requests.
 
         :return: whether there are pending send data requests
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TpmDriver: _pending_data_requests")
-        return self._pending_data_requests
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.check_pending_data_requests()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     #
     # The synchronisation routine for the current TPM requires that
@@ -2309,10 +2434,15 @@ class TpmDriver(MccsBaseComponentManager):
         Return the phase terminal count.
 
         :return: the phase terminal count
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get_phase_terminal_count")
         self.logger.debug("TpmDriver: get_phase_terminal_count is simulated")
-        return self._phase_terminal_count
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
+            if acquired:
+                return self.tile.get_phase_terminal_count()
+        raise TimeoutError("Failed to acquire lock in time reading preadulevels")
 
     @phase_terminal_count.setter  # type: ignore[no-redef]
     def phase_terminal_count(self: TpmDriver, value: int) -> None:

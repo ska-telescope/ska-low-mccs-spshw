@@ -11,11 +11,13 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from dataclasses import dataclass
 from typing import Any, Callable, Optional, Union, cast
 
 import tango
 from pyaavs.tile import Tile as Tile12
 from pyaavs.tile_wrapper import Tile as HwTile
+from pyfabil.base.definitions import BoardError, LibraryError
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
@@ -26,32 +28,100 @@ from ska_control_model import (
 )
 from ska_low_mccs_common import MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
+from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
 from ska_tango_base.base import check_communicating, check_on
-from ska_tango_base.executor import TaskExecutorComponentManager
+from ska_tango_base.poller import PollingComponentManager
 
 from .base_tpm_simulator import BaseTpmSimulator
-from .tile_orchestrator import TileOrchestrator
+from .tile_poll_management import TileRequestProvider
 from .tile_simulator import DynamicTileSimulator, TileSimulator
-from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus
 
-__all__ = [
-    "TileComponentManager",
-]
+__all__ = ["TileComponentManager", "TileRequest", "TileResponse"]
 
 
-# pylint: disable=too-many-public-methods,too-many-instance-attributes, too-many-lines
-class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManager):
+class TileRequest:
+    """
+    Class representing an action to be performed by a poll.
+
+    This is initialised with a command object, args and kwargs and also a flag
+    'publish' to represent if the result of this request should be published.
+    """
+
+    def __init__(
+        self: TileRequest,
+        name: str,
+        command_object: Any,
+        *args: Any,
+        publish: bool = False,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Initialise a new request for execution in a poll.
+
+        :param name: Name of the command to excute
+        :param command_object: The object to call
+        :param args: optional arguments to pass
+        :param publish: Whether to publish the results of
+            poll to the TANGO device on poll_success
+        :param kwargs: Optional kwargs
+        """
+        self.name = name
+        self.publish = publish
+        self._command_object = command_object
+        self._args = args
+        self._kwargs = kwargs
+
+    def abort(self: TileRequest) -> None:
+        """Abort a Long running Command."""
+        if "task_callback" in self._kwargs:
+            self._kwargs["task_callback"](
+                status=TaskStatus.ABORTED,
+                result=(ResultCode.ABORTED, "Command aborted"),
+            )
+
+    def __call__(self: TileRequest) -> Any:
+        """
+        Execute the command object.
+
+        If the command object is callable we will call it with args and kwargs
+        else we will get the value.
+
+        :return: the returned value from the command
+        """
+        if callable(self._command_object):
+            result = self._command_object(*self._args, **self._kwargs)
+        else:
+            result = self._command_object
+        return result
+
+
+@dataclass
+class TileResponse:
+    """
+    Class representing the result of a poll.
+
+    It comprises the command name, the return data and a flag to represent
+    if the result is to be published.
+    """
+
+    command: str | None
+    data: Any
+    publish: bool
+
+
+# pylint: disable=too-many-instance-attributes, too-many-lines
+class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     """A component manager for a TPM (simulator or driver) and its power supply."""
 
-    # pylint: disable=too-many-arguments, too-many-locals
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
         test_mode: TestMode,
         logger: logging.Logger,
-        max_workers: int,
+        poll_rate: float,
         tile_id: int,
         station_id: int,
         tpm_ip: str,
@@ -61,6 +131,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        # tile_device_state_callback: Callable[..., None],
         _tpm_driver: Optional[Union[TpmDriver, BaseTpmSimulator]] = None,
     ) -> None:
         """
@@ -83,7 +154,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             as temperatures and voltages, making for a nice demo but not
             so easy to test against.
         :param logger: a logger for this object to use
-        :param max_workers: nos. of worker threads
+        :param poll_rate: the poll rate
         :param tile_id: the unique ID for the tile
         :param station_id: the unique ID for the station to which this tile belongs.
         :param tpm_ip: the IP address of the tile
@@ -100,13 +171,15 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param _tpm_driver: a optional TpmDriver to inject for testing.
         """
         self._subrack_fqdn = subrack_fqdn
+        self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
-
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
         self._subrack_communication_state = CommunicationStatus.DISABLED
+        self.power_state: PowerState = PowerState.UNKNOWN
         self._tpm_communication_state = CommunicationStatus.DISABLED
-
+        self._simulation_mode = simulation_mode
+        self._pps_delay_correction: int = 0
         if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
             self.logger.warning(
                 "TPM version "
@@ -114,7 +187,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 + " not valid. Trying to read version from board, which must be on"
             )
             tpm_version = ""
-
+        self._request_provider: Optional[TileRequestProvider] = None
         if simulation_mode == SimulationMode.TRUE:
             if test_mode == TestMode.TEST:
                 tile = TileSimulator(logger)
@@ -141,47 +214,258 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self._update_component_state,
         )
 
-        def _update_component_power_state(power_state: PowerState) -> None:
-            self._update_component_state(power=power_state)
-            self.update_tpm_power_state(power_state)
-
-        self._tile_orchestrator = TileOrchestrator(
-            self._start_communicating_with_subrack,
-            self._stop_communicating_with_subrack,
-            self._start_communicating_with_tpm,
-            self._stop_communicating_with_tpm,
-            self._turn_off_tpm,
-            self._turn_on_tpm,
-            self._update_communication_state,
-            _update_component_power_state,
-            logger,
-        )
-
-        self._tile_time = TileTime(0)
-
         super().__init__(
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            max_workers=1,
-            fault=None,
-            power=PowerState.UNKNOWN,
-            programming_state=None,
-            tile_health_structure=self._tpm_driver._tile_health_structure,
-            adc_rms=self._tpm_driver._adc_rms,
-            static_delays=self._tpm_driver._static_delays,
-            preadu_levels=self._tpm_driver._preadu_levels,
+            poll_rate=poll_rate,
+            adc_rms=None,
+            tile_health_structure=None,
+            pll_locked=None,
+            global_status_alarms=None,
+            programming_state=TpmStatus.UNKNOWN.pretty_name(),
+            pps_delay_corrected=0,
+            pps_delay=None,
             csp_rounding=None,
+            preadu_levels=None,
+            static_delays=None,
             channeliser_rounding=None,
+            # fndh_status=None,
         )
 
-    def start_communicating(self: TileComponentManager) -> None:
-        """Establish communication with the tpm and the upstream power supply."""
-        self._tile_orchestrator.desire_online()
+    def get_request(  # type: ignore[override]
+        self: TileComponentManager,
+    ) -> Optional[TileRequest]:
+        """
+        Return the action/s to be taken in the next poll.
 
-    def stop_communicating(self: TileComponentManager) -> None:
-        """Establish communication with the tpm and the upstream power supply."""
-        self._tile_orchestrator.desire_offline()
+        :raises AssertionError: if an unrecognosed poll option is
+            returned by the provider
+
+        :return: attributes to be read and commands to be executed in
+            the next poll.
+        """
+        if not self._request_provider:
+            raise AssertionError(
+                "The request provider is None, unable to get next request"
+            )
+        self.logger.info(f"\n{'New Poll':-^20}")
+        tpm_status: TpmStatus = self.tpm_status
+        self.logger.info(f"Getting request for state {TpmStatus(tpm_status).name:-^40}")
+        self._update_component_state(programming_state=tpm_status.pretty_name())
+
+        request_spec = self._request_provider.get_request(tpm_status)
+
+        # If already a request simply return.
+        if isinstance(request_spec, TileRequest):
+            return request_spec
+
+        if request_spec is None:
+            self.logger.warning("Request provider returned None.")
+            return None
+
+        match request_spec:
+            case ("CHECK_CPLD_COMMS", None):
+                self.logger.error("get check_global_status_alarms")
+                request = TileRequest(
+                    "global_status_alarms",
+                    self._tpm_driver.check_global_status_alarms,
+                    publish=True,
+                )
+            case ("CONNECT", None):
+                error_flag = False
+                try:
+                    self._tpm_driver.ping()
+                    # pylint: disable=broad-except
+                except Exception as e:
+                    # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
+                if error_flag:
+                    request = TileRequest("connect", self._tpm_driver.connect)
+                else:
+                    request = TileRequest(
+                        "global_status_alarms",
+                        self._tpm_driver.check_global_status_alarms,
+                        publish=True,
+                    )
+            case ("IS_PROGRAMMED", request):
+                request = TileRequest("is_programmed", self._tpm_driver.is_programmed)
+            case ("HEALTH_STATUS", None):
+                request = TileRequest(
+                    "tile_health_structure",
+                    self._tpm_driver.get_health_status,
+                    publish=True,
+                )
+            case ("ADC_RMS", None):
+                request = TileRequest("adc_rms", self._tpm_driver.adc_rms, publish=True)
+            case ("PLL_LOCKED", None):
+                request = TileRequest(
+                    "pll_locked", self._tpm_driver.pll_locked, publish=True
+                )
+            case ("PENDING_DATA_REQUESTS", None):
+                request = TileRequest(
+                    "pending_data_requests",
+                    self._tpm_driver.pending_data_requests,
+                    publish=False,
+                )
+            case ("PPS_DELAY", None):
+                request = TileRequest(
+                    "pps_delay",
+                    self._tpm_driver.pps_delay,
+                    publish=True,
+                )
+            case ("PPS_DELAY_CORRECTION", None):
+                request = TileRequest(
+                    "pps_delay_corrected",
+                    command_object=self._tpm_driver.pps_delay_correction,
+                    publish=True,
+                )
+            case ("IS_BEAMFORMER_RUNNING", None):
+                request = TileRequest(
+                    "beamformer_running", self._tpm_driver.is_beamformer_running
+                )
+            case ("PHASE_TERMINAL_COUNT", None):
+                request = TileRequest(
+                    "phase_terminal_count",
+                    self._tpm_driver.phase_terminal_count,
+                )
+            case ("PREADU_LEVELS", None):
+                request = TileRequest(
+                    "preadu_levels", self._tpm_driver.preadu_levels, publish=True
+                )
+            case ("STATIC_DELAYS", None):
+                request = TileRequest(
+                    "static_delays", self._tpm_driver.static_delays, publish=True
+                )
+            case ("STATION_ID", None):
+                request = TileRequest("station_id", self._tpm_driver.get_station_id)
+            case ("TILE_ID", None):
+                request = TileRequest("tile_id", self._tpm_driver.tile_id)
+            case ("CSP_ROUNDING", None):
+                request = TileRequest(
+                    "csp_rounding", self._tpm_driver.csp_rounding, publish=True
+                )
+            case ("CHANNELISER_ROUNDING", None):
+                request = TileRequest(
+                    "channeliser_rounding",
+                    self._tpm_driver.channeliser_truncation,
+                    publish=True,
+                )
+            case ("BEAMFORMER_TABLE", None):
+                request = TileRequest(
+                    "beamformer_table", self._tpm_driver.beamformer_table
+                )
+            case ("FPGA_REFERENCE_TIME", None):
+                request = TileRequest(
+                    "fpga_reference_time",
+                    self._tpm_driver.formatted_fpga_reference_time,
+                )
+
+            case _:
+                message = f"Unrecognised poll request {repr(request_spec)}"
+                self.logger.error(message)
+                raise AssertionError(message)
+        return request
+
+    def poll(self: TileComponentManager, poll_request: TileRequest) -> TileResponse:
+        """
+        Poll request for TpmDriver.
+
+        Execute a command or read some values.
+
+        :param poll_request: specification of the actions to be taken in
+            this poll.
+
+        :return: responses to queries in this poll
+        """
+        self.logger.info(f"Executing request {poll_request.name}")
+        return TileResponse(poll_request.name, poll_request(), poll_request.publish)
+
+    def poll_failed(self: TileComponentManager, exception: Exception) -> None:
+        """
+        Handle a failed poll.
+
+        This is a hook called by the poller when an exception was raised during a
+        poll.
+
+        SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.UNKNOWN
+        SUBRACK_SAY_TPM_OFF         ->  PowerState.OFF
+        SUBRACK_SAY_TPM_ON          ->  PowerState.ON
+        SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.NO_SUPPLY
+
+        :param exception: exception code raised from poll.
+        """
+        self.logger.debug(f"Failed poll with exception : {exception}")
+
+        self.power_state = self._subrack_says_tpm_power
+        self._update_component_state(power=self._subrack_says_tpm_power)
+
+        match exception:
+            case ConnectionError():
+                self.logger.warning(f"ConnectionError found {exception}")
+            case LibraryError():
+                self.logger.warning(
+                    f"LibraryError raised from poll {exception}, "
+                    "check the cpld communications"
+                )
+                if self._request_provider is not None:
+                    # Check the connection
+                    self._request_provider.desire_connection()
+            case BoardError():
+                # TODO: This could be a overheating of the FPGA??
+                self.logger.error("BoardError: check global status alarms")
+                if self._request_provider is not None:
+                    # Check the connection
+                    self._request_provider.desire_connection()
+            case _:
+                self.logger.error(f"Unexpected error found: {repr(exception)}")
+
+    def poll_succeeded(self: TileComponentManager, poll_response: TileResponse) -> None:
+        """
+        Handle the receipt of new polling values.
+
+        This is a hook called by the poller when values have been read
+        during a poll.
+
+        SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.ON
+        SUBRACK_SAY_TPM_OFF         ->  PowerState.ON
+        SUBRACK_SAY_TPM_ON          ->  PowerState.ON
+        SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.ON
+
+        :param poll_response: response to the pool, including any values
+            read.
+        """
+        if self._subrack_says_tpm_power != PowerState.ON:
+            # TODO: this should result in some ALARM or warning raised.
+            # fault = True ? (inconsistent state)
+            self.logger.error(
+                "poll_success but subrack says power is "
+                f"{PowerState(self._subrack_says_tpm_power).name}"
+            )
+        # We managed to poll hardware therefore we are PowerState.ON.
+        # DevState and HealthState is to be determined by the attribute value reported
+        self.power_state = PowerState.ON
+
+        # Publish all responses to TANGO interface.
+        if poll_response.publish:
+            self._update_component_state(  # type: ignore[misc]
+                **{poll_response.command: poll_response.data},
+            )
+        super().poll_succeeded(poll_response)
+        self._update_component_state(power=PowerState.ON)
+
+    def polling_started(self: TileComponentManager) -> None:
+        """Define actions to be taken when polling starts."""
+        self._request_provider = TileRequestProvider()
+        self._request_provider.desire_connection()
+        self._start_communicating_with_subrack_poller()
+
+    def polling_stopped(self: TileComponentManager) -> None:
+        """Define actions to be taken when polling stops."""
+        self._request_provider = None
+        super().polling_stopped()
+        self._update_component_state(programming_state=TpmStatus.UNKNOWN.pretty_name())
 
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None
@@ -193,12 +477,17 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: a result code and a unique_id or message.
         """
-        return self.submit_task(
-            self._tile_orchestrator.desire_off, args=[], task_callback=task_callback
+        subrack_off_command_proxy = MccsCommandProxy(
+            self._subrack_fqdn, "PowerOffTpm", self.logger
         )
+        # Pass the task callback to be updated by command proxy.
+        subrack_off_command_proxy(self._subrack_tpm_id, task_callback=task_callback)
+
+        return TaskStatus.QUEUED, ""
 
     def on(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Tell the upstream power supply proxy to turn the tpm on.
@@ -206,56 +495,40 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param task_callback: Update task state, defaults to None
 
         :return: a result code and a unique_id or message.
+
+        :raises ConnectionError: Connection issues
         """
-        return self.submit_task(
-            self._tile_orchestrator.desire_on, args=[], task_callback=task_callback
+        if self._request_provider is None:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.REJECTED,
+                    result=(ResultCode.REJECTED, "No request provider"),
+                )
+            raise ConnectionError(
+                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Communication with component is not established."
+            )
+        subrack_on_command_proxy = MccsCommandProxy(
+            self._subrack_fqdn, "PowerOnTpm", self.logger
         )
+        # Do not pass the task_callback to command_proxy.
+        # The on command is completed when initialisation has completed.
+        subrack_on_command_proxy(self._subrack_tpm_id)
 
-    def standby(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
-        """
-        Tell the upstream power supply proxy to turn the tpm on.
-
-        :param task_callback: Update task state, defaults to None
-
-        :return: a result code, or None if there was nothing to do.
-        """
-        return self.submit_task(
-            self._tile_orchestrator.desire_standby, args=[], task_callback=task_callback
+        if task_callback:
+            task_callback(status=TaskStatus.STAGING)
+        request = TileRequest(
+            name="initialise",
+            command_object=self._tpm_driver.initialise,
+            program_fpga=True,
+            pps_delay_correction=self._pps_delay_correction,
+            task_callback=task_callback,
         )
+        self.logger.info("Initialise command placed in poll QUEUE")
+        self._request_provider.desire_initialise(request)
+        return TaskStatus.QUEUED, "Task staged"
 
-    def _subrack_communication_state_changed(
-        self: TileComponentManager, communication_state: CommunicationStatus
-    ) -> None:
-        """
-        Handle a change in status of communication with the antenna via the APIU.
-
-        :param communication_state: the status of communication with
-            the antenna via the APIU.
-        """
-        self._tile_orchestrator.update_subrack_communication_state(communication_state)
-
-    def _start_communicating_with_tpm(self: TileComponentManager) -> None:
-        # Pass this as a callback, rather than the method that is calls,
-        # so that self._tpm_driver is resolved when the
-        # callback is called, not when it is registered.
-        self._tpm_driver.start_communicating()
-
-    def _stop_communicating_with_tpm(self: TileComponentManager) -> None:
-        # Pass this as a callback, rather than the method that is calls,
-        # so that self._tpm_driver is resolved when the
-        # callback is called, not when it is registered.
-        self._tpm_driver.stop_communicating()
-
-    # TODO: Convert this to a LRC. This doesn't need to be done right now.
-    #       This needs an instantiation of a new class derived from
-    #       DeviceComponentManager that provides its own message queue.
-    #       That allows the proxy call to other Tango devices to be queued
-    #       rather than blocking until the call to the Tango device has been
-    #       issued and queued in that device. This becomes increasing
-    #       important when we have many Tango devices.
-    def _start_communicating_with_subrack(self: TileComponentManager) -> None:
+    def _start_communicating_with_subrack_poller(self: TileComponentManager) -> None:
         """
         Establish communication with the subrack, then start monitoring.
 
@@ -273,7 +546,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             self._subrack_proxy = MccsDeviceProxy(
                 self._subrack_fqdn, self.logger, connect=False
             )
-            self.logger.debug("Connecting to the subrack")
+            self.logger.error("Connecting to the subrack")
             try:
                 self._subrack_proxy.connect()
             except tango.DevFailed as dev_failed:
@@ -281,23 +554,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 raise ConnectionError(
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
-        self.logger.debug("Created subrack proxy")
-        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            "longRunningCommandResult",
-            self._tile_orchestrator.propogate_subrack_lrc,
-        )
-        self.logger.debug("Callback added for subrack longRunningCommandResult")
+
         cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
             f"tpm{self._subrack_tpm_id}PowerState",
-            self._tpm_power_state_change_event_received,
+            self._subrack_says_tpm_power_changed,
         )
-        time.sleep(0.1)
-        if unconnected:
-            self._tile_orchestrator.update_subrack_communication_state(
-                CommunicationStatus.ESTABLISHED
-            )
 
-    def _tpm_power_state_change_event_received(
+    def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
         event_name: str,
         event_value: PowerState,
@@ -318,43 +581,19 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        self._tpm_power_state_changed(event_value)
+        # NOTE: This is not something we really want in production code.
+        # However the Subrack Simulator is not wired up to the TileSimulator
+        # Therefore this is a workaraound
+        if self._simulation_mode == SimulationMode.TRUE:
+            if event_value == PowerState.ON:
+                self.logger.warning("Mocking tpm on")
+                self._tpm_driver.mock_on()
+            if event_value == PowerState.OFF:
+                self.logger.warning("Mocking tpm off")
+                self._tpm_driver.mock_off()
 
-    def _stop_communicating_with_subrack(self: TileComponentManager) -> None:
-        self._subrack_proxy = None
-
-    # Converted to a LRC, in subrack
-    # This code only tells you if the command was submitted NOT the result
-    def _turn_off_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
-        assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], [unique_id]) = self._subrack_proxy.PowerOffTpm(
-            self._subrack_tpm_id
-        )
-        # TODO better handling of result code and exceptions.
-        if result_code > 2:
-            self.logger.error(
-                f"Turn off tpm {self._subrack_tpm_id} returns {result_code}"
-            )
-        return result_code, unique_id
-
-    # Converted to a LRC, in subrack
-    # This code only tells you if the command was submitted NOT the result
-    def _turn_on_tpm(self: TileComponentManager) -> tuple[ResultCode, str]:
-        assert self._subrack_proxy is not None  # for the type checker
-        ([result_code], [unique_id]) = self._subrack_proxy.PowerOnTpm(
-            self._subrack_tpm_id
-        )
-        # TODO better handling of result code and exceptions.
-        if result_code > 2:
-            self.logger.error(
-                f"Turn on tpm {self._subrack_tpm_id} returns {result_code}"
-            )
-        return result_code, unique_id
-
-    def _tpm_power_state_changed(
-        self: TileComponentManager, power_state: PowerState
-    ) -> None:
-        self._tile_orchestrator.update_tpm_power_state(power_state)
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
 
     def _tpm_communication_state_changed(
         self: TileComponentManager, communication_state: CommunicationStatus
@@ -365,41 +604,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param communication_state: the status of communication with
             the tpm.
         """
-        self._tile_orchestrator.update_tpm_communication_state(communication_state)
-
-    def update_tpm_power_state(
-        self: TileComponentManager, power_state: PowerState
-    ) -> None:
-        """
-        Update the power state, calling callbacks as required.
-
-        If power state is ON, then the TPM is checked for initialisation,
-        and initialised if not already so.
-
-        :param power_state: the new power state of the component. This can
-            be None, in which case the internal value is updated but no
-            callback is called. This is useful to ensure that the
-            callback is called next time a real value is pushed.
-        """
-        self.set_power_state(power_state)
-        self.logger.debug(
-            f"power state: {self.power_state.name}, communication status: "
-            f"{self.communication_state.name}"
-        )
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            if power_state == PowerState.ON:
-                self.logger.debug(
-                    f"Checking state of TPM after TPM ON: programmed="
-                    f"{self.is_programmed} tpm_status={self.tpm_status.name}"
-                )
-                if (not self.is_programmed) or (
-                    self.tpm_status == TpmStatus.PROGRAMMED
-                ):
-                    self.initialise(program_fpga=False)
-                self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
-            if power_state == PowerState.STANDBY:
-                self.erase_fpga()
-                self._tile_time.set_reference_time(0)
+        self.logger.error("Not Implemented.")
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
@@ -409,63 +614,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :return: the TPM status
         """
         if self.power_state == PowerState.UNKNOWN:
-            self.logger.debug("power state UNKNOWN")
             status = TpmStatus.UNKNOWN
         elif self.power_state != PowerState.ON:
             status = TpmStatus.OFF
-        elif self.communication_state != CommunicationStatus.ESTABLISHED:
-            status = TpmStatus.UNCONNECTED
         else:
             status = self._tpm_driver.tpm_status
         return status
-
-    @property
-    def fpgas_unix_time(self: TileComponentManager) -> list[int]:
-        """
-        Return FPGA internal Unix time.
-
-        Used to check proper synchronization
-        :return: list of two Unix time integers
-        """
-        return self.fpgas_time
-
-    @property
-    def fpga_time(self: TileComponentManager) -> str:
-        """
-        Return FPGA internal time in UTC format.
-
-        :return: FPGA internal time
-        """
-        return self._tile_time.format_time_from_timestamp(self.fpgas_time[0])
-
-    @property
-    def fpga_reference_time(self: TileComponentManager) -> str:
-        """
-        Return FPGA reference time in UTC format.
-
-        Reference time is set as part of start_observation.
-        It represents the timestamp  for the first frame
-
-        :return: FPGA reference time
-        """
-        reference_time = self._tpm_driver.fpga_reference_time
-        self._tile_time.set_reference_time(reference_time)
-        return self._tile_time.format_time_from_timestamp(reference_time)
-
-    @property
-    def fpga_frame_time(self: TileComponentManager) -> str:
-        """
-        Return FPGA frame time in UTC format.
-
-        frame time is the timestamp for the current frame being processed.
-        Value reported here refers to the ADC frames, but the total processing
-        delay is < 1ms and thus irrelevant on the timescales of MCCS response time
-
-        :return: FPGA reference time
-        """
-        reference_time = self._tpm_driver.fpga_reference_time
-        self._tile_time.set_reference_time(reference_time)
-        return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
     #
     # Timed commands. Convert time to frame number
@@ -484,7 +638,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
-            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            load_frame = self._tpm_driver.frame_from_utc_time(load_time)
             if load_frame < 0:
                 self.logger.error(f"apply_calibration: Invalid time {load_time}")
                 raise ValueError(f"Invalid time {load_time}")
@@ -507,7 +661,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         elif isinstance(load_time, int):  # added for backward compatibility
             load_frame = load_time
         else:
-            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            load_frame = self._tpm_driver.frame_from_utc_time(load_time)
             if load_frame < 0:
                 self.logger.error(f"apply_pointing_delays: Invalid time {load_time}")
                 raise ValueError(f"Invalid time {load_time}")
@@ -546,7 +700,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         elif isinstance(start_time, int):  # added for backward compatibility
             start_frame = start_time
         else:
-            start_frame = self._tile_time.frame_from_utc_time(start_time)
+            start_frame = self._tpm_driver.frame_from_utc_time(start_time)
             if start_frame < 0:
                 self.logger.error(f"start_beamformer: Invalid time {start_time}")
                 raise ValueError(f"Invalid time {start_time}")
@@ -592,7 +746,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if load_time is None:
             load_frame = 0
         else:
-            load_frame = self._tile_time.frame_from_utc_time(load_time)
+            load_frame = self._tpm_driver.frame_from_utc_time(load_time)
             if load_frame < 0:
                 self.logger.error("configure_test_generator: Invalid time")
                 raise ValueError("Invalid time")
@@ -657,11 +811,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         if start_time is None:
             timestamp = 0
             seconds = params.get("seconds", 0.2)
-        elif self.fpga_reference_time == 0:
+        elif self._tpm_driver.formatted_fpga_reference_time == 0:
             self.logger.error("Cannot send data, acquisition not started")
             raise ValueError("Cannot send data, acquisition not started")
         else:
-            timestamp = self._tile_time.frame_from_utc_time(start_time)
+            timestamp = self._tpm_driver.frame_from_utc_time(start_time)
             if timestamp < 0:
                 self.logger.error(f"Invalid time: {start_time}")
                 raise ValueError(f"Invalid time: {start_time}")
@@ -682,9 +836,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
     __PASSTHROUGH = [
         "adc_rms",
-        "apply_pointing_delays",
+        "fpga_time",
         "arp_table",
         "beamformer_table",
+        "formatted_fpga_reference_time",
+        "pps_delay_correction",
         "board_temperature",
         "channeliser_truncation",
         "pending_data_requests",
@@ -702,6 +858,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "fpga2_temperature",
         "fpgas_time",
         "fpga_current_frame",
+        "fpga_frame_time",
         "get_40g_configuration",
         "voltages",
         "temperatures",
@@ -718,7 +875,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "phase_terminal_count",
         "pll_locked",
         "pps_delay",
-        "pps_delay_correction",
         "pps_present",
         "preadu_levels",
         "read_address",
@@ -738,7 +894,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "test_generator_input_select",
         "tile_id",
         "station_id",
-        # "tpm_status",
+        "tpm_status",
         "voltage_mon",
         "write_address",
         "write_register",
@@ -805,15 +961,25 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         # This one-liner is only a method so that we can decorate it.
         setattr(self._tpm_driver, name, value)
 
+    def set_pps_delay_correction(
+        self: TileComponentManager,
+        correction: int,
+    ) -> None:
+        """
+        Set the ppsDelay correction.
+
+        :param correction: the correction to set
+        """
+        self._pps_delay_correction = correction
+
     #
     # Long running commands
     #
-    @check_communicating
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         program_fpga: bool = True,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[TaskStatus, str] | None:
         """
         Submit the initialise slow task.
 
@@ -822,72 +988,29 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param task_callback: Update task state, defaults to None
         :param program_fpga: Force FPGA reprogramming, for complete initialisation
 
-        :return: A tuple containing a task status and a unique id string to
+        :returns: A tuple containing a task status and a unique id string to
             identify the command
-        """
-        if program_fpga:
-            try:
-                self._tpm_driver.erase_fpga()
-            except ConnectionError as comm_err:
-                return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
 
-        try:
-            return self.submit_task(self._initialise, task_callback=task_callback)
-        except ConnectionError as comm_err:
-            return (TaskStatus.FAILED, f"Tile Connection Error {comm_err}")
-
-    def _initialise(
-        self: TileComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
+        :raises ConnectionError: if we are not connected to the TPM.
         """
-        Initialise the tpm using slow command.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            self._tpm_driver.initialise()
-        # pylint: disable-next=broad-except
-        except Exception as ex:
-            self.logger.error(f"Exception raised while initialising Tile: {repr(ex)}")
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
             if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {repr(ex)}")
-            return
-
-        # Check the tpm_status and inform callbacks
-        match self._tpm_driver.tpm_status:
-            case TpmStatus.INITIALISED:
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result="The initialisation task has completed",
-                    )
-            case TpmStatus.UNPROGRAMMED:
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result="The initialisation task has failed",
-                    )
-            case _:
-                self.logger.error(
-                    "Unexpected TpmStatus following initialisation."
-                    f"{self._tpm_driver.tpm_status}."
+                task_callback(
+                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
                 )
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result="The initialisation task has failed"
-                        f"TpmStatus: {self._tpm_driver.tpm_status}",
-                    )
+            raise ConnectionError(
+                "Cannot execute 'TileComponentManager.initialise'. "
+                "Communication with component is not established."
+            )
+        return self._tpm_driver.initialise(
+            program_fpga=program_fpga,
+            pps_delay_correction=self._pps_delay_correction,
+            task_callback=task_callback,
+        )
 
-    @check_communicating
     def download_firmware(
-        self: TileComponentManager, argin: str, task_callback: Optional[Callable] = None
-    ) -> tuple[TaskStatus, str]:
+        self: TileComponentManager, argin: str, task_callback: Optional[Callable]
+    ) -> tuple[TaskStatus, str] | None:
         """
         Submit the download_firmware slow task.
 
@@ -898,77 +1021,31 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             file
         :param task_callback: Update task state, defaults to None
 
-        :return: A tuple containing a task status and a unique id string to
+        :returns: A tuple containing a task status and a unique id string to
             identify the command
+        :raises ConnectionError: if we are not connected to the TPM.
         """
-        return self.submit_task(
-            self._download_firmware, args=[argin], task_callback=task_callback
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
+                )
+            raise ConnectionError(
+                "Cannot execute 'TileComponentManager.download_firmware'. "
+                "Communication with component is not established."
+            )
+        return self._tpm_driver.download_firmware(
+            bitfile=argin,
+            task_callback=task_callback,
         )
 
-    def _download_firmware(
-        self: TileComponentManager,
-        argin: str,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Download tpm firmware using slow command.
-
-        :param argin: can either be the design name returned or a path to a file
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            self._tpm_driver.download_firmware(argin)
-        # pylint: disable-next=broad-except
-        except Exception as ex:
-            self.logger.error(
-                f"Exception raised while downloading firmware: {repr(ex)}"
-            )
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {repr(ex)}")
-            return
-
-        # Check the programmed state.
-        match self._tpm_driver.is_programmed:
-            case True:
-                message = "The download firmware task has completed"
-                self.logger.info(message)
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.COMPLETED,
-                        result=message,
-                    )
-            case False:
-                message = "The download firmware task has failed"
-                self.logger.warning(message)
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=message,
-                    )
-            case _:
-                message = (
-                    "The download firmware task has failed"
-                    " is_programmed is not returning bool"
-                )
-                self.logger.error(message)
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=message,
-                    )
-
-    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         *,
         start_time: Optional[str] = None,
         delay: int = 2,
-    ) -> tuple[TaskStatus, str]:
+    ) -> tuple[TaskStatus, str] | None:
         """
         Submit the start_acquisition slow task.
 
@@ -978,79 +1055,22 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
-        """
-        if start_time is None:
-            start_frame = None
-        else:
-            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
-            if start_frame < 0:
-                self.logger.error("Invalid time")
-            delay = 0
 
-        return self.submit_task(
-            self._start_acquisition,
-            args=[start_frame, delay],
-            task_callback=task_callback,
+        :raises ConnectionError: if we are not connected to the TPM.
+        """
+        if self.communication_state != CommunicationStatus.ESTABLISHED:
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
+                )
+            raise ConnectionError(
+                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Communication with component is not established."
+            )
+        return self._tpm_driver.start_acquisition(
+            start_time=start_time, delay=delay, task_callback=task_callback
         )
 
-    def _start_acquisition(
-        self: TileComponentManager,
-        start_time: Optional[int] = None,
-        delay: Optional[int] = 2,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Start acquisition using slow command.
-
-        :param start_time: the time at which to start data acquisition, defaults to None
-        :param delay: delay start, defaults to 2
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        :raises NotImplementedError: Command not implemented
-        """
-        success = False
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        try:
-            success = self._tpm_driver.start_acquisition(  # type: ignore[assignment]
-                start_time, delay
-            )
-        except NotImplementedError:
-            raise
-        # pylint: disable-next=broad-except
-        except Exception as ex:
-            self.logger.error(f"error {ex}")
-            if task_callback:
-                task_callback(status=TaskStatus.FAILED, result=f"Exception: {ex}")
-            return
-
-        if task_abort_event and task_abort_event.is_set():
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result="Start acquisition task aborted"
-                )
-            return
-
-        if success:
-            self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
-        else:
-            self._tile_time.set_reference_time(0)
-
-        if task_callback:
-            if success:
-                self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
-                task_callback(
-                    status=TaskStatus.COMPLETED,
-                    result="Start acquisition has completed",
-                )
-            else:
-                task_callback(
-                    status=TaskStatus.FAILED, result="Start acquisition task failed"
-                )
-            return
-
-    @check_communicating
     def post_synchronisation(
         self: TileComponentManager, task_callback: Optional[Callable] = None
     ) -> tuple[TaskStatus, str]:
@@ -1066,6 +1086,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         """
         return self.submit_task(self._post_synchronisation, task_callback=task_callback)
 
+    @check_communicating
     def _post_synchronisation(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1105,16 +1126,3 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 status=TaskStatus.COMPLETED, result="Post synchronisation has completed"
             )
             return
-
-    def set_power_state(self: TileComponentManager, power_state: PowerState) -> None:
-        """
-        Set the power state of the tile.
-
-        If power state changed, re-evaluate the tile programming state and
-        updates it inside the driver. This pushes a callback if it changed.
-
-        :param power_state: The desired power state
-        """
-        with self._power_state_lock:
-            # pylint: disable=attribute-defined-outside-init
-            self.power_state = power_state

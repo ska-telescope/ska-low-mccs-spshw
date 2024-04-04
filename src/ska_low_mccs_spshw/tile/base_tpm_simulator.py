@@ -11,11 +11,13 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import logging
+import random
+import threading
 import time
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
-from ska_control_model import CommunicationStatus, PowerState
+from ska_control_model import CommunicationStatus, TaskStatus
 
 from .tile_data import TileData
 from .tpm_status import TpmStatus
@@ -55,6 +57,13 @@ class BaseTpmSimulator:
         "test-reg2": [0],
         "test-reg3": [0],
         "test-reg4": [0],
+    }
+    _GLOBAL_STATUS_ALARMS: dict[str, int] = {
+        "I2C_access_alm": 0,
+        "temperature_alm": 0,
+        "voltage_alm": 0,
+        "SEM_wd": 0,
+        "MCU_wd": 0,
     }
     # ARP resolution table
     # Values are consistent with unit test test_MccsTile
@@ -110,7 +119,7 @@ class BaseTpmSimulator:
         self._component_state_changed_callback = component_state_changed_callback
         self._communication_state_changed = communication_state_changed
         self._is_programmed = False
-        self._tpm_status = TpmStatus.UNKNOWN
+        self._tpm_status = TpmStatus.UNPROGRAMMED
         self._is_beamformer_running = False
         self._phase_terminal_count = self.PHASE_TERMINAL_COUNT
         self._station_id = 0
@@ -122,6 +131,7 @@ class BaseTpmSimulator:
         self._adc_rms = tuple(self.ADC_RMS)
         self._current_tile_beamformer_frame = self.CURRENT_TILE_BEAMFORMER_FRAME
         self._pps_delay = self.PPS_DELAY
+        self._pps_delay_correction = 0
         self._firmware_name = self.FIRMWARE_NAME
         self._firmware_available = copy.deepcopy(self.FIRMWARE_AVAILABLE)
         self._arp_table = copy.deepcopy(self.ARP_TABLE)
@@ -148,41 +158,65 @@ class BaseTpmSimulator:
         self._is_last: bool
         self._is_first: bool
         self.communication_state = CommunicationStatus.NOT_ESTABLISHED
-        self._fail_communicate = False
+        self._mocked_communication_failure = False
+        self._global_status_alarm = self._GLOBAL_STATUS_ALARMS
+        self.frame_time = "1970-01-01T00:00:00.000000Z"
+        self._formatted_fpga_reference_time = "1970-01-01T00:00:00.000000Z"
+        self.power_locked = False
 
-    def start_communicating(self: BaseTpmSimulator) -> None:
+    def ping(self: BaseTpmSimulator) -> None:
         """
-        Establish communication with the component, then start monitoring.
+        Check we can connect to the TPM.
 
-        :raises ConnectionError: if the attempt to establish
-            communication with the channel fails.
+        :raises ConnectionError: when we fail to connect to the TPM.
         """
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-
-        if self._communication_state_changed:
-            self._communication_state_changed(CommunicationStatus.NOT_ESTABLISHED)
-            self._communication_state_changed(CommunicationStatus.ESTABLISHED)
-            self.communication_state = CommunicationStatus.ESTABLISHED
-
-        if self._fail_communicate:
+        if self._mocked_communication_failure:
             raise ConnectionError("Failed to connect")
 
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback(power=PowerState.ON)
-            self._component_state_changed_callback(fault=False)
+    def check_global_status_alarms(self: BaseTpmSimulator) -> dict:
+        """
+        Check global status alarms.
 
-    def stop_communicating(self: BaseTpmSimulator) -> None:
-        """Cease monitoring the component, and break off all communication with it."""
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
+        :return: a dictionary with global health alarms.
 
-        if self._component_state_changed_callback:
-            self._component_state_changed_callback(power=None, fault=None)
+        :raises ConnectionError: when we fail to connect to the TPM.
+        """
+        if self._mocked_communication_failure:
+            raise ConnectionError("Failed to connect")
+        return self._global_status_alarm
 
-        if self._communication_state_changed:
-            self._communication_state_changed(CommunicationStatus.DISABLED)
-            self.communication_state = CommunicationStatus.DISABLED
+    def connect(self: BaseTpmSimulator) -> None:
+        """
+        Check we can connect to the TPM.
+
+        :raises ConnectionError: when we fail to connect to the TPM.
+        """
+        if self._mocked_communication_failure:
+            raise ConnectionError("Failed to connect")
+
+    def get_health_status(self: BaseTpmSimulator) -> dict[str, Any]:
+        """
+        Get the health status from TPM.
+
+        :return: a dictionary containing multiple monitoring points.
+        """
+        return self._tile_health_structure
+
+    def get_station_id(self: BaseTpmSimulator) -> int:
+        """
+        Return the station id.
+
+        :return: the station id
+        """
+        return self._station_id
+
+    def get_beamformer_table(self: BaseTpmSimulator) -> list[list[int]]:
+        """
+        Return the beamformer table.
+
+        :return: the beamformer table
+        """
+        return self._beamformer_table
 
     @property
     def firmware_available(
@@ -237,6 +271,28 @@ class BaseTpmSimulator:
         self.logger.debug(f"TpmSimulator: is_programmed {self._is_programmed}")
         return self._is_programmed
 
+    def mock_on(self: BaseTpmSimulator) -> None:
+        """Simulate a power ON of the TPM."""
+        self.logger.error("Mocking on")
+        if not self.power_locked:
+            self._mocked_communication_failure = False
+
+    def mock_off(self: BaseTpmSimulator) -> None:
+        """Simulate a power OFFs of the TPM."""
+        self.logger.error("Mocking off")
+        if not self.power_locked:
+            self._mocked_communication_failure = True
+
+    def frame_from_utc_time(self: BaseTpmSimulator, utc_time: str) -> int:
+        """
+        Return the frame from utc time.
+
+        :param utc_time: the time in UTC format
+
+        :returns: the from from utc time.
+        """
+        return 4
+
     @property
     def hardware_version(self: BaseTpmSimulator) -> int:
         """
@@ -246,16 +302,30 @@ class BaseTpmSimulator:
         """
         return self.TPM_VERSION
 
-    def download_firmware(self: BaseTpmSimulator, bitfile: str) -> None:
+    def download_firmware(
+        self: BaseTpmSimulator,
+        bitfile: str,
+        task_callback: Optional[Callable] = None,
+    ) -> None:
         """
         Download the provided firmware bitfile onto the TPM.
 
         :param bitfile: the bitfile to be downloaded
+        :param task_callback: A callback to call with updates of the
+            command progress.
         """
+        if task_callback:
+            task_callback(status=TaskStatus.QUEUED)
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self.logger.debug("TpmSimulator: download_firmware")
         self._firmware_name = bitfile
         self._is_programmed = True
         self._set_tpm_status(TpmStatus.PROGRAMMED)
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="Firmware successfully downloaded",
+            )
 
     def erase_fpga(self: BaseTpmSimulator) -> None:
         """Erase the firmware form the FPGA, to reduce power."""
@@ -273,19 +343,41 @@ class BaseTpmSimulator:
         self.logger.debug("TpmSimulator: get_arp_table")
         raise NotImplementedError
 
-    def initialise(self: BaseTpmSimulator, tile_id: int = 0) -> None:
+    def initialise(
+        self: BaseTpmSimulator,
+        program_fpga: bool,
+        pps_delay_correction: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Real TPM driver performs connectivity checks, programs and initialises the TPM.
 
         The simulator will emulate programming the firmware.
 
-        :param tile_id: Initial value for tile ID (optional)
+        :param program_fpga: True if we want to program the fpga.
+        :param pps_delay_correction: the delay correction to
+            apply to the pps signal.
+        :param task_callback: A callback to call with updates of the
+            command progress.
+        :param task_abort_event: Check for abort, defaults to None
         """
+        print(f"program_fpga {program_fpga}")
+        print(f"task_callback {task_callback}")
+        if task_callback:
+            task_callback(status=TaskStatus.QUEUED)
+            task_callback(status=TaskStatus.IN_PROGRESS)
         self.logger.debug("TpmSimulator: initialise")
-        self._tile_id = tile_id
+        # self._tile_id = tile_id
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)
         self._set_tpm_status(TpmStatus.INITIALISED)
+        time.sleep(random.randint(1, 4))
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result="The initialisation task has completed",
+            )
 
     #
     # Properties
@@ -441,6 +533,15 @@ class BaseTpmSimulator:
         """
         self.logger.debug("TpmSimulator: get_pps_delay")
         return self._pps_delay
+
+    @property
+    def pps_delay_correction(self: BaseTpmSimulator) -> int:
+        """
+        Return last measured ppsdelay correction.
+
+        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+        """
+        return self._pps_delay_correction
 
     @property
     def register_list(self: BaseTpmSimulator) -> list[str]:
@@ -739,6 +840,24 @@ class BaseTpmSimulator:
         #    (time.time()-self._fpga_reference_time)/(TileData.FRAME_PERIOD))
         # TODO Modify testbenches to expect realistic time from the TPM
         return 1000000
+
+    @property
+    def fpga_frame_time(self: BaseTpmSimulator) -> str:
+        """
+        Return current frame from timestamp.
+
+        :return: current frame
+        """
+        return self.frame_time
+
+    @property
+    def formatted_fpga_reference_time(self: BaseTpmSimulator) -> str:
+        """
+        Return formatted frame time.
+
+        :return: current frame
+        """
+        return self._formatted_fpga_reference_time
 
     # pylint: disable=too-many-arguments
     def set_lmc_download(
@@ -1044,8 +1163,9 @@ class BaseTpmSimulator:
 
     def start_acquisition(
         self: BaseTpmSimulator,
-        start_time: Optional[int] = None,
+        start_time: Optional[str] = None,
         delay: Optional[int] = 2,
+        task_callback: Optional[Callable] = None,
     ) -> None:
         """
         Start data acquisition.
@@ -1053,6 +1173,8 @@ class BaseTpmSimulator:
         :param start_time: the time at which to start data acquisition,
             defaults to None
         :param delay: delay start, defaults to 2
+        :param task_callback: Update task state, defaults to None
+
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented
         """

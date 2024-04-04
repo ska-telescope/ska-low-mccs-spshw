@@ -5,8 +5,8 @@
 Standard sphinx config file.
 """
 
-import sys
 import os
+import sys
 
 # WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
 import sphinx.builders.html
@@ -52,6 +52,7 @@ autodoc_mock_imports = [
     "tango",
     "ska_control_model",
     "ska_low_mccs_common",
+    "ska_tango_testing",
     "psycopg",
     "psycopg_pool",
     "ska_ser_skuid",
@@ -67,8 +68,8 @@ autodoc_default_options = {
 # -- Project information -----------------------------------------------------
 release_filename = os.path.join("..", "..", ".release")
 with open(release_filename) as fd:
-    line=fd.readline()
-    release = line.strip().split('=')[1]
+    line = fd.readline()
+    release = line.strip().split("=")[1]
 
 author = "MCCS team"
 project = "MCCS LMC Prototype"
@@ -89,9 +90,9 @@ nitpick_ignore = [
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "pyaavs.tile.Tile"),
     ("py:class", "pyaavs.tile_wrapper.Tile"),
-    ("py:exc", "HTTPException"), # fastapi online docs are mkdocs-based
-    ("py:class", "starlette.requests.Request"), # mkdocs-based
-    ("py:class", "uvicorn.config.Config"), # mkdocs-based
+    ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
+    ("py:class", "starlette.requests.Request"),  # mkdocs-based
+    ("py:class", "uvicorn.config.Config"),  # mkdocs-based
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
     ("py:class", "pyfabil.base.definitions.Device"),
@@ -159,11 +160,9 @@ html_theme = "ska_ser_sphinx_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-}
+html_theme_options = {}
 
-html_context = {
-}
+html_context = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

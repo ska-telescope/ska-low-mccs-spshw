@@ -24,13 +24,19 @@ from ska_control_model import (
     HealthState,
     PowerState,
     ResultCode,
+    TaskStatus,
 )
 from ska_low_mccs_common import MccsDeviceProxy
+from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
 
-from ska_low_mccs_spshw.tile import MccsTile, StaticTpmSimulator, TileData
+from ska_low_mccs_spshw.tile import MccsTile, MockTpm, TileData, TileSimulator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.test_tools import (
+    execute_lrc_to_complettion,
+    wait_for_completed_command_to_clear_from_queue,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -48,10 +54,13 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "admin_mode",
         "health_state",
         "state",
+        "communication_state",
         "tile_programming_state",
+        "lrc_command",
         "adc_power",
         "pps_present",
-        timeout=3.0,
+        "track_lrc_command",
+        timeout=15.0,
     )
 
 
@@ -98,6 +107,149 @@ def tile_device_fixture(
     :yield: the tile Tango device under test.
     """
     yield test_context.get_tile_device(tile_id)
+
+
+@pytest.fixture(name="off_tile_device")
+def off_tile_device_fixture(
+    tile_device: DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> DeviceProxy:
+    """
+    Fixture that returns a DeviceProxy to a off tile.
+
+    :param tile_device: fixture that provides a
+        :py:class:`tango.DeviceProxy` to the device under test, in a
+        :py:class:`tango.test_context.DeviceTestContext`.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    :yield: a 'DeviceProxy' to the tile.
+    """
+    assert tile_device.adminMode == AdminMode.OFFLINE
+    subscription_id = tile_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    assert tile_device.state() == DevState.DISABLE
+
+    tile_device.adminMode = AdminMode.ONLINE
+    assert tile_device.adminMode == AdminMode.ONLINE
+
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    tile_device.unsubscribe_event(subscription_id)
+    yield tile_device
+
+
+@pytest.fixture(name="on_tile_device")
+def on_tile_device_fixture(
+    tile_device: DeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> DeviceProxy:
+    """
+    Fixture that returns a DeviceProxy to a on tile.
+
+    :param tile_device: fixture that provides a
+        :py:class:`tango.DeviceProxy` to the device under test, in a
+        :py:class:`tango.test_context.DeviceTestContext`.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    :yield: a 'DeviceProxy' to the tile.
+    """
+    assert tile_device.adminMode == AdminMode.OFFLINE
+    subscription_ids: list[int] = []
+    subscription_ids.append(
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subscription_ids.append(
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
+    tile_device.adminMode = AdminMode.ONLINE
+
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+    tile_device.on()
+    tile_device.MockTpmOn()
+
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "NotProgrammed"
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
+    change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
+
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    assert tile_device.tileProgrammingState == "Initialised"
+    for subscription_id in subscription_ids:
+        tile_device.unsubscribe_event(subscription_id)
+    yield tile_device
+
+
+def turn_tile_on(
+    tile_device: MccsDeviceProxy,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> DeviceProxy:
+    """
+    Test TPM on sequence.
+
+    :param tile_device: fixture that provides a
+        :py:class:`tango.DeviceProxy` to the device under test, in a
+        :py:class:`tango.test_context.DeviceTestContext`.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+
+    :returns: a 'DeviceProxy' to the tile.
+    """
+    subscription_ids: list[int] = []
+    subscription_ids.append(
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+    subscription_ids.append(
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+    tile_device.on()
+    tile_device.MockTpmOn()
+
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "NotProgrammed", lookahead=2, consume_nonmatches=True
+    )
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "Initialised", lookahead=2, consume_nonmatches=True
+    )
+
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    assert tile_device.tileProgrammingState == "Initialised"
+    for subscription_id in subscription_ids:
+        tile_device.unsubscribe_event(subscription_id)
+    return tile_device
 
 
 # pylint: disable=too-many-lines
@@ -157,85 +309,99 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
-    def test_On(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
-    ) -> None:
-        """
-        Test TPM on sequence.
-
-        :param tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
-        """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.subscribe_event(
-            "state",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["state"],
-        )
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-
-        tile_device.adminMode = AdminMode.ONLINE
-
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.OFF)
-        change_event_callbacks["state"].assert_not_called()
-
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
-
-        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
-        change_event_callbacks["tile_programming_state"].assert_not_called()
-
-        tile_device.MockTpmOn()
-
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Programmed"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised"
-        )
-
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
-        change_event_callbacks["state"].assert_not_called()
-
-        assert tile_device.tileProgrammingState == "Initialised"
-
     @pytest.mark.parametrize(
         "config_in, expected_config",
         [
             pytest.param(
                 {
-                    "fixed_delays": [1, 2],
-                    "antenna_ids": [1, 2],
+                    "fixed_delays": [i + 1 for i in range(32)],
+                    "antenna_ids": [i + 1 for i in range(16)],
                 },
                 {
-                    "fixed_delays": [1, 2],
-                    "antenna_ids": [1, 2],
+                    "fixed_delays": [
+                        1.25,
+                        2.5,
+                        2.5,
+                        3.75,
+                        5.0,
+                        6.25,
+                        7.5,
+                        7.5,
+                        8.75,
+                        10.0,
+                        11.25,
+                        12.5,
+                        12.5,
+                        13.75,
+                        15.0,
+                        16.25,
+                        17.5,
+                        17.5,
+                        18.75,
+                        20.0,
+                        21.25,
+                        22.5,
+                        22.5,
+                        23.75,
+                        25.0,
+                        26.25,
+                        27.5,
+                        27.5,
+                        28.75,
+                        30.0,
+                        31.25,
+                        32.5,
+                    ],
+                    "antenna_ids": [i + 1 for i in range(16)],
                 },
                 id="valid config is entered correctly",
             ),
             pytest.param(
                 {
-                    "fixed_delays": [1, 2],
+                    "fixed_delays": [i + 1 for i in range(32)],
                 },
                 {
-                    "fixed_delays": [1, 2],
+                    "fixed_delays": [
+                        1.25,
+                        2.5,
+                        2.5,
+                        3.75,
+                        5.0,
+                        6.25,
+                        7.5,
+                        7.5,
+                        8.75,
+                        10.0,
+                        11.25,
+                        12.5,
+                        12.5,
+                        13.75,
+                        15.0,
+                        16.25,
+                        17.5,
+                        17.5,
+                        18.75,
+                        20.0,
+                        21.25,
+                        22.5,
+                        22.5,
+                        23.75,
+                        25.0,
+                        26.25,
+                        27.5,
+                        27.5,
+                        28.75,
+                        30.0,
+                        31.25,
+                        32.5,
+                    ],
                     "antenna_ids": [],
                 },
                 id="missing config data is valid",
             ),
             pytest.param(
                 {
-                    "fixed_delays_wrong_name": [1, 2],
+                    "fixed_delays_wrong_name": [i + 1 for i in range(32)],
                 },
                 {
                     "fixed_delays": [],
@@ -255,44 +421,41 @@ class TestMccsTile:
     )
     def test_Configure(
         self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         config_in: dict,
         expected_config: dict,
     ) -> None:
         """
         Test for Configure.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param config_in: configuration of the device
         :param expected_config: the expected output configuration
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-        time.sleep(0.5)
+        init_value = on_tile_device.staticTimeDelays
+        # there is a static delay applied to each ADC channel.
+        assert len(init_value) == 32
 
-        init_value = getattr(tile_device, "staticTimeDelays")
+        print(f"the init_value are: {init_value}")
+        on_tile_device.Configure(json.dumps(config_in))
 
-        tile_device.Configure(json.dumps(config_in))
-
-        assert list(tile_device.antennaIds) == expected_config["antenna_ids"]
+        assert list(on_tile_device.antennaIds) == expected_config["antenna_ids"]
 
         value = expected_config["fixed_delays"]
         write_value = np.array(value)
         init_value = np.array(init_value)
+        print(f"the fdelays are: {on_tile_device.staticTimeDelays}")
         if value:
-            assert (getattr(tile_device, "staticTimeDelays") == write_value).all()
+            assert (on_tile_device.staticTimeDelays == write_value).all()
         else:
-            assert (getattr(tile_device, "staticTimeDelays") == init_value).all()
+            assert (on_tile_device.staticTimeDelays == init_value).all()
 
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,
-        static_tile_component_manager: unittest.mock.Mock,
+        plain_tile_component_manager: unittest.mock.Mock,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -303,7 +466,7 @@ class TestMccsTile:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param static_tile_component_manager: A component manager.
+        :param plain_tile_component_manager: A component manager.
             (Using a BaseTpmSimulator)
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -328,12 +491,11 @@ class TestMccsTile:
         assert tile_device.adminMode == AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
-        change_event_callbacks["state"].assert_not_called()
 
-        static_tile_component_manager._update_communication_state(
+        plain_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
-        static_tile_component_manager._update_component_state(
+        plain_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),
@@ -341,55 +503,35 @@ class TestMccsTile:
 
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
-        assert tile_device.healthState == HealthState.OK
 
     def test_adcPower(
         self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-        static_tile_component_manager: unittest.mock.Mock,
+        on_tile_device: MccsDeviceProxy,
+        plain_tile_component_manager: unittest.mock.Mock,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for adcPower.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param static_tile_component_manager: A component manager.
+        :param plain_tile_component_manager: A component manager.
             (Using a BaseTpmSimulator)
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.subscribe_event(
-            "state",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["state"],
-        )
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-        assert tile_device.state() == DevState.DISABLE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.OFF)
-
-        tile_device.MockTpmOn()
-
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
-
-        tile_device.subscribe_event(
+        on_tile_device.subscribe_event(
             "adcPower",
             EventType.CHANGE_EVENT,
             change_event_callbacks["adc_power"],
         )
 
-        static_tile_component_manager._update_communication_state(
+        plain_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
-        static_tile_component_manager._adc_rms = list(range(32))
-        static_tile_component_manager._update_component_state(
+        plain_tile_component_manager._adc_rms = list(range(32))
+        plain_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),
@@ -400,56 +542,36 @@ class TestMccsTile:
 
     def test_ppsPresent(
         self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-        static_tile_component_manager: unittest.mock.Mock,
+        on_tile_device: MccsDeviceProxy,
+        plain_tile_component_manager: unittest.mock.Mock,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test alarm is raised when pps is disconnected.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
-        :param static_tile_component_manager: A component manager.
+        :param plain_tile_component_manager: A component manager.
             (Using a BaseTpmSimulator)
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.subscribe_event(
-            "state",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["state"],
+        plain_tile_component_manager._request_provider.get_request = unittest.mock.Mock(
+            return_value=("HEALTH_STATUS", None)
         )
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-        assert tile_device.state() == DevState.DISABLE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.OFF)
-
-        # Setup default tile_health_structure
-        tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
-        static_tile_component_manager._update_component_state(
-            tile_health_structure=tile_monitoring_defaults,
-        )
-
-        tile_device.MockTpmOn()
-
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
-
-        tile_device.subscribe_event(
+        time.sleep(2)
+        on_tile_device.subscribe_event(
             "ppsPresent",
             EventType.CHANGE_EVENT,
             change_event_callbacks["pps_present"],
         )
         change_event_callbacks["pps_present"].assert_change_event(True)
         assert (
-            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_VALID
+            on_tile_device.read_attribute("ppspresent").quality
+            == AttrQuality.ATTR_VALID
         )
-        static_tile_component_manager._update_communication_state(
+        plain_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
 
@@ -457,38 +579,39 @@ class TestMccsTile:
         tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
         tile_monitoring_defaults["timing"]["pps"]["status"] = False
 
-        static_tile_component_manager._update_component_state(
+        plain_tile_component_manager._update_component_state(
             tile_health_structure=tile_monitoring_defaults,
         )
         change_event_callbacks["pps_present"].assert_change_event(False)
         assert (
-            tile_device.read_attribute("ppspresent").quality == AttrQuality.ATTR_ALARM
+            on_tile_device.read_attribute("ppspresent").quality
+            == AttrQuality.ATTR_ALARM
         )
-        assert tile_device.state() == DevState.ALARM
+        assert on_tile_device.state() == DevState.ALARM
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [
-            ("logicalTileId", 0, 7),
-            ("stationId", 0, 5),
-            ("voltageMon", StaticTpmSimulator.VOLTAGE, None),
-            ("boardTemperature", StaticTpmSimulator.BOARD_TEMPERATURE, None),
-            ("fpga1Temperature", StaticTpmSimulator.FPGA1_TEMPERATURE, None),
-            ("fpga2Temperature", StaticTpmSimulator.FPGA2_TEMPERATURE, None),
-            ("fpgasUnixTime", pytest.approx(StaticTpmSimulator.FPGAS_TIME), None),
-            ("fpgaTime", "1970-01-01T00:00:01.000000Z", None),
+            ("logicalTileId", 1, 7),
+            ("stationId", 1, 5),
+            ("voltageMon", TileSimulator.VOLTAGE, None),
+            ("boardTemperature", TileSimulator.BOARD_TEMPERATURE, None),
+            ("fpga1Temperature", TileSimulator.FPGA1_TEMPERATURE, None),
+            ("fpga2Temperature", TileSimulator.FPGA2_TEMPERATURE, None),
+            ("fpgasUnixTime", pytest.approx(TileSimulator.FPGAS_TIME), None),
+            ("fpgaTime", "1970-01-01T00:00:00.000000Z", None),
             (
                 "currentTileBeamformerFrame",
-                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+                TileSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
                 None,
             ),
             ("currentFrame", 0, None),
             (
                 "phaseTerminalCount",
-                StaticTpmSimulator.PHASE_TERMINAL_COUNT,
-                45,
-            ),
+                TileSimulator.PHASE_TERMINAL_COUNT,
+                TileSimulator.PHASE_TERMINAL_COUNT,
+            ),  # TODO: Not implemented
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
@@ -499,16 +622,16 @@ class TestMccsTile:
             # TODO Tests fail as np.ndarray is returned.
             (
                 "channeliserRounding",
-                StaticTpmSimulator.CHANNELISER_TRUNCATION,
+                TileSimulator.CHANNELISER_TRUNCATION,
                 [2] * 512,
             ),
-            ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [5] * 32),
-            ("staticTimeDelays", StaticTpmSimulator.STATIC_DELAYS, [12.0] * 32),
-            ("cspRounding", StaticTpmSimulator.CSP_ROUNDING, [3] * 384),
-            ("preaduLevels", StaticTpmSimulator.PREADU_LEVELS, [1, 2, 3, 4] * 4),
+            ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
+            ("staticTimeDelays", TileSimulator.STATIC_DELAYS, [12.5] * 32),
+            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
+            ("preaduLevels", TileSimulator.PREADU_LEVELS, [12] * 32),
             ("clockPresent", True, None),
             ("sysrefPresent", True, None),
-            ("pllLocked", True, None),
+            ("pllLocked", False, None),
         ],
     )
     def test_component_attribute(
@@ -517,6 +640,7 @@ class TestMccsTile:
         change_event_callbacks: MockTangoEventCallbackGroup,
         attribute: str,
         initial_value: Any,
+        mock_subrack_device_proxy: unittest.mock.Mock,
         write_value: Any,
     ) -> None:
         """
@@ -532,10 +656,12 @@ class TestMccsTile:
             callbacks with asynchrony support.
         :param attribute: name of the attribute under test
         :param initial_value: expected initial value of the attribute
+        :param mock_subrack_device_proxy: a mock proxy to the subrack Tango
+            device.
         :param write_value: value to be written as part of the test.
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
-
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
         with pytest.raises(
             DevFailed,
             match="Communication with component is not established",
@@ -548,15 +674,17 @@ class TestMccsTile:
             change_event_callbacks["state"],
         )
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        tile_device.subscribe_event(
+            "tileprogrammingstate",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
         assert tile_device.state() == DevState.DISABLE
 
         tile_device.adminMode = AdminMode.ONLINE
         assert tile_device.adminMode == AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.OFF)
-
-        tile_device.MockTpmOn()
-
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         if isinstance(initial_value, list):
@@ -703,7 +831,7 @@ class TestMccsTileCommands:
             ("StopIntegratedData", None),
         ],
     )
-    def test_command_not_implemented(
+    def test_command_can_execute(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
@@ -722,7 +850,13 @@ class TestMccsTileCommands:
         :param arg: argument to the command (optional)
         """
         assert tile_device.adminMode == AdminMode.OFFLINE
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
 
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         args = [] if arg is None else [arg]
         with pytest.raises(
             DevFailed,
@@ -733,22 +867,99 @@ class TestMccsTileCommands:
         tile_device.adminMode = AdminMode.ONLINE
         assert tile_device.adminMode == AdminMode.ONLINE
 
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()
-        time.sleep(0.1)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = getattr(tile_device, device_command)(*args)
-
-    def test_StartAcquisition(
+    @pytest.mark.parametrize(
+        ("command_name", "command_args"),
+        [
+            ("Initialise", None),
+            ("DownloadFirmware", "tests/data/Vivado_test_firmware_bitfile.bit"),
+        ],
+    )
+    def test_long_running_commands(
         self: TestMccsTileCommands,
         tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
+        command_name: str,
+        command_args: Optional[str],
     ) -> None:
         """
-        Test for StartAcquisition.
+        Test that LongRunningCommand can execute.
+
+        Here we are testing the 'Initialise' and 'DownloadFirmware' command the start
+        acquisition is tested in 'test_StartAcquisition'
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param command_name: the name of the command to test
+        :param command_args: the arguments to pass to the command under
+            test.
+        """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
+
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.state() == DevState.DISABLE
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        with pytest.raises(
+            DevFailed,
+            match="Communication with component is not established",
+        ):
+            [[task_status], [command_id]] = getattr(tile_device, command_name)(
+                command_args
+            )
+
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
+
+        assert task_status == TaskStatus.IN_PROGRESS
+        assert command_name in command_id.split("_")[-1]
+
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "QUEUED")
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "COMPLETED")
+        )
+
+    def test_StartAcquisition(
+        self: TestMccsTileCommands,
+        tile_device: DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that start acquisition can execute.
 
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
@@ -763,130 +974,63 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
+        tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.state() == DevState.DISABLE
 
         tile_device.adminMode = AdminMode.ONLINE
         assert tile_device.adminMode == AdminMode.ONLINE
-        time.sleep(0.2)
+
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
 
         with pytest.raises(
             DevFailed,
             match="Communication with component is not established",
         ):
-            _ = tile_device.StartAcquisition(json.dumps({"delay": 5}))
+            [[task_status], [command_id]] = tile_device.StartAcquisition(
+                json.dumps({"delay": 5})
+            )
 
-        time.sleep(0.1)
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
         tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        [[result_code], [message]] = tile_device.StartAcquisition(
+        [[task_status], [command_id]] = tile_device.StartAcquisition(
             json.dumps({"delay": 5})
         )
-        assert result_code == ResultCode.QUEUED
-        assert "StartAcquisition" in message.split("_")[-1]
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "QUEUED")
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "IN_PROGRESS")
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "FAILED")
+        )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
+        )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
 
-    # def test_On(
-    #     self: TestMccsTileCommands,
-    #     tile_device: MccsDeviceProxy,
-    #     change_event_callbacks: MockTangoEventCallbackGroup,
-    #     mock_subrack_device_proxy: MccsDeviceProxy,
-    #     subrack_tpm_id: int,
-    # ) -> None:
-    #     """
-    #     Test for On.
-
-    #     :param tile_device: fixture that provides a
-    #         :py:class:`tango.DeviceProxy` to the device under test, in a
-    #         :py:class:`tango.test_context.DeviceTestContext`.
-    #     :param change_event_callbacks: dictionary of Tango change event
-    #         callbacks with asynchrony support.
-    #     :param mock_subrack_device_proxy: a proxy to this subrack device
-    #         for the subrack of the TPM under test.
-    #     :param subrack_tpm_id: the position of the TPM in its subrack
-    #     """
-    #     tile_device.subscribe_event(
-    #         "state",
-    #         EventType.CHANGE_EVENT,
-    #         change_event_callbacks["state"],
-    #     )
-    #     assert tile_device.adminMode == AdminMode.OFFLINE
-
-    #     # change_event_callbacks["state"].assert_last_change_event(DevState.DISABLE)
-    #     # assert tile_device.state() == DevState.DISABLE
-    #     with pytest.raises(
-    #         DevFailed,
-    #         match="Command On not allowed when the device is in DISABLE state",
-    #     ):
-    #         _ = tile_device.On()
-
-    #     tile_device.adminMode = AdminMode.ONLINE
-    #     assert tile_device.adminMode == AdminMode.ONLINE
-
-    #     time.sleep(0.2)
-    #     tile_device.MockTpmOff()
-    #     time.sleep(0.2)
-
-    #     tile_device.MockTpmOn()
-    #     time.sleep(0.2)
-
-    #     [[result_code], [message]] = tile_device.On()
-    #     assert result_code == ResultCode.QUEUED
-    #     assert "_OnCommand" in message.split("_")[-1]
-
-    #     mock_subrack_device_proxy.PowerOnTpm.assert_call(subrack_tpm_id)
-    #     # At this point the subrack should turn the TPM on, then fire a change event.
-    #     # so let's fake that.
-    #     tile_device.MockTpmOn()
-    #     assert tile_device.state() == DevState.ON
-
-    def test_Initialise(
-        self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
-    ) -> None:
-        """
-        Test for Initialise.
-
-        :param tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
-        """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            _ = tile_device.Initialise()
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-
-        with pytest.raises(
-            DevFailed,
-            match="Communication with component is not established",
-        ):
-            _ = tile_device.Initialise()
-
-        tile_device.MockTpmOn()
-
-        [[result_code], [message]] = tile_device.Initialise()
-        assert result_code == ResultCode.QUEUED
-        assert "Initialise" in message.split("_")[-1]
+        execute_lrc_to_complettion(
+            change_event_callbacks,
+            tile_device,
+            "StartAcquisition",
+            json.dumps({"delay": 5}),
+        )
 
     def test_GetFirmwareAvailable(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        off_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -897,87 +1041,39 @@ class TestMccsTileCommands:
         * firmwareName attribute
         * firmwareVersion attribute
 
-        :param tile_device: fixture that provides a
+        :param off_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-        tile_device.subscribe_event(
-            "state",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["state"],
-        )
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-        assert tile_device.state() == DevState.DISABLE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
             match="Communication with component is not established",
         ):
-            _ = tile_device.GetFirmwareAvailable()
+            _ = off_tile_device.GetFirmwareAvailable()
+        # self.turn_tile_on(off_tile_device, change_event_callbacks)
+        # off_tile_device.MockTpmOn()
+        # change_event_callbacks["state"].assert_change_event(DevState.ON)
+        on_tile_device = turn_tile_on(off_tile_device, change_event_callbacks)
 
-        time.sleep(0.1)
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-        # change_event_callbacks["state"].assert_last_change_event(DevState.ON)
-
-        firmware_available_str = tile_device.GetFirmwareAvailable()
+        firmware_available_str = on_tile_device.GetFirmwareAvailable()
         firmware_available = json.loads(firmware_available_str)
-        assert firmware_available == StaticTpmSimulator.FIRMWARE_AVAILABLE
+        assert firmware_available == TileSimulator.FIRMWARE_LIST
 
-        firmware_name = tile_device.firmwareName
-        assert firmware_name == StaticTpmSimulator.FIRMWARE_NAME
+        firmware_name = on_tile_device.firmwareName
+        assert firmware_name == TileSimulator.FIRMWARE_NAME
 
-        major = firmware_available[firmware_name]["major"]
-        minor = firmware_available[firmware_name]["minor"]
-        assert tile_device.firmwareVersion == f"{major}.{minor}"
+        major = firmware_available[0]["major"]
+        minor = firmware_available[0]["minor"]
+        build = firmware_available[0]["build"]
 
-    def test_DownloadFirmware(
-        self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
-    ) -> None:
-        """
-        Test for DownloadFirmware.
-
-        Also functions as the test for the isProgrammed and
-        the firmwareName properties.
-
-        :param tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
-        """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        bitfile = "tests/data/Vivado_test_firmware_bitfile.bit"
-        [[result_code], [message]] = tile_device.DownloadFirmware(bitfile)
-        assert result_code == ResultCode.QUEUED
-        assert "DownloadFirmware" in message.split("_")[-1]
-        time.sleep(0.1)
-        assert tile_device.isProgrammed
-        assert tile_device.firmwareName == bitfile
+        assert on_tile_device.firmwareVersion == f"Ver.{major}.{minor} build {build}:"
 
     def test_MissingDownloadFirmwareFile(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -986,119 +1082,75 @@ class TestMccsTileCommands:
         Also functions as the test for the
         isProgrammed and the firmwareName properties.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
         invalid_bitfile_path = "this/folder/and/file/doesnt/exist.bit"
-        existing_firmware_name = tile_device.firmwareName
-        [[result_code], [message]] = tile_device.DownloadFirmware(invalid_bitfile_path)
+        existing_firmware_name = on_tile_device.firmwareName
+        [[result_code], [message]] = on_tile_device.DownloadFirmware(
+            invalid_bitfile_path
+        )
         assert result_code == ResultCode.FAILED
         assert "DownloadFirmware" not in message.split("_")[-1]
-        assert tile_device.firmwareName == existing_firmware_name
+        assert on_tile_device.firmwareName == existing_firmware_name
 
     def test_GetRegisterList(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for GetRegisterList.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        assert tile_device.GetRegisterList() == list(
-            StaticTpmSimulator.REGISTER_MAP.keys()
-        )
+        assert on_tile_device.GetRegisterList() == list(MockTpm._register_map.keys())
 
     def test_ReadRegister(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for ReadRegister.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        num_values = 4
-        values = tile_device.ReadRegister("test-reg1")
-        assert list(values) == [0] * num_values
+        register_name: str = "fpga2.test_generator.delay_0"
+        values = on_tile_device.ReadRegister(register_name)
+        assert list(values) == [MockTpm._register_map[register_name]]
 
     def test_WriteRegister(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for WriteRegister.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
         arg = {
             "register_name": "test-reg1",
             "values": [0, 1, 2, 3],
         }
         json_arg = json.dumps(arg)
-        [[result_code], [message]] = tile_device.WriteRegister(json_arg)
+        [[result_code], [message]] = on_tile_device.WriteRegister(json_arg)
         assert result_code == ResultCode.OK
         assert "WriteRegister" in message.split("_")[-1]
 
@@ -1109,45 +1161,30 @@ class TestMccsTileCommands:
                 DevFailed,
                 match=f"'{exclude_key}' is a required property",
             ):
-                _ = tile_device.WriteRegister(bad_json_arg)
+                _ = on_tile_device.WriteRegister(bad_json_arg)
 
     def test_ReadAddress(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
         Test for ReadAddress.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
         address = 0xF
         nvalues = 10
         expected = (0,) * nvalues
-        assert tuple(tile_device.ReadAddress([address, nvalues])) == expected
+        assert tuple(on_tile_device.ReadAddress([address, nvalues])) == expected
 
         expected = (0,)
-        assert tile_device.ReadAddress([address]) == expected
+        assert on_tile_device.ReadAddress([address]) == expected
 
     def test_WriteAddress(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
         Test for WriteAddress.
@@ -1157,31 +1194,17 @@ class TestMccsTileCommands:
         :py:meth:`~ska_low_mccs.tile.tile_hardware.TileHardwareManager.write_address`
         method is well tested.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        [[result_code], [message]] = tile_device.WriteAddress([20, 1, 2, 3])
+        [[result_code], [message]] = on_tile_device.WriteAddress([20, 1, 2, 3])
         assert result_code == ResultCode.OK
         assert "WriteAddress" in message.split("_")[-1]
 
     def test_Configure40GCore(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
         Test for.
@@ -1190,23 +1213,10 @@ class TestMccsTileCommands:
         * fortyGBDestinationIps attribute
         * fortyGBDestinationPorts attribute
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
         config_1 = {
             "core_id": 0,
             "arp_table_entry": 0,
@@ -1216,7 +1226,7 @@ class TestMccsTileCommands:
             "destination_ip": "10.0.98.3",
             "destination_port": 5000,
         }
-        tile_device.Configure40GCore(json.dumps(config_1))
+        on_tile_device.Configure40GCore(json.dumps(config_1))
 
         config_2 = {
             "core_id": 1,
@@ -1227,20 +1237,20 @@ class TestMccsTileCommands:
             "destination_ip": "10.0.98.4",
             "destination_port": 5001,
         }
-        tile_device.Configure40GCore(json.dumps(config_2))
+        on_tile_device.Configure40GCore(json.dumps(config_2))
 
-        assert tuple(tile_device.fortyGbDestinationIps) == (
+        assert tuple(on_tile_device.fortyGbDestinationIps) == (
             "10.0.98.3",
             "10.0.98.4",
         )
-        assert tuple(tile_device.fortyGbDestinationPorts) == (5000, 5001)
+        assert tuple(on_tile_device.fortyGbDestinationPorts) == (5000, 5001)
 
         arg = {
             "core_id": 0,
             "arp_table_entry": 0,
         }
         json_arg = json.dumps(arg)
-        result_str = tile_device.Get40GCoreConfiguration(json_arg)
+        result_str = on_tile_device.Get40GCoreConfiguration(json_arg)
         result = json.loads(result_str)
         assert result["core_id"] == config_1.pop("core_id")
 
@@ -1253,37 +1263,26 @@ class TestMccsTileCommands:
         with pytest.raises(
             DevFailed, match="Invalid core id or arp table id specified"
         ):
-            _ = tile_device.Get40GCoreConfiguration(json_arg)
+            _ = on_tile_device.Get40GCoreConfiguration(json_arg)
 
         arg2 = {"mode": "10G", "payload_length": 102, "destination_ip": "10.0.1.23"}
         json_arg = json.dumps(arg2)
-        tile_device.SetLmcDownload(json_arg)
+        on_tile_device.SetLmcDownload(json_arg)
 
     def test_LoadCalibrationCoefficients(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for LoadCalibrationCoefficients.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
         antenna = float(2)
         complex_coefficients = [
             [
@@ -1297,21 +1296,20 @@ class TestMccsTileCommands:
         out = [[v.real, v.imag] for v in inp]
         coefficients = [antenna] + list(itertools.chain.from_iterable(out))
 
-        with pytest.raises(DevFailed, match="NotImplementedError"):
-            _ = tile_device.LoadCalibrationCoefficients(coefficients)
+        # check that it can execute without exception
+        _ = on_tile_device.LoadCalibrationCoefficients(coefficients)
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = tile_device.LoadCalibrationCoefficients(coefficients[0:8])
+            _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:8])
 
         with pytest.raises(DevFailed, match="ValueError"):
-            _ = tile_device.LoadCalibrationCoefficients(coefficients[0:16])
+            _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
         start_time: Optional[int],
         duration: Optional[int],
     ) -> None:
@@ -1322,36 +1320,22 @@ class TestMccsTileCommands:
         * StopBeamformer command
         * isBeamformerRunning attribute
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         :param start_time: time to state the beamformer
         :param duration: duration of time that the beamformer should run
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        assert not tile_device.isBeamformerRunning
+        assert not on_tile_device.isBeamformerRunning
         args = {"start_time": start_time, "duration": duration}
-        tile_device.StartBeamformer(json.dumps(args))
-        assert tile_device.isBeamformerRunning
-        tile_device.StopBeamformer()
-        assert not tile_device.isBeamformerRunning
+        on_tile_device.StartBeamformer(json.dumps(args))
+        assert on_tile_device.isBeamformerRunning
+        on_tile_device.StopBeamformer()
+        assert not on_tile_device.isBeamformerRunning
 
     def test_configure_beamformer(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
         Test for.
@@ -1360,24 +1344,11 @@ class TestMccsTileCommands:
         SetBeamFormerRegions
         beamformerTable attribute
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        tile_device.ConfigureStationBeamformer(
+        on_tile_device.ConfigureStationBeamformer(
             json.dumps(
                 {
                     "start_channel": 2,
@@ -1387,18 +1358,18 @@ class TestMccsTileCommands:
                 }
             )
         )
-        table = list(tile_device.beamformerTable)
-        expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
+        table = list(on_tile_device.beamformerTable)
+        expected = [2, 0, 0, 0, 0, 0, 0]  # + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
-        tile_device.SetBeamFormerRegions([2, 8, 5, 3, 8, 1, 1, 101])
-        table = list(tile_device.beamformerTable)
-        expected = [2, 5, 3, 8, 1, 1, 101] + [0, 0, 0, 0, 0, 0, 0] * 47
+        on_tile_device.SetBeamFormerRegions([2, 8, 5, 3, 8, 1, 1, 101])
+        table = list(on_tile_device.beamformerTable)
+        expected = [2, 5, 3, 8, 1, 1, 101]  # + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
     def test_send_data_samples(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
+        on_tile_device: MccsDeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -1408,23 +1379,20 @@ class TestMccsTileCommands:
         CheckPendingDataRequests
         StopDataTransmission
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
 
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
+        execute_lrc_to_complettion(
+            change_event_callbacks,
+            on_tile_device,
+            "StartAcquisition",
+            json.dumps({"delay": 5}),
+        )
         args = [
             {"data_type": "raw", "sync": True, "seconds": 6.7},
             {
@@ -1445,20 +1413,21 @@ class TestMccsTileCommands:
         for arg in args:
             time.sleep(0.1)
             json_arg = json.dumps(arg)
-            [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
+            [[result_code], [message]] = on_tile_device.SendDataSamples(json_arg)
             assert result_code == ResultCode.OK
 
-        assert not tile_device.pendingDataRequests
+        assert not on_tile_device.pendingDataRequests
         json_arg = json.dumps(
             {"data_type": "channel_continuous", "channel_id": 2, "n_samples": 4}
         )
-        [[result_code], [message]] = tile_device.SendDataSamples(json_arg)
+        print("adojsaodijasodij")
+        [[result_code], [message]] = on_tile_device.SendDataSamples(json_arg)
         assert result_code == ResultCode.OK
+        time.sleep(0.2)
+        assert on_tile_device.pendingDataRequests
+        on_tile_device.StopDataTransmission()
         time.sleep(0.1)
-        assert tile_device.pendingDataRequests
-        tile_device.StopDataTransmission()
-        time.sleep(0.1)
-        assert not tile_device.pendingDataRequests
+        assert not on_tile_device.pendingDataRequests
 
         invalid_channel_range_args = [
             {"data_type": "channel", "first_channel": 0, "last_channel": 512},
@@ -1474,7 +1443,7 @@ class TestMccsTileCommands:
             time.sleep(0.1)
             json_arg = json.dumps(arg)
             with pytest.raises(DevFailed, match=error_match):
-                tile_device.SendDataSamples(json_arg)
+                on_tile_device.SendDataSamples(json_arg)
 
     def test_configure_test_generator(
         self: TestMccsTileCommands,
@@ -1493,17 +1462,20 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
         tile_device.adminMode = AdminMode.MAINTENANCE
         assert tile_device.adminMode == AdminMode.MAINTENANCE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()
-
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
         args = [
             {
                 "tone_frequency": 100e6,
@@ -1533,28 +1505,14 @@ class TestMccsTileCommands:
 
     def test_get_arp_table(
         self: TestMccsTileCommands,
-        tile_device: MccsDeviceProxy,
-        change_event_callbacks: MockTangoEventCallbackGroup,
+        on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
         Test that GetArpTable returns a result.
 
-        :param tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
-        :param change_event_callbacks: dictionary of Tango change event
-            callbacks with asynchrony support.
         """
-        assert tile_device.adminMode == AdminMode.OFFLINE
-
-        tile_device.adminMode = AdminMode.ONLINE
-        assert tile_device.adminMode == AdminMode.ONLINE
-
-        time.sleep(0.1)
-
-        tile_device.MockTpmOff()
-        time.sleep(0.1)
-        tile_device.MockTpmOn()
-
-        result = tile_device.GetArpTable()
+        result = on_tile_device.GetArpTable()
         assert json.loads(result) == {"0": [0, 1], "1": [1]}

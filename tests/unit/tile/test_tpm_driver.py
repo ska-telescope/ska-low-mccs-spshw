@@ -15,14 +15,29 @@ import time
 import unittest.mock
 from typing import Any
 
-import numpy as np
 import pytest
 from pyfabil.base.definitions import LibraryError
-from ska_control_model import CommunicationStatus
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.tile import TileSimulator, TpmDriver
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+
+
+@pytest.fixture(name="callbacks")
+def callbacks_fixture() -> MockCallableGroup:
+    """
+    Return a dictionary of callables to be used as callbacks.
+
+    :return: a dictionary of callables to be used as callbacks.
+    """
+    return MockCallableGroup(
+        "communication_status",
+        "component_state",
+        "task",
+        timeout=15.0,
+    )
 
 
 # pylint: disable=too-many-arguments
@@ -71,32 +86,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     based scenarios.
     """
 
-    def test_start_communicating_when_communication_already_established(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test the start_communicating method when communication already ESTABLISHED.
-
-        :param tpm_driver: The TPM driver instance being tested.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        :param callbacks: A dictionary used to assert callbacks.
-        """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        tile_simulator.connect = unittest.mock.Mock()  # type: ignore[assignment]
-
-        # Act
-        tpm_driver.start_communicating()
-
-        # Assert
-        tile_simulator.connect.assert_not_called()
-        callbacks["communication_status"].assert_not_called()
-
     def test_communication_when_connection_failed(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -111,119 +100,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             a simulated tile (`TileSimulator`)
         :param callbacks: A dictionary used to assert callbacks.
         """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.DISABLED)
-        tile_simulator.connect = unittest.mock.Mock(  # type: ignore[assignment]
-            side_effect=LibraryError("attribute mocked to fail")
-        )
-
-        # Act
-        tpm_driver.start_communicating()
-
-        # Assert
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        callbacks["communication_status"].assert_not_called()
-        assert tpm_driver.communication_state == CommunicationStatus.NOT_ESTABLISHED
-        assert tpm_driver._tpm_status == TpmStatus.UNCONNECTED
-
-    def test_stop_communicating_when_communication_already_disabled(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test the stop_communicating method when communication already ESTABLISHED.
-
-        :param tpm_driver: The TPM driver instance being tested.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        :param callbacks: A dictionary used to assert callbacks.
-        """
-        # Arrange
-        assert tpm_driver._communication_state == CommunicationStatus.DISABLED
-        tile_simulator.connect = unittest.mock.Mock()  # type: ignore[assignment]
-
-        # Act
-        tpm_driver.stop_communicating()
-
-        # Assert
-        tile_simulator.connect.assert_not_called()
-        callbacks["communication_status"].assert_not_called()
-
-    def test_stop_communicating(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test the stop_communicating method when communication is ESTABLISHED.
-
-        :param tpm_driver: The TPM driver instance being tested.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        :param callbacks: A dictionary used to assert callbacks.
-        """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        tpm_driver._poll = unittest.mock.Mock()  # type: ignore[assignment]
-
-        # Act
-        tpm_driver._start_polling_event.set()
-        time.sleep(tpm_driver._poll_rate / 1.1)
-
-        # Assert
-        tpm_driver._poll.assert_called_once()
-
-        # Act
-        tpm_driver.stop_communicating()
-
-        # Assert no more calls after the stop communicating
-        time.sleep(tpm_driver._poll_rate * 2 + 1.5)
-        tpm_driver._poll.assert_called_once()
-
-    def test_poll_when_not_communicating(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-    ) -> None:
-        """
-        Test the behavior of the `poll` method when the TPM driver is not communicating.
-
-        :param tpm_driver: The instance of the TPM driver being tested.
-        """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.DISABLED)
-        tpm_driver.start_connection = unittest.mock.Mock()  # type: ignore[assignment]
-
-        # Act
-        tpm_driver._poll()
-
-        # Assert
-        tpm_driver.start_connection.assert_called_once()
-
-    def test_poll_with_tile_failure(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-    ) -> None:
-        """
-        Test the behavior of the `poll` method when there is a tile failure.
-
-        :param tpm_driver: The instance of the TPM driver being tested.
-        """
-        # Arrange
-        tpm_driver._update_communication_state(CommunicationStatus.ESTABLISHED)
-        tpm_driver.tpm_disconnected = unittest.mock.Mock()  # type: ignore[assignment]
-        tpm_driver.tile = None
-
-        # Act
-        tpm_driver._poll()
-
-        # Assert
-        tpm_driver.tpm_disconnected.assert_called_once()
+        tile_simulator.mock_off()
+        with pytest.raises(LibraryError):
+            tpm_driver.ping()
 
     def test_write_register(
         self: TestTpmDriver,
@@ -421,15 +300,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             "fpga1.pps_manager.sync_time_val"
         ] = mocked_sync_time
 
-        # assert the tpm_driver has different values to the simulator
-        assert tpm_driver.adc_rms != list(tile_simulator._adc_rms)
-        assert tpm_driver.adc_rms != tile_simulator._adc_rms
-        assert tpm_driver.pps_delay != tile_simulator._pps_delay
-        assert tpm_driver.fpga_reference_time != pytest.approx(mocked_sync_time)
-
-        # update values to read from simulation.
-        tpm_driver._update_attributes()
-
         # Assert values have been updated.
         assert tpm_driver.adc_rms == list(tile_simulator._adc_rms)
         assert tpm_driver.pps_delay == tile_simulator._pps_delay
@@ -458,9 +328,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.clock_present
         _ = tpm_driver.pll_locked
 
-        assert tpm_driver.is_beamformer_running == tpm_driver._is_beamformer_running
-        assert tpm_driver.pending_data_requests == tpm_driver._pending_data_requests
-        assert tpm_driver.phase_terminal_count == tpm_driver._phase_terminal_count
+        assert tpm_driver.is_beamformer_running == tile_simulator.tpm.beam1.is_running()
+        assert tpm_driver.pending_data_requests == tile_simulator._pending_data_requests
+        assert tpm_driver.phase_terminal_count == tile_simulator._phase_terminal_count
+        # This is a software attribute currently
         assert tpm_driver.test_generator_active == tpm_driver._test_generator_active
 
     def test_dumb_write_tile_attributes(
@@ -484,7 +355,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         _ = tpm_driver.channeliser_truncation
         tpm_driver.static_delays = [12.0] * 32
         _ = tpm_driver.static_delays
-        tpm_driver.csp_rounding = np.array([2] * 384)
+        tpm_driver.csp_rounding = [2] * 384
         _ = tpm_driver.csp_rounding
         tpm_driver.preadu_levels = [12.0] * 32
         _ = tpm_driver.preadu_levels
@@ -625,23 +496,24 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
-        tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
-        tpm_driver.download_firmware("bitfile")
-        tpm_driver._check_programmed()
+        tpm_driver.download_firmware("bitfile", callbacks["task"])
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "The download firmware task has completed"),
+            lookahead=3,
+        )
         assert tpm_driver.is_programmed is True
 
         # Mock a failed download.
         tile_simulator.is_programmed = unittest.mock.Mock(  # type: ignore[assignment]
             return_value=False
         )
-        tpm_driver._update_attributes()
-        tpm_driver._check_programmed()
+
         assert tpm_driver.is_programmed is False
 
-        tpm_driver.download_firmware("bitfile")
-        tpm_driver._check_programmed()
+        tpm_driver.download_firmware("bitfile", callbacks["task"])
         assert tpm_driver.is_programmed is False
 
     def test_set_tile_id(
@@ -660,7 +532,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
 
         # Update attributes and check driver updates
-        tpm_driver._update_attributes()
         assert tpm_driver._station_id == tile_simulator._station_id
         tpm_driver._tile_id = tile_simulator._tile_id
 
@@ -726,8 +597,16 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         assert tpm_driver._tpm_status == TpmStatus.UNKNOWN
 
         # Act
-        tpm_driver.initialise()
+        tpm_driver.initialise(
+            program_fpga=True, pps_delay_correction=0, task_callback=callbacks["task"]
+        )
 
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has completed",
+        )
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
 
@@ -745,9 +624,13 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         # ---------------------------------------------------------
         # Call start_acquisition and check fpga_timestamp is moving
         # ---------------------------------------------------------
-        start_time = int(time.time() + 4.0)
+        future_time = 4.0
+        start_time = int(time.time() + future_time)
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
-        tpm_driver.start_acquisition(start_time=start_time, delay=1)
+        tpm_driver.start_acquisition(
+            start_time=start_time, delay=1, task_callback=callbacks["task"]
+        )
+        time.sleep(future_time)
 
         # check the fpga timestamp is moving
         initial_time3 = tpm_driver.fpga_current_frame
@@ -760,11 +643,15 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver._check_channeliser_started = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
-        tpm_driver.start_acquisition(start_time=start_time, delay=1)
+        tpm_driver.start_acquisition(
+            start_time=start_time, delay=1, task_callback=callbacks["task"]
+        )
         tile_simulator.start_acquisition = (  # type: ignore[assignment]
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
-        tpm_driver.start_acquisition(start_time=start_time, delay=1)
+        tpm_driver.start_acquisition(
+            start_time=start_time, delay=1, task_callback=callbacks["task"]
+        )
 
     def test_load_time_delays(
         self: TestTpmDriver,
@@ -854,129 +741,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.get_firmware_list.side_effect = Exception("mocked exception")
         _ = tpm_driver.firmware_available
 
-    def test_check_programmed(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Test that we can configure the 40G core.
-
-        Test to ensure the tpm_driver can read the _check_programmed() method
-        correctly if the mocked TPM is programmed.
-
-        :param tpm_driver: The tpm driver under test.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)
-        """
-        assert tpm_driver._check_programmed() is False
-        tile_simulator.connect()
-        assert tile_simulator.tpm is not None
-        tile_simulator.tpm._is_programmed = True
-        assert tpm_driver._check_programmed() is True
-
-    def test_update_attributes(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: unittest.mock.Mock,
-    ) -> None:
-        """
-        Test we can update attributes.
-
-        :param tpm_driver: The tpm driver under test.
-        :param tile_simulator: A mock object representing
-            a simulated tile (`TileSimulator`)_simulator
-        """
-        # Arrange
-        tile_simulator.connect()
-        tile_simulator.tpm._is_programmed = True
-        tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
-
-        # Values to be used for assertions later.
-        initial_last_update_tile_1 = tpm_driver._last_update_time_1
-        initial_last_update_tile_2 = tpm_driver._last_update_time_2
-        initial_tile_health_structure = tpm_driver._tile_health_structure
-        initial_pps_delay = tpm_driver._reported_pps_delay
-        initial_adc_rms = tpm_driver._adc_rms
-
-        # updated values
-        adc_rms = [2] * 32
-        pps_delay = 32
-        fpga1_temp = 2
-        fpga2_temp = 32
-        board_temp = 4
-        voltage = 1
-        tile_simulator._tile_health_structure["temperatures"]["FPGA0"] = fpga1_temp
-        tile_simulator._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temp
-        tile_simulator._tile_health_structure["temperatures"]["board"] = board_temp
-        tile_simulator._tile_health_structure["voltages"]["MON_5V0"] = voltage
-
-        # Check these values are different.
-        assert initial_tile_health_structure["temperatures"]["FPGA0"] != fpga1_temp
-        assert initial_tile_health_structure["temperatures"]["FPGA1"] != fpga2_temp
-        assert initial_tile_health_structure["temperatures"]["board"] != board_temp
-        assert initial_tile_health_structure["voltages"]["MON_5V0"] != voltage
-        assert initial_pps_delay != pps_delay
-        assert initial_adc_rms != adc_rms
-
-        # Set them in the simulator.
-        tile_simulator._adc_rms = adc_rms
-        tile_simulator._pps_delay = pps_delay
-        tile_simulator._fpga1_temperature = fpga1_temp
-        tile_simulator._fpga2_temperature = fpga2_temp
-        tile_simulator._board_temperature = board_temp
-        tile_simulator._voltage = voltage
-
-        # Mock a poll event by updating attributes manually.
-        tpm_driver._update_attributes()
-
-        # check that they are updated
-        assert tpm_driver._tile_health_structure["temperatures"]["FPGA0"] == fpga1_temp
-        assert tpm_driver._tile_health_structure["temperatures"]["FPGA1"] == fpga2_temp
-        assert tpm_driver._tile_health_structure["temperatures"]["board"] == board_temp
-        assert tpm_driver._tile_health_structure["voltages"]["MON_5V0"] == voltage
-        assert tpm_driver._reported_pps_delay == pps_delay
-        assert tpm_driver._adc_rms == adc_rms
-
-        # Check that the last update time is more recent.
-        assert initial_last_update_tile_1 < tpm_driver._last_update_time_1
-        assert initial_last_update_tile_2 < tpm_driver._last_update_time_2
-
-        # -------------------------------------------------
-        # Test attributes not updated when exception raised
-        # -------------------------------------------------
-
-        # Arrange
-        tile_simulator._voltage = pytest.approx(2.6)
-        tile_simulator.get_health_status = unittest.mock.Mock(
-            side_effect=LibraryError("attribute mocked to fail")
-        )
-        time.sleep(6)  # time waited needs to be more than tpm_driver.time_interval_1
-
-        # Act
-        tpm_driver._update_attributes()
-
-        # Assert
-        assert (
-            tpm_driver._tile_health_structure["voltages"]["MON_5V0"]
-            != tile_simulator._voltage
-        )
-
-        # ---------------------------------------------------------------
-        # Test updating attributes when Tile reports it is not programmed
-        # ---------------------------------------------------------------
-        # Arrange
-        tile_simulator.tpm._is_programmed = False
-
-        # Act
-        tpm_driver._update_attributes()
-
-        time.sleep(6)  # time waited needs to be more than tpm_driver.time_interval_1
-        # we have polled and the tile is reporting that it is not programmed
-
-        # Assert that the values are reset to what they were initialised to.
-        assert initial_pps_delay == tpm_driver._reported_pps_delay
-
     def test_initialise(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
@@ -1011,7 +775,16 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         final_time1 = tpm_driver.fpga_current_frame
         assert initial_time1 == final_time1
 
-        tpm_driver.initialise()
+        tpm_driver.initialise(
+            program_fpga=True, pps_delay_correction=0, task_callback=callbacks["task"]
+        )
+
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has completed",
+        )
 
         # Assert
         assert tpm_driver._tpm_status == TpmStatus.INITIALISED
@@ -1039,9 +812,17 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.program_fpgas = mocked_return  # type: ignore
 
         # Act
-        with pytest.raises(Exception, match="mocked exception"):
-            tpm_driver.initialise()
-
+        tpm_driver.initialise(
+            program_fpga=True,
+            pps_delay_correction=0,
+            task_callback=callbacks["task"],
+        )
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.FAILED,
+            exception=Anything,
+        )
         # Check TpmStatus is UNPROGRAMMED.
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
@@ -1221,7 +1002,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
-        assert tpm_driver.preadu_levels is None
 
         # Set preADU levels to 3 for all channels
         tpm_driver.preadu_levels = [3.0] * 32
@@ -1362,7 +1142,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver._is_beamformer_running = False
 
         tpm_driver.start_beamformer(3, 4)
-        tpm_driver._update_attributes()
 
         assert tpm_driver._is_beamformer_running is True
 
@@ -1517,7 +1296,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         ):
             tpm_driver.send_data_samples("raw", **mocked_input_params)
 
-        start_time = int(time.time() + 3.0)
+        start_time = str(time.time() + 3.0)
         tpm_driver.start_acquisition(start_time=start_time, delay=1)
 
         # we require timestamp to be in future
@@ -1697,10 +1476,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         tile_simulator.connect()
-        initial_phase_terminal_count = tpm_driver._phase_terminal_count
+        initial_phase_terminal_count = tile_simulator._phase_terminal_count
         assert tpm_driver.phase_terminal_count == initial_phase_terminal_count
-        tpm_driver.phase_terminal_count = initial_phase_terminal_count + 1
-        assert initial_phase_terminal_count != tpm_driver.phase_terminal_count
+        tile_simulator._phase_terminal_count = initial_phase_terminal_count + 1
         assert tpm_driver.phase_terminal_count == initial_phase_terminal_count + 1
 
     def test_test_generator_active(
@@ -2080,7 +1858,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # call with subset of values
         tpm_driver.channeliser_truncation = [3] * 100
-        assert tpm_driver._channeliser_truncation == [3] * 100
+        assert tpm_driver.channeliser_truncation == [3] * 100 + [0] * 412
         tile_simulator.set_channeliser_truncation.assert_called_with(
             [3] * 100 + [0] * 412, 31
         )
@@ -2142,7 +1920,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         # Assert
         tile_simulator.erase_fpga.assert_called_once()
-        tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
@@ -2152,47 +1929,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tpm_driver.erase_fpga()
 
         assert tpm_driver._tpm_status == TpmStatus.PROGRAMMED
-
-    def test_communication(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test the communication state transitions on the driver.
-
-        :param tpm_driver: The TPM driver instance being tested.
-        :param tile_simulator: The tile simulator instance.
-        :param callbacks: A dictionary of driver callbacks used to mock the
-                        underlying component's behavior.
-        """
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
-
-        # start communicating initialises a polling loop that should.
-        # - start_connection with the component under test.
-        # - update attributes in a polling loop.
-        tpm_driver.start_communicating()
-
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        time.sleep(3)
-        assert tile_simulator.tpm is not None
-
-        # Any subsequent calls to start communicating do not fire a change event
-        tpm_driver.start_communicating()
-        callbacks["communication_status"].assert_not_called()
-
-        tpm_driver.stop_communicating()
-        callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
-        assert tpm_driver.communication_state == CommunicationStatus.DISABLED
-
-        # Any subsequent calls to stop communicating do not fire a change event
-        tpm_driver.stop_communicating()
-        callbacks["communication_status"].assert_not_called()
-        assert tile_simulator.tpm is None
 
     @pytest.mark.xfail(
         reason="polling mechanism on the TPMDriver is about to be refactored"
@@ -2225,9 +1961,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         tile_simulator._tile_health_structure["temperature"]["FPGA0"] = 41.0
 
-        poll_time = tpm_driver._poll_rate
-        time.sleep(poll_time + 0.5)
-
         post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
             "FPGA0"
         ]
@@ -2243,8 +1976,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator._tile_health_structure["temperature"]["FPGA0"] = (
             tpm_driver._tile_health_structure["temperature"]["FPGA0"] + 1
         )
-
-        time.sleep(poll_time + 0.5)
 
         post_poll_temperature = tpm_driver._tile_health_structure["temperature"][
             "FPGA0"
@@ -2300,6 +2031,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     def test_dumb_read(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
         attribute: str,
     ) -> None:
         """
@@ -2307,9 +2039,11 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         Validate that it can be called without error.
 
+        :param tile_simulator: An hardware tile_simulator mock
         :param tpm_driver: The TPM driver instance being tested.
         :param attribute: The attribute to be read.
         """
+        tile_simulator.connect()
         _ = getattr(tpm_driver, attribute)
 
     def test_write_read_registers(
@@ -2400,11 +2134,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
 
         tile_simulator._pending_data_requests = True
 
-        tpm_driver._update_attributes()
-
-        assert tpm_driver._pending_data_requests is True
-        tile_simulator._pending_data_requests = False
+        assert tpm_driver.pending_data_requests is True
 
         tpm_driver.stop_data_transmission()
 
-        assert tpm_driver._pending_data_requests is False
+        assert tpm_driver.pending_data_requests is False

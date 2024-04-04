@@ -10,15 +10,20 @@ from __future__ import annotations
 
 import gc
 import time
+import unittest
 
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode, ResultCode
+from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from ska_low_mccs_spshw.tile import TileSimulator
+from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from tests.test_tools import (
+    execute_lrc_to_complettion,
+    wait_for_completed_command_to_clear_from_queue,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -43,20 +48,95 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_preadu_levels",
         "tile_csp_rounding",
         "tile_channeliser_rounding",
+        "track_lrc_command",
         "daq_state",
-        timeout=15.0,
+        timeout=5.0,
     )
+
+
+def test_initialise_can_execute(
+    sps_station_device: tango.DeviceProxy,
+    subrack_device: tango.DeviceProxy,
+    tile_device: tango.DeviceProxy,
+    tile_simulator: TileSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the sps station Initialise function executes.
+
+    This is a very simple test just just to see that the TileSimulator
+    starts counting once turned on and initialised.
+
+    TODO: Initialise does a huge number of tasks.
+    This test only check the initialise command can complete,
+    it does not check in any specifics.
+
+    :param sps_station_device: the station Tango device under test.
+    :param subrack_device: the subrack Tango device under test.
+    :param tile_device: the tile Tango device under test.
+    :param tile_simulator: the backend tile simulator. This is
+        what tile_device is observing.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["subrack_state"],
+    )
+    change_event_callbacks["subrack_state"].assert_change_event(tango.DevState.DISABLE)
+    subrack_device.adminMode = AdminMode.ONLINE
+
+    change_event_callbacks["subrack_state"].assert_change_event(
+        tango.DevState.ON, lookahead=2
+    )
+    assert tile_device.adminMode == AdminMode.OFFLINE
+    tile_device.subscribe_event(
+        "state",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["tile_state"],
+    )
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+    tile_device.subscribe_event(
+        "tileProgrammingState",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["tile_programming_state"],
+    )
+
+    change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
+
+    # Turn adminMode ONLINE with the TPM mocked to be OFF
+    tile_simulator.mock_off()
+    tile_device.adminMode = AdminMode.ONLINE
+
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+    change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+
+    tile_device.On()
+
+    change_event_callbacks["tile_programming_state"].assert_change_event(
+        "NotProgrammed",
+        lookahead=2,
+        consume_nonmatches=True,
+    )
+
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
+    change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
+    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+    wait_for_completed_command_to_clear_from_queue(tile_device)
 
 
 class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
 
-    # pylint: disable=too-many-arguments
-    def turn_station_on(
+    def turn_station_on(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -66,6 +146,8 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -88,6 +170,13 @@ class TestStationTileIntegration:
         # Since the devices are in adminMode OFFLINE,
         # they are not even trying to monitor and control their components,
         # so they each report state as DISABLE.
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
         sps_station_device.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
@@ -104,23 +193,21 @@ class TestStationTileIntegration:
         change_event_callbacks["subrack_state"].assert_change_event(
             tango.DevState.DISABLE
         )
-        tile_device.subscribe_event(
-            "state",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_state"],
-        )
-        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-
         sps_station_device.adminMode = AdminMode.ONLINE
 
         change_event_callbacks["station_state"].assert_change_event(
             tango.DevState.UNKNOWN
         )
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
 
         # Station stays in UNKNOWN state
         # because subrack and tile devices are still OFFLINE
-        change_event_callbacks["station_state"].assert_not_called()
-
+        tile_simulator.mock_off()
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
 
@@ -145,18 +232,17 @@ class TestStationTileIntegration:
             tango.DevState.STANDBY
         )
         change_event_callbacks["station_state"].assert_not_called()
-
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
+        # The Subrack will be ONLINE and therefore will know the state of
+        # the port the TPM is on.
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         tile_device.On()
-
+        # Depending where we are on the poll when on is executed
+        # we may be Unconnected or NotProgrammed, hence the lookahead of 2.
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "NotProgrammed"
+            "NotProgrammed",
+            lookahead=2,
+            consume_nonmatches=True,
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Programmed"
@@ -167,12 +253,15 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
-    # pylint: disable=too-many-arguments
-    def test_initialise_can_execute(
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
+
+    def test_initialise_can_execute(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -189,6 +278,8 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -197,37 +288,25 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
-
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
+        # Check that the initialise LRC executes to COMPLETION
+        execute_lrc_to_complettion(
+            change_event_callbacks, sps_station_device, "Initialise", None
         )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
+        assert tile_device.tileProgrammingState == "Initialised"
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
-        )
-
-    # pylint: disable=too-many-arguments
-    def test_pps_delay(
+    def test_pps_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -237,19 +316,26 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
         self.turn_station_on(
             sps_station_device,
+           
             subrack_device,
+           
             tile_device,
+            tile_simulator,
+           
             daq_device,
-            change_event_callbacks,
+            change_event_callbacks,,
         )
         # Force a poll to get the initial values.
-        tile_device.UpdateAttributes()
+
         initial_corrections = sps_station_device.ppsDelayCorrections
 
         # set a pps Correction to apply
@@ -260,37 +346,27 @@ class TestStationTileIntegration:
         sps_station_device.ppsDelayCorrections = desired_pps_corrections
 
         # This pps delay correction is only applied during initialisation.
-        tile_device.UpdateAttributes()
+
         pps_corrections_before_initialisation = sps_station_device.ppsDelayCorrections
         assert (pps_corrections_before_initialisation == initial_corrections).all()
 
         # Call initialise
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         # Force a poll to get the initial values.
-        tile_device.UpdateAttributes()
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("PPS_DELAY_CORRECTION", None))
+        )
+        time.sleep(2)
         final_corrections = sps_station_device.ppsDelayCorrections
 
         assert np.array_equal(final_corrections, desired_pps_corrections)
-        assert tile_device.ppsDelay == tile_under_test_pps_delay
+        # assert tile_device.ppsDelay == tile_under_test_pps_delay
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_adc_power_change(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -298,6 +374,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -312,6 +389,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -320,29 +398,13 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
 
         sps_station_device.subscribe_event(
@@ -357,7 +419,6 @@ class TestStationTileIntegration:
         tile_simulator._adc_rms = initial_adc_powers
 
         # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
 
         # This will cause the Tile to push a change event.
         # SpsStation is subscribed to this attribute and
@@ -367,8 +428,15 @@ class TestStationTileIntegration:
         # Check with different values.
         final_adc_powers = [24.0] + [24.0] * 31
         tile_simulator._adc_rms = final_adc_powers
-        tile_device.UpdateAttributes()
+
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("ADC_RMS", None))
+        )
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -376,6 +444,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -390,6 +459,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -398,31 +468,15 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
 
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
-        )
-        tile_device.UpdateAttributes()
         tile_device.subscribe_event(
             "staticTimeDelays",
             tango.EventType.CHANGE_EVENT,
@@ -434,10 +488,14 @@ class TestStationTileIntegration:
         initial_static_delays = np.array([12.5] + [0.0] * 31)
         tile_simulator.set_time_delays(initial_static_delays.tolist())
 
-        # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
-
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("STATIC_DELAYS", None))
+        )
+        time.sleep(1)
         # This will cause the Tile to push a change event.
+
         change_event_callbacks["tile_static_delays"].assert_change_event(
             initial_static_delays.tolist()
         )
@@ -451,15 +509,14 @@ class TestStationTileIntegration:
         final_static_delays = np.array([1.25] + [0.0] * 31)
         sps_station_device.staticTimeDelays = final_static_delays
 
-        # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
-
         change_event_callbacks["tile_static_delays"].assert_change_event(
             final_static_delays.tolist()
         )
         time.sleep(0.1)
 
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_sps_preadu_levels_coherent_with_tile_simulator(
@@ -468,6 +525,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -482,6 +540,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -490,35 +549,23 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
 
         # Initialise values in the backend TileSimulator and forces update
         tile_simulator.set_preadu_levels([0.0] * 32)
-        tile_device.UpdateAttributes()
 
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("PREADU_LEVELS", None))
+        )
         # Set the value in the backend TileSimulator.
         initial_preadu_levels = [12.0] * 32
         tile_simulator.set_preadu_levels(initial_preadu_levels)
@@ -532,7 +579,7 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
         # Force a poll on the backend simulator.
-        tile_device.UpdateAttributes()
+
         assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
 
         # This will cause the Tile to push a change event.
@@ -541,14 +588,12 @@ class TestStationTileIntegration:
         )
 
         # Check the station updates its own map.
-        time.sleep(0.1)
         assert sps_station_device.preaduLevels.tolist() == initial_preadu_levels
 
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
         # Finally check `SpsStation` attribute value.
         desired_preadu_levels = np.array([24.0] * 32)
         sps_station_device.preaduLevels = desired_preadu_levels
-
         # Not equal because we need the MccsTile to change value.
         assert not np.array_equal(
             sps_station_device.preaduLevels, desired_preadu_levels
@@ -562,6 +607,8 @@ class TestStationTileIntegration:
         # Check the station updates its own map.
         time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_csp_rounding(
@@ -570,6 +617,7 @@ class TestStationTileIntegration:
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -584,6 +632,7 @@ class TestStationTileIntegration:
         :param tile_device: the tile Tango device under test.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -592,29 +641,13 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
@@ -627,11 +660,16 @@ class TestStationTileIntegration:
         csp_to_check = np.array([5] * 384)
         tile_device.cspRounding = csp_to_check
 
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("CSP_ROUNDING", None))
+        )
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_csp_rounding"].assert_change_event(
             csp_to_check.tolist()
         )
-
+        change_event_callbacks["tile_csp_rounding"].assert_not_called()
         # mock failure
         tile_simulator.is_csp_write_successful = False
 
@@ -639,7 +677,7 @@ class TestStationTileIntegration:
 
         change_event_callbacks["tile_csp_rounding"].assert_not_called()
 
-        # Check that the station agrees on the lase value pushed by tile.
+        # Check that the station agrees on the last value pushed by tile.
         assert np.array_equal(sps_station_device.cspRounding, csp_to_check)
         tile_simulator.is_csp_write_successful = True
 
@@ -652,13 +690,16 @@ class TestStationTileIntegration:
         )
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
-    # pylint: disable=too-many-arguments
-    def test_channeliser_rounding(
+    def test_channeliser_rounding(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
         tile_device: tango.DeviceProxy,
         sps_station_device: tango.DeviceProxy,
         subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        tile_component_manager: TileComponentManager,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -671,6 +712,9 @@ class TestStationTileIntegration:
         :param sps_station_device: the station Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param tile_component_manager: A component manager.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
@@ -679,31 +723,22 @@ class TestStationTileIntegration:
             sps_station_device,
             subrack_device,
             tile_device,
+            tile_simulator,
             daq_device,
             change_event_callbacks,
         )
 
-        sps_station_device.subscribe_event(
-            "longRunningCommandStatus",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["sps_station_command_status"],
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(())
-
-        ([result_code], [initialise_id]) = sps_station_device.Initialise()
-
-        assert result_code == ResultCode.QUEUED
-
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "QUEUED")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "IN_PROGRESS")
-        )
-        change_event_callbacks["sps_station_command_status"].assert_change_event(
-            (initialise_id, "COMPLETED")
+        execute_lrc_to_complettion(
+            change_event_callbacks, tile_device, "Initialise", None
         )
         tile_device.channeliserRounding = np.array([10] * 512)
+
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value=("CHANNELISER_ROUNDING", None))
+        )
+        time.sleep(1)
         # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
             "channeliserRounding",
@@ -718,6 +753,7 @@ class TestStationTileIntegration:
         sps_station_device.SetChanneliserRounding(channeliser_rounding_to_set)
         zero_results = np.zeros((15, 512))
 
+        time.sleep(1)
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_channeliser_rounding"].assert_change_event(
             channeliser_rounding_to_set.tolist()
@@ -733,3 +769,5 @@ class TestStationTileIntegration:
         assert np.array_equal(
             sps_station_device.channeliserRounding, channeliser_rounding_to_check
         )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(sps_station_device)

@@ -19,7 +19,7 @@ import threading
 import time
 from datetime import datetime, timezone
 from statistics import mean
-from typing import Any, Callable, Generator, Optional, Sequence, cast
+from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
@@ -216,6 +216,108 @@ class _TileProxy(DeviceComponentManager):
         return self._proxy.adcPower
 
 
+class _DaqProxy(DeviceComponentManager):
+    """A proxy to a subrack, for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: _DaqProxy,
+        fqdn: str,
+        station_id: int,
+        logger: logging.Logger,
+        max_workers: int,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param station_id: the id of the station to which this station
+            is to be assigned
+        :param logger: the logger to be used by this object.
+        :param max_workers: the maximum worker threads for the slow commands
+            associated with this component manager.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        """
+        self._station_id = station_id
+        self._connecting = False
+
+        super().__init__(
+            fqdn,
+            logger,
+            max_workers,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+        )
+
+    def start_communicating(self: _DaqProxy) -> None:
+        self._connecting = True
+        super().start_communicating()
+
+    def _device_state_changed(
+        self: _DaqProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        if self._connecting and event_value == tango.DevState.ON:
+            assert self._proxy is not None  # for the type checker
+            self._connecting = False
+        super()._device_state_changed(event_name, event_value, event_quality)
+
+    def _update_communication_state(
+        self: _DaqProxy,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        # If communication is established with this Tango device,
+        # configure it to use the device as the source, not the Tango attribute cache.
+        # This might be better done for all of these proxy devices in the common repo.
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            assert self._proxy is not None
+            self._proxy.set_source(tango.DevSource.DEV)
+
+            self._proxy.add_change_event_callback(
+                "xPolBandpass", self._bandpass_callback
+            )
+            self._proxy.add_change_event_callback(
+                "yPolBandpass", self._bandpass_callback
+            )
+        super()._update_communication_state(communication_state)
+
+    def _bandpass_callback(
+        self: _DaqProxy,
+        attribute_name: str,
+        attribute_data: Any,
+        attribute_quality: Any,
+    ) -> None:
+        """
+        Extract bandpass data from event and call cb to update.
+
+        :param attribute_name: Name of attribute that changed.
+        :param attribute_data: New value of attribute.
+        :param attribute_quality: Validity of attribute change.
+        """
+        if self._component_state_callback:
+            if attribute_name.lower() == "xpolbandpass":
+                self.logger.debug("Processing change event for xPolBandpass")
+                self._component_state_callback(xPolBandpass=attribute_data)
+            elif attribute_name.lower() == "ypolbandpass":
+                self.logger.debug("Processing change event for yPolBandpass")
+                self._component_state_callback(yPolBandpass=attribute_data)
+            else:
+                self.logger.error(
+                    f"Got unexpected change event for: {attribute_name} "
+                    "in DaqProxy._bandpass_callback."
+                )
+
+
 # pylint: disable=too-many-instance-attributes
 class SpsStationComponentManager(
     MccsBaseComponentManager, TaskExecutorComponentManager
@@ -224,7 +326,7 @@ class SpsStationComponentManager(
 
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
-    # pylint: disable=too-many-arguments, too-many-locals
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
         self: SpsStationComponentManager,
         station_id: int,
@@ -264,6 +366,7 @@ class SpsStationComponentManager(
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
         """
+        self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
         self._daq_trl = daq_trl
         self._is_configured = False
@@ -318,6 +421,19 @@ class SpsStationComponentManager(
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
+        if self._daq_trl is not None:
+            # TODO: Detect a bad daq trl.
+            self._daq_proxy = _DaqProxy(
+                self._daq_trl,
+                station_id,
+                logger,
+                max_workers,
+                functools.partial(
+                    self._device_communication_state_changed, self._daq_trl
+                ),
+                functools.partial(self._daq_state_changed, self._daq_trl),
+            )
+            self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -358,12 +474,10 @@ class SpsStationComponentManager(
         self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
 
+        self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
+
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
-        if antenna_config_uri:
-            self._get_mappings(antenna_config_uri, logger)
-        else:
-            logger.debug("No antenna mapping provided, skipping")
 
         super().__init__(
             logger,
@@ -375,6 +489,61 @@ class SpsStationComponentManager(
             is_configured=None,
             adc_power=None,
         )
+
+        if antenna_config_uri:
+            logger.debug("Retrieving antenna mapping.")
+            self._get_mappings(antenna_config_uri)
+        else:
+            logger.debug("No antenna mapping provided, skipping")
+
+    def _port_to_antenna_order(
+        self: SpsStationComponentManager,
+        antenna_mapping: dict[int, dict[str, int]],
+        data: np.ndarray,
+    ) -> np.ndarray:
+        """
+        Reorder bandpass data from port order to antenna order.
+
+        Data is a 2D array expected in blocks ordered by TPM number and each block
+            is expected in TPM port order.
+
+        :param antenna_mapping: A mapping of antenna to tpm and ports.
+            dict[ant_id: (tpm_id, tpm_x_port, tpm_y_port)]
+        :param data: Full station data in TPM and port order.
+        :returns: Full station data in Antenna order or `None` if the operation failed.
+        """
+        if antenna_mapping == {}:
+            self.logger.warning(
+                "No antenna mapping provided, returning data unmodified and exiting.",
+            )
+            return data
+        ordered_data = np.zeros(data.shape)
+        nof_antennas_per_tile = TileData.ANTENNA_COUNT
+        skipped_antennas: bool = False
+        try:
+            for antenna in range(1, data.shape[0] + 1):  # 1 based antenna numbering
+                tpm_number = int(antenna_mapping[antenna]["tpm"])
+                tile_base_index = (tpm_number - 1) * nof_antennas_per_tile
+                # So long as X and Y pols are always on adjacent ports this should work.
+                tpm_port_number = antenna_mapping[antenna]["tpm_x_channel"]
+                port_offset = int(tpm_port_number // 2)
+                antenna_index = tile_base_index + port_offset
+                ordered_data[antenna - 1, :] = data[antenna_index, :]
+        except KeyError:
+            # Generally we'll get here when we have fewer than 256 antennas.
+            # Keep a note if we skipped some but don't flood the logs.
+            skipped_antennas = True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self.logger.error(
+                "Caught exception in "
+                f"SpsStationComponentManager._port_to_antenna_order: {repr(e)}"
+            )
+        if skipped_antennas:
+            self.logger.warning(
+                "Data remapped but some antennas that were not found were skipped."
+            )
+
+        return ordered_data
 
     def _find_by_key(
         self: SpsStationComponentManager, data: dict, target: str
@@ -396,30 +565,30 @@ class SpsStationComponentManager(
     def _get_mappings(
         self: SpsStationComponentManager,
         antenna_config_uri: list[str],
-        logger: logging.Logger,
     ) -> None:
         """
         Get mappings from TelModel.
 
         :param antenna_config_uri: Repo and filepath for antenna mapping config
-        :param logger: the logger to be used by this object.
-
-        Need to pass the logger through as its not been setup by the super yet.
         """
-        antenna_mapping_uri, antenna_mapping_filepath = antenna_config_uri
+        (
+            antenna_mapping_uri,
+            antenna_mapping_filepath,
+            this_station_cluster,
+        ) = antenna_config_uri
 
         try:
             tmdata = TMData([antenna_mapping_uri])
         # pylint: disable=broad-except
         except Exception as e:
-            logger.error(f"Unable to create TMData object, check uri. Error: {e}")
+            self.logger.error(f"Unable to create TMData object, check uri. Error: {e}")
             return
 
         try:
             full_dict = tmdata[antenna_mapping_filepath].get_dict()
         # pylint: disable=broad-except
         except Exception as e:
-            logger.error(
+            self.logger.error(
                 "Unable to create dictionary from imported TMData,"
                 f"check uploaded TelModel data. Error: {e}"
             )
@@ -427,7 +596,7 @@ class SpsStationComponentManager(
 
         stations = list(self._find_by_key(full_dict, "stations"))
         if not stations:
-            logger.error(
+            self.logger.error(
                 f"Couldn't find station {self._station_id} in imported TMData."
             )
             return
@@ -436,23 +605,33 @@ class SpsStationComponentManager(
         antennas = {}
         for station in stations:
             for station_id, station_config in station.items():
-                if station_id == str(self._station_id):
+                if (station_id == this_station_cluster) and (
+                    station_config["id"] == self._station_id
+                ):
                     antennas = next(self._find_by_key(station_config, "antennas"))
 
         if not antennas:
-            logger.error(f"Couldn't find antennas on station {self._station_id}.")
+            self.logger.error(f"Couldn't find antennas on station {self._station_id}.")
             return
 
         try:
-            for antenna in antennas:
-                self._antenna_mapping[int(antenna)] = {
-                    "tpm": int(antennas[antenna]["tpm"]),
-                    "tpm_x_channel": antennas[antenna]["tpm_x_channel"],
-                    "tpm_y_channel": antennas[antenna]["tpm_y_channel"],
-                    "delays": antennas[antenna]["delays"],
+            for _, antenna_config in antennas.items():
+                antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
+                tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
+                self._antenna_mapping[antenna_number] = {
+                    "tpm": tpm_number,
+                    "tpm_x_channel": antenna_config["tpm_x_channel"],
+                    "tpm_y_channel": antenna_config["tpm_y_channel"],
+                    "delays": antenna_config["delays"],
+                }
+                # Construct labels for bandpass data.
+                self._antenna_info[antenna_number] = {
+                    "station_id": self._station_id,
+                    "tpm_id": tpm_number,
+                    "antenna_location": antenna_config["location_offset"],
                 }
         except KeyError as err:
-            logger.error(
+            self.logger.error(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
@@ -541,6 +720,8 @@ class SpsStationComponentManager(
             tile_proxy.start_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.start_communicating()
+        if self._daq_proxy is not None:
+            self._daq_proxy.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
@@ -551,6 +732,8 @@ class SpsStationComponentManager(
             tile_proxy.stop_communicating()
         for subrack_proxy in self._subrack_proxies.values():
             subrack_proxy.stop_communicating()
+        if self._daq_proxy is not None:
+            self._daq_proxy.stop_communicating()
 
         self._update_communication_state(CommunicationStatus.DISABLED)
         self._update_component_state(power=None, fault=None)
@@ -702,6 +885,26 @@ class SpsStationComponentManager(
                 self._evaluate_power_state()
         if health is not None:
             self._subrack_health_changed_callback(fqdn, health)
+
+    @threadsafe
+    def _daq_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        if power is not None:
+            with self._power_state_lock:
+                self._daq_power_state[fqdn] = power
+                self._evaluate_power_state()
+        if "xPolBandpass" in state_change:
+            x_bandpass_data = state_change.get("xPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(xPolBandpass=x_bandpass_data)
+        if "yPolBandpass" in state_change:
+            y_bandpass_data = state_change.get("yPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(yPolBandpass=y_bandpass_data)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,

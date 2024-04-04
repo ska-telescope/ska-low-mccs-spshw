@@ -52,6 +52,12 @@ configuration:
         code_push_event: true 
   - class: SpsStation
     attributes:
+      xPolBandpass:
+        code_push_event: true
+      yPolBandpass:
+        code_push_event: true
+      antennaInfo:
+        code_push_event: true
       adcPower:
         code_push_event: true 
       state:

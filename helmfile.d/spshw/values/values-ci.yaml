@@ -6,6 +6,7 @@ platform:
     version: 0.1.0
 
   cluster:
+    domain: techops.internal.skao.int
     daq:
       storage_class: nfss1
 
@@ -60,11 +61,11 @@ platform:
 # For example,
 #
 # helm_values:
-#   image:
-#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.11.0-dev.cc21201e6
+#   # image:
+#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#   #   tag: 0.11.0-dev.cc21201e6
 
 #   ska-low-mccs-daq:
 #     image:
 #       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-#       tag: 0.5.0-dev.cfc920d91
+#       tag: 0.6.1-dev.c72446f19

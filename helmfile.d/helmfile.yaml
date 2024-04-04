@@ -3,10 +3,18 @@ environments:
     kubeContext: minikube
     values:
       - platform/minikube.yaml
-  stfc-ci:
+  minikube:
     values:
       - platform/minikube.yaml
+      - spshw/values/values-ci.yaml
+  stfc-ci-minikube:
+    values:
       - spshw/values/values-stfc-ci.yaml
+      - platform/minikube.yaml
+  stfc-ci:
+    values:
+      - platform/stfc-ci.yaml
+      - spshw/values/values-ci.yaml
   aa0.5:
     kubeContext: low-itf  # temporary target platform
     values:

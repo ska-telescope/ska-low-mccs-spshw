@@ -12,8 +12,8 @@ name = 'ska-nexus'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
 
 [tool.poetry.dependencies]
-python = "~3.10"
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "4d255f07db3c82408c376fb6d2ffefa4631f09d5", subdirectory = "python" }
+python = "~3.10"  
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev = "05eca81981e9a3bda6c49a6fc40905936f464a18", subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
 numpy = "^1.26.4"

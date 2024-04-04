@@ -18,6 +18,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
 
+from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqSimulator
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import (
     MccsTile,
@@ -81,6 +82,17 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
+@pytest.fixture(name="daq_id", scope="session")
+def daq_id_fixture() -> int:
+    """
+    Return the daq id of this daq receiver.
+
+    :return: the daq id of this daq receiver.
+    """
+    return 1
+
+
+# pylint: disable=too-many-arguments
 @pytest.fixture(name="integration_test_context")
 def integration_test_context_fixture(
     subrack_id: int,
@@ -88,6 +100,8 @@ def integration_test_context_fixture(
     tile_id: int,
     subrack_bay: int,
     patched_tile_device_class: MccsTile,
+    daq_id: int,
+    daq_trl: str,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -99,6 +113,8 @@ def integration_test_context_fixture(
     :param subrack_bay: This tile's position in its subrack
     :param patched_tile_device_class: A MccsTile class patched with
         some command to help testing.
+    :param daq_id: the ID number of the DAQ receiver.
+    :param daq_trl: The Tango Resource Locator for this station's DAQ.
 
     :yields: a test context.
     """
@@ -111,7 +127,13 @@ def integration_test_context_fixture(
         subrack_bay=subrack_bay,
         device_class=patched_tile_device_class,
     )
-    harness.set_sps_station_device(subrack_ids=[subrack_id], tile_ids=[tile_id])
+    harness.set_daq_instance(DaqSimulator())
+    harness.set_daq_device(daq_id, address=None)
+    harness.set_sps_station_device(
+        subrack_ids=[subrack_id],
+        tile_ids=[tile_id],
+        daq_trl=daq_trl,
+    )
 
     with harness as context:
         yield context
@@ -318,6 +340,21 @@ def tile_device_fixture(
     :return: the tile Tango device under test.
     """
     return integration_test_context.get_tile_device(tile_id)
+
+
+@pytest.fixture(name="daq_device")
+def daq_device_fixture(
+    integration_test_context: SpsTangoTestHarnessContext,
+) -> DeviceProxy:
+    """
+    Fixture that returns the daq Tango device under test.
+
+    :param integration_test_context: the test context in which
+        integration tests will be run.
+
+    :return: the daq Tango device under test.
+    """
+    return integration_test_context.get_daq_device()
 
 
 @pytest.fixture(name="change_event_callbacks")

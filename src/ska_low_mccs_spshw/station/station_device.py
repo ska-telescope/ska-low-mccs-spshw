@@ -16,6 +16,7 @@ import json
 import sys
 from typing import Any, Optional, cast
 
+import numpy as np
 import tango
 from numpy import ndarray
 from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
@@ -115,6 +116,11 @@ class SpsStation(SKAObsDevice):
         )
         self.set_change_event("healthState", True, False)
 
+        # pylint: disable=attribute-defined-outside-init
+        self._x_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+        # pylint: disable=attribute-defined-outside-init
+        self._y_bandpass_data: np.ndarray = np.zeros(shape=(256, 512), dtype=float)
+
     def create_component_manager(
         self: SpsStation,
     ) -> SpsStationComponentManager:
@@ -202,6 +208,13 @@ class SpsStation(SKAObsDevice):
             )
             self._device._version_id = version_info["version"]
 
+            self._device.set_change_event("xPolBandpass", True, False)
+            self._device.set_change_event("yPolBandpass", True, False)
+            self._device.set_change_event("antennaInfo", True, False)
+
+            self._device.set_archive_event("xPolBandpass", True, False)
+            self._device.set_archive_event("yPolBandpass", True, False)
+            self._device.set_archive_event("antennaInfo", True, False)
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
@@ -279,8 +292,24 @@ class SpsStation(SKAObsDevice):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        bandpass_data_shape = (256, 512)
         super()._component_state_changed(fault=fault, power=power)
         self._health_model.update_state(fault=fault, power=power)
+
+        # Helper function to *expand* a numpy array to a shape and pad with zeros.
+        def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+            y_, x_ = shape
+            y, x = a.shape
+            y_pad = y_ - y
+            x_pad = x_ - x
+            return np.pad(
+                a,
+                (
+                    (y_pad // 2, y_pad // 2 + y_pad % 2),
+                    (x_pad // 2, x_pad // 2 + x_pad % 2),
+                ),
+                mode="constant",
+            )
 
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
@@ -289,6 +318,66 @@ class SpsStation(SKAObsDevice):
             self._adc_power = state_change.get("adc_power")
             self.push_change_event("adcPower", self._adc_power)
             self.push_archive_event("adcPower", self._adc_power)
+
+        if "xPolBandpass" in state_change:
+            x_bandpass_data = state_change.get("xPolBandpass")
+            if isinstance(x_bandpass_data, np.ndarray):
+                x_pol_bandpass_ordered: np.ndarray = np.zeros(
+                    shape=bandpass_data_shape, dtype=float
+                )
+                try:
+                    # Resize data to match attr.
+                    x_bandpass_data = to_shape(x_bandpass_data, bandpass_data_shape)
+                    # Change bandpass data from port order to antenna order.
+                    x_pol_bandpass_ordered = (
+                        self.component_manager._port_to_antenna_order(
+                            self.component_manager._antenna_mapping, x_bandpass_data
+                        )
+                    )
+                    # pylint: disable=attribute-defined-outside-init
+                    self._x_bandpass_data = x_pol_bandpass_ordered
+                    self.push_change_event("xPolBandpass", x_pol_bandpass_ordered)
+                    self.push_archive_event("xPolBandpass", x_pol_bandpass_ordered)
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    self.logger.error(
+                        f"Caught exception setting station X bandpass:\n {e}"
+                    )
+            else:
+                self.logger.error(
+                    "X polarised bandpass data has incorrect format.\
+                        Expected np.ndarray, got %s",
+                    type(x_bandpass_data),
+                )
+
+        if "yPolBandpass" in state_change:
+            y_bandpass_data = state_change.get("yPolBandpass")
+            if isinstance(y_bandpass_data, np.ndarray):
+                y_pol_bandpass_ordered: np.ndarray = np.zeros(
+                    shape=bandpass_data_shape, dtype=float
+                )
+                try:
+                    # Resize data to match attr.
+                    y_bandpass_data = to_shape(y_bandpass_data, bandpass_data_shape)
+                    # Change bandpass data from port order to antenna order.
+                    y_pol_bandpass_ordered = (
+                        self.component_manager._port_to_antenna_order(
+                            self.component_manager._antenna_mapping, y_bandpass_data
+                        )
+                    )
+                    # pylint: disable=attribute-defined-outside-init
+                    self._y_bandpass_data = y_pol_bandpass_ordered
+                    self.push_change_event("yPolBandpass", y_pol_bandpass_ordered)
+                    self.push_archive_event("yPolBandpass", y_pol_bandpass_ordered)
+                except Exception as e:  # pylint: disable=broad-exception-caught
+                    self.logger.error(
+                        f"Caught exception setting station Y bandpass:\n {e}"
+                    )
+            else:
+                self.logger.error(
+                    "Y polarised bandpass data has incorrect format. \
+                    Expected np.ndarray, got %s",
+                    type(y_bandpass_data),
+                )
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -308,6 +397,32 @@ class SpsStation(SKAObsDevice):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
+    )
+    def xPolBandpass(self: SpsStation) -> np.ndarray:
+        """
+        Read the last bandpass plot data for the x-polarisation.
+
+        :return: The last block of x-polarised bandpass data.
+        """
+        return self._x_bandpass_data
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=512,  # Channels
+        max_dim_y=256,  # Antennas
+    )
+    def yPolBandpass(self: SpsStation) -> np.ndarray:
+        """
+        Read the last bandpass plot data for the y-polarisation.
+
+        :return: The last block of y-polarised bandpass data.
+        """
+        return self._y_bandpass_data
 
     @attribute(dtype=str)
     def daqTRL(self: SpsStation) -> str:
@@ -353,9 +468,25 @@ class SpsStation(SKAObsDevice):
         """
         Return the mappings of the antennas.
 
+        Returns a mapping of antenna number to
+            TPM port number.
+
         :return: json string containing antenna mappings
         """
         return json.dumps(self.component_manager._antenna_mapping)
+
+    @attribute(dtype="DevString")
+    def antennaInfo(self: SpsStation) -> str:
+        """
+        Return antenna information.
+
+        Returns a json string representing a dictionary coded
+            by antenna number and presenting that antenna's
+            station_id, tile_id and location information.
+
+        :return: json string containing antenna information.
+        """
+        return json.dumps(self.component_manager._antenna_info)
 
     @attribute(
         dtype=("DevDouble",),

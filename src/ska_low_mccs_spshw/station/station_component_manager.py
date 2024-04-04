@@ -528,7 +528,7 @@ class SpsStationComponentManager(
                 tpm_port_number = antenna_mapping[antenna]["tpm_x_channel"]
                 port_offset = int(tpm_port_number // 2)
                 antenna_index = tile_base_index + port_offset
-                ordered_data[antenna, :] = data[antenna_index, :]
+                ordered_data[antenna - 1, :] = data[antenna_index, :]
         except KeyError:
             # Generally we'll get here when we have fewer than 256 antennas.
             # Keep a note if we skipped some but don't flood the logs.

@@ -318,8 +318,8 @@ def test_port_to_antenna_order(
     antenna_ordered_map = station_component_manager._port_to_antenna_order(
         station_component_manager._antenna_mapping, reshaped_x_tpm_map
     )
-    for i, antenna in enumerate(antenna_ordered_map):
-        # Assert we're in antenna order (and convert from 0 to 1 based numbering)
+    for i, antenna in enumerate(antenna_ordered_map, 1):  # Antenna number is 1-based.
+        # Assert we're in antenna order
         assert i == int(antenna)
 
 

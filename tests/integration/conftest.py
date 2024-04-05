@@ -203,6 +203,18 @@ def patched_tile_device_class_fixture(
             tpm_driver._last_update_time_2 = 0.0
             tpm_driver._update_attributes()
 
+        @command(dtype_out="DevVarLongStringArray")
+        def Off(self: PatchedTileDevice) -> None:
+            if isinstance(self.component_manager._tpm_driver, TpmDriver):
+                self.component_manager._tpm_driver.tile.mock_off()
+            return super().Off()
+
+        @command(dtype_out="DevVarLongStringArray")
+        def On(self: PatchedTileDevice) -> None:
+            if isinstance(self.component_manager._tpm_driver, TpmDriver):
+                self.component_manager._tpm_driver.tile.mock_on()
+            return super().On()
+
     return PatchedTileDevice
 
 

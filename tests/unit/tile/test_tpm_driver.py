@@ -2300,6 +2300,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     def test_dumb_read(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
         attribute: str,
     ) -> None:
         """
@@ -2308,8 +2309,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         Validate that it can be called without error.
 
         :param tpm_driver: The TPM driver instance being tested.
+        :param tile_simulator: The mocked tile_simulator
         :param attribute: The attribute to be read.
         """
+        tile_simulator.connect()
         _ = getattr(tpm_driver, attribute)
 
     def test_write_read_registers(

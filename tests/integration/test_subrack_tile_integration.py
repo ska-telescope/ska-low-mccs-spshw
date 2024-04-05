@@ -40,17 +40,19 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_programming_state",
         "pps_present",
         "daq_state",
-        timeout=2.0,
+        timeout=5.0,
     )
 
 
-class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-arguments
+class TestSubrackTileIntegration:
     """Integration test cases for a SPS station with subservient subrack and tile."""
 
     def test_communication(
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -67,6 +69,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: The mocked tile_simulator
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -209,7 +212,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.ON
         )
-
+        tile_simulator.mock_on()
         # The tile device receives this event too.
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)

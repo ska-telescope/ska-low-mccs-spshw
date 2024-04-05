@@ -432,7 +432,7 @@ class TileSimulator:
 
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
     CSP_ROUNDING: list[int] = [2] * 384
-    STATIC_DELAYS = [0.0] * 32
+    STATIC_DELAYS = [-160.0] * 32
     PREADU_LEVELS = [0.0] * 32
     CLOCK_SIGNALS_OK = True
 
@@ -658,6 +658,7 @@ class TileSimulator:
             return self._pps_delay + self.pps_correction
         return self._pps_delay
 
+    @connected
     def is_programmed(self: TileSimulator) -> Optional[bool]:
         """
         Return whether the mock has been implemented.

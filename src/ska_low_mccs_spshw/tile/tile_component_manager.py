@@ -464,8 +464,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def polling_stopped(self: TileComponentManager) -> None:
         """Define actions to be taken when polling stops."""
         self._request_provider = None
-        super().polling_stopped()
         self._update_component_state(programming_state=TpmStatus.UNKNOWN.pretty_name())
+        self.power_state = PowerState.UNKNOWN
+        super().polling_stopped()
 
     def off(
         self: TileComponentManager, task_callback: Optional[Callable] = None

@@ -25,21 +25,6 @@ from ska_low_mccs_spshw.tile import TileSimulator, TpmDriver
 from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 
-@pytest.fixture(name="callbacks")
-def callbacks_fixture() -> MockCallableGroup:
-    """
-    Return a dictionary of callables to be used as callbacks.
-
-    :return: a dictionary of callables to be used as callbacks.
-    """
-    return MockCallableGroup(
-        "communication_status",
-        "component_state",
-        "task",
-        timeout=15.0,
-    )
-
-
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tpm_driver")
 def tpm_driver_fixture(

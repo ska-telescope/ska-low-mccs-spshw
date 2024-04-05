@@ -51,7 +51,8 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-arguments
+class TestSubrackTileIntegration:
     """Integration test cases for a SPS station with subservient subrack and tile."""
 
     def test_communication(
@@ -247,6 +248,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
 class TestMccsTileTpmDriver:
     """This class is for testing the MccsTile using the TileSimulator."""
 
+    # pylint: disable=too-many-arguments
     def setup_devices(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -441,9 +443,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         delay_time = 2  # seconds
@@ -487,9 +491,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         with pytest.raises(
@@ -540,9 +546,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         config = {
@@ -585,9 +593,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         # Load a bad configuration.
@@ -634,9 +644,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         tile_device.ConfigureStationBeamformer(
@@ -675,9 +687,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         initial_level = tile_device.preadulevels
@@ -714,9 +728,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
-        
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         tile_device.subscribe_event(
@@ -766,7 +782,11 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         # set a pps Correction to apply
@@ -811,17 +831,19 @@ class TestMccsTileTpmDriver:
             callbacks with asynchrony support.
         """
         self.setup_devices(
-            tile_device, tile_simulator, subrack_device, daq_device, change_event_callbacks
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
         )
 
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
         tile_device.adminMode = AdminMode.ONLINE
-
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.ON, lookahead=2, consume_nonmatches=True
-        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         assert tile_device.state() == tango.DevState.ON
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE

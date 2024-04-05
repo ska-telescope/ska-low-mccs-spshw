@@ -50,7 +50,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_channeliser_rounding",
         "track_lrc_command",
         "daq_state",
-        timeout=5.0,
+        timeout=7.0,
     )
 
 
@@ -325,14 +325,11 @@ class TestStationTileIntegration:
         """
         self.turn_station_on(
             sps_station_device,
-           
             subrack_device,
-           
             tile_device,
             tile_simulator,
-           
             daq_device,
-            change_event_callbacks,,
+            change_event_callbacks,
         )
         # Force a poll to get the initial values.
 

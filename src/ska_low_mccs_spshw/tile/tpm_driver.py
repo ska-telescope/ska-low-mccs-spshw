@@ -266,12 +266,12 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: initialisation state
         """
-        self._fpgas_time = [
+        _fpgas_time = [
             self.tile.get_fpga_time(Device.FPGA_1),
             self.tile.get_fpga_time(Device.FPGA_2),
         ]
 
-        return (self._fpgas_time[0] != 0) and (self._fpgas_time[1] != 0)
+        return (_fpgas_time[0] != 0) and (_fpgas_time[1] != 0)
 
     @property
     def hardware_version(self: TpmDriver) -> str:
@@ -842,7 +842,7 @@ class TpmDriver(TaskExecutorComponentManager):
             self.logger.info("Trying to read time from an unprogrammed FPGA")
             return [0, 0]
         failed = False
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
             if acquired:
                 try:
                     self._fpgas_time = [

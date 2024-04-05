@@ -485,6 +485,7 @@ class TileSimulator:
         self._station_id = self.STATION_ID
         self._timestamp = 0
         self._pps_delay: int = self.PPS_DELAY
+        self._lock = threading.Lock()
         self._polling_thread = threading.Thread(
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
@@ -632,7 +633,8 @@ class TileSimulator:
 
         :return: the fpga_time.
         """
-        return self.fpgas_time[device.value - 1]
+        with self._lock:
+            return self.fpgas_time[device.value - 1]
 
     @connected
     def set_station_id(self: TileSimulator, station_id: int, tile_id: int) -> None:
@@ -1288,7 +1290,7 @@ class TileSimulator:
         while True:
             self._start_polling_event.wait()
             time_utc = time.time()
-            self._fpgatime = int(time_utc)
+            _fpgatime = int(time_utc)
             if self.sync_time > 0 and self.sync_time < time_utc:
                 self._timestamp = int((time_utc - self.sync_time) / (256 * 1.08e-6))
                 reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
@@ -1296,9 +1298,9 @@ class TileSimulator:
                 if self.tpm:
                     self.tpm[reg1] = 1
                     self.tpm[reg2] = 1
-
-            self.fpgas_time[0] = int(time_utc)
-            self.fpgas_time[1] = int(time_utc)
+            with self._lock:
+                self.fpgas_time[0] = _fpgatime
+                self.fpgas_time[1] = _fpgatime
             time.sleep(0.1)
 
     @connected

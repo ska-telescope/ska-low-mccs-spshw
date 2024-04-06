@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-An implementation of a Tile component manager that drives a real TPM.
+An class that interfaces with the aavs-system to drive the TPM or TileSimulator.
 
 The class is basically a wrapper around the Tile class, in order to have
 a consistent interface for driver and simulator. This is an initial
@@ -160,7 +160,10 @@ class TpmDriver(TaskExecutorComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
             if acquired:
-                return self.tile.get_health_status()
+                self._tile_health_structure = copy.deepcopy(
+                    self.tile.get_health_status()
+                )
+                return copy.deepcopy(self._tile_health_structure)
         raise TimeoutError("Failed to read health status, lock not acquired")
 
     def get_station_id(self: TpmDriver) -> int:
@@ -693,105 +696,192 @@ class TpmDriver(TaskExecutorComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
+    # TODO connect all these with real hardware probes (in poll loop)
+    @property
+    def pps_present(self: TpmDriver) -> bool:
+        """
+        Check if PPS signal is present.
+
+        Note: cached value returned
+
+        :return: True if PPS is present. Checked in poll loop, cached
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["timing"]["pps"]["status"]
+        raise TimeoutError("Failed to read pps_present, lock not acquired in time.")
+
     @property
     def voltages(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all voltage values available in the TPM.
 
+        Note: cached value returned
+
         :return: voltages in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get all voltages available in the TPM")
-        return self._tile_health_structure["voltages"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["voltages"]
+        raise TimeoutError("Failed to read voltages, lock not acquired")
 
     @property
     def temperatures(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all temperature values available in the TPM.
 
+        Note: cached value returned
+
         :return: temperatures in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get all temperatures available in the TPM")
-        return self._tile_health_structure["temperatures"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["temperatures"]
+        raise TimeoutError("Failed to read temperatures, lock not acquired")
 
     @property
     def currents(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of all current values available in the TPM.
 
+        Note: cached value returned
+
         :return: currents in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get all currents available in the TPM")
-        return self._tile_health_structure["currents"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["currents"]
+        raise TimeoutError("Failed to read currents, lock not acquired")
 
     @property
     def timing(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of the Timing Signals status available in the TPM.
 
+        Note: cached value returned
+
         :return: timings in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: timing")
-        return self._tile_health_structure["timing"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["timing"]
+        raise TimeoutError("Failed to read timing, lock not acquired")
 
     @property
     def io(self: TpmDriver) -> dict[str, Any]:
         """
         Return a dictionary of I/O Interfaces status available in the TPM.
 
+        Note: cached value returned
+
         :return: io in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get io")
-        return self._tile_health_structure["io"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["io"]
+        raise TimeoutError("Failed to read io, lock not acquired")
 
     @property
     def dsp(self: TpmDriver) -> dict[str, Any]:
         """
         Return the tile beamformer and station beamformer status in the TPM.
 
+        Note: cached value returned
+
         :return: dsp status in the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: get dsp")
-        return self._tile_health_structure["dsp"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["dsp"]
+        raise TimeoutError("Failed to read dsp, lock not acquired")
 
     @property
     def board_temperature(self: TpmDriver) -> float:
         """
         Return the temperature of the TPM.
 
+        Note: cached value returned
+
         :return: the temperature of the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: board_temperature")
-        return self._tile_health_structure["temperatures"]["board"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["temperatures"]["board"]
+        raise TimeoutError("Failed to read board_temperature, lock not acquired")
 
     @property
     def voltage_mon(self: TpmDriver) -> float:
         """
         Return the internal 5V supply of the TPM.
 
+        Note: cached value returned
+
         :return: the internal 5V supply of the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: internal 5V supply of the TPM")
-        return self._tile_health_structure["voltages"]["MON_5V0"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["voltages"]["MON_5V0"]
+        raise TimeoutError("Failed to read voltage_mon, lock not acquired")
 
     @property
     def fpga1_temperature(self: TpmDriver) -> float:
         """
         Return the temperature of FPGA 1.
 
+        Note: cached value returned
+
         :return: the temperature of FPGA 1
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: fpga1_temperature")
-        return self._tile_health_structure["temperatures"]["FPGA0"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["temperatures"]["FPGA0"]
+        raise TimeoutError("Failed to read fpga1_temperature, lock not acquired")
 
     @property
     def fpga2_temperature(self: TpmDriver) -> float:
         """
         Return the temperature of FPGA 2.
 
+        Note: cached value returned
+
         :return: the temperature of FPGA 2
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TpmDriver: fpga2_temperature")
-        return self._tile_health_structure["temperatures"]["FPGA1"]
+        with acquire_timeout(self._hardware_lock, timeout=1.2) as acquired:
+            if acquired:
+                return self._tile_health_structure["temperatures"]["FPGA1"]
+        raise TimeoutError("Failed to read fpga2_temperature, lock not acquired")
 
     @property
     def adc_rms(self: TpmDriver) -> list[float]:
@@ -1256,7 +1346,7 @@ class TpmDriver(TaskExecutorComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
             if acquired:
                 return self.tile.get_arp_table()
-        raise TimeoutError("Failed to read spr table, lock not acquired in time.")
+        raise TimeoutError("Failed to read apr table, lock not acquired in time.")
 
     def set_lmc_download(
         self: TpmDriver,
@@ -1295,8 +1385,15 @@ class TpmDriver(TaskExecutorComponentManager):
         Read the cached value for the channeliser truncation.
 
         :return: cached value for the channeliser truncation
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        return copy.deepcopy(self._channeliser_truncation)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return copy.deepcopy(self._channeliser_truncation)
+        raise TimeoutError(
+            "Failed to read channeliser_truncation, lock not acquired in time."
+        )
 
     @channeliser_truncation.setter
     def channeliser_truncation(self: TpmDriver, truncation: int | list[int]) -> None:
@@ -1309,13 +1406,13 @@ class TpmDriver(TaskExecutorComponentManager):
             white noise.
         """
         if isinstance(truncation, int):
-            self._channeliser_truncation = [truncation] * 512
+            _channeliser_truncation = [truncation] * 512
 
         elif len(truncation) == 1:
-            self._channeliser_truncation = [truncation[0]] * 512
+            _channeliser_truncation = [truncation[0]] * 512
         else:
-            self._channeliser_truncation = truncation
-        self._set_channeliser_truncation(self._channeliser_truncation)
+            _channeliser_truncation = truncation
+        self._set_channeliser_truncation(_channeliser_truncation)
 
     def _set_channeliser_truncation(self: TpmDriver, array: list[int]) -> None:
         """
@@ -1425,8 +1522,10 @@ class TpmDriver(TaskExecutorComponentManager):
 
         :return: Final rounding for the CSP samples. Up to 384 values
         """
-        if isinstance(self._csp_rounding, np.ndarray):
-            return self._csp_rounding.tolist()
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                if isinstance(self._csp_rounding, np.ndarray):
+                    return self._csp_rounding.tolist()
         return None
 
     @csp_rounding.setter
@@ -1504,16 +1603,6 @@ class TpmDriver(TaskExecutorComponentManager):
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-
-    # TODO connect all these with real hardware probes (in poll loop)
-    @property
-    def pps_present(self: TpmDriver) -> bool:
-        """
-        Check if PPS signal is present.
-
-        :return: True if PPS is present. Checked in poll loop, cached
-        """
-        return self._tile_health_structure["timing"]["pps"]["status"]
 
     @property
     def clock_present(self: TpmDriver) -> bool:

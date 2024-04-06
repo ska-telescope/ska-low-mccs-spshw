@@ -212,7 +212,7 @@ def tile_component_manager_fixture(
 
     :return: a TPM component manager in the specified simulation mode.
     """
-    poll_rate = 0.05
+    poll_rate = 0.1
     tpm_cpld_port = 6
 
     return TileComponentManager(

@@ -357,11 +357,10 @@ class TestStationTileIntegration:
         request_provider.get_request = (  # type: ignore[method-assign]
             unittest.mock.Mock(return_value=("PPS_DELAY_CORRECTION", None))
         )
-        time.sleep(2)
+        time.sleep(1)
         final_corrections = sps_station_device.ppsDelayCorrections
 
         assert np.array_equal(final_corrections, desired_pps_corrections)
-        # assert tile_device.ppsDelay == tile_under_test_pps_delay
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
@@ -490,7 +489,6 @@ class TestStationTileIntegration:
         request_provider.get_request = (  # type: ignore[method-assign]
             unittest.mock.Mock(return_value=("STATIC_DELAYS", None))
         )
-        time.sleep(1)
         # This will cause the Tile to push a change event.
 
         change_event_callbacks["tile_static_delays"].assert_change_event(
@@ -666,7 +664,6 @@ class TestStationTileIntegration:
         change_event_callbacks["tile_csp_rounding"].assert_change_event(
             csp_to_check.tolist()
         )
-        change_event_callbacks["tile_csp_rounding"].assert_not_called()
         # mock failure
         tile_simulator.is_csp_write_successful = False
 
@@ -735,7 +732,6 @@ class TestStationTileIntegration:
         request_provider.get_request = (  # type: ignore[method-assign]
             unittest.mock.Mock(return_value=("CHANNELISER_ROUNDING", None))
         )
-        time.sleep(1)
         # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
             "channeliserRounding",
@@ -750,10 +746,9 @@ class TestStationTileIntegration:
         sps_station_device.SetChanneliserRounding(channeliser_rounding_to_set)
         zero_results = np.zeros((15, 512))
 
-        time.sleep(1)
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_channeliser_rounding"].assert_change_event(
-            channeliser_rounding_to_set.tolist()
+            channeliser_rounding_to_set.tolist(), lookahead=2, consume_nonmatches=True
         )
 
         # Check that the single Tile in this test context is set

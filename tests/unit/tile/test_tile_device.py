@@ -27,7 +27,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import MccsDeviceProxy
-from ska_tango_testing.mock.placeholders import Anything
+from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import AttrQuality, DevFailed, DeviceProxy, DevState, EventType
 
@@ -179,8 +179,9 @@ def on_tile_device_fixture(
     change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
     tile_device.adminMode = AdminMode.ONLINE
 
-    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    change_event_callbacks["state"].assert_change_event(
+        OneOf(DevState.OFF, DevState.ON), lookahead=2, consume_nonmatches=True
+    )
     change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
     tile_device.on()

@@ -272,13 +272,13 @@ class BaseTpmSimulator:
         return self._is_programmed
 
     def mock_on(self: BaseTpmSimulator) -> None:
-        """Simulate a power ON of the TPM."""
+        """Simulate an ON TPM."""
         self.logger.error("Mocking on")
         if not self.power_locked:
             self._mocked_communication_failure = False
 
     def mock_off(self: BaseTpmSimulator) -> None:
-        """Simulate a power OFFs of the TPM."""
+        """Simulatean ON TPM."""
         self.logger.error("Mocking off")
         if not self.power_locked:
             self._mocked_communication_failure = True
@@ -362,12 +362,9 @@ class BaseTpmSimulator:
             command progress.
         :param task_abort_event: Check for abort, defaults to None
         """
-        print(f"program_fpga {program_fpga}")
-        print(f"task_callback {task_callback}")
         if task_callback:
             task_callback(status=TaskStatus.QUEUED)
             task_callback(status=TaskStatus.IN_PROGRESS)
-        self.logger.debug("TpmSimulator: initialise")
         # self._tile_id = tile_id
         self.download_firmware(self._firmware_name)
         self._set_tpm_status(TpmStatus.PROGRAMMED)

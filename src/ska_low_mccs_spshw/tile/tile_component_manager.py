@@ -37,6 +37,7 @@ from .tile_poll_management import TileRequestProvider
 from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus
+from .utils import abort_task_on_exception
 
 __all__ = ["TileComponentManager", "TileRequest", "TileResponse"]
 
@@ -211,7 +212,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             tile,
             tpm_version,
             self._tpm_communication_state_changed,
-            self._update_component_state,
+            self._tpm_component_state_changed,
         )
 
         super().__init__(
@@ -459,7 +460,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Define actions to be taken when polling starts."""
         self._request_provider = TileRequestProvider()
         self._request_provider.desire_connection()
-        self._start_communicating_with_subrack_poller()
+        self._start_communicating_with_subrack()
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Define actions to be taken when polling stops."""
@@ -529,28 +530,26 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._request_provider.desire_initialise(request)
         return TaskStatus.QUEUED, "Task staged"
 
-    def _start_communicating_with_subrack_poller(self: TileComponentManager) -> None:
+    def _start_communicating_with_subrack(self: TileComponentManager) -> None:
         """
-        Establish communication with the subrack, then start monitoring.
+        Establish communication with the subrack.
 
-        This contains the actual communication logic that is enqueued to
-        be run asynchronously.
+        This will form a subscription to the power of the port this Tile is
+        configured to be on.
 
         :raises ConnectionError: Connection to subrack failed
         """
-        # Don't set comms NOT_ESTABLISHED here. It should already have been handled
-        # synchronously by the orchestator.
-        # Check if it was already connected.
         unconnected = self._subrack_proxy is None
         if unconnected:
             self.logger.debug("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
                 self._subrack_fqdn, self.logger, connect=False
             )
-            self.logger.error("Connecting to the subrack")
+            self.logger.info("Connecting to the subrack")
             try:
                 self._subrack_proxy.connect()
             except tango.DevFailed as dev_failed:
+                self.logger.error(f"Failed to connect to subrack {dev_failed}")
                 self._subrack_proxy = None
                 raise ConnectionError(
                     f"Could not connect to '{self._subrack_fqdn}'"
@@ -605,7 +604,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param communication_state: the status of communication with
             the tpm.
         """
-        self.logger.error("Not Implemented.")
+        # Note: this is a dummy callback. Communication is established from the polling.
+
+    def _tpm_component_state_changed(
+        self: TileComponentManager,
+        **kwargs: Any,
+    ) -> None:
+        """
+        Handle a change in state of the Tpm.
+
+        :param kwargs: the kwargs with state updates
+        """
+        # Note: this is a dummy callback. State updated are calculated from the polling.
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
@@ -976,6 +986,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     #
     # Long running commands
     #
+    @abort_task_on_exception
+    @check_communicating
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -991,24 +1003,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :returns: A tuple containing a task status and a unique id string to
             identify the command
-
-        :raises ConnectionError: if we are not connected to the TPM.
         """
-        if self.communication_state != CommunicationStatus.ESTABLISHED:
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
-                )
-            raise ConnectionError(
-                "Cannot execute 'TileComponentManager.initialise'. "
-                "Communication with component is not established."
-            )
         return self._tpm_driver.initialise(
             program_fpga=program_fpga,
             pps_delay_correction=self._pps_delay_correction,
             task_callback=task_callback,
         )
 
+    @abort_task_on_exception
+    @check_communicating
     def download_firmware(
         self: TileComponentManager, argin: str, task_callback: Optional[Callable]
     ) -> tuple[TaskStatus, str] | None:
@@ -1024,22 +1027,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :returns: A tuple containing a task status and a unique id string to
             identify the command
-        :raises ConnectionError: if we are not connected to the TPM.
         """
-        if self.communication_state != CommunicationStatus.ESTABLISHED:
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
-                )
-            raise ConnectionError(
-                "Cannot execute 'TileComponentManager.download_firmware'. "
-                "Communication with component is not established."
-            )
         return self._tpm_driver.download_firmware(
             bitfile=argin,
             task_callback=task_callback,
         )
 
+    @abort_task_on_exception
+    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1056,18 +1051,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
-
-        :raises ConnectionError: if we are not connected to the TPM.
         """
-        if self.communication_state != CommunicationStatus.ESTABLISHED:
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.ABORTED, result=(ResultCode.ABORTED, "Aborted")
-                )
-            raise ConnectionError(
-                "Cannot execute 'TileComponentManager.start_acquisition'. "
-                "Communication with component is not established."
-            )
         return self._tpm_driver.start_acquisition(
             start_time=start_time, delay=delay, task_callback=task_callback
         )

@@ -16,7 +16,6 @@ import logging
 import os.path
 import sys
 import time
-from dataclasses import dataclass
 from typing import Any, Callable, Final, Optional
 
 import numpy as np
@@ -46,15 +45,6 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
-
-
-@dataclass
-class TileAttribute:
-    """Class representing the internal state of a Tile attribute."""
-
-    value: Any
-    quality: tango.AttrQuality
-    timestamp: float
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
@@ -133,12 +123,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-        # name: data_class
-        self.attribute_store = {
-            "ppsPresent": TileAttribute(
-                value=None, timestamp=0, quality=tango.AttrQuality.ATTR_INVALID
-            )
-        }
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -409,7 +393,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     self.logger.error("Functionality not implemented.")
                 case "tile_health_structure":
                     # TODO: Handle this better.
-                    self.logger.error(f"tile_health_structure called {attribute_value}")
                     if self.tile_health_structure != attribute_value:
                         # TODO: validate structure using schema before setting.
                         self.tile_health_structure = attribute_value
@@ -662,7 +645,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: a string describing the programming state of the tile
         """
         # NOTE: This is updated with every poll
-        return self._tile_programming_state
+        return self.component_manager.tpm_status.pretty_name()
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

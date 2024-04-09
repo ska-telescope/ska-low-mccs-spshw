@@ -13,6 +13,7 @@ import random
 import unittest.mock
 from typing import Iterator
 
+import numpy as np
 import pytest
 from ska_control_model import CommunicationStatus
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
@@ -28,6 +29,7 @@ def test_context_fixture(
     mock_subrack_device_proxy: unittest.mock.Mock,
     tile_id: int,
     mock_tile_device_proxy: unittest.mock.Mock,
+    daq_id: int,
 ) -> Iterator[None]:
     """
     Yield into a context in which Tango is running, with mock devices.
@@ -45,6 +47,7 @@ def test_context_fixture(
     :param tile_id: ID of the tile Tango device to be mocked
     :param mock_tile_device_proxy: a mock tile device proxy
         that has been configured with the required subrack behaviours.
+    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: into a context in which Tango is running, with a mock
         subrack device.
@@ -52,6 +55,8 @@ def test_context_fixture(
     harness = SpsTangoTestHarness()
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
     harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
+    harness.set_daq_instance()
+    harness.set_daq_device(daq_id=daq_id, address=None)
     with harness:
         yield
 
@@ -108,6 +113,7 @@ def station_component_manager_fixture(
     daq_trl: str,
     logger: logging.Logger,
     callbacks: MockCallableGroup,
+    antenna_uri: list[str],
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -119,7 +125,7 @@ def station_component_manager_fixture(
     :param daq_trl: Tango Resource Locator for this Station's DAQ instance.
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
-
+    :param antenna_uri: Location of antenna configuration file.
 
     :return: a station component manager.
     """
@@ -129,7 +135,7 @@ def station_component_manager_fixture(
         [get_tile_name(tile_id)],
         daq_trl,
         "10.0.0.0",
-        [],
+        antenna_uri,
         logger,
         1,
         callbacks["communication_status"],
@@ -247,11 +253,12 @@ def test_load_pointing_delays(
     antenna_no = 1
     for tpm in range(1, 16 + 1):
         for channel in channels:
-            station_component_manager._antenna_mapping[antenna_no] = (
-                tpm,
-                channel * 2,
-                channel * 2 + 1,
-            )
+            station_component_manager._antenna_mapping[antenna_no] = {
+                "tpm": tpm,
+                "tpm_y_channel": channel * 2,
+                "tpm_x_channel": channel * 2 + 1,
+                "delays": 1,
+            }
             antenna_no += 1
 
     # We have a mapping, lets give an argument, this arg
@@ -265,11 +272,12 @@ def test_load_pointing_delays(
 
     # The rest of the args should be pairs of (delay, delay_rate) for each channel
     for channel in range(16):
-        for antenna_no, (
-            tile_no,
-            y_channel,
-            x_channel,
+        for (
+            antenna_no,
+            antenna_config,
         ) in station_component_manager._antenna_mapping.items():
+            tile_no = antenna_config["tpm"]
+            y_channel = antenna_config["tpm_y_channel"]
             if tile_no == tile_id and int(y_channel / 2) == channel:
                 delay, delay_rate = (
                     antenna_order_delays[antenna_no * 2 - 1],
@@ -279,6 +287,40 @@ def test_load_pointing_delays(
         expected_tile_arg[2 * channel + 2] = delay_rate
 
     mock_tile_proxy.LoadPointingDelays.assert_next_call(expected_tile_arg)
+
+
+def test_port_to_antenna_order(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that `port_to_antenna_order` properly re-orders data.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    """
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    assert station_component_manager._antenna_mapping != {}
+
+    tpm_x_mapping = np.zeros((16, 16))
+    for antenna, antenna_info in station_component_manager._antenna_mapping.items():
+        tpm = int(antenna_info["tpm"]) - 1
+        x_port = antenna_info["tpm_x_channel"]
+        # Create a simple dataset where map[tpm][port] = antenna_number
+        # so that it's obvious if we've re-ordered it correctly or not.
+        tpm_x_mapping[tpm][x_port // 2] = antenna
+
+    reshaped_x_tpm_map = tpm_x_mapping.reshape((256, 1))
+
+    antenna_ordered_map = station_component_manager._port_to_antenna_order(
+        station_component_manager._antenna_mapping, reshaped_x_tpm_map
+    )
+    for i, antenna in enumerate(antenna_ordered_map, 1):  # Antenna number is 1-based.
+        # Assert we're in antenna order
+        assert i == int(antenna)
 
 
 def test_find_by_key(
@@ -309,3 +351,54 @@ def test_find_by_key(
     assert next(
         station_component_manager._find_by_key(generic_nested_dict, "key4")
     ) == {"key5": "some string", "key6": ["string1", "string2"]}
+
+
+def test_get_static_delays(
+    station_component_manager: SpsStationComponentManager,
+    tile_id: int,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test getting static delays from dummy TelModel.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param tile_id: id of the tile which the component manager has been given.
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # First we need an example mapping for our antennas, we only have 1 tile in tests,
+    # but lets pretend we have a whole station
+    channels = list(range(16))
+
+    # Let's make sure we've got a random assignment of antennas to channels
+    random.shuffle(channels)
+
+    antenna_no = 1
+    for tpm in range(1, 16 + 1):
+        for channel in channels:
+            station_component_manager._antenna_mapping[antenna_no] = {
+                "tpm": tpm,
+                "tpm_y_channel": channel * 2,
+                "tpm_x_channel": channel * 2 + 1,
+                "delays": antenna_no // 2,
+            }
+            antenna_no += 1
+
+    static_delays = station_component_manager._update_static_delays()
+    expected_static_delays = [0 for _ in range(32)]
+    for antenna, antenna_config in station_component_manager._antenna_mapping.items():
+        if int(antenna_config["tpm"]) == tile_id:
+            expected_static_delays[antenna_config["tpm_y_channel"]] = antenna_config[
+                "delays"
+            ]
+            expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
+                "delays"
+            ]
+    assert static_delays == expected_static_delays

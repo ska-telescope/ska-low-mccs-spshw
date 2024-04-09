@@ -6,41 +6,36 @@
 {{- $subrack_instances := dict}}
 {{- $subrack_simulators := dict}}
 
-{{- range $station_cluster_id, $station_cluster_spec := $platform.array.station_clusters}}
-  {{- range $station_id, $station_spec := $station_cluster_spec.stations}}
-    {{- $station_enabled := dig "enabled" true $station_spec}}
+{{- range $station_name, $station_spec := $platform.array.stations}}
+  {{- $station_enabled := dig "enabled" true $station_spec}}
 
-    {{- $sps_spec := dig "sps" dict $station_spec}}
-    {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
+  {{- $sps_spec := dig "sps" dict $station_spec}}
+  {{- $sps_enabled := dig "enabled" $station_enabled $sps_spec}}
 
-    {{- $subrack_specs := dig "subracks" dict $sps_spec}}
-    {{- range $subrack_id, $subrack_spec := $subrack_specs}}
-      {{- $subrack_enabled := dig "enabled" $sps_enabled $subrack_spec}}
+  {{- $subrack_specs := dig "subracks" dict $sps_spec}}
+  {{- range $subrack_name, $subrack_spec := $subrack_specs}}
+    {{- $subrack_enabled := dig "enabled" $sps_enabled $subrack_spec}}
 
-      {{- if $subrack_enabled}}
-        {{- $station_name := dig "name" (printf "%s-%s" $station_cluster_id $station_id) $station_spec | toString}}
-      
-        {{- $server_name := printf "%s-%d" $station_name (int $subrack_id)}}
-        {{- $subrack_name := printf "low-mccs/subrack/%s" $server_name}}
-        {{- $subrack_number := printf "%s-%d" $station_name (int $subrack_id)}}
-        {{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
-        {{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
-        {{- if $subrack_logging_level_defaults}}
-          {{- $_ := set $subrack_instance "logging_level_default" (first $subrack_logging_level_defaults)}}
-        {{- end }}
-
-        {{- $srmb_host := $subrack_spec.srmb_host}}
-        {{- $srmb_port := dig "srmb_port" 8081 $subrack_spec}}
-
-        {{- $subrack_simulated := dig "simulated" false $subrack_spec}}
-        {{- if $subrack_simulated}}
-          {{- $srmb_host = printf "subrack-simulator-%s" $subrack_number}}
-          {{- $_ := set $subrack_simulators $subrack_number (dict "srmb_host" $srmb_host "srmb_port" $srmb_port)}}
-        {{- end }}
-        {{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
-        {{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
-        {{- $_ := set $subrack_instances $server_name (dict $subrack_name $subrack_instance)}}
+    {{- if $subrack_enabled}}
+      {{- $server_name := printf "%s-%s" $station_name $subrack_name}}
+      {{- $subrack_trl := printf "low-mccs/subrack/%s" $server_name}}
+      {{- $subrack_instance := pick $subrack_spec "nodeSelector"}}
+      {{- $subrack_logging_level_defaults := pluck "logging_level_default" $subrack_spec $defaults}}
+      {{- if $subrack_logging_level_defaults}}
+        {{- $_ := set $subrack_instance "logging_level_default" (first $subrack_logging_level_defaults)}}
       {{- end }}
+
+      {{- $srmb_host := $subrack_spec.srmb_host}}
+      {{- $srmb_port := dig "srmb_port" 8081 $subrack_spec}}
+
+      {{- $subrack_simulated := dig "simulated" false $subrack_spec}}
+      {{- if $subrack_simulated}}
+        {{- $srmb_host = printf "subrack-simulator-%s" $server_name}}
+        {{- $_ := set $subrack_simulators $server_name (dict "srmb_host" $srmb_host "srmb_port" $srmb_port)}}
+      {{- end }}
+      {{- $_ := set $subrack_instance "srmb_host" $srmb_host}}
+      {{- $_ := set $subrack_instance "srmb_port" $srmb_port}}
+      {{- $_ := set $subrack_instances $server_name (dict $subrack_trl $subrack_instance)}}
     {{- end }}
   {{- end }}
 {{- end }}

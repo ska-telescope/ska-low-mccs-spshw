@@ -87,7 +87,7 @@ environments:
       - spshw/values/values-oxford.yaml
       - platform/minikube.yaml
   psi-low:
-    # kubeContext: psi-low
+    kubeContext: psi-low
     values:
       - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=c9f661ff6e223cec2c67cacff9a720a99e0747e7
       - spshw/values/values-psi-low.yaml

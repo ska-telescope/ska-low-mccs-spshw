@@ -166,11 +166,15 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
     return PatchedSpsStationDevice
 
 
-@pytest.fixture(name="daq_trl")
-def daq_trl_fixture() -> str:
+@pytest.fixture(name="antenna_uri")
+def antenna_uri_fixture() -> list[str]:
     """
-    Return a DAQ TRL for testing purposes.
+    Return a uri for antenna data.
 
-    :returns: A DAQ TRL.
+    :returns: A URI for antenna data.
     """
-    return "test/daq/trl"
+    return [
+        "car:ska-low-aavs3?main",
+        "instrument/mccs-configuration/aavs3.yaml",
+        "aavs3",
+    ]

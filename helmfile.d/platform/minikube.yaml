@@ -16,3 +16,5 @@ platform:
       node_selector: ~
       affinity: ~
       tolerations: ~
+    calibration:
+      storage_class: standard

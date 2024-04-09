@@ -39,5 +39,6 @@ platform:
       storage_class: nfss1
       runtime_class: nvidia
       gpu_limit: 1
-
+    calibration:
+      storage_class: nfss1
   # array:  # defined in other yaml files

@@ -83,3 +83,10 @@ livenessProbe:
 readinessProbe:
 {{toYaml .Values.readinessProbe | indent 2 }}
 {{- end }}
+extraVolumes:
+- name: calibration
+  persistentVolumeClaim: 
+    claimName:  calibration
+extraVolumeMounts:
+  - name: calibration
+    mountPath: /product

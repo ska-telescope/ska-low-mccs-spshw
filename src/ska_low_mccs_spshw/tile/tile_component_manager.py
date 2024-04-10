@@ -709,6 +709,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "timing",
         "io",
         "dsp",
+        "adcs",
         "hardware_version",
         "initialise_beamformer",
         "is_beamformer_running",

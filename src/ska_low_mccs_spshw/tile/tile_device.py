@@ -520,6 +520,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="adcs",
+    )
+    def adcs(self: MccsTile) -> str:
+        """
+        Return the tile beamformer and station beamformer status.
+
+        :return: the tile beamformer and station beamformer status
+        """
+        return json.dumps(self.component_manager.adcs)
+
+    @attribute(
+        dtype="DevString",
         label="cspDestinationIp",
     )
     def cspDestinationIp(self: MccsTile) -> str:

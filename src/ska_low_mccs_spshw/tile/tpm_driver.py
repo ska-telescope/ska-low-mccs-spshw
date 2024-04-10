@@ -818,6 +818,16 @@ class TpmDriver(MccsBaseComponentManager):
         return self._tile_health_structure["dsp"]
 
     @property
+    def adcs(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return the tile beamformer and station beamformer status in the TPM.
+
+        :return: dsp status in the TPM
+        """
+        self.logger.debug("TpmDriver: get adcs")
+        return self._tile_health_structure["adcs"]
+
+    @property
     def board_temperature(self: TpmDriver) -> float:
         """
         Return the temperature of the TPM.

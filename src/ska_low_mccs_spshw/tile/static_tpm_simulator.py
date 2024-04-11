@@ -151,7 +151,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         return self._register_map.get(str(address), [])
 
     def find_register(
-        self: StaticTpmSimulatorPatchedReadWrite, address: int | str
+        self: StaticTpmSimulatorPatchedReadWrite, string: int | str
     ) -> list[Any]:
         """
         Find a item in a dictionary.
@@ -159,7 +159,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         This is mocking the reading of a register for the purpose of
         testing TPM_driver
 
-        :param address: address of start of read
+        :param string: Regular expression to search against
 
         :return: registers found at address
         """
@@ -167,7 +167,7 @@ class StaticTpmSimulatorPatchedReadWrite(BaseTpmSimulator):
         for k, v in self._register_map.items():
             if isinstance(k, int):
                 pass
-            elif re.search(str(address), k) is not None:
+            elif re.search(str(string), k) is not None:
                 matches.append(v)
         return matches
 

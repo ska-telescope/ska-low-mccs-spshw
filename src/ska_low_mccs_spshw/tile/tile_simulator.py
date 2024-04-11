@@ -230,14 +230,21 @@ class MockTpm:
         self._station_beamf = [self.beam1, self.beam2]
         self._address_map: dict[str, int] = {}
 
-    def find_register(self: MockTpm, address: str) -> List[Any]:
+    def find_register(
+        self: MockTpm,
+        string: str,
+        display: Optional[bool] = False,
+        info: Optional[bool] = False,
+    ) -> List[Optional[RegisterInfo]]:
         """
         Find a item in a dictionary.
 
         This is mocking the reading of a register for the purpose of
         testing TPM_driver
 
-        :param address: address of start of read
+        :param string: Regular expression to search against
+        :param display: True to output result to console
+        :param info: for linter.
 
         :return: registers found at address.
         """
@@ -245,7 +252,7 @@ class MockTpm:
         for k, v in self._register_map.items():
             if isinstance(k, int):
                 pass
-            elif re.search(str(address), k) is not None:
+            elif re.search(str(string), k) is not None:
                 reg_info = RegisterInfo(
                     k,
                     0x00,
@@ -303,20 +310,23 @@ class MockTpm:
             raise LibraryError(f"Unknown register: {register}")
         self._register_map[register] = values
 
-    def read_register(self: MockTpm, address: int | str, n: int = 1) -> Optional[Any]:
+    def read_register(
+        self: MockTpm, register: int | str, n: int = 1, offset: int = 0
+    ) -> Optional[Any]:
         """
         Get register value.
 
-        :param address: Memory address to read from
+        :param register: Memory register to read from
         :param n: Number of words to read
+        :param offset: Memory address offset to read from
 
         :return: Values
         """
-        if address == ("pll", 0x508):
+        if register == ("pll", 0x508):
             return 0xE7
-        if isinstance(address, int):
-            address = hex(address)
-        return self._register_map.get(address)
+        if isinstance(register, int):
+            register = hex(register)
+        return self._register_map.get(register)
 
     def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
         """
@@ -385,15 +395,20 @@ class PreAdu:
         """
         self.logger = logger
         self.channel_filters: list[float] = [0.00] * 16
+        self._nof_channels: int = 16
 
-    def set_attenuation(self: PreAdu, attenuation: float, channel: list[int]) -> None:
+    def set_attenuation(
+        self: PreAdu, attenuation: float, channels: Optional[list[int]] = None
+    ) -> None:
         """
         Set preadu channel attenuation.
 
         :param attenuation: the attenuation.
-        :param channel: the channel.
+        :param channels: the channels.
         """
-        self.channel_filters[channel[0]] = attenuation
+        if channels is None:
+            channels = list(range(self._nof_channels))
+        self.channel_filters[channels[0]] = attenuation
 
     def get_attenuation(self: PreAdu) -> list[float]:
         """
@@ -547,8 +562,14 @@ class TileSimulator:
         return self._tile_id
 
     @connected
-    def get_adc_rms(self: TileSimulator) -> list[float]:
-        """:return: the mock ADC rms values."""
+    def get_adc_rms(self: TileSimulator, sync: Optional[bool] = False) -> list[float]:
+        """
+        Get ADC power, immediate.
+
+        :param sync: Synchronise RMS read
+
+        :return: the mock ADC rms values.
+        """
         return self._adc_rms
 
     @connected
@@ -567,7 +588,7 @@ class TileSimulator:
 
     @connected
     def initialise_beamformer(
-        self: TileSimulator, start_channel: float, nof_channels: int
+        self: TileSimulator, start_channel: int, nof_channels: int
     ) -> None:
         """
         Mock set the beamformer parameters.
@@ -607,22 +628,79 @@ class TileSimulator:
     def initialise(
         self: TileSimulator,
         station_id: int = 0,
-        pps_delay: int = 0,
         tile_id: int = 0,
+        lmc_use_40g: bool = False,
+        lmc_dst_ip: Optional[str] = None,
+        lmc_dst_port: int = 4660,
+        lmc_integrated_use_40g: bool = False,
+        src_ip_fpga1: Optional[str] = None,
+        src_ip_fpga2: Optional[str] = None,
+        dst_ip_fpga1: Optional[str] = None,
+        dst_ip_fpga2: Optional[str] = None,
+        src_port: int = 4661,
+        dst_port: int = 4660,
+        dst_port_single_port_mode: int = 4662,
+        rx_port_single_port_mode: int = 4662,
+        netmask_40g: Optional[str] = None,
+        gateway_ip_40g: Optional[str] = None,
+        active_40g_ports_setting: str = "port1-only",
+        enable_adc: bool = True,
+        enable_ada: bool = False,
+        enable_test: bool = False,
+        use_internal_pps: bool = False,
+        pps_delay: int = 0,
+        time_delays: int = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
-        active_40g_ports_setting: str = "port1-only",
+        qsfp_detection: str = "auto",
+        adc_mono_channel_14_bit: bool = False,
+        adc_mono_channel_sel: int = 0,
     ) -> None:
         """
         Initialise tile.
 
-        :param station_id: station id
-        :param tile_id: tile id
-        :param pps_delay: PPS delay correction.
-        :param is_first_tile: is the first tile in chain
-        :param is_last_tile: is the lase tile in chain
-        :param active_40g_ports_setting: which 40G port is active.
-            Possible values are port1-only, port2-only and both-ports
+        :param station_id: station ID
+        :param tile_id: Tile ID in the station
+        :param lmc_use_40g: if True use 40G interface to transmit LMC data,
+            otherwise use 1G
+        :param lmc_dst_ip: destination IP address for LMC data packets
+        :param lmc_dst_port: destination UDP port for LMC data packets
+        :param lmc_integrated_use_40g: if True use 40G interface to transmit LMC
+            integrated data, otherwise use 1G
+        :param src_ip_fpga1: source IP address for FPGA1 40G interface
+        :param src_ip_fpga2: source IP address for FPGA2 40G interface
+        :param dst_ip_fpga1: destination IP address for beamformed data from
+            FPGA1 40G interface
+        :param dst_ip_fpga2: destination IP address for beamformed data from
+            FPGA2 40G interface
+        :param src_port: source UDP port for beamformed data packets
+        :param dst_port: destination UDP port for beamformed data packets
+        :param enable_ada: enable adc amplifier, Not present in most TPM versions
+        :param enable_adc: Enable ADC
+        :param active_40g_ports_setting: placeholder docstring
+        :param dst_port_single_port_mode: placeholder docstring
+        :param gateway_ip_40g: placeholder docstring
+        :param netmask_40g: placeholder docstring
+        :param rx_port_single_port_mode: placeholder docstring
+        :param enable_test: setup internal test signal generator instead of ADC
+        :param use_internal_pps: use internal PPS generator synchronised across FPGAs
+        :param pps_delay: PPS delay correction in 625ps units
+        :param time_delays: time domain delays for 32 inputs
+        :param is_first_tile: True if this tile is the first tile in the
+            beamformer chain
+        :param is_last_tile: True if this tile is the last tile in the beamformer chain
+        :param qsfp_detection: "auto" detects QSFP cables automatically,
+            "qsfp1", force QSFP1 cable detected,
+            QSFP2 cable not detected
+            "qsfp2", force QSFP1 cable not detected,
+            QSFP2 cable detected
+            "all", force QSFP1 and QSFP2 cable detected
+            "flyover_test", force QSFP1 and QSFP2
+            cable detected and adjust
+            polarity for board-to-board cable
+            "none", force no cable not detected
+        :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
+        :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -655,7 +733,6 @@ class TileSimulator:
         try:
             return self.fpgas_time[device.value - 1]
         except Exception as e:
-            self.logger.info("Invalid device")
             raise LibraryError("Invalid device specified") from e
 
     @connected
@@ -682,7 +759,7 @@ class TileSimulator:
             return self._pps_delay + self.pps_correction
         return self._pps_delay
 
-    def is_programmed(self: TileSimulator) -> Optional[bool]:
+    def is_programmed(self: TileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
 
@@ -766,9 +843,11 @@ class TileSimulator:
         return None
 
     @connected
-    def check_arp_table(self: TileSimulator) -> bool:
+    def check_arp_table(self: TileSimulator, timeout: float = 30.0) -> bool:
         """
         Check arp table.
+
+        :param timeout: Timeout in seconds
 
         :return: a bool representing if arp table is healthy.
         """
@@ -782,6 +861,8 @@ class TileSimulator:
         dst_ip: Optional[str] = None,
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
+        netmask_40g: Optional[str] = None,
+        gateway_ip_40g: Optional[str] = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -797,6 +878,8 @@ class TileSimulator:
         :param dst_ip: destination service.
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: the maske to apply
+        :param gateway_ip_40g: the gateway ip.
         """
         # This is required to work out where the Tile will send data to.
         # In the Tile simulator we will not be using IP addresses but rather services
@@ -810,8 +893,27 @@ class TileSimulator:
         self.logger.info("This is not implemented")
         return
 
-    def connect(self: TileSimulator) -> None:
-        """Attempt to form a connection with TPM."""
+    def connect(
+        self: TileSimulator,
+        initialise: bool = False,
+        load_plugin: bool = True,
+        enable_ada: bool = False,
+        enable_adc: bool = True,
+        dsp_core: bool = True,
+        adc_mono_channel_14_bit: bool = False,
+        adc_mono_channel_sel: int = 0,
+    ) -> None:
+        """
+        Attempt to form a connection with TPM.
+
+        :param initialise: Initialises the TPM object
+        :param load_plugin: loads software plugins
+        :param enable_ada: Enable ADC amplifier (usually not present)
+        :param enable_adc: Enable ADC
+        :param dsp_core: Enable loading of DSP core plugins
+        :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
+        :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        """
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
             if self.tpm is None:
@@ -821,11 +923,19 @@ class TileSimulator:
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
 
     def mock_off(self: TileSimulator) -> None:
-        """Fake a connection by constructing the TPM."""
+        """
+        Fake a connection by constructing the TPM.
+
+        :NOTE: This method exists in the Simulator Only
+        """
         self.mock_connection_success = False
 
     def mock_on(self: TileSimulator) -> None:
-        """Fake a connection by constructing the TPM."""
+        """
+        Fake a connection by constructing the TPM.
+
+        :NOTE: This method exists in the Simulator Only
+        """
         self.mock_connection_success = True
 
     @connected
@@ -850,7 +960,7 @@ class TileSimulator:
 
     @connected
     def set_channeliser_truncation(
-        self: TileSimulator, trunc: list[int], chan: int
+        self: TileSimulator, trunc: list[int], signal: Optional[int] = None
     ) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
@@ -858,7 +968,7 @@ class TileSimulator:
         :param trunc: list with M values, one for each of the
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
-        :param chan: Input channel to set
+        :param signal: Input signal, 0 to 31. If None, apply to all
         """
         self._channeliser_truncation = trunc
         # self.logger.info("Not implemented, return without error to allow poll.")
@@ -910,16 +1020,18 @@ class TileSimulator:
         self,
         station_id: int,
         subarray_id: int,
-        aperture_id: int,
-        fpga_reference_time: int,
+        nof_antennas: int,
+        ref_epoch: int = -1,
+        start_time: Optional[int] = 0,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
 
         :param station_id: The ID of the station.
         :param subarray_id: The ID of the subarray.
-        :param aperture_id: The ID of the aperture.
-        :param fpga_reference_time: The FPGA reference time used for synchronization.
+        :param nof_antennas: Number of antennas in the station
+        :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
+        :param start_time: start time
 
         :return: a bool representing if command executed without error.
         """
@@ -934,7 +1046,8 @@ class TileSimulator:
 
         :param regions: regions
         """
-        assert self.tpm
+        if self.tpm is None:
+            return
         self.tpm.station_beamf[0].define_channel_table(regions)
         self.tpm.station_beamf[1].define_channel_table(regions)
 
@@ -955,7 +1068,7 @@ class TileSimulator:
 
     @connected
     def load_calibration_coefficients(
-        self: TileSimulator, antenna: int, coefs: list[float]
+        self: TileSimulator, antenna: int, calibration_coefficients: list[float]
     ) -> None:
         """
         Load calibration coefficients.
@@ -975,7 +1088,7 @@ class TileSimulator:
         the parallitic angle), but do not include the geometric delay.
 
         :param antenna: Antenna number (0-15)
-        :param coefs: Calibration coefficient array
+        :param calibration_coefficients: Calibration coefficient array
         """
         self.logger.debug(f"Received calibration coefficients for antenna {antenna}")
 
@@ -990,7 +1103,7 @@ class TileSimulator:
 
     @connected
     def set_pointing_delay(
-        self: TileSimulator, delay_array: list[float], beam_index: int
+        self: TileSimulator, delay_array: list[list[float]], beam_index: int
     ) -> None:
         """
         Set pointing delay.
@@ -1001,21 +1114,32 @@ class TileSimulator:
         self.logger.debug(f"Received pointing delays for beam {beam_index}")
 
     @connected
-    def load_pointing_delay(self: TileSimulator, load_time: int) -> None:
+    def load_pointing_delay(
+        self: TileSimulator, load_time: int = 0, load_delay: int = 64
+    ) -> None:
         """
         Load pointing delay.
 
         :param load_time: load time
+        :param load_delay: delay in (in ADC frames/256) to apply when load_time == 0
         """
         self.logger.debug("Applying pointing delays")
 
     @connected
-    def start_beamformer(self: TileSimulator, start_time: int, duration: int) -> bool:
+    def start_beamformer(
+        self: TileSimulator,
+        start_time: int = 0,
+        duration: int = -1,
+        scan_id: int = 0,
+        mask: int = 0xFFFFFFFFFF,
+    ) -> bool:
         """
         Start beamformer.
 
         :param start_time: start time UTC
         :param duration: duration
+        :param scan_id: ID of the scan, to be specified in the CSP SPEAD header
+        :param mask: Bitmask of the channels to be started. Unsupported by FW
 
         :return: true if the beamformer was started successfully.
         """
@@ -1034,9 +1158,9 @@ class TileSimulator:
     @connected
     def configure_integrated_channel_data(
         self: TileSimulator,
-        integration_time: int,
-        first_channel: int,
-        last_channel: int,
+        integration_time: float = 0.5,
+        first_channel: int = 0,
+        last_channel: int = 512,
     ) -> None:
         """
         Configure and start continuous integrated channel data.
@@ -1082,7 +1206,11 @@ class TileSimulator:
 
     @connected
     def send_raw_data(
-        self: TileSimulator, sync: bool, timestamp: int, seconds: int
+        self: TileSimulator,
+        sync: Optional[bool] = False,
+        timestamp: Optional[int] = None,
+        seconds: Optional[float] = 0.2,
+        fpga_id: Optional[int] = None,
     ) -> None:
         """
         Send raw data.
@@ -1090,15 +1218,21 @@ class TileSimulator:
         :param sync: true to sync
         :param timestamp: timestamp
         :param seconds: When to synchronise
+        :param fpga_id: Specify which FPGA should transmit, 0,1,
+            or None for both FPGAs
         """
         # TODO: This does not send raw SPEAD packets but sends Integrated channel data.
         # Should we create a raw data SPEAD packet generator?
         # Should the data created be meaningful? to what extent?
         # (delay, attenuation, random)
         self.stop_data_transmission()
-        assert self.dst_ip
-        assert self.dst_port
-        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        if not self.dst_ip:
+            _dst_ip: str = ""
+        if not self.dst_port:
+            _dst_port: int = 8080
+        _dst_ip = self.dst_ip or _dst_ip
+        _dst_port = self.dst_port or _dst_port
+        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_raw_data(1)
 
     @connected
@@ -1203,12 +1337,19 @@ class TileSimulator:
         self._pending_data_requests = False
 
     @connected
-    def start_acquisition(self: TileSimulator, start_time: int, delay: float) -> None:
+    def start_acquisition(
+        self: TileSimulator,
+        start_time: Optional[int] = None,
+        delay: int = 2,
+        tpm_start_time: Optional[int] = None,
+    ) -> None:
         """
         Start data acquisition.
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
+        :param tpm_start_time: TPM will act as if it is
+            started at this time (seconds)
         """
         if start_time is None:
             sync_time = time.time() + delay
@@ -1275,7 +1416,7 @@ class TileSimulator:
 
     @connected
     def test_generator_set_noise(
-        self: TileSimulator, amplitude_noise: int, load_time: int
+        self: TileSimulator, amplitude_noise: float = 0.0, load_time: int = 0
     ) -> None:
         """
         Set generator test noise.
@@ -1287,13 +1428,15 @@ class TileSimulator:
 
     @connected
     def set_test_generator_pulse(
-        self: TileSimulator, pulse_code: Any, amplitude_pulse: int
+        self: TileSimulator, freq_code: int, amplitude: float
     ) -> None:
         """
         Set test generator pulse.
 
-        :param pulse_code: pulse code
-        :param amplitude_pulse: amplitude pulse
+        :param freq_code: Code for pulse frequency.
+            Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
+        :param amplitude: Tone peak amplitude,
+            normalized to 127.5 ADC units, resolution 0.5 ADU
         """
         self.logger.error("set_test_generator_pulse not implemented in simulator")
 
@@ -1314,7 +1457,7 @@ class TileSimulator:
             raise LibraryError("Invalid device specified") from e
 
     @connected
-    def test_generator_input_select(self: TileSimulator, inputs: Any) -> None:
+    def test_generator_input_select(self: TileSimulator, inputs: int) -> None:
         """
         Test generator input select.
 
@@ -1359,7 +1502,7 @@ class TileSimulator:
 
     @connected
     def load_antenna_tapering(
-        self: TileSimulator, beam: int, tapering_coefficients: list[float]
+        self: TileSimulator, beam: int, tapering_coefficients: list[int]
     ) -> None:
         """
         Load antenna tapering.
@@ -1387,16 +1530,6 @@ class TileSimulator:
             self.tpm.beam1.is_running()  # type: ignore
             and self.tpm.beam2.is_running()  # type: ignore
         )
-
-    @connected
-    def set_test_generator_tone(self: TileSimulator) -> None:
-        """Set test generator tone."""
-        self.logger.error("set_test_generator_tone not implemented in simulator")
-
-    @connected
-    def set_test_generator_noise(self: TileSimulator) -> None:
-        """Set test generator noise."""
-        self.logger.error("set_test_generator_noise not implemented in simulator")
 
     @connected
     def get_phase_terminal_count(self: TileSimulator) -> int:

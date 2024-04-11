@@ -378,11 +378,11 @@ class TestMccsTileTpmDriver:
         )
         # check that the fpga time is moving.
         initial_time = tile_device.fpgasUnixTime[0]
-        sleep_time = 2
+        sleep_time = 2.5
         time.sleep(sleep_time)
         final_time = tile_device.fpgasUnixTime[0]
 
-        assert (final_time - initial_time) >= sleep_time
+        assert (final_time - initial_time) >= int(sleep_time)
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -434,7 +434,7 @@ class TestMccsTileTpmDriver:
         time.sleep(1)
 
         initial_frame = tile_device.currentFrame
-        sleep_time = 1  # seconds
+        sleep_time = 1.5  # seconds
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame

@@ -732,7 +732,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
-        "sync_fpgas",
         "sysref_present",
         "test_generator_active",
         "test_generator_input_select",

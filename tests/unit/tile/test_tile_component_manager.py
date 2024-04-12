@@ -505,7 +505,6 @@ class TestStaticSimulatorCommon:
             ("stop_integrated_data", 0),
             ("set_lmc_integrated_download", 3),
             ("post_synchronisation", 0),
-            ("sync_fpgas", 0),
         ),
     )
     def test_command(

@@ -620,8 +620,12 @@ class TileSimulator:
         self.tpm._is_programmed = True  # type: ignore
 
     @connected
-    def erase_fpga(self: TileSimulator) -> None:
-        """Erase the fpga firmware."""
+    def erase_fpga(self: TileSimulator, force: bool = True) -> None:
+        """
+        Erase the fpga firmware.
+
+        :param force: force the erase.
+        """
         assert self.tpm
         self.tpm._is_programmed = False
 
@@ -722,7 +726,7 @@ class TileSimulator:
         self.logger.debug("Initialise complete in Tpm.............")
 
     @connected
-    def get_fpga_time(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
+    def get_fpga_time(self: TileSimulator, device: Device) -> int:
         """
         :param device: device.
 
@@ -1038,16 +1042,18 @@ class TileSimulator:
         return self._is_spead_header_write_successful
 
     @connected
-    def set_beamformer_regions(self: TileSimulator, regions: list[list[int]]) -> None:
+    def set_beamformer_regions(
+        self: TileSimulator, region_array: list[list[int]]
+    ) -> None:
         """
-        Set beamformer regions.
+        Set beamformer region_array.
 
-        :param regions: regions
+        :param region_array: region_array
         """
         if self.tpm is None:
             return
-        self.tpm.station_beamf[0].define_channel_table(regions)
-        self.tpm.station_beamf[1].define_channel_table(regions)
+        self.tpm.station_beamf[0].define_channel_table(region_array)
+        self.tpm.station_beamf[1].define_channel_table(region_array)
 
     @connected
     def set_first_last_tile(self: TileSimulator, is_first: bool, is_last: bool) -> bool:
@@ -1180,7 +1186,7 @@ class TileSimulator:
         self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
-        last_channel: int = 512,
+        last_channel: int = 192,
     ) -> None:
         """
         Configure and start continuous integrated beam data.
@@ -1383,14 +1389,6 @@ class TileSimulator:
         """
         self.logger.error("set_lmc_integrated_download not implemented in simulator")
 
-    def sync_fpgas(self: TileSimulator) -> None:
-        """
-        Sync FPGA's.
-
-        :raises NotImplementedError: if not overwritten.
-        """
-        raise NotImplementedError
-
     @connected
     def test_generator_set_tone(
         self: TileSimulator,
@@ -1426,7 +1424,7 @@ class TileSimulator:
 
     @connected
     def set_test_generator_pulse(
-        self: TileSimulator, freq_code: int, amplitude: float
+        self: TileSimulator, freq_code: int, amplitude: float = 0.0
     ) -> None:
         """
         Set test generator pulse.

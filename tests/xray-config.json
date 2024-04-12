@@ -2,7 +2,8 @@
   "test_plans": [
     {
       "select_from_tag": {
-        "default": "XTP-17871"
+        "default": "XTP-17871",
+        "XTP-34301": "XTP-34301"
       }
     }
   ],
@@ -61,8 +62,8 @@
       "env": "CI_COMMIT_BRANCH",
       "maps_to": {
         "default": "",
-        "master": "PI17",
-        "main": "PI17"
+        "master": "PI22",
+        "main": "PI22"
       }
     }
   ],

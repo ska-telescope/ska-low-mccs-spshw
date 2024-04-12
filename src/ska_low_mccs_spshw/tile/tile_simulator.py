@@ -834,8 +834,6 @@ class TileSimulator:
 
         :return: core configuration or list of core configurations or none
         """
-        if core_id == -1:
-            return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
                 if item.get("arp_table_entry") == arp_table_entry:
@@ -1068,7 +1066,7 @@ class TileSimulator:
 
     @connected
     def load_calibration_coefficients(
-        self: TileSimulator, antenna: int, calibration_coefficients: list[float]
+        self: TileSimulator, antenna: int, calibration_coefficients: list[complex]
     ) -> None:
         """
         Load calibration coefficients.
@@ -1483,13 +1481,13 @@ class TileSimulator:
             time.sleep(0.1)
 
     @connected
-    def get_arp_table(self: TileSimulator) -> dict[str, Any]:
+    def get_arp_table(self: TileSimulator) -> dict[int, list[int]]:
         """
         Get arp table.
 
         :return: the app table
         """
-        return {"0": [0, 1], "1": [1]}
+        return {0: [0, 1], 1: [1]}
 
     @connected
     def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:

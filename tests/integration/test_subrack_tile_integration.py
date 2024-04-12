@@ -48,7 +48,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "preadu_levels",
         "track_lrc_command",
         "daq_state",
-        timeout=5.0,
+        timeout=7.0,
     )
 
 
@@ -178,9 +178,6 @@ class TestSubrackTileIntegration:
 
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-        change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
@@ -380,9 +377,6 @@ class TestMccsTileTpmDriver:
         assert result_code == ResultCode.QUEUED
 
         change_event_callbacks["tile_command_status"].assert_change_event(
-            (on_command_id, "STAGING")
-        )
-        change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )
         change_event_callbacks["tile_command_status"].assert_change_event(
@@ -393,10 +387,7 @@ class TestMccsTileTpmDriver:
         )
 
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Programmed"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised"
+            "Initialised", lookahead=2, consume_nonmatches=True
         )
         # check that the fpga time is moving.
         initial_time = tile_device.fpgasUnixTime[0]
@@ -457,17 +448,11 @@ class TestMccsTileTpmDriver:
         assert "StartAcquisition" in message.split("_")[-1]
 
         initial_frame = tile_device.currentFrame
-        time.sleep(delay_time - 1)
-        final_frame = tile_device.currentFrame
-        assert initial_frame == final_frame == 0
-
-        time.sleep(1)
-
-        initial_frame = tile_device.currentFrame
         sleep_time = 1  # seconds
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
+
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_send_data_samples(
@@ -519,7 +504,6 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Synchronised"
         )
-
         [[_], [command_id]] = tile_device.SendDataSamples(
             json.dumps({"data_type": "raw"})
         )

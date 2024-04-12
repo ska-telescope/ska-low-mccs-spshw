@@ -12,31 +12,20 @@ user -> tile: On()
 tile -> tile_component_manager: On(task_callback)
 tile_component_manager -> subrack: On()
 tile_component_manager -> tpl: desire_initialise(task_callback)
+tile<- tile_component_manager: task_callback(QUEUED)
 
 
 loop polling loop
 tile_component_manager -> tpl: get_request(tpmStatus)
 tile_component_manager <- tpl: initialise_request
+
 end
-tile_component_manager -> tpmdriver: Initialise(initialise_request)
-tpmdriver -> aavs: Initialise(initialise_request)
-tpmdriver <- aavs: initialise_result
+tile<- tile_component_manager: task_callback(IN_PROGRESS)
+tile_component_manager -> aavs: Initialise(initialise_request)
 
-loop polling loop
-tile_component_manager -> tpmdriver: calculate_tpm_status()
-tile_component_manager <- tpmdriver: tpmStatus
-tile_component_manager -> tpl: get_request(tpmStatus)
-tile_component_manager <- tpl: status_monitor_request
-tile_component_manager -> tpmdriver: status_monitor_request
-tpmdriver -> aavs: status_monitor_request
-tpmdriver <- aavs: status_monitor_result
-tile_component_manager <- tpmdriver: status_monitor_result
-tile_component_manager -> tile_component_manager: evaluate_state(subrack_says_power, poll_result)
-tile <- tile_component_manager: update device state \n    and attributes
-end
+tile_component_manager <- aavs: initialise_lrc_result
 
-tile <- tpmdriver: initialise_lrc_result
-
+tile<- tile_component_manager: task_callback(COMPLETED || FAILED)
 
 user -> tile: longRunningCommandResult
 user <- tile: longRunningCommandResult

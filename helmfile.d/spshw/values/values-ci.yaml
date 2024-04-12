@@ -6,7 +6,6 @@ platform:
     version: 0.1.0
 
   cluster:
-    domain: techops.internal.skao.int
     daq:
       storage_class: nfss1
 

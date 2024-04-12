@@ -1,7 +1,7 @@
 
-=====================
-Dynamic Tpm Simulator
-=====================
+=======================
+Dynamic Values Generator
+=======================
 
-.. automodule:: ska_low_mccs_spshw.tile.dynamic_tpm_simulator
+.. automodule:: ska_low_mccs_spshw.tile.dynamic_value_generator
    :members:

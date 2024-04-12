@@ -71,11 +71,15 @@ class TileTime:
         :param utc_time: Utc Time in standard rfc3339 format
         :return: frame number equal or after specified time. -1 if error
         """
+        print(f"dfsfsf {utc_time}")
         if self._ref_time == 0:
             return -1
         try:
+            print(f"ssss {utc_time}")
             dt = datetime.strptime(utc_time, self.RFC_FORMAT)
+            print(f"ssss {utc_time}")
             timestamp = dt.replace(tzinfo=timezone.utc).timestamp() - self._ref_time
+            print(f"ssss {utc_time}")
         except ValueError:
             timestamp = -1
 

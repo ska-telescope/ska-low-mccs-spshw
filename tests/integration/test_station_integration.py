@@ -121,7 +121,6 @@ def test_initialise_can_execute(
         consume_nonmatches=True,
     )
 
-    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
@@ -245,11 +244,9 @@ class TestStationTileIntegration:
             consume_nonmatches=True,
         )
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Programmed"
-        )
-        change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised"
         )
+
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
         change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
 
@@ -331,7 +328,6 @@ class TestStationTileIntegration:
             daq_device,
             change_event_callbacks,
         )
-        # Force a poll to get the initial values.
 
         initial_corrections = sps_station_device.ppsDelayCorrections
 

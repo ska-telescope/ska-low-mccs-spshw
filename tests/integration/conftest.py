@@ -19,12 +19,7 @@ from tango import DeviceProxy
 
 from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqSimulator
 from ska_low_mccs_spshw.subrack import SubrackSimulator
-from ska_low_mccs_spshw.tile import (
-    MccsTile,
-    TileComponentManager,
-    TileSimulator,
-    TpmDriver,
-)
+from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulator
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
@@ -141,13 +136,11 @@ def integration_test_context_fixture(
 @pytest.fixture(name="patched_tile_device_class")
 def patched_tile_device_class_fixture(
     tile_component_manager: TileComponentManager,
-    tpm_driver: TpmDriver,
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
     :param tile_component_manager: A component manager.
-    :param tpm_driver: The TpmDriver this component manager uses.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -197,7 +190,7 @@ def tile_component_manager_fixture(
     subrack_id: int,
     subrack_bay: int,
     tpm_version: str,
-    tpm_driver: TpmDriver,
+    tile_simulator: TileSimulator,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -205,7 +198,7 @@ def tile_component_manager_fixture(
     :param logger: the logger to be used by this object.
     :param tile_id: the unique ID for the tile
     :param station_id: the ID of the station to which this tile belongs.
-    :param tpm_driver: a TpmDriver driving a simulated tile
+    :param tile_simulator: a tile_simulator to use as the backend.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_bay: This tile's position in its subrack
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
@@ -229,38 +222,7 @@ def tile_component_manager_fixture(
         subrack_bay,
         unittest.mock.Mock(),
         unittest.mock.Mock(),
-        tpm_driver,
-    )
-
-
-@pytest.fixture(name="tpm_driver")
-def tpm_driver_fixture(
-    logger: logging.Logger,
-    tile_id: int,
-    station_id: int,
-    tpm_version: str,
-    tile_simulator: TileSimulator,
-) -> TpmDriver:
-    """
-    Return a TPMDriver using a tile_simulator.
-
-    :param logger: a object that implements the standard logging
-        interface of :py:class:`logging.Logger`
-    :param tile_id: the unique ID for the tile
-    :param station_id: the ID of the station to which this tile belongs.
-    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
-    :param tile_simulator: The tile used by the TpmDriver.
-
-    :return: a TpmDriver driving a simulated tile
-    """
-    return TpmDriver(
-        logger,
-        tile_id - 1,
-        station_id,
         tile_simulator,
-        tpm_version,
-        unittest.mock.Mock(),
-        unittest.mock.Mock(),
     )
 
 

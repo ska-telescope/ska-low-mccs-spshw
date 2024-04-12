@@ -38,6 +38,49 @@ def acquire_timeout(lock: threading.Lock, timeout: float) -> Iterator[bool]:
             lock.release()
 
 
+def check_hardware_lock_claimed(func: Wrapped) -> Wrapped:
+    """
+    Return a function that checks the hardware lock is claimed before executing.
+
+    The component needs to have claimed a lock, in order for
+    the function to be called.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @check_hardware_lock_claimed
+        def initialise(self):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function
+    """
+
+    @functools.wraps(func)
+    def _wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
+        """
+        Check that the component has its hardware lock claimed before execution.
+
+        This is a wrapper function that implements the functionality of
+        the decorator.
+
+        :param component: the component to check
+        :param args: positional arguments to the wrapped function
+        :param kwargs: keyword arguments to the wrapped function
+
+        :raises AssertionError: when hardware lock has is not claimed.
+
+        :return: whatever the wrapped function returns
+        """
+        if not component._hardware_lock.locked():
+            raise AssertionError("Lock has not been acquired, cannot execute command.")
+        return func(component, *args, **kwargs)
+
+    return cast(Wrapped, _wrapper)
+
+
 def int2ip(addr: int) -> str:
     """
     Convert integer IPV4 into formatted dot address.

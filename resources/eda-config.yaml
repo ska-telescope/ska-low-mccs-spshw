@@ -1,0 +1,414 @@
+db: "*" # depends on the platform we are uploading to
+manager: "*" # depends on the platform we are uploading to
+archiver: "*" # depends on the platform we are uploading to
+configuration:
+  - class: SpsStation
+    attributes:
+      healthState:
+        code_push_event: true
+        archive_period: 0
+      adminMode:
+        code_push_event: true
+        archive_period: 0
+      obsState:
+        code_push_event: true
+        archive_period: 0
+      commandedObsState:
+        code_push_event: true
+        archive_period: 0
+      obsMode:
+        code_push_event: true
+        archive_period: 0
+      configurationProgress:
+        code_push_event: true
+        archive_period: 0
+      configurationDelayExpected:
+        code_push_event: true
+        archive_period: 0
+      xPolBandpass:
+        code_push_event: true
+        archive_period: 0
+      yPolBandpass:
+        code_push_event: true
+        archive_period: 0
+      daqTRL:
+        code_push_event: true
+        archive_period: 0
+      isCalibrated:
+        code_push_event: true
+        archive_period: 0
+      isConfigured:
+        code_push_event: true
+        archive_period: 0
+      antennasMapping:
+        code_push_event: true
+        archive_period: 0
+      antennaInfo:
+        code_push_event: true
+        archive_period: 0
+      staticTimeDelays:
+        code_push_event: true
+        archive_period: 0
+      channeliserRounding:
+        code_push_event: true
+        archive_period: 0
+      cspRounding:
+        code_push_event: true
+        archive_period: 0
+      preaduLevels:
+        code_push_event: true
+        archive_period: 0
+      ppsDelays:
+        code_push_event: true
+        archive_period: 0
+      ppsDelayCorrections:
+        code_push_event: true
+        archive_period: 0
+      beamformerTable:
+        code_push_event: true
+        archive_period: 0
+      fortyGbNetworkAddress:
+        code_push_event: true
+        archive_period: 0
+      cspIngestAddress:
+        code_push_event: true
+        archive_period: 0
+      cspIngestPort:
+        code_push_event: true
+        archive_period: 0
+      cspSourcePort:
+        code_push_event: true
+        archive_period: 0
+      isProgrammed:
+        code_push_event: true
+        archive_period: 0
+      testGeneratorActive:
+        code_push_event: true
+        archive_period: 0
+      isBeamformerRunning:
+        code_push_event: true
+        archive_period: 0
+      tileProgrammingState:
+        code_push_event: true
+        archive_period: 0
+      adcPower:
+        code_push_event: true
+        archive_period: 0
+      boardTemperaturesSummary:
+        code_push_event: true
+        archive_period: 0
+      fpgaTemperaturesSummary:
+        code_push_event: true
+        archive_period: 0
+      ppsDelaySummary:
+        code_push_event: true
+        archive_period: 0
+      sysrefPresentSummary:
+        code_push_event: true
+        archive_period: 0
+      pllLockedSummary:
+        code_push_event: true
+        archive_period: 0
+      ppsPresentSummary:
+        code_push_event: true
+        archive_period: 0
+      clockPresentSummary:
+        code_push_event: true
+        archive_period: 0
+      fortyGbNetworkErrors:
+        code_push_event: true
+        archive_period: 0
+      healthModelParams:
+        code_push_event: true
+        archive_period: 0
+      State:
+        code_push_event: true
+        archive_period: 0
+      Status:
+        code_push_event: true
+        archive_period: 0
+  - class: MccsSubrack
+    attributes:
+      healthState:
+        code_push_event: true
+        archive_period: 0
+      adminMode:
+        code_push_event: true
+        archive_period: 0
+      healthModelParams:
+        code_push_event: true
+        archive_period: 0
+      tpmCount:
+        code_push_event: true
+        archive_period: 0
+      tpmPresent:
+        code_push_event: true
+        archive_period: 0
+      tpm1PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm2PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm3PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm4PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm5PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm6PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm7PowerState:
+        code_push_event: true
+        archive_period: 0
+      tpm8PowerState:
+        code_push_event: true
+        archive_period: 0
+      backplaneTemperatures:
+        code_push_event: true
+        archive_period: 0
+      boardTemperatures:
+        code_push_event: true
+        archive_period: 0
+      boardCurrent:
+        code_push_event: true
+        archive_period: 0
+      powerSupplyCurrents:
+        code_push_event: true
+        archive_period: 0
+      powerSupplyFanSpeeds:
+        code_push_event: true
+        archive_period: 0
+      powerSupplyPowers:
+        code_push_event: true
+        archive_period: 0
+      powerSupplyVoltages:
+        code_push_event: true
+        archive_period: 0
+      subrackFanSpeeds:
+        code_push_event: true
+        archive_period: 0
+      subrackFanSpeedsPercent:
+        code_push_event: true
+        archive_period: 0
+      subrackFanModes:
+        code_push_event: true
+        archive_period: 0
+      tpmCurrents:
+        code_push_event: true
+        archive_period: 0
+      tpmPowers:
+        code_push_event: true
+        archive_period: 0
+      tpmVoltages:
+        code_push_event: true
+        archive_period: 0
+      State:
+        code_push_event: true
+        archive_period: 0
+      Status:
+        code_push_event: true
+        archive_period: 0
+  - class: MccsTile
+    attributes:
+      healthState:
+        code_push_event: true
+        archive_period: 0
+      adminMode:
+        code_push_event: true
+        archive_period: 0
+      voltages:
+        code_push_event: true
+        archive_period: 0
+      temperatures:
+        code_push_event: true
+        archive_period: 0
+      currents:
+        code_push_event: true
+        archive_period: 0
+      timing:
+        code_push_event: true
+        archive_period: 0
+      io:
+        code_push_event: true
+        archive_period: 0
+      dsp:
+        code_push_event: true
+        archive_period: 0
+      cspDestinationIp:
+        code_push_event: true
+        archive_period: 0
+      cspDestinationMac:
+        code_push_event: true
+        archive_period: 0
+      cspDestinationPort:
+        code_push_event: true
+        archive_period: 0
+      logicalTileId:
+        code_push_event: true
+        archive_period: 0
+      tileProgrammingState:
+        code_push_event: true
+        archive_period: 0
+      stationId:
+        code_push_event: true
+        archive_period: 0
+      firmwareName:
+        code_push_event: true
+        archive_period: 0
+      firmwareVersion:
+        code_push_event: true
+        archive_period: 0
+      voltageMon:
+        code_push_event: true
+        archive_period: 0
+      isProgrammed:
+        code_push_event: true
+        archive_period: 0
+      boardTemperature:
+        code_push_event: true
+        archive_period: 0
+      fpga1Temperature:
+        code_push_event: true
+        archive_period: 0
+      fpga2Temperature:
+        code_push_event: true
+        archive_period: 0
+      fpgasUnixTime:
+        code_push_event: true
+        archive_period: 0
+      fpgaTime:
+        code_push_event: true
+        archive_period: 0
+      fpgaReferenceTime:
+        code_push_event: true
+        archive_period: 0
+      fpgaFrameTime:
+        code_push_event: true
+        archive_period: 0
+      antennaIds:
+        code_push_event: true
+        archive_period: 0
+      fortyGbDestinationIps:
+        code_push_event: true
+        archive_period: 0
+      fortyGbDestinationPorts:
+        code_push_event: true
+        archive_period: 0
+      adcPower:
+        code_push_event: true
+        archive_period: 0
+      currentTileBeamformerFrame:
+        code_push_event: true
+        archive_period: 0
+      currentFrame:
+        code_push_event: true
+        archive_period: 0
+      pendingDataRequests:
+        code_push_event: true
+        archive_period: 0
+      isBeamformerRunning:
+        code_push_event: true
+        archive_period: 0
+      phaseTerminalCount:
+        code_push_event: true
+        archive_period: 0
+      ppsDelay:
+        code_push_event: true
+        archive_period: 0
+      ppsDelayCorrection:
+        code_push_event: true
+        archive_period: 0
+      testGeneratorActive:
+        code_push_event: true
+        archive_period: 0
+      ppsPresent:
+        code_push_event: true
+        archive_period: 0
+      clockPresent:
+        code_push_event: true
+        archive_period: 0
+      sysrefPresent:
+        code_push_event: true
+        archive_period: 0
+      pllLocked:
+        code_push_event: true
+        archive_period: 0
+      channeliserRounding:
+        code_push_event: true
+        archive_period: 0
+      staticTimeDelays:
+        code_push_event: true
+        archive_period: 0
+      cspRounding:
+        code_push_event: true
+        archive_period: 0
+      preaduLevels:
+        code_push_event: true
+        archive_period: 0
+      beamformerTable:
+        code_push_event: true
+        archive_period: 0
+      healthModelParams:
+        code_push_event: true
+        archive_period: 0
+      temperatureHealth:
+        code_push_event: true
+        archive_period: 0
+      voltageHealth:
+        code_push_event: true
+        archive_period: 0
+      currentHealth:
+        code_push_event: true
+        archive_period: 0
+      alarmHealth:
+        code_push_event: true
+        archive_period: 0
+      adcHealth:
+        code_push_event: true
+        archive_period: 0
+      timingHealth:
+        code_push_event: true
+        archive_period: 0
+      ioHealth:
+        code_push_event: true
+        archive_period: 0
+      dspHealth:
+        code_push_event: true
+        archive_period: 0
+      State:
+        code_push_event: true
+        archive_period: 0
+      Status:
+        code_push_event: true
+        archive_period: 0
+  - class: MccsDaqReceiver
+    attributes:
+      healthState:
+        code_push_event: true
+        archive_period: 0
+      adminMode:
+        code_push_event: true
+        archive_period: 0
+      dataReceivedResult:
+        code_push_event: true
+        archive_period: 0
+      xPolBandpass:
+        code_push_event: true
+        archive_period: 0
+      yPolBandpass:
+        code_push_event: true
+        archive_period: 0
+      rmsPlot:
+        code_push_event: true
+        archive_period: 0
+      State:
+        code_push_event: true
+        archive_period: 0
+      Status:
+        code_push_event: true
+        archive_period: 0

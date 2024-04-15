@@ -90,6 +90,7 @@ nitpick_ignore = [
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "pyaavs.tile.Tile"),
     ("py:class", "pyaavs.tile_wrapper.Tile"),
+    ("py:exc", "LibraryError"),
     ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
     ("py:class", "starlette.requests.Request"),  # mkdocs-based
     ("py:class", "uvicorn.config.Config"),  # mkdocs-based

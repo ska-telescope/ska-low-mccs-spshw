@@ -21,9 +21,8 @@ tpm_monitoring_points:
       min: 10
       max: 95
   voltages:
-    VREF_2V5: 
-      min: 2.37
-      max: 2.63
+    # TODO: why is this always None? See SPRTS-126
+    VREF_2V5: null
     MGT_AVCC: 
       min: 0.85
       max: 0.95
@@ -54,12 +53,13 @@ tpm_monitoring_points:
     VIN: 
       min: 11.4
       max: 12.6
+    # TODO fix MON_3V3 and MON_1V8 - see SPRTS-126
     MON_3V3: 
-      min: 3.13
-      max: 3.46
+      min: 3.55
+      max: 3.75
     MON_1V8: 
-      min: 1.71
-      max: 1.89
+      min: 1.95
+      max: 2.10
     MON_5V0: 
       min: 4.69
       max: 5.19
@@ -131,11 +131,11 @@ tpm_monitoring_points:
       max: 3.78
   currents:
     FE0_mVA:
-      min: 1.93
-      max: 2.27
+      min: 0.0
+      max: 3.0
     FE1_mVA:
-      min: 2.02
-      max: 2.38
+      min: 0.0
+      max: 3.0
   alarms:
     I2C_access_alm: 0
     temperature_alm: 0

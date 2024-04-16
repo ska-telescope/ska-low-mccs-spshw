@@ -49,9 +49,9 @@ class TestTileHealthModel:
                 HealthState.OK,
             ),
             (
-                {"currents": {"FE0_mVA": 2.5}},
+                {"currents": {"FE0_mVA": 3.2}},
                 HealthState.FAILED,
-                {"currents": {"FE0_mVA": 2.4}},
+                {"currents": {"FE0_mVA": 3.1}},
                 HealthState.FAILED,
             ),
             (

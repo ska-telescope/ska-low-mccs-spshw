@@ -46,7 +46,9 @@ class TileData:
     TILE_MONITORING_POINTS = {
         "temperatures": {"board": None, "FPGA0": None, "FPGA1": None},
         "voltages": {
-            "VREF_2V5": None,
+            # TODO: this is always None, but we can't assert against that so omitting
+            # See SPRTS-126
+            # "VREF_2V5": None,
             "MGT_AVCC": None,
             "VM_SW_AMP": None,
             "MGT_AVTT": None,

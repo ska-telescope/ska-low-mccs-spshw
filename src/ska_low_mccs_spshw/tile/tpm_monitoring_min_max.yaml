@@ -21,46 +21,48 @@ tpm_monitoring_points:
       min: 10
       max: 95
   voltages:
-    # TODO: why is this always None? See SPRTS-126
-    VREF_2V5: null
-    MGT_AVCC: 
+    # TODO: why is this always None? See SPRTS-126. Possibly remove for good.
+#    VREF_2V5:
+#      min: 0.0
+#      max: 0.0
+    MGT_AVCC:
       min: 0.85
       max: 0.95
-    MGT_AVTT: 
+    MGT_AVTT:
       min: 1.14
       max: 1.26
-    SW_AVDD1: 
+    SW_AVDD1:
       min: 1.04
       max: 1.16
-    SW_AVDD2: 
+    SW_AVDD2:
       min: 2.18
       max: 2.42
-    AVDD3: 
+    AVDD3:
       min: 2.37
       max: 2.6
-    MAN_1V2: 
+    MAN_1V2:
       min: 1.14
       max: 1.26
-    DDR0_VREF: 
+    DDR0_VREF:
       min: 0.57
       max: 0.63
-    DDR1_VREF: 
+    DDR1_VREF:
       min: 0.57
       max: 0.63
-    VM_DRVDD: 
+    VM_DRVDD:
       min: 1.71
       max: 1.89
-    VIN: 
+    VIN:
       min: 11.4
       max: 12.6
     # TODO fix MON_3V3 and MON_1V8 - see SPRTS-126
-    MON_3V3: 
+    MON_3V3:
       min: 3.55
       max: 3.75
-    MON_1V8: 
+    MON_1V8:
       min: 1.95
       max: 2.10
-    MON_5V0: 
+    MON_5V0:
       min: 4.69
       max: 5.19
     VM_ADA0:
@@ -69,64 +71,64 @@ tpm_monitoring_points:
     VM_ADA1:
       min: 0
       max: 0
-    VM_AGP0: 
+    VM_AGP0:
       min: 0.84
       max: 0.99
-    VM_AGP1: 
+    VM_AGP1:
       min: 0.84
       max: 0.99
-    VM_AGP2: 
+    VM_AGP2:
       min: 0.84
       max: 0.99
-    VM_AGP3: 
+    VM_AGP3:
       min: 0.84
       max: 0.99
-    VM_CLK0B: 
+    VM_CLK0B:
       min: 3.04
       max: 3.56
-    VM_DDR0_VTT: 
+    VM_DDR0_VTT:
       min: 0.55
       max: 0.65
-    VM_FE0: 
+    VM_FE0:
       min: 3.22
       max: 3.78
-    VM_MGT0_AUX: 
+    VM_MGT0_AUX:
       min: 1.66
       max: 1.94
-    VM_PLL: 
+    VM_PLL:
       min: 3.04
       max: 3.56
-    VM_AGP4: 
+    VM_AGP4:
       min: 0.84
       max: 0.99
-    VM_AGP5: 
+    VM_AGP5:
       min: 0.84
       max: 0.99
-    VM_AGP6: 
+    VM_AGP6:
       min: 0.84
       max: 0.99
-    VM_AGP7: 
+    VM_AGP7:
       min: 0.84
       max: 0.99
-    VM_CLK1B: 
+    VM_CLK1B:
       min: 3.04
       max: 3.56
-    VM_DDR1_VDD: 
+    VM_DDR1_VDD:
       min: 1.1
       max: 1.3
-    VM_DDR1_VTT: 
+    VM_DDR1_VTT:
       min: 0.55
       max: 0.65
-    VM_DVDD: 
+    VM_DVDD:
       min: 1.01
       max: 1.19
-    VM_FE1: 
+    VM_FE1:
       min: 3.22
       max: 3.78
-    VM_MGT1_AUX: 
+    VM_MGT1_AUX:
       min: 1.66
       max: 1.94
-    VM_SW_AMP: 
+    VM_SW_AMP:
       min: 3.22
       max: 3.78
   currents:
@@ -193,10 +195,10 @@ tpm_monitoring_points:
       ADC12: True
       ADC13: True
       ADC14: True
-      ADC15: True 
+      ADC15: True
   timing:
     clocks:
-      FPGA0: 
+      FPGA0:
         JESD: True
         DDR: True
         UDP: True

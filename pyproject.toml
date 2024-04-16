@@ -10,6 +10,9 @@ documentation = "https://developer.skatelescope.org/projects/ska-low-mccs-spshw"
 [[tool.poetry.source]]
 name = 'ska-nexus'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
+[[tool.poetry.source]]
+name = "PyPI-public"
+url = 'https://pypi.org/simple'
 
 [tool.poetry.dependencies]
 python = "~3.10"  
@@ -96,6 +99,24 @@ testpaths = "tests/"
 addopts = "--json-report --json-report-file=build/reports/report.json --cov-report html:build/htmlcov --cov-report xml:build/reports/code-coverage.xml --cov-report term:skip-covered --cov=ska_low_mccs_spshw --junitxml=build/reports/unit-tests.xml --verbose"
 console_output_style = "progress"
 junit_family = "legacy"
+markers = ["XTP-25768",
+"XTP-25769",
+"XTP-34297",
+"XTP-34300",
+"XTP-34301",
+"XTP-25944",
+"XTP-25989",
+"XTP-25946",
+"XTP-21181",
+"XTP-21182",
+"XTP-21184",
+"XTP-21185",
+"XTP-17870",
+"XTP-17871",
+"XTP-17875",
+"XTP-17876",
+"XTP-34316",
+]
 
 [tool.coverage.paths]
 source = ["src"]

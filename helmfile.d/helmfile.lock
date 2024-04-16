@@ -1,4 +1,4 @@
-version: 0.157.0
+version: 0.155.0
 dependencies:
 - name: jupyterhub
   repository: https://jupyterhub.github.io/helm-chart
@@ -24,5 +24,5 @@ dependencies:
 - name: ska-tango-taranta-dashboard-pvc
   repository: https://artefact.skao.int/repository/helm-internal
   version: 1.4.1
-digest: sha256:da5060f161be332b06a0ae4b03fcb0416d34659d085c6f25c3d83a0d798fdd2a
-generated: "2024-02-09T14:13:52.316516902Z"
+digest: sha256:0b216334ff5984fb802a06526f667a17dff689447d99f87a4ab15430c6522b42
+generated: "2024-04-12T09:42:00.021964652+01:00"

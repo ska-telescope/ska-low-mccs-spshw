@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable
+from typing import Any, Callable, Optional
 
 from psycopg import sql
 from psycopg.rows import dict_row
@@ -133,10 +133,12 @@ class CalibrationStoreDatabaseConnection:
                 )
 
                 result = cx.execute(query, [frequency_channel, outside_temperature])
-                row = result.fetchone()
+                row: Optional[
+                    dict[str, Any]
+                ] = result.fetchone()  # type: ignore[assignment]
                 if row is None:
                     return []
-                return row["calibration"]
+                return row["calibration"]  # type: ignore[call-overload]
         except PoolClosed as exc:
             self._logger.info("Pool closed already.")
             self._connection_tries += 1

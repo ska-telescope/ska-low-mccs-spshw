@@ -50,29 +50,29 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     )
 
 
-@pytest.fixture(name="cabinet_network_address", scope="session")
-def cabinet_network_address_fixture() -> str:
+@pytest.fixture(name="station_network_address", scope="session")
+def station_network_address_fixture() -> str:
     """
-    Return the station cabinet network address.
+    Return the station network address.
 
-    :return: the station cabinet network address
+    :return: the station network address
     """
-    return "10.0.0.0"
+    return "10.0.0.152"
 
 
 @pytest.fixture(name="test_context")
 def test_context_fixture(
-    cabinet_network_address: str,
+    station_network_address: str,
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     patched_sps_station_device_class: type[SpsStation],
     daq_trl: str,
+    daq_id: int,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
 
-    :param cabinet_network_address: the network address of the SPS
-        cabinet
+    :param station_network_address: the network address of the SPS station
     :param mock_subrack_device_proxy: a mock return as a device proxy to
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
@@ -81,6 +81,7 @@ def test_context_fixture(
         that has been patched with extra commands that mock system under
         control behaviours.
     :param daq_trl: a Tango Resource Locator of a DAQ instance.
+    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: a test context.
     """
@@ -91,7 +92,7 @@ def test_context_fixture(
         harness.add_mock_tile_device(i + 1, mock_tile_device_proxy)
 
     harness.set_sps_station_device(
-        cabinet_network_address,
+        station_network_address,
         subrack_ids=[1],
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
         daq_trl=daq_trl,
@@ -100,6 +101,9 @@ def test_context_fixture(
     harness.add_field_station_device(
         device_class=MockFieldStation,
     )
+
+    harness.set_daq_instance()
+    harness.set_daq_device(daq_id=daq_id, address=None)
 
     with harness as context:
         yield context
@@ -416,9 +420,9 @@ def test_On(
                     if i != num_tiles - 1
                     else csp_ingest_address
                 ),
-                "destination_port": csp_ingest_port + 2
-                if not last_tile
-                else csp_ingest_port,
+                "destination_port": (
+                    csp_ingest_port + 2 if not last_tile else csp_ingest_port
+                ),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -589,9 +593,9 @@ def test_Initialise(
                     if i != num_tiles - 1
                     else csp_ingest_address
                 ),
-                "destination_port": csp_ingest_port + 2
-                if not last_tile
-                else csp_ingest_port,
+                "destination_port": (
+                    csp_ingest_port + 2 if not last_tile else csp_ingest_port
+                ),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -1103,15 +1107,15 @@ def test_isConfigured(station_device: SpsStation) -> None:
 
 
 def test_fortyGbNetworkAddress(
-    station_device: SpsStation, cabinet_network_address: str
+    station_device: SpsStation, station_network_address: str
 ) -> None:
     """
     Test of the fortyGbNetworkAddress attribute.
 
     :param station_device: The station device to use
-    :param cabinet_network_address: the station network cabinet address
+    :param station_network_address: the station network address
     """
-    assert station_device.fortyGbNetworkAddress == cabinet_network_address
+    assert station_device.fortyGbNetworkAddress == station_network_address
 
 
 def test_write_read_channeliser_rounding(

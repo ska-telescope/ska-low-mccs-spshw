@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Iterator
+from typing import Any, Iterator, Optional
 
 import pytest
 import tango
@@ -539,13 +539,15 @@ def then_solution_stored(
 
         result = cx.execute(query, [frequency_channel, outside_temperature])
         # fetchone to get the most recent
-        row = result.fetchone()
+        row: Optional[dict[str, Any]] = result.fetchone()  # type: ignore[assignment]
         if row is None:
             pytest.fail(
                 "Solution not found in database for "
                 f"channel {frequency_channel}, temperature {outside_temperature}"
             )
-        assert row["calibration"] == pytest.approx(calibration_solution)
+        assert row["calibration"] == pytest.approx(  # type: ignore[call-overload]
+            calibration_solution
+        )
 
 
 @then("existing data is not overwritten")
@@ -576,13 +578,13 @@ def then_existing_data_not_overwritten(
         result.fetchone()
 
         # then get the second-most recent, which will be the existing data
-        row = result.fetchone()
+        row: Optional[dict[str, Any]] = result.fetchone()  # type: ignore[assignment]
         if row is None:
             pytest.fail(
                 "Solution not found in database for "
                 f"channel {frequency_channel}, temperature {outside_temperature}"
             )
-        assert row["calibration"] == pytest.approx(
+        assert row["calibration"] == pytest.approx(  # type: ignore[call-overload]
             calibration_solutions[(frequency_channel, outside_temperature)]
         )
 

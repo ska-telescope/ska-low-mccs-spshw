@@ -1,42 +1,34 @@
 platform:
   metadata:
-    version: 0.0.9
+    version: 0.1.0
     description: A platform configuration specification for Arcetri
 
   # cluster:  specified by minikube.yaml
 
   array:
     name: arcetri
-    station_clusters:
-      "a1":
-        cabinets:
-          "1":
-            # The cabinet subnet ought properly to be the second /25 in a /24
-            # (the first /25 is for non-science data,
-            # the second for science data).
-            # This schema is currently not followed in Arcetri,
-            # but fortunately all we need here is any vacant /25.
-            subnet: 10.0.0.0
-        stations:
-          "1":
-            id: 1
-            name: arcetri
-            sps:
-              cabinet: "1"
-              subracks:
-                "1":
-                  srmb_host: 10.0.10.64
-                  srmb_port: 8081
-              tpms:
-                "1":
-                  host: 10.0.10.71
-                  port: 10000
-                  version: tpm_v1_6
-                  subrack: 1
-                  subrack_slot: 1
-                "2":
-                  host: 10.0.10.74
-                  port: 10000
-                  version: tpm_v1_6
-                  subrack: 1
-                  subrack_slot: 4
+    stations:
+      arcetri:
+        id: 1
+        sps:
+          network_address: 10.0.0.152
+          subracks:
+            sr1:
+              srmb_host: 10.0.10.64
+              srmb_port: 8081
+          tpms:
+            tpm1:
+              id: 0
+              host: 10.0.10.71
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 1
+            tpm2:
+              id: 1
+              host: 10.0.10.74
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 4
+

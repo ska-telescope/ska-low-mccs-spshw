@@ -13,13 +13,18 @@
         },
         "tag": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "string",
-              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-dev\\.c[0-9a-f]{8})?$"
+              "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)((-dev\\.c[0-9a-f]{8})|(-dirty))?$"
             }
           ],
-          "type": ["string", "null"]
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "pullPolicy": {
           "type": "string",
@@ -50,7 +55,7 @@
                   "minimum": 1,
                   "maximum": 512
                 },
-                "cabinet_network_address": {
+                "station_network_address": {
                   "type": "string",
                   "format": "ipv4"
                 },
@@ -63,13 +68,15 @@
                 "subracks": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
                   }
                 },
                 "tpms": {
                   "type": "array",
                   "items": {
-                    "type": "string"
+                    "type": "string",
+                    "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
                   }
                 },
                 "logging_level_default": {
@@ -80,7 +87,7 @@
               },
               "required": [
                 "station_id",
-                "cabinet_network_address",
+                "station_network_address",
                 "antenna_config_uri",
                 "subracks",
                 "tpms"
@@ -166,7 +173,10 @@
                   "maximum": 5
                 }
               },
-              "required": ["field_station_trl", "calibration_store_trl"],
+              "required": [
+                "field_station_trl",
+                "calibration_store_trl"
+              ],
               "additionalProperties": false
             }
           }
@@ -205,8 +215,12 @@
                 "receiver_ip": {
                   "type": "string",
                   "oneOf": [
-                    {"format": "ipv4"},
-                    {"maxLength": 0}
+                    {
+                      "format": "ipv4"
+                    },
+                    {
+                      "maxLength": 0
+                    }
                   ]
                 },
                 "receiver_port": {
@@ -266,7 +280,10 @@
                   "type": "object"
                 }
               },
-              "required": ["srmb_host", "srmb_port"],
+              "required": [
+                "srmb_host",
+                "srmb_port"
+              ],
               "additionalProperties": false
             }
           }
@@ -304,7 +321,10 @@
                   "minimum": 1
                 },
                 "version": {
-                  "enum": ["tpm_v1_2", "tpm_v1_6"]
+                  "enum": [
+                    "tpm_v1_2",
+                    "tpm_v1_6"
+                  ]
                 },
                 "subrack": {
                   "type": "string"
@@ -369,7 +389,10 @@
                 "minimum": 1
               }
             },
-            "required": ["host", "port"],
+            "required": [
+              "host",
+              "port"
+            ],
             "additionalProperties": false
           }
         },
@@ -391,7 +414,10 @@
                 "minimum": 1
               }
             },
-            "required": ["srmb_host", "srmb_port"],
+            "required": [
+              "srmb_host",
+              "srmb_port"
+            ],
             "additionalProperties": false
           }
         }

@@ -1,0 +1,70 @@
+defaults:
+  logging_level_default: 5
+
+platform:
+  metadata:
+    version: 0.1.0
+
+  cluster:
+    daq:
+      storage_class: nfss1
+
+  array:
+    stations:
+      ci-1:
+        id: 1
+        sps:
+          network_address: 10.0.0.152
+          daq:
+            simulated: true
+          subracks:
+            sr1:
+              simulated: true
+              srmb_host: srmb-1
+              srmb_port: 8081
+          tpms:
+            tpm10:
+              id: 9
+              simulated: true
+              host: 10.0.10.201
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 1
+          antenna_config_uri:
+            uri: "car:ska-low-aavs3?main"
+            path: "instrument/mccs-configuration/aavs3.yaml"
+      real-daq-1:
+        id: 1
+        sps:
+          network_address: 10.1.0.152
+          daq:
+            simulated: false
+          subracks:
+            sr1:
+              simulated: true
+              srmb_host: srmb-1
+              srmb_port: 8081
+          tpms:
+            tpm10:
+              id: 9
+              simulated: true
+              host: 10.0.10.201
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 1
+
+# Use helm_values to set arbitrary helm values.
+# These are passed through to the helm values file as-is.
+# For example,
+#
+# helm_values:
+#   # image:
+#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#   #   tag: 0.11.0-dev.cc21201e6
+
+#   ska-low-mccs-daq:
+#     image:
+#       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+#       tag: 0.6.1-dev.c72446f19

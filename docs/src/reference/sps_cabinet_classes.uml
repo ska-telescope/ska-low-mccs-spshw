@@ -8,7 +8,7 @@ class SpsHwController #lightgray {
 note left: Controls the CMB and all elements in the SPS cabinet
 class SpsStation {
   StationId
-  CabinetNetworkAddress
+  StationNetworkAddress
   SubrackFQDNs
   TileFQDNs
 }

@@ -53,7 +53,8 @@ tpm_monitoring_points:
     VIN:
       min: 11.4
       max: 12.6
-    # TODO fix MON_3V3 and MON_1V8 - see SPRTS-126
+    # MON_3V3 and MON_1V8 have a known measurement bias from the true value,
+    # which is why the thresholds aren't centred on 3.3V and 1.8V. See SPRTS-126.
     MON_3V3:
       min: 3.55
       max: 3.75

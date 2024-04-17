@@ -29,6 +29,8 @@ class TileHealthModel(BaseHealthModel):
     for a future, better implementation.
     """
 
+    _health_rules: TileHealthRules
+
     def __init__(
         self: TileHealthModel,
         health_changed_callback: HealthChangedCallbackProtocol,
@@ -80,26 +82,13 @@ class TileHealthModel(BaseHealthModel):
 
         :return: the intermediate health roll-up states
         """
-        if "tile_health_structure" not in self._state:
-            return {
-                "temperatures": HealthState.UNKNOWN,
-                "voltages": HealthState.UNKNOWN,
-                "currents": HealthState.UNKNOWN,
-                "alarms": HealthState.UNKNOWN,
-                "adcs": HealthState.UNKNOWN,
-                "timing": HealthState.UNKNOWN,
-                "io": HealthState.UNKNOWN,
-                "dsp": HealthState.UNKNOWN,
-            }
-        monitoring_points: dict[str, Any] = self._state[
-            "tile_health_structure"
-        ]  # type: ignore[assignment]
-        assert isinstance(self._health_rules, TileHealthRules)  # for the type-checker
+        monitoring_points: dict[str, Any] = self._state.get("tile_health_structure", {})
         return {
-            state: self._health_rules.compute_intermediate_state(
-                monitoring_points[state], self.health_params[state]
+            health_key: self._health_rules.compute_intermediate_state(
+                monitoring_points.get(health_key, {}),
+                parameters,
             )
-            for state in monitoring_points
+            for health_key, parameters in self.health_params.items()
         }
 
     @property

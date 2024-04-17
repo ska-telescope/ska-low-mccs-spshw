@@ -417,9 +417,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # assert the tpm_driver has different values to the simulator
         assert tpm_driver.adc_rms != list(tile_simulator._adc_rms)
@@ -2256,9 +2256,11 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     @pytest.mark.parametrize(
         ("attribute"),
         [
+            # ("active_40g_port"),
             ("voltages"),
             ("temperatures"),
             ("currents"),
+            ("info"),
             ("io"),
             ("dsp"),
             ("board_temperature"),
@@ -2311,6 +2313,26 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param attribute: The attribute to be read.
         """
         _ = getattr(tpm_driver, attribute)
+
+    def test_read_tile_info(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test we can read tile info.
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: A mock object representing
+            a simulated tile (`TileSimulator`)_simulator
+        """
+        # Arrange
+        tile_simulator.connect()
+        tile_simulator.tpm._is_programmed = True
+        tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
+
+        print(tile_simulator)
+        assert False
 
     def test_write_read_registers(
         self: TestTpmDriver,

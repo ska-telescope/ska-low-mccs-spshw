@@ -78,6 +78,12 @@ class TestTileHealthModel:
                 {"io": {"ddr_interface": {"reset_counter": {"FPGA1": 2}}}},
                 HealthState.FAILED,
             ),
+            (
+                {"voltages": {"VREF_2V5": None}},
+                HealthState.OK,
+                {"voltages": {"VREF_2V5": 2.5}},
+                HealthState.FAILED,
+            ),
         ],
     )
     def test_health_changed_monitored_value(  # pylint: disable=too-many-arguments
@@ -162,6 +168,18 @@ class TestTileHealthModel:
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 2}}}},
                 HealthState.FAILED,
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 1}}}},
+                HealthState.FAILED,
+            ),
+            (
+                {"voltages": {"VREF_2V5": {"min": 2.4, "max": 2.6}}},
+                HealthState.UNKNOWN,
+                {"voltages": {"VREF_2V5": None}},
+                HealthState.OK,
+            ),
+            (
+                {"alarms": {"voltage_alm": {"min": 0, "max": 1}}},
+                HealthState.OK,
+                {"alarms": {"voltage_alm": 1}},
                 HealthState.FAILED,
             ),
         ],

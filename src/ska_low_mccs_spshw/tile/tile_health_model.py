@@ -127,9 +127,10 @@ class TileHealthModel(BaseHealthModel):
         :return: the merged dictionary
         """
         output = copy.deepcopy(dict_a)
-        for key in dict_b:
-            if isinstance(dict_b[key], dict):
-                output[key] = self._merge_dicts(dict_a[key], dict_b[key])
+        for key, new_val in dict_b.items():
+            cur_val = dict_a[key]
+            if isinstance(new_val, dict) and isinstance(cur_val, dict):
+                output[key] = self._merge_dicts(cur_val, new_val)
             else:
-                output[key] = dict_b[key]
+                output[key] = new_val
         return output

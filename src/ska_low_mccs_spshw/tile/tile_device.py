@@ -365,7 +365,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param state_change: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         for attribute_name, attribute_value in state_change.items():
             match attribute_name:
@@ -1184,6 +1187,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
 
     @attribute(dtype=HealthState)
     def temperatureHealth(self: MccsTile) -> HealthState:

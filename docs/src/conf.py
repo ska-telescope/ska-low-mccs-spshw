@@ -84,7 +84,7 @@ nitpick_ignore = [
     # In many case, we should look at refactoring so that these external
     # dependencies don't leak out through our public interface.
     ("py:exc", "LibraryError"),
-    ("py:class", "pyfabil.base.definitions.RegisterInfo"),
+    ("py:class", "RegisterInfo"),
     ("py:class", "Angle"),
     ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),

@@ -21,10 +21,8 @@ tpm_monitoring_points:
       min: 10
       max: 95
   voltages:
-    # TODO: why is this always None? See SPRTS-126. Possibly remove for good.
-#    VREF_2V5:
-#      min: 0.0
-#      max: 0.0
+    # TODO: why is this always None? See https://jira.skatelescope.org/browse/SPRTS-126?focusedId=295368&page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-295368
+    VREF_2V5: null
     MGT_AVCC:
       min: 0.85
       max: 0.95

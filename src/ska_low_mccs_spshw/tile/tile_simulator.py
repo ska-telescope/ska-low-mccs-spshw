@@ -291,9 +291,9 @@ class MockTpm:
     def find_register(
         self: MockTpm,
         string: str,
-        display: Optional[bool] = False,
-        info: Optional[bool] = False,
-    ) -> List[Optional[RegisterInfo]]:
+        display: bool | None = False,
+        info: bool | None = False,
+    ) -> List[RegisterInfo | None]:
         """
         Find a item in a dictionary.
 
@@ -456,7 +456,7 @@ class PreAdu:
         self._nof_channels: int = 16
 
     def set_attenuation(
-        self: PreAdu, attenuation: float, channels: Optional[list[int]] = None
+        self: PreAdu, attenuation: float, channels: list[int] | None = None
     ) -> None:
         """
         Set preadu channel attenuation.
@@ -539,7 +539,7 @@ class TileSimulator:
         """
         self.logger: logging.Logger = logger
         self._forty_gb_core_list: list[Any] = []
-        self.tpm: Optional[MockTpm] = None
+        self.tpm: MockTpm | None = None
         self._is_programmed: bool = False
         self._pending_data_request = False
         self._is_first = False
@@ -562,8 +562,8 @@ class TileSimulator:
             target=self._timed_thread, name="tpm_polling_thread", daemon=True
         )
         self._polling_thread.start()
-        self.dst_ip: Optional[str] = None
-        self.dst_port: Optional[int] = None
+        self.dst_ip: str | None = None
+        self.dst_port: int | None = None
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
         self._is_arp_table_healthy: bool = True
@@ -625,7 +625,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def get_adc_rms(self: TileSimulator, sync: Optional[bool] = False) -> list[float]:
+    def get_adc_rms(self: TileSimulator, sync: bool | None = False) -> list[float]:
         """
         Get ADC power, immediate.
 
@@ -666,7 +666,7 @@ class TileSimulator:
         if start_channel < 0:
             raise ValueError("cannot be negative")
         if nof_channels > 384:
-            raise ValueError("to many channels")
+            raise ValueError("too many channels")
         pass
 
     @check_mocked_overheating
@@ -680,7 +680,7 @@ class TileSimulator:
         """
         self.connect()
         if bitfile is None:
-            self.logger.error("Provided bitfile in None type")
+            self.logger.error("Provided bitfile is None type")
             raise LibraryError("bitfile is None type")
 
         self.tpm._is_programmed = True  # type: ignore
@@ -702,19 +702,19 @@ class TileSimulator:
         station_id: int = 0,
         tile_id: int = 0,
         lmc_use_40g: bool = False,
-        lmc_dst_ip: Optional[str] = None,
+        lmc_dst_ip: str | None = None,
         lmc_dst_port: int = 4660,
         lmc_integrated_use_40g: bool = False,
-        src_ip_fpga1: Optional[str] = None,
-        src_ip_fpga2: Optional[str] = None,
-        dst_ip_fpga1: Optional[str] = None,
-        dst_ip_fpga2: Optional[str] = None,
+        src_ip_fpga1: str | None = None,
+        src_ip_fpga2: str | None = None,
+        dst_ip_fpga1: str | None = None,
+        dst_ip_fpga2: str | None = None,
         src_port: int = 4661,
         dst_port: int = 4660,
         dst_port_single_port_mode: int = 4662,
         rx_port_single_port_mode: int = 4662,
-        netmask_40g: Optional[str] = None,
-        gateway_ip_40g: Optional[str] = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
         active_40g_ports_setting: str = "port1-only",
         enable_adc: bool = True,
         enable_ada: bool = False,
@@ -791,7 +791,7 @@ class TileSimulator:
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
         time.sleep(random.randint(1, 3))
-        self.logger.debug("Initialise complete in Tpm.............")
+        self.logger.debug("Initialise complete in Tpm.")
 
     @check_mocked_overheating
     @connected
@@ -851,14 +851,14 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int = 0,
         arp_table_entry: int = 0,
-        src_mac: Optional[int] = None,
-        src_ip: Optional[str] = None,
-        src_port: Optional[int] = None,
-        dst_ip: Optional[str] = None,
-        dst_port: Optional[int] = None,
-        rx_port_filter: Optional[int] = None,
-        netmask: Optional[int] = None,
-        gateway_ip: Optional[int] = None,
+        src_mac: int | None = None,
+        src_ip: str | None = None,
+        src_port: int | None = None,
+        dst_ip: str | None = None,
+        dst_port: int | None = None,
+        rx_port_filter: int | None = None,
+        netmask: int | None = None,
+        gateway_ip: int | None = None,
     ) -> None:
         """
         Configure the 40G code.
@@ -879,7 +879,7 @@ class TileSimulator:
         :raises ValueError: when the core_id is not [0,1]
         """
         if core_id not in [0, 1]:
-            raise ValueError(f"Invalid core_id, must be 0 or 1 it is {core_id}")
+            raise ValueError(f"Invalid core_id {core_id}, must be 0 or 1.")
 
         core_dict = {
             "core_id": core_id,
@@ -901,7 +901,7 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict | Optional[list[dict]]:
+    ) -> dict | list[dict] | None:
         """
         Return a 40G configuration.
 
@@ -936,11 +936,11 @@ class TileSimulator:
         self: TileSimulator,
         mode: str,
         payload_length: int = 1024,
-        dst_ip: Optional[str] = None,
-        src_port: Optional[int] = 0xF0D0,
-        dst_port: Optional[int] = 4660,
-        netmask_40g: Optional[str] = None,
-        gateway_ip_40g: Optional[str] = None,
+        dst_ip: str | None = None,
+        src_port: int | None = 0xF0D0,
+        dst_port: int | None = 4660,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -1042,7 +1042,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def set_channeliser_truncation(
-        self: TileSimulator, trunc: list[int], signal: Optional[int] = None
+        self: TileSimulator, trunc: list[int], signal: int | None = None
     ) -> None:
         """
         Set the channeliser coefficients to modify the bandpass.
@@ -1069,8 +1069,7 @@ class TileSimulator:
         """
         if len(delays) != 32:
             self.logger.error(
-                "Invalid delays specfied (must be a number "
-                "or list of numbers of length 32)"
+                "Invalid delays specfied (must be a " "list of numbers of length 32)"
             )
             return False
         for i in range(16):
@@ -1108,7 +1107,7 @@ class TileSimulator:
         subarray_id: int,
         nof_antennas: int,
         ref_epoch: int = -1,
-        start_time: Optional[int] = 0,
+        start_time: int | None = 0,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1307,10 +1306,10 @@ class TileSimulator:
     @connected
     def send_raw_data(
         self: TileSimulator,
-        sync: Optional[bool] = False,
-        timestamp: Optional[int] = None,
-        seconds: Optional[float] = 0.2,
-        fpga_id: Optional[int] = None,
+        sync: bool | None = False,
+        timestamp: int | None = None,
+        seconds: float | None = 0.2,
+        fpga_id: int | None = None,
     ) -> None:
         """
         Send raw data.
@@ -1342,7 +1341,7 @@ class TileSimulator:
         number_of_samples: int = 1024,
         first_channel: int = 0,
         last_channel: int = 511,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1378,7 +1377,7 @@ class TileSimulator:
         channel_id: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1400,7 +1399,7 @@ class TileSimulator:
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1445,9 +1444,9 @@ class TileSimulator:
     @connected
     def start_acquisition(
         self: TileSimulator,
-        start_time: Optional[int] = None,
+        start_time: int | None = None,
         delay: int = 2,
-        tpm_start_time: Optional[int] = None,
+        tpm_start_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.
@@ -1472,11 +1471,11 @@ class TileSimulator:
         mode: str,
         channel_payload_length: int,
         beam_payload_length: int,
-        dst_ip: Optional[str] = None,
+        dst_ip: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: Optional[str] = None,
-        gateway_ip_40g: Optional[str] = None,
+        netmask_40g: str | None = None,
+        gateway_ip_40g: str | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
@@ -1721,11 +1720,11 @@ class DynamicTileSimulator(TileSimulator):
 
         :param logger: a logger for this simulator to use
         """
-        self._voltage: Optional[float] = None
-        self._current: Optional[float] = None
-        self._board_temperature: Optional[float] = None
-        self._fpga1_temperature: Optional[float] = None
-        self._fpga2_temperature: Optional[float] = None
+        self._voltage: float | None = None
+        self._current: float | None = None
+        self._board_temperature: float | None = None
+        self._fpga1_temperature: float | None = None
+        self._fpga2_temperature: float | None = None
 
         self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
@@ -1754,12 +1753,12 @@ class DynamicTileSimulator(TileSimulator):
         """Garbage-collection hook."""
         self._updater.stop()
 
-    def get_board_temperature(self: DynamicTileSimulator) -> Optional[float]:
+    def get_board_temperature(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked board temperature."""
         return self._board_temperature
 
     @property
-    def board_temperature(self: DynamicTileSimulator) -> Optional[float]:
+    def board_temperature(self: DynamicTileSimulator) -> float | None:
         """
         Return the temperature of the TPM.
 
@@ -1778,7 +1777,7 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._board_temperature = board_temperature
 
-    def get_voltage(self: DynamicTileSimulator) -> Optional[float]:
+    def get_voltage(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked voltage."""
         return self._voltage
 
@@ -1800,7 +1799,7 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._voltage = voltage
 
-    def get_current(self: DynamicTileSimulator) -> Optional[float]:
+    def get_current(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked current."""
         return self._current
 
@@ -1823,7 +1822,7 @@ class DynamicTileSimulator(TileSimulator):
         self._current = current
 
     @connected
-    def get_fpga0_temperature(self: DynamicTileSimulator) -> Optional[float]:
+    def get_fpga0_temperature(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked fpga0 temperature."""
         return self._fpga1_temperature
 
@@ -1848,7 +1847,7 @@ class DynamicTileSimulator(TileSimulator):
         self._fpga1_temperature = fpga1_temperature
 
     @connected
-    def get_fpga1_temperature(self: DynamicTileSimulator) -> Optional[float]:
+    def get_fpga1_temperature(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked fpga1 temperature."""
         return self._fpga2_temperature
 

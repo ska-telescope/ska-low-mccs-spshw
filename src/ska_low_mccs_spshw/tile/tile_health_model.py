@@ -76,9 +76,9 @@ class TileHealthModel(BaseHealthModel):
     @property
     def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
         """
-        Get the 6 intermediate health roll-up quantities.
+        Get the intermediate health roll-up states.
 
-        :return: the 6 intermediate health roll-up quantities
+        :return: the intermediate health roll-up states
         """
         if "tile_health_structure" not in self._state:
             return {

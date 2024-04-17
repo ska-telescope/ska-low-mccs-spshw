@@ -527,11 +527,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def adcs(self: MccsTile) -> str:
         """
-        Return the tile beamformer and station beamformer status.
+        Return the ADC status.
 
-        :return: the tile beamformer and station beamformer status
+        :return: the ADC status
         """
         return json.dumps(self.component_manager.adcs)
+
+    @attribute(
+        dtype="DevString",
+        label="alarms",
+    )
+    def alarms(self: MccsTile) -> str:
+        """
+        Return the TPM's alarm status.
+
+        :return: the TPM's alarm status
+        """
+        return json.dumps(self.component_manager.alarms)
 
     @attribute(
         dtype="DevString",

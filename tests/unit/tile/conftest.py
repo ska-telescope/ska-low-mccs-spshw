@@ -20,10 +20,10 @@ from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
 from ska_low_mccs_spshw.tile import (
-    DynamicTpmSimulator,
-    StaticTpmSimulator,
+    DynamicTileSimulator,
     TileComponentManager,
     TileSimulator,
+    TpmDriver,
 )
 from tests.harness import (
     SpsTangoTestHarness,
@@ -139,7 +139,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "communication_status",
         "component_state",
         "task",
-        timeout=5.0,
+        timeout=10.0,
     )
 
 
@@ -181,6 +181,68 @@ def tpm_version_fixture() -> str:
     :return: the TPM version
     """
     return "tpm_v1_6"
+
+
+@pytest.fixture(name="dynamic_tpm_driver")
+def dynamic_tpm_driver_fixture(
+    logger: logging.Logger,
+    tile_id: int,
+    station_id: int,
+    tpm_version: str,
+    dynamic_tile_simulator: DynamicTileSimulator,
+) -> TpmDriver:
+    """
+    Return a TPMDriver using a dynamic_tile_simulator.
+
+    :param logger: a object that implements the standard logging
+        interface of :py:class:`logging.Logger`
+    :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param dynamic_tile_simulator: The dynamic_tile_simulator fixture
+
+    :return: a TpmDriver driving a simulated tile
+    """
+    return TpmDriver(
+        logger,
+        tile_id - 1,
+        station_id,
+        dynamic_tile_simulator,
+        tpm_version,
+        unittest.mock.Mock(),
+        unittest.mock.Mock(),
+    )
+
+
+@pytest.fixture(name="tpm_driver")
+def tpm_driver_fixture(
+    logger: logging.Logger,
+    tile_id: int,
+    station_id: int,
+    tpm_version: str,
+    tile_simulator: TileSimulator,
+) -> TpmDriver:
+    """
+    Return a TPMDriver using a tile_simulator.
+
+    :param logger: a object that implements the standard logging
+        interface of :py:class:`logging.Logger`
+    :param tile_id: the unique ID for the tile
+    :param station_id: the ID of the station to which this tile belongs.
+    :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param tile_simulator: The tile used by the TpmDriver.
+
+    :return: a TpmDriver driving a simulated tile
+    """
+    return TpmDriver(
+        logger,
+        tile_id - 1,
+        station_id,
+        tile_simulator,
+        tpm_version,
+        unittest.mock.Mock(),
+        unittest.mock.Mock(),
+    )
 
 
 # pylint: disable=too-many-arguments
@@ -246,6 +308,17 @@ def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     return TileSimulator(logger)
 
 
+@pytest.fixture(name="dynamic_tile_simulator")
+def dynamic_tile_simulator_fixture(logger: logging.Logger) -> DynamicTileSimulator:
+    """
+    Return a DynamicTileSimulator.
+
+    :param logger: logger
+    :return: a TileSimulator
+    """
+    return DynamicTileSimulator(logger)
+
+
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="dynamic_tile_component_manager")
 def dynamic_tile_component_manager_fixture(
@@ -260,6 +333,7 @@ def dynamic_tile_component_manager_fixture(
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
+    dynamic_tpm_driver: TpmDriver,
 ) -> TileComponentManager:
     """
     Return a tile component manager (That drives a DynamicTileSimulator).
@@ -276,6 +350,7 @@ def dynamic_tile_component_manager_fixture(
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
     :param callbacks: dictionary of driver callbacks.
+    :param dynamic_tpm_driver: the dynamic_tpm_driver fixture
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -293,12 +368,12 @@ def dynamic_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
-        DynamicTpmSimulator(logger, callbacks["component_state"]),
+        dynamic_tpm_driver,
     )
-    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+    dynamic_tpm_driver._communication_state_callback = (  # type: ignore
         component_manager._tpm_communication_state_changed
     )
-    component_manager._tpm_driver._component_state_changed_callback = (
+    dynamic_tpm_driver._component_state_callback = (
         component_manager._update_component_state
     )
     return component_manager
@@ -319,6 +394,7 @@ def static_tile_component_manager_fixture(
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
+    tpm_driver: TpmDriver,
 ) -> TileComponentManager:
     """
     Return a tile component manager (in simulation and test mode as specified).
@@ -336,6 +412,7 @@ def static_tile_component_manager_fixture(
     :param subrack_tpm_id: This tile's position in its subrack
     :param max_workers: nos. of worker threads
     :param callbacks: dictionary of driver callbacks.
+    :param tpm_driver: the tpm_driver fixture
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -353,14 +430,12 @@ def static_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
-        StaticTpmSimulator(logger, callbacks["component_state"]),
+        tpm_driver,
     )
-    component_manager._tpm_driver._communication_state_changed = (  # type: ignore
+    tpm_driver._communication_state_callback = (  # type: ignore
         component_manager._tpm_communication_state_changed
     )
-    component_manager._tpm_driver._component_state_changed_callback = (
-        component_manager._update_component_state
-    )
+    tpm_driver._component_state_callback = component_manager._update_component_state
     return component_manager
 
 
@@ -429,6 +504,19 @@ def patched_tile_device_class_fixture(
             OFF.
             """
             self.component_manager._tpm_power_state_changed(PowerState.NO_SUPPLY)
+
+        @command()
+        def UpdateAttributes(self: PatchedTileDevice) -> None:
+            """
+            Call update_attributes on the TpmDriver.
+
+            Note: attributes are updated dependent on the time passed since
+            the last read. Here the last update time is set to
+            zero meaning they can be updated (assuming device state permits).
+            """
+            self.component_manager._tpm_driver._last_update_time_1 = 0.0
+            self.component_manager._tpm_driver._last_update_time_2 = 0.0
+            self.component_manager._tpm_driver._update_attributes()
 
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:

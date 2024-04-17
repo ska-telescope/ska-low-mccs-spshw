@@ -19,7 +19,7 @@ import threading
 import time
 from typing import Any, Callable, List, Optional, TypeVar, Union, cast
 
-from pyfabil.base.definitions import Device, LibraryError, RegisterInfo
+from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
 from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
@@ -46,7 +46,7 @@ def connected(func: Wrapped) -> Wrapped:
 
     .. code-block:: python
 
-        @check_connectable
+        @connected
         def set_pps_delay(self):
             ...
 
@@ -78,6 +78,64 @@ def connected(func: Wrapped) -> Wrapped:
             )
             raise LibraryError(
                 "Cannot call function " + func.__name__ + " on unconnected TPM"
+            )
+        else:
+            return func(self, *args, **kwargs)
+
+    return cast(Wrapped, _wrapper)
+
+
+def check_mocked_overheating(func: Wrapped) -> Wrapped:
+    """
+    Return a function that checks if the TileSimulator is mocked overheating.
+
+    The TileSimulator needs to be realistic with the behaviour of the system.
+    The TPM can overheat, in this situation the FPGAs turn off, but the CPLD is
+    connectable still. This decorator is to be placed on methods that cannot be called
+    in the case of overheating.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @check_mocked_overheating
+        def set_pps_delay(self):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function
+    """
+
+    @functools.wraps(func)
+    def _wrapper(
+        self: TileSimulator,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Check if the TPM is overheating.
+
+        :param self: the method called
+        :param args: positional arguments to the wrapped method
+        :param kwargs: keyword arguments to the wrapped method
+
+        :return: whatever the wrapped method returns
+
+        :raises BoardError: if the TPM is mocked overheating.
+        """
+        if self.tpm_mocked_overheating:
+            self.logger.warning(
+                "BoardError: Not possible to communicate with the FPG0: "
+                "Failed to read_address 0x4 on board: UCP::read. "
+                "Command failed on board. "
+                "Requested address 0x4 received address 0xfffffffb"
+            )
+            raise BoardError(
+                "BoardError: Not possible to communicate with the FPG0: "
+                "Failed to read_address 0x4 on board: UCP::read. "
+                "Command failed on board. "
+                "Requested address 0x4 received address 0xfffffffb"
             )
         else:
             return func(self, *args, **kwargs)
@@ -511,9 +569,10 @@ class TileSimulator:
         self._is_arp_table_healthy: bool = True
         self._is_set_first_last_tile_write_successful: bool = True
         self._is_spead_header_write_successful: bool = True
-        self.csp_rounding = self.CSP_ROUNDING
+        self.csp_rounding = list(self.CSP_ROUNDING)
         self._adc_rms: list[float] = list(self.ADC_RMS)
         self.spead_data_simulator = SpeadDataSimulator(logger)
+        self.tpm_mocked_overheating = False
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
@@ -538,6 +597,7 @@ class TileSimulator:
         }
         # return self._register_map.get(str(address), 0)
 
+    @check_mocked_overheating
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
         """
@@ -550,17 +610,20 @@ class TileSimulator:
         """
         return copy.deepcopy(self._tile_health_structure)
 
+    @check_mocked_overheating
     @connected
     def get_firmware_list(self: TileSimulator) -> List[dict[str, Any]]:
         """:return: firmware list."""
         return self.FIRMWARE_LIST
 
+    @check_mocked_overheating
     @connected
     def get_tile_id(self: TileSimulator) -> int:
         """:return: the mocked tile_id."""
         # this is set in the initialise
         return self._tile_id
 
+    @check_mocked_overheating
     @connected
     def get_adc_rms(self: TileSimulator, sync: Optional[bool] = False) -> list[float]:
         """
@@ -572,6 +635,7 @@ class TileSimulator:
         """
         return self._adc_rms
 
+    @check_mocked_overheating
     @connected
     def check_pending_data_requests(self: TileSimulator) -> bool:
         """:return: the pending data requess flag."""
@@ -586,6 +650,7 @@ class TileSimulator:
         """
         return copy.deepcopy(self._global_status_alarms)
 
+    @check_mocked_overheating
     @connected
     def initialise_beamformer(
         self: TileSimulator, start_channel: int, nof_channels: int
@@ -604,6 +669,7 @@ class TileSimulator:
             raise ValueError("to many channels")
         pass
 
+    @check_mocked_overheating
     def program_fpgas(self: TileSimulator, bitfile: str) -> None:
         """
         Mock programmed state to True.
@@ -619,6 +685,7 @@ class TileSimulator:
 
         self.tpm._is_programmed = True  # type: ignore
 
+    @check_mocked_overheating
     @connected
     def erase_fpga(self: TileSimulator, force: bool = True) -> None:
         """
@@ -629,6 +696,7 @@ class TileSimulator:
         assert self.tpm
         self.tpm._is_programmed = False
 
+    @check_mocked_overheating
     def initialise(
         self: TileSimulator,
         station_id: int = 0,
@@ -725,6 +793,7 @@ class TileSimulator:
         time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.............")
 
+    @check_mocked_overheating
     @connected
     def get_fpga_time(self: TileSimulator, device: Device) -> int:
         """
@@ -739,6 +808,7 @@ class TileSimulator:
         except Exception as e:
             raise LibraryError("Invalid device specified") from e
 
+    @check_mocked_overheating
     @connected
     def set_station_id(self: TileSimulator, station_id: int, tile_id: int) -> None:
         """
@@ -750,6 +820,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
 
+    @check_mocked_overheating
     @connected
     def get_pps_delay(self: TileSimulator, enable_correction: bool = True) -> int:
         """
@@ -763,6 +834,7 @@ class TileSimulator:
             return self._pps_delay + self.pps_correction
         return self._pps_delay
 
+    @check_mocked_overheating
     def is_programmed(self: TileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
@@ -773,6 +845,7 @@ class TileSimulator:
             return False
         return self.tpm._is_programmed
 
+    @check_mocked_overheating
     @connected
     def configure_40g_core(
         self: TileSimulator,
@@ -822,6 +895,7 @@ class TileSimulator:
         }
         self._forty_gb_core_list.append(core_dict)
 
+    @check_mocked_overheating
     @connected
     def get_40g_core_configuration(
         self: TileSimulator,
@@ -844,6 +918,7 @@ class TileSimulator:
                     return item
         return None
 
+    @check_mocked_overheating
     @connected
     def check_arp_table(self: TileSimulator, timeout: float = 30.0) -> bool:
         """
@@ -855,6 +930,7 @@ class TileSimulator:
         """
         return self._is_arp_table_healthy
 
+    @check_mocked_overheating
     @connected
     def set_lmc_download(
         self: TileSimulator,
@@ -880,7 +956,7 @@ class TileSimulator:
         :param dst_ip: destination service.
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
-        :param netmask_40g: the maske to apply
+        :param netmask_40g: the mask to apply
         :param gateway_ip_40g: the gateway ip.
         """
         # This is required to work out where the Tile will send data to.
@@ -889,6 +965,7 @@ class TileSimulator:
         self.dst_ip = dst_ip
         self.dst_port = dst_port
 
+    @check_mocked_overheating
     @connected
     def reset_eth_errors(self: TileSimulator) -> None:
         """Reset Ethernet errors."""
@@ -940,6 +1017,7 @@ class TileSimulator:
         """
         self.mock_connection_success = True
 
+    @check_mocked_overheating
     @connected
     def __getitem__(self: TileSimulator, key: int | str) -> Any:
         """
@@ -950,6 +1028,7 @@ class TileSimulator:
         """
         return self.tpm[key]  # type: ignore
 
+    @check_mocked_overheating
     @connected
     def __setitem__(self: TileSimulator, key: int | str, value: Any) -> None:
         """
@@ -960,6 +1039,7 @@ class TileSimulator:
         """
         self.tpm[key] = value  # type: ignore
 
+    @check_mocked_overheating
     @connected
     def set_channeliser_truncation(
         self: TileSimulator, trunc: list[int], signal: Optional[int] = None
@@ -976,6 +1056,7 @@ class TileSimulator:
         # self.logger.info("Not implemented, return without error to allow poll.")
         return
 
+    @check_mocked_overheating
     @connected
     def set_time_delays(self: TileSimulator, delays: list[float]) -> bool:
         """
@@ -999,11 +1080,13 @@ class TileSimulator:
             )
         return True
 
+    @check_mocked_overheating
     @connected
     def current_tile_beamformer_frame(self: TileSimulator) -> int:
         """:return: beamformer frame."""
         return self.get_fpga_timestamp()
 
+    @check_mocked_overheating
     @connected
     def set_csp_rounding(self: TileSimulator, rounding: list[int]) -> bool:
         """
@@ -1017,6 +1100,7 @@ class TileSimulator:
             self.csp_rounding = rounding
         return self.is_csp_write_successful
 
+    @check_mocked_overheating
     @connected
     def define_spead_header(
         self,
@@ -1041,6 +1125,7 @@ class TileSimulator:
             self._station_id = station_id
         return self._is_spead_header_write_successful
 
+    @check_mocked_overheating
     @connected
     def set_beamformer_regions(
         self: TileSimulator, region_array: list[list[int]]
@@ -1055,6 +1140,7 @@ class TileSimulator:
         self.tpm.station_beamf[0].define_channel_table(region_array)
         self.tpm.station_beamf[1].define_channel_table(region_array)
 
+    @check_mocked_overheating
     @connected
     def set_first_last_tile(self: TileSimulator, is_first: bool, is_last: bool) -> bool:
         """
@@ -1070,6 +1156,7 @@ class TileSimulator:
             self._is_last = is_last
         return self._is_set_first_last_tile_write_successful
 
+    @check_mocked_overheating
     @connected
     def load_calibration_coefficients(
         self: TileSimulator, antenna: int, calibration_coefficients: list[complex]
@@ -1096,6 +1183,7 @@ class TileSimulator:
         """
         self.logger.debug(f"Received calibration coefficients for antenna {antenna}")
 
+    @check_mocked_overheating
     @connected
     def switch_calibration_bank(self: TileSimulator, switch_time: int = 0) -> None:
         """
@@ -1105,6 +1193,7 @@ class TileSimulator:
         """
         self.logger.debug("Applying calibration coefficients")
 
+    @check_mocked_overheating
     @connected
     def set_pointing_delay(
         self: TileSimulator, delay_array: list[list[float]], beam_index: int
@@ -1117,6 +1206,7 @@ class TileSimulator:
         """
         self.logger.debug(f"Received pointing delays for beam {beam_index}")
 
+    @check_mocked_overheating
     @connected
     def load_pointing_delay(
         self: TileSimulator, load_time: int = 0, load_delay: int = 64
@@ -1129,6 +1219,7 @@ class TileSimulator:
         """
         self.logger.debug("Applying pointing delays")
 
+    @check_mocked_overheating
     @connected
     def start_beamformer(
         self: TileSimulator,
@@ -1153,12 +1244,14 @@ class TileSimulator:
         self.tpm.beam2.start()  # type: ignore
         return True
 
+    @check_mocked_overheating
     @connected
     def stop_beamformer(self: TileSimulator) -> None:
         """Stop beamformer."""
         self.tpm.beam1.stop()  # type: ignore
         self.tpm.beam2.stop()  # type: ignore
 
+    @check_mocked_overheating
     @connected
     def configure_integrated_channel_data(
         self: TileSimulator,
@@ -1181,6 +1274,7 @@ class TileSimulator:
             "current_channel": first_channel,
         }
 
+    @check_mocked_overheating
     @connected
     def configure_integrated_beam_data(
         self: TileSimulator,
@@ -1202,12 +1296,14 @@ class TileSimulator:
             "current_channel": first_channel,
         }
 
+    @check_mocked_overheating
     @connected
     def stop_integrated_data(self: TileSimulator) -> None:
         """Stop integrated data."""
         self.integrated_channel_configuration["integration_time"] = -1
         self.integrated_beam_configuration["integration_time"] = -1
 
+    @check_mocked_overheating
     @connected
     def send_raw_data(
         self: TileSimulator,
@@ -1239,6 +1335,7 @@ class TileSimulator:
         self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_raw_data(1)
 
+    @check_mocked_overheating
     @connected
     def send_channelised_data(
         self: TileSimulator,
@@ -1274,6 +1371,7 @@ class TileSimulator:
             1, number_of_samples, first_channel, last_channel
         )
 
+    @check_mocked_overheating
     @connected
     def send_channelised_data_continuous(
         self: TileSimulator,
@@ -1294,6 +1392,7 @@ class TileSimulator:
         """
         self._pending_data_requests = True
 
+    @check_mocked_overheating
     @connected
     def send_channelised_data_narrowband(
         self: TileSimulator,
@@ -1318,6 +1417,7 @@ class TileSimulator:
             "send_channelised_data_narrowband not implemented in simulator"
         )
 
+    @check_mocked_overheating
     @connected
     def send_beam_data(
         self: TileSimulator,
@@ -1334,12 +1434,14 @@ class TileSimulator:
         """
         self.logger.error("send_beam_data not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def stop_data_transmission(self: TileSimulator) -> None:
         """Stop data transmission."""
         self.spead_data_simulator.stop_sending_data()
         self._pending_data_requests = False
 
+    @check_mocked_overheating
     @connected
     def start_acquisition(
         self: TileSimulator,
@@ -1363,6 +1465,7 @@ class TileSimulator:
         self.sync_time = sync_time  # type: ignore
         self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
 
+    @check_mocked_overheating
     @connected
     def set_lmc_integrated_download(
         self: TileSimulator,
@@ -1389,6 +1492,7 @@ class TileSimulator:
         """
         self.logger.error("set_lmc_integrated_download not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def test_generator_set_tone(
         self: TileSimulator,
@@ -1410,6 +1514,7 @@ class TileSimulator:
         """
         self.logger.error("test_generator_set_tone not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def test_generator_set_noise(
         self: TileSimulator, amplitude_noise: float = 0.0, load_time: int = 0
@@ -1422,6 +1527,7 @@ class TileSimulator:
         """
         self.logger.error("test_generator_set_noise not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def set_test_generator_pulse(
         self: TileSimulator, freq_code: int, amplitude: float = 0.0
@@ -1436,6 +1542,7 @@ class TileSimulator:
         """
         self.logger.error("set_test_generator_pulse not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def get_fpga_timestamp(self: TileSimulator, device: Device = Device.FPGA_1) -> int:
         """
@@ -1452,6 +1559,7 @@ class TileSimulator:
         except Exception as e:
             raise LibraryError("Invalid device specified") from e
 
+    @check_mocked_overheating
     @connected
     def test_generator_input_select(self: TileSimulator, inputs: int) -> None:
         """
@@ -1478,6 +1586,7 @@ class TileSimulator:
             self.fpgas_time[1] = _fpgatime
             time.sleep(0.1)
 
+    @check_mocked_overheating
     @connected
     def get_arp_table(self: TileSimulator) -> dict[int, list[int]]:
         """
@@ -1487,6 +1596,7 @@ class TileSimulator:
         """
         return {0: [0, 1], 1: [1]}
 
+    @check_mocked_overheating
     @connected
     def load_beam_angle(self: TileSimulator, angle_coefficients: list[float]) -> None:
         """
@@ -1496,6 +1606,7 @@ class TileSimulator:
         """
         self.logger.error("load_beam_angle not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def load_antenna_tapering(
         self: TileSimulator, beam: int, tapering_coefficients: list[int]
@@ -1508,6 +1619,7 @@ class TileSimulator:
         """
         self.logger.error("load_antenna_tapering not implemented in simulator")
 
+    @check_mocked_overheating
     @connected
     def compute_calibration_coefficients(self: TileSimulator) -> None:
         """Compute calibration coefficients."""
@@ -1515,6 +1627,7 @@ class TileSimulator:
             "compute_calibration_coefficients not implemented in simulator"
         )
 
+    @check_mocked_overheating
     @connected
     def beamformer_is_running(self: TileSimulator) -> bool:
         """
@@ -1527,6 +1640,7 @@ class TileSimulator:
             and self.tpm.beam2.is_running()  # type: ignore
         )
 
+    @check_mocked_overheating
     @connected
     def get_phase_terminal_count(self: TileSimulator) -> int:
         """
@@ -1536,6 +1650,7 @@ class TileSimulator:
         """
         return self._phase_terminal_count
 
+    @check_mocked_overheating
     @connected
     def get_station_id(self: TileSimulator) -> int:
         """
@@ -1546,6 +1661,7 @@ class TileSimulator:
         """
         return self._station_id
 
+    @check_mocked_overheating
     @connected
     def set_preadu_levels(self, levels: list[float]) -> None:
         """
@@ -1559,6 +1675,7 @@ class TileSimulator:
             preadu_id, preadu_ch = divmod(adc_channel, 16)
             self.tpm.preadu[preadu_id].set_attenuation(level, [preadu_ch])
 
+    @check_mocked_overheating
     @connected
     def get_preadu_levels(self) -> list[float]:
         """
@@ -1574,6 +1691,7 @@ class TileSimulator:
             levels.append(attenuation)
         return levels
 
+    @check_mocked_overheating
     @connected
     def __getattr__(self, name: str) -> object:
         """

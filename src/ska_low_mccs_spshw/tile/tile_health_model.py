@@ -6,7 +6,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""An implementation of a health model for an APIU."""
+"""An implementation of a health model for a Tile."""
 
 from __future__ import annotations  # allow forward references in type hints
 

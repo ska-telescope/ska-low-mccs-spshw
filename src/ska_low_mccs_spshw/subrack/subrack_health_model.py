@@ -85,7 +85,7 @@ class SubrackHealthModel(BaseHealthModel):
 
     def evaluate_health(
         self: SubrackHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the subrack.
 
@@ -98,7 +98,7 @@ class SubrackHealthModel(BaseHealthModel):
 
         :return: an overall health of the subrack
         """
-        subrack_health = super().evaluate_health()
+        subrack_health, subrack_report = super().evaluate_health()
 
         for health in [
             HealthState.FAILED,
@@ -106,6 +106,9 @@ class SubrackHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if self._health_rules.rules[health](self._state, subrack_health):
-                return health
-        return HealthState.UNKNOWN
+            if health == subrack_health:
+                return subrack_health, subrack_report
+            result, report = self._health_rules.rules[health](self._state)
+            if result:
+                return health, report
+        return HealthState.UNKNOWN, "No rules matched"

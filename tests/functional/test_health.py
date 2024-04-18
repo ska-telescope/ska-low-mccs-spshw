@@ -209,7 +209,12 @@ def device_verify_attribute(
         if device_value == enum_value:
             break
         time.sleep(1)
-    assert device_value == enum_value
+    if attribute == "HealthState":
+        assert (
+            device_value == enum_value
+        ), f"Expected health to be {enum_value} but got {device_value}, Reason: {device_proxy.healthReport}"
+    else:
+        assert device_value == enum_value
 
 
 @when("the Tile board temperature thresholds are adjusted")

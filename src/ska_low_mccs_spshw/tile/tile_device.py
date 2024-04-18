@@ -1188,7 +1188,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: temperature Health State of the device
         """
-        return self._health_model._intermediate_healths["temperatures"]
+        return self._health_model.intermediate_healths["temperatures"][0]
 
     @attribute(dtype=HealthState)
     def voltageHealth(self: MccsTile) -> HealthState:
@@ -1201,7 +1201,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: voltage Health State of the device
         """
-        return self._health_model._intermediate_healths["voltages"]
+        return self._health_model.intermediate_healths["voltages"][0]
 
     @attribute(dtype=HealthState)
     def currentHealth(self: MccsTile) -> HealthState:
@@ -1214,7 +1214,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: current Health State of the device
         """
-        return self._health_model._intermediate_healths["currents"]
+        return self._health_model.intermediate_healths["currents"][0]
 
     @attribute(dtype=HealthState)
     def alarmHealth(self: MccsTile) -> HealthState:
@@ -1227,7 +1227,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: alarm Health State of the device
         """
-        return self._health_model._intermediate_healths["alarms"]
+        return self._health_model.intermediate_healths["alarms"][0]
 
     @attribute(dtype=HealthState)
     def adcHealth(self: MccsTile) -> HealthState:
@@ -1240,7 +1240,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: ADC Health State of the device
         """
-        return self._health_model._intermediate_healths["adcs"]
+        return self._health_model.intermediate_healths["adcs"][0]
 
     @attribute(dtype=HealthState)
     def timingHealth(self: MccsTile) -> HealthState:
@@ -1253,7 +1253,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: timing Health State of the device
         """
-        return self._health_model._intermediate_healths["timing"]
+        return self._health_model.intermediate_healths["timing"][0]
 
     @attribute(dtype=HealthState)
     def ioHealth(self: MccsTile) -> HealthState:
@@ -1266,7 +1266,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: io Health State of the device
         """
-        return self._health_model._intermediate_healths["io"]
+        return self._health_model.intermediate_healths["io"][0]
 
     @attribute(dtype=HealthState)
     def dspHealth(self: MccsTile) -> HealthState:
@@ -1279,7 +1279,16 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: dsp Health State of the device
         """
-        return self._health_model._intermediate_healths["dsp"]
+        return self._health_model.intermediate_healths["dsp"][0]
+
+    @attribute(dtype="DevString")
+    def healthReport(self: MccsTile) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
 
     # # --------
     # # Commands

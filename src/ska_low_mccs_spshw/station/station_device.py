@@ -828,6 +828,15 @@ class SpsStation(SKAObsDevice):
         self._health_model.health_params = json.loads(argin)
         self._health_model.update_health()
 
+    @attribute(dtype="DevString")
+    def healthReport(self: SpsStation) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
+
     # -------------
     # Slow Commands
     # -------------

@@ -47,7 +47,7 @@ class TileHealthModel(BaseHealthModel):
 
     def evaluate_health(
         self: TileHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the station.
 
@@ -60,21 +60,24 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-        tile_health = super().evaluate_health()
-        intermediate_healths = self._intermediate_healths
-
+        tile_health, tile_report = super().evaluate_health()
+        intermediate_healths = self.intermediate_healths
+        print(f"Evaluating health with intermediates {intermediate_healths}")
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if self._health_rules.rules[health](intermediate_healths, tile_health):
-                return health
-        return HealthState.UNKNOWN
+            if health == tile_health:
+                return tile_health, tile_report
+            result, report = self._health_rules.rules[health](intermediate_healths)
+            if result:
+                return health, report
+        return HealthState.UNKNOWN, "No rules matched"
 
     @property
-    def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
+    def intermediate_healths(self: TileHealthModel) -> dict[str, tuple[HealthState, str]]:
         """
         Get the 6 intermediate health roll-up quantities.
 
@@ -82,25 +85,27 @@ class TileHealthModel(BaseHealthModel):
         """
         if "tile_health_structure" not in self._state:
             return {
-                "temperatures": HealthState.UNKNOWN,
-                "voltages": HealthState.UNKNOWN,
-                "currents": HealthState.UNKNOWN,
-                "alarms": HealthState.UNKNOWN,
-                "adcs": HealthState.UNKNOWN,
-                "timing": HealthState.UNKNOWN,
-                "io": HealthState.UNKNOWN,
-                "dsp": HealthState.UNKNOWN,
+                "temperatures": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "voltages": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "currents": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "alarms": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "adcs": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "timing": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "io": (HealthState.UNKNOWN, "Health model inputs not yet read"),
+                "dsp": (HealthState.UNKNOWN, "Health model inputs not yet read"),
             }
         monitoring_points: dict[str, Any] = self._state[
             "tile_health_structure"
         ]  # type: ignore[assignment]
         assert isinstance(self._health_rules, TileHealthRules)  # for the type-checker
-        return {
+        intermediates = {
             state: self._health_rules.compute_intermediate_state(
                 monitoring_points[state], self.health_params[state]
             )
             for state in monitoring_points
         }
+        print(f"Intermediate healths are {intermediates}")
+        return intermediates
 
     @property
     def health_params(self: TileHealthModel) -> dict[str, Any]:

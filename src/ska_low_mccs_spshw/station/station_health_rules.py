@@ -30,10 +30,17 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if UNKNOWN is a valid state
         """
-        return (
+        result = (
             HealthState.UNKNOWN in subrack_healths.values()
             or HealthState.UNKNOWN in tile_healths.values()
         )
+        if result:
+            report = "Some devices are unknown: "
+            f"Tiles: {[f'{trl} - {health}' for trl, health in tile_healths.items() if health == HealthState.UNKNOWN]}"
+            f"Subracks: {[f'{trl} - {health}' for trl, health in subrack_healths.items() if health == HealthState.UNKNOWN]}"
+        else:
+            report = ""
+        return result, report
 
     def failed_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
@@ -47,12 +54,19 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if FAILED is a valid state
         """
-        return (
+        result = (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["tile_failed"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["subrack_failed"]
         )
+        if result:
+            report = "Too many subdevices are in a bad state: "
+            f"Tiles: {[f'{trl} - {health}' for trl, health in tile_healths.items() if health in DEGRADED_STATES]}"
+            f"Subracks: {[f'{trl} - {health}' for trl, health in subrack_healths.items() if health in DEGRADED_STATES]}"
+        else:
+            report = ""
+        return result, report
 
     def degraded_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
@@ -66,12 +80,19 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if DEGRADED is a valid state
         """
-        return (
+        result = (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["tile_degraded"]
             or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             >= self._thresholds["subrack_degraded"]
         )
+        if result:
+            report = "Too many subdevices are in a bad state: "
+            f"Tiles: {[f'{trl} - {health}' for trl, health in tile_healths.items() if health in DEGRADED_STATES]}"
+            f"Subracks: {[f'{trl} - {health}' for trl, health in subrack_healths.items() if health in DEGRADED_STATES]}"
+        else:
+            report = ""
+        return result, report
 
     def healthy_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
@@ -85,12 +106,19 @@ class SpsStationHealthRules(HealthRules):
         :param tile_healths: dictionary of tile healths
         :return: True if OK is a valid state
         """
-        return (
+        result = (
             self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
             < self._thresholds["tile_degraded"]
             and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
             < self._thresholds["subrack_degraded"]
         )
+        if not result:
+            report = "Too many subdevices are in a bad state: "
+            f"Tiles: {[f'{trl} - {health}' for trl, health in tile_healths.items() if health in DEGRADED_STATES]}"
+            f"Subracks: {[f'{trl} - {health}' for trl, health in subrack_healths.items() if health in DEGRADED_STATES]}"
+        else:
+            report = ""
+        return result, report
 
     @property
     def default_thresholds(self: HealthRules) -> dict[str, float]:

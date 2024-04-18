@@ -1152,6 +1152,15 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         }
         self._health_model.update_data(data)
 
+    @attribute(dtype="DevString")
+    def healthReport(self: MccsSubrack) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
+
 
 # ----------
 # Run server

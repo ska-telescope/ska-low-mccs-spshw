@@ -34,7 +34,7 @@ class TestSubrackHealthModel:
         return health_model
 
     @pytest.mark.parametrize(
-        ("data", "expected_final_health"),
+        ("data", "expected_final_health", "expected_final_report"),
         [
             pytest.param(
                 {
@@ -57,6 +57,7 @@ class TestSubrackHealthModel:
                     "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
                 },
                 HealthState.OK,
+                "Health is OK.",
                 id="All devices healthy, expect OK",
             ),
         ],
@@ -66,6 +67,7 @@ class TestSubrackHealthModel:
         health_model: SubrackHealthModel,
         data: dict[str, Any],
         expected_final_health: HealthState,
+        expected_final_report: str,
     ) -> None:
         """
         Tests for evaluating subrack health.
@@ -74,11 +76,11 @@ class TestSubrackHealthModel:
         :param data: Health data values for health model.
         :param expected_final_health: Expected final health.
         """
-        assert health_model.evaluate_health() == HealthState.UNKNOWN
+        assert health_model.evaluate_health() == (HealthState.UNKNOWN, "Failed to read subrack state")
 
         health_model.update_data(data)
 
-        assert health_model.evaluate_health() == expected_final_health
+        assert health_model.evaluate_health() == (expected_final_health, expected_final_report)
 
     @pytest.mark.parametrize(
         ("init_data", "expected_state_init", "end_data", "expected_state_end"),
@@ -208,7 +210,9 @@ class TestSubrackHealthModel:
             "init_thresholds",
             "end_thresholds",
             "init_expected_health",
+            "init_expected_report",
             "end_expected_health",
+            "end_expected_report",
         ),
         [
             pytest.param(
@@ -219,7 +223,9 @@ class TestSubrackHealthModel:
                     "failed_min_board_temp": 10.0,
                 },
                 HealthState.OK,
+                "Health is OK.",
                 HealthState.FAILED,
+                "50.0 greater than failed_max_board_temp 30.0",
                 id="Update thresholds so that now the device reports FAILED",
             ),
             pytest.param(
@@ -230,14 +236,18 @@ class TestSubrackHealthModel:
                     "failed_min_board_temp": 10.0,
                 },
                 HealthState.OK,
+                "Health is OK.",
                 HealthState.DEGRADED,
+                "50.0 greater than degraded_max_board_temp 40.0",
                 id="Update thresholds so that now the device reports DEGRADED",
             ),
             pytest.param(
                 None,
                 {"clock_presence": ["some_clock"]},
                 HealthState.OK,
+                "Health is OK.",
                 HealthState.FAILED,
+                "clock_reqs ['10MHz', '1PPS', '10_MHz_PLL_lock'] does not match thresholds ['some_clock']",
                 id="""Update thresholds so that now the device requires clock
                   locks which it doesnt have, report FAILED""",
             ),
@@ -253,7 +263,9 @@ class TestSubrackHealthModel:
                     "failed_min_board_temp": 10.0,
                 },
                 HealthState.FAILED,
+                "50.0 greater than failed_max_board_temp 30.0",
                 HealthState.OK,
+                "Health is OK.",
                 id="Thresholds start off FAILED, updated to OK",
             ),
         ],
@@ -264,7 +276,9 @@ class TestSubrackHealthModel:
         init_thresholds: Optional[dict[str, float]],
         end_thresholds: dict[str, float],
         init_expected_health: HealthState,
+        init_expected_report: str,
         end_expected_health: HealthState,
+        end_expected_report: str,
     ) -> None:
         """
         Test subrack can change threshold values.
@@ -275,7 +289,7 @@ class TestSubrackHealthModel:
         :param init_expected_health: Init expected health.
         :param end_expected_health: Final expected health.
         """
-        assert health_model.evaluate_health() == HealthState.UNKNOWN
+        assert health_model.evaluate_health() == (HealthState.UNKNOWN, "Failed to read subrack state")
 
         data = {
             "board_temps": [50.0, 50.0],
@@ -300,7 +314,7 @@ class TestSubrackHealthModel:
             health_model.health_params = init_thresholds
 
         health_model.update_data(data)
-        assert health_model.evaluate_health() == init_expected_health
+        assert health_model.evaluate_health() == (init_expected_health, init_expected_report)
 
         health_model.health_params = end_thresholds
-        assert health_model.evaluate_health() == end_expected_health
+        assert health_model.evaluate_health() == (end_expected_health, end_expected_report)

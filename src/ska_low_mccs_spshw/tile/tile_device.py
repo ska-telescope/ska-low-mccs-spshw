@@ -523,6 +523,30 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="adcs",
+    )
+    def adcs(self: MccsTile) -> str:
+        """
+        Return the ADC status.
+
+        :return: the ADC status
+        """
+        return json.dumps(self.component_manager.adcs)
+
+    @attribute(
+        dtype="DevString",
+        label="alarms",
+    )
+    def alarms(self: MccsTile) -> str:
+        """
+        Return the TPM's alarm status.
+
+        :return: the TPM's alarm status
+        """
+        return json.dumps(self.component_manager.alarms)
+
+    @attribute(
+        dtype="DevString",
         label="cspDestinationIp",
     )
     def cspDestinationIp(self: MccsTile) -> str:

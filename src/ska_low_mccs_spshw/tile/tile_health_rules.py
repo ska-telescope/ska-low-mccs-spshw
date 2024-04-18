@@ -109,26 +109,26 @@ class TileHealthRules(HealthRules):
         :return: the computed health state
         """
         states = {}
-        for p in monitoring_points:
-            if isinstance(monitoring_points[p], dict):
+        for p, p_state in monitoring_points.items():
+            if isinstance(p_state, dict):
                 states[p] = self.compute_intermediate_state(
-                    monitoring_points[p], min_max[p], path=f"{path}/{p}"
+                    p_state, min_max[p], path=f"{path}/{p}"
                 )
             else:
-                if monitoring_points[p] is None:
+                if p_state is None:
                     states[p] = HealthState.UNKNOWN, f"Monitoring point {p} not yet read"
                 elif isinstance(min_max[p], dict):
                     states[p] = (
                         (HealthState.OK, "")
-                        if monitoring_points[p] >= min_max[p]["min"]
-                        and monitoring_points[p] <= min_max[p]["max"]
-                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {monitoring_points[p]} not in range {min_max[p]['min']} - {min_max[p]['max']}")
+                        if p_state >= min_max[p]["min"]
+                        and p_state <= min_max[p]["max"]
+                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {p_state} not in range {min_max[p]['min']} - {min_max[p]['max']}")
                     )
                 else:
                     states[p] = (
                         (HealthState.OK, "")
-                        if monitoring_points[p] == min_max[p]
-                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {monitoring_points[p]} =/= {min_max[p]}")
+                        if p_state == min_max[p]
+                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {p_state} =/= {min_max[p]}")
                     )
         return self._combine_states(*states.values())
 

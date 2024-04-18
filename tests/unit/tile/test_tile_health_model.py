@@ -67,10 +67,10 @@ class TestTileHealthModel:
                 'Health is OK.',
             ),
             (
-                {"currents": {"FE0_mVA": 2.5}},
+                {"currents": {"FE0_mVA": 3.2}},
                 HealthState.FAILED,
                 'Intermediate health currents is in FAILED HealthState. Cause: Monitoring point "/FE0_mVA": 2.5 not in range 1.93 - 2.27',
-                {"currents": {"FE0_mVA": 2.4}},
+                {"currents": {"FE0_mVA": 3.1}},
                 HealthState.FAILED,
                 'Intermediate health currents is in FAILED HealthState. Cause: Monitoring point "/FE0_mVA": 2.4 not in range 1.93 - 2.27',
             ),
@@ -105,6 +105,12 @@ class TestTileHealthModel:
                 {"io": {"ddr_interface": {"reset_counter": {"FPGA1": 2}}}},
                 HealthState.FAILED,
                 'Intermediate health io is in FAILED HealthState. Cause: Monitoring point "/ddr_interface/reset_counter/FPGA1": 2 =/= 0',
+            ),
+            (
+                {"voltages": {"VREF_2V5": None}},
+                HealthState.OK,
+                {"voltages": {"VREF_2V5": 2.5}},
+                HealthState.FAILED,
             ),
         ],
     )
@@ -216,6 +222,18 @@ class TestTileHealthModel:
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 1}}}},
                 HealthState.FAILED,
                 'Intermediate health dsp is in FAILED HealthState. Cause: Monitoring point "/station_beamf/ddr_parity_error_count/FPGA0": 0 =/= 1',
+            ),
+            (
+                {"voltages": {"VREF_2V5": {"min": 2.4, "max": 2.6}}},
+                HealthState.UNKNOWN,
+                {"voltages": {"VREF_2V5": None}},
+                HealthState.OK,
+            ),
+            (
+                {"alarms": {"voltage_alm": {"min": 0, "max": 1}}},
+                HealthState.OK,
+                {"alarms": {"voltage_alm": 1}},
+                HealthState.FAILED,
             ),
         ],
     )

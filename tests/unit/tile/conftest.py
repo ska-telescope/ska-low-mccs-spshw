@@ -139,7 +139,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "communication_status",
         "component_state",
         "task",
-        timeout=10.0,
+        timeout=5.0,
     )
 
 

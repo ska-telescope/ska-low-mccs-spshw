@@ -791,7 +791,7 @@ class TileSimulator:
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
-        time.sleep(random.randint(1, 3))
+        time.sleep(random.randint(1, 2))
         self.logger.debug("Initialise complete in Tpm.")
 
     @check_mocked_overheating

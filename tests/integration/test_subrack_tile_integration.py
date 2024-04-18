@@ -40,7 +40,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_programming_state",
         "pps_present",
         "daq_state",
-        timeout=5.0,
+        timeout=3.0,
     )
 
 

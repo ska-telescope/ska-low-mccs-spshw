@@ -4,10 +4,22 @@ archiver: "*" # depends on the platform we are uploading to
 configuration:
   - class: SpsStation
     attributes:
+      buildState:
+        code_push_event: true
+        archive_period: 0
+      versionId:
+        code_push_event: true
+        archive_period: 0
       healthState:
         code_push_event: true
         archive_period: 0
       adminMode:
+        code_push_event: true
+        archive_period: 0
+      simulationMode:
+        code_push_event: true
+        archive_period: 0
+      testMode:
         code_push_event: true
         archive_period: 0
       obsState:
@@ -129,10 +141,22 @@ configuration:
         archive_period: 0
   - class: MccsSubrack
     attributes:
+      buildState:
+        code_push_event: true
+        archive_period: 0
+      versionId:
+        code_push_event: true
+        archive_period: 0
       healthState:
         code_push_event: true
         archive_period: 0
       adminMode:
+        code_push_event: true
+        archive_period: 0
+      simulationMode:
+        code_push_event: true
+        archive_period: 0
+      testMode:
         code_push_event: true
         archive_period: 0
       healthModelParams:
@@ -215,10 +239,22 @@ configuration:
         archive_period: 0
   - class: MccsTile
     attributes:
+      buildState:
+        code_push_event: true
+        archive_period: 0
+      versionId:
+        code_push_event: true
+        archive_period: 0
       healthState:
         code_push_event: true
         archive_period: 0
       adminMode:
+        code_push_event: true
+        archive_period: 0
+      simulationMode:
+        code_push_event: true
+        archive_period: 0
+      testMode:
         code_push_event: true
         archive_period: 0
       voltages:
@@ -388,10 +424,22 @@ configuration:
         archive_period: 0
   - class: MccsDaqReceiver
     attributes:
+      buildState:
+        code_push_event: true
+        archive_period: 0
+      versionId:
+        code_push_event: true
+        archive_period: 0
       healthState:
         code_push_event: true
         archive_period: 0
       adminMode:
+        code_push_event: true
+        archive_period: 0
+      simulationMode:
+        code_push_event: true
+        archive_period: 0
+      testMode:
         code_push_event: true
         archive_period: 0
       dataReceivedResult:

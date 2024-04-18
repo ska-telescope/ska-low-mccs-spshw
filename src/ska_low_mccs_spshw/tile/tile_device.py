@@ -840,6 +840,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the board temperature
         """
+        # Force a read if we have no cached value yet
+        if self._attribute_state["boardTemperature"].value is None:
+            return (
+                self.component_manager.board_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
         return (
             self._attribute_state["boardTemperature"].value,
             self._attribute_state["boardTemperature"].timestamp,
@@ -862,6 +869,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 1
         """
+        # Force a read if we have no cached value yet
+        if self._attribute_state["fpga1Temperature"].value is None:
+            return (
+                self.component_manager.fpga1_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
         return (
             self._attribute_state["fpga1Temperature"].value,
             self._attribute_state["fpga1Temperature"].timestamp,
@@ -884,6 +898,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 2
         """
+        # Force a read if we have no cached value yet
+        if self._attribute_state["fpga2Temperature"].value is None:
+            return (
+                self.component_manager.fpga2_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
         return (
             self._attribute_state["fpga2Temperature"].value,
             self._attribute_state["fpga2Temperature"].timestamp,
@@ -1082,6 +1103,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: a tuple with attribute_value, time, quality
         """
+        # Force a read if we have no cached value yet
+        if self._attribute_state["ppsPresent"].value is None:
+            self._attribute_state[
+                "ppsPresent"
+            ].value = self.component_manager.pps_present
+            self._attribute_state["ppsPresent"].timestamp = time.time()
+            self._attribute_state["ppsPresent"].quality = tango.AttrQuality.ATTR_VALID
         if not self._attribute_state["ppsPresent"].value:
             self._attribute_state["ppsPresent"].quality = tango.AttrQuality.ATTR_ALARM
         return (

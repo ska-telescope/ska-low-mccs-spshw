@@ -60,13 +60,6 @@ simulators:
 
 {{- if (or $daqs_to_launch $daqs_to_egress)}}
 
-storage:
-  calibration:
-{{- with $platform.cluster.calibration.storage_class}}
-    storage_class: {{.}}
-{{- end}}
-    size: "250Mi"
-
 ska-low-mccs-daq:
 {{- end}}
 {{- with $daqs_to_launch}}

@@ -16,10 +16,3 @@ platform:
       node_selector: ~
       affinity: ~
       tolerations: ~
-    calibration:
-      storage_class: standard
-      runtime_class: ~  # We're assuming no GPUs accessible from minikube
-      gpu_limit: ~  # We're assuming no GPUs accessible from minikube
-      node_selector: ~
-      affinity: ~
-      tolerations: ~

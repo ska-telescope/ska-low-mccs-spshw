@@ -365,7 +365,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param state_change: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         for attribute_name, attribute_value in state_change.items():
             match attribute_name:
@@ -517,6 +520,30 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the tile beamformer and station beamformer status
         """
         return json.dumps(self.component_manager.dsp)
+
+    @attribute(
+        dtype="DevString",
+        label="adcs",
+    )
+    def adcs(self: MccsTile) -> str:
+        """
+        Return the ADC status.
+
+        :return: the ADC status
+        """
+        return json.dumps(self.component_manager.adcs)
+
+    @attribute(
+        dtype="DevString",
+        label="alarms",
+    )
+    def alarms(self: MccsTile) -> str:
+        """
+        Return the TPM's alarm status.
+
+        :return: the TPM's alarm status
+        """
+        return json.dumps(self.component_manager.alarms)
 
     @attribute(
         dtype="DevString",
@@ -1172,6 +1199,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
 
     @attribute(dtype=HealthState)
     def temperatureHealth(self: MccsTile) -> HealthState:

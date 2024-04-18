@@ -121,26 +121,21 @@ class TileHealthRules(HealthRules):
         :return: the computed health state
         """
         states = {}
-        for p in monitoring_points:
-            if isinstance(monitoring_points[p], dict):
-                states[p] = self.compute_intermediate_state(
-                    monitoring_points[p], min_max[p]
-                )
+        for p, p_state in monitoring_points.items():
+            if isinstance(p_state, dict):
+                states[p] = self.compute_intermediate_state(p_state, min_max[p])
             else:
-                if monitoring_points[p] is None:
+                if p_state is None and min_max[p] is not None:
                     states[p] = HealthState.UNKNOWN
                 elif isinstance(min_max[p], dict):
                     states[p] = (
                         HealthState.OK
-                        if monitoring_points[p] >= min_max[p]["min"]
-                        and monitoring_points[p] <= min_max[p]["max"]
+                        if min_max[p]["min"] <= p_state <= min_max[p]["max"]
                         else HealthState.FAILED
                     )
                 else:
                     states[p] = (
-                        HealthState.OK
-                        if monitoring_points[p] == min_max[p]
-                        else HealthState.FAILED
+                        HealthState.OK if p_state == min_max[p] else HealthState.FAILED
                     )
         return self._combine_states(*states.values())
 

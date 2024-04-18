@@ -176,5 +176,4 @@ def antenna_uri_fixture() -> list[str]:
     return [
         "car:ska-low-aavs3?main",
         "instrument/mccs-configuration/aavs3.yaml",
-        "aavs3",
     ]

@@ -50,7 +50,7 @@ DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
 @dataclass
 class TileAttribute:
-    """Class representing the internal state of a PaSD attribute."""
+    """Class representing the internal state of a Tile attribute."""
 
     value: Any
     quality: tango.AttrQuality
@@ -448,14 +448,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self: MccsTile,
         health_structure: dict[str, Any],
         dictionary_path: list[str],
-    ) -> Optional[tuple[str, Any]]:
+    ) -> Optional[Any]:
         """
         Unpack the monitoring point value from dictionary.
 
         :param health_structure: A nested health_structure dictionary
         :param dictionary_path: A list of strings used to traverse the dictionary.
 
-        :return: a tuple with tango_attribute name and value.
+        :example:
+
+        >> tile_health = {'timing': { 'pps': {'status': False}}}
+        >> pps=['timing', 'pps', 'status']
+        >> value = unpack_monitoring_point(tile_health, pps)
+        >> print(value) ->  False
+
+        :return: the monitoring point value or None.
         """
         structure = copy.deepcopy(health_structure)
         idx_list = copy.deepcopy(dictionary_path)
@@ -834,7 +841,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def boardTemperature(
         self: MccsTile,
-    ) -> tuple[bool | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the board temperature.
 
@@ -863,7 +870,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def fpga1Temperature(
         self: MccsTile,
-    ) -> tuple[bool | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the temperature of FPGA 1.
 
@@ -892,7 +899,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def fpga2Temperature(
         self: MccsTile,
-    ) -> tuple[bool | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the temperature of FPGA 2.
 

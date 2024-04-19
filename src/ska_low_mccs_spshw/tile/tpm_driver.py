@@ -2354,16 +2354,6 @@ class TpmDriver(MccsBaseComponentManager):
         # with self._hardware_lock:
         #    self.tile.post_synchronisation()
 
-    def sync_fpgas(self: TpmDriver) -> None:
-        """
-        Synchronise the FPGAs.
-
-        TODO Method appears to be mostly internal (private).
-        """
-        self.logger.debug("TpmDriver: sync_fpgas")
-        with self._hardware_lock:
-            self.tile.sync_fpgas()
-
     @property
     def test_generator_active(self: TpmDriver) -> bool:
         """

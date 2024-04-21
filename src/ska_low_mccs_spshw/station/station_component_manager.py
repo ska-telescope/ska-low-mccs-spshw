@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import ipaddress
 import itertools
 import json
 import logging
@@ -23,7 +24,6 @@ from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
-from pyfabil.base.utils import ip2long
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -462,7 +462,7 @@ class SpsStationComponentManager(
         self._lmc_integrated_mode = "10G"
         self._lmc_channel_payload_length = 8192
         self._lmc_beam_payload_length = 8192
-        self._fortygb_network_address = station_network_address
+        self._fortygb_network_address = ipaddress.ip_address(station_network_address)
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
@@ -472,7 +472,7 @@ class SpsStationComponentManager(
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._source_port = 0xF0D0
         self._destination_port = 4660
-        self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
+        self._base_mac_address = 0x620000000000 + int(self._fortygb_network_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
 
@@ -1457,17 +1457,17 @@ class SpsStationComponentManager(
         # Each TPM 40G port point to the corresponding
         # Last TPM uses CSP ingest address and port
         #
-        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
-        base_ip3 = int(ip_tail)
+        # ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
+        # base_ip3 = int(ip_tail)
         last_tile = len(tiles) - 1
         tile = 0
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = f"{ip_head}.{base_ip3+2*tile}"
-            src_ip2 = f"{ip_head}.{base_ip3+2*tile+1}"
-            dst_ip1 = f"{ip_head}.{base_ip3+2*tile+2}"
-            dst_ip2 = f"{ip_head}.{base_ip3+2*tile+3}"
+            src_ip1 = str(self._fortygb_network_address + 2 * tile)
+            src_ip2 = str(self._fortygb_network_address + 2 * tile + 1)
+            dst_ip1 = str(self._fortygb_network_address + 2 * tile + 2)
+            dst_ip2 = str(self._fortygb_network_address + 2 * tile + 3)
             src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
@@ -1793,7 +1793,7 @@ class SpsStationComponentManager(
 
         :return: IP network address for station network
         """
-        return self._fortygb_network_address
+        return str(self._fortygb_network_address)
 
     @property
     def csp_ingest_address(self: SpsStationComponentManager) -> str:
@@ -2072,9 +2072,6 @@ class SpsStationComponentManager(
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
 
-        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
-        base_ip3 = int(ip_tail)
-
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
@@ -2082,8 +2079,8 @@ class SpsStationComponentManager(
 
         num_cores = 2
         last_tile = len(self._tile_proxies) - 1
-        src_ip1 = f"{ip_head}.{base_ip3+2*last_tile}"
-        src_ip2 = f"{ip_head}.{base_ip3+2*last_tile+1}"
+        src_ip1 = str(self._fortygb_network_address + 2 * last_tile)
+        src_ip2 = str(self._fortygb_network_address + 2 * last_tile + 1)
         dst_port = self._csp_ingest_port
         src_ip_list = [src_ip1, src_ip2]
         src_mac = self._base_mac_address + 2 * last_tile

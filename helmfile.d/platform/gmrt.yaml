@@ -1,6 +1,6 @@
 platform:
   metadata:
-    version: 0.1.0
+    version: 0.2.0
     description: A platform configuration specification for GMRT
 
   # cluster:  specified by minikube.yaml
@@ -11,7 +11,7 @@ platform:
       gmrt:
         id: 1
         sps:
-          network_address: 10.0.0.152
+          sdn_first_interface: 10.0.0.152/25
           subracks:
             sr1:
               srmb_host: 10.0.10.112

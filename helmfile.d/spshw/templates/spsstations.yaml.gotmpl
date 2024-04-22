@@ -24,7 +24,10 @@
       {{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
     {{- end }}
 
-    {{- $_ := set $spsstation_instance "station_network_address" $sps_spec.network_address}}
+    {{- $_ := set $spsstation_instance "sdn_first_interface" $sps_spec.sdn_first_interface}}
+    {{- with $sps_spec | get "sdn_gateway" ""}}
+    {{- $_ := set $spsstation_instance "sdn_gateway" .}}
+    {{- end}}
 
     {{- $antenna_config_uri_list := list}}
     {{- $antenna_config_uri := dig "sps" "antenna_config_uri" "uri" "" $station_spec}}

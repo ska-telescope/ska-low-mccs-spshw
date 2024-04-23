@@ -5,8 +5,8 @@
 Standard sphinx config file.
 """
 
-import sys
 import os
+import sys
 
 # WORKAROUND: https://github.com/sphinx-doc/sphinx/issues/9243
 import sphinx.builders.html
@@ -65,8 +65,8 @@ autodoc_default_options = {
 # -- Project information -----------------------------------------------------
 release_filename = os.path.join("..", "..", ".release")
 with open(release_filename) as fd:
-    line=fd.readline()
-    release = line.strip().split('=')[1]
+    line = fd.readline()
+    release = line.strip().split("=")[1]
 
 author = "MCCS team"
 project = "MCCS LMC Prototype"
@@ -81,15 +81,17 @@ nitpick_ignore = [
     # have sphinx-based online docs for us to cross-link to.
     # In many case, we should look at refactoring so that these external
     # dependencies don't leak out through our public interface.
+    ("py:exc", "LibraryError"),
+    ("py:class", "RegisterInfo"),
     ("py:class", "Angle"),
     ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "pyaavs.tile.Tile"),
     ("py:class", "pyaavs.tile_wrapper.Tile"),
-    ("py:exc", "HTTPException"), # fastapi online docs are mkdocs-based
-    ("py:class", "starlette.requests.Request"), # mkdocs-based
-    ("py:class", "uvicorn.config.Config"), # mkdocs-based
+    ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
+    ("py:class", "starlette.requests.Request"),  # mkdocs-based
+    ("py:class", "uvicorn.config.Config"),  # mkdocs-based
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
     ("py:class", "pyfabil.base.definitions.Device"),
@@ -157,11 +159,9 @@ html_theme = "ska_ser_sphinx_theme"
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-html_theme_options = {
-}
+html_theme_options = {}
 
-html_context = {
-}
+html_context = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

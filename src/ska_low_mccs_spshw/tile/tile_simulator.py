@@ -508,7 +508,7 @@ class TileSimulator:
     STATIC_DELAYS = [-160.0] * 32
     PREADU_LEVELS = [0.0] * 32
     CLOCK_SIGNALS_OK = True
-
+    TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())
     VOLTAGE = 5.0
     CURRENT = 0.4
     BOARD_TEMPERATURE = 36.0
@@ -553,7 +553,7 @@ class TileSimulator:
         self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
         self._tile_health_structure: dict[Any, Any] = copy.deepcopy(
-            TileData.get_tile_defaults()
+            self.TILE_MONITORING_POINTS
         )
         self._station_id = self.STATION_ID
         self._timestamp = 0

@@ -8,6 +8,7 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
 
+import copy
 import importlib  # allow forward references in type hints
 import itertools
 import json
@@ -15,6 +16,7 @@ import logging
 import os.path
 import sys
 import time
+from dataclasses import dataclass
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -44,6 +46,15 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
+
+@dataclass
+class TileAttribute:
+    """Class representing the internal state of a Tile attribute."""
+
+    value: Any
+    quality: tango.AttrQuality
+    timestamp: float
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
@@ -123,6 +134,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self._attribute_state: dict[str, TileAttribute] = {}
+
+        self.attribute_monitoring_point_map: dict[str, list[str]] = {
+            "ppsPresent": ["timing", "pps", "status"],
+            "fpga1Temperature": ["temperatures", "FPGA0"],
+            "fpga2Temperature": ["temperatures", "FPGA1"],
+            "boardTemperature": ["temperatures", "board"],
+        }
+        for attr in self.attribute_monitoring_point_map:
+            self._attribute_state[attr] = TileAttribute(
+                value=None, timestamp=0, quality=tango.AttrQuality.ATTR_INVALID
+            )
+
+            self.set_change_event(attr, True, False)
+            self.set_archive_event(attr, True, False)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -258,9 +284,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("preaduLevels", True, False)
             self._device.set_change_event("cspRounding", True, False)
             self._device.set_change_event("channeliserRounding", True, False)
-            self._device.set_change_event("ppsPresent", True, False)
-            self._device.set_archive_event("ppsPresent", True, False)
-
             return (ResultCode.OK, "Init command completed OK")
 
     # class OnCommand(SKABaseDevice):
@@ -421,13 +444,68 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         f"Unexpected attribute changed {attribute_name}" "Nothing is do"
                     )
 
+    def unpack_monitoring_point(
+        self: MccsTile,
+        health_structure: dict[str, Any],
+        dictionary_path: list[str],
+    ) -> Optional[Any]:
+        """
+        Unpack the monitoring point value from dictionary.
+
+        :param health_structure: A nested health_structure dictionary
+        :param dictionary_path: A list of strings used to traverse the dictionary.
+
+        :example:
+
+        >> tile_health = {'timing': { 'pps': {'status': False}}}
+        >> pps=['timing', 'pps', 'status']
+        >> value = unpack_monitoring_point(tile_health, pps)
+        >> print(value) ->  False
+
+        :return: the monitoring point value or None.
+        """
+        structure = copy.deepcopy(health_structure)
+        idx_list = copy.deepcopy(dictionary_path)
+        for key in idx_list:
+            try:
+                if isinstance(structure[key], dict):
+                    idx_list.pop(0)
+                    return self.unpack_monitoring_point(structure[key], idx_list)
+                return structure[key]
+
+            except KeyError as e:
+                self.logger.error(
+                    f"Key error raise when locating tango_attribute value : {e}"
+                )
+                break
+        return None
+
     def update_tile_health_attributes(self: MccsTile) -> None:
-        """Update the TANGO attributes."""
-        pps_present = self.tile_health_structure["timing"]["pps"]["status"]
-        if self._pps_present != pps_present:
-            self._pps_present = pps_present
-            self.push_change_event("ppsPresent", pps_present)
-            self.push_archive_event("ppsPresent", pps_present)
+        """Update TANGO attributes from the tile health structure dictionary."""
+        for (
+            attribute_name,
+            dictionary_path,
+        ) in self.attribute_monitoring_point_map.items():
+            attribute_value = self.unpack_monitoring_point(
+                copy.deepcopy(self.tile_health_structure),
+                dictionary_path,
+            )
+            if attribute_value is None:
+                continue
+            try:
+                self._attribute_state[attribute_name].value = attribute_value
+                self._attribute_state[attribute_name].timestamp = time.time()
+                self._attribute_state[
+                    attribute_name
+                ].quality = tango.AttrQuality.ATTR_VALID
+            except KeyError:
+                self.logger.warning(f"Attribute {attribute_name} not found.")
+                continue
+            try:
+                self.push_change_event(attribute_name, attribute_value)
+                self.push_archive_event(attribute_name, attribute_value)
+            except tango.DevFailed:
+                self.logger.error("failed to push change event")
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -761,13 +839,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=65.0,
     )
-    def boardTemperature(self: MccsTile) -> float:
+    def boardTemperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the board temperature.
 
         :return: the board temperature
         """
-        return self.component_manager.board_temperature
+        # Force a read if we have no cached value yet
+        if self._attribute_state["boardTemperature"].value is None:
+            return (
+                self.component_manager.board_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
+        return (
+            self._attribute_state["boardTemperature"].value,
+            self._attribute_state["boardTemperature"].timestamp,
+            self._attribute_state["boardTemperature"].quality,
+        )
 
     @attribute(
         dtype="DevDouble",
@@ -777,13 +868,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=68.0,
     )
-    def fpga1Temperature(self: MccsTile) -> float:
+    def fpga1Temperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
         """
-        return self.component_manager.fpga1_temperature
+        # Force a read if we have no cached value yet
+        if self._attribute_state["fpga1Temperature"].value is None:
+            return (
+                self.component_manager.fpga1_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
+        return (
+            self._attribute_state["fpga1Temperature"].value,
+            self._attribute_state["fpga1Temperature"].timestamp,
+            self._attribute_state["fpga1Temperature"].quality,
+        )
 
     @attribute(
         dtype="DevDouble",
@@ -793,13 +897,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=68.0,
     )
-    def fpga2Temperature(self: MccsTile) -> float:
+    def fpga2Temperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality]:
         """
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
         """
-        return self.component_manager.fpga2_temperature
+        # Force a read if we have no cached value yet
+        if self._attribute_state["fpga2Temperature"].value is None:
+            return (
+                self.component_manager.fpga2_temperature,
+                time.time(),
+                tango.AttrQuality.ATTR_VALID,
+            )
+        return (
+            self._attribute_state["fpga2Temperature"].value,
+            self._attribute_state["fpga2Temperature"].timestamp,
+            self._attribute_state["fpga2Temperature"].quality,
+        )
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
     def fpgasUnixTime(self: MccsTile) -> list[int]:
@@ -992,22 +1109,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Report if PPS signal is present at the TPM input.
 
         :return: a tuple with attribute_value, time, quality
-            True if pps signal present.
-            ATTR_CHANGING if pps not yet polled,
-            ATTR_ALARM is pps not present,
-            ATTR_VALID is pps is present
         """
-        quality = tango.AttrQuality.ATTR_VALID
-        if self._pps_present is None:
-            self.logger.debug(
-                "We have not yet polled the attribute pps_present, "
-                "setting quality to CHANGING"
-            )
-            quality = tango.AttrQuality.ATTR_CHANGING
-        if self._pps_present is False:
-            self.logger.debug("No PPS signal present, attribute quality set to ALARM")
-            quality = tango.AttrQuality.ATTR_ALARM
-        return self._pps_present, time.time(), quality
+        # Force a read if we have no cached value yet
+        if self._attribute_state["ppsPresent"].value is None:
+            self._attribute_state[
+                "ppsPresent"
+            ].value = self.component_manager.pps_present
+            self._attribute_state["ppsPresent"].timestamp = time.time()
+            self._attribute_state["ppsPresent"].quality = tango.AttrQuality.ATTR_VALID
+        if not self._attribute_state["ppsPresent"].value:
+            self._attribute_state["ppsPresent"].quality = tango.AttrQuality.ATTR_ALARM
+        return (
+            self._attribute_state["ppsPresent"].value,
+            self._attribute_state["ppsPresent"].timestamp,
+            self._attribute_state["ppsPresent"].quality,
+        )
 
     def dev_state(self) -> tango.DevState:
         """
@@ -1023,7 +1139,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         automatic_state_analysis: tango.DevState = super().dev_state()
         force_alarm: bool = False
-        if self._pps_present is False:
+        if self._attribute_state["ppsPresent"].value is False:
             self.logger.debug("no PPS signal present, raising ALARM")
             force_alarm = True
         if force_alarm:

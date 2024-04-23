@@ -32,7 +32,10 @@ class TileHealthRules(HealthRules):
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.UNKNOWN:
-                return True, f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}"
+                return (
+                    True,
+                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                )
         return False, ""
 
     def failed_rule(  # type: ignore[override]
@@ -47,7 +50,10 @@ class TileHealthRules(HealthRules):
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.FAILED:
-                return True, f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}"
+                return (
+                    True,
+                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                )
         return False, ""
 
     def degraded_rule(  # type: ignore[override]
@@ -62,7 +68,10 @@ class TileHealthRules(HealthRules):
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.DEGRADED:
-                return True, f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}"
+                return (
+                    True,
+                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                )
         return False, ""
 
     def healthy_rule(  # type: ignore[override]
@@ -116,33 +125,46 @@ class TileHealthRules(HealthRules):
                 )
             else:
                 if p_state is None:
-                    states[p] = HealthState.UNKNOWN, f"Monitoring point {p} not yet read"
+                    states[p] = (
+                        HealthState.UNKNOWN,
+                        f"Monitoring point {p} not yet read",
+                    )
                 elif isinstance(min_max[p], dict):
                     states[p] = (
                         (HealthState.OK, "")
-                        if p_state >= min_max[p]["min"]
-                        and p_state <= min_max[p]["max"]
-                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {p_state} not in range {min_max[p]['min']} - {min_max[p]['max']}")
+                        if p_state >= min_max[p]["min"] and p_state <= min_max[p]["max"]
+                        else (
+                            HealthState.FAILED,
+                            f"Monitoring point \"{path}/{p}\": {p_state} not in range {min_max[p]['min']} - {min_max[p]['max']}",
+                        )
                     )
                 else:
                     states[p] = (
                         (HealthState.OK, "")
                         if p_state == min_max[p]
-                        else (HealthState.FAILED, f"Monitoring point \"{path}/{p}\": {p_state} =/= {min_max[p]}")
+                        else (
+                            HealthState.FAILED,
+                            f'Monitoring point "{path}/{p}": {p_state} =/= {min_max[p]}',
+                        )
                     )
         return self._combine_states(*states.values())
 
-    def _combine_states(self: TileHealthRules, *args: tuple[HealthState, str]) -> HealthState:
+    def _combine_states(
+        self: TileHealthRules, *args: tuple[HealthState, str]
+    ) -> HealthState:
         states = [
             HealthState.FAILED,
             HealthState.UNKNOWN,
             HealthState.DEGRADED,
             HealthState.OK,
         ]
-        filtered_results = {state: [report for health, report in args if health == state] for state in states}
+        filtered_results = {
+            state: [report for health, report in args if health == state]
+            for state in states
+        }
         for state in states:
             if len(filtered_results[state]) > 0:
                 if state == HealthState.OK:
                     return state, ""
-                return state, " | ".join(filtered_results[state]) 
+                return state, " | ".join(filtered_results[state])
         return HealthState.UNKNOWN, "No health state matches"

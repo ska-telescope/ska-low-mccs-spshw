@@ -76,11 +76,17 @@ class TestSubrackHealthModel:
         :param data: Health data values for health model.
         :param expected_final_health: Expected final health.
         """
-        assert health_model.evaluate_health() == (HealthState.UNKNOWN, "Failed to read subrack state")
+        assert health_model.evaluate_health() == (
+            HealthState.UNKNOWN,
+            "Failed to read subrack state",
+        )
 
         health_model.update_data(data)
 
-        assert health_model.evaluate_health() == (expected_final_health, expected_final_report)
+        assert health_model.evaluate_health() == (
+            expected_final_health,
+            expected_final_report,
+        )
 
     @pytest.mark.parametrize(
         ("init_data", "expected_state_init", "end_data", "expected_state_end"),
@@ -289,7 +295,10 @@ class TestSubrackHealthModel:
         :param init_expected_health: Init expected health.
         :param end_expected_health: Final expected health.
         """
-        assert health_model.evaluate_health() == (HealthState.UNKNOWN, "Failed to read subrack state")
+        assert health_model.evaluate_health() == (
+            HealthState.UNKNOWN,
+            "Failed to read subrack state",
+        )
 
         data = {
             "board_temps": [50.0, 50.0],
@@ -314,7 +323,13 @@ class TestSubrackHealthModel:
             health_model.health_params = init_thresholds
 
         health_model.update_data(data)
-        assert health_model.evaluate_health() == (init_expected_health, init_expected_report)
+        assert health_model.evaluate_health() == (
+            init_expected_health,
+            init_expected_report,
+        )
 
         health_model.health_params = end_thresholds
-        assert health_model.evaluate_health() == (end_expected_health, end_expected_report)
+        assert health_model.evaluate_health() == (
+            end_expected_health,
+            end_expected_report,
+        )

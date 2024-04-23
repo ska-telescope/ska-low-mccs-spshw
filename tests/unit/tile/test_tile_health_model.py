@@ -43,18 +43,18 @@ class TestTileHealthModel:
         ],
         [
             (
-                {}, 
+                {},
                 HealthState.OK,
-                'Health is OK.',
-                {}, 
+                "Health is OK.",
+                {},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
-                {}, 
+                {},
                 HealthState.OK,
-                'Health is OK.',
-                {"voltages": {"AVDD3": 3.4}}, 
+                "Health is OK.",
+                {"voltages": {"AVDD3": 3.4}},
                 HealthState.FAILED,
                 'Intermediate health voltages is in FAILED HealthState. Cause: Monitoring point "/AVDD3": 3.4 not in range 2.37 - 2.6',
             ),
@@ -64,7 +64,7 @@ class TestTileHealthModel:
                 'Intermediate health dsp is in FAILED HealthState. Cause: Monitoring point "/tile_beamf": False =/= True',
                 {"dsp": {"tile_beamf": True}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"currents": {"FE0_mVA": 3.2}},
@@ -77,15 +77,15 @@ class TestTileHealthModel:
             (
                 {"temperatures": {"board": 25}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
                 {"temperatures": {"board": 58}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"alarms": {"temperature_alm": 0}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
                 {"alarms": {"temperature_alm": 1}},
                 HealthState.FAILED,
                 'Intermediate health alarms is in FAILED HealthState. Cause: Monitoring point "/temperature_alm": 1 =/= 0',
@@ -96,7 +96,7 @@ class TestTileHealthModel:
                 'Intermediate health adcs is in FAILED HealthState. Cause: Monitoring point "/sysref_counter/ADC7": False =/= True',
                 {"adcs": {"sysref_counter": {"ADC7": True}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"io": {"ddr_interface": {"reset_counter": {"FPGA1": 1}}}},
@@ -147,7 +147,10 @@ class TestTileHealthModel:
             health_model._state["tile_health_structure"],  # type: ignore[arg-type]
             final_monitoring_points,
         )
-        assert (final_health_state, final_health_report) == health_model.evaluate_health()
+        assert (
+            final_health_state,
+            final_health_report,
+        ) == health_model.evaluate_health()
 
     @pytest.mark.parametrize(
         [
@@ -160,17 +163,17 @@ class TestTileHealthModel:
         ],
         [
             (
-                {}, 
+                {},
                 HealthState.OK,
-                'Health is OK.',
-                {"voltages": {"MON_3V3": {"min": 1}}}, 
+                "Health is OK.",
+                {"voltages": {"MON_3V3": {"min": 1}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
                 {"temperatures": {"FPGA1": {"min": 150, "max": 250}}},
                 HealthState.FAILED,
                 'Intermediate health temperatures is in FAILED HealthState. Cause: Monitoring point "/FPGA1": 52.5 not in range 150 - 250',
@@ -181,7 +184,7 @@ class TestTileHealthModel:
                 'Intermediate health timing is in FAILED HealthState. Cause: Monitoring point "/clocks/FPGA1/UDP": True =/= False',
                 {"timing": {"clocks": {"FPGA1": {"UDP": True}}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"io": {"f2f_interface": {"pll_status": (False, 2)}}},
@@ -194,15 +197,15 @@ class TestTileHealthModel:
             (
                 {"voltages": {"VIN": {"min": 10}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
                 {"voltages": {"VIN": {"min": 11}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"adcs": {"sysref_timing_requirements": {"ADC12": True}}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
                 {"adcs": {"sysref_timing_requirements": {"ADC12": False}}},
                 HealthState.FAILED,
                 'Intermediate health adcs is in FAILED HealthState. Cause: Monitoring point "/sysref_timing_requirements/ADC12": True =/= False',
@@ -213,7 +216,7 @@ class TestTileHealthModel:
                 'Intermediate health alarms is in FAILED HealthState. Cause: Monitoring point "/voltage_alm": 0 =/= 1',
                 {"alarms": {"voltage_alm": 0}},
                 HealthState.OK,
-                'Health is OK.',
+                "Health is OK.",
             ),
             (
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 2}}}},
@@ -264,4 +267,7 @@ class TestTileHealthModel:
         health_model.health_params = init_thresholds
         assert (init_health_state, init_health_report) == health_model.evaluate_health()
         health_model.health_params = final_thresholds
-        assert (final_health_state, final_health_report) == health_model.evaluate_health()
+        assert (
+            final_health_state,
+            final_health_report,
+        ) == health_model.evaluate_health()

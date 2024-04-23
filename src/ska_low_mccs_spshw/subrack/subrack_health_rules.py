@@ -125,10 +125,7 @@ class SubrackHealthRules(HealthRules):
         :param rule_str: The type of error threshold to be checking against.
         :return: True if any of the thresholds are breached.
         """
-        if (
-            len(old_tpm_volts) == 0
-            or len(tpm_volts) == 0
-        ):
+        if len(old_tpm_volts) == 0 or len(tpm_volts) == 0:
             return (
                 False,
                 f"One of {old_tpm_volts}, {tpm_volts} is empty",
@@ -297,46 +294,46 @@ class SubrackHealthRules(HealthRules):
         assert isinstance(state, dict)
 
         voltage_failed, voltage_report = self._check_voltage_drops(
-                state["old_tpm_voltages"],
-                state["tpm_voltages"],
-                state["old_power_supply_voltages"],
-                state["power_supply_voltages"],
-                fail_str,
-            )
-        
+            state["old_tpm_voltages"],
+            state["tpm_voltages"],
+            state["old_power_supply_voltages"],
+            state["power_supply_voltages"],
+            fail_str,
+        )
+
         if (
             voltage_failed
             and state["old_tpm_power_states"] != state["tpm_power_states"]
         ):
             return True, voltage_report
         power_failed, power_report = self._check_powers(
-                state["tpm_power_states"],
-                state["tpm_voltages"],
-                state["tpm_currents"],
-                state["tpm_present"],
-                fail_str,
-            )
-        
+            state["tpm_power_states"],
+            state["tpm_voltages"],
+            state["tpm_currents"],
+            state["tpm_present"],
+            fail_str,
+        )
+
         if power_failed:
             return True, power_report
         basic_thresholds_failed, basic_report = self._check_basic_thresholds(
-                state["board_temps"], state["backplane_temps"], fail_str
-            )
+            state["board_temps"], state["backplane_temps"], fail_str
+        )
         if basic_thresholds_failed:
             return True, basic_report
         fan_failed, fan_report = self._check_fan_speeds(
-                state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
-            )
-        
+            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+        )
+
         if fan_failed:
             return True, fan_report
         current_failed, current_report = self._check_current_diff(
-                state["tpm_currents"],
-                state["board_currents"],
-                state["power_supply_currents"],
-                fail_str,
-            )
-        
+            state["tpm_currents"],
+            state["board_currents"],
+            state["power_supply_currents"],
+            fail_str,
+        )
+
         if current_failed:
             return True, current_report
         if not all(
@@ -373,11 +370,11 @@ class SubrackHealthRules(HealthRules):
         assert isinstance(state, dict)
 
         voltage_degraded, voltage_report = self._check_voltage_drops(
-                state["old_tpm_voltages"],
-                state["tpm_voltages"],
-                state["old_power_supply_voltages"],
-                state["power_supply_voltages"],
-                fail_str,
+            state["old_tpm_voltages"],
+            state["tpm_voltages"],
+            state["old_power_supply_voltages"],
+            state["power_supply_voltages"],
+            fail_str,
         )
         if (
             voltage_degraded
@@ -385,29 +382,29 @@ class SubrackHealthRules(HealthRules):
         ):
             return True, voltage_report
         power_degraded, power_report = self._check_powers(
-                state["tpm_power_states"],
-                state["tpm_voltages"],
-                state["tpm_currents"],
-                state["tpm_present"],
-                fail_str,
+            state["tpm_power_states"],
+            state["tpm_voltages"],
+            state["tpm_currents"],
+            state["tpm_present"],
+            fail_str,
         )
         if power_degraded:
             return True, power_report
         basic_degraded, basic_report = self._check_basic_thresholds(
-                state["board_temps"], state["backplane_temps"], fail_str
+            state["board_temps"], state["backplane_temps"], fail_str
         )
         if basic_degraded:
             return True, basic_report
         fan_degraded, fan_report = self._check_fan_speeds(
-                state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
+            state["subrack_fan_speeds"], state["desired_fan_speeds"], fail_str
         )
         if fan_degraded:
             return True, fan_report
         current_degraded, current_report = self._check_current_diff(
-                state["tpm_currents"],
-                state["board_currents"],
-                state["power_supply_currents"],
-                fail_str,
+            state["tpm_currents"],
+            state["board_currents"],
+            state["power_supply_currents"],
+            fail_str,
         )
         if current_degraded:
             return True, current_report

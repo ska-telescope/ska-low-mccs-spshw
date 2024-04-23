@@ -63,7 +63,9 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
 
     :param device_proxies: dictionary of proxies with device name as a key.
     """
-    device_proxies["Subrack"].healthModelParams = "{}"
+    device_proxies["Subrack"].healthModelParams = json.dumps(
+        {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+    )
 
 
 @pytest.fixture(name="station_name")
@@ -159,6 +161,12 @@ def device_online(
             "device_state", tango.DevState.UNKNOWN
         )
     change_event_callbacks.assert_change_event("device_state", Anything)
+
+    # TODO: Get rid of this
+    if device == "Subrack":
+        device_proxies["Subrack"].healthModelParams = json.dumps(
+            {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+        )
 
 
 @given("the Station has been commanded to turn on")

@@ -92,7 +92,7 @@ class SubrackSimulator(SubrackProtocol):
         # },
         "tpm_voltages": {
             "length": 8,
-            "default": [12.0] * 8,
+            "default": [5.0] * 8,
             "writable": False,
         },
     }

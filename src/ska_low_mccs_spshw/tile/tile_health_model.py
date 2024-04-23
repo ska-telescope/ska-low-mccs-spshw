@@ -79,7 +79,9 @@ class TileHealthModel(BaseHealthModel):
         return HealthState.UNKNOWN, "No rules matched"
 
     @property
-    def intermediate_healths(self: TileHealthModel) -> dict[str, tuple[HealthState, str]]:
+    def intermediate_healths(
+        self: TileHealthModel,
+    ) -> dict[str, tuple[HealthState, str]]:
         """
         Get the intermediate health roll-up states.
 

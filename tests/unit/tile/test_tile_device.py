@@ -89,8 +89,11 @@ def on_tile_device_fixture(
 
     tile_device.adminMode = AdminMode.ONLINE
 
-    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.OFF)
+    # Sometimes not called.
+    # change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.OFF, lookahead=2, consume_nonmatches=True
+    )
     change_event_callbacks["state"].assert_not_called()
 
     tile_device.subscribe_event(

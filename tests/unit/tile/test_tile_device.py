@@ -1020,10 +1020,14 @@ class TestMccsTileCommands:
             callbacks with asynchrony support.
         """
         bitfile = "tests/data/Vivado_test_firmware_bitfile.bit"
-        [[result_code], [message]] = on_tile_device.DownloadFirmware(bitfile)
-        assert result_code == ResultCode.QUEUED
-        assert "DownloadFirmware" in message.split("_")[-1]
+        execute_lrc_to_completion(
+            change_event_callbacks,
+            on_tile_device,
+            "DownloadFirmware",
+            bitfile,
+        )
         on_tile_device.UpdateAttributes()
+
         assert on_tile_device.isProgrammed
         assert on_tile_device.firmwareName == bitfile
 

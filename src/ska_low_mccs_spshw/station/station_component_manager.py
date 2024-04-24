@@ -458,16 +458,8 @@ class SpsStationComponentManager(
             "preaduLevels",
         ]
 
-        self._lmc_param = {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 0xF0D0,
-        }
-        self._lmc_integrated_mode = "10G"
-        self._lmc_channel_payload_length = 8192
-        self._lmc_beam_payload_length = 8192
+        self._source_port = 0xF0D0
+        self._destination_port = 4660
 
         first_interface = ipaddress.ip_interface(sdn_first_interface)
         self._sdn_first_address = first_interface.ip
@@ -475,6 +467,20 @@ class SpsStationComponentManager(
         self._sdn_gateway: int | None = (
             int(ipaddress.ip_address(sdn_gateway)) if sdn_gateway else None
         )
+
+        self._lmc_param = {
+            "mode": "10G",
+            "payload_length": 8192,
+            "destination_ip": "0.0.0.0",
+            "destination_port": self._destination_port,
+            "source_port": self._source_port,
+            "netmask_40g": self._sdn_netmask,
+            "gateway_40g": self._sdn_gateway,
+        }
+        self._lmc_integrated_mode = "10G"
+        self._lmc_channel_payload_length = 8192
+        self._lmc_beam_payload_length = 8192
+
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
@@ -482,8 +488,6 @@ class SpsStationComponentManager(
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
-        self._source_port = 0xF0D0
-        self._destination_port = 4660
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
@@ -1559,6 +1563,8 @@ class SpsStationComponentManager(
                         "destination_ip": self._lmc_param["destination_ip"],
                         "channel_payload_length": self._lmc_channel_payload_length,
                         "beam_payload_length": self._lmc_beam_payload_length,
+                        "netmask_40g": self._sdn_netmask,
+                        "gateway_40g": self._sdn_gateway,
                     }
                 )
             )
@@ -2024,6 +2030,8 @@ class SpsStationComponentManager(
         self._lmc_param["destination_ip"] = dst_ip
         self._lmc_param["source_port"] = src_port
         self._lmc_param["destination_port"] = dst_port
+        self._lmc_param["netmask_40g"] = self._sdn_netmask
+        self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
@@ -2064,6 +2072,8 @@ class SpsStationComponentManager(
                 "destination_ip": dst_ip,
                 "source_port": src_port,
                 "destination_port": dst_port,
+                "netmask_40g": self._sdn_netmask,
+                "gateway_40g": self._sdn_gateway,
             }
         )
         for tile in self._tile_proxies.values():

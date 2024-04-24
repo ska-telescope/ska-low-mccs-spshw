@@ -748,6 +748,8 @@ class BaseTpmSimulator:
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -758,6 +760,8 @@ class BaseTpmSimulator:
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g (science data) subnet
+        :param gateway_40g: gateway of the 40g (science data) subnet
         """
         self.logger.debug("TpmSimulator: set_lmc_download")
         if dst_ip is None:
@@ -771,6 +775,8 @@ class BaseTpmSimulator:
                 dst_ip=dst_ip,
                 src_port=src_port,
                 dst_port=dst_port,
+                netmask=netmask_40g,
+                gateway_ip=gateway_40g,
             )
 
     # pylint: disable=too-many-arguments
@@ -1070,6 +1076,8 @@ class BaseTpmSimulator:
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -1082,6 +1090,8 @@ class BaseTpmSimulator:
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g (science data) subnet
+        :param gateway_40g: gateway of the 40g (science data) subnet
 
         :raises NotImplementedError: because this method is not yet
             meaningfully implemented

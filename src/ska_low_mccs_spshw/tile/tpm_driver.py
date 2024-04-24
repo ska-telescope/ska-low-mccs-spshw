@@ -1268,6 +1268,8 @@ class TpmDriver(MccsBaseComponentManager):
         dst_ip: Optional[str] = None,
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -1278,13 +1280,21 @@ class TpmDriver(MccsBaseComponentManager):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g subnet
+        :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
         """
         self.logger.debug("TpmDriver: set_lmc_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_lmc_download(
-                        mode, payload_length, dst_ip, src_port, dst_port
+                        mode,
+                        payload_length,
+                        dst_ip,
+                        src_port,
+                        dst_port,
+                        netmask_40g=netmask_40g,
+                        gateway_ip_40g=gateway_40g,
                     )
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -2246,6 +2256,8 @@ class TpmDriver(MccsBaseComponentManager):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -2258,6 +2270,8 @@ class TpmDriver(MccsBaseComponentManager):
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g subnet
+        :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -2270,6 +2284,8 @@ class TpmDriver(MccsBaseComponentManager):
                         dst_ip,
                         src_port,
                         dst_port,
+                        netmask_40g=netmask_40g,
+                        gateway_ip_40g=gateway_40g,
                     )
                 # pylint: disable=broad-except
                 except Exception as e:

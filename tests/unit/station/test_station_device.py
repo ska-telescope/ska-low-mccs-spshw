@@ -473,6 +473,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
             "mode": "10G",
@@ -480,6 +482,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
         assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
@@ -487,6 +491,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "beam_payload_length": 8192,
             "channel_payload_length": 8192,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
 
 
@@ -656,6 +662,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
             "mode": "10G",
@@ -663,6 +671,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
         assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
@@ -670,6 +680,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "beam_payload_length": 8192,
             "channel_payload_length": 8192,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
 
 
@@ -928,6 +940,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "source_port": 0xF0D0,
                     "destination_port": 4660,
+                    "netmask_40g": 4294967168,  # /25
+                    "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
             True,
@@ -943,6 +957,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,
+                    "netmask_40g": 4294967168,  # /25
+                    "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
             True,

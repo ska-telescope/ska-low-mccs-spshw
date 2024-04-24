@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import copy
 import functools
+import ipaddress
 import itertools
 import json
 import logging
@@ -23,7 +24,6 @@ from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
-from pyfabil.base.utils import ip2long
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -333,7 +333,8 @@ class SpsStationComponentManager(
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         daq_trl: str,
-        station_network_address: str,
+        sdn_first_interface: str,
+        sdn_gateway: str,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         max_workers: int,
@@ -351,7 +352,12 @@ class SpsStationComponentManager(
         :param tile_fqdns: FQDNs of the Tango devices which manage this
             station's TPMs
         :param daq_trl: The TRL of this Station's DAQ Receiver.
-        :param station_network_address: address prefix for station 40G subnet
+        :param sdn_first_interface: CIDR-style IP address with mask,
+            for the first interface in the block assigned for science data
+            For example, "10.130.0.1/25" means
+            "address 10.130.0.1 on network 10.130.0.0/25".
+        :param sdn_gateway: IP address of the SDN gateway,
+            or None if the network has no gateway.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -452,17 +458,29 @@ class SpsStationComponentManager(
             "preaduLevels",
         ]
 
+        self._source_port = 0xF0D0
+        self._destination_port = 4660
+
+        first_interface = ipaddress.ip_interface(sdn_first_interface)
+        self._sdn_first_address = first_interface.ip
+        self._sdn_netmask = int(first_interface.netmask)
+        self._sdn_gateway: int | None = (
+            int(ipaddress.ip_address(sdn_gateway)) if sdn_gateway else None
+        )
+
         self._lmc_param = {
             "mode": "10G",
             "payload_length": 8192,
             "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 0xF0D0,
+            "destination_port": self._destination_port,
+            "source_port": self._source_port,
+            "netmask_40g": self._sdn_netmask,
+            "gateway_40g": self._sdn_gateway,
         }
         self._lmc_integrated_mode = "10G"
         self._lmc_channel_payload_length = 8192
         self._lmc_beam_payload_length = 8192
-        self._fortygb_network_address = station_network_address
+
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
@@ -470,9 +488,7 @@ class SpsStationComponentManager(
         self._channeliser_rounding = [3] * 512
         self._csp_rounding = [3] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
-        self._source_port = 0xF0D0
-        self._destination_port = 4660
-        self._base_mac_address = 0x620000000000 + ip2long(self._fortygb_network_address)
+        self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
 
@@ -1457,17 +1473,17 @@ class SpsStationComponentManager(
         # Each TPM 40G port point to the corresponding
         # Last TPM uses CSP ingest address and port
         #
-        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
-        base_ip3 = int(ip_tail)
+        # ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
+        # base_ip3 = int(ip_tail)
         last_tile = len(tiles) - 1
         tile = 0
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = f"{ip_head}.{base_ip3+2*tile}"
-            src_ip2 = f"{ip_head}.{base_ip3+2*tile+1}"
-            dst_ip1 = f"{ip_head}.{base_ip3+2*tile+2}"
-            dst_ip2 = f"{ip_head}.{base_ip3+2*tile+3}"
+            src_ip1 = str(self._sdn_first_address + 2 * tile)
+            src_ip2 = str(self._sdn_first_address + 2 * tile + 1)
+            dst_ip1 = str(self._sdn_first_address + 2 * tile + 2)
+            dst_ip2 = str(self._sdn_first_address + 2 * tile + 3)
             src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
@@ -1498,6 +1514,8 @@ class SpsStationComponentManager(
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_1,
                             "rx_port_filter": dst_port_1,
+                            "netmask": self._sdn_netmask,
+                            "gateway_ip": self._sdn_gateway,
                         }
                     )
                 )
@@ -1521,6 +1539,8 @@ class SpsStationComponentManager(
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_2,
+                            "netmask": self._sdn_netmask,
+                            "gateway_ip": self._sdn_gateway,
                         }
                     )
                 )
@@ -1543,6 +1563,8 @@ class SpsStationComponentManager(
                         "destination_ip": self._lmc_param["destination_ip"],
                         "channel_payload_length": self._lmc_channel_payload_length,
                         "beam_payload_length": self._lmc_beam_payload_length,
+                        "netmask_40g": self._sdn_netmask,
+                        "gateway_40g": self._sdn_gateway,
                     }
                 )
             )
@@ -1793,7 +1815,7 @@ class SpsStationComponentManager(
 
         :return: IP network address for station network
         """
-        return self._fortygb_network_address
+        return str(self._sdn_first_address)
 
     @property
     def csp_ingest_address(self: SpsStationComponentManager) -> str:
@@ -2008,6 +2030,8 @@ class SpsStationComponentManager(
         self._lmc_param["destination_ip"] = dst_ip
         self._lmc_param["source_port"] = src_port
         self._lmc_param["destination_port"] = dst_port
+        self._lmc_param["netmask_40g"] = self._sdn_netmask
+        self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
         for tile in self._tile_proxies.values():
             assert tile._proxy is not None  # for the type checker
@@ -2048,6 +2072,8 @@ class SpsStationComponentManager(
                 "destination_ip": dst_ip,
                 "source_port": src_port,
                 "destination_port": dst_port,
+                "netmask_40g": self._sdn_netmask,
+                "gateway_40g": self._sdn_gateway,
             }
         )
         for tile in self._tile_proxies.values():
@@ -2072,9 +2098,6 @@ class SpsStationComponentManager(
         self._csp_ingest_port = dst_port
         self._csp_source_port = src_port
 
-        ip_head, ip_tail = self._fortygb_network_address.rsplit(".", maxsplit=1)
-        base_ip3 = int(ip_tail)
-
         (fqdn, proxy) = list(self._tile_proxies.items())[-1]
         assert proxy._proxy is not None  # for the type checker
         if self._tile_power_states[fqdn] != PowerState.ON:
@@ -2082,8 +2105,8 @@ class SpsStationComponentManager(
 
         num_cores = 2
         last_tile = len(self._tile_proxies) - 1
-        src_ip1 = f"{ip_head}.{base_ip3+2*last_tile}"
-        src_ip2 = f"{ip_head}.{base_ip3+2*last_tile+1}"
+        src_ip1 = str(self._sdn_first_address + 2 * last_tile)
+        src_ip2 = str(self._sdn_first_address + 2 * last_tile + 1)
         dst_port = self._csp_ingest_port
         src_ip_list = [src_ip1, src_ip2]
         src_mac = self._base_mac_address + 2 * last_tile
@@ -2102,6 +2125,8 @@ class SpsStationComponentManager(
                         "destination_ip": dst_ip,
                         "destination_port": dst_port,
                         "rx_port_filter": dst_port,
+                        "netmask": self._sdn_netmask,
+                        "gateway_ip": self._sdn_gateway,
                     }
                 )
             )
@@ -2125,6 +2150,8 @@ class SpsStationComponentManager(
                         "source_port": self._source_port,
                         "destination_ip": dst_ip,
                         "destination_port": dst_port,
+                        "netmask": self._sdn_netmask,
+                        "gateway_ip": self._sdn_gateway,
                     }
                 )
             )

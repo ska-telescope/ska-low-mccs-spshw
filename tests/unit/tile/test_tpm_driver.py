@@ -1651,6 +1651,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that exceptions are caught.
@@ -1864,6 +1866,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that a raised exception is caught.

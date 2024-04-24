@@ -102,7 +102,8 @@ deviceServers: {} # e.g....
   #   s8-1:
   #     low-mccs/daqreceiver/s8-1:
   #       station_id: 345
-  #       station_network_address: 10.0.0.152
+  #       sdn_first_interface: 10.130.0.1/25
+  #       sdn_gateway: 10.130.0.126
   #       antenna_config_uri:
   #       - "car:ska-low-aavs3?main"
   #       - "instrument/mccs-configuration/aavs3.yaml"

@@ -1209,7 +1209,7 @@ class TestMccsTileCommands:
         config_1 = {
             "core_id": 0,
             "arp_table_entry": 0,
-            "source_mac": "10:fe:ed:08:0a:58",
+            "source_mac": 18687084464728,  # 10:fe:ed:08:0a:58
             "source_ip": "10.0.99.3",
             "source_port": 4000,
             "destination_ip": "10.0.98.3",
@@ -1220,7 +1220,7 @@ class TestMccsTileCommands:
         config_2 = {
             "core_id": 1,
             "arp_table_entry": 1,
-            "source_mac": "10:fe:ed:08:0a:56",
+            "source_mac": 18687084464726,  # 10:fe:ed:08:0a:56
             "source_ip": "10.0.99.4",
             "source_port": 4001,
             "destination_ip": "10.0.98.4",

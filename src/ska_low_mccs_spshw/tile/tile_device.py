@@ -1975,6 +1975,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             * source_port - (int) source port
             * destination_ip - (string) IP dot notation
             * destination_port - (int) destination port
+            * netmask - (int) 40g (science data) subnet mask
+            * gateway_ip - (int) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2061,6 +2063,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         "source_port": item.get("src_port", None),
                         "destination_ip": item.get("dst_ip", None),
                         "destination_port": item.get("dst_port", None),
+                        "netmask": item.get("netmask", None),
+                        "gateway_ip": item.get("gateway_ip", None),
                     }
                 )
             if len(item_new) == 0:
@@ -2084,7 +2088,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the configuration is a json string describilg a list (possibly empty)
                  Each list entry comprising:
                  core_id, arp_table_entry, source_mac, source_ip, source_port,
-                 destination_ip, destination_port
+                 destination_ip, destination_port, netmask, gateway_ip
 
         :example:
 
@@ -2158,9 +2162,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             dst_ip = kwargs.get("destination_ip", None)
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
+            netmask_40g = kwargs.get("netmask_40g", None)
+            gateway_40g = kwargs.get("gateway_40g", None)
 
             self._component_manager.set_lmc_download(
-                mode, payload_length, dst_ip, src_port, dst_port
+                mode,
+                payload_length,
+                dst_ip,
+                src_port,
+                dst_port,
+                netmask_40g=netmask_40g,
+                gateway_40g=gateway_40g,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2176,6 +2188,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP.
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
+            * netmask_40g - (int) 40g (science data) subnet mask
+            * gateway_40g - (int) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2251,6 +2265,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             dst_ip = kwargs.get("destination_ip", None)
             src_port = kwargs.get("source_port", 0xF0D0)
             dst_port = kwargs.get("destination_port", 4660)
+            netmask_40g = kwargs.get("netmask_40g", None)
+            gateway_40g = kwargs.get("gateway_40g", None)
 
             self._component_manager.set_lmc_integrated_download(
                 mode,
@@ -2259,6 +2275,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 dst_ip,
                 src_port,
                 dst_port,
+                netmask_40g=netmask_40g,
+                gateway_40g=gateway_40g,
             )
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
@@ -2278,6 +2296,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             * destination_ip - (string) Destination IP
             * source_port - (int) Source port for integrated data streams
             * destination_port - (int) Destination port for integrated data streams
+            * netmask_40g - (int) 40g (science data) subnet mask
+            * gateway_40g - (int) IP address of 40g (science) subnet gateway
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

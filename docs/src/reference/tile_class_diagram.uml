@@ -1,0 +1,42 @@
+@startuml
+scale 2
+
+class SKABaseDevice {
+}
+
+class MccsTile {
+}
+
+class PollingComponentManager {
+}
+
+class TileComponentManager {
+}
+
+class MccsSubrack {
+}
+
+class pyaavs.Tile {
+}
+class TileSimulator {
+}
+class TileRequestProvider {
+}
+
+
+
+SKABaseDevice <|-- MccsTile
+MccsTile "1" -r- "1" TileComponentManager
+
+TileComponentManager "1" -u- "0..8" MccsSubrack
+TileComponentManager "1" -r- "1" TileRequestProvider
+
+
+PollingComponentManager <|-- TileComponentManager
+
+TileComponentManager "0..1" --  pyaavs.Tile
+TileComponentManager "0..1" --  TileSimulator
+
+
+
+@enduml

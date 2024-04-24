@@ -23,6 +23,7 @@ prototype for the `Square Kilometre Array`_.
    :maxdepth: 1
    :caption: Reference material
 
+   reference/at_a_glance.rst
    reference/power
    reference/tile_device_to_tpm
    reference/tile_device_methods.rst

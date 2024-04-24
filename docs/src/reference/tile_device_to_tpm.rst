@@ -6,21 +6,23 @@
  Tango Tile Device Construction
 ********************************
 
-The TPM (or simulator) is created during the Tile's Init command.
-This command is executed automatically during construction of the Tile Tango device.
-The decision whether to use the TPM simulator or a real hardware driver is made
-with the simulation_mode flag. This is currently hardcoded to SimulationMode.TRUE
-in tile_device.py. This means that either the TPM simulator or the real hardware
-driver is available as soon as the Tile Tango device is ready for use.
-You can swicth between simulation and real TPM driver by writing to the Tile device's
-simulation_mode attribute. This will reset the Tile's TPM object.
-
-The Hardware tile object is actually a factory, which returns either a Tile12 or
+During deployment MccsTile is constructed with a platform specific configuration defined by helm.
+The MccsTile contructs a TileComponentManager using information from this configuration. 
+This configuration includes a simulation_mode flag. When simulation_mode is TRUE a TileSimulator 
+will be constructed and used as the backend, when False a pyaavs.Tile object will be created to 
+interface with the hardware as a backend.
+The Tile object is actually a factory, which returns either a Tile12 or
 a Tile16 object, depending on the Tango property *TpmVersion*. 
 
-TPM Simulator Construction
-==========================
-.. uml:: tile_construction.uml
+Tile brief architecture
+=======================
+The MccsTile inherits from the SkaTangoBase class, this is the interface for TANGO control.
+Information and instructions are sent to the hardware using this interface via a 'TileComponentManager'. 
+The 'TileComponentManager' is a 'PollingComponentManager' and will poll requests on the backend system, 
+the decision of what to poll is determined by the 'TileRequestProvider'. 
+
+.. uml:: tile_class_diagram.uml
+
 
 TPM Driver Construction
 =======================

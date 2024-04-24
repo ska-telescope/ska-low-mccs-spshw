@@ -453,12 +453,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         The exception code can be used to give more information to user.
         And potentially inform the poll prioritisation.
 
-        Currently:
-        poll_failed + SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.UNKNOWN
-        poll_failed + SUBRACK_SAY_TPM_OFF         ->  PowerState.OFF
-        poll_failed + SUBRACK_SAY_TPM_ON          ->  PowerState.ON
-        poll_failed + SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.NO_SUPPLY
-
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
@@ -502,11 +496,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         This is a hook called by the poller when values have been read
         during a poll.
-
-        SUBRACK_SAY_TPM_UNKNOWN     ->  PowerState.ON
-        SUBRACK_SAY_TPM_OFF         ->  PowerState.ON
-        SUBRACK_SAY_TPM_ON          ->  PowerState.ON
-        SUBRACK_SAY_TPM_NO_SUPPLY   ->  PowerState.ON
 
         :param poll_response: response to the pool, including any values
             read.

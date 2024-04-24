@@ -28,6 +28,8 @@ def unconnected_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is NotConnected.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CONNECT"
     """
     while True:
         yield "CONNECT"
@@ -38,6 +40,10 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is Unknown.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CHECK_CPLD_COMMS"
+    *    yield "CONNECT"
+    *    yield "FIRMWARE_AVALIABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -50,6 +56,10 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is NotProgrammed.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CHECK_CPLD_COMMS"
+    *    yield "CONNECT"
+    *    yield "FIRMWARE_AVALIABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -62,6 +72,14 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is Programmed.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CHECK_CPLD_COMMS"
+    *    yield "CSP_ROUNDING"
+    *    yield "CHANNELISER_ROUNDING"
+    *    yield "IS_PROGRAMMED"
+    *    yield "HEALTH_STATUS"
+    *    yield "PLL_LOCKED"
+    *    yield "FIRMWARE_AVALIABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -78,6 +96,28 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is Initialised.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CHECK_CPLD_COMMS"
+    *    yield "CSP_ROUNDING"
+    *    yield "CHANNELISER_ROUNDING"
+    *    yield "IS_PROGRAMMED"
+    *    yield "HEALTH_STATUS"
+    *    yield "PLL_LOCKED"
+    *    yield "HEALTH_STATUS"
+    *    yield "ADC_RMS"
+    *    yield "PLL_LOCKED"
+    *    yield "PENDING_DATA_REQUESTS"
+    *    yield "PPS_DELAY"
+    *    yield "PPS_DELAY_CORRECTION"
+    *    yield "IS_BEAMFORMER_RUNNING"
+    *    yield "FPGA_REFERENCE_TIME"
+    *    yield "PHASE_TERMINAL_COUNT"
+    *    yield "PREADU_LEVELS"
+    *    yield "STATIC_DELAYS"
+    *    yield "STATION_ID"
+    *    yield "TILE_ID"
+    *    yield "BEAMFORMER_TABLE"
+    *    yield "FIRMWARE_AVALIABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -108,6 +148,29 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     Return an iterator yielding attributes to be polled when TpmStatus is Initialised.
 
     :yields: the name of an attribute group to be read from the device.
+
+    *    yield "CHECK_CPLD_COMMS"
+    *    yield "CSP_ROUNDING"
+    *    yield "CHANNELISER_ROUNDING"
+    *    yield "IS_PROGRAMMED"
+    *    yield "HEALTH_STATUS"
+    *    yield "PLL_LOCKED"
+    *    yield "HEALTH_STATUS"
+    *    yield "ADC_RMS"
+    *    yield "PLL_LOCKED"
+    *    yield "PENDING_DATA_REQUESTS"
+    *    yield "PPS_DELAY"
+    *    yield "PPS_DELAY_CORRECTION"
+    *    yield "IS_BEAMFORMER_RUNNING"
+    *    yield "FPGA_REFERENCE_TIME"
+    *    yield "PHASE_TERMINAL_COUNT"
+    *    yield "PREADU_LEVELS"
+    *    yield "STATIC_DELAYS"
+    *    yield "STATION_ID"
+    *    yield "TILE_ID"
+    *    yield "BEAMFORMER_TABLE"
+    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "TILE_BEAMFORMER_FRAME"
     """
     while True:
         yield "CHECK_CPLD_COMMS"

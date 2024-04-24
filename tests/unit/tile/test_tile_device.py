@@ -384,7 +384,7 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["adc_power"],
         )
-
+        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
         static_tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
@@ -393,10 +393,9 @@ class TestMccsTile:
             fault=False,
             power=PowerState.ON,
             tile_health_structure=TileData.get_tile_defaults(),
-            adc_rms=list(range(32)),
+            adc_rms=list(range(2, 34)),
         )
-
-        change_event_callbacks["adc_power"].assert_change_event(list(range(32)))
+        change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
 
     def test_ppsPresent(
         self: TestMccsTile,

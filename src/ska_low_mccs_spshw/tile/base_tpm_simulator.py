@@ -1149,16 +1149,6 @@ class BaseTpmSimulator:
         self.logger.debug("TpmSimulator: post_synchronisation")
         raise NotImplementedError
 
-    def sync_fpgas(self: BaseTpmSimulator) -> None:
-        """
-        Synchronise the FPGAs.
-
-        :raises NotImplementedError: because this method is not yet
-            meaningfully implemented
-        """
-        self.logger.debug("TpmSimulator: sync_fpgas")
-        raise NotImplementedError
-
     # pylint: disable=too-many-arguments
     def configure_test_generator(
         self: BaseTpmSimulator,

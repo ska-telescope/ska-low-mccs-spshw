@@ -833,10 +833,30 @@ class TpmDriver(MccsBaseComponentManager):
         """
         Return the tile beamformer and station beamformer status in the TPM.
 
-        :return: dsp status in the TPM
+        :return: tile beamformer and station beamformer status in the TPM
         """
         self.logger.debug("TpmDriver: get dsp")
         return self._tile_health_structure["dsp"]
+
+    @property
+    def adcs(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return the ADC status in the TPM.
+
+        :return: ADC status in the TPM
+        """
+        self.logger.debug("TpmDriver: get adcs")
+        return self._tile_health_structure["adcs"]
+
+    @property
+    def alarms(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return the alarms status in the TPM.
+
+        :return: alarms status in the TPM
+        """
+        self.logger.debug("TpmDriver: get alarms")
+        return self._tile_health_structure["alarms"]
 
     @property
     def board_temperature(self: TpmDriver) -> float:
@@ -2354,16 +2374,6 @@ class TpmDriver(MccsBaseComponentManager):
         """
         # with self._hardware_lock:
         #    self.tile.post_synchronisation()
-
-    def sync_fpgas(self: TpmDriver) -> None:
-        """
-        Synchronise the FPGAs.
-
-        TODO Method appears to be mostly internal (private).
-        """
-        self.logger.debug("TpmDriver: sync_fpgas")
-        with self._hardware_lock:
-            self.tile.sync_fpgas()
 
     @property
     def test_generator_active(self: TpmDriver) -> bool:

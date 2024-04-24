@@ -8,6 +8,8 @@
 """This module contains pytest-specific test harness for SPSHW integration tests."""
 from __future__ import annotations
 
+import copy
+import json
 import logging
 import unittest
 from typing import Any, Iterator
@@ -169,6 +171,20 @@ def patched_tile_device_class_fixture(
         this, we only want to fix it in this one place.
         """
 
+        HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP = {
+            "fpga1Temperature": ["temperatures", "FPGA0"],
+            "fpga2Temperature": ["temperatures", "FPGA1"],
+            "boardTemperature": ["temperatures", "board"],
+            "ppsPresent": ["timing", "pps", "status"],
+        }
+
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            self.health_attribute_to_simulator_map = copy.deepcopy(
+                self.HEALTH_ATTRIBUTE_TO_SIMULATOR_MAP
+            )
+
+            super().__init__(*args, **kwargs)
+
         def create_component_manager(
             self: PatchedTileDevice,
         ) -> TileComponentManager:
@@ -202,6 +218,53 @@ def patched_tile_device_class_fixture(
             tpm_driver._last_update_time_1 = 0.0
             tpm_driver._last_update_time_2 = 0.0
             tpm_driver._update_attributes()
+
+        @command(dtype_in="DevString")
+        def SetHealthStructureInBackend(
+            self: PatchedTileDevice, attribute_to_set: str
+        ) -> None:
+            """
+            Set a value in the backend TileSimulator.
+
+            :param attribute_to_set: a json string of the form
+                "{attr_name: attr_set_value}"
+            """
+            attributes = json.loads(attribute_to_set)
+            for attribute, value in attributes.items():
+                if attribute not in self.health_attribute_to_simulator_map:
+                    pytest.fail(
+                        f"Unable to set attribute {attribute} in TileSimulator "
+                        "mapping not found."
+                    )
+                try:
+                    indexes = self.health_attribute_to_simulator_map[attribute]
+
+                    def _nested_set(
+                        dic: dict[str, Any], keys: list[str], value: Any
+                    ) -> None:
+                        for key in keys[:-1]:
+                            dic = dic.setdefault(key, {})
+                        dic[keys[-1]] = value
+
+                    _nested_set(tpm_driver.tile._tile_health_structure, indexes, value)
+
+                except Exception as e:  # pylint: disable=broad-except
+                    pytest.fail(
+                        f"Failed to set {attribute} = {value} "
+                        f"in backend TileSimulator : {repr(e)}"
+                    )
+
+        @command(dtype_out="DevVarLongStringArray")
+        def Off(self: PatchedTileDevice) -> None:
+            if isinstance(self.component_manager._tpm_driver, TpmDriver):
+                self.component_manager._tpm_driver.tile.mock_off()
+            return super().Off()
+
+        @command(dtype_out="DevVarLongStringArray")
+        def On(self: PatchedTileDevice) -> None:
+            if isinstance(self.component_manager._tpm_driver, TpmDriver):
+                self.component_manager._tpm_driver.tile.mock_on()
+            return super().On()
 
     return PatchedTileDevice
 

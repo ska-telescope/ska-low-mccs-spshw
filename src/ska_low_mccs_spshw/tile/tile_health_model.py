@@ -6,7 +6,7 @@
 #
 # Distributed under the terms of the GPL license.
 # See LICENSE.txt for more info.
-"""An implementation of a health model for an APIU."""
+"""An implementation of a health model for a Tile."""
 
 from __future__ import annotations  # allow forward references in type hints
 
@@ -28,6 +28,8 @@ class TileHealthModel(BaseHealthModel):
     At present this uses the base health model; this is a placeholder
     for a future, better implementation.
     """
+
+    _health_rules: TileHealthRules
 
     def __init__(
         self: TileHealthModel,
@@ -76,30 +78,17 @@ class TileHealthModel(BaseHealthModel):
     @property
     def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
         """
-        Get the 6 intermediate health roll-up quantities.
+        Get the intermediate health roll-up states.
 
-        :return: the 6 intermediate health roll-up quantities
+        :return: the intermediate health roll-up states
         """
-        if "tile_health_structure" not in self._state:
-            return {
-                "temperatures": HealthState.UNKNOWN,
-                "voltages": HealthState.UNKNOWN,
-                "currents": HealthState.UNKNOWN,
-                "alarms": HealthState.UNKNOWN,
-                "adcs": HealthState.UNKNOWN,
-                "timing": HealthState.UNKNOWN,
-                "io": HealthState.UNKNOWN,
-                "dsp": HealthState.UNKNOWN,
-            }
-        monitoring_points: dict[str, Any] = self._state[
-            "tile_health_structure"
-        ]  # type: ignore[assignment]
-        assert isinstance(self._health_rules, TileHealthRules)  # for the type-checker
+        monitoring_points: dict[str, Any] = self._state.get("tile_health_structure", {})
         return {
-            state: self._health_rules.compute_intermediate_state(
-                monitoring_points[state], self.health_params[state]
+            health_key: self._health_rules.compute_intermediate_state(
+                monitoring_points.get(health_key, {}),
+                parameters,
             )
-            for state in monitoring_points
+            for health_key, parameters in self.health_params.items()
         }
 
     @property
@@ -138,9 +127,10 @@ class TileHealthModel(BaseHealthModel):
         :return: the merged dictionary
         """
         output = copy.deepcopy(dict_a)
-        for key in dict_b:
-            if isinstance(dict_b[key], dict):
-                output[key] = self._merge_dicts(dict_a[key], dict_b[key])
+        for key, new_val in dict_b.items():
+            cur_val = dict_a[key]
+            if isinstance(new_val, dict) and isinstance(cur_val, dict):
+                output[key] = self._merge_dicts(cur_val, new_val)
             else:
-                output[key] = dict_b[key]
+                output[key] = new_val
         return output

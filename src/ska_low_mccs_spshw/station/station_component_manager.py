@@ -574,7 +574,6 @@ class SpsStationComponentManager(
         (
             antenna_mapping_uri,
             antenna_mapping_filepath,
-            this_station_cluster,
         ) = antenna_config_uri
 
         try:
@@ -604,10 +603,8 @@ class SpsStationComponentManager(
         # Look through all the stations on this cluster, find antennas on this station.
         antennas = {}
         for station in stations:
-            for station_id, station_config in station.items():
-                if (station_id == this_station_cluster) and (
-                    station_config["id"] == self._station_id
-                ):
+            for _, station_config in station.items():
+                if station_config["id"] == self._station_id:
                     antennas = next(self._find_by_key(station_config, "antennas"))
 
         if not antennas:
@@ -635,6 +632,8 @@ class SpsStationComponentManager(
                 "Antenna mapping dictionary structure not as expected, skipping, "
                 f"err: {err}",
             )
+
+        self.logger.debug("Successfully loaded antenna mapping.")
 
     def _update_static_delays(
         self: SpsStationComponentManager,

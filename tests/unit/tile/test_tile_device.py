@@ -1332,13 +1332,13 @@ class TestMccsTileCommands:
         time.sleep(0.5)
         on_tile_device.UpdateAttributes()
         table = list(on_tile_device.beamformerTable)
-        expected = [2, 0, 0, 0, 0, 0, 0]  # + [0, 0, 0, 0, 0, 0, 0] * 47
+        expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
         on_tile_device.SetBeamFormerRegions([2, 8, 5, 3, 8, 1, 1, 101])
         on_tile_device.UpdateAttributes()
         table = list(on_tile_device.beamformerTable)
-        expected = [2, 5, 3, 8, 1, 1, 101]  # + [0, 0, 0, 0, 0, 0, 0] * 47
+        expected = [2, 5, 3, 8, 1, 1, 101] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
     def test_send_data_samples(

@@ -794,7 +794,7 @@ class TestStaticSimulatorCommon:
             [72, 0, 0, 8, 0, 0, 0],
             [80, 0, 0, 16, 0, 0, 0],
             [88, 0, 0, 24, 0, 0, 0],
-        ]
+        ] + [[0, 0, 0, 0, 0, 0, 0]] * 44
 
         assert table == expected
 
@@ -820,7 +820,7 @@ class TestStaticSimulatorCommon:
             [72, 2, 3, 16, 7, 8, 9],
             [140, 4, 5, 32, 10, 11, 12],
             [148, 4, 5, 40, 10, 11, 12],
-        ]
+        ] + [[0, 0, 0, 0, 0, 0, 0]] * 44
 
         assert table == expected
 

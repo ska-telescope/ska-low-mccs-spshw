@@ -322,7 +322,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
-                        ].get_channel_table()[0 : self._nof_blocks]
+                        ].get_channel_table()
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -1644,7 +1644,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self.tile.set_beamformer_regions(collapsed_regions)
                     self._beamformer_table = self.tile.tpm.station_beamf[
                         0
-                    ].get_channel_table()[0 : self._nof_blocks]
+                    ].get_channel_table()
                     self.tile.define_spead_header(
                         self._station_id,
                         subarray_id,

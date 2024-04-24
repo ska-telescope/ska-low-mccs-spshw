@@ -797,17 +797,6 @@ class TpmDriver(MccsBaseComponentManager):
         self.logger.debug("TpmDriver: timing")
         return self._tile_health_structure["timing"]
 
-    # @property
-    # def active_40g_port(self: TpmDriver) -> list[bool]:
-    #     # If single 40G not supported by firmware both ports must be used
-    #     assert self.tile is not None
-    #     if not self.tile["fpga1.dsp_regfile.config_id.is_master"]:
-    #         return [True, True]
-    #     return [
-    #         self.tile["fpga1.dsp_regfile.config_id.is_master"] > 0,
-    #         self.tile["fpga2.dsp_regfile.config_id.is_master"] > 0,
-    #     ]
-
     @property
     def info(self: TpmDriver) -> dict[str, Any]:
         """

@@ -235,15 +235,15 @@ class MockTpmFirmwareInformation:
         """Reset firmware information."""
         self._major = -1
         self._minor = -1
-        self._host = "mock_host"
-        self._design = "mock_design"
-        self._user = "mock_user"
-        self._time = "mock_time"
-        self._build = "mock_build"
-        self._board = "mock_board"
-        self._git_branch = "mock_branch"
-        self._git_commit = "mock_commit"
-        self._git_dirty_flag = "mock_dirty_flag"
+        self._host = "<mock_host>"
+        self._design = "<mock_design>"
+        self._user = "<mock_user>"
+        self._time = "<mock_time>"
+        self._build = "<mock_build>"
+        self._board = "<mock_board>"
+        self._git_branch = "<mock_branch>"
+        self._git_commit = "<mock_commit>"
+        self._git_dirty_flag = "<mock_dirty_flag>"
 
     def get_design(self: MockTpmFirmwareInformation) -> str:
         return self._design
@@ -433,6 +433,88 @@ class MockTpm:
         :return: the preadu.
         """
         return self.preadu
+
+    @property
+    def info(self: MockTpm) -> dict[str, Any]:
+        """
+        TPM information
+
+        :return: the info
+        """
+        # TODO: Update this with representative data and types rather
+        # than just arbitrary strings.
+        info: dict[str, Any] = {}
+        info["hardware"] = self.get_board_info()
+        info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
+        info["hardware"]["BOARD_MODE"] = "<current board mode>"
+        info["hardware"]["LOCATION"] = "<current hardware location>"
+        info["hardware"]["DDR_SIZE_GB"] = "<current hardware DDR size>"
+
+        # Skip this as we're using strings for now.
+        # # Convert EEP information to IPv4Address type
+        # info["hardware"]["ip_address_eep"] = IPv4Address(
+        #     info["hardware"]["ip_address_eep"]
+        # )
+        # info["hardware"]["netmask_eep"] = IPv4Address(info["hardware"]["netmask_eep"])
+        # info["hardware"]["gateway_eep"] = IPv4Address(info["hardware"]["gateway_eep"])
+        # Populate Firmware Build information from first FPGA
+        info["fpga_firmware"] = {}
+        info["fpga_firmware"]["design"] = self.tpm_firmware_information.get_design()
+        info["fpga_firmware"]["build"] = self.tpm_firmware_information.get_build()
+        info["fpga_firmware"]["compile_time"] = self.tpm_firmware_information.get_time()
+        info["fpga_firmware"]["compile_user"] = self.tpm_firmware_information.get_user()
+        info["fpga_firmware"]["compile_host"] = self.tpm_firmware_information.get_host()
+        info["fpga_firmware"][
+            "git_branch"
+        ] = self.tpm_firmware_information.get_git_branch()
+        info["fpga_firmware"][
+            "git_commit"
+        ] = self.tpm_firmware_information.get_git_commit()
+        # Dictionary manipulation, move 1G network information
+        info["network"] = {}
+        info["network"]["1g_ip_address"] = "<network 1g IP address>"
+        info["network"]["1g_mac_address"] = "<network 1g mac address>"
+        info["network"]["1g_netmask"] = "<network 1g netmask>"
+        info["network"]["1g_gateway"] = "<network 1g gateway>"
+        del info["hardware"]["ip_address"]
+        del info["hardware"]["MAC"]
+        del info["hardware"]["netmask"]
+        del info["hardware"]["gateway"]
+        # TODO: What should we do about this bit? Where to check comms in sim?
+        # Add 40G network information, using ARP table entry for station beam packets
+        # if communication_status["FPGA0"] and communication_status["FPGA1"]:
+        #     config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
+        #     config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
+        #     info["network"]["40g_ip_address_p1"] = IPv4Address(config_40g_1["src_ip"])
+        #     mac = config_40g_1["src_mac"]
+        #     info["network"]["40g_mac_address_p1"] = ":".join(
+        #         f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+        #     )
+        #     info["network"]["40g_gateway_p1"] = IPv4Address(config_40g_1["gateway_ip"])
+        #     info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
+        #     info["network"]["40g_ip_address_p2"] = IPv4Address(config_40g_2["src_ip"])
+        #     mac = config_40g_2["src_mac"]
+        #     info["network"]["40g_mac_address_p2"] = ":".join(
+        #         f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+        #     )
+        #     info["network"]["40g_gateway_p2"] = IPv4Address(config_40g_2["gateway_ip"])
+        #     info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
+        # else:
+        info["network"].update(
+            dict.fromkeys(
+                [
+                    "40g_ip_address_p1",
+                    "40g_mac_address_p1",
+                    "40g_gateway_p1",
+                    "40g_netmask_p1",
+                    "40g_ip_address_p2",
+                    "40g_mac_address_p2",
+                    "40g_gateway_p2",
+                    "40g_netmask_p2",
+                ]
+            )
+        )
+        return info
 
     def write_register(
         self: MockTpm,
@@ -959,10 +1041,9 @@ class TileSimulator:
         communication_status = self.check_communication()
         if not communication_status["CPLD"]:
             raise BoardError(
-                f"Bard communication error, unable to get health status. Check communication status and try again."
+                "Board communication error, unable to get health status. Check communication status and try again."
             )
         info = {}
-        print(f"tpm={self.tpm}")
         if self.tpm:
             # Populate Hardware portion as provided by Sanitas
             info["hardware"] = self.tpm.get_board_info()
@@ -1950,7 +2031,7 @@ class TileSimulator:
         info = self.info
         keys = ["hardware", "fpga_firmware", "network"]
         if not all(key in info.keys() for key in keys):
-            print(f"KEYS NOT FOUND IN INFO: {info}")
+            self.logger.error(f"KEYS: [{keys}] NOT FOUND IN INFO: [{info}]")
             return ""
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} Serial Number: {info['hardware']['SN']} \n"

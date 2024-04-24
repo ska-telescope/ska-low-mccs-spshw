@@ -2308,13 +2308,20 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)_simulator
         """
-        # Arrange
         tile_simulator.connect()
         tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
 
-        print(tile_simulator)
-        assert False
+        # Pull attr
+        tile_info = tile_simulator.info
+
+        # Check some (not all) values are as set in tile simulator.
+        assert tile_info["hardware"]["HARDWARE_REV"] == "<current hardware revision>"
+        assert tile_info["hardware"]["BOARD_MODE"] == "<current board mode>"
+        assert tile_info["hardware"]["LOCATION"] == "<current hardware location>"
+        assert tile_info["hardware"]["DDR_SIZE_GB"] == "<current hardware DDR size>"
+        assert tile_info["fpga_firmware"]["compile_time"] == "<mock_time>"
+        assert tile_info["network"]["1g_netmask"] == "<network 1g netmask>"
 
     def test_write_read_registers(
         self: TestTpmDriver,

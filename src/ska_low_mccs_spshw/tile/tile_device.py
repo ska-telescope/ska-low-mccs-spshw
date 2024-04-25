@@ -17,7 +17,7 @@ import os.path
 import sys
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Final, Optional, cast
+from typing import Any, Callable, Final, Optional
 
 import numpy as np
 import tango
@@ -66,6 +66,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     # -----------------
     SimulationConfig = device_property(dtype=int, default_value=SimulationMode.FALSE)
     TestConfig = device_property(dtype=int, default_value=TestMode.NONE)
+    PollRate = device_property(dtype=float, default_value=0.4)
 
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
@@ -95,21 +96,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
-
+        self._preadu_levels: Optional[list[float]] = None
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
-        self._tile_programming_state: TpmStatus
-        self._adc_rms: list[float]
+        self._tile_programming_state: str
         self._pps_present: Optional[bool]
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._max_workers: int = 1
+        self._pll_locked: Optional[bool] = None
+        self._beamformer_table: Optional[list[list[int]]] = None
         self._static_delays: Optional[list[int]] = None
+        self._pps_delay_correction: Optional[int] = None
+        self._phase_terminal_count: Optional[int] = None
+        self._adc_rms: Optional[list[float]] = None
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
-        self._tile_programming_state = TpmStatus.UNKNOWN
-        self._adc_rms = [0.0] * 32
+        self._tile_programming_state = TpmStatus.UNKNOWN.pretty_name()
         self._max_workers = 1
         self._pps_present = None
         super().init_device()
@@ -130,6 +134,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tAntennasPerTile: {self.AntennasPerTile}\n"
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
+            f"\tPollRate: {self.PollRate}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -169,7 +174,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SimulationConfig,
             self.TestConfig,
             self.logger,
-            self._max_workers,
+            self.PollRate,
             self.TileId,
             self.StationID,
             self.TpmIp,
@@ -179,6 +184,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
+            # self._tile_device_state_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -284,6 +290,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._device.set_archive_event("preaduLevels", True, False)
             self._device.set_change_event("cspRounding", True, False)
             self._device.set_change_event("channeliserRounding", True, False)
+            self._device.set_change_event("ppsDelayCorrection", True, False)
+            self._device.set_archive_event("ppsDelayCorrection", True, False)
+            self._device.set_change_event("ppsDelay", True, False)
+            self._device.set_archive_event("ppsDelay", True, False)
+
             return (ResultCode.OK, "Init command completed OK")
 
     # class OnCommand(SKABaseDevice):
@@ -387,31 +398,33 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
+        # TODO: there is a lot of repeated code here.
+        # Refactor attributes to be more like PaSD.
         super()._component_state_changed(fault=fault, power=power)
         if power is not None:
             self._health_model.update_state(fault=fault, power=power)
         else:
             self._health_model.update_state(fault=fault)
 
-        for attribute_name, attribute_value in state_change.items():
+        capture_dict = copy.deepcopy(state_change)
+        for attribute_name, attribute_value in capture_dict.items():
             match attribute_name:
                 case "programming_state":
-                    tile_programming_state = cast(TpmStatus, attribute_value)
                     message = (
                         "programming_state callback. "
                         f"Old: {self._tile_programming_state}"
-                        f" -> {tile_programming_state}"
+                        f" -> {attribute_value}"
                     )
                     self.logger.debug(message)
-                    if self._tile_programming_state != tile_programming_state:
-                        self._tile_programming_state = tile_programming_state
-                        self.push_change_event(
-                            "tileProgrammingState", tile_programming_state.pretty_name()
-                        )
-                        self.push_archive_event(
-                            "tileProgrammingState", tile_programming_state.pretty_name()
-                        )
+                    if self._tile_programming_state != attribute_value:
+                        self._tile_programming_state = attribute_value
+                        self.push_change_event("tileProgrammingState", attribute_value)
+                        self.push_archive_event("tileProgrammingState", attribute_value)
+                case "global_status_alarms":
+                    # TODO: MCCS-2037
+                    self.logger.error("Functionality not implemented.")
                 case "tile_health_structure":
+                    # TODO: Handle this better.
                     if self.tile_health_structure != attribute_value:
                         # TODO: validate structure using schema before setting.
                         self.tile_health_structure = attribute_value
@@ -420,28 +433,38 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         )
                         self.update_tile_health_attributes()
                 case "adc_rms":
-                    if self._adc_rms != attribute_value:
-                        self._adc_rms = attribute_value
-                        self.push_change_event("adcPower", attribute_value)
-                        self.push_archive_event("adcPower", attribute_value)
+                    self._adc_rms = attribute_value
+                    self.push_change_event("adcPower", attribute_value)
+                    self.push_archive_event("adcPower", attribute_value)
                 case "static_delays":
-                    if self._static_delays != attribute_value:
-                        self._static_delays = attribute_value
-                        self.push_change_event("staticTimeDelays", attribute_value)
-                        self.push_archive_event("staticTimeDelays", attribute_value)
+                    self._static_delays = attribute_value
+                    self.push_change_event("staticTimeDelays", attribute_value)
+                    self.push_archive_event("staticTimeDelays", attribute_value)
                 case "preadu_levels":
-                    preadu_levels = state_change["preadu_levels"]
-                    self.push_change_event("preaduLevels", preadu_levels)
-                    self.push_archive_event("preaduLevels", preadu_levels)
+                    self._preadu_levels = attribute_value
+                    self.push_change_event("preaduLevels", attribute_value)
+                    self.push_archive_event("preaduLevels", attribute_value)
                 case "csp_rounding":
-                    _csp_rounding = state_change["csp_rounding"]
-                    self.push_change_event("cspRounding", _csp_rounding)
+                    self.push_change_event("cspRounding", attribute_value)
                 case "channeliser_rounding":
-                    _channeliser_rounding = state_change["channeliser_rounding"]
-                    self.push_change_event("channeliserRounding", _channeliser_rounding)
+                    self.push_change_event("channeliserRounding", attribute_value)
+                case "pps_delay_correction":
+                    self.logger.error("pps_delay_correction was called")
+                    self._pps_delay_correction = attribute_value
+                    self.push_change_event("ppsDelayCorrection", attribute_value)
+                    self.push_change_event("ppsDelayCorrection", attribute_value)
+                case "pps_delay":
+                    self.push_change_event("ppsDelay", attribute_value)
+                    self.push_change_event("ppsDelay", attribute_value)
+                case "pll_locked":
+                    self._pll_locked = attribute_value
+                case "beamformer_table":
+                    self._beamformer_table = attribute_value
+                case "phase_terminal_count":
+                    self._phase_terminal_count = attribute_value
                 case _:
                     self.logger.warning(
-                        f"Unexpected attribute changed {attribute_name}" "Nothing is do"
+                        f"Unexpected attribute changed {attribute_name}."
                     )
 
     def unpack_monitoring_point(
@@ -537,7 +560,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: voltages available
         """
-        return json.dumps(self.component_manager.voltages)
+        return json.dumps(self.tile_health_structure.get("voltages"))
 
     @attribute(
         dtype="DevString",
@@ -549,7 +572,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: temperatures available
         """
-        return json.dumps(self.component_manager.temperatures)
+        return json.dumps(self.tile_health_structure.get("temperatures"))
 
     @attribute(
         dtype="DevString",
@@ -561,7 +584,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: currents available
         """
-        return json.dumps(self.component_manager.currents)
+        return json.dumps(self.tile_health_structure.get("currents"))
 
     @attribute(
         dtype="DevString",
@@ -573,7 +596,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: timing signals status
         """
-        return json.dumps(self.component_manager.timing)
+        return json.dumps(self.tile_health_structure.get("timing"))
 
     @attribute(
         dtype="DevString",
@@ -585,7 +608,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: I/O interfaces status
         """
-        return json.dumps(self.component_manager.io)
+        return json.dumps(self.tile_health_structure.get("io"))
 
     @attribute(
         dtype="DevString",
@@ -597,7 +620,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the tile beamformer and station beamformer status
         """
-        return json.dumps(self.component_manager.dsp)
+        return json.dumps(self.tile_health_structure.get("dsp"))
 
     @attribute(
         dtype="DevString",
@@ -743,9 +766,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: a string describing the programming state of the tile
         """
-        status = self.component_manager.tpm_status
-        self._tile_programming_state = status
-        return status.pretty_name()
+        # NOTE: This is updated with every poll
+        return self.component_manager.tpm_status.pretty_name()
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:
@@ -814,13 +836,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=4.55,
         max_alarm=5.45,
     )
-    def voltageMon(self: MccsTile) -> float:
+    def voltageMon(self: MccsTile) -> Optional[float]:
         """
         Return the internal 5V supply of the TPM.
 
         :return: Internal supply of the TPM
         """
-        return self.component_manager.voltage_mon
+        if not self.tile_health_structure:
+            return None
+        return self.tile_health_structure["voltages"]["MON_5V0"]
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:
@@ -841,7 +865,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def boardTemperature(
         self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
         """
         Return the board temperature.
 
@@ -870,7 +894,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def fpga1Temperature(
         self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
         """
         Return the temperature of FPGA 1.
 
@@ -899,7 +923,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def fpga2Temperature(
         self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality]:
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
         """
         Return the temperature of FPGA 2.
 
@@ -925,7 +949,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the time for FPGAs
         """
-        return self.component_manager.fpgas_unix_time
+        return self.component_manager.fpgas_time
 
     @attribute(dtype="DevString")
     def fpgaTime(self: MccsTile) -> str:
@@ -943,7 +967,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the FPGA timestamp, in UTC format
         """
-        return self.component_manager.fpga_reference_time
+        return self.component_manager.formatted_fpga_reference_time
 
     @attribute(dtype="DevString")
     def fpgaFrameTime(self: MccsTile) -> str:
@@ -995,7 +1019,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         ]
 
     @attribute(dtype=("DevDouble",), max_dim_x=32)
-    def adcPower(self: MccsTile) -> list[float]:
+    def adcPower(self: MccsTile) -> Optional[list[float]]:
         """
         Return the RMS power of every ADC signal.
 
@@ -1003,7 +1027,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        return self.component_manager.adc_rms
+        return self._adc_rms
 
     @attribute(dtype="DevLong")
     def currentTileBeamformerFrame(self: MccsTile) -> int:
@@ -1030,7 +1054,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
-    def pendingDataRequests(self: MccsTile) -> bool:
+    def pendingDataRequests(self: MccsTile) -> Optional[bool]:
         """
         Check for pending data requests.
 
@@ -1039,7 +1063,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.pending_data_requests
 
     @attribute(dtype="DevBoolean")
-    def isBeamformerRunning(self: MccsTile) -> bool:
+    def isBeamformerRunning(self: MccsTile) -> Optional[bool]:
         """
         Check if beamformer is running.
 
@@ -1054,7 +1078,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: phase terminal count
         """
-        return self.component_manager.phase_terminal_count
+        return self._phase_terminal_count
 
     @phaseTerminalCount.write  # type: ignore[no-redef]
     def phaseTerminalCount(self: MccsTile, value: int) -> None:
@@ -1063,10 +1087,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param value: the phase terminal count
         """
-        self.component_manager.phase_terminal_count = value
+        self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self: MccsTile) -> int:
+    def ppsDelay(self: MccsTile) -> Optional[int]:
         """
         Return the delay between PPS and 10 MHz clock.
 
@@ -1081,7 +1105,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Return the PPS delay in nanoseconds
         """
-        return self.component_manager.pps_delay_correction
+        return self._pps_delay_correction
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
     def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
@@ -1092,7 +1116,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param pps_delay_correction: a correction to apply to the pps_delay.
         """
-        self.component_manager.pps_delay_correction = pps_delay_correction
+        self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
     @attribute(dtype="DevBoolean")
     def testGeneratorActive(self: MccsTile) -> bool:
@@ -1147,7 +1171,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return automatic_state_analysis
 
     @attribute(dtype="DevBoolean")
-    def clockPresent(self: MccsTile) -> bool:
+    def clockPresent(self: MccsTile) -> None:
         """
         Report if 10 MHz clock signal is present at the TPM input.
 
@@ -1156,7 +1180,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.clock_present
 
     @attribute(dtype="DevBoolean")
-    def sysrefPresent(self: MccsTile) -> bool:
+    def sysrefPresent(self: MccsTile) -> None:
         """
         Report if SYSREF signal is present at the FPGA.
 
@@ -1165,13 +1189,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.sysref_present
 
     @attribute(dtype="DevBoolean")
-    def pllLocked(self: MccsTile) -> bool:
+    def pllLocked(self: MccsTile) -> Optional[bool]:
         """
         Report if ADC clock PLL is in locked state.
 
         :return: PLL lock state
         """
-        return self.component_manager.pll_locked
+        return self._pll_locked
 
     @attribute(
         dtype=("DevLong",),
@@ -1213,7 +1237,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.static_delays
+        return self._static_delays
 
     @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
@@ -1223,7 +1247,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param delays: Delay in samples (positive = increase the signal delay)
              to correct for static delay mismathces, e.g. cable length.
         """
-        self.component_manager.static_delays = delays
+        self.component_manager.set_static_delays(delays)
 
     @attribute(
         dtype=("DevLong",),
@@ -1262,7 +1286,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self.component_manager.preadu_levels
+        return self._preadu_levels
 
     @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
@@ -1271,10 +1295,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self.component_manager.preadu_levels = list(levels)
+        self.component_manager.set_preadu_levels(list(levels))
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
-    def beamformerTable(self: MccsTile) -> list[int]:
+    def beamformerTable(self: MccsTile) -> Optional[list[int]]:
         """
         Get beamformer region table.
 
@@ -1291,9 +1315,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: list of up to 7*48 values
         """
-        return list(
-            itertools.chain.from_iterable(self.component_manager.beamformer_table)
-        )
+        table = self._beamformer_table
+        if not table:
+            return None
+        return list(itertools.chain.from_iterable(table))
 
     @attribute(
         dtype="DevString",
@@ -1442,7 +1467,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         static_delays = config.get("fixed_delays")
         if static_delays:
-            self.component_manager.static_delays = static_delays
+            self.component_manager.set_static_delays(static_delays)
 
         self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
 
@@ -1769,7 +1794,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             argin: list[int],
             *args: Any,
             **kwargs: Any,
-        ) -> tuple[ResultCode, str]:
+        ) -> list[int]:
             """
             Implement :py:meth:`.MccsTile.ReadAddress` command functionality.
 

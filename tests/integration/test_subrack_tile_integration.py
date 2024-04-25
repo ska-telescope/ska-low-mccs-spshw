@@ -42,7 +42,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "pps_present",
         "generic_health_attribute",
         "daq_state",
-        timeout=5.0,
+        timeout=3.0,
     )
 
 
@@ -603,7 +603,7 @@ class TestMccsTileTpmDriver:
         )
         tile_device.UpdateAttributes()
         table = list(tile_device.beamformerTable)
-        expected = [2, 0, 0, 0, 0, 0, 0]
+        expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
     def test_preadu_levels(

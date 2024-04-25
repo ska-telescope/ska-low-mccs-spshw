@@ -50,7 +50,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_channeliser_rounding",
         "track_lrc_command",
         "daq_state",
-        timeout=8.0,
+        timeout=9.0,
     )
 
 

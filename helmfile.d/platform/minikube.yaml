@@ -1,7 +1,7 @@
 platform:
   cluster:
     minikube: true
-    domain: stfc-ral-k8s.skao.int
+    domain: cluster.local
     services:
       jupyterhub: false  # Not a platform service
       taranta-platform: false  # Not a platform service

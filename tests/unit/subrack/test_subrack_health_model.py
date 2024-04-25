@@ -75,6 +75,7 @@ class TestSubrackHealthModel:
         :param health_model: Health model fixture.
         :param data: Health data values for health model.
         :param expected_final_health: Expected final health.
+        :param expected_final_report: Expected final health report.
         """
         assert health_model.evaluate_health() == (
             HealthState.UNKNOWN,
@@ -253,7 +254,8 @@ class TestSubrackHealthModel:
                 HealthState.OK,
                 "Health is OK.",
                 HealthState.FAILED,
-                "clock_reqs ['10MHz', '1PPS', '10_MHz_PLL_lock'] does not match thresholds ['some_clock']",
+                "clock_reqs ['10MHz', '1PPS', '10_MHz_PLL_lock'] "
+                "does not match thresholds ['some_clock']",
                 id="""Update thresholds so that now the device requires clock
                   locks which it doesnt have, report FAILED""",
             ),
@@ -293,7 +295,10 @@ class TestSubrackHealthModel:
         :param init_thresholds: Initial thresholds to set it to.
         :param end_thresholds: End thresholds to set it to.
         :param init_expected_health: Init expected health.
+        :param init_expected_report: Init expected health report.
         :param end_expected_health: Final expected health.
+        :param end_expected_report: Final expected health report.
+
         """
         assert health_model.evaluate_health() == (
             HealthState.UNKNOWN,

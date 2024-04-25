@@ -10,7 +10,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import copy
 from typing import Any, Optional
 
 from ska_control_model import HealthState
@@ -116,26 +115,3 @@ class TileHealthModel(BaseHealthModel):
         self._health_rules._thresholds = self._merge_dicts(
             self._health_rules.default_thresholds, params
         )
-
-    def _merge_dicts(
-        self: TileHealthModel, dict_a: dict[str, Any], dict_b: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Merge two nested dictionaries, taking values from b when available.
-
-        This is necessary for nested dictionaries of thresholds
-
-        TODO: Move into common repo
-
-        :param dict_a: the dictionary to take from if not in dictionary b
-        :param dict_b: the dictionary to preferentially take from
-        :return: the merged dictionary
-        """
-        output = copy.deepcopy(dict_a)
-        for key, new_val in dict_b.items():
-            cur_val = dict_a[key]
-            if isinstance(new_val, dict) and isinstance(cur_val, dict):
-                output[key] = self._merge_dicts(cur_val, new_val)
-            else:
-                output[key] = new_val
-        return output

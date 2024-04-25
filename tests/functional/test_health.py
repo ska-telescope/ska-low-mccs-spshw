@@ -19,10 +19,8 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import (
-    get_calibration_store_name,
     get_daq_name,
     get_sps_station_name,
-    get_station_calibrator_name,
     get_subrack_name,
     get_tile_name,
 )
@@ -121,12 +119,6 @@ def device_proxies_fixture(
         "Subrack": tango.DeviceProxy(get_subrack_name(subrack_id, station_name)),
         "Station": tango.DeviceProxy(get_sps_station_name(station_name)),
         "DAQ": tango.DeviceProxy(get_daq_name(station_name)),
-        "Calibration Store": tango.DeviceProxy(
-            get_calibration_store_name(station_name)
-        ),
-        "Station Calibrator": tango.DeviceProxy(
-            get_station_calibrator_name(station_name)
-        ),
     }
 
 
@@ -180,6 +172,16 @@ def station_on(device_proxies: dict[str, tango.DeviceProxy]) -> None:
     device_proxies["Station"].On()
 
 
+@given("the Station has been commanded to turn off")
+def station_off(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+    """
+    Command the station to turn off.
+
+    :param device_proxies: dictionary of device proxies.
+    """
+    device_proxies["Station"].Off()
+
+
 @given(parsers.cfparse("the {device} reports that its {attribute} is {value}"))
 @then(parsers.cfparse("the {device} reports that its {attribute} is {value}"))
 def device_verify_attribute(
@@ -220,7 +222,8 @@ def device_verify_attribute(
     if attribute == "HealthState":
         assert (
             device_value == enum_value
-        ), f"Expected health to be {enum_value} but got {device_value}, Reason: {device_proxy.healthReport}"
+        ), f"Expected health to be {enum_value} but got {device_value}, "
+        f"Reason: {device_proxy.healthReport}"
     else:
         assert device_value == enum_value
 

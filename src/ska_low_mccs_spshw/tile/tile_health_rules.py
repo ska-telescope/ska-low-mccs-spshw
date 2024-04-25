@@ -28,13 +28,15 @@ class TileHealthRules(HealthRules):
         Test whether UNKNOWN is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
-        :return: True if UNKNOWN is a valid state
+
+        :return: True if UNKNOWN is a valid state, along with a text report.
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.UNKNOWN:
                 return (
                     True,
-                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                    f"Intermediate health {key} is in {value[0].name} HealthState. "
+                    f"Cause: {value[1]}",
                 )
         return False, ""
 
@@ -46,13 +48,15 @@ class TileHealthRules(HealthRules):
         Test whether FAILED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
-        :return: True if FAILED is a valid state
+
+        :return: True if FAILED is a valid state, along with a text report.
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.FAILED:
                 return (
                     True,
-                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                    f"Intermediate health {key} is in {value[0].name} HealthState. "
+                    f"Cause: {value[1]}",
                 )
         return False, ""
 
@@ -64,13 +68,15 @@ class TileHealthRules(HealthRules):
         Test whether DEGRADED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
-        :return: True if DEGRADED is a valid state
+
+        :return: True if DEGRADED is a valid state, along with a text report.
         """
         for key, value in intermediate_healths.items():
             if value[0] == HealthState.DEGRADED:
                 return (
                     True,
-                    f"Intermediate health {key} is in {value[0].name} HealthState. Cause: {value[1]}",
+                    f"Intermediate health {key} is in {value[0].name} HealthState. "
+                    f"Cause: {value[1]}",
                 )
         return False, ""
 
@@ -82,9 +88,9 @@ class TileHealthRules(HealthRules):
         Test whether OK is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
-        :return: True if OK is a valid state
+        :return: True if OK is a valid state, along with a text report.
         """
-        if all(intermediate_healths.values() == HealthState.OK):
+        if all(state == HealthState.OK for state, _ in intermediate_healths.values()):
             return True, "Health is OK"
         return False, "Health not OK"
 
@@ -102,7 +108,7 @@ class TileHealthRules(HealthRules):
         monitoring_points: dict[str, Any],
         min_max: dict[str, Any],
         path: str = "",
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute the intermediate health state for the Tile.
 
@@ -115,27 +121,30 @@ class TileHealthRules(HealthRules):
             For monitoring points where a minimum/maximum doesn't make sense,
             the value provided will be that which the monitoring point is required
             to have for the device to be healthy
-        :return: the computed health state
+        :param path: the location in the health structure dictionary that is currently
+            being computed.
+        :return: the computed health state and health report
         """
-        states = {}
+        states: dict[str, tuple[HealthState, str]] = {}
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
                 states[p] = self.compute_intermediate_state(
                     p_state, min_max[p], path=f"{path}/{p}"
                 )
             else:
-                if p_state is None:
+                if p_state is None and min_max[p] is not None:
                     states[p] = (
                         HealthState.UNKNOWN,
-                        f"Monitoring point {p} not yet read",
+                        f"Monitoring point {p} is None.",
                     )
                 elif isinstance(min_max[p], dict):
                     states[p] = (
                         (HealthState.OK, "")
-                        if p_state >= min_max[p]["min"] and p_state <= min_max[p]["max"]
+                        if min_max[p]["min"] <= p_state <= min_max[p]["max"]
                         else (
                             HealthState.FAILED,
-                            f"Monitoring point \"{path}/{p}\": {p_state} not in range {min_max[p]['min']} - {min_max[p]['max']}",
+                            f'Monitoring point "{path}/{p}": {p_state} not in range '
+                            f"{min_max[p]['min']} - {min_max[p]['max']}",
                         )
                     )
                 else:
@@ -144,14 +153,15 @@ class TileHealthRules(HealthRules):
                         if p_state == min_max[p]
                         else (
                             HealthState.FAILED,
-                            f'Monitoring point "{path}/{p}": {p_state} =/= {min_max[p]}',
+                            f'Monitoring point "{path}/{p}": '
+                            f"{p_state} =/= {min_max[p]}",
                         )
                     )
         return self._combine_states(*states.values())
 
     def _combine_states(
         self: TileHealthRules, *args: tuple[HealthState, str]
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         states = [
             HealthState.FAILED,
             HealthState.UNKNOWN,

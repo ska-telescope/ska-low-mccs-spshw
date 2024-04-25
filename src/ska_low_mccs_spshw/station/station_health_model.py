@@ -83,7 +83,7 @@ class SpsStationHealthModel(BaseHealthModel):
 
     def evaluate_health(
         self: SpsStationHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the station.
 

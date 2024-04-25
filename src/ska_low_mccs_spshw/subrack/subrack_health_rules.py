@@ -34,29 +34,33 @@ class SubrackHealthRules(HealthRules):
         :param backplane_temps: The temperatures of the backplane sensors.
         :param rule_str: The type of error threshold to be checking against.
 
-        :return: True if any of the thresholds are breached.
+        :return: True if any of the thresholds are breached, along with a text report.
         """
         for temp in board_temps:
             if temp > self._thresholds[f"{rule_str}max_board_temp"]:
                 return (
                     True,
-                    f"{temp} greater than {rule_str}max_board_temp {self._thresholds[f'{rule_str}max_board_temp']}",
+                    f"{temp} greater than {rule_str}max_board_temp "
+                    f"{self._thresholds[f'{rule_str}max_board_temp']}",
                 )
             if temp < self._thresholds[f"{rule_str}min_board_temp"]:
                 return (
                     True,
-                    f"{temp} less than {rule_str}min_board_temp {self._thresholds[f'{rule_str}min_board_temp']}",
+                    f"{temp} less than {rule_str}min_board_temp "
+                    f"{self._thresholds[f'{rule_str}min_board_temp']}",
                 )
         for temp in backplane_temps:
             if temp > self._thresholds[f"{rule_str}max_backplane_temp"]:
                 return (
                     True,
-                    f"{temp} greater than {rule_str}max_backplane_temp {self._thresholds[f'{rule_str}max_backplane_temp']}",
+                    f"{temp} greater than {rule_str}max_backplane_temp "
+                    f"{self._thresholds[f'{rule_str}max_backplane_temp']}",
                 )
             if temp < self._thresholds[f"{rule_str}min_backplane_temp"]:
                 return (
                     True,
-                    f"{temp} less than {rule_str}min_backplane_temp {self._thresholds[f'{rule_str}min_backplane_temp']}",
+                    f"{temp} less than {rule_str}min_backplane_temp "
+                    f"{self._thresholds[f'{rule_str}min_backplane_temp']}",
                 )
         return False, ""
 
@@ -73,7 +77,7 @@ class SubrackHealthRules(HealthRules):
         :param desired_fan_speeds: The desired speeds of the fans.
         :param rule_str: The type of error threshold to be checking against.
 
-        :return: True if any of the thresholds are breached.
+        :return: True if any of the thresholds are breached, along with a text report.
         """
         for fan_speed in fan_speeds[0:2]:
             if (
@@ -82,12 +86,15 @@ class SubrackHealthRules(HealthRules):
             ):
                 return (
                     True,
-                    f"Speed diff {fan_speed} - {desired_fan_speeds[1]} = {abs(fan_speed - desired_fan_speeds[1])} not within threshold {self._thresholds[f'{rule_str}fan_speed_diff']}",
+                    f"Speed diff {fan_speed} - {desired_fan_speeds[1]} = "
+                    f"{abs(fan_speed - desired_fan_speeds[1])} not within threshold "
+                    f"{self._thresholds[f'{rule_str}fan_speed_diff']}",
                 )
             if fan_speed < self._thresholds[f"{rule_str}min_fan_speed"]:
                 return (
                     True,
-                    f"Fan speed {fan_speed} is below {rule_str}min_fan_speed {self._thresholds[f'{rule_str}min_fan_speed']}",
+                    f"Fan speed {fan_speed} is below {rule_str}min_fan_speed "
+                    f"{self._thresholds[f'{rule_str}min_fan_speed']}",
                 )
 
         for fan_speed in fan_speeds[2:4]:
@@ -97,12 +104,15 @@ class SubrackHealthRules(HealthRules):
             ):
                 return (
                     True,
-                    f"Speed diff abs({fan_speed} - {desired_fan_speeds[2]}) = {abs(fan_speed - desired_fan_speeds[2])} not within threshold {self._thresholds[f'{rule_str}fan_speed_diff']}",
+                    f"Speed diff abs({fan_speed} - {desired_fan_speeds[2]}) = "
+                    f"{abs(fan_speed - desired_fan_speeds[2])} not within threshold "
+                    f"{self._thresholds[f'{rule_str}fan_speed_diff']}",
                 )
             if fan_speed < self._thresholds[f"{rule_str}min_fan_speed"]:
                 return (
                     True,
-                    f"Fan speed {fan_speed} is below {rule_str}min_fan_speed {self._thresholds[f'{rule_str}min_fan_speed']}",
+                    f"Fan speed {fan_speed} is below {rule_str}min_fan_speed "
+                    f"{self._thresholds[f'{rule_str}min_fan_speed']}",
                 )
         return False, ""
 
@@ -123,7 +133,8 @@ class SubrackHealthRules(HealthRules):
         :param old_power_supply_volts: The old voltages of the power supplies.
         :param power_supply_volts: The voltages of the power supplies.
         :param rule_str: The type of error threshold to be checking against.
-        :return: True if any of the thresholds are breached.
+
+        :return: True if any of the thresholds are breached, along with a text report.
         """
         if len(old_tpm_volts) == 0 or len(tpm_volts) == 0:
             return (
@@ -141,7 +152,9 @@ class SubrackHealthRules(HealthRules):
         ]:
             return (
                 True,
-                f"Voltage drop {tpm_vol_drop} - {power_sup_vol_drop} = {tpm_vol_drop - power_sup_vol_drop} is above threshold {self._thresholds[f'{rule_str}voltage_drop']}",
+                f"Voltage drop {tpm_vol_drop} - {power_sup_vol_drop} = "
+                f"{tpm_vol_drop - power_sup_vol_drop} is above threshold "
+                f"{self._thresholds[f'{rule_str}voltage_drop']}",
             )
         return False, ""
 
@@ -163,7 +176,7 @@ class SubrackHealthRules(HealthRules):
         :param power_supply_currents: The currents of the power supplies.
         :param rule_str: The type of error threshold to be checking against.
 
-        :return: True if any of the thresholds are breached.
+        :return: True if any of the thresholds are breached, along with a text report.
         """
         total_current = sum(tpm_currents) + sum(board_currents)
         if (
@@ -172,10 +185,14 @@ class SubrackHealthRules(HealthRules):
         ):
             return (
                 True,
-                f"For power supply currents {power_supply_currents}, the sum {sum(power_supply_currents)} differ from the total current {total_current} by more than {self._thresholds[f'{rule_str}max_current_diff']}",
+                f"For power supply currents {power_supply_currents}, the sum "
+                f"{sum(power_supply_currents)} differ from the total current "
+                f"{total_current} by more than "
+                f"{self._thresholds[f'{rule_str}max_current_diff']}",
             )
         return False, ""
 
+    # pylint: disable=too-many-return-statements
     def _check_powers(
         self: SubrackHealthRules,
         tpm_power_states: list[float],
@@ -193,7 +210,7 @@ class SubrackHealthRules(HealthRules):
         :param tpm_present: List of whether a tpm is present.
         :param rule_str: The type of error threshold to be checking against.
 
-        :return: True if any of the thresholds are breached.
+        :return: True if any of the thresholds are breached, along with a text report.
         """
         if (
             len(tpm_voltages) == 0
@@ -212,35 +229,40 @@ class SubrackHealthRules(HealthRules):
             ):
                 return (
                     True,
-                    f"TPM {i} ON voltage too high {tpm_voltages[i]} > {self._thresholds[f'{rule_str}tpm_voltage_on']}",
+                    f"TPM {i} ON voltage too high {tpm_voltages[i]} > "
+                    f"{self._thresholds[f'{rule_str}tpm_voltage_on']}",
                 )
             if power_state == PowerState.ON and (
                 tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_on"]
             ):
                 return (
                     True,
-                    f"TPM {i} ON current too high {tpm_currents[i]} > {self._thresholds[f'{rule_str}tpm_current_on']}",
+                    f"TPM {i} ON current too high {tpm_currents[i]} > "
+                    f"{self._thresholds[f'{rule_str}tpm_current_on']}",
                 )
             if power_state == PowerState.STANDBY and (
                 tpm_voltages[i] > self._thresholds[f"{rule_str}tpm_voltage_standby"]
             ):
                 return (
                     True,
-                    f"TPM {i} STANDBY voltage too high {tpm_voltages[i]} > {self._thresholds[f'{rule_str}tpm_voltage_standby']}",
+                    f"TPM {i} STANDBY voltage too high {tpm_voltages[i]} > "
+                    f"{self._thresholds[f'{rule_str}tpm_voltage_standby']}",
                 )
             if power_state == PowerState.STANDBY and (
                 tpm_currents[i] > self._thresholds[f"{rule_str}tpm_current_standby"]
             ):
                 return (
                     True,
-                    f"TPM {i} STANDBY current too high {tpm_currents[i]} > {self._thresholds[f'{rule_str}tpm_current_standby']}",
+                    f"TPM {i} STANDBY current too high {tpm_currents[i]} > "
+                    f"{self._thresholds[f'{rule_str}tpm_current_standby']}",
                 )
             if power_state in [PowerState.OFF, PowerState.NO_SUPPLY] and (
                 tpm_voltages[i] > 0 or tpm_currents[i] > 0
             ):
                 return (
                     True,
-                    f"TPM {i} PowerState is {power_state} but voltage is {tpm_voltages[i]} and current {tpm_currents[i]}",
+                    f"TPM {i} PowerState is {power_state} but voltage is "
+                    f"{tpm_voltages[i]} and current {tpm_currents[i]}",
                 )
         return False, ""
 
@@ -252,9 +274,8 @@ class SubrackHealthRules(HealthRules):
         Test whether UNKNOWN is valid for the subrack.
 
         :param state_dict: The current state of the subrack.
-        :param subrack_health: The health state of the subrack.
 
-        :return: True if UNKNOWN is a valid state
+        :return: True if UNKNOWN is a valid state, along with a text report.
         """
         if (
             state_dict.get("subrack_state_points") == {}
@@ -265,12 +286,12 @@ class SubrackHealthRules(HealthRules):
         state = state_dict.get("subrack_state_points")
         assert isinstance(state, dict)
 
-        # tpm power state is messed up atm
-        # for i, power_state in enumerate(state["tpm_power_states"]):
-        #    if power_state == PowerState.UNKNOWN:
-        #        return True
+        for i, power_state in enumerate(state["tpm_power_states"]):
+            if power_state == PowerState.UNKNOWN:
+                return True, f"TPM {i} power state is UNKNOWN"
         return False, ""
 
+    # pylint: disable=too-many-return-statements
     def failed_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
@@ -279,9 +300,8 @@ class SubrackHealthRules(HealthRules):
         Test whether FAILED is valid for the subrack.
 
         :param state_dict: The current state of the subrack.
-        :param subrack_health: The health state of the subrack.
 
-        :return: True if FAILED is a valid state
+        :return: True if FAILED is a valid state, along with a text report.
         """
         fail_str = "failed_"
 
@@ -342,22 +362,23 @@ class SubrackHealthRules(HealthRules):
         ):
             return (
                 True,
-                f"clock_reqs {state['clock_reqs']} does not match thresholds {self._thresholds['clock_presence']}",
+                f"clock_reqs {state['clock_reqs']} does not match thresholds "
+                f"{self._thresholds['clock_presence']}",
             )
 
         return False, ""
 
+    # pylint: disable=too-many-return-statements
     def degraded_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
-    ) -> bool:
+    ) -> tuple[bool, str]:
         """
         Test whether DEGRADED is valid for the subrack.
 
         :param state_dict: The current state of the subrack.
-        :param subrack_health: The health state of the subrack.
 
-        :return: True if DEGRADED is a valid state
+        :return: True if DEGRADED is a valid state, along with a text report.
         """
         fail_str = "degraded_"
 
@@ -414,14 +435,13 @@ class SubrackHealthRules(HealthRules):
     def healthy_rule(  # type: ignore[override]
         self: SubrackHealthRules,
         state_dict: dict[str, Any],
-    ) -> bool:
+    ) -> tuple[bool, str]:
         """
         Test whether OK is valid for the subrack.
 
         :param state_dict: The current state of the subrack.
-        :param subrack_health: The health state of the subrack.
 
-        :return: True if OK is a valid state
+        :return: True if OK is a valid state, along with a text report.
         """
         # Not sure what I should be measuring against here...
         return True, "Health is OK"

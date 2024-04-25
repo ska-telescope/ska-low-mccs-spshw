@@ -43,19 +43,19 @@ class TestTileHealthRules:
                 TileData.MIN_MAX_MONITORING_POINTS["voltages"],
                 TileData.TILE_MONITORING_POINTS["voltages"],
                 HealthState.UNKNOWN,
-                "not yet read",
+                "is None",
                 id="Monitoring points are None, health is UNKNOWN",
             ),
             pytest.param(
                 TileData.MIN_MAX_MONITORING_POINTS["currents"],
                 {"FE0_mVA": None, "FE1_mVA": 50},
                 HealthState.FAILED,
-                'Monitoring point "/FE1_mVA": 50 not in range 2.02 - 2.38',
+                'Monitoring point "/FE1_mVA": 50 not in range 2.45 - 2.55',
                 id="One monitoring point failed, one out of range, health is FAILED",
             ),
         ],
     )
-    def test_compute_intermediate_state(
+    def test_compute_intermediate_state(  # pylint: disable=too-many-arguments
         self: TestTileHealthRules,
         health_rules: TileHealthRules,
         min_max: dict[str, Any],
@@ -70,13 +70,14 @@ class TestTileHealthRules:
         :param min_max: the min and max values that the monitoring points can take
         :param monitoring_points: the input monitoring point values
         :param expected_state: the expected health state
+        :param expected_report: the expected health report
         """
         if expected_state == HealthState.UNKNOWN:
             state, report = health_rules.compute_intermediate_state(
                 monitoring_points, min_max
             )
             assert state == expected_state
-            assert report.count(expected_report) == 36
+            assert report.count(expected_report) == 35
         else:
             assert health_rules.compute_intermediate_state(
                 monitoring_points, min_max

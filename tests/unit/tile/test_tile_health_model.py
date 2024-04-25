@@ -56,12 +56,14 @@ class TestTileHealthModel:
                 "Health is OK.",
                 {"voltages": {"AVDD3": 3.4}},
                 HealthState.FAILED,
-                'Intermediate health voltages is in FAILED HealthState. Cause: Monitoring point "/AVDD3": 3.4 not in range 2.37 - 2.6',
+                "Intermediate health voltages is in FAILED HealthState. "
+                'Cause: Monitoring point "/AVDD3": 3.4 not in range 2.37 - 2.6',
             ),
             (
                 {"dsp": {"tile_beamf": False}},
                 HealthState.FAILED,
-                'Intermediate health dsp is in FAILED HealthState. Cause: Monitoring point "/tile_beamf": False =/= True',
+                "Intermediate health dsp is in FAILED HealthState. "
+                'Cause: Monitoring point "/tile_beamf": False =/= True',
                 {"dsp": {"tile_beamf": True}},
                 HealthState.OK,
                 "Health is OK.",
@@ -69,10 +71,12 @@ class TestTileHealthModel:
             (
                 {"currents": {"FE0_mVA": 3.2}},
                 HealthState.FAILED,
-                'Intermediate health currents is in FAILED HealthState. Cause: Monitoring point "/FE0_mVA": 2.5 not in range 1.93 - 2.27',
+                "Intermediate health currents is in FAILED HealthState. "
+                'Cause: Monitoring point "/FE0_mVA": 3.2 not in range 2.45 - 2.55',
                 {"currents": {"FE0_mVA": 3.1}},
                 HealthState.FAILED,
-                'Intermediate health currents is in FAILED HealthState. Cause: Monitoring point "/FE0_mVA": 2.4 not in range 1.93 - 2.27',
+                "Intermediate health currents is in FAILED HealthState. "
+                'Cause: Monitoring point "/FE0_mVA": 3.1 not in range 2.45 - 2.55',
             ),
             (
                 {"temperatures": {"board": 25}},
@@ -88,12 +92,14 @@ class TestTileHealthModel:
                 "Health is OK.",
                 {"alarms": {"temperature_alm": 1}},
                 HealthState.FAILED,
-                'Intermediate health alarms is in FAILED HealthState. Cause: Monitoring point "/temperature_alm": 1 =/= 0',
+                "Intermediate health alarms is in FAILED HealthState. "
+                'Cause: Monitoring point "/temperature_alm": 1 =/= 0',
             ),
             (
                 {"adcs": {"sysref_counter": {"ADC7": False}}},
                 HealthState.FAILED,
-                'Intermediate health adcs is in FAILED HealthState. Cause: Monitoring point "/sysref_counter/ADC7": False =/= True',
+                "Intermediate health adcs is in FAILED HealthState. "
+                'Cause: Monitoring point "/sysref_counter/ADC7": False =/= True',
                 {"adcs": {"sysref_counter": {"ADC7": True}}},
                 HealthState.OK,
                 "Health is OK.",
@@ -101,16 +107,21 @@ class TestTileHealthModel:
             (
                 {"io": {"ddr_interface": {"reset_counter": {"FPGA1": 1}}}},
                 HealthState.FAILED,
-                'Intermediate health io is in FAILED HealthState. Cause: Monitoring point "/ddr_interface/reset_counter/FPGA1": 1 =/= 0',
+                "Intermediate health io is in FAILED HealthState. "
+                'Cause: Monitoring point "/ddr_interface/reset_counter/FPGA1": 1 =/= 0',
                 {"io": {"ddr_interface": {"reset_counter": {"FPGA1": 2}}}},
                 HealthState.FAILED,
-                'Intermediate health io is in FAILED HealthState. Cause: Monitoring point "/ddr_interface/reset_counter/FPGA1": 2 =/= 0',
+                "Intermediate health io is in FAILED HealthState. "
+                'Cause: Monitoring point "/ddr_interface/reset_counter/FPGA1": 2 =/= 0',
             ),
             (
                 {"voltages": {"VREF_2V5": None}},
                 HealthState.OK,
+                "Health is OK.",
                 {"voltages": {"VREF_2V5": 2.5}},
                 HealthState.FAILED,
+                "Intermediate health voltages is in FAILED HealthState. "
+                'Cause: Monitoring point "/VREF_2V5": 2.5 =/= None',
             ),
         ],
     )
@@ -131,8 +142,10 @@ class TestTileHealthModel:
         :param init_monitoring_points: the initial monitoring points,
             using the defaults where not provided
         :param init_health_state: the initial expected health state
+        :param init_health_report: the initial expected health report
         :param final_monitoring_points: the new values of the monitoring points
         :param final_health_state: the final expected health state
+        :param final_health_report: the initial final health report
         """
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
         health_model._state[
@@ -176,12 +189,14 @@ class TestTileHealthModel:
                 "Health is OK.",
                 {"temperatures": {"FPGA1": {"min": 150, "max": 250}}},
                 HealthState.FAILED,
-                'Intermediate health temperatures is in FAILED HealthState. Cause: Monitoring point "/FPGA1": 52.5 not in range 150 - 250',
+                "Intermediate health temperatures is in FAILED HealthState. "
+                'Cause: Monitoring point "/FPGA1": 52.5 not in range 150 - 250',
             ),
             (
                 {"timing": {"clocks": {"FPGA1": {"UDP": False}}}},
                 HealthState.FAILED,
-                'Intermediate health timing is in FAILED HealthState. Cause: Monitoring point "/clocks/FPGA1/UDP": True =/= False',
+                "Intermediate health timing is in FAILED HealthState. "
+                'Cause: Monitoring point "/clocks/FPGA1/UDP": True =/= False',
                 {"timing": {"clocks": {"FPGA1": {"UDP": True}}}},
                 HealthState.OK,
                 "Health is OK.",
@@ -189,10 +204,14 @@ class TestTileHealthModel:
             (
                 {"io": {"f2f_interface": {"pll_status": (False, 2)}}},
                 HealthState.FAILED,
-                'Intermediate health io is in FAILED HealthState. Cause: Monitoring point "/f2f_interface/pll_status": (True, 0) =/= (False, 2)',
+                "Intermediate health io is in FAILED HealthState. "
+                'Cause: Monitoring point "/f2f_interface/pll_status": '
+                "(True, 0) =/= (False, 2)",
                 {"io": {"f2f_interface": {"pll_status": (False, 4)}}},
                 HealthState.FAILED,
-                'Intermediate health io is in FAILED HealthState. Cause: Monitoring point "/f2f_interface/pll_status": (True, 0) =/= (False, 4)',
+                "Intermediate health io is in FAILED HealthState. "
+                'Cause: Monitoring point "/f2f_interface/pll_status": '
+                "(True, 0) =/= (False, 4)",
             ),
             (
                 {"voltages": {"VIN": {"min": 10}}},
@@ -208,12 +227,15 @@ class TestTileHealthModel:
                 "Health is OK.",
                 {"adcs": {"sysref_timing_requirements": {"ADC12": False}}},
                 HealthState.FAILED,
-                'Intermediate health adcs is in FAILED HealthState. Cause: Monitoring point "/sysref_timing_requirements/ADC12": True =/= False',
+                "Intermediate health adcs is in FAILED HealthState. "
+                'Cause: Monitoring point "/sysref_timing_requirements/ADC12": '
+                "True =/= False",
             ),
             (
                 {"alarms": {"voltage_alm": 1}},
                 HealthState.FAILED,
-                'Intermediate health alarms is in FAILED HealthState. Cause: Monitoring point "/voltage_alm": 0 =/= 1',
+                "Intermediate health alarms is in FAILED HealthState. "
+                'Cause: Monitoring point "/voltage_alm": 0 =/= 1',
                 {"alarms": {"voltage_alm": 0}},
                 HealthState.OK,
                 "Health is OK.",
@@ -221,22 +243,32 @@ class TestTileHealthModel:
             (
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 2}}}},
                 HealthState.FAILED,
-                'Intermediate health dsp is in FAILED HealthState. Cause: Monitoring point "/station_beamf/ddr_parity_error_count/FPGA0": 0 =/= 2',
+                "Intermediate health dsp is in FAILED HealthState. "
+                "Cause: Monitoring point "
+                '"/station_beamf/ddr_parity_error_count/FPGA0": 0 =/= 2',
                 {"dsp": {"station_beamf": {"ddr_parity_error_count": {"FPGA0": 1}}}},
                 HealthState.FAILED,
-                'Intermediate health dsp is in FAILED HealthState. Cause: Monitoring point "/station_beamf/ddr_parity_error_count/FPGA0": 0 =/= 1',
+                "Intermediate health dsp is in FAILED HealthState. "
+                "Cause: Monitoring point "
+                '"/station_beamf/ddr_parity_error_count/FPGA0": 0 =/= 1',
             ),
             (
                 {"voltages": {"VREF_2V5": {"min": 2.4, "max": 2.6}}},
                 HealthState.UNKNOWN,
+                "Intermediate health voltages is in UNKNOWN HealthState. "
+                "Cause: Monitoring point VREF_2V5 is None.",
                 {"voltages": {"VREF_2V5": None}},
                 HealthState.OK,
+                "Health is OK.",
             ),
             (
                 {"alarms": {"voltage_alm": {"min": 0, "max": 1}}},
                 HealthState.OK,
+                "Health is OK.",
                 {"alarms": {"voltage_alm": 1}},
                 HealthState.FAILED,
+                "Intermediate health alarms is in FAILED HealthState. "
+                'Cause: Monitoring point "/voltage_alm": 0 =/= 1',
             ),
         ],
     )
@@ -257,8 +289,10 @@ class TestTileHealthModel:
         :param init_thresholds: the initial thresholds,
             using the defaults where not provided
         :param init_health_state: the initial expected health state
+        :param init_health_report: the initial expected health report
         :param final_thresholds: the new values of the thresholds
         :param final_health_state: the final expected health state
+        :param final_health_report: the initial final health report
         """
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
         health_model._state[

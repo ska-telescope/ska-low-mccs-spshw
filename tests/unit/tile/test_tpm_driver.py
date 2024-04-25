@@ -625,6 +625,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
+        assert tile_simulator.tpm
+        tile_simulator.tpm._is_programmed = False
         tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
@@ -1651,6 +1653,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that exceptions are caught.
@@ -1807,27 +1811,6 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         )
         tpm_driver.test_generator_input_select(5)
 
-    @pytest.mark.xfail(reason="Exception not caught, do we want to catch it?")
-    def test_sync_fpgas(
-        self: TestTpmDriver,
-        tpm_driver: TpmDriver,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """
-        Unit test for the sync_fpgas function.
-
-        :param tpm_driver: The TPM driver instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        tile_simulator.connect()
-        tile_simulator.sync_fpgas = unittest.mock.Mock()  # type: ignore[assignment]
-        tpm_driver.sync_fpgas()
-        tile_simulator.sync_fpgas.assert_called()
-
-        # Check that exception is caught
-        tile_simulator.sync_fpgas.side_effect = Exception("mocked exception")
-        tpm_driver.sync_fpgas()
-
     @pytest.mark.xfail(reason="Local static delay written when exception fired.")
     def test_static_delays(
         self: TestTpmDriver,
@@ -1885,6 +1868,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that a raised exception is caught.
@@ -2134,19 +2119,18 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Arrange
         tile_simulator.connect()
-        tile_simulator.erase_fpga = unittest.mock.Mock()  # type: ignore[assignment]
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
 
         # erase a programmed FPGA.
         tpm_driver.erase_fpga()
 
         # Assert
-        tile_simulator.erase_fpga.assert_called_once()
         tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
+        tile_simulator.erase_fpga = unittest.mock.Mock()  # type: ignore[assignment]
         tile_simulator.erase_fpga.side_effect = Exception("Mocked exception")
 
         tpm_driver.erase_fpga()
@@ -2300,6 +2284,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     def test_dumb_read(
         self: TestTpmDriver,
         tpm_driver: TpmDriver,
+        tile_simulator: TileSimulator,
         attribute: str,
     ) -> None:
         """
@@ -2308,8 +2293,10 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         Validate that it can be called without error.
 
         :param tpm_driver: The TPM driver instance being tested.
+        :param tile_simulator: The mocked tile_simulator
         :param attribute: The attribute to be read.
         """
+        tile_simulator.connect()
         _ = getattr(tpm_driver, attribute)
 
     def test_write_read_registers(

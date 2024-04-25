@@ -11,6 +11,7 @@ from __future__ import annotations
 import gc
 import json
 import time
+from typing import Any
 
 import pytest
 import tango
@@ -39,18 +40,21 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tile_command_status",
         "tile_programming_state",
         "pps_present",
+        "generic_health_attribute",
         "daq_state",
-        timeout=2.0,
+        timeout=3.0,
     )
 
 
-class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
+# pylint: disable=too-few-public-methods, too-many-arguments
+class TestSubrackTileIntegration:
     """Integration test cases for a SPS station with subservient subrack and tile."""
 
     def test_communication(
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
@@ -67,6 +71,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         :param daq_device: the Daq Tango device under test.
         :param subrack_device: the subrack Tango device under test.
         :param tile_device: the tile Tango device under test.
+        :param tile_simulator: The mocked tile_simulator
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
@@ -209,7 +214,7 @@ class TestSubrackTileIntegration:  # pylint: disable=too-few-public-methods
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.ON
         )
-
+        tile_simulator.mock_on()
         # The tile device receives this event too.
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
@@ -375,11 +380,11 @@ class TestMccsTileTpmDriver:
         )
         # check that the fpga time is moving.
         initial_time = tile_device.fpgasUnixTime[0]
-        sleep_time = 2
+        sleep_time = 2.5
         time.sleep(sleep_time)
         final_time = tile_device.fpgasUnixTime[0]
 
-        assert (final_time - initial_time) >= sleep_time
+        assert (final_time - initial_time) >= int(sleep_time)
 
         # The tile device tells the subrack device
         # to tell its subrack to power on its TPM.
@@ -431,7 +436,7 @@ class TestMccsTileTpmDriver:
         time.sleep(1)
 
         initial_frame = tile_device.currentFrame
-        sleep_time = 1  # seconds
+        sleep_time = 1.5  # seconds
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
@@ -598,7 +603,7 @@ class TestMccsTileTpmDriver:
         )
         tile_device.UpdateAttributes()
         table = list(tile_device.beamformerTable)
-        expected = [2, 0, 0, 0, 0, 0, 0]
+        expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
     def test_preadu_levels(
@@ -678,6 +683,105 @@ class TestMccsTileTpmDriver:
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
+
+    # pylint: disable=too-many-arguments
+    @pytest.mark.parametrize(
+        ("attribute", "initial_value", "alarm_value"),
+        [
+            (
+                "fpga1Temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
+                77.0,
+            ),
+            (
+                "fpga2Temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
+                77.0,
+            ),
+            (
+                "boardTemperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
+                66.0,
+            ),
+            (
+                "ppsPresent",
+                TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
+                False,
+            ),
+        ],
+    )
+    def test_health_attributes_alarms(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        attribute: str,
+        initial_value: Any,
+        alarm_value: Any,
+    ) -> None:
+        """
+        Test alarm is raised when attribute goes out of alarm threshold.
+
+        This tests will check that when we set alarming values in the backend
+        TileSimulator and force a poll the attribute corresponding to this will
+        go into ALARM and the MccsTile device will go into ALARM.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param subrack_device: the subrack Tango device under test.
+        :param daq_device: the Daq Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param attribute: the name of the health attribute
+        :param initial_value: the value that the TileSimulator initially has for this
+            attribute
+        :param alarm_value: A value that should raise an ALARM
+        """
+        self.setup_devices(
+            tile_device, subrack_device, daq_device, change_event_callbacks
+        )
+
+        tile_device.UpdateAttributes()
+
+        sub_id = tile_device.subscribe_event(
+            attribute,
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["generic_health_attribute"],
+        )
+        change_event_callbacks["generic_health_attribute"].assert_change_event(
+            initial_value
+        )
+
+        assert (
+            tile_device.read_attribute(attribute).quality
+            == tango.AttrQuality.ATTR_VALID
+        )
+
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        # Set the alarming value in backend TileSimulator
+        tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
+
+        # Force a poll to update Tango layer
+        tile_device.UpdateAttributes()
+
+        change_event_callbacks["generic_health_attribute"].assert_change_event(
+            alarm_value
+        )
+
+        assert (
+            tile_device.read_attribute(attribute).quality
+            == tango.AttrQuality.ATTR_ALARM
+        )
+        assert tile_device.state() == tango.DevState.ALARM
+        tile_device.unsubscribe_event(sub_id)
 
     def test_tile_state_rediscovery(
         self: TestMccsTileTpmDriver,

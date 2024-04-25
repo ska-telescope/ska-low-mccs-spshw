@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, cast
 
 import tango
 from pyaavs.tile import Tile as Tile12
@@ -29,7 +29,6 @@ from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_tango_base.base import check_communicating, check_on
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .base_tpm_simulator import BaseTpmSimulator
 from .tile_orchestrator import TileOrchestrator
 from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
@@ -61,7 +60,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
-        _tpm_driver: Optional[Union[TpmDriver, BaseTpmSimulator]] = None,
+        _tpm_driver: Optional[TpmDriver] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -734,13 +733,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "stop_beamformer",
         "stop_data_transmission",
         "stop_integrated_data",
-        "sync_fpgas",
         "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
         "tile_id",
         "station_id",
-        # "tpm_status",
         "voltage_mon",
         "write_address",
         "write_register",
@@ -963,7 +960,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                         result=message,
                     )
 
-    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -995,6 +991,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             task_callback=task_callback,
         )
 
+    @check_communicating
     def _start_acquisition(
         self: TileComponentManager,
         start_time: Optional[int] = None,

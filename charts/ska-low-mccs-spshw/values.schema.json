@@ -55,7 +55,12 @@
                   "minimum": 1,
                   "maximum": 512
                 },
-                "station_network_address": {
+                "sdn_first_interface": {
+                  "$comment": "CIDR-style ip address with netmask",
+                  "type": "string",
+                  "pattern": "((^|\\.)((25[0-5])|(2[0-4]\\d)|(1\\d\\d)|([1-9]?\\d))){4}\\/(?:\\d|[12]\\d|3[01])$"
+                },
+                "sdn_gateway": {
                   "type": "string",
                   "format": "ipv4"
                 },
@@ -87,97 +92,11 @@
               },
               "required": [
                 "station_id",
-                "station_network_address",
+                "sdn_first_interface",
                 "antenna_config_uri",
                 "subracks",
                 "tpms"
               ]
-            }
-          }
-        },
-        "calibrationstores": {
-          "type": "object",
-          "propertyNames": {
-            "$comment": "Slug used to construct server name, k8s pods, etc",
-            "format": "hostname"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "propertyNames": {
-              "$comment": "device TRL",
-              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
-            },
-            "additionalProperties": {
-              "properties": {
-                "logging_level_default": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 5
-                }
-              },
-              "required": [],
-              "additionalProperties": false
-            }
-          }
-        },
-        "mockfieldstations": {
-          "type": "object",
-          "propertyNames": {
-            "$comment": "Slug used to construct server name, k8s pods, etc",
-            "format": "hostname"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "propertyNames": {
-              "$comment": "device TRL",
-              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
-            },
-            "additionalProperties": {
-              "properties": {
-                "logging_level_default": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 5
-                }
-              },
-              "required": [],
-              "additionalProperties": false
-            }
-          }
-        },
-        "stationcalibrators": {
-          "type": "object",
-          "propertyNames": {
-            "$comment": "Slug used to construct server name, k8s pods, etc",
-            "format": "hostname"
-          },
-          "additionalProperties": {
-            "type": "object",
-            "propertyNames": {
-              "$comment": "device TRL",
-              "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
-            },
-            "additionalProperties": {
-              "properties": {
-                "field_station_trl": {
-                  "type": "string",
-                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
-                },
-                "calibration_store_trl": {
-                  "type": "string",
-                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
-                },
-                "logging_level_default": {
-                  "type": "integer",
-                  "minimum": 0,
-                  "maximum": 5
-                }
-              },
-              "required": [
-                "field_station_trl",
-                "calibration_store_trl"
-              ],
-              "additionalProperties": false
             }
           }
         },

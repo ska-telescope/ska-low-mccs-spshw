@@ -8,7 +8,12 @@
         "mode": {
             "description": "Mode: 1G or 10G",
             "type": "string",
-            "enum": ["1g", "1G", "10g", "10G"]
+            "enum": [
+                "1g",
+                "1G",
+                "10g",
+                "10G"
+            ]
         },
         "payload_length": {
             "description": "SPEAD payload length for channel data",
@@ -29,7 +34,21 @@
             "description": "Destination port for integrated data streams",
             "type": "integer",
             "minimum": 0
+        },
+        "netmask_40g": {
+            "description": "Integer netmask for the 40g (science data) subnet",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967296
+        },
+        "gateway_40g": {
+            "description": "Integer IP address of the 40g (science data) subnet gateway",
+            "minimum": 0,
+            "maximum": 4294967296
         }
     },
-    "required": ["mode"]
+    "required": [
+        "mode"
+    ],
+    "additionalProperties": false
 }

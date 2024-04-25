@@ -5,7 +5,8 @@ Deploy the Tango devices. For example,
     spsstations:
       "s8-1":
         station_id: 345
-        station_network_address: 10.0.0.152
+        sdn_first_interface: 10.130.0.1/25
+        sdn_gateway: 10.130.0.126
         antenna_config_uri:
         - "reference/data/url"
         - "internal/path/config.yaml"
@@ -15,15 +16,6 @@ Deploy the Tango devices. For example,
         tpms:
         - "s8-1-10"
         - "s8-1-13"
-        logging_level_default: 5
-    calibrationstores:
-      "s8-1":
-        logging_level_default: 5
-    mockfieldstations:
-      "s8-1":
-        logging_level_default: 5
-    stationcalibrators:
-      "s8-1":
         logging_level_default: 5
     daqs:
       "s8-1":

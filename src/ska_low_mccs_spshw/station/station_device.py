@@ -44,7 +44,13 @@ class SpsStation(SKAObsDevice):
     StationId = device_property(dtype=int, default_value=0)
     TileFQDNs = device_property(dtype=(str,), default_value=[])
     SubrackFQDNs = device_property(dtype=(str,), default_value=[])
-    StationNetworkAddress = device_property(dtype=str, default_value="10.0.0.0")
+
+    # IP address and mask of first interface in allocated block for science data,
+    # using CIDR-style slash notation.
+    # e.g. "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25"
+    SdnFirstInterface = device_property(dtype=str)
+    SdnGateway = device_property(dtype=str, default_value="")
+
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
         dtype=(str,),
@@ -96,7 +102,8 @@ class SpsStation(SKAObsDevice):
             f"\tTileFQDNs: {self.TileFQDNs}\n"
             f"\tDaqTRL: {self.DaqTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
-            f"\tStationNetworkAddress: {self.StationNetworkAddress}\n"
+            f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
+            f"\tSdnGateway: {self.SdnGateway}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -134,7 +141,8 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self.DaqTRL,
-            self.StationNetworkAddress,
+            self.SdnFirstInterface,
+            self.SdnGateway,
             self.AntennaConfigURI,
             self.logger,
             self._max_workers,

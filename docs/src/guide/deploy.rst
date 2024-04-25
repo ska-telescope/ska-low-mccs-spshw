@@ -155,8 +155,7 @@ There are two keys:
 
   * The ``enabled`` key can be applied to any device instance,
     to enable or disable deployment of that device.
-    For example, to disable deployment of the devices
-    that support station calibration:
+    For example, to disable deployment of tpm 10:
 
     .. code-block:: yaml
 
@@ -167,12 +166,9 @@ There are two keys:
                stations:
                  "1":
                    sps:
-                     calibration_store:
-                       enabled: false
-                     mock_field_station:
-                       enabled: false
-                     station_calibrator:
-                       enabled: false
+                     tpms:
+                       "10":
+                         enabled: false
 
     One can also disable an entire station, and then enable only certain
     devices:

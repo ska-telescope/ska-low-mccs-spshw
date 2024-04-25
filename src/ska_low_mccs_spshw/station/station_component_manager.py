@@ -41,6 +41,7 @@ from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
 
 from ..tile.tile_data import TileData
+from .station_self_check_manager import StationSelfCheckManager
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -488,6 +489,13 @@ class SpsStationComponentManager(
             fault=None,
             is_configured=None,
             adc_power=None,
+        )
+
+        self._self_check_manager = StationSelfCheckManager(
+            logger=self.logger,
+            tile_trls=list(self._tile_proxies.keys()),
+            subrack_trls=list(self._subrack_proxies.keys()),
+            daq_trl=self._daq_trl,
         )
 
         if antenna_config_uri:
@@ -1595,6 +1603,76 @@ class SpsStationComponentManager(
         :return: whether this station component manager is configured.
         """
         return self._is_configured
+
+    def self_check(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _self_check method.
+
+        This method returns immediately after it submitted
+        `self._self_check` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :return: a task staus and response message
+        """
+        return self.submit_task(self._self_check, task_callback=task_callback)
+
+    def _self_check(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        self._self_check_manager.run_tests()
+
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result=(ResultCode.OK, "Tests completed")
+            )
+
+    def run_test(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        count: Optional[int] = 1,
+        test_name: str,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _run_test method.
+
+        This method returns immediately after it submitted
+        `self._run_test` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param count: how many times to run the test, default is 1.
+        :param test_name: which test to run.
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._run_test, args=[count, test_name], task_callback=task_callback
+        )
+
+    def _run_test(
+        self: SpsStationComponentManager,
+        count: int,
+        test_name: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        self._self_check_manager.run_test(test_name=test_name, count=count)
+
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED, result=(ResultCode.OK, "Tests completed")
+            )
 
     # ----------
     # Attributes

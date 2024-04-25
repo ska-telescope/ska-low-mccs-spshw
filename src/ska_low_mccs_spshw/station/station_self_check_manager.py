@@ -1,0 +1,157 @@
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""An implementation of self check procedures for a station."""
+from __future__ import annotations
+
+import logging
+import time
+from typing import Optional
+
+from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
+from .tests.test_tango import BasicTangoTest
+
+__all__ = ["StationSelfCheckManager"]
+
+
+# pylint: disable=too-many-instance-attributes
+class StationSelfCheckManager:
+    """A class for initiating station self-check procedures."""
+
+    def __init__(
+        self: StationSelfCheckManager,
+        logger: logging.Logger,
+        tile_trls: list[str],
+        subrack_trls: list[str],
+        daq_trl: str,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param logger: a logger for this model to use.
+        :param tile_trls: trls of tiles the station has.
+        :param subrack_trls: trls of subracks the station has.
+        :param daq_trl: trl of the daq the station has.
+        """
+        self.logger = logger
+        self._test_logs = ""
+        self._test_report = ""
+
+        self._tile_trls = tile_trls
+        self._subrack_trls = subrack_trls
+        self._daq_trl = daq_trl
+
+        tpm_tests = [
+            tpm_test(
+                logger=self.logger,
+                tile_trls=list(self._tile_trls),
+                subrack_trls=list(self._subrack_trls),
+                daq_trl=self._daq_trl,
+            )
+            for tpm_test in [BasicTangoTest]
+        ]
+        self._tpm_test_names = [tpm_test.__class__.__name__ for tpm_test in tpm_tests]
+        self._tpm_tests: dict[str, TpmSelfCheckTest] = {
+            tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
+        }
+
+    def run_tests(self: StationSelfCheckManager) -> list[TestResult]:
+        """
+        Run all self check tests.
+
+        :returns: results of the test set.
+        """
+        self._test_report = ""
+        test_results = [TestResult.NOT_RUN for _ in range(len(self._tpm_tests))]
+        start_time = time.time()
+        for test_no, tpm_test in enumerate(self._tpm_tests.values()):
+            requirements_met, requirements_needed = tpm_test.check_requirements()
+            if requirements_met:
+                test_results[test_no], self._test_logs = tpm_test.run_test()
+            else:
+                self.logger.warning(
+                    f"Not running test {tpm_test.__class__.__name__},"
+                    f" : {requirements_needed}"
+                )
+            self._generate_report(
+                test_results=[test_results[test_no]],
+                test_name=tpm_test.__class__.__name__,
+            )
+        duration = time.time() - start_time
+        self._generate_report(test_results=test_results, duration=duration)
+        return test_results
+
+    def run_test(
+        self: StationSelfCheckManager, test_name: str, count: int
+    ) -> list[TestResult]:
+        """
+        Run a specific test, with an optional count parameter to run multiple times.
+
+        :param test_name: name of the test to run.
+        :param count: number of times to run test.
+
+        :returns: results of the tests.
+        """
+        self._test_report = ""
+        test_results = [TestResult.NOT_RUN for _ in range(count)]
+        start_time = time.time()
+        tpm_test = self._tpm_tests[test_name]
+        for test_run in range(count):
+            test_results[test_run], self._test_logs = tpm_test.run_test()
+            self._generate_report(
+                test_results=[test_results[test_run]],
+                test_name=test_name,
+            )
+        duration = time.time() - start_time
+        self._generate_report(test_results=test_results, duration=duration)
+        return test_results
+
+    def _generate_report(
+        self: StationSelfCheckManager,
+        test_results: list[TestResult],
+        duration: Optional[float] = None,
+        test_name: Optional[str] = None,
+    ) -> None:
+        """
+        Generate test report.
+
+        :param test_results: results of the tests.
+        :param duration: how long the test set took to run.
+        :param test_name: name of test which run.
+        """
+        if self._test_report == "":
+            self._test_report = "Test report:\n\n"
+        if test_name is not None:
+            self._test_report += (
+                f"Test: {test_name}," f" Result: {test_results[0].name}\n"
+            )
+        if duration is not None:
+            passed_count = [
+                test_result
+                for test_result in test_results
+                if test_result == TestResult.PASSED
+            ]
+            failed_count = [
+                test_result
+                for test_result in test_results
+                if test_result == TestResult.FAILED
+            ]
+            error_count = [
+                test_result
+                for test_result in test_results
+                if test_result == TestResult.ERROR
+            ]
+            not_run_count = [
+                test_result
+                for test_result in test_results
+                if test_result == TestResult.NOT_RUN
+            ]
+            self._test_report += f"\nTests PASSED : {len(passed_count)}, "
+            self._test_report += f"Tests FAILED : {len(failed_count)}, "
+            self._test_report += f"Tests ERRORED : {len(error_count)}, "
+            self._test_report += f"Tests NOT_RUN : {len(not_run_count)}\n"
+            self._test_report += f"Tests completed in {duration:.2f} seconds"

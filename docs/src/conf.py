@@ -52,6 +52,9 @@ autodoc_mock_imports = [
     "tango",
     "ska_control_model",
     "ska_low_mccs_common",
+    "ska_tango_testing",
+    "psycopg",
+    "psycopg_pool",
     "ska_ser_skuid",
 ]
 
@@ -89,6 +92,7 @@ nitpick_ignore = [
     ("py:exc", "yaml.YAMLError"),
     ("py:class", "pyaavs.tile.Tile"),
     ("py:class", "pyaavs.tile_wrapper.Tile"),
+    ("py:exc", "LibraryError"),
     ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
     ("py:class", "starlette.requests.Request"),  # mkdocs-based
     ("py:class", "uvicorn.config.Config"),  # mkdocs-based

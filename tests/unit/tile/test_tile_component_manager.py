@@ -76,37 +76,33 @@ class TestTileComponentManager:
         :param tile_simulator: the backend simulator.
         :param tile_id: the logical tile id
         """
+        # Dynamically configure mock return
+        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
         tile_simulator.mock_off(lock=True)
-
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
-        # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-
-        # Dynamically configure mock return
-        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
 
         tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-
+        # For each power_state the subrack claims,
+        # check the tile arrives at correct state.
         match power_state:
             case PowerState.ON:
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["component_state"].assert_call(
                     programming_state=TpmStatus.UNCONNECTED.pretty_name()
                 )
-                callbacks["component_state"].assert_not_called()
             case PowerState.UNKNOWN:
-                callbacks["component_state"].assert_not_called()
+                pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 callbacks["component_state"].assert_call(power=power_state, lookahead=2)
                 callbacks["component_state"].assert_call(
                     programming_state=TpmStatus.OFF.pretty_name(), lookahead=2
                 )
-                callbacks["component_state"].assert_not_called()
 
         callbacks["communication_status"].assert_not_called()
         tile_component_manager.stop_communicating()

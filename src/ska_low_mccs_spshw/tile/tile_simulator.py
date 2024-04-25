@@ -230,6 +230,7 @@ class MockTpm:
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
+    PLL_LOCKED_REGISTER = 0xE7
     _register_map: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -282,6 +283,7 @@ class MockTpm:
         # low level details and just assume all went ok.
         self.logger = logger
         self._is_programmed = False
+        self._mocked_pll_locked_status = copy.deepcopy(self.PLL_LOCKED_REGISTER)
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu(logger)] * 2
@@ -381,9 +383,10 @@ class MockTpm:
         :return: Values
         """
         if register == ("pll", 0x508):
-            return 0xE7
+            return self._mocked_pll_locked_status
         if isinstance(register, int):
             register = hex(register)
+
         return self._register_map.get(register)
 
     def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
@@ -411,7 +414,7 @@ class MockTpm:
             key = str(address + i)
             self._address_map.update({key: value})
 
-    def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
+    def __getitem__(self: MockTpm, key: Any) -> Optional[Any]:
         """
         Check if the specified key is a memory address or register name.
 
@@ -424,6 +427,8 @@ class MockTpm:
             key = hex(key)
         if key == "" or key == "unknown":
             raise LibraryError(f"Unknown register: {key}")
+        if key == ("pll", 1288):
+            return self._mocked_pll_locked_status
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value: Any) -> None:
@@ -527,7 +532,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 1
-    TILE_ID = 0
+    TILE_ID = 1
 
     def __init__(
         self: TileSimulator,
@@ -550,6 +555,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
@@ -790,6 +796,7 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
+        time.sleep(random.randint(1, 2))
         self._start_polling_event.set()
         time.sleep(random.randint(1, 2))
         self.logger.debug("Initialise complete in Tpm.")
@@ -836,6 +843,7 @@ class TileSimulator:
         return self._pps_delay
 
     @check_mocked_overheating
+    @connected
     def is_programmed(self: TileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
@@ -902,7 +910,7 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict | list[dict] | None:
+    ) -> dict[str, Any] | list[dict] | None:
         """
         Return a 40G configuration.
 
@@ -940,8 +948,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -1002,21 +1010,33 @@ class TileSimulator:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
 
-    def mock_off(self: TileSimulator) -> None:
+    def mock_off(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = False
+        if lock:
+            self.mock_connection_success = False
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = False
 
-    def mock_on(self: TileSimulator) -> None:
+    def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = True
+        if lock:
+            self.mock_connection_success = True
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = True
 
     @check_mocked_overheating
     @connected
@@ -1159,7 +1179,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def load_calibration_coefficients(
-        self: TileSimulator, antenna: int, calibration_coefficients: list[complex]
+        self: TileSimulator, antenna: int, calibration_coefficients: list[list[complex]]
     ) -> None:
         """
         Load calibration coefficients.
@@ -1364,9 +1384,13 @@ class TileSimulator:
             number_of_samples = new_value
         self.stop_data_transmission()
 
-        assert self.dst_ip
-        assert self.dst_port
-        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        if not self.dst_ip:
+            _dst_ip: str = ""
+        if not self.dst_port:
+            _dst_port: int = 8080
+        _dst_ip = self.dst_ip or _dst_ip
+        _dst_port = self.dst_port or _dst_port
+        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_channelised_data(
             1, number_of_samples, first_channel, last_channel
         )
@@ -1396,7 +1420,7 @@ class TileSimulator:
     @connected
     def send_channelised_data_narrowband(
         self: TileSimulator,
-        frequency: int,
+        frequency: float,
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
@@ -1422,7 +1446,7 @@ class TileSimulator:
     def send_beam_data(
         self: TileSimulator,
         timeout: int = 0,
-        timestamp: int = 0,
+        timestamp: Optional[int] = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1475,8 +1499,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
@@ -1657,7 +1681,6 @@ class TileSimulator:
         Get station ID.
 
         :return: station ID programmed in HW
-        :rtype: int
         """
         return self._station_id
 
@@ -1693,7 +1716,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self, name: str) -> Any:
         """
         Get the attribute.
 
@@ -1704,7 +1727,6 @@ class TileSimulator:
             the named attribute.
 
         :return: the requested attribute
-        :rtype: object
         """
         if self.tpm:
             return getattr(self.tpm, name)

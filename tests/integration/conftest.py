@@ -11,12 +11,11 @@ from __future__ import annotations
 import copy
 import json
 import logging
-import time
 import unittest
 from typing import Any, Iterator
 
 import pytest
-from ska_control_model import LoggingLevel, ResultCode, SimulationMode, TestMode
+from ska_control_model import LoggingLevel, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
@@ -196,18 +195,6 @@ def patched_tile_device_class_fixture(
 
             return tile_component_manager
 
-        @command()
-        def UpdateAttributes(self: PatchedTileDevice) -> None:
-            """
-            Call update_attributes on the TpmDriver.
-
-            Note: attributes are updated dependent on the time passed since
-            the last read. Here the last update time is set to
-            zero meaning they can be updated (assuming device state permits).
-            """
-            # TODO: correct
-            time.sleep(10)
-
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(
             self: PatchedTileDevice, attribute_to_set: str
@@ -246,18 +233,6 @@ def patched_tile_device_class_fixture(
                         f"Failed to set {attribute} = {value} "
                         f"in backend TileSimulator : {repr(e)}"
                     )
-
-        @command(dtype_out="DevVarLongStringArray")
-        def Off(self: PatchedTileDevice) -> tuple[ResultCode, str]:
-            if isinstance(self.component_manager.tile, TileSimulator):
-                self.component_manager.tile.mock_off()
-            return super().Off()
-
-        @command(dtype_out="DevVarLongStringArray")
-        def On(self: PatchedTileDevice) -> tuple[ResultCode, str]:
-            if isinstance(self.component_manager.tile, TileSimulator):
-                self.component_manager.tile.mock_on()
-            return super().On()
 
     return PatchedTileDevice
 

@@ -7,6 +7,7 @@
 """This module defined a pytest harness for unit testing the SPS Station module."""
 from __future__ import annotations
 
+import logging
 import unittest.mock
 
 import pytest
@@ -16,7 +17,9 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
-from tests.harness import get_tile_name
+from ska_low_mccs_spshw.station import StationSelfCheckManager
+from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
+from tests.harness import get_daq_name, get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -177,3 +180,94 @@ def antenna_uri_fixture() -> list[str]:
         "car:ska-low-aavs3?main",
         "instrument/mccs-configuration/aavs3.yaml",
     ]
+
+
+class ErrorTest(TpmSelfCheckTest):
+    """Test class for test that errors."""
+
+    def test(self: TpmSelfCheckTest) -> None:
+        """This test will raise a KeyError."""
+        my_dictionary = {"key1": 1, "key2": 2}
+        assert "key1" in my_dictionary
+
+        # Oh no!
+        _ = my_dictionary["key3"]
+
+
+class PassTest(TpmSelfCheckTest):
+    """Test class for test that passes."""
+
+    def test(self: TpmSelfCheckTest) -> None:
+        """This test will pass."""
+        my_dictionary = {"key1": 1, "key2": 2}
+        assert "key1" in my_dictionary
+        assert "key2" in my_dictionary
+
+
+class FailTest(TpmSelfCheckTest):
+    """Test class for test that fails."""
+
+    def test(self: TpmSelfCheckTest) -> None:
+        """This test will fail."""
+        my_dictionary = {"key1": 1, "key2": 2}
+        assert "key1" in my_dictionary
+        assert "key2" in my_dictionary
+        assert "key3" in my_dictionary
+
+
+class BadRequirementsTest(TpmSelfCheckTest):
+    """Test class for test which we fail to meet requirements of."""
+
+    def test(self: TpmSelfCheckTest) -> None:
+        """This test won't be run."""
+        my_dictionary = {"key1": 1, "key2": 2}
+        assert "key1" in my_dictionary
+        assert "key2" in my_dictionary
+
+    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+        """
+        Unreasonable test requirements which we won't meet.
+
+        :returns: False as we don't meet the requirements.
+        """
+        if len(self.tile_trls) < 20:
+            return (False, "For some reason this test wants 20 tiles")
+        return (True, "Damn you really have 20 tiles?")
+
+
+@pytest.fixture(name="station_self_check_manager")
+def station_self_check_manager_fixture(
+    logger: logging.Logger,
+) -> StationSelfCheckManager:
+    """
+    Return a station self check manager with patched example tests.
+
+    :param logger: logger for use in the tests.
+
+    :returns: a station self check manager with patched example tests.
+    """
+    tile_trls = [get_tile_name(i) for i in range(1, 5)]
+    subrack_trls = [get_subrack_name(1)]
+    daq_trl = get_daq_name()
+    station_self_check_manager = StationSelfCheckManager(
+        logger=logger,
+        tile_trls=tile_trls,
+        subrack_trls=subrack_trls,
+        daq_trl=daq_trl,
+    )
+    tpm_tests = [
+        tpm_test(
+            logger=logger,
+            tile_trls=list(tile_trls),
+            subrack_trls=list(subrack_trls),
+            daq_trl=daq_trl,
+        )
+        for tpm_test in [PassTest, FailTest, ErrorTest, BadRequirementsTest]
+    ]
+    station_self_check_manager._tpm_test_names = [
+        tpm_test.__class__.__name__ for tpm_test in tpm_tests
+    ]
+    station_self_check_manager._tpm_tests = {
+        tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
+    }
+    return station_self_check_manager

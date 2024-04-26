@@ -13,6 +13,7 @@ import logging
 import traceback
 from io import StringIO
 
+from ska_control_model import LoggingLevel
 from ska_ser_logging.configuration import _FORMAT_STR_NO_TAGS  # type: ignore
 
 
@@ -59,6 +60,7 @@ class TpmSelfCheckTest:
         """Configure logger used for tests so we get split off test logs."""
         self.stringio_handler.setFormatter(logging.Formatter(_FORMAT_STR_NO_TAGS))
         self.test_logger.addHandler(self.stringio_handler)
+        self.test_logger.setLevel(LoggingLevel.DEBUG)
 
     def _clear_test_logs(self: TpmSelfCheckTest) -> None:
         """Before each test run, we want to clear the test logs."""

@@ -10,8 +10,9 @@
 __all__ = [
     "TpmSelfCheckTest",
     "BasicTangoTest",
+    "TestResult",
 ]
 
 
-from .base_tpm_test import TpmSelfCheckTest
+from .base_tpm_test import TestResult, TpmSelfCheckTest
 from .test_tango import BasicTangoTest

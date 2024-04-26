@@ -59,19 +59,25 @@ class StationSelfCheckManager:
             tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
         }
 
+    def _clear_logs_and_report(self: StationSelfCheckManager) -> None:
+        self._test_report = ""
+        self._test_logs = ""
+
     def run_tests(self: StationSelfCheckManager) -> list[TestResult]:
         """
         Run all self check tests.
 
         :returns: results of the test set.
         """
-        self._test_report = ""
+        self._clear_logs_and_report()
         test_results = [TestResult.NOT_RUN for _ in range(len(self._tpm_tests))]
         start_time = time.time()
         for test_no, tpm_test in enumerate(self._tpm_tests.values()):
             requirements_met, requirements_needed = tpm_test.check_requirements()
             if requirements_met:
-                test_results[test_no], self._test_logs = tpm_test.run_test()
+                test_results[test_no], test_log = tpm_test.run_test()
+                self._test_logs += f"\n{'#'*5} {tpm_test.__class__.__name__} {'#'*5}\n"
+                self._test_logs += test_log
             else:
                 self.logger.warning(
                     f"Not running test {tpm_test.__class__.__name__},"
@@ -96,16 +102,26 @@ class StationSelfCheckManager:
 
         :returns: results of the tests.
         """
-        self._test_report = ""
+        self._clear_logs_and_report()
         test_results = [TestResult.NOT_RUN for _ in range(count)]
         start_time = time.time()
         tpm_test = self._tpm_tests[test_name]
-        for test_run in range(count):
-            test_results[test_run], self._test_logs = tpm_test.run_test()
-            self._generate_report(
-                test_results=[test_results[test_run]],
-                test_name=test_name,
+        requirements_met, requirements_needed = tpm_test.check_requirements()
+        if requirements_met:
+            for test_run in range(count):
+                test_results[test_run], test_log = tpm_test.run_test()
+                self._test_logs += f"\n{'#'*5} {test_name} {'#'*5}\n"
+                self._test_logs += test_log
+                self._generate_report(
+                    test_results=[test_results[test_run]],
+                    test_name=test_name,
+                )
+        else:
+            self.logger.warning(
+                f"Not running test {tpm_test.__class__.__name__},"
+                f" : {requirements_needed}"
             )
+
         duration = time.time() - start_time
         self._generate_report(test_results=test_results, duration=duration)
         return test_results

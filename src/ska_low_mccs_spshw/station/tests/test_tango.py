@@ -12,6 +12,8 @@ import tango
 
 from .base_tpm_test import TpmSelfCheckTest
 
+__all__ = ["BasicTangoTest"]
+
 
 class BasicTangoTest(TpmSelfCheckTest):
     """A basic test to show we can connect to proxies."""

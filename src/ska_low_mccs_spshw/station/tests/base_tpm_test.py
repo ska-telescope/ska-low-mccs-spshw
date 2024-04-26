@@ -16,6 +16,8 @@ from io import StringIO
 from ska_control_model import LoggingLevel
 from ska_ser_logging.configuration import _FORMAT_STR_NO_TAGS  # type: ignore
 
+__all__ = ["TestResult", "TpmSelfCheckTest"]
+
 
 class TestResult(enum.IntEnum):
     """Enumerate for test results."""

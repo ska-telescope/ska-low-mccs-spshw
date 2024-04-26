@@ -554,6 +554,7 @@ class TestMccsTile:
         self: TestMccsTile,
         on_tile_device: MccsDeviceProxy,
         tile_component_manager: unittest.mock.Mock,
+        tile_simulator: TileSimulator,
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
@@ -567,11 +568,14 @@ class TestMccsTile:
             callbacks with asynchrony support.
         :param tile_component_manager: A component manager.
             (Using a TileSimulator)
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         """
         tile_component_manager._request_provider.get_request = unittest.mock.Mock(
             return_value="HEALTH_STATUS"
         )
-        time.sleep(2)
+        # This sleep is to ensure a poll has occured
+        time.sleep(0.1)
         on_tile_device.subscribe_event(
             "ppsPresent",
             EventType.CHANGE_EVENT,
@@ -587,12 +591,8 @@ class TestMccsTile:
         )
 
         # Simulate disconnection the PPS.
-        tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
-        tile_monitoring_defaults["timing"]["pps"]["status"] = False
+        tile_simulator._tile_health_structure["timing"]["pps"]["status"] = False
 
-        tile_component_manager._update_component_state(
-            tile_health_structure=tile_monitoring_defaults,
-        )
         change_event_callbacks["pps_present"].assert_change_event(False)
         assert (
             on_tile_device.read_attribute("ppspresent").quality

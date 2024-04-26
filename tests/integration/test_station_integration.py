@@ -120,7 +120,6 @@ def test_initialise_can_execute(
         lookahead=2,
         consume_nonmatches=True,
     )
-
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
@@ -289,13 +288,15 @@ class TestStationTileIntegration:
             daq_device,
             change_event_callbacks,
         )
-        # Check that the initialise LRC executes to COMPLETION
-        execute_lrc_to_completion(
-            change_event_callbacks, sps_station_device, "Initialise", None
-        )
-        assert tile_device.tileProgrammingState == "Initialised"
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
+        number_of_iterations = 2
+        for i in range(number_of_iterations):
+            # Check that the initialise LRC executes to COMPLETION
+            execute_lrc_to_completion(
+                change_event_callbacks, sps_station_device, "Initialise", None
+            )
+            assert tile_device.tileProgrammingState == "Initialised"
+            wait_for_completed_command_to_clear_from_queue(tile_device)
+            wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_pps_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -395,10 +396,6 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
-
         sps_station_device.subscribe_event(
             "adcPower",
             tango.EventType.CHANGE_EVENT,
@@ -463,10 +460,6 @@ class TestStationTileIntegration:
             tile_simulator,
             daq_device,
             change_event_callbacks,
-        )
-
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
         )
 
         tile_device.subscribe_event(
@@ -543,10 +536,6 @@ class TestStationTileIntegration:
             tile_simulator,
             daq_device,
             change_event_callbacks,
-        )
-
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
         )
 
         # Initialise values in the backend TileSimulator and forces update
@@ -637,9 +626,6 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
         # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
             "cspRounding",
@@ -718,9 +704,6 @@ class TestStationTileIntegration:
             change_event_callbacks,
         )
 
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
         tile_device.channeliserRounding = np.array([10] * 512)
 
         request_provider = tile_component_manager._request_provider

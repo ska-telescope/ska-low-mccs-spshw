@@ -842,6 +842,7 @@ class TestMccsTileTpmDriver:
     def test_health_attributes_alarms(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         daq_device: tango.DeviceProxy,
@@ -860,6 +861,7 @@ class TestMccsTileTpmDriver:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
         :param tile_simulator: the backend tile simulator. This is
             what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
@@ -878,8 +880,15 @@ class TestMccsTileTpmDriver:
             daq_device,
             change_event_callbacks,
         )
+        # Force a poll to get the initial values.
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value="HEALTH_STATUS")
+        )
 
-        tile_device.UpdateAttributes()
+        # sleep to allow a poll
+        time.sleep(0.5)
 
         sub_id = tile_device.subscribe_event(
             attribute,
@@ -905,8 +914,8 @@ class TestMccsTileTpmDriver:
         # Set the alarming value in backend TileSimulator
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
-        # Force a poll to update Tango layer
-        tile_device.UpdateAttributes()
+        # sleep to allow a poll
+        time.sleep(0.5)
 
         change_event_callbacks["generic_health_attribute"].assert_change_event(
             alarm_value

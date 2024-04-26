@@ -218,6 +218,39 @@ tpm_monitoring_points:
     pps:
       status: True
     pll: !!python/tuple [True, 0]
+  info:
+    hardware:
+      ip_address_eep: 10.0.10.2
+      netmask_eep: 255.255.255.0
+      gateway_eep: 255.255.255.255
+      SN: 0500422020045
+      PN: 'iTPM_ADU_1.6'
+      bios: 'v0.5.0 (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)'
+      BOARD_MODE: 'NO-ADA'
+      LOCATION: '65535:255:255'
+      HARDWARE_REV: 'v1.6.7a'
+      DDR_SIZE_GB: 4
+    fpga_firmware:
+      design: 'tpm_test'
+      build: 2002
+      compile_time: '2024-02-21 20:33:55.586210'
+      compile_user: 'gitlab-runner'
+      compile_host: 'te7dastardly linux-5.4.0-169-generic-x86_64-with-glibc2.29'
+      git_branch: 'detached head'
+      git_commit: ''
+    network:
+      1g_ip_address: 10.132.0.21
+      1g_mac_address: 04:91:62:b2:75:6f
+      1g_netmask: 255.255.255.0
+      1g_gateway: 10.132.0.254
+      40g_ip_address_p1: 10.130.0.1
+      40g_mac_address_p1: 62:00:0A:82:00:01
+      40g_gateway_p1: 10.130.0.126
+      40g_netmask_p1: 255.255.255.128
+      40g_ip_address_p2: 0.0.0.0
+      40g_mac_address_p2: 02:00:00:00:00:00
+      40g_gateway_p2: 10.130.0.126
+      40g_netmask_p2: 255.255.255.128
   io:
     jesd_interface:
       link_status: True

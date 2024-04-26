@@ -289,6 +289,40 @@ class TestMccsTile:
         else:
             assert (getattr(tile_device, "staticTimeDelays") == init_value).all()
 
+    def test_tileInfo(
+        self: TestMccsTile,
+        tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for healthState.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+        change_event_callbacks["state"].assert_not_called()
+        tile_device.MockTpmOn()
+
+        tile_info = json.loads(tile_device.tile_info)
+        keys = ["hardware", "fpga_firmware", "network"]
+        assert all(key in tile_info.keys() for key in keys)
+
     def test_healthState(
         self: TestMccsTile,
         tile_device: MccsDeviceProxy,

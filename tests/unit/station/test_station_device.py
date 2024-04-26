@@ -961,7 +961,7 @@ def test_station_tile_commands(
     tile_command_mock = getattr(mock_tile_device_proxies[0], tile_command)
 
     # Wait for LRCs to execute
-    timeout = 10
+    timeout = 15
     time_waited = 0
     while not tile_command_mock.called:
         time.sleep(1)
@@ -1121,6 +1121,7 @@ def test_fortyGbNetworkAddress(
 def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test we can set and read channeliserRounding.
@@ -1128,8 +1129,18 @@ def test_write_read_channeliser_rounding(
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)

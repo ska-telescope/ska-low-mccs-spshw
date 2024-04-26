@@ -331,8 +331,14 @@ class MockTpm:
         self._station_beamf = [self.beam1, self.beam2]
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
+        self._40g_configuration: dict[str, Any] = {}
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
+        """
+        Retrieve TPM board information.
+
+        :return: A dictionary of board info.
+        """
         board_info = {
             "ip_address": self.get_ip(),
             "netmask": self.get_netmask(),
@@ -348,34 +354,113 @@ class MockTpm:
         return board_info
 
     def get_ip(self: MockTpm) -> str:
+        """
+        Return a mock ip string.
+
+        :return: A string ip.
+        """
         return "123.123.123.100"
 
     def get_netmask(self: MockTpm) -> str:
+        """
+        Return a mock netmask string.
+
+        :return: A string netmask.
+        """
         return "123.123.123.101"
 
     def get_gateway(self: MockTpm) -> str:
+        """
+        Return a mock gateway string.
+
+        :return: A string gateway.
+        """
         return "123.123.123.102"
 
     def get_ip_eep(self: MockTpm) -> str:
+        """
+        Return a mock ip_eep string.
+
+        :return: A string ip_eep.
+        """
         return "123.123.123.103"
 
     def get_netmask_eep(self: MockTpm) -> str:
+        """
+        Return a mock netmask_eep string.
+
+        :return: A string netmask_eep.
+        """
         return "123.123.123.104"
 
     def get_gateway_eep(self: MockTpm) -> str:
+        """
+        Return a mock gateway_eep string.
+
+        :return: A string gateway_eep.
+        """
         return "123.123.123.105"
 
     def get_mac(self: MockTpm) -> str:
+        """
+        Return a mock mac address string.
+
+        :return: A string mac address.
+        """
         return "e1:13:9a:7d:18:7d"
 
     def get_serial_number(self: MockTpm) -> str:
+        """
+        Return a mock serial_number string.
+
+        :return: A string serial_number.
+        """
         return "1234567890"
 
     def get_part_number(self: MockTpm) -> str:
+        """
+        Return a mock part_number string.
+
+        :return: A string part_number.
+        """
         return "0987654321"
 
     def get_bios(self: MockTpm) -> str:
+        """
+        Return a mock bios string.
+
+        :return: A string bios version.
+        """
         return "TileSimulatorBios"
+
+    def get_40g_core_configuration(
+        self: MockTpm,
+        core_id: int = -1,
+        arp_table_entry: int = 0,
+    ) -> dict:
+        """
+        Return a 40G configuration.
+
+        :param core_id: id of the core for which a configuration is to
+            be returned. Defaults to -1, in which case all core
+            configurations are returned, defaults to -1
+        :param arp_table_entry: ARP table entry to use
+
+        :return: core configuration or list of core configurations or none
+        """
+        # Fake some values. In reality we'd query the TPM here.
+        self._40g_configuration = {
+            "core_id": core_id,
+            "arp_table_entry": arp_table_entry,
+            "src_mac": int("62:00:0A:82:00:01"),
+            "src_ip": int("10.0.10.2"),
+            "dst_ip": int("10.0.10.3"),
+            "src_port": int(1234),
+            "dst_port": int(5678),
+            "netmask": int("255.255.255.0"),
+            "gateway_ip": int("10.0.10.1"),
+        }
+        return self._40g_configuration
 
     def find_register(
         self: MockTpm,
@@ -437,12 +522,13 @@ class MockTpm:
     @property
     def info(self: MockTpm) -> dict[str, Any]:
         """
-        TPM information
+        Report MockTPM information.
 
         :return: the info
         """
         # TODO: Update this with representative data and types rather
         # than just arbitrary strings.
+        communication_status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
         info: dict[str, Any] = {}
         info["hardware"] = self.get_board_info()
         info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
@@ -452,11 +538,11 @@ class MockTpm:
 
         # Skip this as we're using strings for now.
         # # Convert EEP information to IPv4Address type
-        # info["hardware"]["ip_address_eep"] = IPv4Address(
-        #     info["hardware"]["ip_address_eep"]
-        # )
-        # info["hardware"]["netmask_eep"] = IPv4Address(info["hardware"]["netmask_eep"])
-        # info["hardware"]["gateway_eep"] = IPv4Address(info["hardware"]["gateway_eep"])
+        info["hardware"]["ip_address_eep"] = IPv4Address(
+            info["hardware"]["ip_address_eep"]
+        )
+        info["hardware"]["netmask_eep"] = IPv4Address(info["hardware"]["netmask_eep"])
+        info["hardware"]["gateway_eep"] = IPv4Address(info["hardware"]["gateway_eep"])
         # Populate Firmware Build information from first FPGA
         info["fpga_firmware"] = {}
         info["fpga_firmware"]["design"] = self.tpm_firmware_information.get_design()
@@ -472,48 +558,59 @@ class MockTpm:
         ] = self.tpm_firmware_information.get_git_commit()
         # Dictionary manipulation, move 1G network information
         info["network"] = {}
-        info["network"]["1g_ip_address"] = "<network 1g IP address>"
-        info["network"]["1g_mac_address"] = "<network 1g mac address>"
-        info["network"]["1g_netmask"] = "<network 1g netmask>"
-        info["network"]["1g_gateway"] = "<network 1g gateway>"
+        info["network"]["1g_ip_address"] = IPv4Address(info["hardware"]["ip_address"])
+        info["network"]["1g_mac_address"] = info["hardware"]["MAC"]
+        info["network"]["1g_netmask"] = IPv4Address(info["hardware"]["netmask"])
+        info["network"]["1g_gateway"] = IPv4Address(info["hardware"]["gateway"])
         del info["hardware"]["ip_address"]
         del info["hardware"]["MAC"]
         del info["hardware"]["netmask"]
         del info["hardware"]["gateway"]
         # TODO: What should we do about this bit? Where to check comms in sim?
         # Add 40G network information, using ARP table entry for station beam packets
-        # if communication_status["FPGA0"] and communication_status["FPGA1"]:
-        #     config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
-        #     config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
-        #     info["network"]["40g_ip_address_p1"] = IPv4Address(config_40g_1["src_ip"])
-        #     mac = config_40g_1["src_mac"]
-        #     info["network"]["40g_mac_address_p1"] = ":".join(
-        #         f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-        #     )
-        #     info["network"]["40g_gateway_p1"] = IPv4Address(config_40g_1["gateway_ip"])
-        #     info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
-        #     info["network"]["40g_ip_address_p2"] = IPv4Address(config_40g_2["src_ip"])
-        #     mac = config_40g_2["src_mac"]
-        #     info["network"]["40g_mac_address_p2"] = ":".join(
-        #         f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-        #     )
-        #     info["network"]["40g_gateway_p2"] = IPv4Address(config_40g_2["gateway_ip"])
-        #     info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
-        # else:
-        info["network"].update(
-            dict.fromkeys(
-                [
-                    "40g_ip_address_p1",
-                    "40g_mac_address_p1",
-                    "40g_gateway_p1",
-                    "40g_netmask_p1",
-                    "40g_ip_address_p2",
-                    "40g_mac_address_p2",
-                    "40g_gateway_p2",
-                    "40g_netmask_p2",
-                ]
+        if communication_status["FPGA0"] and communication_status["FPGA1"]:
+            config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
+            config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
+            if config_40g_1 is not None:
+                info["network"]["40g_ip_address_p1"] = IPv4Address(
+                    config_40g_1["src_ip"]
+                )
+                mac = config_40g_1["src_mac"]
+                info["network"]["40g_mac_address_p1"] = ":".join(
+                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+                )
+                info["network"]["40g_gateway_p1"] = IPv4Address(
+                    config_40g_1["gateway_ip"]
+                )
+                info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
+
+            if config_40g_2 is not None:
+                info["network"]["40g_ip_address_p2"] = IPv4Address(
+                    config_40g_2["src_ip"]
+                )
+                mac = config_40g_2["src_mac"]
+                info["network"]["40g_mac_address_p2"] = ":".join(
+                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+                )
+                info["network"]["40g_gateway_p2"] = IPv4Address(
+                    config_40g_2["gateway_ip"]
+                )
+                info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
+        else:
+            info["network"].update(
+                dict.fromkeys(
+                    [
+                        "40g_ip_address_p1",
+                        "40g_mac_address_p1",
+                        "40g_gateway_p1",
+                        "40g_netmask_p1",
+                        "40g_ip_address_p2",
+                        "40g_mac_address_p2",
+                        "40g_gateway_p2",
+                        "40g_netmask_p2",
+                    ]
+                )
             )
-        )
         return info
 
     def write_register(
@@ -770,17 +867,19 @@ class TileSimulator:
 
     def check_communication(self: TileSimulator) -> dict[str, bool]:
         """
-        Checks status of connection to TPM CPLD and FPGAs.
+        Check status of connection to TPM CPLD and FPGAs.
 
         Examples:
-        - OK Status:
-          {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
-        - TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
-          {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
-        - TPM OFF or Network Issue:
-          {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
+            OK Status:
+            {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
 
-        Returns dictionary of connection status
+            TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
+            {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
+
+            TPM OFF or Network Issue:
+            {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
+
+        :Returns: dictionary of connection status
         """
         status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
         return status
@@ -1036,108 +1135,11 @@ class TileSimulator:
     @property
     def info(self: TileSimulator) -> dict[str, Any]:
         """
-        Docstring.
+        Report tile firmware information.
+
+        :returns: A dictionary of tile information.
         """
-        communication_status = self.check_communication()
-        if not communication_status["CPLD"]:
-            raise BoardError(
-                "Board communication error, unable to get health status. Check communication status and try again."
-            )
-        info = {}
-        if self.tpm:
-            # Populate Hardware portion as provided by Sanitas
-            info["hardware"] = self.tpm.get_board_info()
-            # Convert EEP information to IPv4Address type
-            info["hardware"]["ip_address_eep"] = IPv4Address(
-                info["hardware"]["ip_address_eep"]
-            )
-            info["hardware"]["netmask_eep"] = IPv4Address(
-                info["hardware"]["netmask_eep"]
-            )
-            info["hardware"]["gateway_eep"] = IPv4Address(
-                info["hardware"]["gateway_eep"]
-            )
-            # Populate Firmware Build information from first FPGA
-            info["fpga_firmware"] = {}
-            info["fpga_firmware"][
-                "design"
-            ] = self.tpm.tpm_firmware_information.get_design()
-            info["fpga_firmware"][
-                "build"
-            ] = self.tpm.tpm_firmware_information.get_build()
-            info["fpga_firmware"][
-                "compile_time"
-            ] = self.tpm.tpm_firmware_information.get_time()
-            info["fpga_firmware"][
-                "compile_user"
-            ] = self.tpm.tpm_firmware_information.get_user()
-            info["fpga_firmware"][
-                "compile_host"
-            ] = self.tpm.tpm_firmware_information.get_host()
-            info["fpga_firmware"][
-                "git_branch"
-            ] = self.tpm.tpm_firmware_information.get_git_branch()
-            info["fpga_firmware"][
-                "git_commit"
-            ] = self.tpm.tpm_firmware_information.get_git_commit()
-            # Dictionary manipulation, move 1G network information
-            info["network"] = {}
-            info["network"]["1g_ip_address"] = IPv4Address(
-                info["hardware"]["ip_address"]
-            )
-            info["network"]["1g_mac_address"] = info["hardware"]["MAC"]
-            info["network"]["1g_netmask"] = IPv4Address(info["hardware"]["netmask"])
-            info["network"]["1g_gateway"] = IPv4Address(info["hardware"]["gateway"])
-            del info["hardware"]["ip_address"]
-            del info["hardware"]["MAC"]
-            del info["hardware"]["netmask"]
-            del info["hardware"]["gateway"]
-            # Add 40G network information, using ARP table entry for station beam pkts
-            if communication_status["FPGA0"] and communication_status["FPGA1"]:
-                config_40g_1 = self.get_40g_core_configuration(
-                    arp_table_entry=0, core_id=0
-                )
-                config_40g_2 = self.get_40g_core_configuration(
-                    arp_table_entry=0, core_id=1
-                )
-                info["network"]["40g_ip_address_p1"] = IPv4Address(
-                    config_40g_1["src_ip"]
-                )
-                mac = config_40g_1["src_mac"]
-                info["network"]["40g_mac_address_p1"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
-                info["network"]["40g_gateway_p1"] = IPv4Address(
-                    config_40g_1["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
-                info["network"]["40g_ip_address_p2"] = IPv4Address(
-                    config_40g_2["src_ip"]
-                )
-                mac = config_40g_2["src_mac"]
-                info["network"]["40g_mac_address_p2"] = ":".join(
-                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
-                )
-                info["network"]["40g_gateway_p2"] = IPv4Address(
-                    config_40g_2["gateway_ip"]
-                )
-                info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
-            else:
-                info["network"].update(
-                    dict.fromkeys(
-                        [
-                            "40g_ip_address_p1",
-                            "40g_mac_address_p1",
-                            "40g_gateway_p1",
-                            "40g_netmask_p1",
-                            "40g_ip_address_p2",
-                            "40g_mac_address_p2",
-                            "40g_gateway_p2",
-                            "40g_netmask_p2",
-                        ]
-                    )
-                )
-        return info
+        return self._tile_health_structure["info"]
 
     @check_mocked_overheating
     @connected
@@ -1206,20 +1208,17 @@ class TileSimulator:
 
         :return: core configuration or list of core configurations or none
         """
+        # Fake some values. In reality we'd query the TPM here.
         self._40g_configuration = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
-            "src_mac": int(self.tpm.tpm_10g_core[core_id].get_src_mac()),
-            "src_ip": int(self.tpm.tpm_10g_core[core_id].get_src_ip()),
-            "dst_ip": int(self.tpm.tpm_10g_core[core_id].get_dst_ip(arp_table_entry)),
-            "src_port": int(
-                self.tpm.tpm_10g_core[core_id].get_src_port(arp_table_entry)
-            ),
-            "dst_port": int(
-                self.tpm.tpm_10g_core[core_id].get_dst_port(arp_table_entry)
-            ),
-            "netmask": int(self.tpm.tpm_10g_core[core_id].get_netmask()),
-            "gateway_ip": int(self.tpm.tpm_10g_core[core_id].get_gateway_ip()),
+            "src_mac": int("62:00:0A:82:00:01"),
+            "src_ip": int("10.0.10.2"),
+            "dst_ip": int("10.0.10.3"),
+            "src_port": int(1234),
+            "dst_port": int(5678),
+            "netmask": int("255.255.255.0"),
+            "gateway_ip": int("10.0.10.1"),
         }
         if core_id == -1:
             return self._forty_gb_core_list
@@ -2034,21 +2033,25 @@ class TileSimulator:
             self.logger.error(f"KEYS: [{keys}] NOT FOUND IN INFO: [{info}]")
             return ""
         return (
-            f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} Serial Number: {info['hardware']['SN']} \n"
+            f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
+            f"Serial Number: {info['hardware']['SN']} \n"
             f"{'_'*90} \n"
             f"{' '*29}| \n"
-            f"Classification               | {info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
+            f"Classification               | {info['hardware']['PN']}-"
+            f"{info['hardware']['BOARD_MODE']} \n"
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
             f"Serial Number                | {info['hardware']['SN']} \n"
             f"BIOS Revision                | {info['hardware']['bios']} \n"
             f"Board Location               | {info['hardware']['LOCATION']} \n"
-            f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} GB per FPGA \n"
+            f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
+            "GB per FPGA \n"
             f"{'_'*29}|{'_'*60} \n"
             f"{' '*29}| \n"
             f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
             f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
-            f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} UTC \n"
-            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']}  \n"
+            f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
+            "UTC \n"
+            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} \n"
             f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
             f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
             f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
@@ -2058,17 +2061,26 @@ class TileSimulator:
             f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
             f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
             f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
-            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])} \n"
+            "EEP IP Address               | "
+            f"{str(info['hardware']['ip_address_eep'])} \n"
             f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
             f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
-            f"40G Port 1 IP Address        | {str(info['network']['40g_ip_address_p1'])} \n"
-            f"40G Port 1 MAC Address       | {str(info['network']['40g_mac_address_p1'])} \n"
-            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])} \n"
-            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])} \n"
-            f"40G Port 2 IP Address        | {str(info['network']['40g_ip_address_p2'])} \n"
-            f"40G Port 2 MAC Address       | {str(info['network']['40g_mac_address_p2'])} \n"
-            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])} \n"
-            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])} \n"
+            "40G Port 1 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p1'])} \n"
+            "40G Port 1 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p1'])} \n"
+            "40G Port 1 Netmask           | "
+            f"{str(info['network']['40g_netmask_p1'])} \n"
+            "40G Port 1 Gateway IP        | "
+            f"{str(info['network']['40g_gateway_p1'])} \n"
+            "40G Port 2 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p2'])} \n"
+            "40G Port 2 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p2'])} \n"
+            "40G Port 2 Netmask           | "
+            f"{str(info['network']['40g_netmask_p2'])} \n"
+            "40G Port 2 Gateway IP        | "
+            f"{str(info['network']['40g_gateway_p2'])} \n"
         )
 
 

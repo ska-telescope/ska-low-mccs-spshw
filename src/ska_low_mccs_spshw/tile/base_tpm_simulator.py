@@ -185,6 +185,15 @@ class BaseTpmSimulator:
             self.communication_state = CommunicationStatus.DISABLED
 
     @property
+    def info(self: BaseTpmSimulator) -> dict[str, Any]:
+        """
+        Return tile firmware information.
+
+        :return: a dictionary of tile information.
+        """
+        return self._tile_health_structure["info"]
+
+    @property
     def firmware_available(
         self: BaseTpmSimulator,
     ) -> dict[str, dict[str, Any]]:

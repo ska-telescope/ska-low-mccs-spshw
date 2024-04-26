@@ -529,6 +529,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="info",
+    )
+    def tile_info(self: MccsTile) -> str:
+        """
+        Return all the tile info available.
+
+        :return: info available
+        """
+        return json.dumps(self.component_manager.info)
+
+    @attribute(
+        dtype="DevString",
         label="voltages",
     )
     def voltages(self: MccsTile) -> str:

@@ -42,6 +42,7 @@ from ska_telmodel.data import TMData  # type: ignore
 
 from ..tile.tile_data import TileData
 from .station_self_check_manager import StationSelfCheckManager
+from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -1627,11 +1628,25 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        self._self_check_manager.run_tests()
+        test_results = self._self_check_manager.run_tests()
 
+        if all(
+            test_result in [TestResult.PASSED, TestResult.NOT_RUN]
+            for test_result in test_results
+        ):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Tests completed OK."),
+                )
+            return
         if task_callback is not None:
             task_callback(
-                status=TaskStatus.COMPLETED, result=(ResultCode.OK, "Tests completed")
+                status=TaskStatus.FAILED,
+                result=(
+                    ResultCode.FAILED,
+                    "Not all tests passed or skipped, check report.",
+                ),
             )
 
     def run_test(
@@ -1667,11 +1682,34 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        self._self_check_manager.run_test(test_name=test_name, count=count)
+        test_results = self._self_check_manager.run_test(
+            test_name=test_name, count=count
+        )
 
+        if all(test_result == TestResult.PASSED for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Tests completed OK."),
+                )
+            return
+        if all(test_result == TestResult.NOT_RUN for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.REJECTED,
+                    result=(
+                        ResultCode.REJECTED,
+                        "Tests requirements not met, check logs.",
+                    ),
+                )
+            return
         if task_callback is not None:
             task_callback(
-                status=TaskStatus.COMPLETED, result=(ResultCode.OK, "Tests completed")
+                status=TaskStatus.FAILED,
+                result=(
+                    ResultCode.FAILED,
+                    "Not all tests passed, check report.",
+                ),
             )
 
     # ----------

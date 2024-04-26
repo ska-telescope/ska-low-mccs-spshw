@@ -590,28 +590,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
         self._subrack_says_tpm_power = event_value
 
-    def _tpm_communication_state_changed(
-        self: TileComponentManager, communication_state: CommunicationStatus
-    ) -> None:
-        """
-        Handle a change in status of communication with the tpm.
-
-        :param communication_state: the status of communication with
-            the tpm.
-        """
-        # Note: this is a dummy callback. Communication is established from the polling.
-
-    def _tpm_component_state_changed(
-        self: TileComponentManager,
-        **kwargs: Any,
-    ) -> None:
-        """
-        Handle a change in state of the Tpm.
-
-        :param kwargs: the kwargs with state updates
-        """
-        # Note: this is a dummy callback. State updated are calculated from the polling.
-
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
@@ -648,6 +626,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with self._hardware_lock:
             self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
 
+    @check_hardware_lock_claimed
     def _check_initialised(self: TileComponentManager) -> bool:
         """
         Return whether this TPM has been correctly initialised.
@@ -663,6 +642,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ]
         return (_fpgas_time[0] != 0) and (_fpgas_time[1] != 0)
 
+    @check_hardware_lock_claimed
     def _check_channeliser_started(self: TileComponentManager) -> bool:
         """
         Check that the channeliser is correctly generating samples.

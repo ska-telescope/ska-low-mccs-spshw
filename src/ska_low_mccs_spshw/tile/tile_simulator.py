@@ -1118,9 +1118,8 @@ class TileSimulator:
         self._tile_id = tile_id
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
-        time.sleep(random.randint(1, 2))
         self._start_polling_event.set()
-        time.sleep(random.randint(1, 2))
+        time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
 
     @connected

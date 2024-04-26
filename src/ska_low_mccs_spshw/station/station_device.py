@@ -14,12 +14,20 @@ from __future__ import annotations
 import itertools
 import json
 import sys
-from typing import Any, Optional, cast
+from functools import wraps
+from typing import Any, Callable, Optional, cast
 
 import numpy as np
 import tango
 from numpy import ndarray
-from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
+from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -32,6 +40,31 @@ from .station_obs_state_model import SpsStationObsStateModel
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["SpsStation", "main"]
+
+
+def engineering_mode_required(func: Callable) -> Callable:
+    """
+    Return a decorator for engineering only commands.
+
+    :param func: the command which is engineering mode only.
+
+    :returns: decorator to check for engineering mode before running command.
+    """
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
+        device: SKABaseDevice = args[0]
+        if device._admin_mode != AdminMode.ENGINEERING:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"Device in adminmode {device._admin_mode.name}, "
+                    "this command requires engineering."
+                ],
+            )
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 # pylint: disable=too-many-instance-attributes
@@ -971,6 +1004,7 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
+    @engineering_mode_required
     @command(
         dtype_out="DevVarLongStringArray",
     )
@@ -989,6 +1023,7 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler()
         return ([return_code], [message])
 
+    @engineering_mode_required
     @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",

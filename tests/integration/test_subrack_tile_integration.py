@@ -811,7 +811,7 @@ class TestMccsTileTpmDriver:
         request_provider.get_request = (  # type: ignore[method-assign]
             unittest.mock.Mock(return_value="PPS_DELAY_CORRECTION")
         )
-        time.sleep(0.2)
+        time.sleep(0.3)
         final_corrections = tile_device.ppsDelayCorrection
 
         assert np.array_equal(final_corrections, tile_under_test_pps_delay)

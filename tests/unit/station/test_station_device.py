@@ -1134,6 +1134,7 @@ def test_fortyGbNetworkAddress(
 def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test we can set and read channeliserRounding.
@@ -1141,11 +1142,20 @@ def test_write_read_channeliser_rounding(
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
-    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     channeliser_rounding_to_set = np.array([5] * 512)
     station_device.SetChanneliserRounding(channeliser_rounding_to_set)

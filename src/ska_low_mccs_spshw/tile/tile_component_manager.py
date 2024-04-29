@@ -836,7 +836,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_hardware_lock_claimed
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[int] = None,
+        start_time: Optional[str] = None,
         delay: int = 2,
     ) -> None:
         """
@@ -845,6 +845,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
         """
+        if start_time is None:
+            start_frame = None
+        else:
+            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
+            if start_frame < 0:
+                self.logger.error("Invalid time")
+            delay = 0
+
         started = False
         self.logger.debug(
             f"Start acquisition: start time: {start_time}, delay: {delay}"
@@ -854,7 +862,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.tile.reset_eth_errors()
             self.tile.check_arp_table()
             # Start data acquisition on board
-            self.tile.start_acquisition(start_time, delay)
+            self.tile.start_acquisition(start_frame, delay)
             started = True
             self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
         # pylint: disable=broad-except

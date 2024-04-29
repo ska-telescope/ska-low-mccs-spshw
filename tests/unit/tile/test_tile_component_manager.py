@@ -1041,7 +1041,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Call start_acquisition and check fpga_timestamp is moving
         # ---------------------------------------------------------
         future_time = 4.0
-        start_time = int(time.time() + future_time)
+        start_time = datetime.datetime.strftime(
+            datetime.datetime.fromtimestamp(int(time.time()) + future_time), RFC_FORMAT
+        )
         assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
             start_time=start_time, delay=1, task_callback=callbacks["task"]
@@ -2074,7 +2076,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         ):
             tile_component_manager.send_data_samples("raw", **mocked_input_params)
 
-        start_time = str(time.time() + 3.0)
+        start_time = datetime.datetime.strftime(
+            datetime.datetime.fromtimestamp(int(time.time()) + 3), RFC_FORMAT
+        )
         tile_component_manager.start_acquisition(start_time=start_time, delay=1)
 
         # we require timestamp to be in future

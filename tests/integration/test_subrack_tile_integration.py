@@ -8,6 +8,7 @@
 """This module contains integration tests of tile-subrack interactions in MCCS."""
 from __future__ import annotations
 
+import datetime
 import gc
 import json
 import time
@@ -28,6 +29,8 @@ from tests.test_tools import (
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
+
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 @pytest.fixture(name="change_event_callbacks")
@@ -444,18 +447,20 @@ class TestMccsTileTpmDriver:
         time.sleep(0.1)
         assert tile_device.tileprogrammingstate == "Initialised"
         delay_time = 2  # seconds
+        start_time = datetime.datetime.strftime(
+            datetime.datetime.fromtimestamp(int(time.time()) + delay_time), RFC_FORMAT
+        )
         [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"delay": delay_time})
+            json.dumps({"start_time": start_time})
         )
         assert result_code == ResultCode.QUEUED
         assert "StartAcquisition" in message.split("_")[-1]
 
         initial_frame = tile_device.currentFrame
-        sleep_time = 2.5  # seconds
+        sleep_time = delay_time + 0.5  # seconds
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
-
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_send_data_samples(

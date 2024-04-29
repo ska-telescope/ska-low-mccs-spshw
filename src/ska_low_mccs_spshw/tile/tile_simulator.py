@@ -452,15 +452,36 @@ class MockTpm:
         self._40g_configuration = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
-            "src_mac": int("62:00:0A:82:00:01"),
-            "src_ip": int("10.0.10.2"),
-            "dst_ip": int("10.0.10.3"),
-            "src_port": int(1234),
-            "dst_port": int(5678),
-            "netmask": int("255.255.255.0"),
-            "gateway_ip": int("10.0.10.1"),
+            "src_mac": self._get_src_mac(),
+            "src_ip": self._get_src_ip(),
+            "dst_ip": self._get_dst_ip(),
+            "src_port": self._get_src_port(),
+            "dst_port": self._get_dst_port(),
+            "netmask": self._get_netmask(),
+            "gateway_ip": self._get_gateway_ip(),
         }
         return self._40g_configuration
+
+    def _get_src_mac(self: MockTpm) -> int:
+        return 107752315813889
+
+    def _get_src_ip(self: MockTpm) -> int:
+        return 167774722
+
+    def _get_dst_ip(self: MockTpm) -> int:
+        return 167774723
+
+    def _get_src_port(self: MockTpm) -> int:
+        return 1234
+
+    def _get_dst_port(self: MockTpm) -> int:
+        return 5678
+
+    def _get_netmask(self: MockTpm) -> int:
+        return 4294967040
+
+    def _get_gateway_ip(self: MockTpm) -> int:
+        return 167774721
 
     def find_register(
         self: MockTpm,
@@ -1212,13 +1233,13 @@ class TileSimulator:
         self._40g_configuration = {
             "core_id": core_id,
             "arp_table_entry": arp_table_entry,
-            "src_mac": int("62:00:0A:82:00:01"),
-            "src_ip": int("10.0.10.2"),
-            "dst_ip": int("10.0.10.3"),
-            "src_port": int(1234),
-            "dst_port": int(5678),
-            "netmask": int("255.255.255.0"),
-            "gateway_ip": int("10.0.10.1"),
+            "src_mac": self._get_src_mac(),
+            "src_ip": self._get_src_ip(),
+            "dst_ip": self._get_dst_ip(),
+            "src_port": self._get_src_port(),
+            "dst_port": self._get_dst_port(),
+            "netmask": self._get_netmask(),
+            "gateway_ip": self._get_gateway_ip(),
         }
         if core_id == -1:
             return self._forty_gb_core_list
@@ -1227,6 +1248,27 @@ class TileSimulator:
                 if item.get("arp_table_entry") == arp_table_entry:
                     return item
         return None
+
+    def _get_src_mac(self: TileSimulator) -> int:
+        return 107752315813889
+
+    def _get_src_ip(self: TileSimulator) -> int:
+        return 167774722
+
+    def _get_dst_ip(self: TileSimulator) -> int:
+        return 167774723
+
+    def _get_src_port(self: TileSimulator) -> int:
+        return 1234
+
+    def _get_dst_port(self: TileSimulator) -> int:
+        return 5678
+
+    def _get_netmask(self: TileSimulator) -> int:
+        return 4294967040
+
+    def _get_gateway_ip(self: TileSimulator) -> int:
+        return 167774721
 
     @check_mocked_overheating
     @connected

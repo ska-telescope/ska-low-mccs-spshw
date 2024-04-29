@@ -19,33 +19,25 @@ __all__ = [
     "MccsTile",
     "TileComponentManager",
     "TileHealthModel",
-    "BaseTpmSimulator",
     "DemoTile",
-    "DynamicTpmSimulator",
     "DynamicValuesUpdater",
     "DynamicValuesGenerator",
-    "StaticTpmSimulator",
     "TileSimulator",
     "DynamicTileSimulator",
     "TpmDriver",
     "TpmStatus",
     "demo_tile_device",
+    "MockTpm",
     # "plugins",
 ]
 
-from .base_tpm_simulator import BaseTpmSimulator
 from .demo_tile_device import DemoTile
-from .dynamic_tpm_simulator import (
-    DynamicTpmSimulator,
-    DynamicValuesGenerator,
-    DynamicValuesUpdater,
-)
-from .static_tpm_simulator import StaticTpmSimulator
+from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
 from .tile_component_manager import TileComponentManager
 from .tile_data import TileData
 from .tile_device import MccsTile
 from .tile_health_model import TileHealthModel
-from .tile_simulator import DynamicTileSimulator, TileSimulator
+from .tile_simulator import DynamicTileSimulator, MockTpm, TileSimulator
 from .time_util import TileTime
 from .tpm_driver import TpmDriver
 from .tpm_status import TpmStatus

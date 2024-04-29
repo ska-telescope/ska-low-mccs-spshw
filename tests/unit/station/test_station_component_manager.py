@@ -140,6 +140,7 @@ def station_component_manager_fixture(
         [get_tile_name(tile_id)],
         daq_trl,
         "10.0.0.0",
+        "",
         antenna_uri,
         logger,
         1,

@@ -15,7 +15,7 @@ import unittest
 from typing import Any, Iterator
 
 import pytest
-from ska_control_model import SimulationMode, TestMode
+from ska_control_model import ResultCode, SimulationMode, TestMode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
@@ -255,13 +255,13 @@ def patched_tile_device_class_fixture(
                     )
 
         @command(dtype_out="DevVarLongStringArray")
-        def Off(self: PatchedTileDevice) -> None:
+        def Off(self: PatchedTileDevice) -> tuple[ResultCode, str]:
             if isinstance(self.component_manager._tpm_driver, TpmDriver):
                 self.component_manager._tpm_driver.tile.mock_off()
             return super().Off()
 
         @command(dtype_out="DevVarLongStringArray")
-        def On(self: PatchedTileDevice) -> None:
+        def On(self: PatchedTileDevice) -> tuple[ResultCode, str]:
             if isinstance(self.component_manager._tpm_driver, TpmDriver):
                 self.component_manager._tpm_driver.tile.mock_on()
             return super().On()

@@ -1230,17 +1230,18 @@ class TileSimulator:
         :return: core configuration or list of core configurations or none
         """
         # Fake some values. In reality we'd query the TPM here.
-        self._40g_configuration = {
-            "core_id": core_id,
-            "arp_table_entry": arp_table_entry,
-            "src_mac": self._get_src_mac(),
-            "src_ip": self._get_src_ip(),
-            "dst_ip": self._get_dst_ip(),
-            "src_port": self._get_src_port(),
-            "dst_port": self._get_dst_port(),
-            "netmask": self._get_netmask(),
-            "gateway_ip": self._get_gateway_ip(),
-        }
+        if self.tpm is not None:
+            self._40g_configuration = {
+                "core_id": core_id,
+                "arp_table_entry": arp_table_entry,
+                "src_mac": self.tpm._get_src_mac(),
+                "src_ip": self.tpm._get_src_ip(),
+                "dst_ip": self.tpm._get_dst_ip(),
+                "src_port": self.tpm._get_src_port(),
+                "dst_port": self.tpm._get_dst_port(),
+                "netmask": self.tpm._get_netmask(),
+                "gateway_ip": self.tpm._get_gateway_ip(),
+            }
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
@@ -1248,27 +1249,6 @@ class TileSimulator:
                 if item.get("arp_table_entry") == arp_table_entry:
                     return item
         return None
-
-    def _get_src_mac(self: TileSimulator) -> int:
-        return 107752315813889
-
-    def _get_src_ip(self: TileSimulator) -> int:
-        return 167774722
-
-    def _get_dst_ip(self: TileSimulator) -> int:
-        return 167774723
-
-    def _get_src_port(self: TileSimulator) -> int:
-        return 1234
-
-    def _get_dst_port(self: TileSimulator) -> int:
-        return 5678
-
-    def _get_netmask(self: TileSimulator) -> int:
-        return 4294967040
-
-    def _get_gateway_ip(self: TileSimulator) -> int:
-        return 167774721
 
     @check_mocked_overheating
     @connected

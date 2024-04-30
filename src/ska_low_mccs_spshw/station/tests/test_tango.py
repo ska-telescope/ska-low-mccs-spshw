@@ -18,14 +18,14 @@ __all__ = ["BasicTangoTest"]
 class BasicTangoTest(TpmSelfCheckTest):
     """A basic test to show we can connect to proxies."""
 
-    def test(self: TpmSelfCheckTest) -> None:
+    def test(self: BasicTangoTest) -> None:
         """A basic test to show we can connect to proxies."""
         station_proxy = tango.DeviceProxy("low-mccs/spsstation/ci-1")
         self.test_logger.debug(f"{station_proxy.state()=}")
         tile_proxy = tango.DeviceProxy(self.tile_trls[0])
         self.test_logger.debug(f"{tile_proxy.state()=}")
 
-    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+    def check_requirements(self: BasicTangoTest) -> tuple[bool, str]:
         """
         Check we have at least one TPM.
 

@@ -893,13 +893,13 @@ class SpsStation(SKAObsDevice):
         dtype="DevString",
         format="%s",
     )
-    def testResults(self: SpsStation) -> str:
+    def testLogs(self: SpsStation) -> str:
         """
         Get logs of the most recently run self-check test.
 
         :return: the logs of the most recently run self-check test.
         """
-        return self.component_manager._self_check_manager._test_logs
+        return self.component_manager.test_logs
 
     @attribute(
         dtype="DevString",
@@ -911,7 +911,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the report for the most recently run self-check test set.
         """
-        return self.component_manager._self_check_manager._test_report
+        return self.component_manager.test_report
 
     @attribute(dtype=("DevString",), format="%s", max_dim_x=32)
     def testList(self: SpsStation) -> list[str]:
@@ -920,7 +920,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the list of self-check tests available.
         """
-        return self.component_manager._self_check_manager._tpm_test_names
+        return self.component_manager.test_list
 
     # -------------
     # Slow Commands

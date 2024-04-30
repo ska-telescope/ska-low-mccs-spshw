@@ -60,7 +60,7 @@ class StationSelfCheckManager:
         }
 
     def _clear_logs_and_report(self: StationSelfCheckManager) -> None:
-        self._test_report = ""
+        self._test_report = "Test report:\n\n"
         self._test_logs = ""
 
     def run_tests(self: StationSelfCheckManager) -> list[TestResult]:
@@ -83,8 +83,8 @@ class StationSelfCheckManager:
                     f"Not running test {tpm_test.__class__.__name__},"
                     f" : {requirements_needed}"
                 )
-            self._generate_report(
-                test_results=[test_results[test_no]],
+            self._update_report(
+                test_result=test_results[test_no],
                 test_name=tpm_test.__class__.__name__,
             )
         duration = time.time() - start_time
@@ -112,14 +112,18 @@ class StationSelfCheckManager:
                 test_results[test_run], test_log = tpm_test.run_test()
                 self._test_logs += f"\n{'#'*5} {test_name} {'#'*5}\n"
                 self._test_logs += test_log
-                self._generate_report(
-                    test_results=[test_results[test_run]],
+                self._update_report(
+                    test_result=test_results[test_run],
                     test_name=test_name,
                 )
         else:
             self.logger.warning(
                 f"Not running test {tpm_test.__class__.__name__},"
                 f" : {requirements_needed}"
+            )
+            self._update_report(
+                test_result=TestResult.NOT_RUN,
+                test_name=test_name,
             )
 
         duration = time.time() - start_time
@@ -130,44 +134,40 @@ class StationSelfCheckManager:
         self: StationSelfCheckManager,
         test_results: list[TestResult],
         duration: Optional[float] = None,
-        test_name: Optional[str] = None,
     ) -> None:
         """
         Generate test report.
 
         :param test_results: results of the tests.
         :param duration: how long the test set took to run.
-        :param test_name: name of test which run.
         """
-        if self._test_report == "":
-            self._test_report = "Test report:\n\n"
-        if test_name is not None:
-            self._test_report += (
-                f"Test: {test_name}," f" Result: {test_results[0].name}\n"
-            )
-        if duration is not None:
-            passed_count = [
-                test_result
-                for test_result in test_results
-                if test_result == TestResult.PASSED
-            ]
-            failed_count = [
-                test_result
-                for test_result in test_results
-                if test_result == TestResult.FAILED
-            ]
-            error_count = [
-                test_result
-                for test_result in test_results
-                if test_result == TestResult.ERROR
-            ]
-            not_run_count = [
-                test_result
-                for test_result in test_results
-                if test_result == TestResult.NOT_RUN
-            ]
-            self._test_report += f"\nTests PASSED : {len(passed_count)}, "
-            self._test_report += f"Tests FAILED : {len(failed_count)}, "
-            self._test_report += f"Tests ERRORED : {len(error_count)}, "
-            self._test_report += f"Tests NOT_RUN : {len(not_run_count)}\n"
-            self._test_report += f"Tests completed in {duration:.2f} seconds"
+        passed_count = [
+            test_result
+            for test_result in test_results
+            if test_result == TestResult.PASSED
+        ]
+        failed_count = [
+            test_result
+            for test_result in test_results
+            if test_result == TestResult.FAILED
+        ]
+        error_count = [
+            test_result
+            for test_result in test_results
+            if test_result == TestResult.ERROR
+        ]
+        not_run_count = [
+            test_result
+            for test_result in test_results
+            if test_result == TestResult.NOT_RUN
+        ]
+        self._test_report += f"\nTests PASSED : {len(passed_count)}, "
+        self._test_report += f"Tests FAILED : {len(failed_count)}, "
+        self._test_report += f"Tests ERRORED : {len(error_count)}, "
+        self._test_report += f"Tests NOT_RUN : {len(not_run_count)}\n"
+        self._test_report += f"Tests completed in {duration:.2f} seconds"
+
+    def _update_report(
+        self: StationSelfCheckManager, test_result: TestResult, test_name: str
+    ) -> None:
+        self._test_report += f"Test: {test_name}," f" Result: {test_result.name}\n"

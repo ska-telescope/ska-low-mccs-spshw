@@ -185,7 +185,7 @@ def antenna_uri_fixture() -> list[str]:
 class ErrorTest(TpmSelfCheckTest):
     """Test class for test that errors."""
 
-    def test(self: TpmSelfCheckTest) -> None:
+    def test(self: ErrorTest) -> None:
         """This test will raise a KeyError."""
         my_dictionary = {"key1": 1, "key2": 2}
         assert "key1" in my_dictionary
@@ -197,7 +197,7 @@ class ErrorTest(TpmSelfCheckTest):
 class PassTest(TpmSelfCheckTest):
     """Test class for test that passes."""
 
-    def test(self: TpmSelfCheckTest) -> None:
+    def test(self: PassTest) -> None:
         """This test will pass."""
         my_dictionary = {"key1": 1, "key2": 2}
         assert "key1" in my_dictionary
@@ -207,7 +207,7 @@ class PassTest(TpmSelfCheckTest):
 class FailTest(TpmSelfCheckTest):
     """Test class for test that fails."""
 
-    def test(self: TpmSelfCheckTest) -> None:
+    def test(self: FailTest) -> None:
         """This test will fail."""
         my_dictionary = {"key1": 1, "key2": 2}
         assert "key1" in my_dictionary
@@ -218,13 +218,13 @@ class FailTest(TpmSelfCheckTest):
 class BadRequirementsTest(TpmSelfCheckTest):
     """Test class for test which we fail to meet requirements of."""
 
-    def test(self: TpmSelfCheckTest) -> None:
+    def test(self: BadRequirementsTest) -> None:
         """This test won't be run."""
         my_dictionary = {"key1": 1, "key2": 2}
         assert "key1" in my_dictionary
         assert "key2" in my_dictionary
 
-    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+    def check_requirements(self: BadRequirementsTest) -> tuple[bool, str]:
         """
         Unreasonable test requirements which we won't meet.
 
@@ -255,15 +255,33 @@ def station_self_check_manager_fixture(
         subrack_trls=subrack_trls,
         daq_trl=daq_trl,
     )
-    tpm_tests = [
+    # Jank to get around https://github.com/python/mypy/issues/3115 and
+    # https://github.com/python/mypy/issues/16509
+    tpm_tests_1 = [
         tpm_test(
             logger=logger,
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
             daq_trl=daq_trl,
         )
-        for tpm_test in [PassTest, FailTest, ErrorTest, BadRequirementsTest]
+        for tpm_test in [
+            PassTest,
+            FailTest,
+        ]
     ]
+    tpm_tests_2 = [
+        tpm_test(
+            logger=logger,
+            tile_trls=list(tile_trls),
+            subrack_trls=list(subrack_trls),
+            daq_trl=daq_trl,
+        )
+        for tpm_test in [
+            ErrorTest,
+            BadRequirementsTest,
+        ]
+    ]
+    tpm_tests = tpm_tests_1 + tpm_tests_2
     station_self_check_manager._tpm_test_names = [
         tpm_test.__class__.__name__ for tpm_test in tpm_tests
     ]

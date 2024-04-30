@@ -2121,6 +2121,33 @@ class SpsStationComponentManager(
             result = result + [0, 0]
         return result
 
+    @property
+    def test_logs(self: SpsStationComponentManager) -> str:
+        """
+        Get logs of most recently run self-check test set.
+
+        :return: logs of most recently run self-check test set.
+        """
+        return self._self_check_manager._test_logs
+
+    @property
+    def test_report(self: SpsStationComponentManager) -> str:
+        """
+        Get report of most recently run self-check test set.
+
+        :return: report of most recently run self-check test set.
+        """
+        return self._self_check_manager._test_report
+
+    @property
+    def test_list(self: SpsStationComponentManager) -> list[str]:
+        """
+        Get list of self-check tests available.
+
+        :return: list of self-check tests available.
+        """
+        return self._self_check_manager._tpm_test_names
+
     # ------------
     # commands
     # ------------

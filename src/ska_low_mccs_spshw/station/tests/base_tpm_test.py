@@ -8,6 +8,7 @@
 """An implementation of self check procedures for a station."""
 from __future__ import annotations
 
+import abc
 import enum
 import logging
 import traceback
@@ -31,7 +32,7 @@ class TestResult(enum.IntEnum):
     NOT_RUN = 3
 
 
-class TpmSelfCheckTest:
+class TpmSelfCheckTest(abc.ABC):
     """Base class for Tpm self check tests."""
 
     def __init__(
@@ -53,13 +54,13 @@ class TpmSelfCheckTest:
         self.tile_trls = tile_trls
         self.subrack_trls = subrack_trls
         self.daq_trl = daq_trl
-        self.test_logger = logging.getLogger(self.__class__.__name__)
-        self.stringio_buffer = StringIO()
-        self.stringio_handler = logging.StreamHandler(self.stringio_buffer)
         self._configure_test_logger()
 
     def _configure_test_logger(self: TpmSelfCheckTest) -> None:
         """Configure logger used for tests so we get split off test logs."""
+        self.test_logger = logging.getLogger(self.__class__.__name__)
+        self.stringio_buffer = StringIO()
+        self.stringio_handler = logging.StreamHandler(self.stringio_buffer)
         self.stringio_handler.setFormatter(logging.Formatter(_FORMAT_STR_NO_TAGS))
         self.test_logger.addHandler(self.stringio_handler)
         self.test_logger.setLevel(LoggingLevel.DEBUG)
@@ -69,6 +70,7 @@ class TpmSelfCheckTest:
         self.stringio_buffer.truncate(0)
         self.stringio_buffer.seek(0)
 
+    @abc.abstractmethod
     def test(self: TpmSelfCheckTest) -> None:
         """
         This should be written by sub-classes.

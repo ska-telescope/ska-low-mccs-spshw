@@ -241,6 +241,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.logger.warning(f"Connection to tpm lost! : {e}")
                     error_flag = True
                 if error_flag:
+                    self.tile.tpm = None
                     request = TileRequest("connect", self.connect)
                 else:
                     request = TileRequest(
@@ -511,7 +512,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             name="initialise",
             command_object=self._execute_initialise,
             task_callback=task_callback,
-            program_fpga=True,
+            program_fpga=False,
             pps_delay_correction=self._pps_delay_correction,
         )
         self.logger.info("Initialise command placed in poll QUEUE")
@@ -580,6 +581,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if event_value == PowerState.OFF:
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
+
+        if event_value == PowerState.ON:
+            self._tile_time.set_reference_time(self._fpga_reference_time)
+        else:
+            self._tile_time.set_reference_time(0)
 
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
         self._subrack_says_tpm_power = event_value
@@ -1277,7 +1283,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # -----------------------------
     # FastCommands
     # ----------------------------
-
+    @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
         """Check we can connect to the TPM."""
         self.tile.connect()

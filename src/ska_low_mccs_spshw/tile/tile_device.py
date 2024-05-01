@@ -767,7 +767,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: a string describing the programming state of the tile
         """
         # NOTE: This is updated with every poll
-        return self.component_manager.tpm_status.pretty_name()
+        return self._tile_programming_state
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

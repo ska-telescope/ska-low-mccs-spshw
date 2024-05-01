@@ -13,9 +13,15 @@ import enum
 import logging
 import traceback
 from io import StringIO
+from typing import TYPE_CHECKING, Any
 
-from ska_control_model import LoggingLevel
+from ska_control_model import AdminMode, LoggingLevel, TaskStatus
+from ska_low_mccs_common import MccsDeviceProxy
 from ska_ser_logging.configuration import _FORMAT_STR_NO_TAGS  # type: ignore
+
+if TYPE_CHECKING:
+    from ..station_component_manager import SpsStationComponentManager
+
 
 __all__ = ["TestResult", "TpmSelfCheckTest"]
 
@@ -32,11 +38,13 @@ class TestResult(enum.IntEnum):
     NOT_RUN = 3
 
 
+# pylint: disable=too-many-instance-attributes, too-many-arguments
 class TpmSelfCheckTest(abc.ABC):
     """Base class for Tpm self check tests."""
 
     def __init__(
         self: TpmSelfCheckTest,
+        component_manager: SpsStationComponentManager,
         logger: logging.Logger,
         tile_trls: list[str],
         subrack_trls: list[str],
@@ -49,12 +57,52 @@ class TpmSelfCheckTest(abc.ABC):
         :param tile_trls: trls of tiles the station has.
         :param subrack_trls: trls of subracks the station has.
         :param daq_trl: trl of the daq the station has.
+        :param component_manager: SpsStation component manager under test.
         """
+        self.component_manager = component_manager
         self.logger = logger
         self.tile_trls = tile_trls
         self.subrack_trls = subrack_trls
         self.daq_trl = daq_trl
+
+        self._task_status: TaskStatus = TaskStatus.NOT_FOUND
+
+        self.tile_proxies: list[MccsDeviceProxy] = []
+        self.subrack_proxies: list[MccsDeviceProxy] = []
+        self.daq_proxy: MccsDeviceProxy | None = None
+        self.proxies: list[MccsDeviceProxy] = []
+        self._proxies_constructed = False
+
         self._configure_test_logger()
+
+    def _setup_proxies(self: TpmSelfCheckTest) -> None:
+        self.tile_proxies = [
+            MccsDeviceProxy(fqdn=tile_trl, logger=self.logger)
+            for tile_trl in self.tile_trls
+        ]
+        self.subrack_proxies = [
+            MccsDeviceProxy(fqdn=subrack_trl, logger=self.logger)
+            for subrack_trl in self.subrack_trls
+        ]
+
+        self.proxies = self.tile_proxies + self.subrack_proxies
+
+        if self.daq_trl != "":
+            self.daq_proxy = MccsDeviceProxy(fqdn=self.daq_trl, logger=self.logger)
+            self.proxies.append(self.daq_proxy)
+
+        self._proxies_constructed = True
+
+    def _task_callback(self: TpmSelfCheckTest, *args: Any, **kwargs: Any) -> None:
+        """
+        Task callback so we can keep track of progress.
+
+        :param args: any positional args, should be empty.
+        :param kwargs: any key word args, should contain 'status' for status updates.
+        """
+        task_status = kwargs.get("status")
+        if task_status is not None:
+            self._task_status = task_status
 
     def _configure_test_logger(self: TpmSelfCheckTest) -> None:
         """Configure logger used for tests so we get split off test logs."""
@@ -85,7 +133,10 @@ class TpmSelfCheckTest(abc.ABC):
 
         :return: true as no requirements have been set.
         """
-        return (True, "No requirements set for test")
+        if all(proxy.adminmode == AdminMode.ENGINEERING for proxy in self.proxies):
+            return (True, "All proxies in ENGINEERING adminmode, continuing test.")
+
+        return (False, "Not all proxies in ENGINEERING adminmode")
 
     def run_test(self: TpmSelfCheckTest) -> tuple[TestResult, str]:
         """
@@ -94,6 +145,17 @@ class TpmSelfCheckTest(abc.ABC):
         :returns: test result.
         """
         self._clear_test_logs()
+        if not self._proxies_constructed:
+            self._setup_proxies()
+
+        requirements_met, requirements_needed = self.check_requirements()
+
+        if not requirements_met:
+            self.test_logger.warning(
+                f"Not running test {self.__class__.__name__}"
+                f" : {requirements_needed}"
+            )
+            return TestResult.NOT_RUN, self.stringio_handler.stream.getvalue()
 
         try:
             self.test()

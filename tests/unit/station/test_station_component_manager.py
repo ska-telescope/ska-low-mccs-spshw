@@ -21,7 +21,7 @@ from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.station import (
     SpsStationComponentManager,
-    StationSelfCheckManager,
+    SpsStationSelfCheckManager,
 )
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
@@ -117,7 +117,7 @@ def station_component_manager_fixture(
     logger: logging.Logger,
     callbacks: MockCallableGroup,
     antenna_uri: list[str],
-    station_self_check_manager: StationSelfCheckManager,
+    station_self_check_manager: SpsStationSelfCheckManager,
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -130,7 +130,7 @@ def station_component_manager_fixture(
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
     :param antenna_uri: Location of antenna configuration file.
-    :param station_self_check_manager: StationSelfCheckManager with basic tests.
+    :param station_self_check_manager: SpsStationSelfCheckManager with basic tests.
 
     :return: a station component manager.
     """

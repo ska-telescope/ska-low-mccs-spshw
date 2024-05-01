@@ -17,7 +17,7 @@ from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
 from ska_low_mccs_spshw import SpsStation
-from ska_low_mccs_spshw.station import StationSelfCheckManager
+from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
 from tests.harness import get_daq_name, get_subrack_name, get_tile_name
 
@@ -193,6 +193,14 @@ class ErrorTest(TpmSelfCheckTest):
         # Oh no!
         _ = my_dictionary["key3"]
 
+    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+        """
+        Strip engineering mode requirements for testing.
+
+        :returns: True
+        """
+        return (True, "Not test requirements")
+
 
 class PassTest(TpmSelfCheckTest):
     """Test class for test that passes."""
@@ -202,6 +210,14 @@ class PassTest(TpmSelfCheckTest):
         my_dictionary = {"key1": 1, "key2": 2}
         assert "key1" in my_dictionary
         assert "key2" in my_dictionary
+
+    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+        """
+        Strip engineering mode requirements for testing.
+
+        :returns: True
+        """
+        return (True, "Not test requirements")
 
 
 class FailTest(TpmSelfCheckTest):
@@ -213,6 +229,14 @@ class FailTest(TpmSelfCheckTest):
         assert "key1" in my_dictionary
         assert "key2" in my_dictionary
         assert "key3" in my_dictionary
+
+    def check_requirements(self: TpmSelfCheckTest) -> tuple[bool, str]:
+        """
+        Strip engineering mode requirements for testing.
+
+        :returns: True
+        """
+        return (True, "Not test requirements")
 
 
 class BadRequirementsTest(TpmSelfCheckTest):
@@ -237,19 +261,24 @@ class BadRequirementsTest(TpmSelfCheckTest):
 
 @pytest.fixture(name="station_self_check_manager")
 def station_self_check_manager_fixture(
+    test_context: None,
     logger: logging.Logger,
-) -> StationSelfCheckManager:
+) -> SpsStationSelfCheckManager:
     """
     Return a station self check manager with patched example tests.
 
+    :param test_context: a Tango test context running the required
+        mock subservient devices.
     :param logger: logger for use in the tests.
 
     :returns: a station self check manager with patched example tests.
     """
-    tile_trls = [get_tile_name(i) for i in range(1, 5)]
+    tile_trls = [get_tile_name(1)]
     subrack_trls = [get_subrack_name(1)]
     daq_trl = get_daq_name()
-    station_self_check_manager = StationSelfCheckManager(
+    mock_component_manager = unittest.mock.Mock()
+    station_self_check_manager = SpsStationSelfCheckManager(
+        component_manager=mock_component_manager,
         logger=logger,
         tile_trls=tile_trls,
         subrack_trls=subrack_trls,
@@ -259,6 +288,7 @@ def station_self_check_manager_fixture(
     # https://github.com/python/mypy/issues/16509
     tpm_tests_1 = [
         tpm_test(
+            component_manager=mock_component_manager,
             logger=logger,
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),
@@ -271,6 +301,7 @@ def station_self_check_manager_fixture(
     ]
     tpm_tests_2 = [
         tpm_test(
+            component_manager=mock_component_manager,
             logger=logger,
             tile_trls=list(tile_trls),
             subrack_trls=list(subrack_trls),

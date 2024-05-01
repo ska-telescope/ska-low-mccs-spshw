@@ -8,8 +8,6 @@
 """An implementation of a basic test for a station."""
 from __future__ import annotations
 
-import tango
-
 from .base_tpm_test import TpmSelfCheckTest
 
 __all__ = ["BasicTangoTest"]
@@ -20,10 +18,7 @@ class BasicTangoTest(TpmSelfCheckTest):
 
     def test(self: BasicTangoTest) -> None:
         """A basic test to show we can connect to proxies."""
-        station_proxy = tango.DeviceProxy("low-mccs/spsstation/ci-1")
-        self.test_logger.debug(f"{station_proxy.state()=}")
-        tile_proxy = tango.DeviceProxy(self.tile_trls[0])
-        self.test_logger.debug(f"{tile_proxy.state()=}")
+        self.test_logger.debug(f"{self.tile_proxies[0].state()=}")
 
     def check_requirements(self: BasicTangoTest) -> tuple[bool, str]:
         """
@@ -33,4 +28,4 @@ class BasicTangoTest(TpmSelfCheckTest):
         """
         if len(self.tile_trls) < 1:
             return (False, "This test requires at least one TPM")
-        return (True, "This test can be run")
+        return super().check_requirements()

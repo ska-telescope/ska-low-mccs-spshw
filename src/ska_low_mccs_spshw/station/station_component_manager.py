@@ -41,7 +41,7 @@ from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
 
 from ..tile.tile_data import TileData
-from .station_self_check_manager import StationSelfCheckManager
+from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
@@ -508,7 +508,8 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
-        self._self_check_manager = StationSelfCheckManager(
+        self._self_check_manager = SpsStationSelfCheckManager(
+            component_manager=self,
             logger=self.logger,
             tile_trls=list(self._tile_proxies.keys()),
             subrack_trls=list(self._subrack_proxies.keys()),

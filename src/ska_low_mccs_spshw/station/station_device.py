@@ -1050,6 +1050,16 @@ class SpsStation(SKAObsDevice):
             >>> dp = tango.DeviceProxy("low-mccs/spsstation/aavs3")
             >>> dp.RunTest(json.dumps({"test_name" : "my_test", "count" : 5}))
         """
+        test_name = json.loads(argin)["test_name"]
+        if test_name not in self.component_manager.test_list:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"{test_name} not in available tests: "
+                    f"{self.component_manager.test_list}"
+                ],
+            )
+
         handler = self.get_command_object("RunTest")
         (return_code, message) = handler(argin)
         return ([return_code], [message])

@@ -2738,16 +2738,20 @@ class SpsStationComponentManager(
                     task_callback(
                         status=TaskStatus.FAILED,
                         result=(
-                            ResultCode.FAILED, 
-                            "AcquireDataForCalibration failed. Tiles not synchronised."
+                            ResultCode.FAILED,
+                            "AcquireDataForCalibration failed. Tiles not synchronised.",
                         ),
                     )
                 return
 
         # Get DAQ running with correlator
+        assert self._daq_proxy is not None
         assert self._daq_proxy._proxy is not None
         daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-        if all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
+        if all(
+            status_list[0] != daq_mode
+            for status_list in daq_status["Running Consumers"]
+        ):
             if len(daq_status["Running Consumers"]) > 0:
                 rc, _ = self._daq_proxy._proxy.StopDaq()
                 if rc != ResultCode.OK:
@@ -2755,32 +2759,45 @@ class SpsStationComponentManager(
                         task_callback(
                             status=TaskStatus.FAILED,
                             result=(
-                                ResultCode.FAILED, 
-                                "AcquireDataForCalibration failed. Failed to stop daq."
+                                ResultCode.FAILED,
+                                "AcquireDataForCalibration failed. Failed to stop daq.",
                             ),
                         )
                     return
             self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
             max_tries = 10
-            for i in range(max_tries):
+            for _ in range(max_tries):
                 daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-                if not all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
-                    continue
-                else:
-                    time.sleep(0.5)
-            if all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
+                if any(
+                    status_list[0] == daq_mode
+                    for status_list in daq_status["Running Consumers"]
+                ):
+                    break
+                time.sleep(0.5)
+            if all(
+                status_list[0] != daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
                 if task_callback:
                     task_callback(
                         status=TaskStatus.FAILED,
                         result=(
-                            ResultCode.FAILED, 
-                            "AcquireDataForCalibration failed. Failed to start daq."
+                            ResultCode.FAILED,
+                            "AcquireDataForCalibration failed. Failed to start daq.",
                         ),
                     )
                 return
 
         # Send data from tpms
-        self.send_data_samples(json.dumps({"data_type": data_send_mode, "first_channel": channel, "last_channel": channel}))
+        self.send_data_samples(
+            json.dumps(
+                {
+                    "data_type": data_send_mode,
+                    "first_channel": channel,
+                    "last_channel": channel,
+                }
+            )
+        )
 
     @check_communicating
     def set_channeliser_rounding(

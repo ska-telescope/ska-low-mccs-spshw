@@ -139,6 +139,7 @@ def station_device_fixture(
     """
     yield test_context.get_sps_station_device()
 
+
 @pytest.fixture(name="daq_device")
 def daq_device_fixture(
     test_context: SpsTangoTestHarnessContext,
@@ -1425,6 +1426,7 @@ def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
 
     assert station_device.daqTRL == "NEW_DAQ_TRL"
 
+
 def test_AcquireDataForCalibration(
     station_device: SpsStation,
     daq_device: DeviceProxy,
@@ -1467,8 +1469,15 @@ def test_AcquireDataForCalibration(
         time.sleep(1)
         time_waited += 1
         if time_waited >= timeout:
-            assert False, f"Command SendDataSamples not called on tile"
+            assert False, "Command SendDataSamples not called on tile"
 
     tile_command_mock.assert_called_once()
-    assert json.loads(tile_command_mock.call_args[0][0]) == {"data_type": "channel", "first_channel": channel, "last_channel": channel}
-    assert json.loads(daq_device.DaqStatus())["Running Consumers"][0][0] == "CORRELATOR_DATA"
+    assert json.loads(tile_command_mock.call_args[0][0]) == {
+        "data_type": "channel",
+        "first_channel": channel,
+        "last_channel": channel,
+    }
+    assert (
+        json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
+        == "CORRELATOR_DATA"
+    )

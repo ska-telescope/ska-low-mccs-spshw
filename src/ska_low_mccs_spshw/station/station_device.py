@@ -1002,7 +1002,9 @@ class SpsStation(SKAObsDevice):
         dtype_in="DevLong",
         dtype_out="DevVarLongStringArray",
     )
-    def AcquireDataForCalibration(self: SpsStation, channel: int) -> DevVarLongStringArrayType:
+    def AcquireDataForCalibration(
+        self: SpsStation, channel: int
+    ) -> DevVarLongStringArrayType:
         """
         Start acquiring data for calibration.
 

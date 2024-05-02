@@ -10,7 +10,6 @@ environments:
   stfc-ral:
     values:
       - platform/stfc-ral.yaml
-      - spshw/values/values-ci.yaml
   stfc-ci:
     values:
       - platform/stfc-ci.yaml

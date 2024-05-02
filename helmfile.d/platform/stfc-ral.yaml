@@ -3,8 +3,9 @@ platform:
     version: 0.2.0
     description: A platform configuration specification for STFC RAL
 
-  cluster: 
-  # specified by minikube.yaml
+  cluster:
+    daq:
+      storage_class: nfss1
     domain: stfc-ral-k8s.skao.int
     minikube: false
     services:
@@ -16,8 +17,6 @@ platform:
         id: 1
         sps:
           sdn_first_interface: 10.130.0.100/16  # Tile 40G IP allocation starting at .100
-#          daq:
-#            ip: 172.17.6.145
           subracks:
             sr1:
               srmb_host: 10.132.0.34
@@ -66,3 +65,5 @@ platform:
               subrack: sr1
               subrack_slot: 6
 
+defaults:
+  logging_level_default: 5

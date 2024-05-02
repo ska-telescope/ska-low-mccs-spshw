@@ -394,7 +394,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                 if (not self.is_programmed) or (
                     self.tpm_status == TpmStatus.PROGRAMMED
                 ):
-                    self.initialise(program_fpga=False)
+                    self.initialise(program_fpga=True)
                 self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
             if power_state == PowerState.STANDBY:
                 self.erase_fpga()

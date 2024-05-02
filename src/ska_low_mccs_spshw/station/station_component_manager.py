@@ -2688,6 +2688,100 @@ class SpsStationComponentManager(
                 )
             return
 
+    def acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        channel: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the acquire data for calibration method.
+
+        This method returns immediately after it submitted
+        `self._acquire_data_for_calibration` for execution.
+
+        :param channel: channel to calibrate for
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        if channel < 0 or channel > 510:
+            self.logger.error(f"Invalid channel{channel}")
+            return (TaskStatus.REJECTED, "Invalid channel")
+
+        return self.submit_task(
+            self._acquire_data_for_calibration,
+            args=[channel],
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        channel: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Acquire data for calibration.
+
+        :param channel: channel to calibrate for
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        daq_mode = "CORRELATOR_DATA"
+        data_send_mode = "channel"
+        # Verify all tiles are acquiring data
+        for tile in self._tile_proxies.values():
+            assert tile._proxy is not None  # for the type checker
+            if not tile._proxy.tileProgrammingState == "Synchronised":
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED, 
+                            "AcquireDataForCalibration failed. Tiles not synchronised."
+                        ),
+                    )
+                return
+
+        # Get DAQ running with correlator
+        assert self._daq_proxy._proxy is not None
+        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+        if all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
+            if len(daq_status["Running Consumers"]) > 0:
+                rc, _ = self._daq_proxy._proxy.StopDaq()
+                if rc != ResultCode.OK:
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.FAILED,
+                            result=(
+                                ResultCode.FAILED, 
+                                "AcquireDataForCalibration failed. Failed to stop daq."
+                            ),
+                        )
+                    return
+            self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+            max_tries = 10
+            for i in range(max_tries):
+                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+                if not all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
+                    continue
+                else:
+                    time.sleep(0.5)
+            if all(status_list[0] != daq_mode for status_list in daq_status["Running Consumers"]):
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED, 
+                            "AcquireDataForCalibration failed. Failed to start daq."
+                        ),
+                    )
+                return
+
+        # Send data from tpms
+        self.send_data_samples(json.dumps({"data_type": data_send_mode, "first_channel": channel, "last_channel": channel}))
+
     @check_communicating
     def set_channeliser_rounding(
         self: SpsStationComponentManager,

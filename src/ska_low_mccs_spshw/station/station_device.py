@@ -210,6 +210,7 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
+            ("AcquireDataForCalibration", "acquire_data_for_calibration"),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
@@ -995,6 +996,26 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(
+        dtype_in="DevLong",
+        dtype_out="DevVarLongStringArray",
+    )
+    def AcquireDataForCalibration(self: SpsStation, channel: int) -> DevVarLongStringArrayType:
+        """
+        Start acquiring data for calibration.
+
+        :param channel: channel to calibrate for
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/station/ci-1")
+            >>> dp.command_inout("AcquireDataForCalibration", 153)
+        """
+        handler = self.get_command_object("AcquireDataForCalibration")
+        (return_code, message) = handler(channel)
         return ([return_code], [message])
 
     @command(

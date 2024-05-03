@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*
+# pylint: disable=too-many-lines
 #
 # This file is part of the SKA Low MCCS project
 #
@@ -932,6 +933,123 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.state() == tango.DevState.ALARM
         tile_device.unsubscribe_event(sub_id)
+
+    # pylint: disable=too-many-arguments
+    @pytest.mark.parametrize(
+        ("attribute", "initial_value", "alarm_value"),
+        [
+            (
+                "fpga1Temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
+                77.0,
+            ),
+            (
+                "fpga2Temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
+                77.0,
+            ),
+            (
+                "boardTemperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
+                66.0,
+            ),
+        ],
+    )
+    def test_self_shutdown(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        subrack_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        attribute: str,
+        initial_value: Any,
+        alarm_value: Any,
+    ) -> None:
+        """
+        Test alarm is raised when attribute goes out of alarm threshold.
+
+        This tests will check that when we set alarming values in the backend
+        TileSimulator and force a poll the attribute corresponding to this will
+        go into ALARM and the MccsTile device will go into ALARM.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param subrack_device: the subrack Tango device under test.
+        :param daq_device: the Daq Tango device under test.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param attribute: the name of the health attribute
+        :param initial_value: the value that the TileSimulator initially has for this
+            attribute
+        :param alarm_value: A value that should raise an ALARM
+        """
+        self.setup_devices(
+            tile_device,
+            tile_simulator,
+            subrack_device,
+            daq_device,
+            change_event_callbacks,
+        )
+        # Force a poll to get the initial values.
+        request_provider = tile_component_manager._request_provider
+        assert request_provider is not None
+        request_provider.get_request = (  # type: ignore[method-assign]
+            unittest.mock.Mock(return_value="HEALTH_STATUS")
+        )
+
+        # sleep to allow a poll
+        time.sleep(0.5)
+
+        sub_id = tile_device.subscribe_event(
+            attribute,
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["generic_health_attribute"],
+        )
+        change_event_callbacks["generic_health_attribute"].assert_change_event(
+            initial_value
+        )
+
+        assert (
+            tile_device.read_attribute(attribute).quality
+            == tango.AttrQuality.ATTR_VALID
+        )
+
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+
+        # Set the alarming value in backend TileSimulator
+        tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
+
+        # sleep to allow a poll
+        time.sleep(0.5)
+
+        change_event_callbacks["generic_health_attribute"].assert_change_event(
+            alarm_value
+        )
+
+        assert (
+            tile_device.read_attribute(attribute).quality
+            == tango.AttrQuality.ATTR_ALARM
+        )
+        assert tile_device.state() == tango.DevState.ALARM
+
+        tile_device.unsubscribe_event(sub_id)
+
+        # Temperature attributes have a soft shutdown.
+        # After overheating the Tile will turn off the port
+        # and report the Power as OFF.
+        time.sleep(4)
+        assert tile_device.state() == tango.DevState.OFF
 
     def test_tile_state_rediscovery(
         self: TestMccsTileTpmDriver,

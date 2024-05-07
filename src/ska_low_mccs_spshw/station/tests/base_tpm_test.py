@@ -148,12 +148,12 @@ class TpmSelfCheckTest(abc.ABC):
         if not self._proxies_constructed:
             self._setup_proxies()
 
-        requirements_met, requirements_needed = self.check_requirements()
+        requirements_met, requirements_check_message = self.check_requirements()
 
         if not requirements_met:
             self.test_logger.warning(
                 f"Not running test {self.__class__.__name__}"
-                f" : {requirements_needed}"
+                f" : {requirements_check_message}"
             )
             return TestResult.NOT_RUN, self.stringio_handler.stream.getvalue()
 

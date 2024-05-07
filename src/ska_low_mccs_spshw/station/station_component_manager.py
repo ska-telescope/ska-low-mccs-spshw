@@ -1067,7 +1067,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._standby, task_callback=task_callback)
 
@@ -1145,7 +1145,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
@@ -1230,7 +1230,7 @@ class SpsStationComponentManager(
         `self._initialise` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._initialise, task_callback=task_callback)
 
@@ -1639,7 +1639,7 @@ class SpsStationComponentManager(
         `self._self_check` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._self_check, task_callback=task_callback)
 
@@ -1689,7 +1689,7 @@ class SpsStationComponentManager(
         :param count: how many times to run the test, default is 1.
         :param test_name: which test to run.
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(
             self._run_test, args=[count, test_name], task_callback=task_callback
@@ -2547,7 +2547,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         params = json.loads(argin)
         start_time = params.get("start_time", None)
@@ -2616,7 +2616,7 @@ class SpsStationComponentManager(
             each channeliser frequency channel.
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(
             self._set_channeliser_rounding,
@@ -2683,7 +2683,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(
             self._trigger_adc_equalisation,

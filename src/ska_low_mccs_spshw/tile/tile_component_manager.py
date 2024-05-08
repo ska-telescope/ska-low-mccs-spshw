@@ -1117,3 +1117,4 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         with self._power_state_lock:
             # pylint: disable=attribute-defined-outside-init
             self.power_state = power_state
+            self._update_component_state(programming_state=self.tpm_status)

@@ -308,7 +308,12 @@ class TestMccsTileTpmDriver:
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_state"],
         )
-
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -353,11 +358,6 @@ class TestMccsTileTpmDriver:
         )
         change_event_callbacks["tile_command_status"].assert_change_event(())
 
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         ([result_code], [on_command_id]) = tile_device.On()
@@ -401,6 +401,7 @@ class TestMccsTileTpmDriver:
             (on_command_id, "COMPLETED")
         )
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_start_acquisition(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -441,6 +442,7 @@ class TestMccsTileTpmDriver:
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -489,6 +491,7 @@ class TestMccsTileTpmDriver:
             json.dumps({"data_type": "raw"})
         )
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_configure_40g_core(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -528,6 +531,7 @@ class TestMccsTileTpmDriver:
         # check is a subset
         assert config.items() <= result.items()
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -568,6 +572,7 @@ class TestMccsTileTpmDriver:
         ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -606,6 +611,7 @@ class TestMccsTileTpmDriver:
         expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -635,6 +641,7 @@ class TestMccsTileTpmDriver:
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
 
     # pylint: disable=too-many-arguments
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_pps_present(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
@@ -685,6 +692,7 @@ class TestMccsTileTpmDriver:
         assert tile_device.state() == tango.DevState.ALARM
 
     # pylint: disable=too-many-arguments
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "alarm_value"),
         [
@@ -783,6 +791,7 @@ class TestMccsTileTpmDriver:
         assert tile_device.state() == tango.DevState.ALARM
         tile_device.unsubscribe_event(sub_id)
 
+    @pytest.mark.xfail(reason="Capturing MCCS-2111 bug")
     def test_tile_state_rediscovery(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,

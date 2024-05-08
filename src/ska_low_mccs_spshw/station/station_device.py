@@ -14,13 +14,21 @@ from __future__ import annotations
 import itertools
 import json
 import sys
-from typing import Any, Optional, cast
+from functools import wraps
+from typing import Any, Callable, Optional, cast
 
 import numpy as np
 import tango
 from numpy import ndarray
-from ska_control_model import CommunicationStatus, HealthState, PowerState, ResultCode
-from ska_tango_base.commands import SubmittedSlowCommand
+from ska_control_model import (
+    AdminMode,
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+)
+from ska_tango_base import SKABaseDevice
+from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
@@ -32,6 +40,31 @@ from .station_obs_state_model import SpsStationObsStateModel
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["SpsStation", "main"]
+
+
+def engineering_mode_required(func: Callable) -> Callable:
+    """
+    Return a decorator for engineering only commands.
+
+    :param func: the command which is engineering mode only.
+
+    :returns: decorator to check for engineering mode before running command.
+    """
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
+        device: SKABaseDevice = args[0]
+        if device._admin_mode != AdminMode.ENGINEERING:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"Device in adminmode {device._admin_mode.name}, "
+                    "this command requires engineering."
+                ],
+            )
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 # pylint: disable=too-many-instance-attributes
@@ -159,12 +192,35 @@ class SpsStation(SKAObsDevice):
         #
         # Long running commands
         #
-        for command_name, method_name in [
-            ("Initialise", "initialise"),
-            ("StartAcquisition", "start_acquisition"),
-            ("TriggerAdcEqualisation", "trigger_adc_equalisation"),
-            ("SetChanneliserRounding", "set_channeliser_rounding"),
+
+        run_test_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "test_name": {"type": "string"},
+                "count": {"type": "integer"},
+            },
+            "required": ["test_name"],
+        }
+
+        for command_name, method_name, schema in [
+            ("Initialise", "initialise", None),
+            ("StartAcquisition", "start_acquisition", None),
+            ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
+            ("SetChanneliserRounding", "set_channeliser_rounding", None),
+            ("SelfCheck", "self_check", None),
+            ("RunTest", "run_test", run_test_schema),
         ]:
+            validator = (
+                None
+                if schema is None
+                else JsonValidator(
+                    command_name,
+                    schema,
+                    logger=self.logger,
+                )
+            )
+
             self.register_command_object(
                 command_name,
                 SubmittedSlowCommand(
@@ -174,6 +230,7 @@ class SpsStation(SKAObsDevice):
                     method_name,
                     callback=None,
                     logger=self.logger,
+                    validator=validator,
                 ),
             )
 
@@ -832,6 +889,39 @@ class SpsStation(SKAObsDevice):
         """
         self._health_model.health_params = json.loads(argin)
 
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def testLogs(self: SpsStation) -> str:
+        """
+        Get logs of the most recently run self-check test.
+
+        :return: the logs of the most recently run self-check test.
+        """
+        return self.component_manager.test_logs
+
+    @attribute(
+        dtype="DevString",
+        format="%s",
+    )
+    def testReport(self: SpsStation) -> str:
+        """
+        Get the report for the most recently run self-check test set.
+
+        :return: the report for the most recently run self-check test set.
+        """
+        return self.component_manager.test_report
+
+    @attribute(dtype=("DevString",), format="%s", max_dim_x=32)
+    def testList(self: SpsStation) -> list[str]:
+        """
+        Get the list of self-check tests available.
+
+        :return: the list of self-check tests available.
+        """
+        return self.component_manager.test_list
+
     # -------------
     # Slow Commands
     # -------------
@@ -920,6 +1010,58 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("TriggerAdcEqualisation")
         (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @engineering_mode_required
+    @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def SelfCheck(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Run all the self-check tests once.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/aavs3")
+            >>> dp.SelfCheck()
+        """
+        handler = self.get_command_object("SelfCheck")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @engineering_mode_required
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+    )
+    def RunTest(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        """
+        Run a self-check test and optional amount of times.
+
+        :param argin: json-ified args, containing a required 'test_name', and optional
+            'count'
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/aavs3")
+            >>> dp.RunTest(json.dumps({"test_name" : "my_test", "count" : 5}))
+        """
+        test_name = json.loads(argin)["test_name"]
+        if test_name not in self.component_manager.test_list:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"{test_name} not in available tests: "
+                    f"{self.component_manager.test_list}"
+                ],
+            )
+
+        handler = self.get_command_object("RunTest")
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     # -------------

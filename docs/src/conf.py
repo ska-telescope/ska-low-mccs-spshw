@@ -53,6 +53,7 @@ autodoc_mock_imports = [
     "ska_control_model",
     "ska_low_mccs_common",
     "ska_ser_skuid",
+    "ska_ser_logging",
 ]
 
 

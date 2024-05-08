@@ -15,11 +15,14 @@ from typing import Iterator
 
 import numpy as np
 import pytest
-from ska_control_model import CommunicationStatus
+from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
-from ska_low_mccs_spshw.station import SpsStationComponentManager
+from ska_low_mccs_spshw.station import (
+    SpsStationComponentManager,
+    SpsStationSelfCheckManager,
+)
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
@@ -114,6 +117,7 @@ def station_component_manager_fixture(
     logger: logging.Logger,
     callbacks: MockCallableGroup,
     antenna_uri: list[str],
+    station_self_check_manager: SpsStationSelfCheckManager,
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -126,10 +130,11 @@ def station_component_manager_fixture(
     :param logger: a logger to be used by the commonent manager
     :param callbacks: callback group
     :param antenna_uri: Location of antenna configuration file.
+    :param station_self_check_manager: SpsStationSelfCheckManager with basic tests.
 
     :return: a station component manager.
     """
-    return SpsStationComponentManager(
+    sps_station_component_manager = SpsStationComponentManager(
         1,
         [get_subrack_name(subrack_id)],
         [get_tile_name(tile_id)],
@@ -144,6 +149,9 @@ def station_component_manager_fixture(
         callbacks["tile_health"],
         callbacks["subrack_health"],
     )
+    # Patching through our self check manager basic tests.
+    sps_station_component_manager._self_check_manager = station_self_check_manager
+    return sps_station_component_manager
 
 
 @pytest.fixture(name="generic_nested_dict")
@@ -403,3 +411,91 @@ def test_get_static_delays(
                 "delays"
             ]
     assert static_delays == expected_static_delays
+
+
+def test_self_check(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test running a self_check with example tests.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    station_component_manager.self_check(task_callback=callbacks["task"])
+
+    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+    callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+
+    # This should fail as we have set up one FAIL test and one ERROR test.
+    callbacks["task"].assert_call(
+        status=TaskStatus.FAILED,
+        result=(ResultCode.FAILED, "Not all tests passed or skipped, check report."),
+    )
+
+
+@pytest.mark.parametrize(
+    ("test_name"),
+    [
+        pytest.param("PassTest"),
+        pytest.param("FailTest"),
+        pytest.param("ErrorTest"),
+        pytest.param("BadRequirementsTest"),
+    ],
+)
+def test_run_test(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    test_name: str,
+) -> None:
+    """
+    Test running a run_test with example tests.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param test_name: name of test to run.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    station_component_manager.run_test(
+        task_callback=callbacks["task"], test_name=test_name, count=1
+    )
+
+    callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+    callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+
+    if test_name == "PassTest":
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Tests completed OK."),
+        )
+        return
+
+    if test_name == "BadRequirementsTest":
+        callbacks["task"].assert_call(
+            status=TaskStatus.REJECTED,
+            result=(ResultCode.REJECTED, "Tests requirements not met, check logs."),
+        )
+        return
+    callbacks["task"].assert_call(
+        status=TaskStatus.FAILED,
+        result=(
+            ResultCode.FAILED,
+            "Not all tests passed, check report.",
+        ),
+    )

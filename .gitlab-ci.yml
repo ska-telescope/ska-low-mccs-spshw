@@ -65,58 +65,6 @@ include:
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
 
-.image_builder_template:
-  image: $SKA_K8S_TOOLS_BUILD_DEPLOY
-  tags:
-    - ska-default
-  before_script:
-    - '[ -f .make/oci.mk ] || (echo "File oci.mk not included in Makefile; exit 1")'
-    - 'make help | grep oci-build-all'
-    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
-    - mkdir -p build
-  script:
-    - make oci-build-all CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
-  artifacts:
-    paths:
-      - build/
-
-oci-image-build:
-  extends:
-    - .image_builder_template
-  stage: build
-  timeout: 1h
-  rules:
-    - exists:
-        - Dockerfile
-        - images/**/*
-
-
-test:
-  timeout: 1h
-  stage: test
-  before_script:
-    - apk update && apk add --no-cache make bash git curl openssl docker jq
-    - pip3 install sphinx==5.1.1 sphinx-rtd-theme==1.0.0 recommonmark==0.7.1 conan==1.60.2
-    - pip3 install --index-url https://artefact.skao.int/repository/pypi-all/simple skart
-    - curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
-    - helm repo add ska https://artefact.skao.int/repository/helm-internal
-    - wget https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_amd64.zip -O terraform.zip
-    - unzip terraform.zip && rm terraform.zip && mv terraform /usr/bin/terraform
-    - wget https://github.com/terraform-linters/tflint/releases/download/v${TFLINT_VERSION}/tflint_linux_amd64.zip -O tflint.zip
-    - unzip tflint.zip && rm tflint.zip && mv tflint /usr/bin/tflint
-    - mkdir -p build/reports
-    - mkdir -p build/charts
-  script:
-  - cd tests
-  - make test
-  artifacts:
-    name: "$CI_PROJECT_NAME-$CI_JOB_ID"
-    paths:
-      - "build/"
-    reports:
-      junit: build/report.xml
-    when: always
-
 psi-low-k8s-test:
   stage: test-psi-low
   when: manual

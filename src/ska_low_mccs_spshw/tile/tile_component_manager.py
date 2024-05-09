@@ -718,6 +718,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if program_fpga:
             self.tile.erase_fpga()
+            self._update_component_state(
+                programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
+            )
 
         prog_status = False
 
@@ -730,6 +733,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Initialisation after programming the FPGA
         #
         if prog_status:
+            self._update_component_state(
+                programming_state=TpmStatus.PROGRAMMED.pretty_name()
+            )
             #
             # Base initialisation
             #
@@ -2274,7 +2280,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         elif len(truncation) == 1:
             self._channeliser_truncation = [truncation[0]] * 512
         else:
-            self._channeliser_truncation = truncation
+            if isinstance(truncation, np.ndarray):
+                self._channeliser_truncation = truncation.tolist()
+            else:
+                self._channeliser_truncation = list(truncation)
         self._set_channeliser_truncation(self._channeliser_truncation)
 
     def _set_channeliser_truncation(

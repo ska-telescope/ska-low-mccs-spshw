@@ -196,6 +196,7 @@ def on_tile_device_fixture(
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "NotProgrammed"
     )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "Initialised", lookahead=2, consume_nonmatches=True
     )
@@ -249,6 +250,7 @@ def turn_tile_on(
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "NotProgrammed", lookahead=2, consume_nonmatches=True
     )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event(
         "Initialised", lookahead=2, consume_nonmatches=True
     )

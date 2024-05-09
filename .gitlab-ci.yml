@@ -61,7 +61,8 @@ include:
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
 python-test:
-  tags: ska-k8s
+  tags:
+  - ska-k8s
 
 psi-low-k8s-test:
   stage: test-psi-low

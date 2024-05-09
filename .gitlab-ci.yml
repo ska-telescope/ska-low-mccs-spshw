@@ -129,10 +129,10 @@ psi-low-stop-k8s:
     - make k8s-delete-namespace
   allow_failure: true
 
-  python_test:
-    extends: python_test
+  python-do-test:
+    extends: python-do-test
     tags: ska-k8s
   
-  oci-build:
-    extends: oci-build
+  oci-do-build:
+    extends: oci-do-build
     tags: ska-k8s

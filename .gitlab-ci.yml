@@ -60,9 +60,6 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
-oci-build:
-  tags: ska-k8s
-
 python-test:
   tags: ska-k8s
 

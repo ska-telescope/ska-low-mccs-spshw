@@ -5,8 +5,7 @@
 image: $SKA_K8S_TOOLS_DOCKER_BUILDER_IMAGE
 
 default:
-  tags:
-  - ska-k8s
+  tags: ska-k8s
 
 variables:
   GIT_SUBMODULE_STRATEGY: recursive
@@ -128,3 +127,11 @@ psi-low-stop-k8s:
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all
     - make k8s-delete-namespace
   allow_failure: true
+
+  python_test:
+    extends: python_test
+    tags: ska-k8s
+  
+  oci-build:
+    extends: oci-build
+    tags: ska-k8s

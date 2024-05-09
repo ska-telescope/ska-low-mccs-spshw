@@ -61,6 +61,32 @@ include:
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
 
+.image_builder_template:
+  image: $SKA_K8S_TOOLS_BUILD_DEPLOY
+  tags:
+    - ska-default
+  before_script:
+    - '[ -f .make/oci.mk ] || (echo "File oci.mk not included in Makefile; exit 1")'
+    - 'make help | grep oci-build-all'
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER --password-stdin $CI_REGISTRY
+    - mkdir -p build
+  script:
+    - make oci-build-all CAR_OCI_REGISTRY_HOST=${CI_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_NAME}
+  artifacts:
+    paths:
+      - build/
+
+oci-image-build:
+  extends:
+    - .image_builder_template
+  stage: build
+  timeout: 1h
+  rules:
+    - exists:
+        - Dockerfile
+        - images/**/*
+
+
 test:
   timeout: 1h
   stage: test

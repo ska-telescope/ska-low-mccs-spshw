@@ -60,6 +60,10 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
+
+test:
+  timeout: 1h
+
 psi-low-k8s-test:
   stage: test-psi-low
   when: manual

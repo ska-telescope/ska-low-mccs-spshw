@@ -287,21 +287,24 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.set_source(tango.DevSource.DEV)
 
             self._proxy.add_change_event_callback(
-                "xPolBandpass", self._bandpass_callback
+                "xPolBandpass", self._daq_data_callback
             )
             self._proxy.add_change_event_callback(
-                "yPolBandpass", self._bandpass_callback
+                "yPolBandpass", self._daq_data_callback
+            )
+            self._proxy.add_change_event_callback(
+                "dataReceivedResult", self._daq_data_callback
             )
         super()._update_communication_state(communication_state)
 
-    def _bandpass_callback(
+    def _daq_data_callback(
         self: _DaqProxy,
         attribute_name: str,
         attribute_data: Any,
         attribute_quality: Any,
     ) -> None:
         """
-        Extract bandpass data from event and call cb to update.
+        Extract bandpass data or data received from event and call cb to update.
 
         :param attribute_name: Name of attribute that changed.
         :param attribute_data: New value of attribute.
@@ -314,10 +317,13 @@ class _DaqProxy(DeviceComponentManager):
             elif attribute_name.lower() == "ypolbandpass":
                 self.logger.debug("Processing change event for yPolBandpass")
                 self._component_state_callback(yPolBandpass=attribute_data)
+            elif attribute_name.lower() == "datareceivedresult":
+                self.logger.debug("Processing change event for dataReceivedResult")
+                self._component_state_callback(dataReceivedResult=attribute_data)
             else:
                 self.logger.error(
                     f"Got unexpected change event for: {attribute_name} "
-                    "in DaqProxy._bandpass_callback."
+                    "in DaqProxy._daq_data_callback."
                 )
 
 
@@ -930,6 +936,10 @@ class SpsStationComponentManager(
             y_bandpass_data = state_change.get("yPolBandpass")
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
+        if "dataReceivedResult" in state_change:
+            data_received_result = state_change.get("dataReceivedResult")
+            if self._component_state_callback is not None:
+                self._component_state_callback(dataReceivedResult=data_received_result)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,

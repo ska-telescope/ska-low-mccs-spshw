@@ -2803,8 +2803,8 @@ class SpsStationComponentManager(
             json.dumps(
                 {
                     "data_type": data_send_mode,
-                    #"first_channel": channel,
-                    #"last_channel": channel,
+                    # "first_channel": channel,
+                    # "last_channel": channel,
                 }
             )
         )

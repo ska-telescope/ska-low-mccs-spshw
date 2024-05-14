@@ -1064,6 +1064,29 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevString",
+    )
+    def DescribeTest(self: SpsStation, test_name: str) -> str:
+        """
+        Fetch the docstring of a given test.
+
+        :param test_name: the name of the test you wish to fetch the details of.
+
+        :returns: the docstring of a given test.
+        """
+        if test_name not in self.component_manager.test_list:
+            return (
+                f"{test_name} not in available tests: "
+                f"{self.component_manager.test_list}"
+            )
+
+        docs = self.component_manager._self_check_manager._tpm_tests[test_name].__doc__
+        if docs is None:
+            return f"{test_name} appears to have no description."
+        return docs
+
     # -------------
     # Fast Commands
     # -------------

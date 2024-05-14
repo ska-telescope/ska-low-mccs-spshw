@@ -2738,7 +2738,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        daq_mode = "INTEGRATED_CHANNEL_DATA"
+        daq_mode = "CORRELATOR_DATA"
         data_send_mode = "channel"
         # Verify all tiles are acquiring data
         for tile in self._tile_proxies.values():
@@ -2803,8 +2803,8 @@ class SpsStationComponentManager(
             json.dumps(
                 {
                     "data_type": data_send_mode,
-                    # "first_channel": channel,
-                    # "last_channel": channel,
+                    "first_channel": channel,
+                    "last_channel": channel,
                 }
             )
         )

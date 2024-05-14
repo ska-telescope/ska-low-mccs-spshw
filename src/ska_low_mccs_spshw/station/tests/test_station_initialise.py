@@ -9,7 +9,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ska_control_model import PowerState, TaskStatus
@@ -77,7 +77,7 @@ class InitialiseStation(TpmSelfCheckTest):
             self.test_logger.debug(f"Sucessfully initialised {tile_proxy.dev_name()}")
 
         count = 0
-        while self.tile_proxies[0].get_arp_table() == '{"0": [], "1": []}':
+        while self.tile_proxies[0].GetArpTable() == '{"0": [], "1": []}':
             self.test_logger.debug(
                 "Waiting for ARP table to populate, "
                 f"waiting for {30*(10-count)} seconds."
@@ -90,7 +90,7 @@ class InitialiseStation(TpmSelfCheckTest):
         self.test_logger.debug("Sucessfully initialised station, synchronising.")
 
         start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
+            datetime.fromtimestamp(time.time(), tz=timezone.utc), RFC_FORMAT
         )
 
         self.component_manager._start_acquisition(

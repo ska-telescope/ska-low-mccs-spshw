@@ -76,6 +76,17 @@ class InitialiseStation(TpmSelfCheckTest):
             )
             self.test_logger.debug(f"Sucessfully initialised {tile_proxy.dev_name()}")
 
+        count = 0
+        while self.tile_proxies[0].get_arp_table() == '{"0": [], "1": []}':
+            self.test_logger.debug(
+                "Waiting for ARP table to populate, "
+                f"waiting for {30*(10-count)} seconds."
+            )
+            time.sleep(30)
+            count += 1
+            if count >= 10:
+                assert False, "Didn't populate ARP table in time."
+
         self.test_logger.debug("Sucessfully initialised station, synchronising.")
 
         start_time = datetime.strftime(
@@ -94,42 +105,32 @@ class InitialiseStation(TpmSelfCheckTest):
             )
             self.test_logger.debug(f"Sucessfully synchronised {tile_proxy.dev_name()}")
 
-        self.test_logger.debug("Sucessfully synchronised station, starting beamformer.")
-
-        self.test_logger.error(f"{self.tile_proxies[0].fpgaReferenceTime=}")
-        self.test_logger.error(f"{self.tile_proxies[0].fpgaFrameTime=}")
-
-        time.sleep(1)
-
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 5), RFC_FORMAT
-        )
-
-        self.component_manager.start_beamformer(
-            start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
-        )
-
-        for tile_proxy in self.tile_proxies:
-            assert _wait_for_attribute(tile_proxy, "isBeamformerRunning", True)
-            self.test_logger.debug(
-                f"Sucessfully started beamformer {tile_proxy.dev_name()}"
-            )
-
-        assert self.component_manager.is_beamformer_running
-
-        self.test_logger.debug("Sucessfully started station beamformer")
-
-        self.component_manager.stop_beamformer()
-
-        for tile_proxy in self.tile_proxies:
-            assert _wait_for_attribute(tile_proxy, "isBeamformerRunning", False)
-            self.test_logger.debug(
-                f"Sucessfully stopped beamformer {tile_proxy.dev_name()}"
-            )
-
-        assert not self.component_manager.is_beamformer_running
-
-        self.test_logger.debug("Sucessfully stopped station beamformer")
+        for tile in self.tile_proxies:
+            for fpga in ["fpga1", "fpga2"]:
+                assert (
+                    tile.ReadRegister(f"{fpga}.beamf_fd.f2f_latency.count") < 100
+                ), f"Tile {tile.dev_name()}, F2F latency error!"
+                assert (
+                    tile.ReadRegister(f"{fpga}.beamf_fd.f2f_latency.count_start") == 1
+                ), f"Tile {tile.dev_name()}, F2F latency start error!"
+                assert (
+                    tile.ReadRegister(f"{fpga}.beamf_fd.f2f_latency.count_stop") == 1
+                ), f"Tile {tile.dev_name()}, F2F latency stop error!"
+                assert (
+                    tile.ReadRegister(f"{fpga}.beamf_fd.errors") == 0
+                ), f"Tile {tile.dev_name()}, F2F Tile Beamformer error!"
+                for core in range(2):
+                    for lane in range(8):
+                        assert (
+                            tile.ReadRegister(
+                                f"{fpga}.jesd204_if.core_id_{core}_lane_"
+                                f"{lane}_buffer_adjust"
+                            )
+                            < 32
+                        ), (
+                            f"Tile {tile.dev_name()}, JESD204B fill buffer "
+                            "level larger than 32 octets"
+                        )
 
     def check_requirements(self: InitialiseStation) -> tuple[bool, str]:
         """

@@ -387,7 +387,6 @@ class TpmDriver(MccsBaseComponentManager):
         :param intentional_disconnect: True if disconnection was expected.
         """
         self.logger.debug("Tile disconnecting from tpm.")
-        self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         while self.tile.tpm is not None:
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:

@@ -1117,5 +1117,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param power_state: The desired power state
         """
         with self._power_state_lock:
-            # pylint: disable=attribute-defined-outside-init
             self.power_state = power_state
+            if self.power_state != PowerState.ON:
+                # NOTE: the TileComponentManger has a different
+                # _component_state dictionary to TpmDriver.
+                # In order to correctly push change events. We must
+                # Push from a single state dictionary.
+                # TODO: Removal of TpmDriver in MCCS-1507, will remove
+                # this issue.
+                self._tpm_driver._set_tpm_status(self.tpm_status)

@@ -593,7 +593,10 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
-        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
+        # Lookahead of 2 due to the transition to Unknown first.
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Off", lookahead=2, consume_nonmatches=True
+        )
         tile_device.MockTpmOn()
 
         change_event_callbacks["state"].assert_change_event(DevState.ON)

@@ -167,7 +167,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             max_workers=1,
             fault=None,
             power=PowerState.UNKNOWN,
-            programming_state=None,
+            programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tpm_driver._tile_health_structure,
             adc_rms=self._tpm_driver._adc_rms,
             static_delays=self._tpm_driver._static_delays,

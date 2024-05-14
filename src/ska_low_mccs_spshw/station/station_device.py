@@ -115,7 +115,7 @@ class SpsStation(SKAObsDevice):
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
-        self._data_received_result: tuple[str, str] = ("", "")
+        self._data_received_result: Optional[tuple[str, str]] = ("", "")
 
     def init_device(self: SpsStation) -> None:
         """

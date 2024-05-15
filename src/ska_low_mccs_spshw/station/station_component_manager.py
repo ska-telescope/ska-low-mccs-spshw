@@ -1271,6 +1271,8 @@ class SpsStationComponentManager(
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
+        time.sleep(60)
+
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
             result_code = self._initialise_tile_parameters(

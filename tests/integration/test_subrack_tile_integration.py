@@ -308,7 +308,12 @@ class TestMccsTileTpmDriver:
             tango.EventType.CHANGE_EVENT,
             change_event_callbacks["tile_state"],
         )
-
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
 
         tile_device.adminMode = AdminMode.ONLINE
@@ -353,11 +358,6 @@ class TestMccsTileTpmDriver:
         )
         change_event_callbacks["tile_command_status"].assert_change_event(())
 
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
         change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         ([result_code], [on_command_id]) = tile_device.On()

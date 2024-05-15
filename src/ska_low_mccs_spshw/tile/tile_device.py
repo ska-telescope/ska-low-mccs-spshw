@@ -98,7 +98,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
-        self._tile_programming_state: TpmStatus
+        self._tile_programming_state: str
         self._adc_rms: list[float]
         self._pps_present: Optional[bool]
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
@@ -108,7 +108,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
-        self._tile_programming_state = TpmStatus.UNKNOWN
+        self._tile_programming_state = TpmStatus.UNKNOWN.pretty_name()
         self._adc_rms = [0.0] * 32
         self._max_workers = 1
         self._pps_present = None
@@ -396,7 +396,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         for attribute_name, attribute_value in state_change.items():
             match attribute_name:
                 case "programming_state":
-                    tile_programming_state = cast(TpmStatus, attribute_value)
+                    tile_programming_state = cast(
+                        TpmStatus, attribute_value
+                    ).pretty_name()
                     message = (
                         "programming_state callback. "
                         f"Old: {self._tile_programming_state}"
@@ -406,10 +408,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     if self._tile_programming_state != tile_programming_state:
                         self._tile_programming_state = tile_programming_state
                         self.push_change_event(
-                            "tileProgrammingState", tile_programming_state.pretty_name()
+                            "tileProgrammingState", tile_programming_state
                         )
                         self.push_archive_event(
-                            "tileProgrammingState", tile_programming_state.pretty_name()
+                            "tileProgrammingState", tile_programming_state
                         )
                 case "tile_health_structure":
                     if self.tile_health_structure != attribute_value:
@@ -743,9 +745,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: a string describing the programming state of the tile
         """
-        status = self.component_manager.tpm_status
-        self._tile_programming_state = status
-        return status.pretty_name()
+        return self._tile_programming_state
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

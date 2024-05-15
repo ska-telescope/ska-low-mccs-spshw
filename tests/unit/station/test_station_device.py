@@ -26,6 +26,7 @@ from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.station import SpsStation
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.test_tools import execute_lrc_to_completion
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -46,6 +47,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "health_state",
         "state",
         "outsideTemperature",
+        "track_lrc_command",
         timeout=2.0,
     )
 
@@ -1134,6 +1136,7 @@ def test_fortyGbNetworkAddress(
 def test_write_read_channeliser_rounding(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test we can set and read channeliserRounding.
@@ -1141,16 +1144,28 @@ def test_write_read_channeliser_rounding(
     :param station_device: The station device to use
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
 
     channeliser_rounding_to_set = np.array([5] * 512)
-    station_device.SetChanneliserRounding(channeliser_rounding_to_set)
-
-    time.sleep(0.1)
+    execute_lrc_to_completion(
+        change_event_callbacks,
+        station_device,
+        "SetChanneliserRounding",
+        channeliser_rounding_to_set,
+    )
 
     # Calculate expected channeliser rounding of all tiles after write
     zero_results = np.zeros((12, 512))

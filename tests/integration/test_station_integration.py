@@ -531,9 +531,10 @@ class TestStationTileIntegration:
         )
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
+        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
+
         # Force a poll on the backend simulator.
         tile_device.UpdateAttributes()
-        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
 
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_preadu_levels"].assert_change_event(

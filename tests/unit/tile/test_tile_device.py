@@ -279,21 +279,21 @@ class TestMccsTile:
         [
             pytest.param(
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [i + 1 for i in range(16)],
                 },
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [i + 1 for i in range(16)],
                 },
                 id="valid config is entered correctly",
             ),
             pytest.param(
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                 },
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [],
                 },
                 id="missing config data is valid",
@@ -344,7 +344,8 @@ class TestMccsTile:
         value = expected_config["fixed_delays"]
         write_value = np.array(value)
         init_value = np.array(init_value)
-
+        on_tile_device.UpdateAttributes()
+        time.sleep(1)
         if value:
             assert (on_tile_device.staticTimeDelays == write_value).all()
         else:

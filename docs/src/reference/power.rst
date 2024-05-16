@@ -117,3 +117,33 @@ Startup command, it need only start up the SPS cabinets and field
 equipment.
 
 .. uml:: power_sequence.uml
+
+
+Self Shutdown
+-------------
+The MccsTile has the ability to modify the ALARM and WARNING thresholds on attributes.
+
+Certain attributes are configured to shutdown on ALARM. Currently these are:
+
+  * *boardTemperature*
+  * *fpga1Temperature*
+  * *fpga2Temperature*
+  
+To configure the values on the device:  
+    .. code-block:: python
+
+
+        thresholds = {
+            "boardTemperature" : {
+                "max_alarm": "79"
+                "min_alarm": "25"
+                "max_warning": "74"
+                "min_warning": "27"
+                },
+            }
+        tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
+        # To see the max_alarm value.
+        print(tile_device.get_attribute_config(attribute).max_alarm)
+            ...
+
+

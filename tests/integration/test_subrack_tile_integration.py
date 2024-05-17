@@ -213,15 +213,14 @@ class TestSubrackTileIntegration:
 
         # The subrack device tells the subrack to turn the TPM on. It does so.
         # The subrack device detects that the TPM is on.
+        tile_simulator.mock_on()
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.ON
         )
-        tile_simulator.mock_on()
+
         # The tile device receives this event too.
         # TODO: it transitions straight to ON without going through UNKNOWN. Why?
-        change_event_callbacks["tile_state"].assert_change_event(
-            tango.DevState.ON, lookahead=2, consume_nonmatches=True
-        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
         # Now we power off all the TPMs using the subrack,
         # to check that the tile response is responsible to "spontaneous" changes.

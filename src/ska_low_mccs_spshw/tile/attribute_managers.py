@@ -76,11 +76,11 @@ class AttributeManager:
 
         :return: the attribute value.
         """
-        return self._value
+        return self._value, self._last_update, self._quality
 
     def notify(self: AttributeManager) -> None:
         """Notify callback with value."""
-        self._value_time_quality_callback(self.read())
+        self._value_time_quality_callback(*self.read())
         if self.alarm_handler is not None:
             self.alarm_handler()
 
@@ -128,11 +128,3 @@ class BoolAttributeManager(AttributeManager):
             if self._alarm_on_true is self._value
             else tango.AttrQuality.ATTR_VALID
         )
-
-    def read(self: BoolAttributeManager) -> tuple[Any, float, tango.AttrQuality]:
-        """
-        Return the attribute value, time, quality.
-
-        :return: the attribute value, time, quality.
-        """
-        return self._value, self._last_update, self._quality

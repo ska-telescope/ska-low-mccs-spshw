@@ -555,25 +555,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self: MccsTile,
         name: str,
         attr_value: Any,
+        attr_time: float,
+        attr_quality: tango.AttrQuality,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
 
-        NOTE: This can be passed a individual value to push or
-        a tuple with value, time, quality.
-
         :param name: the name of the TANGO attribute to push
         :param attr_value: a value to push, or,
             a tuple containing the value, time, quality.
+        :param attr_time: An optional parameter specifying the
+            time the attribute was updated. Defaults to None.
+        :param attr_quality: An optional paramter specifying the
+            quality factor of the attribute. Defaults to None.
         """
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
-
-        if isinstance(attr_value, tuple):
-            self.push_archive_event(name, *attr_value)
-            self.push_change_event(name, *attr_value)
-        else:
-            self.push_archive_event(name, attr_value)
-            self.push_change_event(name, attr_value)
+        self.push_archive_event(name, attr_value, attr_time, attr_quality)
+        self.push_change_event(name, attr_value, attr_time, attr_quality)
 
     # ----------
     # Attributes

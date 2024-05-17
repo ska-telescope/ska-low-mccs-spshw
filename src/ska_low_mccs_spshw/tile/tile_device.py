@@ -1032,7 +1032,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        if self._attribute_state["adcPower"].read()[0] is None:
+        if self._attribute_state["adcPower"].read() is None:
             power = self.component_manager.adc_rms
             self._attribute_state["adcPower"].update(power, post=False)
         return self._attribute_state["adcPower"].read()
@@ -1206,7 +1206,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :returns: list of 512 values, one per channel.
         """
-        if self._attribute_state["channeliserRounding"].read()[0] is None:
+        if self._attribute_state["channeliserRounding"].read() is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
         return self._attribute_state["channeliserRounding"].read()
@@ -1235,7 +1235,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["staticTimeDelays"].read()[0] is None:
+        if self._attribute_state["staticTimeDelays"].read() is None:
             delays = self.component_manager.static_delays
             self._attribute_state["staticTimeDelays"].update(delays, post=False)
         return self._attribute_state["staticTimeDelays"].read()
@@ -1287,7 +1287,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["preaduLevels"].read()[0] is None:
+        if self._attribute_state["preaduLevels"].read() is None:
             temp = self.component_manager.preadu_levels
             self._attribute_state["preaduLevels"].update(temp, post=False)
         return self._attribute_state["preaduLevels"].read()
@@ -2360,6 +2360,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             super().__init__(logger)
 
+        # pylint: disable=too-many-locals
         def do(  # type: ignore[override]
             self: MccsTile.SetAttributeThresholdsCommand,
             multi_attr: tango.MultiAttribute,
@@ -2368,7 +2369,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.GetArpTable` commands.
+            Implement :py:meth:`.MccsTile.SetAttributeThresholds` commands.
 
             :param argin: a serialised string containing attribute names and
                 thresholds.
@@ -2378,11 +2379,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :param kwargs: unspecified keyword arguments. This should be empty and is
                 provided for type hinting only
 
-            :return: a JSON-encoded dictionary of coreId and populated arpID table
+            :return: A tuple containing ResultCode and a message.
             """
             attribute_threshold = json.loads(argin)
             message = ""
-            self.logger.error(f"{attribute_threshold=}")
             for attribute_name, thresholds in attribute_threshold.items():
                 try:
                     attr = multi_attr.get_attr_by_name(attribute_name)
@@ -2391,14 +2391,20 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     max_warning = thresholds.get("max_warning")
                     min_warning = thresholds.get("min_warning")
 
+                    information_message = f"Updated {attribute_name} thresholds: \n"
                     if max_alarm is not None:
                         attr.set_max_alarm(max_alarm)
+                        information_message += f"\t{max_alarm=}\n"
                     if min_alarm is not None:
                         attr.set_min_alarm(min_alarm)
+                        information_message += f"\t{min_alarm=}\n"
                     if max_warning is not None:
                         attr.set_max_warning(max_warning)
+                        information_message += f"\t{max_warning=}\n"
                     if min_warning is not None:
                         attr.set_min_warning(min_warning)
+                        information_message += f"\t{min_warning=}\n"
+                    self.logger.info(information_message)
                 except Exception as e:  # pylint: disable=broad-except
                     self.logger.error(
                         f"Failed to update thresholds for {attribute_name} "
@@ -2426,8 +2432,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         >>>     }
         >>> tile_proxy.SetAttributeThresholds(json.dumps(thresholds))
 
-        :param argin: a serialised string containing attribute names and
-            thresholds.
+        :param argin: a serialised dictionary containing attribute names and
+            threshold limits.
         """
         multi_attr = self.get_device_attr()
         handler = self.get_command_object("SetAttributeThresholds")

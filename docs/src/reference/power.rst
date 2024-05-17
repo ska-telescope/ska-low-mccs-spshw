@@ -129,7 +129,8 @@ Certain attributes are configured to shutdown on ALARM. Currently these are:
   * *fpga1Temperature*
   * *fpga2Temperature*
   
-To configure the values on the device:  
+The following snippet shows how you can configure the thresholds.
+
     .. code-block:: python
 
 

@@ -16,6 +16,7 @@ url = "https://gitlab.com/ska-telescope/aavs-system.git"
 reference = "4fd6ff7f78697bb48fcb80c06e5638daf5db8b6e"
 resolved_reference = "4fd6ff7f78697bb48fcb80c06e5638daf5db8b6e"
 subdirectory = "python"
+
 [[package]]
 name = "alabaster"
 version = "0.7.16"
@@ -1636,27 +1637,30 @@ files = [
 [[package]]
 name = "pydantic"
 version = "2.7.0"
-description = ""
+description = "Data validation using Python type hints"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
     {file = "pydantic-2.7.0-py3-none-any.whl", hash = "sha256:9dee74a271705f14f9a1567671d144a851c675b072736f0a7b2608fd9e495352"},
     {file = "pydantic-2.7.0.tar.gz", hash = "sha256:b5ecdd42262ca2462e2624793551e80911a1e989f462910bb81aef974b4bb383"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pypi.org/simple"
-reference = "PyPI-public"
+[package.dependencies]
+annotated-types = ">=0.4.0"
+pydantic-core = "2.18.1"
+typing-extensions = ">=4.6.1"
+
+[package.extras]
+email = ["email-validator (>=2.0.0)"]
 
 [[package]]
 name = "pydantic-core"
 version = "2.18.1"
-description = ""
+description = "Core functionality for Pydantic validation and serialization"
 category = "main"
 optional = false
-python-versions = "*"
+python-versions = ">=3.8"
 files = [
     {file = "pydantic_core-2.18.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:ee9cf33e7fe14243f5ca6977658eb7d1042caaa66847daacbd2117adb258b226"},
     {file = "pydantic_core-2.18.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:6b7bbb97d82659ac8b37450c60ff2e9f97e4eb0f8a8a3645a5568b9334b08b50"},
@@ -1739,10 +1743,8 @@ files = [
     {file = "pydantic_core-2.18.1.tar.gz", hash = "sha256:de9d3e8717560eb05e28739d1b35e4eac2e458553a52a301e51352a7ffc86a35"},
 ]
 
-[package.source]
-type = "legacy"
-url = "https://pypi.org/simple"
-reference = "PyPI-public"
+[package.dependencies]
+typing-extensions = ">=4.6.0,<4.7.0 || >4.7.0"
 
 [[package]]
 name = "pydocstyle"
@@ -3441,4 +3443,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"  
-content-hash = "bed1cc825f748cc0b75ee8fa755cdc9e54524f805b6d24fc84217ba52ed5cd57"
+content-hash = "20689d6e4e52e0309fd0fe20b9bc8219ac474f3787707b0173083ef2bcc8b328"

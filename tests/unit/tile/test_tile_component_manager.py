@@ -1,3 +1,5 @@
+# pylint: disable=too-many-lines
+#
 # -*- coding: utf-8 -*
 #
 # This file is part of the SKA Low MCCS project
@@ -13,6 +15,7 @@ import unittest.mock
 from datetime import datetime, timezone
 from typing import Any
 
+import numpy as np
 import pytest
 import pytest_mock
 from ska_control_model import CommunicationStatus, PowerState, TaskStatus, TestMode
@@ -20,9 +23,11 @@ from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
 from ska_low_mccs_spshw.tile import (
-    DynamicTpmSimulator,
-    StaticTpmSimulator,
+    DynamicTileSimulator,
+    MockTpm,
     TileComponentManager,
+    TileSimulator,
+    TpmDriver,
     TpmStatus,
 )
 
@@ -109,13 +114,18 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
+        callbacks["component_state"].assert_call(programming_state=TpmStatus.OFF)
         callbacks["communication_status"].assert_not_called()
 
         # Stop communicating will break the connection with the subrack
         # therefore component state becomes UNKNOWN
         tile_component_manager.stop_communicating()
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN, lookahead=2
+        )
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
         callbacks["component_state"].assert_not_called()
 
     # TODO: find out if TPM has standby mode, and if so add this case
@@ -322,14 +332,13 @@ class TestStaticSimulatorCommon:
     Class for testing commands common to several component manager layers.
 
     Because the TileComponentManager is designed to pass commands
-    through to the TPM simulator or driver that it is driving, many
+    through to the Tpmdriver to the TPM simulator, many
     commands are common to multiple classes. Here we test the flow of
     commands to the simulator. Tests in this class are tested against:
 
-    * the StaticTpmSimulator
-    * the StaticTpmSimulatorComponentManager,
-    * the TileComponentManager (in simulation and test mode and turned
-      on)
+    * the TileSimulator
+    * the TpmDriver
+    * the TileComponentManager.
     """
 
     @pytest.fixture()
@@ -340,27 +349,27 @@ class TestStaticSimulatorCommon:
         Return the initial power mode of the TPM.
 
         Overridden here to put the TPM into ON state, so that we don't
-        have to fiddle around with state change events to get the tile
-        component manager communicating with its tile.
+        have to fiddle around with state change events to get the tile_component_manager
+        component manager communicating with its tile_component_manager.
 
         :return: the initial power mode of the TPM.
         """
         return PowerState.ON
 
     @pytest.fixture()
-    def tile(
+    def tile_component_manager(
         self: TestStaticSimulatorCommon,
         static_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
-        Return the tile component under test (Driving a StaticTpmSimulator).
+        Return the tile_component_manager component under test.
 
-        :param static_tile_component_manager: the tile component manager (
-            driving a StaticTpmSimulator)
+        :param static_tile_component_manager: the tile_component_manager
+            component manager (driving a TileSimulator)
         :param callbacks: dictionary of driver callbacks.
 
-        :return: the tile class object under test
+        :return: the tile_component_manager class object under test
         """
         # pylint: disable=attribute-defined-outside-init
         self.tile_name = "tile_component_manager"
@@ -372,39 +381,58 @@ class TestStaticSimulatorCommon:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["component_state"].assert_call(power=PowerState.ON)
         callbacks["component_state"].assert_call(fault=False, lookahead=3)
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNPROGRAMMED
+        )
         callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
         callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED
+            programming_state=TpmStatus.INITIALISED, lookahead=2
         )
         return static_tile_component_manager
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            ("voltage_mon", StaticTpmSimulator.VOLTAGE),
-            ("board_temperature", StaticTpmSimulator.BOARD_TEMPERATURE),
-            ("fpga1_temperature", StaticTpmSimulator.FPGA1_TEMPERATURE),
-            ("fpga2_temperature", StaticTpmSimulator.FPGA2_TEMPERATURE),
-            ("adc_rms", StaticTpmSimulator.ADC_RMS),
-            ("fpgas_time", StaticTpmSimulator.FPGAS_TIME),
+            (
+                "voltage_mon",
+                TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
+            ),
+            (
+                "board_temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
+            ),
+            (
+                "fpga1_temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA0"],
+            ),
+            (
+                "fpga2_temperature",
+                TileSimulator.TILE_MONITORING_POINTS["temperatures"]["FPGA1"],
+            ),
+            ("adc_rms", TileSimulator.ADC_RMS),
+            ("fpgas_time", TileSimulator.FPGAS_TIME),
             (
                 "current_tile_beamformer_frame",
-                StaticTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+                TileSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
             ("fpga_current_frame", 0),
-            ("pps_delay", StaticTpmSimulator.PPS_DELAY),
-            ("firmware_available", StaticTpmSimulator.FIRMWARE_AVAILABLE),
-            ("register_list", list(StaticTpmSimulator.REGISTER_MAP.keys())),
-            ("pps_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
-            ("clock_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
-            ("sysref_present", StaticTpmSimulator.CLOCK_SIGNALS_OK),
-            ("pll_locked", StaticTpmSimulator.CLOCK_SIGNALS_OK),
+            ("pps_delay", TileSimulator.PPS_DELAY),
+            ("firmware_available", TileSimulator.FIRMWARE_LIST),
+            ("register_list", list(MockTpm._register_map.keys())),
+            (
+                "pps_present",
+                TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
+            ),
+            ("clock_present", True),
+            ("sysref_present", True),
+            ("pll_locked", False),
             ("pending_data_requests", False),
         ),
     )
     def test_read_attribute(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
+        tpm_driver: TpmDriver,
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -414,13 +442,16 @@ class TestStaticSimulatorCommon:
         This is a weak test; over time we should find ways to more thoroughly
         test each of these independently.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        :param tpm_driver: the tpm_driver fixture.
         :param attribute_name: the name of the attribute under test
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        assert getattr(tile, attribute_name) == expected_value
+        tpm_driver._update_attributes()
+        assert getattr(tile_component_manager, attribute_name) == expected_value
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value", "expected_component_value"),
@@ -431,7 +462,7 @@ class TestStaticSimulatorCommon:
     )
     def test_read_time_attribute(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         attribute_name: str,
         expected_value: Any,
         expected_component_value: Any,
@@ -442,7 +473,8 @@ class TestStaticSimulatorCommon:
         This is a weak test; over time we should find ways to more thoroughly
         test each of these independently.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param attribute_name: the name of the attribute under test
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
@@ -451,44 +483,52 @@ class TestStaticSimulatorCommon:
             manager, which is in different format wrt. the value in the
             underlying driver/simulator
         """
-        if not isinstance(tile, TileComponentManager):
+        if not isinstance(tile_component_manager, TileComponentManager):
             if expected_value is not None:
-                assert getattr(tile, attribute_name) == expected_value
+                assert getattr(tile_component_manager, attribute_name) == expected_value
         else:
-            assert getattr(tile, attribute_name) == expected_component_value
+            assert (
+                getattr(tile_component_manager, attribute_name)
+                == expected_component_value
+            )
 
     @pytest.mark.parametrize(
         ("attribute_name", "initial_value", "values_to_write"),
         (
             (
                 "phase_terminal_count",
-                StaticTpmSimulator.PHASE_TERMINAL_COUNT,
+                TileSimulator.PHASE_TERMINAL_COUNT,
                 [1, 2],
             ),
             (
                 "static_delays",
-                StaticTpmSimulator.STATIC_DELAYS,
+                TileSimulator.STATIC_DELAYS,
                 [[1.0, 2.0, 3.0, 4.0] * 8],
             ),
-            ("csp_rounding", StaticTpmSimulator.CSP_ROUNDING, [[1, 2, 3, 4] * 96]),
+            (
+                "csp_rounding",
+                np.array(TpmDriver.CSP_ROUNDING),
+                np.array([[1, 2, 3, 4] * 96]),
+            ),
             (
                 "preadu_levels",
-                StaticTpmSimulator.PREADU_LEVELS,
-                [[-10.0 - 5, 5, 10] * 8],
+                TileSimulator.PREADU_LEVELS,
+                [[-10.0, -5, 5, 10] * 8],
             ),
             (
                 "channeliser_truncation",
-                StaticTpmSimulator.CHANNELISER_TRUNCATION,
+                TileSimulator.CHANNELISER_TRUNCATION,
                 [[2] * 512],
             ),
-            ("tile_id", 0, [123]),
-            ("station_id", 0, [321]),
+            ("tile_id", TileSimulator.TILE_ID, [123]),
+            ("station_id", TileSimulator.STATION_ID, [321]),
             ("test_generator_active", False, [True]),
         ),
     )
-    def test_write_attribute(
+    def test_write_attribute(  # pylint: disable=too-many-arguments
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
+        tpm_driver: TpmDriver,
         attribute_name: str,
         initial_value: Any,
         values_to_write: list,
@@ -502,7 +542,8 @@ class TestStaticSimulatorCommon:
         This is a weak test; over time we should find ways to more
         thoroughly test each of these independently.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param attribute_name: the name of the attribute under test
         :param initial_value: the expected initial value of the
             attribute. This can be any type, but the test of the
@@ -511,31 +552,43 @@ class TestStaticSimulatorCommon:
             to check that the writes are sticking. The values can be of
             any type, but the test of the attribute is a simple "=="
             equality test.
+        :param tpm_driver: the tpm_driver fixture.
         """
-        assert getattr(tile, attribute_name) == initial_value
+        tpm_driver._update_attributes()
+        if isinstance(initial_value, np.ndarray):
+            assert (
+                getattr(tile_component_manager, attribute_name) == initial_value
+            ).all()
+        else:
+            assert getattr(tile_component_manager, attribute_name) == initial_value
 
         for value in values_to_write:
-            setattr(tile, attribute_name, value)
-            assert getattr(tile, attribute_name) == value
+            setattr(tile_component_manager, attribute_name, value)
+            tpm_driver._update_attributes()
+            if isinstance(value, np.ndarray):
+                assert (getattr(tile_component_manager, attribute_name) == value).all()
+            else:
+                assert getattr(tile_component_manager, attribute_name) == value
 
     @pytest.mark.parametrize(
-        ("command_name", "num_args"),
+        ("command_name", "args"),
         (
-            ("load_pointing_delays", 2),
-            ("configure_integrated_channel_data", 3),
-            ("configure_integrated_beam_data", 3),
-            ("start_acquisition", 0),
-            ("stop_integrated_data", 0),
-            ("set_lmc_integrated_download", 3),
-            ("post_synchronisation", 0),
+            ("load_pointing_delays", [[2] * 32, 1]),
+            ("configure_integrated_channel_data", []),
+            ("configure_integrated_beam_data", []),
+            ("start_acquisition", []),
+            ("stop_integrated_data", []),
+            ("set_lmc_integrated_download", ["raw", 8190, 8190]),
+            ("post_synchronisation", []),
         ),
     )
-    def test_command(
+    def test_command(  # pylint: disable=too-many-arguments
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
+        tpm_driver: TpmDriver,
         mocker: pytest_mock.MockerFixture,
         command_name: str,
-        num_args: int,
+        args: int,
     ) -> None:
         """
         Test of commands that aren't implemented yet.
@@ -544,24 +597,24 @@ class TestStaticSimulatorCommon:
         anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        :param tpm_driver: the tpm_driver fixture.
         :param command_name: the name of the command under test
-        :param num_args: the number of args the command takes
+        :param args: the args the command takes
         """
         lrc_list = [
             "start_acquisition",
             "post_synchronisation",
         ]
-        args = [mocker.Mock()] * num_args
         if command_name in lrc_list and self.tile_name == "tile_component_manager":
             command_name = "_" + command_name
 
-        with pytest.raises(NotImplementedError):
-            getattr(tile, command_name)(*args)
+        getattr(tile_component_manager, command_name)(*args)
 
     def test_set_lmc_download(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
     ) -> None:
         """
@@ -571,21 +624,22 @@ class TestStaticSimulatorCommon:
         anything, these tests simply check that the command can be called.
 
         :param mocker: fixture that wraps unittest.mock
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         """
-        tile.set_lmc_download("10G", 1024, "10.0.10.1")
+        tile_component_manager.set_lmc_download("10G", 1024, "10.0.10.1")
 
     @pytest.mark.parametrize(
         ("command_name", "implemented"),
         (
-            ("apply_calibration", False),
-            ("apply_pointing_delays", False),
+            ("apply_calibration", True),
+            ("apply_pointing_delays", True),
             ("start_beamformer", True),
         ),
     )
     def test_timed_command(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         command_name: str,
         implemented: bool,
     ) -> None:
@@ -595,7 +649,8 @@ class TestStaticSimulatorCommon:
         Since the commands don't really do
         anything, these tests simply check that the command can be called.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param command_name: the name of the command under test
         :param implemented: the command is implemented, does not raise error
         """
@@ -607,71 +662,80 @@ class TestStaticSimulatorCommon:
             dt = datetime.strptime("2022-11-10T00:00:00.0Z", "%Y-%m-%dT%H:%M:%S.%fZ")
             timestamp = int(dt.replace(tzinfo=timezone.utc).timestamp())
             # TODO: there is no fpga_sync_time method.
-            # tile._tpm_driver.fpga_sync_time = timestamp
-            # assert tile._tpm_driver.fpga_sync_time == timestamp
-            tile._tile_time.set_reference_time(timestamp)  # type: ignore[union-attr]
+            # tile_component_manager._tpm_driver.fpga_sync_time = timestamp
+            # assert tile_component_manager._tpm_driver.fpga_sync_time == timestamp
+            tile_component_manager._tile_time.set_reference_time(timestamp)
         else:
             args = "123456"
 
-        if implemented:
-            getattr(tile, command_name)()
-            getattr(tile, command_name)(0)
-            getattr(tile, command_name)(args)
-        else:
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)()
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)(0)
-            with pytest.raises(NotImplementedError):
-                getattr(tile, command_name)(args)
+        getattr(tile_component_manager, command_name)()
+        getattr(tile_component_manager, command_name)(0)
+        getattr(tile_component_manager, command_name)(args)
 
     def test_initialise(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
-        Test of the initialise command, which programs the TPM.
+        Test of the initialise command.
 
-        :param tile: the tile class object under test.
+        A very simple test, checking command can execute to completion.
+        And that the programming state changed.
+
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        :param callbacks: dictionary of driver callbacks.
         """
-        tile.erase_fpga()
-        time.sleep(0.2)
-        assert not tile.is_programmed
-        time.sleep(0.2)
-        tile.initialise()
-        time.sleep(2)
-        assert tile.is_programmed
-        assert tile.firmware_name == "itpm_v1_6.bit"
+        tile_component_manager.erase_fpga()
+        assert not tile_component_manager.is_programmed
+
+        tile_component_manager.initialise(task_callback=callbacks["task_lrc"])
+
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The initialisation task has completed",
+            lookahead=3,
+        )
+        assert tile_component_manager.is_programmed
+        assert tile_component_manager.firmware_name == "itpm_v1_6.bit"
 
     def test_download_firmware(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         mocker: pytest_mock.MockerFixture,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
-        Test.
+        Test Downloadfirmware command completes.
 
         Tests that:
-        * the download_firmware command.
-        * the is_programmed attribute
+        * the download_firmware command can execute to completion.
+        * the is_programmed attribute changes upon completion.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param mocker: fixture that wraps unittest.mock
+        :param callbacks: dictionary of driver callbacks.
         """
-        tile.erase_fpga()
-        time.sleep(0.2)
-        assert not tile.is_programmed
+        tile_component_manager.erase_fpga()
+        assert not tile_component_manager.is_programmed
         mock_bitfile = mocker.Mock()
-        time.sleep(0.2)
-        tile.download_firmware(mock_bitfile)
-        time.sleep(0.2)
-        assert tile.is_programmed
+        tile_component_manager.download_firmware(mock_bitfile, callbacks["task_lrc"])
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result="The download firmware task has completed",
+            lookahead=3,
+        )
+        assert tile_component_manager.is_programmed
 
-    @pytest.mark.parametrize("register", [f"test-reg{i}" for i in (1, 4)])
+    @pytest.mark.parametrize(
+        "register", [f"fpga1.test_generator.delay_{i}" for i in (1, 4)]
+    )
     @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
     def test_read_and_write_register(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         register: str,
         write_values: list[int],
     ) -> None:
@@ -682,13 +746,14 @@ class TestStaticSimulatorCommon:
         * read_register command
         * write_register command
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param register: which register is being addressed
         :param write_values: values to write to the register
         """
         expected_read = write_values
-        tile.write_register(register, write_values)
-        assert tile.read_register(register) == expected_read
+        tile_component_manager.write_register(register, write_values)
+        assert tile_component_manager.read_register(register) == expected_read
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -702,7 +767,7 @@ class TestStaticSimulatorCommon:
     @pytest.mark.parametrize("read_length", [0, 4])
     def test_read_and_write_address(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         write_address: int,
         write_values: list[int],
         read_address: int,
@@ -715,7 +780,8 @@ class TestStaticSimulatorCommon:
         * read_address command
         * write_address command
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param write_address: address to write to
         :param write_values: values to write
         :param read_address: address to read from
@@ -739,14 +805,16 @@ class TestStaticSimulatorCommon:
             return slice(address - min_address, address - min_address + length)
 
         buffer[buffer_slice(write_address, len(write_values))] = write_values
-        expected_read = list(buffer[buffer_slice(read_address, read_length)])
-
-        tile.write_address(write_address, write_values)
-        assert tile.read_address(read_address, read_length) == expected_read
+        expected_read = list(buffer[buffer_slice(read_address - 1, read_length)])
+        tile_component_manager.write_address(write_address, write_values)
+        assert (
+            tile_component_manager.read_address(read_address, read_length)
+            == expected_read
+        )
 
     def test_start_stop_beamformer(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
     ) -> None:
         """
         Test start and stop beamformer.
@@ -756,17 +824,18 @@ class TestStaticSimulatorCommon:
         * the stop_beamformer command.
         * the is_beamformer_running attribute
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         """
-        assert not tile.is_beamformer_running
-        tile.start_beamformer()
-        assert tile.is_beamformer_running
-        tile.stop_beamformer()
-        assert not tile.is_beamformer_running
+        assert not tile_component_manager.is_beamformer_running
+        tile_component_manager.start_beamformer()
+        assert tile_component_manager.is_beamformer_running
+        tile_component_manager.stop_beamformer()
+        assert not tile_component_manager.is_beamformer_running
 
     def test_initialise_beamformer(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
     ) -> None:
         """
         Test initialise_beamformer.
@@ -775,11 +844,12 @@ class TestStaticSimulatorCommon:
         * the initialise_beamformer command executes
         * the beamformer table is correctly configured
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         """
-        tile.initialise_beamformer(64, 32, False, False)
-
-        table = tile.beamformer_table
+        tile_component_manager.initialise_beamformer(64, 32, False, False)
+        tile_component_manager._tpm_driver._update_attributes()
+        table = tile_component_manager.beamformer_table
         expected = [
             [64, 0, 0, 0, 0, 0, 0],
             [72, 0, 0, 8, 0, 0, 0],
@@ -791,7 +861,7 @@ class TestStaticSimulatorCommon:
 
     def test_set_beamformer_regions(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
     ) -> None:
         """
         Test set_beamformer_regions.
@@ -800,12 +870,13 @@ class TestStaticSimulatorCommon:
         * the set_beamformer_regions accepts 2 regions
         * the beamformer table is correctly configured
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         """
         regions = [[64, 16, 2, 3, 8, 7, 8, 9], [140, 16, 4, 5, 32, 10, 11, 12]]
-        tile.set_beamformer_regions(regions)
+        tile_component_manager.set_beamformer_regions(regions)
 
-        table = tile.beamformer_table
+        table = tile_component_manager.beamformer_table
         expected = [
             [64, 2, 3, 8, 7, 8, 9],
             [72, 2, 3, 16, 7, 8, 9],
@@ -817,7 +888,7 @@ class TestStaticSimulatorCommon:
 
     def test_40g_configuration(
         self: TestStaticSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
     ) -> None:
         """
         Test 40G configuration.
@@ -826,12 +897,13 @@ class TestStaticSimulatorCommon:
         * the configure_40g_core command
         * the get_40g_configuration command
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         """
-        assert tile.get_40g_configuration(-1, 0) == []
-        assert tile.get_40g_configuration(9) == []
+        assert tile_component_manager.get_40g_configuration(-1, 0) == []
+        assert tile_component_manager.get_40g_configuration(9) == []
 
-        tile.configure_40g_core(
+        tile_component_manager.configure_40g_core(
             1,
             0,
             0x123456,
@@ -854,9 +926,9 @@ class TestStaticSimulatorCommon:
             "gateway_ip": None,
         }
 
-        assert tile.get_40g_configuration(-1, 0) == [expected]
-        assert tile.get_40g_configuration(1) == [expected]
-        assert tile.get_40g_configuration(10) == []
+        assert tile_component_manager.get_40g_configuration(-1, 0) == [expected]
+        assert tile_component_manager.get_40g_configuration(1) == [expected]
+        assert tile_component_manager.get_40g_configuration(10) == []
 
 
 class TestDynamicSimulatorCommon:
@@ -869,15 +941,15 @@ class TestDynamicSimulatorCommon:
     commands to the dynamic TPM simulator. Tests in this class are
     tested against:
 
-    * the TileComponentManager (Driving the DynamicTpmSimulator)
+    * the TileComponentManager (Driving the DynamicTileSimulator)
     """
 
     @pytest.fixture()
     def test_mode(self: TestDynamicSimulatorCommon) -> TestMode:
         """
-        Return the test mode to be used when initialising the tile class object.
+        Return the test mode to be used when initialising the tile_component_manager.
 
-        :return: the test mode to be used when initialising the tile
+        :return: the test mode to be used when initialising the tile_component_manager
             class object.
         """
         return TestMode.NONE
@@ -890,27 +962,27 @@ class TestDynamicSimulatorCommon:
         Return the initial power mode of the TPM.
 
         Overridden here to put the TPM into ON state, so that we don't
-        have to fiddle around with state change events to get the tile
-        component manager communicating with its tile.
+        have to fiddle around with state change events to get the tile_component_manager
+        component manager communicating with its tile_component_manager.
 
         :return: the initial power mode of the TPM.
         """
         return PowerState.ON
 
     @pytest.fixture()
-    def tile(
+    def tile_component_manager(
         self: TestDynamicSimulatorCommon,
         dynamic_tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
     ) -> TileComponentManager:
         """
-        Return the tile component under test. (Driving a DynamicTpmSimulator).
+        Return the tile_component_manager component under test.
 
-        :param dynamic_tile_component_manager: the tile component manager (
-            Driving a DynamicTpmSimulator)
+        :param dynamic_tile_component_manager: the tile_component_manager
+            component manager (Driving a DynamicTileSimulator)
         :param callbacks: dictionary of driver callbacks.
 
-        :return: the tile class object under test
+        :return: the tile_component_manager class object under test
         """
         dynamic_tile_component_manager.start_communicating()
 
@@ -919,10 +991,19 @@ class TestDynamicSimulatorCommon:
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
-        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        callbacks["component_state"].assert_call(fault=False, lookahead=2)
         callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED
+            programming_state=TpmStatus.UNPROGRAMMED,
+            lookahead=2,
+            consume_nonmatches=True,
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.PROGRAMMED, lookahead=2, consume_nonmatches=True
+        )
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED,
+            lookahead=2,
+            consume_nonmatches=True,
         )
         return dynamic_tile_component_manager
 
@@ -937,7 +1018,7 @@ class TestDynamicSimulatorCommon:
     )
     def test_dynamic_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         attribute_name: str,
     ) -> None:
         """
@@ -946,36 +1027,38 @@ class TestDynamicSimulatorCommon:
         Check that they are NOT equal to the
         static value assigned in the static dynamic simulator.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager
+            class object under test.
         :param attribute_name: the name of the attribute under test
         """
-        attribute_value = getattr(tile, attribute_name)
+        attribute_value = getattr(tile_component_manager, attribute_name)
         assert attribute_value is not None
-        time.sleep(1.1)
-        new_attribute_value = getattr(tile, attribute_name)
+        time.sleep(8.1)
+        tile_component_manager._tpm_driver._update_attributes()
+        new_attribute_value = getattr(tile_component_manager, attribute_name)
         assert new_attribute_value is not None
         assert new_attribute_value != attribute_value
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
-            ("adc_rms", DynamicTpmSimulator.ADC_RMS),
-            ("fpgas_time", DynamicTpmSimulator.FPGAS_TIME),
+            ("adc_rms", DynamicTileSimulator.ADC_RMS),
+            ("fpgas_time", DynamicTileSimulator.FPGAS_TIME),
             (
                 "current_tile_beamformer_frame",
-                DynamicTpmSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
+                DynamicTileSimulator.CURRENT_TILE_BEAMFORMER_FRAME,
             ),
-            ("pps_delay", DynamicTpmSimulator.PPS_DELAY),
-            ("firmware_available", DynamicTpmSimulator.FIRMWARE_AVAILABLE),
+            ("pps_delay", DynamicTileSimulator.PPS_DELAY),
+            ("firmware_available", DynamicTileSimulator.FIRMWARE_LIST),
             (
                 "register_list",
-                list(DynamicTpmSimulator.REGISTER_MAP.keys()),
+                list(MockTpm._register_map.keys()),
             ),
         ),
     )
     def test_read_static_attribute(
         self: TestDynamicSimulatorCommon,
-        tile: TileComponentManager,
+        tile_component_manager: TileComponentManager,
         attribute_name: str,
         expected_value: Any,
     ) -> None:
@@ -984,10 +1067,13 @@ class TestDynamicSimulatorCommon:
 
         This test covers attributes that have not been made dynamic yet.
 
-        :param tile: the tile class object under test.
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
         :param attribute_name: the name of the attribute under test
         :param expected_value: the expected value of the attribute. This
             can be any type, but the test of the attribute is a single
             "==" equality test.
         """
-        assert getattr(tile, attribute_name) == expected_value
+        tile_component_manager._tpm_driver._update_attributes()
+        time.sleep(0.1)
+        assert getattr(tile_component_manager, attribute_name) == expected_value

@@ -14,6 +14,7 @@ __all__ = [
     "SpsStationHealthRules",
     "SpsStationObsStateModel",
     "SpsStation",
+    "SpsStationSelfCheckManager",
 ]
 
 
@@ -22,3 +23,4 @@ from .station_device import SpsStation
 from .station_health_model import SpsStationHealthModel
 from .station_health_rules import SpsStationHealthRules
 from .station_obs_state_model import SpsStationObsStateModel
+from .station_self_check_manager import SpsStationSelfCheckManager

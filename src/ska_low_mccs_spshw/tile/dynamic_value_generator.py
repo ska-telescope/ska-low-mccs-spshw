@@ -9,17 +9,14 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 import math
 import random
 import threading
 import time
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 import scipy.stats
 import tango
-
-from .base_tpm_simulator import BaseTpmSimulator
 
 
 # pylint: disable=too-few-public-methods
@@ -160,138 +157,3 @@ class DynamicValuesUpdater:
     def __del__(self: DynamicValuesUpdater) -> None:
         """Things to do before this object is garbage collected."""
         self.stop()
-
-
-class DynamicTpmSimulator(BaseTpmSimulator):
-    """
-    A simulator for a TPM, with dynamic value updates to certain attributes.
-
-    This is useful for demoing.
-    """
-
-    def __init__(
-        self: DynamicTpmSimulator,
-        logger: logging.Logger,
-        component_state_changed_callback: Optional[Callable[..., None]] = None,
-    ) -> None:
-        """
-        Initialise a new TPM simulator instance.
-
-        :param logger: a logger for this simulator to use
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        super().__init__(logger, component_state_changed_callback)
-
-        self._tile_health_structure["voltages"]["MON_5V0"] = None
-        self._tile_health_structure["temperatures"]["board"] = None
-        self._tile_health_structure["temperatures"]["FPGA0"] = None
-        self._tile_health_structure["temperatures"]["FPGA1"] = None
-
-        self._updater = DynamicValuesUpdater(1.0)
-        self._updater.add_target(
-            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
-        )
-        self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
-            self._board_temperature_changed,
-        )
-        self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
-            self._fpga1_temperature_changed,
-        )
-        self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
-            self._fpga2_temperature_changed,
-        )
-        self._updater.start()
-
-    def __del__(self: DynamicTpmSimulator) -> None:
-        """Garbage-collection hook."""
-        self._updater.stop()
-
-    @property
-    def board_temperature(self: DynamicTpmSimulator) -> float:
-        """
-        Return the temperature of the TPM.
-
-        :return: the temperature of the TPM
-        """
-        assert (
-            self._tile_health_structure["temperatures"]["board"] is not None
-        )  # for the type checker
-        return self._tile_health_structure["temperatures"]["board"]
-
-    def _board_temperature_changed(
-        self: DynamicTpmSimulator, board_temperature: float
-    ) -> None:
-        """
-        Call this method when the board temperature changes.
-
-        :param board_temperature: the new board temperature
-        """
-        self._tile_health_structure["temperatures"]["board"] = board_temperature
-
-    @property
-    def voltage_mon(self: DynamicTpmSimulator) -> float:
-        """
-        Return the internal 5V supply of the TPM.
-
-        :return: the internal voltage of the TPM
-        """
-        assert (
-            self._tile_health_structure["voltages"]["MON_5V0"] is not None
-        )  # for the type checker
-        return self._tile_health_structure["voltages"]["MON_5V0"]
-
-    def _voltage_changed(self: DynamicTpmSimulator, voltage: float) -> None:
-        """
-        Call this method when the internal 5V supply of the TPM changes.
-
-        :param voltage: the new voltage
-        """
-        self._tile_health_structure["voltages"]["MON_5V0"] = voltage
-
-    @property
-    def fpga1_temperature(self: DynamicTpmSimulator) -> float:
-        """
-        Return the temperature of FPGA 1.
-
-        :return: the temperature of FPGA 1
-        """
-        assert (
-            self._tile_health_structure["temperatures"]["FPGA0"] is not None
-        )  # for the type checker
-        return self._tile_health_structure["temperatures"]["FPGA0"]
-
-    def _fpga1_temperature_changed(
-        self: DynamicTpmSimulator, fpga1_temperature: float
-    ) -> None:
-        """
-        Call this method when the FPGA1 temperature changes.
-
-        :param fpga1_temperature: the new FPGA1 temperature
-        """
-        self._tile_health_structure["temperatures"]["FPGA0"] = fpga1_temperature
-
-    @property
-    def fpga2_temperature(self: DynamicTpmSimulator) -> float:
-        """
-        Return the temperature of FPGA 2.
-
-        :return: the temperature of FPGA 2
-        """
-        assert (
-            self._tile_health_structure["temperatures"]["FPGA1"] is not None
-        )  # for the type checker
-        return self._tile_health_structure["temperatures"]["FPGA1"]
-
-    def _fpga2_temperature_changed(
-        self: DynamicTpmSimulator, fpga2_temperature: float
-    ) -> None:
-        """
-        Call this method when the FPGA2 temperature changes.
-
-        :param fpga2_temperature: the new FPGA2 temperature
-        """
-        self._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temperature

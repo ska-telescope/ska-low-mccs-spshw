@@ -322,7 +322,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.tpm.station_beamf[
                             0
-                        ].get_channel_table()[0 : self._nof_blocks]
+                        ].get_channel_table()
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -387,7 +387,6 @@ class TpmDriver(MccsBaseComponentManager):
         :param intentional_disconnect: True if disconnection was expected.
         """
         self.logger.debug("Tile disconnecting from tpm.")
-        self._set_tpm_status(TpmStatus.UNCONNECTED)
         self.logger.debug("CommunicationStatus.NOT_ESTABLISHED")
         while self.tile.tpm is not None:
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1278,6 +1277,8 @@ class TpmDriver(MccsBaseComponentManager):
         dst_ip: Optional[str] = None,
         src_port: Optional[int] = 0xF0D0,
         dst_port: Optional[int] = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -1288,13 +1289,21 @@ class TpmDriver(MccsBaseComponentManager):
         :param dst_ip: destination IP, defaults to None
         :param src_port: sourced port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g subnet
+        :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
         """
         self.logger.debug("TpmDriver: set_lmc_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     self.tile.set_lmc_download(
-                        mode, payload_length, dst_ip, src_port, dst_port
+                        mode,
+                        payload_length,
+                        dst_ip,
+                        src_port,
+                        dst_port,
+                        netmask_40g=netmask_40g,
+                        gateway_ip_40g=gateway_40g,
                     )
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -1644,7 +1653,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self.tile.set_beamformer_regions(collapsed_regions)
                     self._beamformer_table = self.tile.tpm.station_beamf[
                         0
-                    ].get_channel_table()[0 : self._nof_blocks]
+                    ].get_channel_table()
                     self.tile.define_spead_header(
                         self._station_id,
                         subarray_id,
@@ -2256,6 +2265,8 @@ class TpmDriver(MccsBaseComponentManager):
         dst_ip: Optional[str] = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
+        netmask_40g: int | None = None,
+        gateway_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data.
@@ -2268,6 +2279,8 @@ class TpmDriver(MccsBaseComponentManager):
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+        :param netmask_40g: netmask of the 40g subnet
+        :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
         """
         self.logger.debug("TpmDriver: set_lmc_integrated_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -2280,6 +2293,8 @@ class TpmDriver(MccsBaseComponentManager):
                         dst_ip,
                         src_port,
                         dst_port,
+                        netmask_40g=netmask_40g,
+                        gateway_ip_40g=gateway_40g,
                     )
                 # pylint: disable=broad-except
                 except Exception as e:

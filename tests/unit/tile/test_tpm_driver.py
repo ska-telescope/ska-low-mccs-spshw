@@ -625,6 +625,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Mock a connection to the TPM.
         tile_simulator.connect()
+        assert tile_simulator.tpm
+        tile_simulator.tpm._is_programmed = False
         tpm_driver._check_programmed()
         assert tpm_driver.is_programmed is False
 
@@ -1651,6 +1653,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that exceptions are caught.
@@ -1864,6 +1868,8 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             mocked_input_params["dst_ip"],
             mocked_input_params["src_port"],
             mocked_input_params["dst_port"],
+            netmask_40g=None,
+            gateway_ip_40g=None,
         )
 
         # Check that a raised exception is caught.
@@ -2113,19 +2119,18 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         # Arrange
         tile_simulator.connect()
-        tile_simulator.erase_fpga = unittest.mock.Mock()  # type: ignore[assignment]
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
 
         # erase a programmed FPGA.
         tpm_driver.erase_fpga()
 
         # Assert
-        tile_simulator.erase_fpga.assert_called_once()
         tpm_driver._check_programmed()
         assert tpm_driver._is_programmed is False
         assert tpm_driver._tpm_status == TpmStatus.UNPROGRAMMED
 
         tpm_driver._tpm_status = TpmStatus.PROGRAMMED
+        tile_simulator.erase_fpga = unittest.mock.Mock()  # type: ignore[assignment]
         tile_simulator.erase_fpga.side_effect = Exception("Mocked exception")
 
         tpm_driver.erase_fpga()

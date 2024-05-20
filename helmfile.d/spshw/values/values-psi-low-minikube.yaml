@@ -7,11 +7,11 @@ overrides:
             sps:
               subracks:
                 "1":
-                  nodeSelector: []
+                  nodeSelector: {}
               tpms:
                 "5":
-                  nodeSelector: []
+                  nodeSelector: {}
                 "7":
-                  nodeSelector: []
+                  nodeSelector: {}
                 "8":
-                  nodeSelector: []
+                  nodeSelector: {}

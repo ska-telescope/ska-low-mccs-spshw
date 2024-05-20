@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, Union, cast
+from typing import Any, Callable, Optional, cast
 
 import tango
 from pyaavs.tile import Tile as Tile12
@@ -29,7 +29,6 @@ from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_tango_base.base import check_communicating, check_on
 from ska_tango_base.executor import TaskExecutorComponentManager
 
-from .base_tpm_simulator import BaseTpmSimulator
 from .tile_orchestrator import TileOrchestrator
 from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
@@ -61,7 +60,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
-        _tpm_driver: Optional[Union[TpmDriver, BaseTpmSimulator]] = None,
+        _tpm_driver: Optional[TpmDriver] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -102,6 +101,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
+
+        self.power_state: PowerState = PowerState.UNKNOWN
 
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
         self._subrack_communication_state = CommunicationStatus.DISABLED
@@ -166,7 +167,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             max_workers=1,
             fault=None,
             power=PowerState.UNKNOWN,
-            programming_state=None,
+            programming_state=TpmStatus.UNKNOWN,
             tile_health_structure=self._tpm_driver._tile_health_structure,
             adc_rms=self._tpm_driver._adc_rms,
             static_delays=self._tpm_driver._static_delays,
@@ -740,7 +741,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "test_generator_input_select",
         "tile_id",
         "station_id",
-        # "tpm_status",
         "voltage_mon",
         "write_address",
         "write_register",
@@ -963,7 +963,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                         result=message,
                     )
 
-    @check_communicating
     def start_acquisition(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
@@ -995,6 +994,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             task_callback=task_callback,
         )
 
+    @check_communicating
     def _start_acquisition(
         self: TileComponentManager,
         start_time: Optional[int] = None,
@@ -1118,5 +1118,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param power_state: The desired power state
         """
         with self._power_state_lock:
-            # pylint: disable=attribute-defined-outside-init
             self.power_state = power_state
+            if self.power_state != PowerState.ON:
+                # NOTE: the TileComponentManger has a different
+                # _component_state dictionary to TpmDriver.
+                # In order to correctly push change events. We must
+                # Push from a single state dictionary.
+                # TODO: Removal of TpmDriver in MCCS-1507, will remove
+                # this issue.
+                self._tpm_driver._set_tpm_status(self.tpm_status)

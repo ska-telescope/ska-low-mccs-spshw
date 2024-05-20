@@ -13,29 +13,46 @@
             "description": "ARP table entry",
             "type": "integer"
         },
-        "src_mac": {
+        "source_mac": {
             "description": "Source MAC address",
             "type": "integer"
         },
-        "src_ip": {
+        "source_ip": {
             "description": "Source IP address",
             "type": "string",
             "format": "ipv4"
         },
-        "src_port": {
+        "source_port": {
             "description": "Source port",
             "type": "integer",
             "minimum": 1
         },
-        "dst_ip": {
+        "destination_ip": {
             "description": "Destinate IP address",
             "type": "string",
             "format": "ipv4"
         },
-        "dst_port": {
+        "destination_port": {
             "description": "Destination port",
             "type": "integer",
             "minimum": 1
+        },
+        "rx_port_filter": {
+            "description": "Receive ports filter",
+            "type": "integer",
+            "minimum": 1
+        },
+        "netmask": {
+            "description": "Integer netmask for the 40g (science data) subnet",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967296
+        },
+        "gateway_ip": {
+            "description": "Integer IP address of the 40g (science data) subnet gateway",
+            "minimum": 0,
+            "maximum": 4294967296
         }
-    }
+    },
+    "additionalProperties": false
 }

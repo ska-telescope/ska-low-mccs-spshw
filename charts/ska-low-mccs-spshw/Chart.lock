@@ -5,8 +5,5 @@ dependencies:
 - name: ska-tango-util
   repository: https://artefact.skao.int/repository/helm-internal
   version: 0.4.11
-- name: postgresql
-  repository: https://charts.bitnami.com/bitnami
-  version: 11.6.6
-digest: sha256:6d73c8ef212ca7f12d229e6177db830d4183b27f2334f60d01f4991a5fe04eb5
-generated: "2024-04-25T11:43:01.006601016+01:00"
+digest: sha256:22d3135c0fff440e28218a4be1dade0af63e7afdbf465bf3e6b6b72c943c5ec4
+generated: "2024-05-09T11:35:13.254578444+01:00"

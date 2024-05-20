@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import datetime
 import gc
+import ipaddress
 import json
 import time
 import unittest.mock
@@ -23,9 +24,9 @@ from ska_control_model import AdminMode, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
-from ska_low_mccs_spshw.mocks import MockFieldStation
 from ska_low_mccs_spshw.station import SpsStation
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.test_tools import execute_lrc_to_completion
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -46,23 +47,38 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "health_state",
         "state",
         "outsideTemperature",
+        "track_lrc_command",
         timeout=2.0,
     )
 
 
-@pytest.fixture(name="station_network_address", scope="session")
-def station_network_address_fixture() -> str:
+@pytest.fixture(name="sdn_first_interface", scope="session")
+def sdn_first_interface_fixture() -> str:
     """
-    Return the station network address.
+    Return the first interface of the block allocated to this station for science data.
 
-    :return: the station network address
+    This is an IP address and netmask, in CIDR-style slash-notation.
+    For example, "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25".
+
+    :return: the SDN first interface
     """
-    return "10.0.0.152"
+    return "10.0.0.152/25"
+
+
+@pytest.fixture(name="sdn_gateway", scope="session")
+def sdn_gateway_fixture() -> str:
+    """
+    Return the IP address of the SDN gateway.
+
+    :return: the SDN gateway IP
+    """
+    return "10.0.0.254"
 
 
 @pytest.fixture(name="test_context")
 def test_context_fixture(
-    station_network_address: str,
+    sdn_first_interface: str,
+    sdn_gateway: str,
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
     patched_sps_station_device_class: type[SpsStation],
@@ -72,7 +88,9 @@ def test_context_fixture(
     """
     Return a test context in which an SPS station Tango device is running.
 
-    :param station_network_address: the network address of the SPS station
+    :param sdn_first_interface: the first interface of the block
+        allocated to this station for science data.
+    :param sdn_gateway: the IP address of the SDN gateway
     :param mock_subrack_device_proxy: a mock return as a device proxy to
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
@@ -92,14 +110,12 @@ def test_context_fixture(
         harness.add_mock_tile_device(i + 1, mock_tile_device_proxy)
 
     harness.set_sps_station_device(
-        station_network_address,
+        sdn_first_interface,
+        sdn_gateway,
         subrack_ids=[1],
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
         daq_trl=daq_trl,
         device_class=patched_sps_station_device_class,
-    )
-    harness.add_field_station_device(
-        device_class=MockFieldStation,
     )
 
     harness.set_daq_instance()
@@ -122,55 +138,6 @@ def station_device_fixture(
     :yield: the station Tango device under test.
     """
     yield test_context.get_sps_station_device()
-
-
-@pytest.fixture(name="field_station_device")
-def field_station_device_fixture(
-    test_context: SpsTangoTestHarnessContext,
-) -> DeviceProxy:
-    """
-    Fixture that returns the field station Tango device under test.
-
-    :param test_context: a Tango test context
-        containing an SPS station and mock subservient devices.
-
-    :yield: the station Tango device under test.
-    """
-    yield test_context.get_field_station_device()
-
-
-def test_mock_field_station(
-    field_station_device: DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
-    """
-    Test basic functionality of the mock field station.
-
-    :param field_station_device: the Field station Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
-    """
-    assert (
-        field_station_device.outsideTemperature
-        == MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
-    )
-
-    field_station_device.subscribe_event(
-        "outsideTemperature",
-        EventType.CHANGE_EVENT,
-        change_event_callbacks["outsideTemperature"],
-    )
-    change_event_callbacks["outsideTemperature"].assert_change_event(
-        MockFieldStation.INITIAL_MOCKED_OUTSIDE_TEMPERATURE
-    )
-
-    mocked_outside_temperature = 37.2
-
-    field_station_device.MockOutsideTemperatureChange(mocked_outside_temperature)
-
-    change_event_callbacks["outsideTemperature"].assert_change_event(
-        mocked_outside_temperature
-    )
 
 
 def test_Off(
@@ -257,6 +224,8 @@ def test_On(
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
 ) -> None:
     """
     Test our ability to turn the SPS station device on.
@@ -267,6 +236,10 @@ def test_On(
     :param num_tiles: the number of mock tiles
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+        An empty string signifiese that no gateway is defined.
     """
     counter = 0
     sync_time = None
@@ -404,6 +377,8 @@ def test_On(
                 ),
                 "destination_port": csp_ingest_port,
                 "rx_port_filter": csp_ingest_port,
+                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -423,6 +398,8 @@ def test_On(
                 "destination_port": (
                     csp_ingest_port + 2 if not last_tile else csp_ingest_port
                 ),
+                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -445,6 +422,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
             "mode": "10G",
@@ -452,6 +431,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
         assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
@@ -459,6 +440,8 @@ def test_On(
             "destination_ip": "0.0.0.0",
             "beam_payload_length": 8192,
             "channel_payload_length": 8192,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
 
 
@@ -467,6 +450,8 @@ def test_Initialise(
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    sdn_first_interface: str,
+    sdn_gateway: str,
 ) -> None:
     """
     Test of the Initialise command.
@@ -477,6 +462,10 @@ def test_Initialise(
     :param num_tiles: the number of mock tiles
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+        An empty string signifiese that no gateway is defined.
     """
     counter = 0
     sync_time = None
@@ -577,6 +566,8 @@ def test_Initialise(
                 ),
                 "destination_port": csp_ingest_port,
                 "rx_port_filter": csp_ingest_port,
+                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -596,6 +587,8 @@ def test_Initialise(
                 "destination_port": (
                     csp_ingest_port + 2 if not last_tile else csp_ingest_port
                 ),
+                "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
             }
             assert json.loads(
                 tile.Configure40GCore.mock_calls[
@@ -618,6 +611,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
             "mode": "10G",
@@ -625,6 +620,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "destination_port": 4660,
             "source_port": 61648,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
         assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
         assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
@@ -632,6 +629,8 @@ def test_Initialise(
             "destination_ip": "0.0.0.0",
             "beam_payload_length": 8192,
             "channel_payload_length": 8192,
+            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
         }
 
 
@@ -890,6 +889,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "source_port": 0xF0D0,
                     "destination_port": 4660,
+                    "netmask_40g": 4294967168,  # /25
+                    "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
             True,
@@ -905,6 +906,8 @@ def test_Standby(
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,
+                    "netmask_40g": 4294967168,  # /25
+                    "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
             True,
@@ -986,6 +989,8 @@ def test_SetCspIngest(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],
     num_tiles: int,
+    sdn_first_interface: str,
+    sdn_gateway: str,
 ) -> None:
     """
     Test of the SetCspIngest command.
@@ -994,6 +999,10 @@ def test_SetCspIngest(
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
     :param num_tiles: the number of mock tiles
+    :param sdn_first_interface: CIDR-like specification of the first interface
+        in the block allocated to this station for science data.
+    :param sdn_gateway: IP address of the subnet gateway.
+        An empty string signifiese that no gateway is defined.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     station_device.MockSubracksOn()
@@ -1027,6 +1036,8 @@ def test_SetCspIngest(
                     "destination_ip": "123.123.234.234",
                     "destination_port": 1234,
                     "rx_port_filter": 1234,
+                    "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                    "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
                 }
                 assert json.loads(
                     tile.Configure40GCore.mock_calls[1 + (3 * core)].args[0]
@@ -1038,6 +1049,8 @@ def test_SetCspIngest(
                     "source_port": 61648,
                     "destination_ip": "123.123.234.234",
                     "destination_port": 1234,
+                    "netmask": int(ipaddress.ip_interface(sdn_first_interface).netmask),
+                    "gateway_ip": int(ipaddress.ip_address(sdn_gateway)),
                 }
                 assert json.loads(
                     tile.Configure40GCore.mock_calls[2 + (3 * core)].args[0]
@@ -1107,15 +1120,17 @@ def test_isConfigured(station_device: SpsStation) -> None:
 
 
 def test_fortyGbNetworkAddress(
-    station_device: SpsStation, station_network_address: str
+    station_device: SpsStation, sdn_first_interface: str
 ) -> None:
     """
     Test of the fortyGbNetworkAddress attribute.
 
     :param station_device: The station device to use
-    :param station_network_address: the station network address
+    :param sdn_first_interface: the first interface in the block
+        assigned to this station for science data
     """
-    assert station_device.fortyGbNetworkAddress == station_network_address
+    first_interface = ipaddress.ip_interface(sdn_first_interface)
+    assert station_device.fortyGbNetworkAddress == str(first_interface.ip)
 
 
 def test_write_read_channeliser_rounding(
@@ -1143,12 +1158,14 @@ def test_write_read_channeliser_rounding(
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     for i, tile in enumerate(mock_tile_device_proxies):
         tile.tileProgrammingState = "Synchronised"
-    time.sleep(0.1)
 
     channeliser_rounding_to_set = np.array([5] * 512)
-    station_device.SetChanneliserRounding(channeliser_rounding_to_set)
-
-    time.sleep(0.1)
+    execute_lrc_to_completion(
+        change_event_callbacks,
+        station_device,
+        "SetChanneliserRounding",
+        channeliser_rounding_to_set,
+    )
 
     # Calculate expected channeliser rounding of all tiles after write
     zero_results = np.zeros((12, 512))

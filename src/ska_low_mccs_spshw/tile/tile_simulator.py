@@ -22,7 +22,7 @@ from typing import Any, Callable, List, Optional, TypeVar, Union, cast
 
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
-from .dynamic_tpm_simulator import DynamicValuesGenerator, DynamicValuesUpdater
+from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
 from .tile_data import TileData
 
@@ -806,6 +806,7 @@ class TileSimulator:
     ADC_RMS = [float(i) for i in range(32)]
     FPGAS_TIME = [0, 0]
     CURRENT_TILE_BEAMFORMER_FRAME = 0
+    TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
     FIRMWARE_NAME = "itpm_v1_6.bit"
@@ -815,7 +816,7 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 1
-    TILE_ID = 2
+    TILE_ID = 0
 
     def __init__(
         self: TileSimulator,
@@ -1098,7 +1099,7 @@ class TileSimulator:
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
-        time.sleep(random.randint(1, 3))
+        time.sleep(random.randint(1, 2))
         self.logger.debug("Initialise complete in Tpm.")
 
     @check_mocked_overheating
@@ -2115,6 +2116,7 @@ class DynamicTileSimulator(TileSimulator):
 
         :param logger: a logger for this simulator to use
         """
+        super().__init__(logger)
         self._voltage: float | None = None
         self._current: float | None = None
         self._board_temperature: float | None = None
@@ -2141,8 +2143,6 @@ class DynamicTileSimulator(TileSimulator):
             self._fpga2_temperature_changed,
         )
         self._updater.start()
-
-        super().__init__(logger)
 
     def __del__(self: DynamicTileSimulator) -> None:
         """Garbage-collection hook."""
@@ -2171,6 +2171,7 @@ class DynamicTileSimulator(TileSimulator):
         :param board_temperature: the new board temperature
         """
         self._board_temperature = board_temperature
+        self._tile_health_structure["temperatures"]["board"] = board_temperature
 
     def get_voltage(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked voltage."""
@@ -2193,6 +2194,7 @@ class DynamicTileSimulator(TileSimulator):
         :param voltage: the new voltage
         """
         self._voltage = voltage
+        self._tile_health_structure["voltages"]["MON_5V0"] = voltage
 
     def get_current(self: DynamicTileSimulator) -> float | None:
         """:return: the mocked current."""
@@ -2240,6 +2242,7 @@ class DynamicTileSimulator(TileSimulator):
         :param fpga1_temperature: the new FPGA1 temperature
         """
         self._fpga1_temperature = fpga1_temperature
+        self._tile_health_structure["temperatures"]["FPGA0"] = fpga1_temperature
 
     @connected
     def get_fpga1_temperature(self: DynamicTileSimulator) -> float | None:
@@ -2265,3 +2268,4 @@ class DynamicTileSimulator(TileSimulator):
         :param fpga2_temperature: the new FPGA2 temperature
         """
         self._fpga2_temperature = fpga2_temperature
+        self._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temperature

@@ -3,7 +3,7 @@ defaults:
 
 platform:
   metadata:
-    version: 0.1.0
+    version: 0.2.0
 
   cluster:
     daq:
@@ -14,7 +14,7 @@ platform:
       ci-1:
         id: 1
         sps:
-          network_address: 10.0.0.152
+          sdn_first_interface: 10.0.0.152/25
           daq:
             simulated: true
           subracks:
@@ -37,7 +37,7 @@ platform:
       real-daq-1:
         id: 1
         sps:
-          network_address: 10.1.0.152
+          sdn_first_interface: 10.1.0.152/25
           daq:
             simulated: false
           subracks:

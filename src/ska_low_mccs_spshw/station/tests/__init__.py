@@ -7,11 +7,12 @@
 # See LICENSE for more info.
 """This subpackage implements station functionality for MCCS."""
 
-
 __all__ = [
-    "MockFieldStationComponentManager",
-    "MockFieldStation",
+    "TpmSelfCheckTest",
+    "BasicTangoTest",
+    "TestResult",
 ]
 
-from .mock_field_station_component_manager import MockFieldStationComponentManager
-from .mock_field_station_device import MockFieldStation
+
+from .base_tpm_test import TestResult, TpmSelfCheckTest
+from .test_tango import BasicTangoTest

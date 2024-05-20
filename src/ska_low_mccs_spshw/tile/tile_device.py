@@ -531,7 +531,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="info",
+        label="tile_info",
     )
     def tile_info(self: MccsTile) -> str:
         """

@@ -379,6 +379,7 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         change_event_callbacks["state"].assert_not_called()
         tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         tile_info = json.loads(tile_device.tile_info)
         keys = ["hardware", "fpga_firmware", "network"]

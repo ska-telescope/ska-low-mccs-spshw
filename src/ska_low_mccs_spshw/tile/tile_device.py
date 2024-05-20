@@ -113,6 +113,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._adc_rms = [0.0] * 32
         self._max_workers = 1
         self._pps_present = None
+        self._multi_attr = self.get_device_attr()
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -538,11 +539,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param attr_name: the name of the attribute causing the shutdown.
         """
         try:
-            multi_attr = self.get_device_attr()
-            attr = multi_attr.get_attr_by_name(attr_name)
+            attr = self._multi_attr.get_attr_by_name(attr_name)
             if attr.is_max_alarm():
                 self.logger.warning(
-                    f"Attribute {attr_name} exceeded threshold, Shutting down TPM."
+                    f"Attribute {attr_name} above threshold, Shutting down TPM."
+                )
+                self.component_manager.off()
+            if attr.is_min_alarm():
+                self.logger.warning(
+                    f"Attribute {attr_name} below threshold, Shutting down TPM."
                 )
                 self.component_manager.off()
         except Exception:  # pylint: disable=broad-except
@@ -572,6 +577,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
+
+        # set_value must be called after push_change_event.
+        # it seems that fire_change_event will consume the
+        # value set meaning a check_alarm has a nullptr.
+        attr = self._multi_attr.get_attr_by_name(name)
+        attr.set_value(attr_value)
+        try:
+            # Update the attribute ALARM status.
+            self._multi_attr.check_alarm(name)
+        except tango.DevFailed:
+            self.logger.error("no alarm defined")
 
     # ----------
     # Attributes
@@ -896,7 +912,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the board temperature
         """
         # Force a read if we have no cached value yet
-        if self._attribute_state["boardTemperature"].read() is None:
+        if self._attribute_state["boardTemperature"].read()[0] is None:
             temp = self.component_manager.board_temperature
             self._attribute_state["boardTemperature"].update(temp, post=False)
         return self._attribute_state["boardTemperature"].read()
@@ -918,7 +934,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the temperature of FPGA 1
         """
         # Force a read if we have no cached value yet
-        if self._attribute_state["fpga1Temperature"].read() is None:
+        if self._attribute_state["fpga1Temperature"].read()[0] is None:
             temp = self.component_manager.fpga1_temperature
             self._attribute_state["fpga1Temperature"].update(temp, post=False)
         return self._attribute_state["fpga1Temperature"].read()
@@ -940,7 +956,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the temperature of FPGA 2
         """
         # Force a read if we have no cached value yet
-        if self._attribute_state["fpga2Temperature"].read() is None:
+        if self._attribute_state["fpga2Temperature"].read()[0] is None:
             temp = self.component_manager.fpga2_temperature
             self._attribute_state["fpga2Temperature"].update(temp, post=False)
         return self._attribute_state["fpga2Temperature"].read()
@@ -1030,7 +1046,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        if self._attribute_state["adcPower"].read() is None:
+        if self._attribute_state["adcPower"].read()[0] is None:
             power = self.component_manager.adc_rms
             self._attribute_state["adcPower"].update(power, post=False)
         return self._attribute_state["adcPower"].read()
@@ -1204,7 +1220,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :returns: list of 512 values, one per channel.
         """
-        if self._attribute_state["channeliserRounding"].read() is None:
+        if self._attribute_state["channeliserRounding"].read()[0] is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
         return self._attribute_state["channeliserRounding"].read()
@@ -1233,7 +1249,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["staticTimeDelays"].read() is None:
+        if self._attribute_state["staticTimeDelays"].read()[0] is None:
             delays = self.component_manager.static_delays
             self._attribute_state["staticTimeDelays"].update(delays, post=False)
         return self._attribute_state["staticTimeDelays"].read()
@@ -1285,7 +1301,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["preaduLevels"].read() is None:
+        if self._attribute_state["preaduLevels"].read()[0] is None:
             temp = self.component_manager.preadu_levels
             self._attribute_state["preaduLevels"].update(temp, post=False)
         return self._attribute_state["preaduLevels"].read()
@@ -2433,9 +2449,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: a serialised dictionary containing attribute names and
             threshold limits.
         """
-        multi_attr = self.get_device_attr()
         handler = self.get_command_object("SetAttributeThresholds")
-        (return_code, message) = handler(multi_attr, argin)
+        (return_code, message) = handler(self._multi_attr, argin)
         return ([return_code], [message])
 
     class GetArpTableCommand(FastCommand):

@@ -36,7 +36,7 @@ def _wait_for_attribute(
 
 class InitialiseStation(TpmSelfCheckTest):
     """
-    Test we can initialise tiles correctly.
+    Test we can initialise and synchronise tiles correctly.
 
     ##########
     TEST STEPS
@@ -48,9 +48,6 @@ class InitialiseStation(TpmSelfCheckTest):
     3. Synchronise the station. This should iterate through each of your tiles
         and synchronise each of them to the same reference time.
     4. Verify each tile has reached the SYNCHRONISED state.
-    5. Configure the MccsDAQ to recieve station beam data.
-    6. Start the station beamformer.
-    7. Verify that the rate of data received at MccsDAQ is correct.
 
     #################
     TEST REQUIREMENTS
@@ -60,7 +57,6 @@ class InitialiseStation(TpmSelfCheckTest):
         common for all tests.
     2. Your station must have at least 1 TPM.
     3. Your station must be DevState.ON.
-    4. You must have a MccsDAQ instance to receive data.
     """
 
     def test(self: InitialiseStation) -> None:
@@ -76,17 +72,22 @@ class InitialiseStation(TpmSelfCheckTest):
             )
             self.test_logger.debug(f"Sucessfully initialised {tile_proxy.dev_name()}")
 
-        count = 0
-        while self.tile_proxies[0].GetArpTable() == '{"0": [], "1": []}':
-            self.test_logger.debug(
-                "Waiting for ARP table to populate, "
-                f"waiting for {30*(10-count)} seconds."
-            )
-            time.sleep(30)
-            count += 1
-            if count >= 10:
-                assert False, "Didn't populate ARP table in time."
+        for tile_proxy in self.tile_proxies:
+            count = 0
+            while tile_proxy.GetArpTable() == '{"0": [], "1": []}':
+                self.test_logger.debug(
+                    "Waiting for ARP table to populate, "
+                    f"waiting for {30-count} seconds."
+                )
+                time.sleep(1)
+                count += 1
+                if count >= 30:
+                    assert (
+                        False
+                    ), f"Didn't populate ARP table on {tile_proxy.dev_name()} in time."
+            self.test_logger.debug(f"APT table populated on {tile_proxy.dev_name()}")
 
+        self.test_logger.debug("ARP tables populated.")
         self.test_logger.debug("Sucessfully initialised station, synchronising.")
 
         start_time = datetime.strftime(
@@ -131,6 +132,11 @@ class InitialiseStation(TpmSelfCheckTest):
                             f"Tile {tile.dev_name()}, JESD204B fill buffer "
                             "level larger than 32 octets"
                         )
+                self.test_logger.debug(
+                    f"Register assertions on {tile.dev_name()} successful."
+                )
+
+        self.test_logger.info("Test succeeded!")
 
     def check_requirements(self: InitialiseStation) -> tuple[bool, str]:
         """

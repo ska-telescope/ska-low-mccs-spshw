@@ -73,18 +73,9 @@ class InitialiseStation(TpmSelfCheckTest):
             self.test_logger.debug(f"Sucessfully initialised {tile_proxy.dev_name()}")
 
         for tile_proxy in self.tile_proxies:
-            count = 0
-            while tile_proxy.GetArpTable() == '{"0": [], "1": []}':
-                self.test_logger.debug(
-                    "Waiting for ARP table to populate, "
-                    f"waiting for {30-count} seconds."
-                )
-                time.sleep(1)
-                count += 1
-                if count >= 30:
-                    assert (
-                        False
-                    ), f"Didn't populate ARP table on {tile_proxy.dev_name()} in time."
+            assert (
+                tile_proxy.GetArpTable() != '{"0": [], "1": []}'
+            ), f"Didn't populate ARP table on {tile_proxy.dev_name()} in time."
             self.test_logger.debug(f"ARP table populated on {tile_proxy.dev_name()}")
 
         self.test_logger.debug("ARP tables populated.")

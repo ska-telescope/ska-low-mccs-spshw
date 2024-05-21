@@ -540,7 +540,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: info available
         """
         # return json.dumps(self.component_manager.info)
-        return json.dumps(self.component_manager._tpm_driver.tile.info)
+        some_info = self.component_manager._tpm_driver.tile.info
+        self.logger.info(f"property: {self.component_manager._tpm_driver.tile.info}")
+        self.logger.info(f"tile.info type: {type(some_info)}")
+        self.logger.info(f"tile.info: {some_info}")
+        return json.dumps(some_info)
 
     @attribute(
         dtype="DevString",

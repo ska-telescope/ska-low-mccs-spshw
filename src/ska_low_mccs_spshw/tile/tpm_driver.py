@@ -97,6 +97,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._nof_blocks = self.BEAMFORMER_TABLE[0][1] // 8
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._csp_rounding: Optional[np.ndarray] = np.array(self.CSP_ROUNDING)
+        self._csp_spead_format = "SKA"
         self._forty_gb_core_list: list = []
         self._preadu_levels: Optional[list[float]] = None
         self._static_delays: list[float] = [0.0] * 32
@@ -1476,6 +1477,50 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
+    def csp_spead_format(self: TpmDriver) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.setter
+    def csp_spead_format(self: TpmDriver, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+        """
+        self._csp_spead_format = spead_format
+        if self._tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
+            return
+        spead_format = 0
+        if self._csp_spead_format == "SKA"
+            spead_format = 1
+        if self.tile.tpm.has_register("fpga.beamf_ring.control.new_spead_format"):
+            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+                if acquired:
+                    try:
+                        for fpga in ["fpga1", "fpga2"]:
+                            self.tile.tpm[
+                                f"{fpga}.beamf_ring.control.new_spead_format"
+                                ] = spead_format
+                    # pylint: disable=broad-except
+                    except Exception as e:
+                        self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                else:
+                    self.logger.warning("Failed to acquire hardware lock")
+        elif spead_format ==1:
+            self.logger.error("SKA SPEAD format not supported in firmware")
+
+    @property
     def preadu_levels(self: TpmDriver) -> Optional[list[float]]:
         """
         Get preadu levels in dB.
@@ -1649,6 +1694,7 @@ class TpmDriver(MccsBaseComponentManager):
                         subarray_id,
                         aperture_id,
                         self._fpga_reference_time,
+                        self._csp_spead_format == "SKA",
                     )
                 # pylint: disable=broad-except
                 except Exception as e:

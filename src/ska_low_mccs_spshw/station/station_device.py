@@ -746,6 +746,35 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.csp_source_port
 
+    @attribute(dtype="DevString")
+    def cspSpeadFormat(self: SpsStation) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header. 
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: SpsStation, spead_format: str) -> None: 
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error(
+                "Invalid SPEAD format: should be AAVS or SKA"
+                )
+
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:
         """

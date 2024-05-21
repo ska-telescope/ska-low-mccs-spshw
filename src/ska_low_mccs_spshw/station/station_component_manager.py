@@ -452,6 +452,7 @@ class SpsStationComponentManager(
         self._csp_ingest_address = "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
+        self._csp_spead_format = "SKA"
 
         # TODO: this needs to be scaled,
         self.tile_attributes_to_subscribe = [
@@ -1447,6 +1448,7 @@ class SpsStationComponentManager(
             tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
+            tile.cspSpeadFormat = self._csp_spead_format
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
@@ -1871,6 +1873,39 @@ class SpsStationComponentManager(
                 f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
             )
             proxy._proxy.cspRounding = truncation
+
+    @property
+    def csp_spead_format(self: SpsStationComponentManager) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header. 
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.write  # type: ignore[no-redef]
+    def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self._csp_spead_format = spead_format
+        else:
+            self.logger.error(
+                "Invalid SPEAD format: should be AAVS or SKA"
+                )
+            return
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy.cspSpeadFormat(spead_format)
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:

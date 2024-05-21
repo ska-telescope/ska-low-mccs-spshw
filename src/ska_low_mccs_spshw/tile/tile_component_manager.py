@@ -694,6 +694,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "configure_integrated_beam_data",
         "configure_integrated_channel_data",
         "csp_rounding",
+        "csp_spead_format",
         "current_tile_beamformer_frame",
         "erase_fpga",
         "firmware_available",

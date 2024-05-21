@@ -661,6 +661,39 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self._csp_destination_port
 
+    @attribute(
+        dtype="DevString"
+        label="cspSpeadFormat"
+    )
+    def cspSpeadFormat(self: MccsTile) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error(
+                "Invalid SPEAD format: should be AAVS or SKA"
+                )
+
+
     @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True)
     def simulationMode(self: MccsTile) -> int:
         """

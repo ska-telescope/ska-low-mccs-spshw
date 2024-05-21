@@ -1268,6 +1268,10 @@ class SpsStationComponentManager(
             result_code = ResultCode.FAILED
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
@@ -1377,6 +1381,30 @@ class SpsStationComponentManager(
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
+
+    @check_communicating
+    def _set_tile_source_ips(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Set source IPs on tiles before initialising.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        for tile_id, tile_proxy in enumerate(list(self._tile_proxies.values())):
+            tile = tile_proxy._proxy
+            if tile is None:
+                self.logger.error(f"Tile {tile_id} proxy not formed.")
+                return ResultCode.FAILED
+            src_ip1 = str(self._sdn_first_address + 2 * tile_id)
+            src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
+            tile.srcip40gfpga1 = src_ip1
+            tile.srcip40gfpga2 = src_ip2
+        return ResultCode.OK
 
     @check_communicating
     def _reinitialise_tiles(
@@ -1492,20 +1520,20 @@ class SpsStationComponentManager(
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = str(self._sdn_first_address + 2 * tile)
-            src_ip2 = str(self._sdn_first_address + 2 * tile + 1)
+            # src_ip1 = str(self._sdn_first_address + 2 * tile)
+            # src_ip2 = str(self._sdn_first_address + 2 * tile + 1)
             dst_ip1 = str(self._sdn_first_address + 2 * tile + 2)
             dst_ip2 = str(self._sdn_first_address + 2 * tile + 3)
-            src_ip_list = [src_ip1, src_ip2]
+            # src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
             src_mac = self._base_mac_address + 2 * tile
-            self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
-            self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
+            # self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
+            # self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
 
             for core in range(num_cores):
-                src_ip = src_ip_list[core]
+                # src_ip = src_ip_list[core]
                 dst_ip = dst_ip_list[core]
 
                 if tile == last_tile:
@@ -1520,7 +1548,7 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 0,
-                            "source_ip": src_ip,
+                            # "source_ip": src_ip,
                             "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
@@ -1546,7 +1574,7 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 2,
-                            "source_ip": src_ip,
+                            # "source_ip": src_ip,
                             "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,

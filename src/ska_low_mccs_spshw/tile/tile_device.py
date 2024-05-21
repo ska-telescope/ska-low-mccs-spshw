@@ -1421,6 +1421,48 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self._health_model._intermediate_healths["dsp"]
 
+    @attribute(dtype="DevString")
+    def srcip40gfpga1(self: MccsTile) -> str:
+        """
+        Return source IP for FPGA1, to be set by SpsStation.
+
+        :return: source IP for FPGA1.
+        """
+        if self.component_manager.src_ip_40g_fpga1 is not None:
+            return self.component_manager.src_ip_40g_fpga1
+        self.logger.warning("Source IP for FPGA1 not set")
+        return ""
+
+    @srcip40gfpga1.write  # type: ignore[no-redef]
+    def srcip40gfpga1(self: MccsTile, argin: str) -> None:
+        """
+        Set source IP for FPGA1.
+
+        :param argin: source IP for FPGA1
+        """
+        self.component_manager.src_ip_40g_fpga1 = argin
+
+    @attribute(dtype="DevString")
+    def srcip40gfpga2(self: MccsTile) -> str:
+        """
+        Return source IP for FPGA2, to be set by SpsStation.
+
+        :return: source IP for FPGA2.
+        """
+        if self.component_manager.src_ip_40g_fpga2 is not None:
+            return self.component_manager.src_ip_40g_fpga2
+        self.logger.warning("Source IP for FPGA2 not set")
+        return ""
+
+    @srcip40gfpga2.write  # type: ignore[no-redef]
+    def srcip40gfpga2(self: MccsTile, argin: str) -> None:
+        """
+        Set source IP for FPGA2.
+
+        :param argin: source IP for FPGA2
+        """
+        self.component_manager.src_ip_40g_fpga2 = argin
+
     # # --------
     # # Commands
     # # --------

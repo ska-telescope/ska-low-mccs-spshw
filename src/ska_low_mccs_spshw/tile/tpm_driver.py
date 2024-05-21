@@ -1497,13 +1497,15 @@ class TpmDriver(MccsBaseComponentManager):
         CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
         using a reference Unix time specified in the header.
         SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
         """
         self._csp_spead_format = spead_format
         if self._tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
             return
-        spead_format = 0
-        if self._csp_spead_format == "SKA"
-            spead_format = 1
+        hw_spead_format = 0
+        if self._csp_spead_format == "SKA":
+            hw_spead_format = 1
         if self.tile.tpm.has_register("fpga.beamf_ring.control.new_spead_format"):
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
@@ -1511,13 +1513,13 @@ class TpmDriver(MccsBaseComponentManager):
                         for fpga in ["fpga1", "fpga2"]:
                             self.tile.tpm[
                                 f"{fpga}.beamf_ring.control.new_spead_format"
-                                ] = spead_format
+                            ] = hw_spead_format
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
                 else:
                     self.logger.warning("Failed to acquire hardware lock")
-        elif spead_format ==1:
+        elif spead_format == 1:
             self.logger.error("SKA SPEAD format not supported in firmware")
 
     @property

@@ -1880,7 +1880,7 @@ class SpsStationComponentManager(
         Get CSP SPEAD format.
 
         CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
-        using a reference Unix time specified in the header. 
+        using a reference Unix time specified in the header.
         SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
 
         :return: CSP Spead format. AAVS or SKA
@@ -1895,17 +1895,17 @@ class SpsStationComponentManager(
         CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
         using a reference Unix time specified in the header.
         SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
         """
         if spead_format in ["AAVS", "SKA"]:
             self._csp_spead_format = spead_format
         else:
-            self.logger.error(
-                "Invalid SPEAD format: should be AAVS or SKA"
-                )
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
             return
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            proxy.cspSpeadFormat(spead_format)
+            proxy._proxy.cspSpeadFormat(spead_format)
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:

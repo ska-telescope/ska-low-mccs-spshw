@@ -539,7 +539,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        return json.dumps(self.component_manager.info)
+        # return json.dumps(self.component_manager.info)
+        self.logger.info("Trying to get board info from attr")
+        board_info = self.component_manager._tpm_driver.tile.tpm.get_board_info()
+        self.logger.info(board_info)
+        return json.dumps(self.component_manager._tpm_driver.tile.info)
 
     @attribute(
         dtype="DevString",

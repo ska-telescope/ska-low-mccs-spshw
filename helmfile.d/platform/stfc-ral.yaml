@@ -16,7 +16,8 @@ platform:
       stfc-ral:
         id: 1
         sps:
-          sdn_first_interface: 10.130.0.100/16  # Tile 40G IP allocation starting at .100
+          sdn_first_interface: 10.130.0.100/25  # Tile 40G IP allocation starting at .100
+          sdn_gateway: 10.130.0.126
           subracks:
             sr1:
               srmb_host: 10.132.0.34

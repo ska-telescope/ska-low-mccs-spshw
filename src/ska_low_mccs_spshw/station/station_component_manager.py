@@ -1185,6 +1185,10 @@ class SpsStationComponentManager(
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
+        if result_code == ResultCode.OK:
+            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -1376,9 +1380,32 @@ class SpsStationComponentManager(
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
-                return ResultCode.OK
-        self.logger.error("Timed out waiting for tiles to come up")
-        return ResultCode.FAILED
+                break
+
+        states = self.tile_programming_state()
+        if not all(state in ["Initialised", "Synchronised"] for state in states):
+            self.logger.error("Timed out waiting for tiles to come up")
+            return ResultCode.FAILED
+
+        timeout = 30
+        tick = 2
+        for tile_trl, tile_proxy in self._tile_proxies.items():
+            last_time = time.time() + timeout
+            tile = tile_proxy._proxy
+            if tile is None:
+                self.logger.error(f"{tile_trl} proxy not set up.")
+                return ResultCode.FAILED
+            while time.time() < last_time:
+                self.logger.debug(f"Waiting on {tile_trl} ARP table.")
+                if tile.GetArpTable() != '{"0": [], "1": []}':
+                    break
+                time.sleep(tick)
+            if tile.GetArpTable() == '{"0": [], "1": []}':
+                self.logger.error(f"Failed to populate ARP table of {tile_trl}")
+                return ResultCode.FAILED
+            self.logger.debug(f"Got ARP table for {tile_trl}")
+
+        return ResultCode.OK
 
     @check_communicating
     def _set_tile_source_ips(
@@ -1441,9 +1468,32 @@ class SpsStationComponentManager(
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
-                return ResultCode.OK
-        self.logger.error("Timed out waiting for tiles to come up")
-        return ResultCode.FAILED
+                break
+
+        states = self.tile_programming_state()
+        if not all(state in ["Initialised", "Synchronised"] for state in states):
+            self.logger.error("Timed out waiting for tiles to come up")
+            return ResultCode.FAILED
+
+        timeout = 30
+        tick = 2
+        for tile_trl, tile_proxy in self._tile_proxies.items():
+            last_time = time.time() + timeout
+            tile = tile_proxy._proxy
+            if tile is None:
+                self.logger.error(f"{tile_trl} proxy not set up.")
+                return ResultCode.FAILED
+            while time.time() < last_time:
+                self.logger.debug(f"Waiting on {tile_trl} ARP table.")
+                if tile.GetArpTable() != '{"0": [], "1": []}':
+                    break
+                time.sleep(tick)
+            if tile.GetArpTable() == '{"0": [], "1": []}':
+                self.logger.error(f"Failed to populate ARP table of {tile_trl}")
+                return ResultCode.FAILED
+            self.logger.debug(f"Got ARP table for {tile_trl}")
+
+        return ResultCode.OK
 
     @check_communicating
     def _initialise_tile_parameters(

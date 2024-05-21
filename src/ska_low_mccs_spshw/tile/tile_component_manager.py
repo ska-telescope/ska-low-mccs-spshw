@@ -453,6 +453,24 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
+    @fpga_reference_time.setter
+    def fpga_reference_time(self: TileComponentManager, reference_time: str) -> None:
+        """
+        Set the reference time to be used in initalization.
+
+        Can be set only if the tile is not yet synchronised, no
+        effect otherwise.
+        :param reference_time: Reference time representing timestamp for frame 0
+        """
+        if self.tpm_driver.tpm_status == TpmStatus.SYNCHRONISED:
+            self.logger_warning("Cannot set reference_time in TpmStatus SYNCHRONISED")
+            return
+        if reference_time == "":
+            global_start_time = None
+        else:
+            global_start_time = self._tile_time.timestamp_from_utc_time(reference_time)
+        self.tpm_driver.global_start_time = global_start_time
+
     @property
     def fpga_frame_time(self: TileComponentManager) -> str:
         """
@@ -968,6 +986,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         task_callback: Optional[Callable] = None,
         *,
         start_time: Optional[str] = None,
+        global_start_time: Optional[str] = None,
         delay: int = 2,
     ) -> tuple[TaskStatus, str]:
         """
@@ -976,6 +995,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         :param task_callback: Update task state, defaults to None
         :param start_time: the acquisition start time
         :param delay: a delay to the acquisition start
+        :param global_start_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
@@ -985,12 +1005,22 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         else:
             start_frame = self._tile_time.timestamp_from_utc_time(start_time)
             if start_frame < 0:
-                self.logger.error("Invalid time")
+                self.logger.error("Invalid time for start_time")
+            delay = 0
+
+        if global_start_time is None:
+            global_start_frame = None
+        else:
+            global_start_frame = self._tile_time.timestamp_from_utc_time(
+                global_start_time
+            )
+            if global_start_frame < 0:
+                self.logger.error("Invalid time for global_start_time")
             delay = 0
 
         return self.submit_task(
             self._start_acquisition,
-            args=[start_frame, delay],
+            args=[start_frame, delay, global_start_frame],
             task_callback=task_callback,
         )
 
@@ -999,6 +1029,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self: TileComponentManager,
         start_time: Optional[int] = None,
         delay: Optional[int] = 2,
+        global_start_time: Optional[int] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1007,6 +1038,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
+        :param global_start_time: the start time assumed for starting the timestamp
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         :raises NotImplementedError: Command not implemented
@@ -1016,7 +1048,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             task_callback(status=TaskStatus.IN_PROGRESS)
         try:
             success = self._tpm_driver.start_acquisition(  # type: ignore[assignment]
-                start_time, delay
+                start_time, delay, global_start_time
             )
         except NotImplementedError:
             raise

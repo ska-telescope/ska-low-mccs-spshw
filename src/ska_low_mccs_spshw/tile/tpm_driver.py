@@ -123,6 +123,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._fpgas_time = [0, 0]
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
+        self._global_start_time: int | None = None
         self._phase_terminal_count = 0
         self._tile_health_structure["timing"]["pps"]["status"] = True
         self._clock_present = True
@@ -673,6 +674,7 @@ class TpmDriver(MccsBaseComponentManager):
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
                     active_40g_ports_setting="port1-only",
+                    global_start_time=self._global_start_time,
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -2235,7 +2237,10 @@ class TpmDriver(MccsBaseComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     def start_acquisition(
-        self: TpmDriver, start_time: Optional[int] = None, delay: Optional[int] = 2
+        self: TpmDriver,
+        start_time: Optional[int] = None,
+        delay: Optional[int] = 2,
+        global_start_time: Optional[int] = None,
     ) -> bool:
         """
         Start data acquisition.
@@ -2244,6 +2249,7 @@ class TpmDriver(MccsBaseComponentManager):
 
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
+        :param global_start_time: the start time assumed for starting the timestamp
 
         :returns: if data acquisition started correctly
         """
@@ -2251,6 +2257,11 @@ class TpmDriver(MccsBaseComponentManager):
         self.logger.debug(
             f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
         )
+        if global_start_time is None:
+            global_start_time = self._global_start_time
+        else:
+            self._global_start_time = global_start_time
+
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2258,7 +2269,11 @@ class TpmDriver(MccsBaseComponentManager):
                     self.tile.reset_eth_errors()
                     self.tile.check_arp_table()
                     # Start data acquisition on board
-                    self.tile.start_acquisition(start_time, delay)
+                    self.tile.start_acquisition(
+                        start_time,
+                        delay,
+                        global_start_time,
+                    )
                     started = True
                     self._fpga_reference_time = self.tile[
                         "fpga1.pps_manager.sync_time_val"
@@ -2416,6 +2431,27 @@ class TpmDriver(MccsBaseComponentManager):
         """
         # with self._hardware_lock:
         #    self.tile.post_synchronisation()
+
+    @property
+    def global_start_time(self: TpmDriver) -> int | None:
+        """
+        Return the Unix time used as global synchronization time.
+
+        :return: Unix time used as global synchronization time
+        """
+        return self._global_start_time
+
+    @global_start_time.setter
+    def global_start_time(self: TpmDriver, start_time: int | None) -> None:
+        """
+        Set the Unix time used as global synchronization time.
+
+        :param start_time: Reference time representing timestamp for frame 0
+        """
+        if start_time is None or start_time <= 0:
+            self._global_start_time = None
+        else:
+            self._global_start_time = start_time
 
     @property
     def test_generator_active(self: TpmDriver) -> bool:

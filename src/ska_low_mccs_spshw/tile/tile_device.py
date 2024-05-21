@@ -539,12 +539,21 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        # return json.dumps(self.component_manager.info)
-        some_info = self.component_manager._tpm_driver.tile.info
-        self.logger.info(f"property: {self.component_manager._tpm_driver.tile.info}")
-        self.logger.info(f"tile.info type: {type(some_info)}")
-        self.logger.info(f"tile.info: {some_info}")
-        return json.dumps(some_info)
+        return json.dumps(self.component_manager.info)
+        # some_info = self.component_manager._tpm_driver.tile.info
+        # self.logger.info(f"property: {self.component_manager._tpm_driver.tile.info}")
+        # self.logger.info(f"tile.info type: {type(some_info)}")
+        # self.logger.info(f"tile.info: {some_info}")
+        # return json.dumps(some_info)
+
+    @tile_info.write  # type: ignore[no-redef]
+    def tile_info(self: MccsTile, value: str) -> None:
+        """
+        Set the firmware version.
+
+        :param value: firmware version
+        """
+        self.component_manager.info = value
 
     @attribute(
         dtype="DevString",

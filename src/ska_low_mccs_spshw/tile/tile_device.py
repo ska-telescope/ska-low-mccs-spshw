@@ -497,9 +497,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             try:
                 self._attribute_state[attribute_name].value = attribute_value
                 self._attribute_state[attribute_name].timestamp = time.time()
-                self._attribute_state[
-                    attribute_name
-                ].quality = tango.AttrQuality.ATTR_VALID
+                self._attribute_state[attribute_name].quality = (
+                    tango.AttrQuality.ATTR_VALID
+                )
             except KeyError:
                 self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
@@ -540,9 +540,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: info available
         """
         # return json.dumps(self.component_manager.info)
-        self.logger.info("Trying to get board info from attr")
-        board_info = self.component_manager._tpm_driver.tile.tpm.get_board_info()
-        self.logger.info(board_info)
         return json.dumps(self.component_manager._tpm_driver.tile.info)
 
     @attribute(
@@ -1128,9 +1125,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         # Force a read if we have no cached value yet
         if self._attribute_state["ppsPresent"].value is None:
-            self._attribute_state[
-                "ppsPresent"
-            ].value = self.component_manager.pps_present
+            self._attribute_state["ppsPresent"].value = (
+                self.component_manager.pps_present
+            )
             self._attribute_state["ppsPresent"].timestamp = time.time()
             self._attribute_state["ppsPresent"].quality = tango.AttrQuality.ATTR_VALID
         if not self._attribute_state["ppsPresent"].value:

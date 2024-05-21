@@ -85,7 +85,7 @@ class InitialiseStation(TpmSelfCheckTest):
                     assert (
                         False
                     ), f"Didn't populate ARP table on {tile_proxy.dev_name()} in time."
-            self.test_logger.debug(f"APT table populated on {tile_proxy.dev_name()}")
+            self.test_logger.debug(f"ARP table populated on {tile_proxy.dev_name()}")
 
         self.test_logger.debug("ARP tables populated.")
         self.test_logger.debug("Sucessfully initialised station, synchronising.")

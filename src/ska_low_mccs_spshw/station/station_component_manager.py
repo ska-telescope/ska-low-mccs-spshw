@@ -1518,17 +1518,12 @@ class SpsStationComponentManager(
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            # src_ip1 = str(self._sdn_first_address + 2 * tile)
-            # src_ip2 = str(self._sdn_first_address + 2 * tile + 1)
             dst_ip1 = str(self._sdn_first_address + 2 * tile + 2)
             dst_ip2 = str(self._sdn_first_address + 2 * tile + 3)
-            # src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
             src_mac = self._base_mac_address + 2 * tile
-            # self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
-            # self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
 
             for core in range(num_cores):
                 # src_ip = src_ip_list[core]
@@ -1546,7 +1541,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 0,
-                            # "source_ip": src_ip,
                             "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
@@ -1572,7 +1566,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 2,
-                            # "source_ip": src_ip,
                             "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,

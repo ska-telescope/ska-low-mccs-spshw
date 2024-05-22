@@ -1887,7 +1887,7 @@ class SpsStationComponentManager(
         """
         return self._csp_spead_format
 
-    @csp_spead_format.write  # type: ignore[no-redef]
+    @csp_spead_format.setter  # type: ignore[no-redef]
     def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
         """
         Set CSP SPEAD format.

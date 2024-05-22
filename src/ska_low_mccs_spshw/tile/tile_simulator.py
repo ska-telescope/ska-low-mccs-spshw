@@ -775,6 +775,8 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param global_start_time: TPM will act as if it is
+            started at this time (seconds)
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -1120,6 +1122,7 @@ class TileSimulator:
         :param nof_antennas: Number of antennas in the station
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
+        :param new_spead_header_format: True for new (SKA) CBF SPEAD header format
 
         :return: a bool representing if command executed without error.
         """
@@ -1456,7 +1459,7 @@ class TileSimulator:
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :param tpm_start_time: TPM will act as if it is
+        :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
         if start_time is None:

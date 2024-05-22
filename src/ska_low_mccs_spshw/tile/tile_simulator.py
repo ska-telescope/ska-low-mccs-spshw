@@ -1110,6 +1110,7 @@ class TileSimulator:
         nof_antennas: int,
         ref_epoch: int = -1,
         start_time: int | None = 0,
+        new_spead_header_format: bool = False,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1344,7 +1345,7 @@ class TileSimulator:
         first_channel: int = 0,
         last_channel: int = 511,
         timestamp: int | None = None,
-        seconds: float = 0.2,
+        seconds: float = 0.4,
     ) -> None:
         """
         Send channelised data from the TPM.
@@ -1448,7 +1449,7 @@ class TileSimulator:
         self: TileSimulator,
         start_time: int | None = None,
         delay: int = 2,
-        tpm_start_time: int | None = None,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.

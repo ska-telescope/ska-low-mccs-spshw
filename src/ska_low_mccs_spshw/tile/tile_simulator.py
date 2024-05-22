@@ -728,6 +728,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Initialise tile.

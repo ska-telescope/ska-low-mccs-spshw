@@ -508,7 +508,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 continue
             try:
                 self.logger.info(
-                    f"Updating health attrribute {attribute_name} "
+                    f"Updating health attribute {attribute_name} "
                     f"value to {attribute_value}"
                 )
                 self._attribute_state[attribute_name].update(attribute_value)
@@ -540,19 +540,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         try:
             attr = self._multi_attr.get_attr_by_name(attr_name)
+            attr_value = self._attribute_state[attr_name].read()[0]
             if attr.is_max_alarm():
                 self.logger.warning(
-                    f"Attribute {attr_name} above threshold, Shutting down TPM."
+                    f"Attribute {attr_name} changed to {attr_value}, "
+                    "this is above maximum alarm, Shutting down TPM."
                 )
                 self.component_manager.off()
             if attr.is_min_alarm():
                 self.logger.warning(
-                    f"Attribute {attr_name} below threshold, Shutting down TPM."
+                    f"Attribute {attr_name} changed to {attr_value}, "
+                    "this is below minimum alarm, Shutting down TPM."
                 )
                 self.component_manager.off()
-        except Exception:  # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             self.logger.error(
-                "Unable to read shutdown attribute ALARM status, Shutting down TPM."
+                f"Unable to read shutdown attribute ALARM status : {repr(e)}, "
+                "Shutting down TPM."
             )
             self.component_manager.off()
 
@@ -567,17 +571,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Post a Archive and Change TANGO event.
 
         :param name: the name of the TANGO attribute to push
-        :param attr_value: a value to push, or,
-            a tuple containing the value, time, quality.
-        :param attr_time: An optional parameter specifying the
-            time the attribute was updated. Defaults to None.
-        :param attr_quality: An optional paramter specifying the
-            quality factor of the attribute. Defaults to None.
+        :param attr_value: The value of the attribute.
+        :param attr_time: A parameter specifying the
+            time the attribute was updated.
+        :param attr_quality: A paramter specifying the
+            quality factor of the attribute.
         """
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
+        # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
@@ -809,7 +813,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: a string describing the programming state of the tile
         """
-        return self._attribute_state["tileProgrammingState"].read()
+        return self._attribute_state["tileProgrammingState"].read()[0]
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:

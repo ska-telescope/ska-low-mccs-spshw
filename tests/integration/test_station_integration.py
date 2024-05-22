@@ -548,12 +548,8 @@ class TestStationTileIntegration:
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
         # Finally check `SpsStation` attribute value.
         desired_preadu_levels = np.array([24.0] * 32)
+        assert desired_preadu_levels.tolist() != initial_preadu_levels
         sps_station_device.preaduLevels = desired_preadu_levels
-
-        # Not equal because we need the MccsTile to change value.
-        assert not np.array_equal(
-            sps_station_device.preaduLevels, desired_preadu_levels
-        )
 
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
             desired_preadu_levels.tolist()

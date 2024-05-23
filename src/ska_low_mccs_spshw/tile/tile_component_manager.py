@@ -207,11 +207,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        print(f"\n{'New Poll':-^{40}}")
+        self.logger.debug(f"\n{'New Poll':-^{40}}\n")
         tpm_status: TpmStatus = TpmStatus(self.tpm_status)
         self._update_component_state(programming_state=tpm_status.pretty_name())
 
-        self.logger.info(f"Getting request for state ({tpm_status.name}) ...")
+        self.logger.debug(f"Getting request for state ({tpm_status.name}) ...")
         request_spec = self._request_provider.get_request(tpm_status)
 
         # If already a request simply return.
@@ -359,13 +359,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: responses to queries in this poll
         """
-        self.logger.info(f"Executing request {poll_request.name} ...")
+        self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
         self.command_task_callback = None
         if isinstance(poll_request, TileLRCRequest):
+            self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
             self.command_task_callback = poll_request.task_callback
             if self.command_task_callback:
-                self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
+                # self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
                 self.command_task_callback(status=TaskStatus.IN_PROGRESS)
         # Claim lock before we attempt a request.
         with self._hardware_lock:
@@ -428,6 +429,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             read.
         """
         if self.command_task_callback:
+            self.logger.error("LRC completed")
             self.command_task_callback(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "Command executed to completion."),
@@ -537,7 +539,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         unconnected = self._subrack_proxy is None
         if unconnected:
-            self.logger.debug("Starting subrack proxy creation")
+            self.logger.info("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
                 self._subrack_fqdn, self.logger, connect=False
             )
@@ -758,14 +760,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             #
             # extra steps required to have it working
             #
-            self.logger.debug("TileComponentManager: reset_and_initialise_beamformer")
+            self.logger.info("TileComponentManager: reset_and_initialise_beamformer")
             self.tile.initialise_beamformer(128, 8)
             self.tile.set_first_last_tile(False, False)
 
             # self.tile.post_synchronisation()
             self.tile.set_station_id(self._station_id, self._tile_id)
 
-            self.logger.debug("TileComponentManager: initialisation completed")
+            self.logger.info("TileComponentManager: initialisation completed")
 
     @abort_task_on_exception
     @check_communicating
@@ -813,7 +815,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param bitfile: can either be the design name returned or a path to a file
         """
-        self.logger.debug("Programming fpgas ...")
+        self.logger.info("Programming fpgas ...")
         self.tile.program_fpgas(bitfile)
         is_programmed = self.tile.is_programmed()
 
@@ -879,9 +881,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             delay = 0
 
         started = False
-        self.logger.debug(
-            f"Start acquisition: start time: {start_time}, delay: {delay}"
-        )
+        self.logger.info(f"Start acquisition: start time: {start_time}, delay: {delay}")
         try:
             # Check if ARP table is populated before starting
             self.tile.reset_eth_errors()
@@ -987,7 +987,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.tile.set_station_id(value, self._tile_id)
                     self._station_id = self.tile.get_station_id()
-                    self.logger.debug(
+                    self.logger.info(
                         f"setting station:{self._station_id}, tile:{self._tile_id}"
                     )
                     if self._station_id != value:
@@ -1034,7 +1034,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: firmware_version")
+        self.logger.info("TileComponentManager: firmware_version")
 
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -1061,7 +1061,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the firmware list
         """
-        self.logger.debug("TileComponentManager: firmware_available")
+        self.logger.info("TileComponentManager: firmware_available")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1164,7 +1164,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: the FPGAs clock time
         :raises ConnectionError: if communication with tile failed
         """
-        self.logger.debug("TileComponentManager: fpgas_time")
+        self.logger.info("TileComponentManager: fpgas_time")
 
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1245,7 +1245,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: the FPGA_1 current frame counter
         :raises ConnectionError: if communication with tile failed
         """
-        self.logger.debug("TileComponentManager: fpga_current_frame")
+        self.logger.info("TileComponentManager: fpga_current_frame")
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=8.4) as acquired:
             if acquired:
@@ -1274,7 +1274,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: current_tile_beamformer_frame")
+        self.logger.info("TileComponentManager: current_tile_beamformer_frame")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.current_tile_beamformer_frame()
@@ -1332,7 +1332,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.warning(
+        self.logger.debug(
             "Method 'beamformer_table' should be implemented in aavs-system tile"
         )
         if self.tile.tpm is None:
@@ -1385,7 +1385,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: set_lmc_integrated_download")
+        self.logger.info("TileComponentManager: set_lmc_integrated_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1418,7 +1418,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: Stop integrated data")
+        self.logger.info("TileComponentManager: Stop integrated data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1446,7 +1446,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: stop_data_transmission")
+        self.logger.info("TileComponentManager: stop_data_transmission")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1501,7 +1501,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :raises ValueError: error in time specification
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug(f"send_data_samples: {data_type}")
+        self.logger.info(f"send_data_samples: {data_type}")
         # Check if another operation is pending. Wait at most 0.2 seconds
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -1576,7 +1576,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: send_raw_data")
+        self.logger.info("TileComponentManager: send_raw_data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
@@ -1602,7 +1602,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: send_channelised_data")
+        self.logger.info("TileComponentManager: send_channelised_data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.send_channelised_data(
@@ -1638,7 +1638,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: send_channelised_data_continuous")
+        self.logger.info("TileComponentManager: send_channelised_data_continuous")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.send_channelised_data_continuous(
@@ -1676,7 +1676,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: send_channelised_data_narrowband")
+        self.logger.info("TileComponentManager: send_channelised_data_narrowband")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.send_channelised_data_narrowband(
@@ -1705,7 +1705,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: send_beam_data")
+        self.logger.info("TileComponentManager: send_beam_data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
@@ -1732,7 +1732,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: configure_integrated_beam_data")
+        self.logger.info("TileComponentManager: configure_integrated_beam_data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1768,7 +1768,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: configure_integrated_channel_data")
+        self.logger.info("TileComponentManager: configure_integrated_channel_data")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1790,7 +1790,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: Stop beamformer")
+        self.logger.info("TileComponentManager: Stop beamformer")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1885,7 +1885,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
                 raise ValueError("Time too early")
 
-        self.logger.debug("TileComponentManager: load_pointing_delay")
+        self.logger.info("TileComponentManager: load_pointing_delay")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1913,9 +1913,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param beam_index: the beam to which the pointing delay should
             be applied
         """
-        self.logger.debug("TileComponentManager: set_pointing_delay")
+        self.logger.info("TileComponentManager: set_pointing_delay")
         nof_items = len(delay_array)
-        self.logger.debug(f"Beam: {beam_index} delays: {delay_array}")
+        self.logger.info(f"Beam: {beam_index} delays: {delay_array}")
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
             delay_array = delay_array + [[0.0, 0.0]] * (16 - nof_items)
@@ -1953,7 +1953,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error("apply_calibration: time not enough in the future")
                 raise ValueError("Time too early")
 
-        self.logger.debug("TileComponentManager: switch_calibration_bank")
+        self.logger.info("TileComponentManager: switch_calibration_bank")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1981,7 +1981,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
         """
-        self.logger.debug("TileComponentManager: load_calibration_coefficients")
+        self.logger.info("TileComponentManager: load_calibration_coefficients")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2013,7 +2013,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.debug("TileComponentManager: initialise_beamformer")
+        self.logger.info("TileComponentManager: initialise_beamformer")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2060,7 +2060,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.debug("TileComponentManager: set_beamformer_regions")
+        self.logger.info("TileComponentManager: set_beamformer_regions")
         # TODO: Remove when interface with station beamformer allows multiple
         # subarrays, stations and apertures
         subarray_id = 0
@@ -2075,7 +2075,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         for region in regions:
             nof_blocks += region[1] // 8
         self._nof_blocks = nof_blocks
-        self.logger.debug(f"Setting beamformer table for {self._nof_blocks} blocks")
+        self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2179,7 +2179,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param rounding: Number of bits rounded in final 8 bit requantization to CSP
         """
-        self.logger.debug("TileComponentManager: set_csp_rounding")
+        self.logger.info("TileComponentManager: set_csp_rounding")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2233,7 +2233,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param delays: Static zenith delays, one per input channel
         """
-        self.logger.debug("TileComponentManager: set_static_delays")
+        self.logger.info("TileComponentManager: set_static_delays")
         delays_float = []
         for d in delays:
             delays_float.append(float(d))
@@ -2296,7 +2296,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             frequency channels. Same truncation is applied to the corresponding
             frequency channels in all inputs.
         """
-        self.logger.debug(
+        self.logger.info(
             f"TileComponentManager: set_channeliser_truncation: {array[0]}"
         )
         nb_freq = len(array)
@@ -2341,7 +2341,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param netmask_40g: netmask of the 40g subnet
         :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
         """
-        self.logger.debug("TileComponentManager: set_lmc_download")
+        self.logger.info("TileComponentManager: set_lmc_download")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2375,7 +2375,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: core configuration or list of core configurations
         """
-        self.logger.debug(
+        self.logger.info(
             f"get_40g_configuration: core:{core_id} entry:{arp_table_entry}"
         )
         self._forty_gb_core_list = []
@@ -2394,7 +2394,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 ]
         # convert in more readable format
         for core in self._forty_gb_core_list:
-            self.logger.debug(f"{core}")
+            self.logger.info(f"{core}")
             core["src_ip"] = int2ip(core["src_ip"])
             core["dst_ip"] = int2ip(core["dst_ip"])
         return self._forty_gb_core_list
@@ -2452,7 +2452,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
         """
-        self.logger.debug("TileComponentManager: configure_40g_core")
+        self.logger.info("TileComponentManager: configure_40g_core")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2581,7 +2581,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         current_address = int(address & 0xFFFFFFFC)
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                self.logger.debug(
+                self.logger.info(
                     "Reading address "
                     + str(current_address)
                     + "of type "
@@ -2687,7 +2687,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: arp_table")
+        self.logger.info("TileComponentManager: arp_table")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_arp_table()
@@ -2703,7 +2703,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: _pending_data_requests")
+        self.logger.info("TileComponentManager: _pending_data_requests")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.check_pending_data_requests()
@@ -2802,7 +2802,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TpmDriver: get adcs")
+        self.logger.info("TpmDriver: get adcs")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_health_status()["adcs"]
@@ -2818,7 +2818,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TpmDriver: get alarms")
+        self.logger.info("TpmDriver: get alarms")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_health_status()["alarms"]
@@ -2890,7 +2890,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
                 raise ValueError("Time too early")
 
-        self.logger.debug(
+        self.logger.info(
             "Test generator: set tone 0: "
             + str(frequency0)
             + " Hz"
@@ -2906,11 +2906,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     load_frame = self.tile.get_fpga_timestamp() + 180
                 else:
                     raise TimeoutError("Failed to acquire lock")
-            self.logger.debug(
-                f"tile generator uses asyncrhonous timestamp {load_frame}"
-            )
+            self.logger.info(f"tile generator uses asyncrhonous timestamp {load_frame}")
         else:
-            self.logger.debug(f"Test generator load time: {load_frame}")
+            self.logger.info(f"Test generator load time: {load_frame}")
 
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2936,7 +2934,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-        self.logger.debug(f"Time after programming: {end_time}")
+        self.logger.info(f"Time after programming: {end_time}")
         if end_time > load_frame:
             self.logger.warning("Test generator failed to program before start time")
 
@@ -2952,7 +2950,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("Test generator: set inputs " + hex(inputs))
+        self.logger.info("Test generator: set inputs " + hex(inputs))
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 self.tile.test_generator_input_select(inputs)

@@ -98,28 +98,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # "attribute-defined-outside-init" etc. We still need to make sure that
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
-        self._preadu_levels: Optional[list[float]] = None
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: TileHealthModel
-        self._tile_programming_state: str
-        self._adc_rms: list[float]
-        self._pps_present: Optional[bool]
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
-        self._max_workers: int = 1
-        self._pll_locked: Optional[bool] = None
-        self._beamformer_table: Optional[list[list[int]]] = None
-        self._static_delays: Optional[list[int]] = None
-        self._pps_delay_correction: Optional[int] = None
-        self._phase_terminal_count: Optional[int] = None
-        self._adc_rms: Optional[list[float]] = None
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
-        self._tile_programming_state = TpmStatus.UNKNOWN.pretty_name()
-        self._adc_rms = [0.0] * 32
-        self._max_workers = 1
-        self._pps_present = None
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
@@ -462,8 +447,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             else:
                 try:
                     self.logger.info(f"Update attribute {attribute_name}")
-                    if attribute_name == "programming_state":
-                        attribute_value = cast(TpmStatus, attribute_value).pretty_name()
                     tango_name = self.attr_map[attribute_name]
                     self._attribute_state[tango_name].update(attribute_value)
                 except KeyError as e:
@@ -590,6 +573,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        # https://gitlab.com/tango-controls/pytango/-/issues/615
+        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
@@ -598,8 +583,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # set_value must be called after push_change_event.
         # it seems that fire_change_event will consume the
         # value set meaning a check_alarm has a nullptr.
-        attr = self._multi_attr.get_attr_by_name(name)
-        attr.set_value(attr_value)
+        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
         try:
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
@@ -1116,7 +1100,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        return self._attribute_state["adcPower"].read()
+        return self._attribute_state["adcPower"].read()[0]
 
     @attribute(dtype="DevLong")
     def currentTileBeamformerFrame(self: MccsTile) -> int:
@@ -1167,7 +1151,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: phase terminal count
         """
-        return self._phase_terminal_count
+        return self._attribute_state["phaseTerminalCount"].read()[0]
 
     @phaseTerminalCount.write  # type: ignore[no-redef]
     def phaseTerminalCount(self: MccsTile, value: int) -> None:
@@ -1274,7 +1258,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: PLL lock state
         """
-        return self._pll_locked
+        return self._attribute_state["pllLocked"].read()[0]
 
     @attribute(
         dtype=("DevLong",),
@@ -1319,10 +1303,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["staticTimeDelays"].read()[0] is None:
-            delays = self.component_manager.static_delays
-            self._attribute_state["staticTimeDelays"].update(delays, post=False)
-        return self._attribute_state["staticTimeDelays"].read()
+        return self._attribute_state["staticTimeDelays"].read()[0]
 
     @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
@@ -1349,7 +1330,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return self._attribute_state["cspRounding"].read()
+        return self._attribute_state["cspRounding"].read()[0]
 
     @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
@@ -1371,10 +1352,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        if self._attribute_state["preaduLevels"].read()[0] is None:
-            temp = self.component_manager.preadu_levels
-            self._attribute_state["preaduLevels"].update(temp, post=False)
-        return self._attribute_state["preaduLevels"].read()
+        return self._attribute_state["preaduLevels"].read()[0]
 
     @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
@@ -1403,7 +1381,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: list of up to 7*48 values
         """
-        table = self._beamformer_table
+        table = self._attribute_state["beamformerTable"].read()[0]
         if not table:
             return None
         return list(itertools.chain.from_iterable(table))
@@ -1606,7 +1584,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         static_delays = config.get("fixed_delays")
         if static_delays:
-            self.component_manager.static_delays = static_delays
+            self.component_manager.set_static_delays(static_delays)
 
         self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
 

@@ -377,11 +377,6 @@ class TestMccsTileTpmDriver:
         )
         change_event_callbacks["tile_command_status"].assert_change_event(())
 
-        tile_device.subscribe_event(
-            "tileProgrammingState",
-            tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["tile_programming_state"],
-        )
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=2, consume_nonmatches=True
         )
@@ -397,9 +392,11 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "NotProgrammed", lookahead=2, consume_nonmatches=True
         )
-
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=2, consume_nonmatches=True
+            "Programmed"
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised"
         )
         # check that the fpga time is moving.
         initial_time = tile_device.fpgasUnixTime[0]
@@ -451,8 +448,6 @@ class TestMccsTileTpmDriver:
             daq_device,
             change_event_callbacks,
         )
-        # TODO: Why this sleep?
-        time.sleep(0.1)
         assert tile_device.tileprogrammingstate == "Initialised"
         delay_time = 2  # seconds
         start_time = datetime.datetime.strftime(
@@ -965,6 +960,7 @@ class TestMccsTileTpmDriver:
     def test_self_shutdown(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
@@ -982,6 +978,8 @@ class TestMccsTileTpmDriver:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
@@ -993,11 +991,11 @@ class TestMccsTileTpmDriver:
         """
         self.setup_devices(
             tile_device,
+            tile_simulator,
             subrack_device,
             daq_device,
             change_event_callbacks,
         )
-        tile_device.UpdateAttributes()
 
         sub_id = tile_device.subscribe_event(
             attribute,
@@ -1024,7 +1022,6 @@ class TestMccsTileTpmDriver:
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
         # sleep to allow a poll
-        tile_device.UpdateAttributes()
 
         change_event_callbacks["generic_health_attribute"].assert_change_event(
             alarm_value
@@ -1070,6 +1067,7 @@ class TestMccsTileTpmDriver:
     def test_setting_shutdown_temperatures(
         self: TestMccsTileTpmDriver,
         tile_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
         subrack_device: tango.DeviceProxy,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
@@ -1087,6 +1085,8 @@ class TestMccsTileTpmDriver:
         :param tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
         :param subrack_device: the subrack Tango device under test.
         :param daq_device: the Daq Tango device under test.
         :param change_event_callbacks: dictionary of Tango change event
@@ -1098,11 +1098,11 @@ class TestMccsTileTpmDriver:
         """
         self.setup_devices(
             tile_device,
+            tile_simulator,
             subrack_device,
             daq_device,
             change_event_callbacks,
         )
-        tile_device.UpdateAttributes()
 
         sub_id = tile_device.subscribe_event(
             attribute,
@@ -1141,8 +1141,6 @@ class TestMccsTileTpmDriver:
             json.dumps({attribute: less_than_initial_value + 2})
         )
 
-        # sleep to allow a poll
-        tile_device.UpdateAttributes()
         # Confirm that the subrack reports the TPM is OFF.
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.OFF

@@ -729,7 +729,12 @@ class TestStationTileIntegration:
         )
 
         channeliser_rounding_to_set = np.array([5] * 512)
-        sps_station_device.SetChanneliserRounding(channeliser_rounding_to_set)
+        execute_lrc_to_completion(
+            change_event_callbacks,
+            sps_station_device,
+            "SetChanneliserRounding",
+            channeliser_rounding_to_set,
+        )
         zero_results = np.zeros((15, 512))
 
         # This will cause the Tile to push a change event.

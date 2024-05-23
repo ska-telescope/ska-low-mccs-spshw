@@ -621,7 +621,6 @@ class TestMccsTile:
                 TileSimulator.CHANNELISER_TRUNCATION,
                 [2] * 512,
             ),
-            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
         ],
     )
     def test_component_attribute(  # pylint: disable=too-many-arguments
@@ -714,6 +713,7 @@ class TestMccsTile:
             ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
             ("staticTimeDelays", TileSimulator.STATIC_DELAYS, [12.5] * 32),
             ("pllLocked", True, None),
+            ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
         ],
     )
     def test_component_cached_attribute(

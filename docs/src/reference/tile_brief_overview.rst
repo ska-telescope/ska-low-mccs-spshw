@@ -13,8 +13,6 @@ The MccsTile contructs a TileComponentManager using information from this config
 This configuration includes a simulation_mode flag. When simulation_mode is TRUE a TileSimulator 
 will be constructed and used as the backend, when False a pyaavs.Tile object will be created to 
 interface with the hardware as a backend.
-The Tile object is actually a factory, which returns either a Tile12 or
-a Tile16 object, depending on the Tango property *TpmVersion*. 
 
 Tile brief architecture
 =======================
@@ -40,7 +38,6 @@ Tile Polling Overview
 =====================
 The TileRequestProvider will determine the next item to poll on hardware.
 given a 'TpmStatus' it will return a requests to execute on a poll.
-see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/tile_poll_management.html
-Any command will take priority over passive polling. To see the attributes Polled for each 
-TpmStatus see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/api/tile/tile_poll_management.html#ska_low_mccs_spshw.tile.tile_poll_management.initialised_tpm_read_request_iterator
+
+Commands will take priority over passive monitoring requests.
     

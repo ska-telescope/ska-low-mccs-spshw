@@ -1030,29 +1030,41 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        message: str = ""
         if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        results = [proxy.off() for proxy in self._subrack_proxies.values()]
-        # Never mind tiles, turning off subracks suffices
-        # TODO: Here we need to monitor Tiles. This will eventually
-        # use the mechanism described in MCCS-945, but until that is implemented
-        # we might instead just poll these devices' longRunngCommandAttribute.
-        # For the moment, however, we just submit the subservient devices' commands
-        # for execution and forget about them.
-        if all(
-            result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
-            for (result, _) in results
-        ):
-            task_status = TaskStatus.COMPLETED
-            result_code = ResultCode.OK
-            message = "Off Command Completed"
-        else:
-            task_status = TaskStatus.FAILED
-            result_code = ResultCode.FAILED
-            message = "Off Command Failed"
-        if task_callback:
-            task_callback(status=task_status, result=(result_code, message))
+            task_callback(
+                status=TaskStatus.REJECTED,
+                result=(
+                    ResultCode.REJECTED,
+                    "MCCS has no control over subrack PDUs. "
+                    "Unable to drive to the OFF state."
+                    "Try Standby to turn off all TPMs.",
+                ),
+            )
+        # The following is commented out because
+        # MCCS has no control over subrack PDUs, meaning
+        # the lowest drivable state for spsStation is STANDBY.
+        # There is already a method Standby() that does this.
+        # message: str = ""
+        # if task_callback:
+        #     task_callback(status=TaskStatus.IN_PROGRESS)
+        # results = [proxy.off() for proxy in self._subrack_proxies.values()]
+        # # Never mind tiles, turning off subracks suffices
+        # # TODO: Here we need to monitor Tiles. This will eventually
+        # # use the mechanism described in MCCS-945, but until that is implemented
+        # # we might instead just poll these devices' longRunngCommandAttribute.
+        # # For the moment, however, we just submit the subservient devices' commands
+        # # for execution and forget about them.
+        # if all(
+        #     result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
+        #     for (result, _) in results
+        # ):
+        #     task_status = TaskStatus.COMPLETED
+        #     result_code = ResultCode.OK
+        #     message = "Off Command Completed"
+        # else:
+        #     task_status = TaskStatus.FAILED
+        #     result_code = ResultCode.FAILED
+        #     message = "Off Command Failed"
 
     @check_communicating
     def standby(

@@ -12,8 +12,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "69204210354ce8b9f0ab510a174f1c504146d8d7"
-resolved_reference = "69204210354ce8b9f0ab510a174f1c504146d8d7"
+reference = "4a679b2deade9fe5351d228c83cee6ee7af41fb6"
+resolved_reference = "4a679b2deade9fe5351d228c83cee6ee7af41fb6"
 subdirectory = "python"
 
 [[package]]
@@ -2112,8 +2112,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
-resolved_reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
+reference = "eeeca4c2b7823c456acfe8b51c05eced4a50b4bb"
+resolved_reference = "eeeca4c2b7823c456acfe8b51c05eced4a50b4bb"
 
 [[package]]
 name = "pyflakes"
@@ -3979,4 +3979,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "64c5fc417c4697dce0a267b1b3147498728488a60701ea270af1bd4a97769f15"
+content-hash = "7389f4bf8b9213e868845a3be9cf109ccbeac48495d4d005d6f421f7d08ddbc3"

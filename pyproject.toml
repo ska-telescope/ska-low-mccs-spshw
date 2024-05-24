@@ -16,8 +16,8 @@ url = 'https://pypi.org/simple'
 
 [tool.poetry.dependencies]
 python = "~3.10"  
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", branch="sp-3800-spead-header-icd-final", rev = "69204210354ce8b9f0ab510a174f1c504146d8d7", subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", branch="sp-3800-spead-header-icd-final", rev = "4a679b2deade9fe5351d228c83cee6ee7af41fb6", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", branch="sp-3800-spead-header-icd-final", rev = "eeeca4c2b7823c456acfe8b51c05eced4a50b4bb" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "9.4.2"

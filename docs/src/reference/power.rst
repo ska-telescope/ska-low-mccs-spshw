@@ -16,7 +16,9 @@ SKA hardware may support up to three power modes:
    however, where this is not supported. For example, an externally
    managed cluster can be turned off, but the MCCS interface to it might
    only allow for submission and monitoring of jobs. Thus it cannot be
-   turned off from the MCCS point of view.
+   turned off from the MCCS point of view. MCCS does not currently have control over 
+   the Subrack Power Distribution Unit (PDU). As a result the lowest drivable state 
+   for SpsStation is STANDBY (Subrack ON and Tiles OFF.)
 
 -  STANDBY: the hardware is in a low-power standby mode. Such a mode is
    important in two cases:

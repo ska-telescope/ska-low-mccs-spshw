@@ -977,6 +977,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_reference_time
 
+    @fpgaReferenceTime.write  # type: ignore[no-redef]
+    def fpgaReferenceTime(self: MccsTile, reference_time: str) -> None:
+        """
+        Set the global FPGA synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        """
+        self.component_manager.fpga_reference_time = reference_time
+
     @attribute(dtype="DevString")
     def fpgaFrameTime(self: MccsTile) -> str:
         """

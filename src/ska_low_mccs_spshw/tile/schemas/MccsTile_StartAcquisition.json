@@ -6,10 +6,15 @@
     "type": "object",
     "properties": {
         "start_time": {
-            "description": "",
+            "description": "ISO time for starting the ADC acquisition",
             "type": "string",
             "format": "time"
         },
+	"global_sync_time": {
+	    "description": "Reference time used for timestamp",
+            "type": "string",
+            "format": "time"
+	},
         "delay": {
             "description": "An acquisition start delay",
             "type": "integer"

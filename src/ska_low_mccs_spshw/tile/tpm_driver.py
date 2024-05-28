@@ -674,7 +674,6 @@ class TpmDriver(MccsBaseComponentManager):
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
                     active_40g_ports_setting="port1-only",
-                    global_start_time=self._global_start_time,
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -689,6 +688,10 @@ class TpmDriver(MccsBaseComponentManager):
             self.logger.debug("Lock released")
             self._set_tpm_status(TpmStatus.INITIALISED)
             self.logger.debug("TpmDriver: initialisation completed")
+
+            if self._global_start_time:
+                self.logger.debug("Global start time specifed, starting acquisition")
+                self.start_acquisition(delay=0)
         else:
             self._set_tpm_status(TpmStatus.UNPROGRAMMED)
             self.logger.error("TpmDriver: Cannot initialise board Failed to Program.")
@@ -1503,19 +1506,20 @@ class TpmDriver(MccsBaseComponentManager):
         :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
         """
         self._csp_spead_format = spead_format
+        if spead_format not in ["AAVS", "SKA"]:
+            self.logger.warning(
+                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
+            )
         if self._tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
             return
-        hw_spead_format = 0
-        if self._csp_spead_format == "SKA":
-            hw_spead_format = 1
-        if self.tile.tpm.has_register("fpga.beamf_ring.control.new_spead_format"):
+
+        hw_spead_format = spead_format == "SKA"
+
+        if self.tile.spead_ska_format_supported:
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
                 if acquired:
                     try:
-                        for fpga in ["fpga1", "fpga2"]:
-                            self.tile.tpm[
-                                f"{fpga}.beamf_ring.control.new_spead_format"
-                            ] = hw_spead_format
+                        self.tile.set_spead_format(hw_spead_format)
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2236,6 +2240,7 @@ class TpmDriver(MccsBaseComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
+    # pylint: disable=too-many-branches
     def start_acquisition(
         self: TpmDriver,
         start_time: Optional[int] = None,
@@ -2253,6 +2258,11 @@ class TpmDriver(MccsBaseComponentManager):
 
         :returns: if data acquisition started correctly
         """
+        if self._tpm_status == TpmStatus.SYNCHRONISED:
+            self.logger.warning(
+                "TPM already synchronized, start_acquisition command ignored"
+            )
+            return True
         started = False
         self.logger.debug(
             f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"

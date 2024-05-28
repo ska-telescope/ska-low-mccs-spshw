@@ -1001,26 +1001,28 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             identify the command
         """
         if start_time is None:
-            start_frame = None
+            start_timestamp = None
         else:
-            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
-            if start_frame < 0:
+            start_timestamp = self._tile_time.timestamp_from_utc_time(start_time)
+            if start_timestamp < 0:
                 self.logger.error("Invalid time for start_time")
+                start_timestamp = None
             delay = 0
 
         if global_start_time is None:
-            global_start_frame = None
+            global_start_timestamp = None
         else:
-            global_start_frame = self._tile_time.timestamp_from_utc_time(
+            global_start_timestamp = self._tile_time.timestamp_from_utc_time(
                 global_start_time
             )
-            if global_start_frame < 0:
+            if global_start_timestamp < 0:
                 self.logger.error("Invalid time for global_start_time")
+                global_start_timestamp = None
             delay = 0
 
         return self.submit_task(
             self._start_acquisition,
-            args=[start_frame, delay, global_start_frame],
+            args=[start_timestamp, delay, global_start_timestamp],
             task_callback=task_callback,
         )
 

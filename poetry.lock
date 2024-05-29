@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "master"
-resolved_reference = "391a82200959a6f3e8eecd4fe68dcee704026b12"
+reference = "c03cf53881f5a25b8629eaabbcd669b79dafd081"
+resolved_reference = "c03cf53881f5a25b8629eaabbcd669b79dafd081"
 subdirectory = "python"
 [[package]]
 name = "alabaster"
@@ -2628,14 +2628,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "requests"
-version = "2.32.2"
+version = "2.32.3"
 description = "Python HTTP for Humans."
 category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "requests-2.32.2-py3-none-any.whl", hash = "sha256:fc06670dd0ed212426dfeb94fc1b983d917c4f9847c863f313c9dfaaffb7c23c"},
-    {file = "requests-2.32.2.tar.gz", hash = "sha256:dd951ff5ecf3e3b3aa26b40703ba77495dab41da839ae72ef3c8e5d8e2433289"},
+    {file = "requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"},
+    {file = "requests-2.32.3.tar.gz", hash = "sha256:55365417734eb18255590a9ff9eb97e9e1da868d4ccd6402399eaf68af20a760"},
 ]
 
 [package.dependencies]
@@ -3100,19 +3100,19 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-tango-testing"
-version = "0.6.1"
+version = "0.6.2"
 description = "Test harness for testing SKA Tango devices"
 category = "main"
 optional = false
-python-versions = ">=3.8.1,<4.0.0"
+python-versions = ">=3.10,<4.0"
 files = [
-    {file = "ska_tango_testing-0.6.1-py3-none-any.whl", hash = "sha256:c8d636719d5aef6499e144b340f007dbee0944c83320db83c8fbcdb941486abe"},
-    {file = "ska_tango_testing-0.6.1.tar.gz", hash = "sha256:defbb84b6dc2bc6675828fd393f8521cc4cc768252ad5d7c786e5dfab2ff381f"},
+    {file = "ska_tango_testing-0.6.2-py3-none-any.whl", hash = "sha256:d8d41fccb774dbc82378a15938ba363e8d830f941af1faf1a0a152f4388ef217"},
+    {file = "ska_tango_testing-0.6.2.tar.gz", hash = "sha256:4b525430b7aaad16a8b0caba0600d64066a4535ef362ac71b55926cb6ca05315"},
 ]
 
 [package.dependencies]
-numpy = ">=1.19.0,<2.0.0"
-pytango = ">=9.3.3,<10.0.0"
+numpy = ">=1.23.2,<2.0.0"
+pytango = ">=9.4.2,<10.0.0"
 
 [package.source]
 type = "legacy"
@@ -4086,4 +4086,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"  
-content-hash = "350b7cb0a638b1e8a573fa30f5769b0eddb3bf5cf44d890b35336590f3d6a220"
+content-hash = "dd023e31f12914ca57499343ed88ff168ab838e13b344ea86e711a610b694adc"

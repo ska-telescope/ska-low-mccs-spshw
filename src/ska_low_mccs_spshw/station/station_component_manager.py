@@ -2619,13 +2619,6 @@ class SpsStationComponentManager(
         start_time = params.get("start_time", None)
         delay = params.get("delay", 0)
 
-        if start_time is None:
-            start_time = datetime.strftime(
-                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
-            )
-        else:
-            delay = 0
-
         return self.submit_task(
             self._start_acquisition,
             args=[start_time, delay],
@@ -2649,6 +2642,13 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         success = True
+
+        if start_time is None:
+            start_time = datetime.strftime(
+                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
+            )
+        else:
+            delay = 0
 
         parameter_list = {"start_time": start_time, "delay": delay}
         json_argument = json.dumps(parameter_list)

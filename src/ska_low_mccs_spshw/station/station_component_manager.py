@@ -679,12 +679,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delays"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delays"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delays"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delays"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1446,6 +1446,7 @@ class SpsStationComponentManager(
                 self.logger.error(f"Failed to populate ARP table of {tile_trl}")
                 return ResultCode.FAILED
             self.logger.debug(f"Got ARP table for {tile_trl}")
+        time.sleep(tick)
         return ResultCode.OK
 
     @check_communicating

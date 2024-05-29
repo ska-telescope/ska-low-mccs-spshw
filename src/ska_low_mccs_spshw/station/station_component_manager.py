@@ -1446,7 +1446,6 @@ class SpsStationComponentManager(
                 self.logger.error(f"Failed to populate ARP table of {tile_trl}")
                 return ResultCode.FAILED
             self.logger.debug(f"Got ARP table for {tile_trl}")
-        time.sleep(tick)
         return ResultCode.OK
 
     @check_communicating

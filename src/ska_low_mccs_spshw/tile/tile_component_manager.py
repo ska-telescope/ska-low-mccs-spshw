@@ -473,11 +473,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: source IP for FPGA1.
         """
-        return self._tpm_driver._src_ip_40g_fpga1
+        return self._tpm_driver.src_ip_40g_fpga1
 
     @src_ip_40g_fpga1.setter
     def src_ip_40g_fpga1(self: TileComponentManager, argin: str) -> None:
-        self._tpm_driver._src_ip_40g_fpga1 = argin
+        self._tpm_driver.src_ip_40g_fpga1 = argin
 
     @property
     def src_ip_40g_fpga2(self: TileComponentManager) -> str | None:
@@ -486,11 +486,11 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
 
         :return: source IP for FPGA2.
         """
-        return self._tpm_driver._src_ip_40g_fpga2
+        return self._tpm_driver.src_ip_40g_fpga2
 
     @src_ip_40g_fpga2.setter
     def src_ip_40g_fpga2(self: TileComponentManager, argin: str) -> None:
-        self._tpm_driver._src_ip_40g_fpga2 = argin
+        self._tpm_driver.src_ip_40g_fpga2 = argin
 
     #
     # Timed commands. Convert time to frame number

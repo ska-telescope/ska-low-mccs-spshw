@@ -15,12 +15,11 @@ from typing import Any
 from ska_control_model import PowerState, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 
+from ...tile.time_util import TileTime
 from ...tile.tpm_status import TpmStatus
 from .base_tpm_test import TpmSelfCheckTest
 
 __all__ = ["InitialiseStation"]
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 def _wait_for_attribute(
@@ -84,7 +83,7 @@ class InitialiseStation(TpmSelfCheckTest):
         self.test_logger.debug("Sucessfully initialised station, synchronising.")
 
         start_time = datetime.strftime(
-            datetime.fromtimestamp(time.time(), tz=timezone.utc), RFC_FORMAT
+            datetime.fromtimestamp(time.time(), tz=timezone.utc), TileTime.RFC_FORMAT
         )
 
         self._task_status = TaskStatus.NOT_FOUND
@@ -136,10 +135,14 @@ class InitialiseStation(TpmSelfCheckTest):
         """
         Check test requirements.
 
-        :returns: true if we have at least one TPM.
+        * Station is in state tango.DevState.ON
+        * Station has at least one Tile.
+
+        :returns: true if all checks pass.
+
         """
         if self.component_manager.component_state["power"] != PowerState.ON:
-            return (False, "Station must be on to test initialisation.")
+            return (False, "Station must be ON to test initialisation.")
 
         if len(self.tile_trls) < 1:
             return (False, "This test requires at least one TPM.")

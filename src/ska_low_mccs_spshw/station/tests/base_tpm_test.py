@@ -131,7 +131,7 @@ class TpmSelfCheckTest(abc.ABC):
         """
         Check requirements for the test before running.
 
-        :return: false if not all our proxies are in ENGINEERING mode.
+        :return: true if all our proxies are in ENGINEERING mode.
         """
         if all(proxy.adminmode == AdminMode.ENGINEERING for proxy in self.proxies):
             return (True, "All proxies in ENGINEERING adminmode, continuing test.")

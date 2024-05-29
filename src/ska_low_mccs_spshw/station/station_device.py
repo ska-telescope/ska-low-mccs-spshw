@@ -979,6 +979,8 @@ class SpsStation(SKAObsDevice):
         """
         Start the acquisition synchronously for all tiles, checks for synchronisation.
 
+        If a start time isn't given, it will default to 'now'.
+
         :param argin: Start acquisition time in ISO9601 format
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
@@ -1082,10 +1084,7 @@ class SpsStation(SKAObsDevice):
                 f"{self.component_manager.test_list}"
             )
 
-        docs = self.component_manager._self_check_manager._tpm_tests[test_name].__doc__
-        if docs is None:
-            return f"{test_name} appears to have no description."
-        return docs
+        return self.component_manager.describe_test(test_name)
 
     # -------------
     # Fast Commands

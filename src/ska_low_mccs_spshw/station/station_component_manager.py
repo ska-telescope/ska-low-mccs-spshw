@@ -508,7 +508,7 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
-        self._self_check_manager = SpsStationSelfCheckManager(
+        self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,
             logger=self.logger,
             tile_trls=list(self._tile_proxies.keys()),
@@ -1716,7 +1716,7 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        test_results = self._self_check_manager.run_tests()
+        test_results = self.self_check_manager.run_tests()
 
         if all(
             test_result in [TestResult.PASSED, TestResult.NOT_RUN]
@@ -1770,7 +1770,7 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        test_results = self._self_check_manager.run_test(
+        test_results = self.self_check_manager.run_test(
             test_name=test_name, count=count
         )
 
@@ -2194,7 +2194,7 @@ class SpsStationComponentManager(
 
         :return: logs of most recently run self-check test set.
         """
-        return self._self_check_manager._test_logs
+        return self.self_check_manager._test_logs
 
     @property
     def test_report(self: SpsStationComponentManager) -> str:
@@ -2203,7 +2203,7 @@ class SpsStationComponentManager(
 
         :return: report of most recently run self-check test set.
         """
-        return self._self_check_manager._test_report
+        return self.self_check_manager._test_report
 
     @property
     def test_list(self: SpsStationComponentManager) -> list[str]:
@@ -2212,7 +2212,7 @@ class SpsStationComponentManager(
 
         :return: list of self-check tests available.
         """
-        return self._self_check_manager._tpm_test_names
+        return self.self_check_manager._tpm_test_names
 
     # ------------
     # commands
@@ -2800,3 +2800,16 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "ADC equalisation complete."),
             )
+
+    def describe_test(self, test_name: str) -> str:
+        """
+        Return the doc string of a given self-check test.
+
+        :param test_name: name of the test.
+
+        :returns: the doc string of a given self-check test.
+        """
+        docs = self.self_check_manager._tpm_tests[test_name].__doc__
+        if docs is None:
+            return f"{test_name} appears to have no description."
+        return docs

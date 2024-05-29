@@ -62,6 +62,8 @@ class InitialiseStation(TpmSelfCheckTest):
     def test(self: InitialiseStation) -> None:
         """Test we can initialise tiles correctly."""
         self.test_logger.debug("Starting test, initialising station.")
+
+        self._task_status = TaskStatus.NOT_FOUND
         self.component_manager._initialise(task_callback=self._task_callback)
 
         assert self._task_status == TaskStatus.COMPLETED
@@ -85,6 +87,7 @@ class InitialiseStation(TpmSelfCheckTest):
             datetime.fromtimestamp(time.time(), tz=timezone.utc), RFC_FORMAT
         )
 
+        self._task_status = TaskStatus.NOT_FOUND
         self.component_manager._start_acquisition(
             start_time=start_time, task_callback=self._task_callback
         )
@@ -141,6 +144,4 @@ class InitialiseStation(TpmSelfCheckTest):
         if len(self.tile_trls) < 1:
             return (False, "This test requires at least one TPM.")
 
-        if self.daq_proxy is None:
-            return (False, "This test requires a MccsDAQ instance.")
         return super().check_requirements()

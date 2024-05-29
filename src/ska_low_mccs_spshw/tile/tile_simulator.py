@@ -802,7 +802,7 @@ class TileSimulator:
 
     @connected
     def find_register(
-        self, string: str = "", display: bool = False, info: bool = False
+        self: TileSimulator, string: str = "", display: bool = False, info: bool = False
     ) -> list[None | RegisterInfo]:
         """
         Return register information from a provided search string.
@@ -819,7 +819,9 @@ class TileSimulator:
         return self.tpm.find_register(string, display, info)
 
     @connected
-    def check_pll_locked(self) -> bool:
+    def check_pll_locked(
+        self: TileSimulator,
+    ) -> bool:
         """
         Check in hardware if PLL is locked.
 
@@ -830,7 +832,7 @@ class TileSimulator:
         return pll_status in [0xF2, 0xE7]
 
     @connected
-    def get_beamformer_table(self, fpga_id: int = 0) -> list[list[int]]:
+    def get_beamformer_table(self: TileSimulator, fpga_id: int = 0) -> list[list[int]]:
         """
         Return the beamformer table.
 
@@ -857,7 +859,7 @@ class TileSimulator:
 
     @connected
     def define_channel_table(
-        self, region_array: list[list[int]], fpga_id: None | int = None
+        self: TileSimulator, region_array: list[list[int]], fpga_id: None | int = None
     ) -> bool:
         """
         Set frequency regions.
@@ -907,7 +909,9 @@ class TileSimulator:
         return True
 
     @connected
-    def get_tpm_temperature_thresholds(self) -> dict[str, tuple[int, int]]:
+    def get_tpm_temperature_thresholds(
+        self: TileSimulator,
+    ) -> dict[str, tuple[int, int]]:
         """
         Return a dictionary of temperature thresholds.
 
@@ -1235,7 +1239,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def define_spead_header(
-        self,
+        self: TileSimulator,
         station_id: int,
         subarray_id: int,
         nof_antennas: int,
@@ -1795,7 +1799,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_preadu_levels(self, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileSimulator, levels: list[float]) -> None:
         """
         Set preADU attenuation levels.
 
@@ -1809,7 +1813,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def get_preadu_levels(self) -> list[float]:
+    def get_preadu_levels(self: TileSimulator) -> list[float]:
         """
         Get preADU attenuation levels.
 
@@ -1825,7 +1829,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self: TileSimulator, name: str) -> object:
         """
         Get the attribute.
 

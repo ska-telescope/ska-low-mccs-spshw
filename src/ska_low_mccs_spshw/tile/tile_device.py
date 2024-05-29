@@ -839,6 +839,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
+    def firmwareTemperatureThresholds(
+        self: MccsTile,
+    ) -> str | dict[str, tuple[int, int]]:
+        """
+        Return the temperature thresholds set in firmware.
+
+        :return: A serialised dictionary containing the thresholds.
+            or a null string.
+        """
+        return json.dumps(self.component_manager.get_tpm_temperature_thresholds())
+
+    @attribute(dtype="DevString")
     def firmwareName(self: MccsTile) -> str:
         """
         Return the firmware name.

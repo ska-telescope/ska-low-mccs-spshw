@@ -9,7 +9,7 @@ platform:
     domain: stfc-ral-k8s.skao.int
     minikube: false
     services:
-      jupyterhub: false
+      jupyterhub: true
   array:
     name: stfc-ral
     stations:

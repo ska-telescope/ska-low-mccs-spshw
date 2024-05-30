@@ -386,6 +386,7 @@ class SpsStationComponentManager(
             for fqdn in list(subrack_fqdns) + list(tile_fqdns)
         }
 
+        self._last_pointing_loaded: Optional[dict] = None
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}
@@ -660,6 +661,23 @@ class SpsStationComponentManager(
             )
 
         self.logger.debug("Successfully loaded antenna mapping.")
+
+    def update_antenna_mapping(
+        self: SpsStationComponentManager, antenna_mapping: list[dict[str, int]]
+    ) -> None:
+        """
+        Manually update mappings.
+
+        WARNING: This will cause a drift from TelModel.
+
+        :param antenna_mapping: dictionary containing mappings to load.
+        """
+        for antenna, antenna_map in enumerate(antenna_mapping):
+            self._antenna_mapping[int(antenna) + 1] = {
+                "tpm": int(antenna_map["tpm"]),
+                "tpm_x_channel": antenna_map["tpm_x_channel"],
+                "tpm_y_channel": antenna_map["tpm_y_channel"],
+            }
 
     def _update_static_delays(
         self: SpsStationComponentManager,
@@ -2401,7 +2419,7 @@ class SpsStationComponentManager(
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
-
+        self._last_pointing_loaded = tile_delays
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 

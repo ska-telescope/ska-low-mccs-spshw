@@ -11,11 +11,13 @@
 
 from __future__ import annotations
 
+import importlib.resources
 import itertools
 import json
+import logging
 import sys
 from functools import wraps
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import tango
@@ -28,7 +30,7 @@ from ska_control_model import (
     ResultCode,
 )
 from ska_tango_base import SKABaseDevice
-from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
+from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
@@ -188,6 +190,11 @@ class SpsStation(SKAObsDevice):
     def init_command_objects(self: SpsStation) -> None:
         """Set up the handler objects for Commands."""
         super().init_command_objects()
+
+        self.register_command_object(
+            "UpdateAntennaMapping",
+            self.UpdateAntennaMappingCommand(self.component_manager, self.logger),
+        )
 
         #
         # Long running commands
@@ -922,6 +929,26 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.test_list
 
+    @attribute(dtype="DevString")
+    def lastPointingLoaded(self: SpsStation) -> Any:
+        """
+        Return last pointing delays loaded to the station.
+
+        :return: last pointing delays loaded to the station.
+        """
+        return json.dumps(self.component_manager._last_pointing_loaded)
+
+    @attribute(dtype="DevString")
+    def antennaMapping(self: SpsStation) -> Any:
+        """
+        Return current antenna mapping.
+
+        Of the form : {antenna_no : tpm_no, x_channel, y_channel}
+
+        :return: current antenna mapping.
+        """
+        return json.dumps(self.component_manager._antenna_mapping)
+
     # -------------
     # Slow Commands
     # -------------
@@ -1061,6 +1088,76 @@ class SpsStation(SKAObsDevice):
             )
 
         handler = self.get_command_object("RunTest")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class UpdateAntennaMappingCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the UpdateAntennaMapping() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_UpdateAntennaMapping.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station.schemas",
+                "SpsStation_UpdateAntennaMapping.json",
+            )
+        )
+
+        def __init__(
+            self: SpsStation.UpdateAntennaMappingCommand,
+            component_manager: SpsStationComponentManager,
+            logger: Optional[logging.Logger] = None,
+        ) -> None:
+            """
+            Initialise a new UpdateAntennaMapping instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("UpdateAntennaMapping", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        def do(
+            self: SpsStation.UpdateAntennaMappingCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.SpsStation.UpdateAntennaMapping` command functionality.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.update_antenna_mapping(kwargs["antennaMapping"])
+            return (ResultCode.OK, "UpdateAntennaMapping completed OK")
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def UpdateAntennaMapping(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+        """
+        Manually update the antenna mapping.
+
+        :param argin: the configuration for the antenna mapping in
+            stringified json format
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("UpdateAntennaMapping")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

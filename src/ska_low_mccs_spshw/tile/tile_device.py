@@ -146,6 +146,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "beamformer_running": "isBeamformerRunning",
             "is_programmed": "isProgrammed",
             "beamformer_table": "beamformerTable",
+            "io": "io",
+            "alarms": "alarms",
+            "dsp": "dsp",
+            "voltages": "voltages",
+            "temperatures": "temperatures",
+            "adcs": "adcs",
+            "timing": "timing",
+            "currents": "currents",
+            "voltageMon": "voltageMon",
+            "tile_id": "logicalTileId",
+            "station_id": "stationId",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -160,11 +171,20 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # Specialised attributes.
         # - ppsPresent: tango does not have good ALARMs for Boolean
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
+        # - stationId and logicalTileId given an initial value from configuration.
         self._attribute_state.update(
             {
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
+                ),
+                "stationId": AttributeManager(
+                    functools.partial(self.post_change_event, "stationId"),
+                    initial_value=self.StationID,
+                ),
+                "logicalTileId": AttributeManager(
+                    functools.partial(self.post_change_event, "logicalTileId"),
+                    initial_value=self.TileId,
                 ),
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
@@ -196,6 +216,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
             "boardTemperature": ["temperatures", "board"],
+            "io": ["io"],
+            "alarms": ["alarms"],
+            "dsp": ["dsp"],
+            "voltages": ["voltages"],
+            "temperatures": ["temperatures"],
+            "adcs": ["adcs"],
+            "timing": ["timing"],
+            "currents": ["currents"],
+            "voltageMon": ["voltages", "MON_5V0"],
         }
 
         for attr_name in self._attribute_state:
@@ -479,6 +508,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         for key in idx_list:
             try:
                 if isinstance(structure[key], dict):
+                    if len(idx_list) == 1:
+                        return structure[key]
                     idx_list.pop(0)
                     return self.unpack_monitoring_point(structure[key], idx_list)
                 return structure[key]
@@ -573,6 +604,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
+        if isinstance(attr_value, dict):
+            attr_value = json.dumps(attr_value)
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         self._multi_attr.get_attr_by_name(name).set_value(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
@@ -588,7 +621,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
         except tango.DevFailed:
-            self.logger.error("no alarm defined")
+            self.logger.debug("no alarm defined")
 
     # ----------
     # Attributes
@@ -643,7 +676,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: voltages available
         """
-        return json.dumps(self.tile_health_structure.get("voltages"))
+        return json.dumps(self._attribute_state["voltages"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -655,7 +688,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: temperatures available
         """
-        return json.dumps(self.tile_health_structure.get("temperatures"))
+        return json.dumps(self._attribute_state["temperatures"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -667,7 +700,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: currents available
         """
-        return json.dumps(self.tile_health_structure.get("currents"))
+        return json.dumps(self._attribute_state["currents"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -679,7 +712,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: timing signals status
         """
-        return json.dumps(self.tile_health_structure.get("timing"))
+        return json.dumps(self._attribute_state["timing"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -691,7 +724,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: I/O interfaces status
         """
-        return json.dumps(self.tile_health_structure.get("io"))
+        return json.dumps(self._attribute_state["io"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -703,7 +736,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the tile beamformer and station beamformer status
         """
-        return json.dumps(self.tile_health_structure.get("dsp"))
+        return json.dumps(self._attribute_state["dsp"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -715,7 +748,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the ADC status
         """
-        return json.dumps(self.component_manager.adcs)
+        return json.dumps(self._attribute_state["adcs"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -727,7 +760,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the TPM's alarm status
         """
-        return json.dumps(self.component_manager.alarms)
+        return json.dumps(self._attribute_state["alarms"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -829,7 +862,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the logical tile id
         """
-        return self.component_manager.tile_id
+        return self._attribute_state["logicalTileId"].read()[0]
 
     @logicalTileId.write  # type: ignore[no-redef]
     def logicalTileId(self: MccsTile, value: int) -> None:
@@ -858,7 +891,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the id of the station to which this tile is assigned
         """
-        station = self.component_manager.station_id
+        station = self._attribute_state["stationId"].read()[0]
         message = f"stationId: read value = {station}"
         self.logger.debug(message)
         return station
@@ -936,9 +969,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Internal supply of the TPM
         """
-        if not self.tile_health_structure:
-            return None
-        return self.tile_health_structure["voltages"]["MON_5V0"]
+        return self._attribute_state["voltageMon"].read()[0]
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:

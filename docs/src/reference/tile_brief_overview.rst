@@ -34,6 +34,26 @@ command to the TPM as soon as it is connectable.
 For more information about how the Tile On command fits into the power sequence 
 see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/reference/power.html
 
+Tile operation state
+====================
+See https://developer.skao.int/projects/ska-control-model/en/stable/op_state.html.
+
+Information specific to Tile is provided below:
+
+-  UNKNOWN: the control system is monitoring (or at least trying to monitor) the system under control, but is unable to determine its state.
+   this will occur when we cannot connect with the TPM and the MccsSubrack is reporting its ports power UNKNOWN.
+
+-  OFF: the control system is monitoring the system under control, which is powered off. This will occur when MccsSubrack says the port
+   is NO_SUPPLY or OFF, and we are NOT connected with the TPM.
+
+-  STANDBY: Not implemented in Tile.
+
+-  ON: The control system is monitoring the system under control, which is turned on.
+   This will occur when we are connected and communicating with the TPM.
+
+-  FAULT: The Tile will be in state FAULT under inconsistent state. Currently if we can connect with the TPM but the MccsSubrack is reporting 
+   a inconsistent state (i.e not ON), we are in FAULT state.
+
 Tile Polling Overview
 =====================
 The TileRequestProvider will determine the next item to poll on hardware.

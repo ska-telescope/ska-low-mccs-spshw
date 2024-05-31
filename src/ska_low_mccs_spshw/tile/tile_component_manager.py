@@ -118,6 +118,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
 
+        self.fault_state: Optional[bool] = None
+
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
@@ -401,7 +403,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
 
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power)
+        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
@@ -415,10 +417,50 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     "check the cpld communications"
                 )
             case BoardError():
-                # TODO: This could be a overheating of the FPGA??
-                self.logger.error("BoardError: check global status alarms")
+                self.logger.error(f"BoardError: {repr(exception)}")
             case _:
                 self.logger.error(f"Unexpected error found: {repr(exception)}")
+
+    def update_fault_state(
+        self: TileComponentManager,
+        poll_success: bool,
+        exception_code: Optional[Any] = None,
+    ) -> None:
+        """
+        Update fault state.
+
+        This method will evaluate if the current state if faulty.
+        Depending on the previous fault state we will update the fault_state
+        to allow navigation of the Opstate machine
+
+        NOTE: As evaluation becomes more complex we may want to refactor
+        this method into a class. As of MCCS-1507, this is a very simple evaluation,
+        only checking for an inconsistent state.
+
+        :param poll_success: a bool representing if the poll was a success
+        :param exception_code: the exception code raised in last poll.
+        """
+        is_faulty: bool = False
+        match poll_success:
+            case False:
+                pass
+            case True:
+                if self._subrack_says_tpm_power != PowerState.ON:
+                    # This is an inconsistent state, we can connect with the
+                    # TPM but the subrack is NOT reporting the TPM ON.
+                    is_faulty = True
+                    self.logger.error(
+                        "Tpm is connectable but subrack says power is "
+                        f"{PowerState(self._subrack_says_tpm_power).name}"
+                    )
+        if is_faulty:
+            self.fault_state = is_faulty
+        else:
+            if self.fault_state is True:
+                # We have stopped experiencing the fault.
+                self.fault_state = False
+            else:
+                self.fault_state = None
 
     def poll_succeeded(self: TileComponentManager, poll_response: TileResponse) -> None:
         """
@@ -436,13 +478,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "Command executed to completion."),
             )
-        if self._subrack_says_tpm_power != PowerState.ON:
-            # TODO: this should result in some ALARM or warning raised.
-            # fault = True ? (inconsistent state)
-            self.logger.error(
-                "poll_success but subrack says power is "
-                f"{PowerState(self._subrack_says_tpm_power).name}"
-            )
+        self.update_fault_state(poll_success=True)
+
         # We managed to poll hardware therefore we are PowerState.ON.
         # DevState and HealthState is to be determined by the attribute value reported
         self.power_state = PowerState.ON
@@ -453,7 +490,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 **{poll_response.command: poll_response.data},
             )
         super().poll_succeeded(poll_response)
-        self._update_component_state(power=PowerState.ON)
+        self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""

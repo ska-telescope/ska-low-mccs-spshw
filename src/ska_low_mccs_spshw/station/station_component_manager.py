@@ -895,6 +895,7 @@ class SpsStationComponentManager(
         fqdn: str,
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:

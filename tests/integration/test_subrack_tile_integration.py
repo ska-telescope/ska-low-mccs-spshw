@@ -230,8 +230,14 @@ class TestSubrackTileIntegration:
             PowerState.ON
         )
 
-        # The tile device receives this event too.
-        # TODO: it transitions straight to ON without going through UNKNOWN. Why?
+        # The TPM may become connectable before the MccsSubrack device has fired a
+        # change event. When the TPM is connectable and MccsSubrack reports
+        # its power as anything but ON we are in a fault state (this is inconsistent).
+        # As a result when connecting we transition to ON showing we can CONNECT,
+        # followed by FAULT because of the transient inconsistency in state.
+        # Finally when the state becomes consistent and we will transition back to ON.
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.FAULT)
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 
         # Now we power off all the TPMs using the subrack,

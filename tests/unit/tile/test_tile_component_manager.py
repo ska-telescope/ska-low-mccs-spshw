@@ -188,7 +188,7 @@ class TestTileComponentManager:
                     lookahead=3,
                 )
                 callbacks["component_state"].assert_call(
-                    power=PowerState.ON, lookahead=3
+                    power=PowerState.ON, fault=True, lookahead=3
                 )
                 callbacks["component_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
@@ -211,7 +211,7 @@ class TestTileComponentManager:
                     lookahead=3,
                 )
                 callbacks["component_state"].assert_call(
-                    power=PowerState.ON, lookahead=3
+                    power=PowerState.ON, fault=True, lookahead=3
                 )
                 callbacks["component_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3

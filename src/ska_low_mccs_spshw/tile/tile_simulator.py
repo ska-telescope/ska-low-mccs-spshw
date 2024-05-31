@@ -2210,7 +2210,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def __getattr__(self: TileSimulator, name: str) -> object:
+    def __getattr__(self: TileSimulator, name: str) -> Any:
         """
         Get the attribute.
 

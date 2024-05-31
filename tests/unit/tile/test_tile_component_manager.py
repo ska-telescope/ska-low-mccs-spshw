@@ -898,7 +898,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         time.sleep(4.2)
         with tile_component_manager._hardware_lock:
-            table = tile_component_manager.get_beamformer_table()
+            table = tile_component_manager.tile.get_beamformer_table()
         expected = [
             [64, 2, 3, 8, 7, 8, 9],
             [72, 2, 3, 16, 7, 8, 9],
@@ -1348,7 +1348,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         _ = tile_component_manager.pps_present
         # _ = tile_component_manager._check_pps_present()
         with tile_component_manager._hardware_lock:
-            _ = tile_component_manager.get_pll_locked()
+            _ = tile_component_manager.tile.check_pll_locked()
 
         assert (
             tile_component_manager.is_beamformer_running

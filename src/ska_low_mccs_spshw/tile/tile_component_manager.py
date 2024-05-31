@@ -268,7 +268,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case "ADC_RMS":
                 request = TileRequest("adc_rms", self.tile.get_adc_rms, publish=True)
             case "PLL_LOCKED":
-                request = TileRequest("pll_locked", self.get_pll_locked, publish=True)
+                request = TileRequest(
+                    "pll_locked", self.tile.check_pll_locked, publish=True
+                )
             case "PENDING_DATA_REQUESTS":
                 request = TileRequest(
                     "pending_data_requests",
@@ -327,7 +329,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
             case "BEAMFORMER_TABLE":
                 request = TileRequest(
-                    "beamformer_table", self.get_beamformer_table, publish=True
+                    "beamformer_table", self.tile.get_beamformer_table, publish=True
                 )
             case "FPGA_REFERENCE_TIME":
                 request = TileRequest(
@@ -624,8 +626,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"tile: tpm_status failed: {e}")
-                # TODO This must be handled in the connection loop
-                # when implemented
                 status = TpmStatus.UNCONNECTED
         return status
 
@@ -719,7 +719,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             pps signal.
         """
         if program_fpga:
-            self.tile.erase_fpga()
+            self.tile.erase_fpgas()
             self._update_component_state(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
             )
@@ -1091,7 +1091,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
-                    regmap = self.tile.tpm.find_register("")
+                    regmap = self.tile.find_register("")
                     for reg in regmap:
                         if isinstance(reg, RegisterInfo):
                             reglist.append(reg.name)
@@ -1284,6 +1284,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             "lock not acquired in time."
         )
 
+    @check_communicating
+    def get_tpm_temperature_thresholds(
+        self: TileComponentManager,
+    ) -> None | dict[str, tuple[int, int]]:
+        """
+        Return the temperature thresholds in firmware.
+
+        :returns: A dictionary containing the thresholds or
+            None if lock could not be acquired in 0.4 seconds.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_tpm_temperature_thresholds()
+        raise TimeoutError("Failed to acquire_lock")
+
     @property
     @check_communicating
     def pps_delay(self: TileComponentManager) -> Optional[int]:
@@ -1318,44 +1335,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param correction: the correction to set
         """
         self._pps_delay_correction = correction
-
-    @check_communicating
-    @check_hardware_lock_claimed
-    def get_beamformer_table(self: TileComponentManager) -> list[list[int]]:
-        """
-        Return the beamformer table.
-
-        NOTE: Should this method should be moved to aavs-sysem.
-        It interfaces with pyfabil methods
-
-        :return: the beamformer table
-
-        :raises ValueError: if the tpm is value None.
-        """
-        self.logger.debug(
-            "Method 'beamformer_table' should be implemented in aavs-system tile"
-        )
-        if self.tile.tpm is None:
-            raise ValueError("Cannot read register on unconnected TPM.")
-        return copy.deepcopy(self.tile.tpm.station_beamf[0].get_channel_table())
-
-    @check_communicating
-    @check_hardware_lock_claimed
-    def get_pll_locked(self: TileComponentManager) -> bool:
-        """
-        Check if ADC clock PLL is locked.
-
-        NOTE: Should this method should be moved to aavs-sysem.
-        It interfaces with pyfabil methods
-
-        :return: True if PLL is locked. Checked in poll loop, cached
-
-        :raises ValueError: if the tpm is value None.
-        """
-        if self.tile.tpm is None:
-            raise ValueError("Cannot read register on unconnected TPM.")
-        pll_status = self.tile.tpm["pll", 0x508]
-        return pll_status in [0xF2, 0xE7]
 
     @check_communicating
     def set_lmc_integrated_download(
@@ -2019,17 +1998,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
-                    self.tile.tpm.station_beamf[0].define_channel_table(
-                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                    )
-                    self.tile.tpm.station_beamf[1].define_channel_table(
+                    self.tile.define_channel_table(
                         [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
                     self.tile.set_first_last_tile(is_first, is_last)
                     self._nof_blocks = nof_channels // 8
-                    beamformer_table = copy.deepcopy(
-                        self.tile.tpm.station_beamf[0].get_channel_table()
-                    )
+                    beamformer_table = self.tile.get_beamformer_table()
                     self._update_component_state(beamformer_table=beamformer_table)
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -2510,7 +2484,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
-        if len(self.tile.tpm.find_register(register_name)) == 0:
+        if len(self.tile.find_register(register_name)) == 0:
             self.logger.error("Register '" + register_name + "' not present")
             return []
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -2551,7 +2525,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         regname = devname + register_name
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
-        if len(self.tile.tpm.find_register(regname)) == 0:
+        if len(self.tile.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -2802,7 +2776,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.info("TpmDriver: get adcs")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_health_status()["adcs"]
@@ -2818,7 +2791,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.info("TpmDriver: get alarms")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_health_status()["alarms"]
@@ -2924,8 +2896,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_frame)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
-                    self.tile.tpm["fpga1.test_generator.control.load_dds0"] = 1
-                    self.tile.tpm["fpga2.test_generator.control.load_dds0"] = 1
+                    self.tile["fpga1.test_generator.control.load_dds0"] = 1
+                    self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -2974,18 +2946,3 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
-
-    @check_communicating
-    def get_tpm_temperature_thresholds(
-        self: TileComponentManager
-    ) -> None | dict[str, tuple[int, int]]:
-        """
-        Return the temperature thresholds in firmware.
-
-        :returns: A dictionary containing the thresholds or
-            None if lock could not be acquired in 0.4 seconds.
-        """
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-            if acquired:
-                return self.tile.get_tpm_temperature_thresholds()
-        raise TimeoutError("Failed to acquire_lock")

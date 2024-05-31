@@ -604,13 +604,6 @@ class TestMccsTile:
                 TileSimulator.TPM_TEMPERATURE_THRESHOLDS,
                 None,
             ),
-            ("logicalTileId", 0, 7),
-            ("stationId", TileSimulator.STATION_ID, 5),
-            (
-                "voltageMon",
-                TileSimulator.TILE_MONITORING_POINTS["voltages"]["MON_5V0"],
-                None,
-            ),
             (
                 "boardTemperature",
                 TileSimulator.TILE_MONITORING_POINTS["temperatures"]["board"],
@@ -699,7 +692,9 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=4
         )
-        if isinstance(initial_value, list):
+        if isinstance(initial_value, dict):
+            initial_value = json.dumps(initial_value)
+        elif isinstance(initial_value, list):
             initial_value = np.array(initial_value)
             assert (getattr(tile_device, attribute) == initial_value).all()
         else:

@@ -157,6 +157,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "voltageMon": "voltageMon",
             "tile_id": "logicalTileId",
             "station_id": "stationId",
+            "tile_beamformer_frame": "currentTileBeamformerFrame",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -460,8 +461,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param power: the power state of the component
         :param state_change: other state updates
         """
-        # TODO: there is a lot of repeated code here.
-        # Refactor attributes to be more like PaSD.
         super()._component_state_changed(fault=fault, power=power)
         if power is not None:
             self._health_model.update_state(fault=fault, power=power)
@@ -507,12 +506,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         idx_list = copy.deepcopy(dictionary_path)
         for key in idx_list:
             try:
-                if isinstance(structure[key], dict):
-                    if len(idx_list) == 1:
-                        return structure[key]
-                    idx_list.pop(0)
-                    return self.unpack_monitoring_point(structure[key], idx_list)
-                return structure[key]
+                if len(idx_list) == 1:
+                    return structure[key]
+                idx_list.pop(0)
+                return self.unpack_monitoring_point(structure[key], idx_list)
 
             except KeyError as e:
                 self.logger.error(
@@ -1127,7 +1124,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the RMS power of every ADC signal.
 
-        (so a TPM processes 16 antennas, this should return 32 RMS value.
+        so a TPM processes 16 antennas, this should return 32 RMS value.
 
         :return: RMP power of ADC signals
         """
@@ -1143,7 +1140,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: current frame
         """
-        return self.component_manager.current_tile_beamformer_frame
+        try:
+            return self.component_manager.current_tile_beamformer_frame
+        except TimeoutError as e:
+            self.logger.warning(
+                f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
+            )
+        return self._attribute_state["currentTileBeamformerFrame"].read()[0]
 
     @attribute(dtype="DevLong")
     def currentFrame(self: MccsTile) -> int:

@@ -123,7 +123,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._fpgas_time = [0, 0]
         self._fpga_current_frame = 0
         self._fpga_reference_time = 0
-        self._global_start_time: int | None = None
+        self._global_reference_time: int | None = None
         self._phase_terminal_count = 0
         self._tile_health_structure["timing"]["pps"]["status"] = True
         self._clock_present = True
@@ -689,9 +689,9 @@ class TpmDriver(MccsBaseComponentManager):
             self._set_tpm_status(TpmStatus.INITIALISED)
             self.logger.debug("TpmDriver: initialisation completed")
 
-            if self._global_start_time:
+            if self._global_reference_time:
                 self.logger.debug("Global start time specifed, starting acquisition")
-                self.start_acquisition(delay=0)
+                self.start_acquisition()
         else:
             self._set_tpm_status(TpmStatus.UNPROGRAMMED)
             self.logger.error("TpmDriver: Cannot initialise board Failed to Program.")
@@ -1505,11 +1505,12 @@ class TpmDriver(MccsBaseComponentManager):
 
         :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
         """
-        self._csp_spead_format = spead_format
         if spead_format not in ["AAVS", "SKA"]:
             self.logger.warning(
                 "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
             )
+            spead_format = "AAVS"
+        self._csp_spead_format = spead_format
         if self._tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
             return
 
@@ -1721,8 +1722,12 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
+                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
                     self.tile.initialise_beamformer(128, 8)
-                    self.tile.set_first_last_tile(False, False)
+                    self.tile.set_first_last_tile(
+                        False,
+                        False,
+                    )
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -2245,7 +2250,7 @@ class TpmDriver(MccsBaseComponentManager):
         self: TpmDriver,
         start_time: Optional[int] = None,
         delay: Optional[int] = 2,
-        global_start_time: Optional[int] = None,
+        global_reference_time: Optional[int] = None,
     ) -> bool:
         """
         Start data acquisition.
@@ -2254,7 +2259,7 @@ class TpmDriver(MccsBaseComponentManager):
 
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
-        :param global_start_time: the start time assumed for starting the timestamp
+        :param global_reference_time: the start time assumed for starting the timestamp
 
         :returns: if data acquisition started correctly
         """
@@ -2267,10 +2272,10 @@ class TpmDriver(MccsBaseComponentManager):
         self.logger.debug(
             f"TpmDriver:Start acquisition: start time: {start_time}, delay: {delay}"
         )
-        if global_start_time is None:
-            global_start_time = self._global_start_time
+        if global_reference_time is None:
+            global_reference_time = self._global_reference_time
         else:
-            self._global_start_time = global_start_time
+            self._global_reference_time = global_reference_time
 
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2282,7 +2287,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self.tile.start_acquisition(
                         start_time,
                         delay,
-                        global_start_time,
+                        global_reference_time,
                     )
                     started = True
                     self._fpga_reference_time = self.tile[
@@ -2443,25 +2448,27 @@ class TpmDriver(MccsBaseComponentManager):
         #    self.tile.post_synchronisation()
 
     @property
-    def global_start_time(self: TpmDriver) -> int | None:
+    def global_reference_time(self: TpmDriver) -> int | None:
         """
         Return the Unix time used as global synchronization time.
 
         :return: Unix time used as global synchronization time
         """
-        return self._global_start_time
+        self.logger.debug(f"Global reference time read {self._global_reference_time}")
+        return self._global_reference_time
 
-    @global_start_time.setter
-    def global_start_time(self: TpmDriver, start_time: int | None) -> None:
+    @global_reference_time.setter
+    def global_reference_time(self: TpmDriver, start_time: int | None) -> None:
         """
         Set the Unix time used as global synchronization time.
 
         :param start_time: Reference time representing timestamp for frame 0
         """
+        self.logger.debug(f"Global reference time set to {start_time}")
         if start_time is None or start_time <= 0:
-            self._global_start_time = None
+            self._global_reference_time = None
         else:
-            self._global_start_time = start_time
+            self._global_reference_time = start_time
 
     @property
     def test_generator_active(self: TpmDriver) -> bool:

@@ -19,6 +19,7 @@ from typing import Any, Callable, Optional, cast
 
 import numpy as np
 import tango
+from astropy.time import Time
 from numpy import ndarray
 from ska_control_model import (
     AdminMode,
@@ -774,6 +775,39 @@ class SpsStation(SKAObsDevice):
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: SpsStation) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: SpsStation, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        :raises ValueError: if specified time not in ISO format or < TAI2000
+        """
+        #   tai_2000_epoch = int(AstropyTime('2000-01-01 00:00:00',
+        #                        scale='tai').unix) - extra_leap_seconds
+        tai_2000_epoch = 946684763
+        # check syntax and positive time
+        try:
+            time_ref = Time(reference_time, format="isot").unix
+        except ValueError as error:
+            self.logger.error(f"Invalid ISO time: {error}")
+            raise ValueError(error) from error
+        time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
+        if time_ref < 0:
+            raise ValueError("Reference time cannot be before Y2000")
+        self.component_manager.global_reference_time = (
+            Time(time_ref, format="unix").isot + "Z"
+        )
+
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:
         """
@@ -1139,9 +1173,9 @@ class SpsStation(SKAObsDevice):
         >> dp.command_inout("SetLmcDownload", jstr)
         """
         params = json.loads(argin)
-        mode = params.get("mode", "40G")
+        mode = params.get("mode", "10G")
 
-        if mode.upper == "40G":
+        if mode.upper() == "40G":
             mode = "10G"
         payload_length = params.get("payload_length", None)
         if payload_length is None:
@@ -1860,8 +1894,8 @@ class SpsStation(SKAObsDevice):
         * set_time: time at which the generator is set, for synchronization
             among different TPMs. In UTC ISO format (string)
         * adc_channels: list of adc channels which will be substituted with
-            the generated signal. It is a 32 integer, with each bit representing
-            an input channel. Default: all if at least q source is specified,
+            the generated signal. 32 bit integer, with each bit representing
+            an input channel. Default: all if at least 1 source is specified,
             none otherwises.
 
         :return: A tuple containing a return code and a string

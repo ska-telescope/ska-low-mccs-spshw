@@ -453,6 +453,7 @@ class SpsStationComponentManager(
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
         self._csp_spead_format = "SKA"
+        self._global_reference_time = ""
 
         # TODO: this needs to be scaled,
         self.tile_attributes_to_subscribe = [
@@ -1449,6 +1450,7 @@ class SpsStationComponentManager(
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
             tile.cspSpeadFormat = self._csp_spead_format
+            tile.globalReferenceTime = self._global_reference_time
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
@@ -1905,7 +1907,32 @@ class SpsStationComponentManager(
             return
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.cspSpeadFormat(spead_format)
+            proxy._proxy.cspSpeadFormat = spead_format
+
+    @property
+    def global_reference_time(self: SpsStationComponentManager) -> str:
+        """
+        Return the UTC time used as global synchronization time.
+
+        :return: UTC time in ISOT format used as global synchronization time
+        """
+        return self._global_reference_time
+
+    @global_reference_time.setter  # type: ignore[no-redef]
+    def global_reference_time(
+        self: SpsStationComponentManager, reference_time: str
+    ) -> None:
+        """
+        Set the Unix time used as global synchronization time.
+
+        Time will be used by all tiles as a common start time for timestamps.
+        If specified, StartAcquisition is also performed in Station.On()
+        :param reference_time: Reference time in ISOT format, or null string
+        """
+        self._global_reference_time = reference_time
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.globalReferenceTime = reference_time
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:

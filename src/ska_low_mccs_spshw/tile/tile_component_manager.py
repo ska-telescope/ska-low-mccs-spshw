@@ -453,8 +453,23 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_timestamp(reference_time)
 
-    @fpga_reference_time.setter
-    def fpga_reference_time(self: TileComponentManager, reference_time: str) -> None:
+    @property
+    def global_reference_time(self: TileComponentManager) -> str:
+        """
+        Return global reference time in UTC format.
+
+        Reference time is set as part of start_observation.
+        It represents the timestamp  for the first frame
+
+        :return: FPGA reference time
+        """
+        reference_time = self._tpm_driver.global_reference_time
+        if reference_time:
+            return self._tile_time.format_time_from_timestamp(reference_time)
+        return ""
+
+    @global_reference_time.setter
+    def global_reference_time(self: TileComponentManager, reference_time: str) -> None:
         """
         Set the reference time to be used in initalization.
 
@@ -462,14 +477,16 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         effect otherwise.
         :param reference_time: Reference time representing timestamp for frame 0
         """
-        if self.tpm_driver.tpm_status == TpmStatus.SYNCHRONISED:
-            self.logger_warning("Cannot set reference_time in TpmStatus SYNCHRONISED")
+        if self._tpm_driver.tpm_status == TpmStatus.SYNCHRONISED:
+            self.logger.warning("Cannot set reference_time in TpmStatus SYNCHRONISED")
             return
         if reference_time == "":
-            global_start_time = None
+            global_reference_time = None
         else:
-            global_start_time = self._tile_time.timestamp_from_utc_time(reference_time)
-        self.tpm_driver.global_start_time = global_start_time
+            global_reference_time = self._tile_time.timestamp_from_utc_time(
+                reference_time
+            )
+        self._tpm_driver.global_reference_time = global_reference_time
 
     @property
     def fpga_frame_time(self: TileComponentManager) -> str:
@@ -892,6 +909,12 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                         status=TaskStatus.COMPLETED,
                         result="The initialisation task has failed",
                     )
+            case TpmStatus.SYNCHRONISED:
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result="The initialisation/synchronisation task has completed",
+                    )
             case _:
                 self.logger.error(
                     "Unexpected TpmStatus following initialisation."
@@ -901,7 +924,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                     task_callback(
                         status=TaskStatus.COMPLETED,
                         result="The initialisation task has failed"
-                        f"TpmStatus: {self._tpm_driver.tpm_status}",
+                        f"TpmStatus: {self._tpm_driver.tpm_status.pretty_name}",
                     )
 
     @check_communicating

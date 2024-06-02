@@ -901,8 +901,8 @@ def test_Standby(
             "SetLmcDownload",
             json.dumps(
                 {
-                    "mode": "40G",
-                    "payload_length": 1024,
+                    "mode": "10G",
+                    "payload_length": 8192,
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,

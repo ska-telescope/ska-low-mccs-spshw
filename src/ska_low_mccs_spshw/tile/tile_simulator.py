@@ -1455,7 +1455,7 @@ class TileSimulator:
         self: TileSimulator,
         start_time: int | None = None,
         delay: int = 2,
-        global_reference_time: int | None = None,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.

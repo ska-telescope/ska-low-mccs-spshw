@@ -434,7 +434,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         to allow navigation of the Opstate machine
 
         NOTE: As evaluation becomes more complex we may want to refactor
-        this method into a class. As of MCCS-1507, this is a very simple evaluation,
+        this method into a class. Currently this is a very simple evaluation,
         only checking for an inconsistent state.
 
         :param poll_success: a bool representing if the poll was a success

@@ -373,7 +373,24 @@ class TestTileComponentManager:
         )
         # If we are on we can ESTABLISH a connection
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        try:
+            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        except AssertionError:
+            # MccsSubrack will report the power of the TPM.
+            # If the value reported by the MccsSubrack is inconsistent with the value
+            # reported from polling, we are in state FAULT. For example:
+            # - MccsSubrack reports the TPM as NOT ON, but we can poll the hardware.
+            # Therefore depending on the exact timing of the poll
+            # relative to the MccsSubrack TPM power callback,
+            # we may find a transient FAULT.
+            callbacks["component_state"].assert_call(
+                power=PowerState.ON, fault=True, lookahead=2
+            )
+            # The lookahead of 4 is needed due to monitoring values being passed
+            # to this callback.
+            # For commands being executed e.g initialise,
+            # the callback can be called multiple times.
+            callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         tile_component_manager.off()
         # Manually report the Subrack turning on
@@ -507,7 +524,24 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         tile_component_manager.on(task_callback=callbacks["task"])
-        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        try:
+            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        except AssertionError:
+            # MccsSubrack will report the power of the TPM.
+            # If the value reported by the MccsSubrack is inconsistent with the value
+            # reported from polling, we are in state FAULT. For example:
+            # - MccsSubrack reports the TPM as NOT ON, but we can poll the hardware.
+            # Therefore depending on the exact timing of the poll
+            # relative to the MccsSubrack TPM power callback,
+            # we may find a transient FAULT.
+            callbacks["component_state"].assert_call(
+                power=PowerState.ON, fault=True, lookahead=2
+            )
+            # The lookahead of 4 is needed due to monitoring values being passed
+            # to this callback.
+            # For commands being executed e.g initialise,
+            # the callback can be called multiple times.
+            callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
@@ -2812,7 +2846,24 @@ class TestDynamicSimulator:
         )
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         dynamic_tile_component_manager.on(task_callback=callbacks["task"])
-        callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        try:
+            callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=2)
+        except AssertionError:
+            # MccsSubrack will report the power of the TPM.
+            # If the value reported by the MccsSubrack is inconsistent with the value
+            # reported from polling, we are in state FAULT. For example:
+            # - MccsSubrack reports the TPM as NOT ON, but we can poll the hardware.
+            # Therefore depending on the exact timing of the poll
+            # relative to the MccsSubrack TPM power callback,
+            # we may find a transient FAULT.
+            callbacks["component_state"].assert_call(
+                power=PowerState.ON, fault=True, lookahead=2
+            )
+            # The lookahead of 4 is needed due to monitoring values being passed
+            # to this callback.
+            # For commands being executed e.g initialise,
+            # the callback can be called multiple times.
+            callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["component_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2

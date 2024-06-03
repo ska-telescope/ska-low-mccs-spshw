@@ -528,6 +528,7 @@ class TileSimulator:
     ]
     STATION_ID = 1
     TILE_ID = 0
+    CSP_SPEAD_FORMAT = "SKA"
 
     def __init__(
         self: TileSimulator,
@@ -567,6 +568,8 @@ class TileSimulator:
         self.dst_port: int | None = None
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
+        self.csp_spead_format = self.CSP_SPEAD_FORMAT
+        self.global_reference_time: int | None = None
         self._is_arp_table_healthy: bool = True
         self._is_set_first_last_tile_write_successful: bool = True
         self._is_spead_header_write_successful: bool = True
@@ -1452,14 +1455,14 @@ class TileSimulator:
         self: TileSimulator,
         start_time: int | None = None,
         delay: int = 2,
-        global_start_time: int | None = None,
+        global_reference_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :param global_start_time: TPM will act as if it is
+        :param global_reference_time: TPM will act as if it is
             started at this time (seconds)
         """
         if start_time is None:
@@ -1467,6 +1470,15 @@ class TileSimulator:
         else:
             sync_time = start_time + delay
 
+        # if global reference time is set, either in parameter or in attribute,
+        # use it as sync time
+        if global_reference_time:
+            self.global_reference_time = global_reference_time
+        else:
+            global_reference_time = self.global_reference_time
+
+        if global_reference_time:
+            sync_time = global_reference_time
         self.sync_time = sync_time  # type: ignore
         self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
 

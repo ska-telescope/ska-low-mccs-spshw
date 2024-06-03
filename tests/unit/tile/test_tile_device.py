@@ -66,7 +66,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "adc_power",
         "pps_present",
         "track_lrc_command",
-        timeout=25.0,
+        timeout=7.0,
     )
 
 
@@ -197,9 +197,7 @@ def on_tile_device_fixture(
         "NotProgrammed"
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
-    change_event_callbacks["tile_programming_state"].assert_change_event(
-        "Initialised", lookahead=2, consume_nonmatches=True
-    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
 
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
@@ -384,7 +382,6 @@ class TestMccsTile:
         # there is a static delay applied to each ADC channel.
         assert len(init_value) == 32
 
-        print(f"the init_value are: {init_value}")
         on_tile_device.Configure(json.dumps(config_in))
 
         assert list(on_tile_device.antennaIds) == expected_config["antenna_ids"]
@@ -480,14 +477,15 @@ class TestMccsTile:
         tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
         )
-        tile_component_manager._update_component_state(
-            fault=False,
-            power=PowerState.ON,
-            tile_health_structure=TileData.get_tile_defaults(),
+        tile_device.On()
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.ON,
+            EventType.CHANGE_EVENT,
         )
-
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        assert tile_device.healthState == HealthState.OK
 
     def test_adcPower(
         self: TestMccsTile,

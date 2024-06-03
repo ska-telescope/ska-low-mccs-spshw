@@ -1462,7 +1462,7 @@ class TileSimulator:
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :param global_reference_time: TPM will act as if it is
+        :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
         if start_time is None:

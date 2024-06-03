@@ -569,7 +569,6 @@ class TileSimulator:
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
         self.csp_spead_format = self.CSP_SPEAD_FORMAT
-        self.global_reference_time: int | None = None
         self._is_arp_table_healthy: bool = True
         self._is_set_first_last_tile_write_successful: bool = True
         self._is_spead_header_write_successful: bool = True
@@ -1470,15 +1469,10 @@ class TileSimulator:
         else:
             sync_time = start_time + delay
 
-        # if global reference time is set, either in parameter or in attribute,
+        # if global start time is set, either in parameter or in attribute,
         # use it as sync time
-        if global_reference_time:
-            self.global_reference_time = global_reference_time
-        else:
-            global_reference_time = self.global_reference_time
-
-        if global_reference_time:
-            sync_time = global_reference_time
+        if global_start_time:
+            sync_time = global_start_time
         self.sync_time = sync_time  # type: ignore
         self.tpm["fpga1.pps_manager.sync_time_val"] = sync_time  # type: ignore
 

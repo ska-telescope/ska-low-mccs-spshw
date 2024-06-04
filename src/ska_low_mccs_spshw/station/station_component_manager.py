@@ -486,6 +486,7 @@ class SpsStationComponentManager(
         self._lmc_beam_payload_length = 8192
 
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
+        self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
@@ -1369,11 +1370,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
@@ -1410,11 +1414,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
@@ -2384,13 +2391,21 @@ class SpsStationComponentManager(
             (which must be a multiple of 8), and a beam index (between 0 and 7)
             and a substation ID (not used)
         """
-        self._beamformer_table = copy.deepcopy(beamformer_table)
+        number_entries = len(beamformer_table)
+        for i in range(number_entries):
+            self._beamformer_table[i] = beamformer_table[i]
+        for i in range(number_entries, 48):
+            self._beamformer_table[i] = [0, 0, 0, 0, 0, 0, 0]
         self._set_beamformer_table()
 
     def _set_beamformer_table(
         self: SpsStationComponentManager,
     ) -> None:
         """Set the frequency regions to be beamformed into a single beam."""
+        # At least one entry in the beamformer table must be not null
+        # Entries with start channel = 0 are ignored in MccsTile
+        if all(entry[0] == 0 for entry in self._beamformer_table):
+            self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         beamformer_regions = []
         for entry in self._beamformer_table:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))

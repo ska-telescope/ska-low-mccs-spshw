@@ -1687,29 +1687,35 @@ class TpmDriver(MccsBaseComponentManager):
             aperture_id = regions[0][7]
         collapsed_regions = self._collapse_regions(regions)
         nof_blocks = 0
-        for region in regions:
+        for region in collapsed_regions:
             nof_blocks += region[1] // 8
         self._nof_blocks = nof_blocks
         self.logger.debug(f"Setting beamformer table for {self._nof_blocks} blocks")
+        fmt = None
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_beamformer_regions(collapsed_regions)
+                    if nof_blocks > 0:
+                        self.tile.set_beamformer_regions(collapsed_regions)
+                    else:
+                        self.logger.error("No valid beamformer regions specified")
                     self._beamformer_table = self.tile.tpm.station_beamf[
                         0
                     ].get_channel_table()
                     self.tile.define_spead_header(
-                        self._station_id,
-                        subarray_id,
-                        aperture_id,
-                        self._fpga_reference_time,
-                        self._csp_spead_format == "SKA",
+                        station_id=self._station_id,
+                        subarray_id=subarray_id,
+                        nof_antennas=aperture_id,
+                        ref_epoch=self._fpga_reference_time,
+                        new_spead_header_format=self._csp_spead_format == "SKA",
                     )
+                    fmt = self.tile.new_spead_header
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+        self.logger.debug(f"SPEAD format: {fmt}")
 
     def _reset_and_initialise_beamformer(self: TpmDriver) -> None:
         """
@@ -1722,7 +1728,6 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
                     self.tile.initialise_beamformer(128, 8)
                     self.tile.set_first_last_tile(
                         False,
@@ -1750,10 +1755,14 @@ class TpmDriver(MccsBaseComponentManager):
         :param is_first: whether this is the first (?)
         :param is_last: whether this is the last (?)
         """
-        self.logger.debug("TpmDriver: initialise_beamformer")
+        self.logger.debug(
+            "TpmDriver: initialise_beamformer for chans {start_channel}:{nof_channels}"
+        )
+        fmt = None
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
+                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
                     self.tile.tpm.station_beamf[0].define_channel_table(
                         [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
@@ -1762,11 +1771,13 @@ class TpmDriver(MccsBaseComponentManager):
                     )
                     self.tile.set_first_last_tile(is_first, is_last)
                     self._nof_blocks = nof_channels // 8
+                    fmt = self.tile.new_spead_header  # debug
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
             else:
                 self.logger.warning("Failed to acquire hardware lock")
+        self.logger.debug(f"SPEAD format: {fmt}")
 
     @property
     def beamformer_table(self: TpmDriver) -> list[list[int]]:
@@ -1784,6 +1795,7 @@ class TpmDriver(MccsBaseComponentManager):
         * substation_id - (int) Substation
         * aperture_id:  ID of the aperture (station*100+substation?)
         """
+        # TODO Must return an array of 48 rows.
         return copy.deepcopy(self._beamformer_table)
 
     def load_calibration_coefficients(

@@ -18,6 +18,7 @@ import json
 import logging
 import threading
 import time
+from concurrent import futures
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
@@ -1030,29 +1031,41 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        message: str = ""
         if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        results = [proxy.off() for proxy in self._subrack_proxies.values()]
-        # Never mind tiles, turning off subracks suffices
-        # TODO: Here we need to monitor Tiles. This will eventually
-        # use the mechanism described in MCCS-945, but until that is implemented
-        # we might instead just poll these devices' longRunngCommandAttribute.
-        # For the moment, however, we just submit the subservient devices' commands
-        # for execution and forget about them.
-        if all(
-            result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
-            for (result, _) in results
-        ):
-            task_status = TaskStatus.COMPLETED
-            result_code = ResultCode.OK
-            message = "Off Command Completed"
-        else:
-            task_status = TaskStatus.FAILED
-            result_code = ResultCode.FAILED
-            message = "Off Command Failed"
-        if task_callback:
-            task_callback(status=task_status, result=(result_code, message))
+            task_callback(
+                status=TaskStatus.REJECTED,
+                result=(
+                    ResultCode.REJECTED,
+                    "MCCS has no control over subrack PDUs. "
+                    "Unable to drive to the OFF state."
+                    "Try Standby to turn off all TPMs.",
+                ),
+            )
+        # The following is commented out because
+        # MCCS has no control over subrack PDUs, meaning
+        # the lowest drivable state for spsStation is STANDBY.
+        # There is already a method Standby() that does this.
+        # message: str = ""
+        # if task_callback:
+        #     task_callback(status=TaskStatus.IN_PROGRESS)
+        # results = [proxy.off() for proxy in self._subrack_proxies.values()]
+        # # Never mind tiles, turning off subracks suffices
+        # # TODO: Here we need to monitor Tiles. This will eventually
+        # # use the mechanism described in MCCS-945, but until that is implemented
+        # # we might instead just poll these devices' longRunngCommandAttribute.
+        # # For the moment, however, we just submit the subservient devices' commands
+        # # for execution and forget about them.
+        # if all(
+        #     result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
+        #     for (result, _) in results
+        # ):
+        #     task_status = TaskStatus.COMPLETED
+        #     result_code = ResultCode.OK
+        #     message = "Off Command Completed"
+        # else:
+        #     task_status = TaskStatus.FAILED
+        #     result_code = ResultCode.FAILED
+        #     message = "Off Command Failed"
 
     @check_communicating
     def standby(
@@ -2575,9 +2588,24 @@ class SpsStationComponentManager(
 
     def stop_data_transmission(self: SpsStationComponentManager) -> None:
         """Stop data transmission for send_channelised_data_continuous."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopDataTransmission()
+        future_results = [
+            dev._proxy.command_inout(
+                "StopDataTransmission",
+                green_mode=tango.GreenMode.Futures,
+                wait=False,
+            )
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+        ]
+        futures.wait(future_results)
+        if len(future_results) != len(self._tile_proxies):
+            self.logger.warning(
+                "StopDataTransmission how not been called on all Tiles."
+            )
+        self.logger.debug(
+            "Tiles response from StopDataTransmission: "
+            f" {[f.result() for f in future_results]}"
+        )
 
     def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
         """

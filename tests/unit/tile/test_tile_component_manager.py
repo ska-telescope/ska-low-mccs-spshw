@@ -87,7 +87,7 @@ class TestTileComponentManager:
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
-    def test_state_with_adminode(
+    def test_state_with_adminmode(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,
@@ -114,13 +114,18 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
+        callbacks["component_state"].assert_call(programming_state=TpmStatus.OFF)
         callbacks["communication_status"].assert_not_called()
 
         # Stop communicating will break the connection with the subrack
         # therefore component state becomes UNKNOWN
         tile_component_manager.stop_communicating()
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
-        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+
+        callbacks["component_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN, lookahead=2
+        )
+        callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
         callbacks["component_state"].assert_not_called()
 
     # TODO: find out if TPM has standby mode, and if so add this case

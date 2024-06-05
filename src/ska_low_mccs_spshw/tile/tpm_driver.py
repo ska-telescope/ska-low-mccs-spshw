@@ -1787,7 +1787,7 @@ class TpmDriver(MccsBaseComponentManager):
         Fetch table used by the hardware beamformer to define beams and logical bands
         :return: bidimensional table, with 48 entries, one every 8 channels
 
-        * start physical channel
+        * start physical channel - 0 means unused
         * tile hardware beam
         * subarray ID
         * subarray start logical channel
@@ -1795,7 +1795,10 @@ class TpmDriver(MccsBaseComponentManager):
         * substation_id - (int) Substation
         * aperture_id:  ID of the aperture (station*100+substation?)
         """
-        # TODO Must return an array of 48 rows.
+        # Must return an array of 48 rows.
+        table = copy.deepcopy(self._beamformer_table)
+        for i in range(48 - len(table)):
+            table.append([0, 0, 0, 0, 0, 0, 0,])
         return copy.deepcopy(self._beamformer_table)
 
     def load_calibration_coefficients(

@@ -473,13 +473,8 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         """
         Set the reference time to be used in initalization.
 
-        Can be set only if the tile is not yet synchronised, no
-        effect otherwise.
         :param reference_time: Reference time representing timestamp for frame 0
         """
-        if self._tpm_driver.tpm_status == TpmStatus.SYNCHRONISED:
-            self.logger.warning("Cannot set reference_time in TpmStatus SYNCHRONISED")
-            return
         if reference_time == "":
             global_reference_time = None
         else:

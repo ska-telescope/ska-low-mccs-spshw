@@ -1702,6 +1702,26 @@ class TileSimulator:
             levels.append(attenuation)
         return levels
 
+    def set_spead_format(self, new_spead_header_format: bool) -> None:
+        """
+        Set CSP SPEAD format.
+
+        :param new_spead_header_format: True for new (SKA) format, False for old (AAVS)
+        """
+        spead_format = "AAVS"
+        if new_spead_header_format:
+            spead_format = "SKA"
+        self.csp_spead_format = spead_format
+
+    @property
+    def new_spead_header(self) -> bool:
+        """
+        Return format of the CSP Spead header.
+        
+        :return: True for new new (SKA) format, False for old (AAVS)
+        """
+        return self.csp_spead_format == "SKA"
+
     @check_mocked_overheating
     @connected
     def __getattr__(self, name: str) -> object:

@@ -1798,7 +1798,17 @@ class TpmDriver(MccsBaseComponentManager):
         # Must return an array of 48 rows.
         table = copy.deepcopy(self._beamformer_table)
         for i in range(48 - len(table)):
-            table.append([0, 0, 0, 0, 0, 0, 0,])
+            table.append(
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                ]
+            )
         return copy.deepcopy(self._beamformer_table)
 
     def load_calibration_coefficients(

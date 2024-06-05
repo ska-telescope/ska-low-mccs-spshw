@@ -1717,7 +1717,7 @@ class TileSimulator:
     def new_spead_header(self) -> bool:
         """
         Return format of the CSP Spead header.
-        
+
         :return: True for new new (SKA) format, False for old (AAVS)
         """
         return self.csp_spead_format == "SKA"

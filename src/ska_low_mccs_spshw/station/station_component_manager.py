@@ -2763,7 +2763,9 @@ class SpsStationComponentManager(
             for status_list in daq_status["Running Consumers"]
         ):
             if len(daq_status["Running Consumers"]) > 0:
-                rc, _ = self._daq_proxy._proxy.StopDaq()
+                # TODO: Do we really want to stop unrelated DAQ modes?
+                self.logger.warning("Stopping all data capture!")
+                rc, _ = self._daq_proxy._proxy.Stop()
                 if rc != ResultCode.OK:
                     if task_callback:
                         task_callback(
@@ -2775,6 +2777,7 @@ class SpsStationComponentManager(
                         )
                     return
             self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+            self.logger.info(f"Starting daq to capture in mode {daq_mode}")
             max_tries = 10
             for _ in range(max_tries):
                 daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
@@ -2798,6 +2801,16 @@ class SpsStationComponentManager(
                     )
                 return
 
+        # TODO: Why is LMC routing not already configured in device initialisation?
+        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+        self.set_lmc_download(
+            mode="10g",
+            payload_length=8192,  # Default for using 10g
+            dst_ip=daq_status["Receiver IP"][0],
+            dst_port=daq_status["Receiver Ports"][0],
+        )
+        self.logger.info("Configured LMC routing to DAQ")
+
         # Send data from tpms
         self.send_data_samples(
             json.dumps(
@@ -2808,6 +2821,7 @@ class SpsStationComponentManager(
                 }
             )
         )
+        self.logger.info(f"Raw channel spigot sent for {channel=}")
 
     @check_communicating
     def set_channeliser_rounding(

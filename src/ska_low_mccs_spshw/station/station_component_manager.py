@@ -19,12 +19,12 @@ import logging
 import threading
 import time
 from concurrent import futures
-from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
+from astropy.time import Time  # type: ignore
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -2666,9 +2666,7 @@ class SpsStationComponentManager(
         success = True
 
         if start_time is None:
-            start_time = datetime.strftime(
-                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
-            )
+            start_time = Time(int(time.time() + 2), format="unix").isot + "Z"
         else:
             delay = 0
 

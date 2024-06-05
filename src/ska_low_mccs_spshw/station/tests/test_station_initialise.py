@@ -9,13 +9,11 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
 from typing import Any
 
 from ska_control_model import PowerState, TaskStatus
 from ska_low_mccs_common import MccsDeviceProxy
 
-from ...tile.time_util import TileTime
 from ...tile.tpm_status import TpmStatus
 from .base_tpm_test import TpmSelfCheckTest
 
@@ -82,14 +80,8 @@ class InitialiseStation(TpmSelfCheckTest):
         self.test_logger.debug("ARP tables populated.")
         self.test_logger.debug("Sucessfully initialised station, synchronising.")
 
-        start_time = datetime.strftime(
-            datetime.fromtimestamp(time.time(), tz=timezone.utc), TileTime.RFC_FORMAT
-        )
-
         self._task_status = TaskStatus.NOT_FOUND
-        self.component_manager._start_acquisition(
-            start_time=start_time, task_callback=self._task_callback
-        )
+        self.component_manager._start_acquisition(task_callback=self._task_callback)
 
         assert self._task_status == TaskStatus.COMPLETED
 

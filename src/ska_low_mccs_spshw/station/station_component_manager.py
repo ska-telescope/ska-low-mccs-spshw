@@ -18,12 +18,12 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
+from astropy.time import Time  # type: ignore
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -1423,7 +1423,7 @@ class SpsStationComponentManager(
         task_abort_event: Optional[threading.Event] = None,
     ) -> ResultCode:
         """
-        Set source IPs on tiles before initialising.
+        Wait for ARP tables on tiles before continuing.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
@@ -1486,7 +1486,7 @@ class SpsStationComponentManager(
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
                 return ResultCode.OK
-
+        self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
 
     @check_communicating
@@ -1530,7 +1530,6 @@ class SpsStationComponentManager(
         self._set_beamformer_table()
         return ResultCode.OK
 
-    # pylint: disable=too-many-locals
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
@@ -1567,10 +1566,8 @@ class SpsStationComponentManager(
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
-            src_mac = self._base_mac_address + 2 * tile
 
             for core in range(num_cores):
-                # src_ip = src_ip_list[core]
                 dst_ip = dst_ip_list[core]
 
                 if tile == last_tile:
@@ -1585,7 +1582,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 0,
-                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_1,
@@ -1610,7 +1606,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 2,
-                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_2,
@@ -2643,9 +2638,7 @@ class SpsStationComponentManager(
         success = True
 
         if start_time is None:
-            start_time = datetime.strftime(
-                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
-            )
+            start_time = Time(int(time.time() + 2), format="unix").isot
         else:
             delay = 0
 

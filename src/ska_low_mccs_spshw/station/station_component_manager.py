@@ -19,12 +19,12 @@ import logging
 import threading
 import time
 from concurrent import futures
+from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
-from astropy.time import Time  # type: ignore
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -680,12 +680,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delays"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delays"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delays"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delays"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -2666,7 +2666,9 @@ class SpsStationComponentManager(
         success = True
 
         if start_time is None:
-            start_time = Time(int(time.time() + 2), format="unix").isot
+            start_time = datetime.strftime(
+                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
+            )
         else:
             delay = 0
 

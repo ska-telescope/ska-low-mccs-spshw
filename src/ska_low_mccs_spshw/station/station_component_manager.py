@@ -18,6 +18,7 @@ import json
 import logging
 import threading
 import time
+from concurrent import futures
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
@@ -2527,9 +2528,24 @@ class SpsStationComponentManager(
 
     def stop_data_transmission(self: SpsStationComponentManager) -> None:
         """Stop data transmission for send_channelised_data_continuous."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopDataTransmission()
+        future_results = [
+            dev._proxy.command_inout(
+                "StopDataTransmission",
+                green_mode=tango.GreenMode.Futures,
+                wait=False,
+            )
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+        ]
+        futures.wait(future_results)
+        if len(future_results) != len(self._tile_proxies):
+            self.logger.warning(
+                "StopDataTransmission how not been called on all Tiles."
+            )
+        self.logger.debug(
+            "Tiles response from StopDataTransmission: "
+            f" {[f.result() for f in future_results]}"
+        )
 
     def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
         """

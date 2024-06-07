@@ -1648,3 +1648,50 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         """
         on_tile_device.GetArpTable()
+
+    def test_set_firmware_temperature_thresholds(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test device attributes that map through to the component.
+
+        Thus require the component to be connected and turned on before
+        a read / write can be effected.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        board_alarm_threshold = json.loads(
+            on_tile_device.firmwareTemperatureThresholds
+        )["board_alarm_threshold"]
+
+        # This method mut be used in ENGINEERING MODE
+        assert on_tile_device.adminMode == AdminMode.ONLINE
+        with pytest.raises(DevFailed):
+            on_tile_device.SetFirmwareTemperatureThresholds(
+                json.dumps(
+                    {
+                        "board_temperature_threshold": [20, 30],
+                        "fpga1_temperature_threshold": [20, 30],
+                        "fpga2_temperature_threshold": [20, 30],
+                    }
+                )
+            )
+        on_tile_device.adminMode = AdminMode.ENGINEERING
+        on_tile_device.SetFirmwareTemperatureThresholds(
+            json.dumps(
+                {
+                    "board_temperature_threshold": [20, 30],
+                    "fpga1_temperature_threshold": [20, 30],
+                    "fpga2_temperature_threshold": [20, 30],
+                }
+            )
+        )
+        final_board_alarm_threshold = json.loads(
+            on_tile_device.firmwareTemperatureThresholds
+        )["board_alarm_threshold"]
+
+        assert final_board_alarm_threshold != board_alarm_threshold
+        assert final_board_alarm_threshold == [20, 30]

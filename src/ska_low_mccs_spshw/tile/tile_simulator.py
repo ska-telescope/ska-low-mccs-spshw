@@ -822,12 +822,12 @@ class TileSimulator:
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
     TPM_TEMPERATURE_THRESHOLDS = {
-        "board_warning_threshold": (-273, 90),
-        "board_alarm_threshold": (-273, 90),
-        "fpga1_warning_threshold": (-273, 90),
-        "fpga1_alarm_threshold": (-273, 90),
-        "fpga2_warning_threshold": (-273, 90),
-        "fpga2_alarm_threshold": (-273, 90),
+        "board_warning_threshold": (-273.0, 90.0),
+        "board_alarm_threshold": (-273.0, 90.0),
+        "fpga1_warning_threshold": (-273.0, 90.0),
+        "fpga1_alarm_threshold": (-273.0, 90.0),
+        "fpga2_warning_threshold": (-273.0, 90.0),
+        "fpga2_alarm_threshold": (-273.0, 90.0),
     }
 
     FIRMWARE_NAME = "itpm_v1_6.bit"
@@ -888,6 +888,10 @@ class TileSimulator:
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
+        self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
+        self._is_cpld_connectable = True
+        self._is_fpga1_connectable = True
+        self._is_fpga2_connectable = True
         self._global_status_alarms: dict[str, int] = {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
@@ -1232,7 +1236,7 @@ class TileSimulator:
     @connected
     def get_tpm_temperature_thresholds(
         self: TileSimulator,
-    ) -> dict[str, tuple[int, int]]:
+    ) -> dict[str, tuple[float, float]]:
         """
         Return a dictionary of temperature thresholds.
 
@@ -1249,7 +1253,7 @@ class TileSimulator:
         :return: A dictionary containing the temperature thresholds.
         :rtype: dict
         """
-        return self.TPM_TEMPERATURE_THRESHOLDS
+        return self._tpm_temperature_thresholds
 
     @check_mocked_overheating
     @connected
@@ -2156,6 +2160,100 @@ class TileSimulator:
             self.tpm.beam1.is_running()  # type: ignore
             and self.tpm.beam2.is_running()  # type: ignore
         )
+
+    def set_tpm_temperature_thresholds(
+        self: TileSimulator,
+        board_alarm_threshold: tuple[float, float] | None = None,
+        fpga1_alarm_threshold: tuple[float, float] | None = None,
+        fpga2_alarm_threshold: tuple[float, float] | None = None,
+    ) -> None:
+        """
+        Set the temperature thresholds.
+
+        NOTE: Warning this method can configure the shutdown temperature of
+        components and must be used with care. This method is capped to a minimum
+        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+
+        :param board_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the board (unit: Degree Celsius)
+        :param fpga1_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
+        :param fpga2_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        """
+        self.logger.info("Not yet complete")
+
+        # TODO: In this method we should be checking if we an overheating event is
+        # Happening. If it is we will need to mock the CPLD halting power to
+        # the overheating component.
+        def _is_in_range_20_50(value: float) -> bool:
+            """
+            Return True if value is larger than 20 and less than 50.
+
+            :param value: value under test
+
+            :return: True when test value in range.
+            """
+            min_settable = 20
+            max_settable = 50
+            if min_settable <= value <= max_settable:
+                return True
+            return False
+
+        if board_alarm_threshold is not None:
+            if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
+                board_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "board_alarm_threshold"
+                ] = board_alarm_threshold
+            else:
+                self.logger.info(
+                    f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga1_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga1_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga1_alarm_threshold"
+                ] = fpga1_alarm_threshold
+            else:
+                self.logger.info(
+                    f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga2_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga2_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga2_alarm_threshold"
+                ] = fpga2_alarm_threshold
+            else:
+                self.logger.debug(
+                    f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+
+    def check_communication(self: TileSimulator) -> dict[str, bool]:
+        """
+        Return status of connection to TPM CPLD and FPGAs.
+
+        :example:
+
+        >> OK Status:
+          {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
+        >> TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
+          {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
+        >> TPM OFF or Network Issue:
+          {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
+
+        :return: a dictionary with the key communication information.
+        """
+        return {
+            "CPLD": self._is_cpld_connectable,
+            "FPGA0": self._is_fpga1_connectable,
+            "FPGA1": self._is_fpga2_connectable,
+        }
 
     @check_mocked_overheating
     @connected

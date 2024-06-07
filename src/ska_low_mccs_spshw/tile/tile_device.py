@@ -148,7 +148,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "is_programmed": "isProgrammed",
             "beamformer_table": "beamformerTable",
             "io": "io",
-            "alarms": "alarms",
             "dsp": "dsp",
             "voltages": "voltages",
             "temperatures": "temperatures",
@@ -159,6 +158,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
+            "core_communication": "coreCommunicationStatus",
+            "global_status_alarms": "alarms",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -272,6 +273,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            (
+                "SetFirmwareTemperatureThresholds",
+                self.SetFirmwareTemperatureThresholdsCommand,
+            ),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
             ("WriteRegister", self.WriteRegisterCommand),
@@ -1148,6 +1153,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
             )
         return self._attribute_state["currentTileBeamformerFrame"].read()[0]
+
+    @attribute(dtype="DevString")
+    def coreCommunicationStatus(self: MccsTile) -> str | None:
+        """
+        Return status of connection to TPM, CPLD and FPGAs.
+
+        Return True if communication is OK else False
+
+        :example:
+
+        >>> core_communication_status = tile_proxy.coreCommunicationStatus
+        >>> print(core_communication_status)
+        >>> {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
+
+        :return: dictionary containing if the CPLD and FPGAs are
+            connectable or None if not yet polled.
+        """
+        return json.dumps(self._attribute_state["coreCommunicationStatus"].read()[0])
 
     @attribute(dtype="DevLong")
     def currentFrame(self: MccsTile) -> int:
@@ -4056,6 +4079,94 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
             f" \n"
         )
+
+    class SetFirmwareTemperatureThresholdsCommand(FastCommand):
+        """Class for handling the SetFirmwareTemperatureThresholds(argin) command."""
+
+        SUCCEEDED_MESSAGE = "Command executed."
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_SetTemperatureThresholds.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new SetFirmwareTemperatureThresholdsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator(
+                "SetFirmwareTemperatureThresholds", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            board_temperature_threshold = kwargs.get("board_temperature_threshold")
+            fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold")
+            fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold")
+
+            self._component_manager.set_tpm_temperature_thresholds(
+                board_alarm_threshold=board_temperature_threshold,
+                fpga1_alarm_threshold=fpga1_temperature_threshold,
+                fpga2_alarm_threshold=fpga2_temperature_threshold,
+            )
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetFirmwareTemperatureThresholds(
+        self: MccsTile, argin: list[float]
+    ) -> DevVarLongStringArrayType:
+        """
+        Specify the temperature thresholds in the firmware.
+
+        NOTE: This method may only be used in ENGINEERING mode.
+        fpga1_temperature_threshold.
+
+        :param argin: An array containing: Temperature parameter
+            with minimal and maximal thresholds.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :raises PermissionError: If this command is executed when not in
+            ENGINEERING mode.
+
+        :example:
+
+        >>> thresholds = {"board_temperature_threshold": [30, 45]}
+        >>> json_thresholds = json.loads(thresholds)
+        >>> tile_device.SetFirmwareTemperatureThresholds(json_thresholds)
+        """
+        if self._admin_mode != AdminMode.ENGINEERING:
+            raise PermissionError("Must be in engineering mode to use this command.")
+        handler = self.get_command_object("SetFirmwareTemperatureThresholds")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
 
 # ----------

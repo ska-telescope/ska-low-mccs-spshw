@@ -221,10 +221,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.ping()
                     # pylint: disable=broad-except
-                except Exception as e:
+                except Exception:
                     # polling attempt was unsuccessful
-                    self.logger.warning(f"Connection to tpm lost! : {e}")
                     error_flag = True
+                finally:
+                    # Check core communications every poll.
+                    self.logger.warning("Checking communication with CPLD and FPGAs")
+                    core_communication = self.tile.check_communication()
+                    self._update_component_state(core_communication=core_communication)
                 if error_flag:
                     self.tile.tpm = None
                     request = TileRequest("connect", self.connect)
@@ -1299,7 +1303,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def get_tpm_temperature_thresholds(
         self: TileComponentManager,
-    ) -> None | dict[str, tuple[int, int]]:
+    ) -> None | dict[str, tuple[float, float]]:
         """
         Return the temperature thresholds in firmware.
 
@@ -2823,6 +2827,39 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         raise TimeoutError(
             "Failed to check programmed state, lock not acquired in time."
         )
+
+    @check_communicating
+    def set_tpm_temperature_thresholds(
+        self: TileComponentManager,
+        board_alarm_threshold: tuple[float, float] | None = None,
+        fpga1_alarm_threshold: tuple[float, float] | None = None,
+        fpga2_alarm_threshold: tuple[float, float] | None = None,
+    ) -> None:
+        """
+        Set the temperature thresholds.
+
+        NOTE: Warning this method can configure the shutdown temperature of
+        components and must be used with care. This method is capped to a minimum
+        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+
+        :param board_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the board (unit: Degree Celsius)
+        :param fpga1_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
+        :param fpga2_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.set_tpm_temperature_thresholds(
+                    board_alarm_threshold=board_alarm_threshold,
+                    fpga1_alarm_threshold=fpga1_alarm_threshold,
+                    fpga2_alarm_threshold=fpga2_alarm_threshold,
+                )
+            else:
+                self.logger.warning(
+                    "Failed to acquire lock for set_tpm_temperature_thresholds."
+                )
 
     # -----------------------------
     # Test generator methods

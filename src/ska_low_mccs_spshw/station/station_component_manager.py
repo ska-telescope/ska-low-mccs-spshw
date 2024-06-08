@@ -1178,7 +1178,8 @@ class SpsStationComponentManager(
             for proxy in self._tile_proxies.values()
         ):
             self.logger.debug("Tiles already initialised")
-            result_code = ResultCode.FAILED
+            result_code = ResultCode.OK
+            return
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON

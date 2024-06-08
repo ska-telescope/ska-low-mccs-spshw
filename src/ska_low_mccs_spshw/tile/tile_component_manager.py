@@ -905,6 +905,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
                         result="The initialisation task has failed",
                     )
             case TpmStatus.SYNCHRONISED:
+                self._tile_time.set_reference_time(self._tpm_driver.fpga_reference_time)
                 if task_callback:
                     task_callback(
                         status=TaskStatus.COMPLETED,

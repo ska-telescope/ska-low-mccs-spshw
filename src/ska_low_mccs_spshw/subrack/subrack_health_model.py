@@ -82,6 +82,7 @@ class SubrackHealthModel(BaseHealthModel):
         self._state["subrack_state_points"] = (
             self._state["subrack_state_points"] | new_states
         )
+        self.update_health()
 
     def evaluate_health(
         self: SubrackHealthModel,

@@ -154,12 +154,6 @@ def device_online(
         )
     change_event_callbacks.assert_change_event("device_state", Anything)
 
-    # TODO: Get rid of this
-    if device == "Subrack":
-        device_proxies["Subrack"].healthModelParams = json.dumps(
-            {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
-        )
-
 
 @given("the Station has been commanded to turn on")
 @when("the Station has been commanded to turn on")

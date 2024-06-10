@@ -15,7 +15,7 @@ name = "PyPI-public"
 url = 'https://pypi.org/simple'
 
 [tool.poetry.dependencies]
-python = "~3.10"  
+python = "^3.10"  
 aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="c03cf53881f5a25b8629eaabbcd669b79dafd081" , subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
@@ -26,7 +26,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^0.20.0"
 ska-control-model = "^0.3.4"
-ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev = "d35c3d238547677fa832efb5e2207d96e5f6d71c" }
+ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev = "768d0006ebd6674d6928ed89ce244af1faef7ae8" }
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"

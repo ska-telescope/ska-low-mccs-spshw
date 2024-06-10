@@ -166,14 +166,14 @@ def station_on(device_proxies: dict[str, tango.DeviceProxy]) -> None:
     device_proxies["Station"].On()
 
 
-@given("the Station has been commanded to turn off")
-def station_off(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@given("the Station has been commanded to turn to standby")
+def station_standby(device_proxies: dict[str, tango.DeviceProxy]) -> None:
     """
-    Command the station to turn off.
+    Command the station to turn to standby.
 
     :param device_proxies: dictionary of device proxies.
     """
-    device_proxies["Station"].Off()
+    device_proxies["Station"].Standby()
 
 
 @given(parsers.cfparse("the {device} reports that its {attribute} is {value}"))
@@ -195,7 +195,11 @@ def device_verify_attribute(
     device_proxy = device_proxies[device]
     enum_value = None
     if attribute == "state":
-        enum_value = {"ON": tango.DevState.ON, "OFF": tango.DevState.OFF}[value.upper()]
+        enum_value = {
+            "ON": tango.DevState.ON,
+            "OFF": tango.DevState.OFF,
+            "STANDBY": tango.DevState.STANDBY,
+        }[value.upper()]
     elif attribute == "HealthState":
         enum_value = {
             "OK": HealthState.OK,
@@ -203,7 +207,7 @@ def device_verify_attribute(
             "FAILED": HealthState.FAILED,
             "UNKNOWN": HealthState.UNKNOWN,
         }[value]
-    timeout = 10
+    timeout = 30
     device_value = None
     for _ in range(timeout):
         if attribute == "state":

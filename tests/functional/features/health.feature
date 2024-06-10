@@ -6,8 +6,8 @@ Feature: Test health
         And a Subrack that is online
         And a Tile that is online
         And a Station that is online
-        And the Station has been commanded to turn off
-        And the Station reports that its state is OFF
+        And the Station has been commanded to turn to standby
+        And the Station reports that its state is STANDBY
         And the Tile reports that its state is OFF
         When the Station has been commanded to turn on
         Then the Station reports that its state is ON

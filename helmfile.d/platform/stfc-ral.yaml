@@ -1,0 +1,70 @@
+platform:
+  metadata:
+    version: 0.4.0
+    description: A platform configuration specification for STFC RAL
+
+  cluster:
+    daq:
+      storage_class: nfss1
+    domain: stfc-ral-k8s.skao.int
+    minikube: false
+    services:
+      jupyterhub: true
+  array:
+    name: stfc-ral
+    stations:
+      stfc-ral:
+        id: 1
+        sps:
+          sdn_first_interface: 10.130.0.100/25  # Tile 40G IP allocation starting at .100
+          sdn_gateway: 10.130.0.126
+          subracks:
+            sr1:
+              srmb_host: 10.132.0.54
+              srmb_port: 8081
+          tpms:
+            tpm1:
+              id: 0
+              host: 10.132.0.61
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 1
+            tpm2:
+              id: 1
+              host: 10.132.0.62
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 2
+            tpm3:
+              id: 2
+              host: 10.132.0.63
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 3
+            tpm4:
+              id: 3
+              host: 10.132.0.64
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 4
+            tpm5:
+              id: 4
+              host: 10.132.0.65
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 5
+            tpm6:
+              id: 5
+              host: 10.132.0.66
+              port: 10000
+              version: tpm_v1_6
+              subrack: sr1
+              subrack_slot: 6
+
+defaults:
+  logging_level_default: 5

@@ -18,6 +18,7 @@ import json
 import logging
 import threading
 import time
+from concurrent import futures
 from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
@@ -41,6 +42,8 @@ from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
 
 from ..tile.tile_data import TileData
+from .station_self_check_manager import SpsStationSelfCheckManager
+from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
 
@@ -504,6 +507,14 @@ class SpsStationComponentManager(
             fault=None,
             is_configured=None,
             adc_power=None,
+        )
+
+        self._self_check_manager = SpsStationSelfCheckManager(
+            component_manager=self,
+            logger=self.logger,
+            tile_trls=list(self._tile_proxies.keys()),
+            subrack_trls=list(self._subrack_proxies.keys()),
+            daq_trl=self._daq_trl,
         )
 
         if antenna_config_uri:
@@ -1020,29 +1031,41 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        message: str = ""
         if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-        results = [proxy.off() for proxy in self._subrack_proxies.values()]
-        # Never mind tiles, turning off subracks suffices
-        # TODO: Here we need to monitor Tiles. This will eventually
-        # use the mechanism described in MCCS-945, but until that is implemented
-        # we might instead just poll these devices' longRunngCommandAttribute.
-        # For the moment, however, we just submit the subservient devices' commands
-        # for execution and forget about them.
-        if all(
-            result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
-            for (result, _) in results
-        ):
-            task_status = TaskStatus.COMPLETED
-            result_code = ResultCode.OK
-            message = "Off Command Completed"
-        else:
-            task_status = TaskStatus.FAILED
-            result_code = ResultCode.FAILED
-            message = "Off Command Failed"
-        if task_callback:
-            task_callback(status=task_status, result=(result_code, message))
+            task_callback(
+                status=TaskStatus.REJECTED,
+                result=(
+                    ResultCode.REJECTED,
+                    "MCCS has no control over subrack PDUs. "
+                    "Unable to drive to the OFF state."
+                    "Try Standby to turn off all TPMs.",
+                ),
+            )
+        # The following is commented out because
+        # MCCS has no control over subrack PDUs, meaning
+        # the lowest drivable state for spsStation is STANDBY.
+        # There is already a method Standby() that does this.
+        # message: str = ""
+        # if task_callback:
+        #     task_callback(status=TaskStatus.IN_PROGRESS)
+        # results = [proxy.off() for proxy in self._subrack_proxies.values()]
+        # # Never mind tiles, turning off subracks suffices
+        # # TODO: Here we need to monitor Tiles. This will eventually
+        # # use the mechanism described in MCCS-945, but until that is implemented
+        # # we might instead just poll these devices' longRunngCommandAttribute.
+        # # For the moment, however, we just submit the subservient devices' commands
+        # # for execution and forget about them.
+        # if all(
+        #     result in [ResultCode.OK, ResultCode.STARTED, ResultCode.QUEUED]
+        #     for (result, _) in results
+        # ):
+        #     task_status = TaskStatus.COMPLETED
+        #     result_code = ResultCode.OK
+        #     message = "Off Command Completed"
+        # else:
+        #     task_status = TaskStatus.FAILED
+        #     result_code = ResultCode.FAILED
+        #     message = "Off Command Failed"
 
     @check_communicating
     def standby(
@@ -1057,7 +1080,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._standby, task_callback=task_callback)
 
@@ -1135,7 +1158,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
@@ -1220,7 +1243,7 @@ class SpsStationComponentManager(
         `self._initialise` for execution.
 
         :param task_callback: Update task state, defaults to None
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(self._initialise, task_callback=task_callback)
 
@@ -1618,6 +1641,113 @@ class SpsStationComponentManager(
         """
         return self._is_configured
 
+    def self_check(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _self_check method.
+
+        This method returns immediately after it submitted
+        `self._self_check` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :return: a task status and response message
+        """
+        return self.submit_task(self._self_check, task_callback=task_callback)
+
+    def _self_check(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        test_results = self._self_check_manager.run_tests()
+
+        if all(
+            test_result in [TestResult.PASSED, TestResult.NOT_RUN]
+            for test_result in test_results
+        ):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Tests completed OK."),
+                )
+            return
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.FAILED,
+                result=(
+                    ResultCode.FAILED,
+                    "Not all tests passed or skipped, check report.",
+                ),
+            )
+
+    def run_test(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        count: Optional[int] = 1,
+        test_name: str,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _run_test method.
+
+        This method returns immediately after it submitted
+        `self._run_test` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param count: how many times to run the test, default is 1.
+        :param test_name: which test to run.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._run_test, args=[count, test_name], task_callback=task_callback
+        )
+
+    def _run_test(
+        self: SpsStationComponentManager,
+        count: int,
+        test_name: str,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        test_results = self._self_check_manager.run_test(
+            test_name=test_name, count=count
+        )
+
+        if all(test_result == TestResult.PASSED for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result=(ResultCode.OK, "Tests completed OK."),
+                )
+            return
+        if all(test_result == TestResult.NOT_RUN for test_result in test_results):
+            if task_callback is not None:
+                task_callback(
+                    status=TaskStatus.REJECTED,
+                    result=(
+                        ResultCode.REJECTED,
+                        "Tests requirements not met, check logs.",
+                    ),
+                )
+            return
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.FAILED,
+                result=(
+                    ResultCode.FAILED,
+                    "Not all tests passed, check report.",
+                ),
+            )
+
     # ----------
     # Attributes
     # ----------
@@ -2005,6 +2135,33 @@ class SpsStationComponentManager(
             result = result + [0, 0]
         return result
 
+    @property
+    def test_logs(self: SpsStationComponentManager) -> str:
+        """
+        Get logs of most recently run self-check test set.
+
+        :return: logs of most recently run self-check test set.
+        """
+        return self._self_check_manager._test_logs
+
+    @property
+    def test_report(self: SpsStationComponentManager) -> str:
+        """
+        Get report of most recently run self-check test set.
+
+        :return: report of most recently run self-check test set.
+        """
+        return self._self_check_manager._test_report
+
+    @property
+    def test_list(self: SpsStationComponentManager) -> list[str]:
+        """
+        Get list of self-check tests available.
+
+        :return: list of self-check tests available.
+        """
+        return self._self_check_manager._tpm_test_names
+
     # ------------
     # commands
     # ------------
@@ -2371,9 +2528,24 @@ class SpsStationComponentManager(
 
     def stop_data_transmission(self: SpsStationComponentManager) -> None:
         """Stop data transmission for send_channelised_data_continuous."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopDataTransmission()
+        future_results = [
+            dev._proxy.command_inout(
+                "StopDataTransmission",
+                green_mode=tango.GreenMode.Futures,
+                wait=False,
+            )
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+        ]
+        futures.wait(future_results)
+        if len(future_results) != len(self._tile_proxies):
+            self.logger.warning(
+                "StopDataTransmission how not been called on all Tiles."
+            )
+        self.logger.debug(
+            "Tiles response from StopDataTransmission: "
+            f" {[f.result() for f in future_results]}"
+        )
 
     def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
         """
@@ -2403,7 +2575,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         params = json.loads(argin)
         start_time = params.get("start_time", None)
@@ -2472,7 +2644,7 @@ class SpsStationComponentManager(
             each channeliser frequency channel.
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(
             self._set_channeliser_rounding,
@@ -2539,7 +2711,7 @@ class SpsStationComponentManager(
 
         :param task_callback: Update task state, defaults to None
 
-        :return: a task staus and response message
+        :return: a task status and response message
         """
         return self.submit_task(
             self._trigger_adc_equalisation,

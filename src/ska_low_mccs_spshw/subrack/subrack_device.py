@@ -323,7 +323,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
 
         self._hardware_attributes: dict[str, Any] = {}
 
-        self._desired_fan_speeds: list[float] = [0.0] * 4
+        self._desired_fan_speeds: Optional[list[float]] = None
         self.clock_presence: list[str] = []
         self._update_health_data()
 
@@ -450,7 +450,9 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         )
 
     def _fan_speed_set(self: MccsSubrack, fan_id: int, fan_speed_set: float) -> None:
-        self._desired_fan_speeds[fan_id] = fan_speed_set
+        if self._desired_fan_speeds is None:
+            self._desired_fan_speeds = [0.0] * 4
+        self._desired_fan_speeds[fan_id - 1] = fan_speed_set
         self._update_health_data()
 
     # ----------
@@ -925,6 +927,16 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             When communication with the subrack is not established,
             this returns an empty list.
         """
+        return self._subrack_fan_speeds_percent()
+
+    def _subrack_fan_speeds_percent(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the subrack fan speeds, in percent.
+
+        :return: the subrack fan speeds.
+            When communication with the subrack is not established,
+            this returns an empty list.
+        """
         return self._hardware_attributes.get("subrackFanSpeedsPercent", None) or []
 
     # TODO: https://gitlab.com/tango-controls/pytango/-/issues/483
@@ -1139,7 +1151,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         data = {
             "board_temps": self._board_temperatures(),
             "backplane_temps": self._backplane_temperatures(),
-            "subrack_fan_speeds": self._subrack_fan_speeds(),
+            "subrack_fan_speeds": self._subrack_fan_speeds_percent(),
             "board_currents": self._board_current(),
             "tpm_currents": self._tpm_currents(),
             "power_supply_currents": self._power_supply_currents(),

@@ -9,7 +9,7 @@
 """A file to store health transition rules for subrack."""
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Optional
 
 import numpy as np
 from ska_control_model import HealthState, PowerState
@@ -67,18 +67,20 @@ class SubrackHealthRules(HealthRules):
     def _check_fan_speeds(
         self: SubrackHealthRules,
         fan_speeds: list[float],
-        desired_fan_speeds: list[float],
+        desired_fan_speeds: Optional[list[float]],
         rule_str: str,
     ) -> tuple[bool, str]:
         """
         Check the fan speeds.
 
         :param fan_speeds: The speeds of the fans.
-        :param desired_fan_speeds: The desired speeds of the fans.
+        :param desired_fan_speeds: The desired speeds of the fans, None if not set yet.
         :param rule_str: The type of error threshold to be checking against.
 
         :return: True if any of the thresholds are breached, along with a text report.
         """
+        if desired_fan_speeds is None:
+            return False, ""
         for fan_speed in fan_speeds[0:2]:
             if (
                 abs(fan_speed - desired_fan_speeds[1])

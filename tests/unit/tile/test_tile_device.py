@@ -279,21 +279,21 @@ class TestMccsTile:
         [
             pytest.param(
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [i + 1 for i in range(16)],
                 },
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [i + 1 for i in range(16)],
                 },
                 id="valid config is entered correctly",
             ),
             pytest.param(
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                 },
                 {
-                    "fixed_delays": [i + 1 for i in range(32)],
+                    "fixed_delays": [(i + 1) * 1.25 for i in range(32)],
                     "antenna_ids": [],
                 },
                 id="missing config data is valid",
@@ -344,7 +344,8 @@ class TestMccsTile:
         value = expected_config["fixed_delays"]
         write_value = np.array(value)
         init_value = np.array(init_value)
-
+        on_tile_device.UpdateAttributes()
+        time.sleep(1)
         if value:
             assert (on_tile_device.staticTimeDelays == write_value).all()
         else:
@@ -524,6 +525,11 @@ class TestMccsTile:
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [
+            (
+                "firmwareTemperatureThresholds",
+                TileSimulator.TPM_TEMPERATURE_THRESHOLDS,
+                None,
+            ),
             ("logicalTileId", 0, 7),
             ("stationId", TileSimulator.STATION_ID, 5),
             (
@@ -641,7 +647,9 @@ class TestMccsTile:
         time.sleep(0.2)
         tile_device.UpdateAttributes()
         time.sleep(0.2)
-        if isinstance(initial_value, list):
+        if isinstance(initial_value, dict):
+            initial_value = json.dumps(initial_value)
+        elif isinstance(initial_value, list):
             initial_value = np.array(initial_value)
             assert (getattr(tile_device, attribute) == initial_value).all()
         else:

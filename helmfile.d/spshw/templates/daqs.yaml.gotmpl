@@ -10,6 +10,10 @@
 {{- $daqs_to_launch := dict}}
 {{- $daqs_to_egress := dict}}
 
+{{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
+{{- $daq_storage_name := dig "local_storage_claim" "daq-data" $cluster_daq_spec}}
+{{- $daq_storage_class := dig "storage_class" "" $cluster_daq_spec}}
+
 {{- range $station_name, $station_spec := $platform.array.stations}}
   {{- $sps_spec := dig "sps" (dict "enabled" false) $station_spec}}
   {{- $daq_spec := dig "daq" dict $sps_spec}}
@@ -59,22 +63,19 @@ simulators:
 {{- end}}
 
 {{- if (or $daqs_to_launch $daqs_to_egress)}}
-
 ska-low-mccs-daq:
+{{- if $daq_storage_class}}
+  storage:
+    {{$daq_storage_name}}:
+      storage_class: {{$daq_storage_class}}
+      size: "250Mi"
 {{- end}}
 {{- with $daqs_to_launch}}
-  storage:
-    daq-data:
-{{- with $platform.cluster.daq.storage_class}}
-      storage_class: {{.}}
-{{- end}}
-      size: "250Mi"
-
   receivers:
-{{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
 {{- range $station_name, $daq_spec := .}}
     {{$station_name}}:
-      storage: daq-data
+      storage: {{$daq_storage_name}}
+{{- $cluster_daq_spec := dig "cluster" "daq" dict $platform}}
 {{- with (pick $cluster_daq_spec "annotations" "node_selector" "affinity" "tolerations" "runtime_class" "gpu_limit")}}
 {{toYaml . | indent 6}}
 {{- end}}
@@ -84,4 +85,5 @@ ska-low-mccs-daq:
 {{- with $daqs_to_egress}}
   receiver_egresses:
 {{toYaml . | indent 4}}
+{{- end}}
 {{- end}}

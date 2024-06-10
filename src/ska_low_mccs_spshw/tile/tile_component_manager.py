@@ -739,6 +739,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "sysref_present",
         "test_generator_active",
         "test_generator_input_select",
+        "get_tpm_temperature_thresholds",
         "tile_id",
         "station_id",
         "voltage_mon",

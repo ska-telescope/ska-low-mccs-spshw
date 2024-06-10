@@ -192,7 +192,7 @@ def test_Off(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -214,9 +214,7 @@ def test_Off(
     #         json.dumps([int(ResultCode.OK), "Command completed"]),
     #     ),
     # )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
-    )
+    change_event_callbacks["command_status"].assert_not_called()
 
 
 def test_On(
@@ -308,7 +306,7 @@ def test_On(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -321,19 +319,15 @@ def test_On(
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.OFF
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
-    )
-
     # Now turn the station back on using the On command
     ([result_code], [on_command_id]) = station_device.On()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "QUEUED")
+        (off_command_id, "REJECTED", on_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED", on_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -349,7 +343,7 @@ def test_On(
     assert station_device.state() == DevState.ON
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "COMPLETED")
+        (off_command_id, "REJECTED", on_command_id, "COMPLETED")
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1

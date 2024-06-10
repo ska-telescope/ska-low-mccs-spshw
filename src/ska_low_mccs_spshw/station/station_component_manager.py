@@ -2776,6 +2776,18 @@ class SpsStationComponentManager(
                             ),
                         )
                     return
+            self._daq_proxy._proxy.configure(
+                json.dumps(
+                    {
+                        "nof_antennas": 16,  # nof_antenna_per_tile
+                        "nof_tiles": 16,
+                        "nof_channels": 1,
+                        "directory": "correlator_data",
+                        "nof_correlator_samples": 1835008,
+                        "receiver_frame_size": 9000,
+                    }
+                )
+            )
             self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
             self.logger.info(f"Starting daq to capture in mode {daq_mode}")
             max_tries = 10

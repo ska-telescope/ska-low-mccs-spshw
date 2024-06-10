@@ -75,12 +75,12 @@ class SpsStationHealthRules(HealthRules):
         )
         if result:
             tile_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in tile_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
             subrack_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
@@ -113,12 +113,12 @@ class SpsStationHealthRules(HealthRules):
         )
         if result:
             tile_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in tile_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
             subrack_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
@@ -151,12 +151,12 @@ class SpsStationHealthRules(HealthRules):
         )
         if not result:
             tile_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in tile_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]
             subrack_states = [
-                f"{trl} - {health.name}"
+                f"{trl} - {HealthState(health).name}"
                 for trl, health in subrack_healths.items()
                 if health is not None and health in DEGRADED_STATES
             ]

@@ -150,7 +150,7 @@ def station_component_manager_fixture(
         callbacks["subrack_health"],
     )
     # Patching through our self check manager basic tests.
-    sps_station_component_manager._self_check_manager = station_self_check_manager
+    sps_station_component_manager.self_check_manager = station_self_check_manager
     return sps_station_component_manager
 
 

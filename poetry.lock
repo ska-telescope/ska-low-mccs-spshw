@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "c03cf53881f5a25b8629eaabbcd669b79dafd081"
-resolved_reference = "c03cf53881f5a25b8629eaabbcd669b79dafd081"
+reference = "19ef07078bb08ebbfd6120772f59c90ab1f0e653"
+resolved_reference = "19ef07078bb08ebbfd6120772f59c90ab1f0e653"
 subdirectory = "python"
 [[package]]
 name = "alabaster"
@@ -1419,14 +1419,14 @@ files = [
 
 [[package]]
 name = "parse"
-version = "1.20.1"
+version = "1.20.2"
 description = "parse() is the opposite of format()"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "parse-1.20.1-py2.py3-none-any.whl", hash = "sha256:76ddd5214255ae711db4c512be636151fbabaa948c6f30115aecc440422ca82c"},
-    {file = "parse-1.20.1.tar.gz", hash = "sha256:09002ca350ad42e76629995f71f7b518670bcf93548bdde3684fd55d2be51975"},
+    {file = "parse-1.20.2-py2.py3-none-any.whl", hash = "sha256:967095588cb802add9177d0c0b6133b5ba33b1ea9007ca800e526f42a85af558"},
+    {file = "parse-1.20.2.tar.gz", hash = "sha256:b41d604d16503c79d81af5165155c0b20f6c8d6c559efa66b4b695c3e5a0a0ce"},
 ]
 
 [[package]]
@@ -1780,8 +1780,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
-resolved_reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
+reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
+resolved_reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
 
 [[package]]
 name = "pyflakes"
@@ -3407,4 +3407,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"  
-content-hash = "8437d97046120d4064a81e51e122a455118f9a993857b8ca01922299d56eca88"
+content-hash = "9fc86ceecbdb7e38da491c5cc108996514b6a04180330ba2fd9bacb28cad1cbf"

@@ -244,6 +244,7 @@ class MockTpmFirmwareInformation:
         self._git_branch = "<mock_branch>"
         self._git_commit = "<mock_commit>"
         self._git_dirty_flag = "<mock_dirty_flag>"
+        self._firmware_version = "<mock_firmware_version"
 
     def get_design(self: MockTpmFirmwareInformation) -> str:
         return self._design
@@ -265,6 +266,9 @@ class MockTpmFirmwareInformation:
 
     def get_git_commit(self: MockTpmFirmwareInformation) -> str:
         return self._git_commit
+
+    def get_firmware_version(self: MockTpmFirmwareInformation) -> str:
+        return self._firmware_version
 
 
 class MockTpm:
@@ -568,6 +572,9 @@ class MockTpm:
         info["fpga_firmware"] = {}
         info["fpga_firmware"]["design"] = self.tpm_firmware_information.get_design()
         info["fpga_firmware"]["build"] = self.tpm_firmware_information.get_build()
+        info["fpga_firmware"][
+            "version"
+        ] = self.tpm_firmware_information.get_firmware_version()
         info["fpga_firmware"]["compile_time"] = self.tpm_firmware_information.get_time()
         info["fpga_firmware"]["compile_user"] = self.tpm_firmware_information.get_user()
         info["fpga_firmware"]["compile_host"] = self.tpm_firmware_information.get_host()

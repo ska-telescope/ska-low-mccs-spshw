@@ -812,7 +812,8 @@ class TpmDriver(MccsBaseComponentManager):
         :return: Info in the TPM
         """
         self.logger.debug("TpmDriver: get info")
-        return self.tile.info
+        return self._tile_health_structure["info"]
+        # return self.tile.info
 
     @property
     def io(self: TpmDriver) -> dict[str, Any]:

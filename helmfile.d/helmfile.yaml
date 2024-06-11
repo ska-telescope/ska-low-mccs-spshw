@@ -13,15 +13,15 @@ environments:
   stfc-ral-software:
     values:
       - platform/stfc-ral.yaml
-      - mccs/values/values-ral-software.yaml
+      - spshw/values/values-ral-software.yaml
   stfc-ral-firmware:
     values:
       - platform/stfc-ral.yaml
-      - mccs/values/values-ral-firmware.yaml
+      - spshw/values/values-ral-firmware.yaml
   stfc-ral-partial:
     values:
       - platform/stfc-ral.yaml
-      - mccs/values/values-ral-partial.yaml
+      - spshw/values/values-ral-partial.yaml
   stfc-ci:
     values:
       - platform/stfc-ci.yaml

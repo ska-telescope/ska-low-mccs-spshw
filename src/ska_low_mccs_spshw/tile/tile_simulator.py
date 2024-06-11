@@ -1017,7 +1017,16 @@ class TileSimulator:
         if bitfile is None:
             self.logger.error("Provided bitfile is None type")
             raise LibraryError("bitfile is None type")
-
+        # Every time we reprogram the temperature thresholds get reset.
+        self._tpm_temperature_thresholds = {
+            "board_warning_threshold": (-273.0, 90.0),
+            "board_alarm_threshold": (-273.0, 90.0),
+            "fpga1_warning_threshold": (-273.0, 90.0),
+            "fpga1_alarm_threshold": (-273.0, 90.0),
+            "fpga2_warning_threshold": (-273.0, 90.0),
+            "fpga2_alarm_threshold": (-273.0, 90.0),
+        }
+        self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
     @check_mocked_overheating
@@ -2233,6 +2242,33 @@ class TileSimulator:
                 self.logger.debug(
                     f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
                 )
+        self.evaluate_mcu_action()
+
+    def evaluate_mcu_action(self: TileSimulator) -> None:
+        """
+        Evaluate thresholds to temperatures.
+
+        In the case of overheating, we will mock the action of the
+        MCU (micro controller unit).
+        """
+        if (
+            self._tile_health_structure["temperatures"]["board"]
+            > self._tpm_temperature_thresholds["board_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA0"]
+            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA1"]
+            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"][1]
+        ):
+            self.logger.warning(
+                "We are overheating, CPLD is turning the overheating components OFF!"
+            )
+            self._is_fpga1_connectable = False
+            self._is_fpga2_connectable = False
+            self.tpm_mocked_overheating = True
+        else:
+            self.tpm_mocked_overheating = False
+            self._is_fpga1_connectable = True
+            self._is_fpga2_connectable = True
 
     def check_communication(self: TileSimulator) -> dict[str, bool]:
         """

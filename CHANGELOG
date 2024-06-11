@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [MCCS-2176] Update RAL platform spec to 0.5.0
+
 ## 0.14.0
 
 * [MCCS-1957] Support deployment namespace override

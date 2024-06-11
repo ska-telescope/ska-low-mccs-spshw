@@ -105,7 +105,7 @@ class TpmSelfCheckTest(abc.ABC):
             self._task_status = task_status
 
     def _configure_test_logger(self: TpmSelfCheckTest) -> None:
-        """Configure logger used for tests so we get split off test logs."""
+        """Configure logger used for tests so we can split off test logs."""
         self.test_logger = logging.getLogger(self.__class__.__name__)
         self.stringio_buffer = StringIO()
         self.stringio_handler = logging.StreamHandler(self.stringio_buffer)
@@ -131,7 +131,7 @@ class TpmSelfCheckTest(abc.ABC):
         """
         Check requirements for the test before running.
 
-        :return: true as no requirements have been set.
+        :return: true if all our proxies are in ENGINEERING mode.
         """
         if all(proxy.adminmode == AdminMode.ENGINEERING for proxy in self.proxies):
             return (True, "All proxies in ENGINEERING adminmode, continuing test.")
@@ -160,12 +160,11 @@ class TpmSelfCheckTest(abc.ABC):
         try:
             self.test()
             result = TestResult.PASSED
-        except AssertionError as e:
-            error_traceback = traceback.format_exc()
-            self.test_logger.error(f"{repr(e)} : {error_traceback}")
-            result = TestResult.FAILED
         except Exception as e:  # pylint: disable=broad-except
             error_traceback = traceback.format_exc()
             self.test_logger.error(f"{repr(e)} : {error_traceback}")
-            result = TestResult.ERROR
+            if isinstance(e, AssertionError):
+                result = TestResult.FAILED
+            else:
+                result = TestResult.ERROR
         return result, self.stringio_handler.stream.getvalue()

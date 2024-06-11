@@ -129,6 +129,10 @@ class TpmDriver(MccsBaseComponentManager):
         self._sysref_present = True
         self._pll_locked = True
         self._register_list = self.REGISTER_LIST
+
+        self.src_ip_40g_fpga1: str | None = None
+        self.src_ip_40g_fpga2: str | None = None
+
         # Hardware
         self._tpm_version = tpm_version
         self.tile = tile
@@ -664,13 +668,18 @@ class TpmDriver(MccsBaseComponentManager):
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
                 self.logger.info(
-                    "initialising tile with a "
-                    f"pps correction of {self._desired_pps_delay_correction}"
+                    "initialising tile with: \n"
+                    f"* tile ID of {self._tile_id} \n"
+                    f"* pps correction of {self._desired_pps_delay_correction} \n"
+                    f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
+                    f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
                 )
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
                     active_40g_ports_setting="port1-only",
+                    src_ip_fpga1=self.src_ip_40g_fpga1,
+                    src_ip_fpga2=self.src_ip_40g_fpga2,
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")

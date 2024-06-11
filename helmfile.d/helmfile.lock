@@ -24,5 +24,5 @@ dependencies:
 - name: ska-tango-taranta-dashboard-pvc
   repository: https://artefact.skao.int/repository/helm-internal
   version: 1.4.1
-digest: sha256:eecbb9eb35b3e77829824278a7a426452e6e53aabb547853ef9cb8299c6889ac
-generated: "2024-06-10T16:16:26.631618419+01:00"
+digest: sha256:f4b81556446152640b6d1e75e6611bbac3f3c344aad58eed4e8b856353c3745e
+generated: "2024-06-11T16:23:24.896608847+01:00"

@@ -468,6 +468,32 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         self._tile_time.set_reference_time(reference_time)
         return self._tile_time.format_time_from_frame(self.fpga_current_frame)
 
+    @property
+    def src_ip_40g_fpga1(self: TileComponentManager) -> str | None:
+        """
+        Return source IP for FPGA1, to be set by SpsStation.
+
+        :return: source IP for FPGA1.
+        """
+        return self._tpm_driver.src_ip_40g_fpga1
+
+    @src_ip_40g_fpga1.setter
+    def src_ip_40g_fpga1(self: TileComponentManager, argin: str) -> None:
+        self._tpm_driver.src_ip_40g_fpga1 = argin
+
+    @property
+    def src_ip_40g_fpga2(self: TileComponentManager) -> str | None:
+        """
+        Return source IP for FPGA2, to be set by SpsStation.
+
+        :return: source IP for FPGA2.
+        """
+        return self._tpm_driver.src_ip_40g_fpga2
+
+    @src_ip_40g_fpga2.setter
+    def src_ip_40g_fpga2(self: TileComponentManager, argin: str) -> None:
+        self._tpm_driver.src_ip_40g_fpga2 = argin
+
     #
     # Timed commands. Convert time to frame number
     #

@@ -19,12 +19,12 @@ import logging
 import threading
 import time
 from concurrent import futures
-from datetime import datetime, timezone
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
+from astropy.time import Time  # type: ignore
 from ska_control_model import (
     CommunicationStatus,
     HealthState,
@@ -509,7 +509,7 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
-        self._self_check_manager = SpsStationSelfCheckManager(
+        self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,
             logger=self.logger,
             tile_trls=list(self._tile_proxies.keys()),
@@ -1198,6 +1198,10 @@ class SpsStationComponentManager(
             result_code = self._turn_on_subracks(task_callback, task_abort_event)
         self.logger.debug("Subracks now on")
 
+        if result_code == ResultCode.OK:
+            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -1214,6 +1218,10 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
             result_code = self._initialise_station(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Waiting for ARP table")
+            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1281,6 +1289,10 @@ class SpsStationComponentManager(
             result_code = ResultCode.FAILED
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Setting tile source IPs before initialisation")
+            result_code = self._set_tile_source_ips(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
@@ -1293,6 +1305,10 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
             result_code = self._initialise_station(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Waiting for ARP table")
+            result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1386,8 +1402,64 @@ class SpsStationComponentManager(
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in ["Initialised", "Synchronised"] for state in states):
                 return ResultCode.OK
-        self.logger.error("Timed out waiting for tiles to come up")
+
         return ResultCode.FAILED
+
+    @check_communicating
+    def _set_tile_source_ips(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Set source IPs on tiles before initialising.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        for tile_id, tile_proxy in enumerate(list(self._tile_proxies.values())):
+            tile = tile_proxy._proxy
+            if tile is None:
+                self.logger.error(f"Tile {tile_id} proxy not formed.")
+                return ResultCode.FAILED
+            src_ip1 = str(self._sdn_first_address + 2 * tile_id)
+            src_ip2 = str(self._sdn_first_address + 2 * tile_id + 1)
+            tile.srcip40gfpga1 = src_ip1
+            tile.srcip40gfpga2 = src_ip2
+        return ResultCode.OK
+
+    @check_communicating
+    def _wait_for_arp_table(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Wait for ARP tables on tiles before continuing.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        timeout = 30
+        tick = 2
+        for tile_trl, tile_proxy in self._tile_proxies.items():
+            last_time = time.time() + timeout
+            tile = tile_proxy._proxy
+            if tile is None:
+                self.logger.error(f"{tile_trl} proxy not set up.")
+                return ResultCode.FAILED
+            while time.time() < last_time:
+                self.logger.debug(f"Waiting on {tile_trl} ARP table.")
+                if tile.GetArpTable() != '{"0": [], "1": []}':
+                    break
+                time.sleep(tick)
+            if tile.GetArpTable() == '{"0": [], "1": []}':
+                self.logger.error(f"Failed to populate ARP table of {tile_trl}")
+                return ResultCode.FAILED
+            self.logger.debug(f"Got ARP table for {tile_trl}")
+        return ResultCode.OK
 
     @check_communicating
     def _reinitialise_tiles(
@@ -1471,7 +1543,6 @@ class SpsStationComponentManager(
         self._set_beamformer_table()
         return ResultCode.OK
 
-    # pylint: disable=too-many-locals
     @check_communicating
     def _initialise_station(
         self: SpsStationComponentManager,
@@ -1503,20 +1574,13 @@ class SpsStationComponentManager(
         num_cores = 2
         for proxy in tiles:
             assert proxy._proxy is not None
-            src_ip1 = str(self._sdn_first_address + 2 * tile)
-            src_ip2 = str(self._sdn_first_address + 2 * tile + 1)
             dst_ip1 = str(self._sdn_first_address + 2 * tile + 2)
             dst_ip2 = str(self._sdn_first_address + 2 * tile + 3)
-            src_ip_list = [src_ip1, src_ip2]
             dst_ip_list = [dst_ip1, dst_ip2]
             dst_port_1 = self._destination_port
             dst_port_2 = dst_port_1 + 2
-            src_mac = self._base_mac_address + 2 * tile
-            self.logger.debug(f"Tile {tile}: 40G#1: {src_ip1} -> {dst_ip1}")
-            self.logger.debug(f"Tile {tile}: 40G#2: {src_ip2} -> {dst_ip2}")
 
             for core in range(num_cores):
-                src_ip = src_ip_list[core]
                 dst_ip = dst_ip_list[core]
 
                 if tile == last_tile:
@@ -1531,8 +1595,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 0,
-                            "source_ip": src_ip,
-                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_1,
@@ -1557,8 +1619,6 @@ class SpsStationComponentManager(
                         {
                             "core_id": core,
                             "arp_table_entry": 2,
-                            "source_ip": src_ip,
-                            "source_mac": src_mac + core,
                             "source_port": self._source_port,
                             "destination_ip": dst_ip,
                             "destination_port": dst_port_2,
@@ -1664,7 +1724,7 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        test_results = self._self_check_manager.run_tests()
+        test_results = self.self_check_manager.run_tests()
 
         if all(
             test_result in [TestResult.PASSED, TestResult.NOT_RUN]
@@ -1718,7 +1778,7 @@ class SpsStationComponentManager(
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        test_results = self._self_check_manager.run_test(
+        test_results = self.self_check_manager.run_test(
             test_name=test_name, count=count
         )
 
@@ -2142,7 +2202,7 @@ class SpsStationComponentManager(
 
         :return: logs of most recently run self-check test set.
         """
-        return self._self_check_manager._test_logs
+        return self.self_check_manager._test_logs
 
     @property
     def test_report(self: SpsStationComponentManager) -> str:
@@ -2151,7 +2211,7 @@ class SpsStationComponentManager(
 
         :return: report of most recently run self-check test set.
         """
-        return self._self_check_manager._test_report
+        return self.self_check_manager._test_report
 
     @property
     def test_list(self: SpsStationComponentManager) -> list[str]:
@@ -2160,7 +2220,7 @@ class SpsStationComponentManager(
 
         :return: list of self-check tests available.
         """
-        return self._self_check_manager._tpm_test_names
+        return self.self_check_manager._tpm_test_names
 
     # ------------
     # commands
@@ -2581,13 +2641,6 @@ class SpsStationComponentManager(
         start_time = params.get("start_time", None)
         delay = params.get("delay", 0)
 
-        if start_time is None:
-            start_time = datetime.strftime(
-                datetime.fromtimestamp(time.time(), tz=timezone.utc), self.RFC_FORMAT
-            )
-        else:
-            delay = 0
-
         return self.submit_task(
             self._start_acquisition,
             args=[start_time, delay],
@@ -2611,6 +2664,11 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         success = True
+
+        if start_time is None:
+            start_time = Time(int(time.time() + 2), format="unix").isot + "Z"
+        else:
+            delay = 0
 
         parameter_list = {"start_time": start_time, "delay": delay}
         json_argument = json.dumps(parameter_list)
@@ -2763,3 +2821,16 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "ADC equalisation complete."),
             )
+
+    def describe_test(self, test_name: str) -> str:
+        """
+        Return the doc string of a given self-check test.
+
+        :param test_name: name of the test.
+
+        :returns: the doc string of a given self-check test.
+        """
+        docs = self.self_check_manager._tpm_tests[test_name].__doc__
+        if docs is None:
+            return f"{test_name} appears to have no description."
+        return docs

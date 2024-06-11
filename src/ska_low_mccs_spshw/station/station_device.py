@@ -992,6 +992,8 @@ class SpsStation(SKAObsDevice):
         """
         Start the acquisition synchronously for all tiles, checks for synchronisation.
 
+        If a start time isn't given, it will default to 'now'.
+
         :param argin: Start acquisition time in ISO9601 format
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
@@ -1076,6 +1078,26 @@ class SpsStation(SKAObsDevice):
         handler = self.get_command_object("RunTest")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevString",
+    )
+    def DescribeTest(self: SpsStation, test_name: str) -> str:
+        """
+        Fetch the docstring of a given test.
+
+        :param test_name: the name of the test you wish to fetch the details of.
+
+        :returns: the docstring of a given test.
+        """
+        if test_name not in self.component_manager.test_list:
+            return (
+                f"{test_name} not in available tests: "
+                f"{self.component_manager.test_list}"
+            )
+
+        return self.component_manager.describe_test(test_name)
 
     # -------------
     # Fast Commands

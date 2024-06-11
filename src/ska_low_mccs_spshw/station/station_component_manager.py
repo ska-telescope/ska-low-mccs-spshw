@@ -2763,7 +2763,7 @@ class SpsStationComponentManager(
             for status_list in daq_status["Running Consumers"]
         ):
             if len(daq_status["Running Consumers"]) > 0:
-                # TODO: Do we really want to stop unrelated DAQ modes?
+                # TODO: Do we want to stop all consumers?
                 self.logger.warning("Stopping all data capture!")
                 rc, _ = self._daq_proxy._proxy.Stop()
                 if rc != ResultCode.OK:
@@ -2782,7 +2782,7 @@ class SpsStationComponentManager(
                         "nof_antennas": 16,  # nof_antenna_per_tile
                         "nof_tiles": 16,
                         "nof_channels": 1,
-                        "directory": "correlator_data",
+                        "directory": "correlator_data",  # Appended to ADR-55 path.
                         "nof_correlator_samples": 1835008,
                         "receiver_frame_size": 9000,
                     }
@@ -2821,7 +2821,6 @@ class SpsStationComponentManager(
             dst_ip=daq_status["Receiver IP"][0],
             dst_port=daq_status["Receiver Ports"][0],
         )
-        self.logger.info("Configured LMC routing to DAQ")
 
         # Send data from tpms
         self.send_data_samples(
@@ -2833,7 +2832,7 @@ class SpsStationComponentManager(
                 }
             )
         )
-        self.logger.info(f"Raw channel spigot sent for {channel=}")
+        self.logger.debug(f"Raw channel spigot sent for {channel=}")
 
     @check_communicating
     def set_channeliser_rounding(

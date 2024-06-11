@@ -227,8 +227,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 finally:
                     # Check core communications every poll.
                     self.logger.warning("Checking communication with CPLD and FPGAs")
-                    core_communication = self.tile.check_communication()
-                    self._update_component_state(core_communication=core_communication)
                 if error_flag:
                     self.tile.tpm = None
                     request = TileRequest("connect", self.connect)
@@ -638,6 +636,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             try:
                 with self._hardware_lock:
+                    core_communication = self.tile.check_communication()
+                    self._update_component_state(core_communication=core_communication)
                     _is_programmed = self.tile.is_programmed()
                     if _is_programmed is False:
                         status = TpmStatus.UNPROGRAMMED

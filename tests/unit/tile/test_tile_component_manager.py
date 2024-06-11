@@ -95,6 +95,9 @@ class TestTileComponentManager:
             case PowerState.ON:
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True}, lookahead=2
+                )
+                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
                 )
             case PowerState.UNKNOWN:
@@ -159,6 +162,10 @@ class TestTileComponentManager:
         match power_state:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -198,6 +205,10 @@ class TestTileComponentManager:
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -219,7 +230,10 @@ class TestTileComponentManager:
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 # We start in UNKNOWN so no need to assert
-
+                callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
                 callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {

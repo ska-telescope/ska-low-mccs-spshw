@@ -87,7 +87,7 @@ class TileData:
         "alarms": {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
-            "voltage_alm": 1,
+            "voltage_alm": 0,
             "SEM_wd": 0,
             "MCU_wd": 0,
         },

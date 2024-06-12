@@ -141,7 +141,7 @@ tpm_monitoring_points:
   alarms:
     I2C_access_alm: 0
     temperature_alm: 0
-    voltage_alm: 0
+    voltage_alm: 1
     SEM_wd: 0
     MCU_wd: 0
   adcs:

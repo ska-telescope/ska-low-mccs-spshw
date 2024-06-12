@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-import numpy as np
+# import numpy as np
 from ska_control_model import HealthState, PowerState
 from ska_low_mccs_common.health import HealthRules
 
@@ -148,22 +148,23 @@ class SubrackHealthRules(HealthRules):
                 False,
                 f"One of {old_tpm_volts}, {tpm_volts} is empty",
             )
-        tpm_vol_drop = sum(np.subtract(old_tpm_volts, tpm_volts))
+        return True, f"One of {old_tpm_volts}, {tpm_volts} is empty"
+        # tpm_vol_drop = sum(np.subtract(old_tpm_volts, tpm_volts))
 
-        power_sup_vol_drop = sum(
-            np.subtract(old_power_supply_volts, power_supply_volts)
-        )
+        # power_sup_vol_drop = sum(
+        #     np.subtract(old_power_supply_volts, power_supply_volts)
+        # )
 
-        if (tpm_vol_drop - power_sup_vol_drop) > self._thresholds[
-            f"{rule_str}voltage_drop"
-        ]:
-            return (
-                True,
-                f"Voltage drop {tpm_vol_drop} - {power_sup_vol_drop} = "
-                f"{tpm_vol_drop - power_sup_vol_drop} is above threshold "
-                f"{self._thresholds[f'{rule_str}voltage_drop']}",
-            )
-        return False, ""
+        # if (tpm_vol_drop - power_sup_vol_drop) > self._thresholds[
+        #     f"{rule_str}voltage_drop"
+        # ]:
+        #     return (
+        #         True,
+        #         f"Voltage drop {tpm_vol_drop} - {power_sup_vol_drop} = "
+        #         f"{tpm_vol_drop - power_sup_vol_drop} is above threshold "
+        #         f"{self._thresholds[f'{rule_str}voltage_drop']}",
+        #     )
+        # return False, ""
 
     def _check_current_diff(
         self: SubrackHealthRules,

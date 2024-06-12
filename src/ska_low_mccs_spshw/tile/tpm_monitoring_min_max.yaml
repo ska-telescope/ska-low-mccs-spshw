@@ -280,7 +280,7 @@ tpm_monitoring_points:
     udp_interface:
       arp: True
       # TODO: MCCS-1979, this can be reverted after this ticket.
-        status: false
+        status: False
       # status: True
       crc_error_count:
         FPGA0: 0

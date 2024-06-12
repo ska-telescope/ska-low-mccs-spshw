@@ -138,7 +138,12 @@ class SubrackHealthRules(HealthRules):
 
         :return: True if any of the thresholds are breached, along with a text report.
         """
-        if len(old_tpm_volts) == 0 or len(tpm_volts) == 0:
+        if (
+            len(old_tpm_volts) == 0
+            or len(tpm_volts) == 0
+            or old_tpm_volts is None
+            or tpm_volts is None
+        ):
             return (
                 False,
                 f"One of {old_tpm_volts}, {tpm_volts} is empty",

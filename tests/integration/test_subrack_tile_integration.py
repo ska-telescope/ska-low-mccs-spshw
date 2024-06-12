@@ -465,11 +465,13 @@ class TestMccsTileTpmDriver:
         start_time = datetime.datetime.strftime(
             datetime.datetime.fromtimestamp(int(time.time()) + delay_time), RFC_FORMAT
         )
-        [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"start_time": start_time})
+
+        execute_lrc_to_completion(
+            change_event_callbacks,
+            tile_device,
+            "StartAcquisition",
+            json.dumps({"start_time": start_time}),
         )
-        assert result_code == ResultCode.QUEUED
-        assert "StartAcquisition" in message.split("_")[-1]
 
         initial_frame = tile_device.currentFrame
         sleep_time = delay_time + 0.5  # seconds

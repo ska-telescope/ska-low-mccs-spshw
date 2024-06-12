@@ -294,6 +294,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self._update_component_state(
                         tile_health_structure=self._tile_health_structure
                     )
+                    self._info = self.tile.info
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
@@ -327,7 +328,6 @@ class TpmDriver(MccsBaseComponentManager):
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.get_beamformer_table()
-                        self._info = self.tile.info
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")

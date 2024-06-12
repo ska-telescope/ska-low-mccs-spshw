@@ -607,14 +607,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
+        # The below line prints the info properly.
         self.logger.debug(self.component_manager.info)
-        return json.dumps(self.component_manager.info)
+        # Returning the info fails as we can't json serialise IPV4Addresses.
+        return str(self)
+        # return json.dumps(self.component_manager.info)
         # some_info = self.component_manager._tpm_driver.tile.info
         # self.logger.info(f"property: {self.component_manager._tpm_driver.tile.info}")
         # self.logger.info(f"tile.info type: {type(some_info)}")
         # self.logger.info(f"tile.info: {some_info}")
         # return json.dumps(some_info)
 
+    # Needed?
     @tile_info.write  # type: ignore[no-redef]
     def tile_info(self: MccsTile, value: str) -> None:
         """
@@ -3943,6 +3947,66 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    def __str__(self: MccsTile) -> str:
+        """
+        Produce list of tile information.
+
+        :return: Information string
+        :rtype: str
+        """
+        info = self.component_manager.info
+        return (
+            f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} Serial "
+            "Number: {info['hardware']['SN']} \n"
+            f"{'_'*90} \n"
+            f"{' '*29}| \n"
+            "Classification               | "
+            f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
+            f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
+            f"Serial Number                | {info['hardware']['SN']} \n"
+            f"BIOS Revision                | {info['hardware']['bios']} \n"
+            f"Board Location               | {info['hardware']['LOCATION']} \n"
+            f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
+            "GB per FPGA \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
+            f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
+            f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
+            "UTC \n"
+            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} "
+            " \n"
+            f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
+            f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
+            f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"1G (MGMT) IP Address         | {str(info['network']['1g_ip_address'])} \n"
+            f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
+            f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
+            f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
+            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            " \n"
+            f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
+            f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
+            f"40G Port 1 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p1'])} \n"
+            f"40G Port 1 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p1'])} \n"
+            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
+            " \n"
+            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
+            " \n"
+            f"40G Port 2 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p2'])} \n"
+            f"40G Port 2 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p2'])} \n"
+            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
+            " \n"
+            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
+            " \n"
+        )
 
 
 # ----------

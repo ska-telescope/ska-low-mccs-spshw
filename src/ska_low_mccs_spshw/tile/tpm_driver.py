@@ -129,6 +129,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._sysref_present = True
         self._pll_locked = True
         self._register_list = self.REGISTER_LIST
+        self._info: dict[str, Any] = {}
 
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
@@ -326,6 +327,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.get_beamformer_table()
+                        self._info = self.tile.info
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -812,7 +814,7 @@ class TpmDriver(MccsBaseComponentManager):
         :return: Info in the TPM
         """
         self.logger.debug("TpmDriver: get info")
-        return self._tile_health_structure["info"]
+        return self._info
         # return self.tile.info
 
     @property

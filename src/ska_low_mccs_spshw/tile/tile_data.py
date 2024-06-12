@@ -175,6 +175,7 @@ class TileData:
             "fpga_firmware": {
                 "design": None,
                 "build": None,
+                "version": None,
                 "compile_time": None,
                 "compile_user": None,
                 "compile_host": None,

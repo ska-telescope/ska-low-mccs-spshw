@@ -216,6 +216,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
+            case "CHECK_BOARD_TEMPERATURE":
+                request = TileRequest(
+                    "board_temperature",
+                    self.tile.get_temperature,
+                    publish=True,
+                )
             case "CONNECT":
                 error_flag = False
                 try:
@@ -638,6 +644,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 with self._hardware_lock:
                     core_communication = self.tile.check_communication()
                     self._update_component_state(core_communication=core_communication)
+                    if core_communication["CPLD"]:
+                        if (
+                            not core_communication["FPGA0"]
+                            or not core_communication["FPGA1"]
+                        ):
+                            self.logger.warning(
+                                "Unable to connect with at least 1 FPGA"
+                            )
+                            return TpmStatus.UNCONNECTED
                     _is_programmed = self.tile.is_programmed()
                     if _is_programmed is False:
                         status = TpmStatus.UNPROGRAMMED

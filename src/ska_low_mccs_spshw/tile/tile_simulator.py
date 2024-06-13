@@ -985,6 +985,15 @@ class TileSimulator:
         """
         return copy.deepcopy(self._global_status_alarms)
 
+    @connected
+    def get_temperature(self: TileSimulator) -> float:
+        """
+        Get the board temperature.
+
+        :return: a float with the board temperature.
+        """
+        return self._tile_health_structure["temperatures"]["board"]
+
     @check_mocked_overheating
     @connected
     def initialise_beamformer(

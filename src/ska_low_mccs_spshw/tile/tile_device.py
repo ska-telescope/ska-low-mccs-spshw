@@ -160,6 +160,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "core_communication": "coreCommunicationStatus",
             "global_status_alarms": "alarms",
+            "board_temperature": "boardTemperature",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -218,7 +219,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "ppsPresent": ["timing", "pps", "status"],
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
-            "boardTemperature": ["temperatures", "board"],
             "io": ["io"],
             "alarms": ["alarms"],
             "dsp": ["dsp"],

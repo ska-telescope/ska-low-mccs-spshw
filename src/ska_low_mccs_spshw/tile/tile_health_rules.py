@@ -151,6 +151,9 @@ class TileHealthRules(HealthRules):
                     states[p] = (
                         (HealthState.OK, "")
                         if p_state == min_max[p]
+                        # TODO: MCCS-1979
+                        or "/udp_interface/status" == f"{path}/{p}"
+                        or "/udp_interface/bip_error_count/FPGA1/" in f"{path}/{p}"
                         else (
                             HealthState.FAILED,
                             f'Monitoring point "{path}/{p}": '

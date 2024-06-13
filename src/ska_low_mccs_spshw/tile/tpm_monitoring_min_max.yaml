@@ -279,9 +279,7 @@ tpm_monitoring_points:
       hard_error: 0
     udp_interface:
       arp: True
-      # TODO: MCCS-1979, this can be reverted after this ticket.
-      status: False
-      # status: True
+      status: True
       crc_error_count:
         FPGA0: 0
         FPGA1: 0
@@ -291,24 +289,11 @@ tpm_monitoring_points:
           lane1: 0
           lane2: 0
           lane3: 0
-        # TODO: MCCS-1979, this can be reverted after this ticket.
         FPGA1:
-          lane0:
-            min: 0
-            max: 100
-          lane1:
-            min: 0
-            max: 100
-          lane2:
-            min: 0
-            max: 100
-          lane3:
-            min: 0
-            max: 100
-        #   lane0: 0
-        #   lane1: 0
-        #   lane2: 0
-        #   lane3: 0
+          lane0: 0
+          lane1: 0
+          lane2: 0
+          lane3: 0
       decode_error_count:
         FPGA0:
           lane0: 0

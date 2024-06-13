@@ -950,12 +950,6 @@ class TestMccsTileTpmDriver:
             daq_device,
             change_event_callbacks,
         )
-        # Force a poll to get the initial values.
-        request_provider = tile_component_manager._request_provider
-        assert request_provider is not None
-        request_provider.get_request = (  # type: ignore[method-assign]
-            unittest.mock.Mock(return_value="HEALTH_STATUS")
-        )
 
         # sleep to allow a poll
         time.sleep(0.5)

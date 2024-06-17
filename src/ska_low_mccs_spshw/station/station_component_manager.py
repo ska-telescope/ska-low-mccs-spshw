@@ -338,7 +338,7 @@ class SpsStationComponentManager(
         daq_trl: str,
         sdn_first_interface: str,
         sdn_gateway: str,
-        csp_ingest_ip: ipaddress.ip_address | None,
+        csp_ingest_ip: ipaddress.IPv4Address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         max_workers: int,
@@ -648,7 +648,7 @@ class SpsStationComponentManager(
                     "tpm": tpm_number,
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
-                    "delays": antenna_config["delays"],
+                    "delay": antenna_config["delay"],
                 }
                 # Construct labels for bandpass data.
                 self._antenna_info[antenna_number] = {
@@ -682,12 +682,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
-                antenna_config["delays"]
-            )
-            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
-                antenna_config["delays"]
-            )
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

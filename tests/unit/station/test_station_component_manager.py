@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import logging
 import random
 import unittest.mock
@@ -27,7 +28,7 @@ from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="test_context")
-def test_context_fixture(
+def fixture_test_context(
     subrack_id: int,
     mock_subrack_device_proxy: unittest.mock.Mock,
     tile_id: int,
@@ -139,8 +140,8 @@ def station_component_manager_fixture(
         [get_subrack_name(subrack_id)],
         [get_tile_name(tile_id)],
         daq_trl,
-        "10.0.0.0",
-        "",
+        ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
+        None,  # sdn_gateway
         None,  # csp_ingest_ip,
         antenna_uri,
         logger,

@@ -336,8 +336,8 @@ class SpsStationComponentManager(
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         daq_trl: str,
-        sdn_first_interface: str,
-        sdn_gateway: str,
+        sdn_first_interface: ipaddress.IPv4Interface,
+        sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
@@ -466,12 +466,9 @@ class SpsStationComponentManager(
         self._source_port = 0xF0D0
         self._destination_port = 4660
 
-        first_interface = ipaddress.ip_interface(sdn_first_interface)
-        self._sdn_first_address = first_interface.ip
-        self._sdn_netmask = int(first_interface.netmask)
-        self._sdn_gateway: int | None = (
-            int(ipaddress.ip_address(sdn_gateway)) if sdn_gateway else None
-        )
+        self._sdn_first_address = sdn_first_interface.ip
+        self._sdn_netmask = int(sdn_first_interface.netmask)
+        self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
 
         self._lmc_param = {
             "mode": "10G",

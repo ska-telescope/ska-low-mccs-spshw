@@ -338,6 +338,7 @@ class SpsStationComponentManager(
         daq_trl: str,
         sdn_first_interface: str,
         sdn_gateway: str,
+        csp_ingest_ip: ipaddress.ip_address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         max_workers: int,
@@ -361,6 +362,7 @@ class SpsStationComponentManager(
             "address 10.130.0.1 on network 10.130.0.0/25".
         :param sdn_gateway: IP address of the SDN gateway,
             or None if the network has no gateway.
+        :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -450,7 +452,7 @@ class SpsStationComponentManager(
         self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
-        self._csp_ingest_address = "0.0.0.0"
+        self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
 
@@ -680,12 +682,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delays"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delays"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delays"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delays"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

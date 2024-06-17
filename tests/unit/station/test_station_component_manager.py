@@ -141,6 +141,7 @@ def station_component_manager_fixture(
         daq_trl,
         "10.0.0.0",
         "",
+        None,  # csp_ingest_ip,
         antenna_uri,
         logger,
         1,

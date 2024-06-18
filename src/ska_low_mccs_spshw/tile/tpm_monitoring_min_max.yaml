@@ -142,7 +142,9 @@ tpm_monitoring_points:
     I2C_access_alm: 0
     temperature_alm: 0
     # SPRTS-141: This is stuck in WARNING in the BIOS
-    voltage_alm: 1
+    voltage_alm:
+      min: 0
+      max: 1
     SEM_wd: 0
     MCU_wd: 0
   adcs:

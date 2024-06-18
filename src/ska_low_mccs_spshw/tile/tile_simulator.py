@@ -1114,7 +1114,7 @@ class TileSimulator:
         nof_antennas: int,
         ref_epoch: int = -1,
         start_time: int | None = 0,
-        new_spead_header_format: bool = False,
+        ska_spead_header_format: bool = False,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1124,7 +1124,7 @@ class TileSimulator:
         :param nof_antennas: Number of antennas in the station
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
-        :param new_spead_header_format: True for new (SKA) CBF SPEAD header format
+        :param ska_spead_header_format: True for new (SKA) CBF SPEAD header format
 
         :return: a bool representing if command executed without error.
         """
@@ -1702,19 +1702,19 @@ class TileSimulator:
             levels.append(attenuation)
         return levels
 
-    def set_spead_format(self, new_spead_header_format: bool) -> None:
+    def set_spead_format(self, ska_spead_header_format: bool) -> None:
         """
         Set CSP SPEAD format.
 
-        :param new_spead_header_format: True for new (SKA) format, False for old (AAVS)
+        :param ska_spead_header_format: True for new (SKA) format, False for old (AAVS)
         """
         spead_format = "AAVS"
-        if new_spead_header_format:
+        if ska_spead_header_format:
             spead_format = "SKA"
         self.csp_spead_format = spead_format
 
     @property
-    def new_spead_header(self) -> bool:
+    def ska_spead_header(self) -> bool:
         """
         Return format of the CSP Spead header.
 

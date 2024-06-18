@@ -1707,9 +1707,9 @@ class TpmDriver(MccsBaseComponentManager):
                         subarray_id=subarray_id,
                         nof_antennas=aperture_id,
                         ref_epoch=self._fpga_reference_time,
-                        new_spead_header_format=self._csp_spead_format == "SKA",
+                        ska_spead_header_format=self._csp_spead_format == "SKA",
                     )
-                    fmt = self.tile.new_spead_header
+                    fmt = self.tile.ska_spead_header
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")
@@ -1771,7 +1771,7 @@ class TpmDriver(MccsBaseComponentManager):
                     )
                     self.tile.set_first_last_tile(is_first, is_last)
                     self._nof_blocks = nof_channels // 8
-                    fmt = self.tile.new_spead_header  # debug
+                    fmt = self.tile.ska_spead_header  # debug
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(f"TpmDriver: Tile access failed: {e}")

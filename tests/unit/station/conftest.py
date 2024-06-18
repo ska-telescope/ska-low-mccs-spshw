@@ -177,7 +177,7 @@ def antenna_uri_fixture() -> list[str]:
     :returns: A URI for antenna data.
     """
     return [
-        "car:ska-low-aavs3?main",
+        "gitlab://gitlab.com/ska-telescope/ska-low-aavs3?edeba65f#tmdata",
         "instrument/mccs-configuration/aavs3.yaml",
     ]
 

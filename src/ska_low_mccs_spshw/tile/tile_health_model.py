@@ -63,7 +63,6 @@ class TileHealthModel(BaseHealthModel):
         """
         tile_health, tile_report = super().evaluate_health()
         intermediate_healths = self.intermediate_healths
-        print(f"Evaluating health with intermediates {intermediate_healths}")
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,

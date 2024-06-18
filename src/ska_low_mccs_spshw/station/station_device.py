@@ -211,7 +211,7 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
-            ("AcquireDataForCalibration", "acquire_data_for_calibration"),
+            ("AcquireDataForCalibration", "acquire_data_for_calibration", None),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),

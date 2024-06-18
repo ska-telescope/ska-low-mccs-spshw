@@ -8,6 +8,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import logging
 import random
 import unittest.mock
@@ -27,7 +28,7 @@ from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="test_context")
-def test_context_fixture(
+def fixture_test_context(
     subrack_id: int,
     mock_subrack_device_proxy: unittest.mock.Mock,
     tile_id: int,
@@ -139,8 +140,9 @@ def station_component_manager_fixture(
         [get_subrack_name(subrack_id)],
         [get_tile_name(tile_id)],
         daq_trl,
-        "10.0.0.0",
-        "",
+        ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
+        None,  # sdn_gateway
+        None,  # csp_ingest_ip,
         antenna_uri,
         logger,
         1,
@@ -266,7 +268,7 @@ def test_load_pointing_delays(
                 "tpm": tpm,
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
-                "delays": 1,
+                "delay": 1,
             }
             antenna_no += 1
 
@@ -396,7 +398,7 @@ def test_get_static_delays(
                 "tpm": tpm,
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
-                "delays": antenna_no // 2,
+                "delay": antenna_no // 2,
             }
             antenna_no += 1
 
@@ -405,10 +407,10 @@ def test_get_static_delays(
     for antenna, antenna_config in station_component_manager._antenna_mapping.items():
         if int(antenna_config["tpm"]) == tile_id:
             expected_static_delays[antenna_config["tpm_y_channel"]] = antenna_config[
-                "delays"
+                "delay"
             ]
             expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
-                "delays"
+                "delay"
             ]
     assert static_delays == expected_static_delays
 

@@ -336,8 +336,9 @@ class SpsStationComponentManager(
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
         daq_trl: str,
-        sdn_first_interface: str,
-        sdn_gateway: str,
+        sdn_first_interface: ipaddress.IPv4Interface,
+        sdn_gateway: ipaddress.IPv4Address | None,
+        csp_ingest_ip: ipaddress.IPv4Address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         max_workers: int,
@@ -361,6 +362,7 @@ class SpsStationComponentManager(
             "address 10.130.0.1 on network 10.130.0.0/25".
         :param sdn_gateway: IP address of the SDN gateway,
             or None if the network has no gateway.
+        :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param max_workers: the maximum worker threads for the slow commands
@@ -450,7 +452,7 @@ class SpsStationComponentManager(
         self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
-        self._csp_ingest_address = "0.0.0.0"
+        self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
 
@@ -464,12 +466,9 @@ class SpsStationComponentManager(
         self._source_port = 0xF0D0
         self._destination_port = 4660
 
-        first_interface = ipaddress.ip_interface(sdn_first_interface)
-        self._sdn_first_address = first_interface.ip
-        self._sdn_netmask = int(first_interface.netmask)
-        self._sdn_gateway: int | None = (
-            int(ipaddress.ip_address(sdn_gateway)) if sdn_gateway else None
-        )
+        self._sdn_first_address = sdn_first_interface.ip
+        self._sdn_netmask = int(sdn_first_interface.netmask)
+        self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
 
         self._lmc_param = {
             "mode": "10G",
@@ -646,7 +645,7 @@ class SpsStationComponentManager(
                     "tpm": tpm_number,
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
-                    "delays": antenna_config["delays"],
+                    "delay": antenna_config["delay"],
                 }
                 # Construct labels for bandpass data.
                 self._antenna_info[antenna_number] = {
@@ -682,10 +681,10 @@ class SpsStationComponentManager(
                 continue
             tile_delays[tile_logical_id][
                 antenna_config["tpm_x_channel"]
-            ] = antenna_config["delays"]
+            ] = antenna_config["delay"]
             tile_delays[tile_logical_id][
                 antenna_config["tpm_y_channel"]
-            ] = antenna_config["delays"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

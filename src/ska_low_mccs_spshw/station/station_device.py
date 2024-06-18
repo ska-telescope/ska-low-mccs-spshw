@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import itertools
 import json
 import sys
@@ -83,6 +84,7 @@ class SpsStation(SKAObsDevice):
     # e.g. "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25"
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
+    CspIngestIp = device_property(dtype=str, default_value="")
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -137,6 +139,7 @@ class SpsStation(SKAObsDevice):
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
+            f"\tCspIngestIp: {self.CspIngestIp}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -174,8 +177,9 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self.DaqTRL,
-            self.SdnFirstInterface,
-            self.SdnGateway,
+            ipaddress.IPv4Interface(self.SdnFirstInterface),
+            ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
+            ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
             self.AntennaConfigURI,
             self.logger,
             self._max_workers,

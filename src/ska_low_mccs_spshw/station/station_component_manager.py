@@ -896,7 +896,7 @@ class SpsStationComponentManager(
                 self._tile_power_states[fqdn] = power
                 self._evaluate_power_state()
         if health is not None:
-            self._tile_health_changed_callback(fqdn, health)
+            self._tile_health_changed_callback(fqdn, HealthState(health))
 
     @threadsafe
     def _subrack_state_changed(
@@ -910,7 +910,7 @@ class SpsStationComponentManager(
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
         if health is not None:
-            self._subrack_health_changed_callback(fqdn, health)
+            self._subrack_health_changed_callback(fqdn, HealthState(health))
 
     @threadsafe
     def _daq_state_changed(

@@ -148,8 +148,6 @@ class SubrackHealthRules(HealthRules):
         if (
             len(old_tpm_volts) == 0
             or len(tpm_volts) == 0
-            or old_tpm_volts is None
-            or tpm_volts is None
             or None in old_tpm_volts
             or None in tpm_volts
         ):

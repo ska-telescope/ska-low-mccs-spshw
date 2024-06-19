@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
+from ipaddress import IPv4Address
 from typing import Any
 
 import numpy as np
@@ -417,9 +418,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # assert the tpm_driver has different values to the simulator
         assert tpm_driver.adc_rms != list(tile_simulator._adc_rms)
@@ -2322,14 +2323,12 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_info = tile_simulator.info
 
         # Check some (not all) values are as set in tile simulator.
-        assert tile_info["hardware"]["HARDWARE_REV"] == "v1.6.7a"
-        assert tile_info["hardware"]["BOARD_MODE"] == "NO-ADA"
-        assert tile_info["hardware"]["LOCATION"] == "65535:255:255"
-        assert tile_info["hardware"]["DDR_SIZE_GB"] == 4
-        assert (
-            tile_info["fpga_firmware"]["compile_time"] == "2024-02-21 20:33:55.586210"
-        )
-        assert tile_info["network"]["1g_netmask"] == "255.255.255.0"
+        assert tile_info["hardware"]["HARDWARE_REV"] == "<current hardware revision>"
+        assert tile_info["hardware"]["BOARD_MODE"] == "<current board mode>"
+        assert tile_info["hardware"]["LOCATION"] == "<current hardware location>"
+        assert tile_info["hardware"]["DDR_SIZE_GB"] == "<current hardware DDR size>"
+        assert tile_info["fpga_firmware"]["compile_time"] == "<mock_time>"
+        assert tile_info["network"]["1g_netmask"] == IPv4Address("123.123.123.101")
 
     def test_write_read_registers(
         self: TestTpmDriver,

@@ -815,7 +815,6 @@ class TpmDriver(MccsBaseComponentManager):
         """
         self.logger.debug("TpmDriver: get info")
         return self._info
-        # return self.tile.info
 
     @property
     def io(self: TpmDriver) -> dict[str, Any]:

@@ -1298,13 +1298,14 @@ class TileSimulator:
         return self.tpm._is_programmed
 
     @property
-    def info(self: TileSimulator) -> dict[str, Any]:
+    def tile_info(self: TileSimulator) -> str:
         """
         Report tile firmware information.
 
-        :returns: A dictionary of tile information.
+        :returns: A string of tile information.
         """
-        return self._tile_health_structure["info"]
+        self.logger.debug("getting tile info")
+        return str(self)
 
     @check_mocked_overheating
     @connected
@@ -2193,31 +2194,30 @@ class TileSimulator:
         :return: Information string
         :rtype: str
         """
-        info = self.info
-        keys = ["hardware", "fpga_firmware", "network"]
-        if not all(key in info.keys() for key in keys):
-            self.logger.error(f"KEYS: [{keys}] NOT FOUND IN INFO: [{info}]")
+        if self.tpm is None:
             return ""
+        info: dict[str, Any] = self.tpm.info
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"
             f"{'_'*90} \n"
             f"{' '*29}| \n"
-            f"Classification               | {info['hardware']['PN']}-"
-            f"{info['hardware']['BOARD_MODE']} \n"
+            f"Classification               | "
+            f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
             f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
             f"Serial Number                | {info['hardware']['SN']} \n"
             f"BIOS Revision                | {info['hardware']['bios']} \n"
             f"Board Location               | {info['hardware']['LOCATION']} \n"
             f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
-            "GB per FPGA \n"
+            f"GB per FPGA \n"
             f"{'_'*29}|{'_'*60} \n"
             f"{' '*29}| \n"
             f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
             f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
             f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
-            "UTC \n"
-            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} \n"
+            f"UTC \n"
+            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} "
+            f" \n"
             f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
             f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
             f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
@@ -2227,26 +2227,26 @@ class TileSimulator:
             f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
             f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
             f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
-            "EEP IP Address               | "
-            f"{str(info['hardware']['ip_address_eep'])} \n"
+            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            f" \n"
             f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
             f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
-            "40G Port 1 IP Address        | "
+            f"40G Port 1 IP Address        | "
             f"{str(info['network']['40g_ip_address_p1'])} \n"
-            "40G Port 1 MAC Address       | "
+            f"40G Port 1 MAC Address       | "
             f"{str(info['network']['40g_mac_address_p1'])} \n"
-            "40G Port 1 Netmask           | "
-            f"{str(info['network']['40g_netmask_p1'])} \n"
-            "40G Port 1 Gateway IP        | "
-            f"{str(info['network']['40g_gateway_p1'])} \n"
-            "40G Port 2 IP Address        | "
+            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
+            f" \n"
+            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
+            f" \n"
+            f"40G Port 2 IP Address        | "
             f"{str(info['network']['40g_ip_address_p2'])} \n"
-            "40G Port 2 MAC Address       | "
+            f"40G Port 2 MAC Address       | "
             f"{str(info['network']['40g_mac_address_p2'])} \n"
-            "40G Port 2 Netmask           | "
-            f"{str(info['network']['40g_netmask_p2'])} \n"
-            "40G Port 2 Gateway IP        | "
-            f"{str(info['network']['40g_gateway_p2'])} \n"
+            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
+            f" \n"
+            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
+            f" \n"
         )
 
 

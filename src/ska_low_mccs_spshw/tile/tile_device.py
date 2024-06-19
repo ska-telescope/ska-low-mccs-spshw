@@ -607,20 +607,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        # The below line prints the info properly.
         self.logger.debug(self.component_manager.info)
         # Returning the info fails as we can't json serialise IPV4Addresses.
         return str(self)
 
     # Needed?
-    # @tile_info.write  # type: ignore[no-redef]
-    # def tile_info(self: MccsTile, value: str) -> None:
-    #     """
-    #     Set the firmware version.
+    @tile_info.write  # type: ignore[no-redef]
+    def tile_info(self: MccsTile, value: str) -> None:
+        """
+        Set the firmware version.
 
-    #     :param value: firmware version
-    #     """
-    #     self.component_manager.info = value
+        :param value: firmware version
+        """
+        self.component_manager.info = value
 
     @attribute(
         dtype="DevString",

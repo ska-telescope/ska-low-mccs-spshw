@@ -398,11 +398,11 @@ class SpsStationComponentManager(
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}
-        number_of_tiles = len(tile_fqdns)
+        self._number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
-        for logical_tile_id in range(number_of_tiles):
+        for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
@@ -2724,6 +2724,71 @@ class SpsStationComponentManager(
             task_callback=task_callback,
         )
 
+    def _configure_station_for_calibration(self: SpsStationComponentManager) -> None:
+        daq_mode: str = "CORRELATOR_DATA"
+        nof_correlator_samples: int = 1835008
+        receiver_frame_size: int = 9000
+        nof_channels: int = 1
+
+        max_tries: int = 10
+        tick: float = 0.5
+
+        # Get DAQ running with correlator
+        assert self._daq_proxy is not None
+        assert self._daq_proxy._proxy is not None
+        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+
+        # TODO: We have to stop all consumers before sending again
+        # Issue while testing.
+        # Bug description (Aavs3):
+        # - Call MccsStation.AcquireDataForCalibration()
+        # 4 consecutive times with 4 channels.
+        # - It will only acquire for 3 channels (unless you stop DAQ inbetween.)
+        if len(daq_status["Running Consumers"]) > 0:
+            self.logger.warning("Stopping all consumers...")
+            rc, _ = self._daq_proxy._proxy.Stop()
+            if rc != ResultCode.OK:
+                self.logger.warning("Unable to stop daq consumers.")
+            for _ in range(max_tries):
+                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+                if len(daq_status["Running Consumers"]) == 0:
+                    continue
+                time.sleep(tick)
+            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
+        self._daq_proxy._proxy.configure(
+            json.dumps(
+                {
+                    "nof_tiles": self._number_of_tiles,
+                    "nof_channels": nof_channels,
+                    "directory": "correlator_data",  # Appended to ADR-55 path.
+                    "nof_correlator_samples": nof_correlator_samples,
+                    "receiver_frame_size": receiver_frame_size,
+                }
+            )
+        )
+        self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                break
+            time.sleep(tick)
+
+        assert (
+            daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+        self.set_lmc_download(
+            mode="10g",
+            payload_length=8192,  # Default for using 10g
+            dst_ip=daq_status["Receiver IP"][0],
+            dst_port=daq_status["Receiver Ports"][0],
+        )
+
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -2738,10 +2803,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        daq_mode = "CORRELATOR_DATA"
-        data_send_mode = "channel"
-        max_tries: int = 10
-        tick: float = 0.5
+        data_send_mode: str = "channel"
 
         # Verify all tiles are acquiring data
         for tile in self._tile_proxies.values():
@@ -2757,85 +2819,23 @@ class SpsStationComponentManager(
                     )
                 return
 
-        # Get DAQ running with correlator
-        assert self._daq_proxy is not None
-        assert self._daq_proxy._proxy is not None
-        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-
-        # TODO: We have to stop all consumers before sending again
-        # Issue while testing.
-        # Bug description:
-        # - Call MccsStaiton.AcquireDataForCalibration()
-        # 5 consecutive times with 5 consecutive channels
-        # - It will only acquire for 3 channels (unless you stop DAQ inbetween.)
-        if len(daq_status["Running Consumers"]) > 0:
-            # TODO: Do we want to stop all consumers?
-            self.logger.warning("Stopping all data capture!")
-            rc, _ = self._daq_proxy._proxy.Stop()
-            if rc != ResultCode.OK:
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(
-                            ResultCode.FAILED,
-                            "AcquireDataForCalibration failed. Failed to stop daq.",
-                        ),
-                    )
-                return
-            # NOTE: Stop is a fast command just executed and returned,
-            # We must manually wait on the status of the backend DaqInstance,
-            # For it to report the consumer has actually stopped.
-            for _ in range(max_tries):
-                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-                if len(daq_status["Running Consumers"]) == 0:
-                    continue
-                time.sleep(tick)
-            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
-
-        self._daq_proxy._proxy.configure(
-            json.dumps(
-                {
-                    "nof_antennas": 16,  # nof_antenna_per_tile
-                    "nof_tiles": 16,
-                    "nof_channels": 1,
-                    "directory": "correlator_data",  # Appended to ADR-55 path.
-                    "nof_correlator_samples": 1835008,
-                    "receiver_frame_size": 9000,
-                }
+        try:
+            self.logger.info(
+                "AcquireDataForCalibration configuring tiles and daq for calibration"
             )
-        )
-        self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
-        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
-            time.sleep(tick)
-        if all(
-            status_list[0] != daq_mode
-            for status_list in daq_status["Running Consumers"]
-        ):
+            self._configure_station_for_calibration()
+        except AssertionError as e:
+            self.logger.error(f"Unable to configure station {repr(e)}")
             if task_callback:
                 task_callback(
                     status=TaskStatus.FAILED,
                     result=(
                         ResultCode.FAILED,
-                        "AcquireDataForCalibration failed. Failed to start daq.",
+                        "AcquireDataForCalibration failed. "
+                        f"Unable to configure station {repr(e)}",
                     ),
                 )
             return
-
-        # TODO: Why is LMC routing not already configured in device initialisation?
-        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-        self.set_lmc_download(
-            mode="10g",
-            payload_length=8192,  # Default for using 10g
-            dst_ip=daq_status["Receiver IP"][0],
-            dst_port=daq_status["Receiver Ports"][0],
-        )
 
         # Send data from tpms
         self.send_data_samples(

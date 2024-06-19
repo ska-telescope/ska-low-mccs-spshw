@@ -1034,7 +1034,7 @@ class SpsStation(SKAObsDevice):
             status. The message is for information purpose only.
 
         :example:
-            >>> dp = tango.DeviceProxy("low-mccs/station/ci-1")
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
             >>> dp.command_inout("AcquireDataForCalibration", 153)
         """
         handler = self.get_command_object("AcquireDataForCalibration")

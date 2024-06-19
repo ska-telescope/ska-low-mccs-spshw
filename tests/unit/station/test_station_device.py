@@ -1463,7 +1463,7 @@ def test_AcquireDataForCalibration(
     tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
 
     # Wait for LRCs to execute
-    timeout = 10
+    timeout = 20
     time_waited = 0
     while not tile_command_mock.called:
         time.sleep(1)

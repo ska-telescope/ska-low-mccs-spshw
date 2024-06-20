@@ -34,6 +34,10 @@ annotated-types = "^0.6.0"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 typing-extensions = "^4.7.1"
 future = "^0.18.3"
+jsonschema = "~4.22.0"
+referencing = "~0.28.4"
+jsonschema-specifications = "~2023.03.6"
+#rpds-py = "~0.7.1"
 # ska-low-mccs-daq-interface = "^0.1.1"
 ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
 

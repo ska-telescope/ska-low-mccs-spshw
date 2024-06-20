@@ -153,6 +153,7 @@ def device_online(
             "device_state", tango.DevState.UNKNOWN
         )
     change_event_callbacks.assert_change_event("device_state", Anything)
+    time.sleep(1)
 
 
 @given("the Station has been commanded to turn on")

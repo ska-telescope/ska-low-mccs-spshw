@@ -2739,13 +2739,9 @@ class SpsStationComponentManager(
         daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
 
         # TODO: We have to stop all consumers before sending again
-        # Issue while testing.
-        # Bug description (Aavs3):
-        # - Call MccsStation.AcquireDataForCalibration()
-        # 4 consecutive times with 4 channels.
-        # - It will only acquire for 3 channels (unless you stop DAQ inbetween.)
+        # https://jira.skatelescope.org/browse/MCCS-2183
         if len(daq_status["Running Consumers"]) > 0:
-            self.logger.warning("Stopping all consumers...")
+            self.logger.info("Stopping all consumers...")
             rc, _ = self._daq_proxy._proxy.Stop()
             if rc != ResultCode.OK:
                 self.logger.warning("Unable to stop daq consumers.")

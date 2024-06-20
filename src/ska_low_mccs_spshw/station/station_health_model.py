@@ -83,7 +83,7 @@ class SpsStationHealthModel(BaseHealthModel):
 
     def evaluate_health(
         self: SpsStationHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the station.
 
@@ -96,7 +96,7 @@ class SpsStationHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-        station_health = super().evaluate_health()
+        station_health, station_report = super().evaluate_health()
 
         for health in [
             HealthState.FAILED,
@@ -104,11 +104,11 @@ class SpsStationHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if (
-                self._health_rules.rules[health](
-                    self._subrack_health, self._tile_health
-                )
-                or station_health == health
-            ):
-                return health
-        return HealthState.UNKNOWN
+            if health == station_health:
+                return station_health, station_report
+            result, report = self._health_rules.rules[health](
+                self._subrack_health, self._tile_health
+            )
+            if result:
+                return health, report
+        return HealthState.UNKNOWN, "No rules matched"

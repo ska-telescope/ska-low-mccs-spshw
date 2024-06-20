@@ -37,7 +37,7 @@ class SubrackHealthModel(BaseHealthModel):
         self._health_rules = SubrackHealthRules(thresholds)
         super().__init__(component_state_changed_callback)
 
-    def update_data(self: BaseHealthModel, new_states: dict) -> None:
+    def update_data(self: SubrackHealthModel, new_states: dict) -> None:
         """
         Update this health model with state relevant to evaluating health.
 
@@ -82,10 +82,11 @@ class SubrackHealthModel(BaseHealthModel):
         self._state["subrack_state_points"] = (
             self._state["subrack_state_points"] | new_states
         )
+        self.update_health()
 
     def evaluate_health(
         self: SubrackHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the subrack.
 
@@ -98,7 +99,7 @@ class SubrackHealthModel(BaseHealthModel):
 
         :return: an overall health of the subrack
         """
-        subrack_health = super().evaluate_health()
+        subrack_health, subrack_report = super().evaluate_health()
 
         for health in [
             HealthState.FAILED,
@@ -106,6 +107,9 @@ class SubrackHealthModel(BaseHealthModel):
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if self._health_rules.rules[health](self._state, subrack_health):
-                return health
-        return HealthState.UNKNOWN
+            if health == subrack_health:
+                return subrack_health, subrack_report
+            result, report = self._health_rules.rules[health](self._state)
+            if result:
+                return health, report
+        return HealthState.UNKNOWN, "No rules matched"

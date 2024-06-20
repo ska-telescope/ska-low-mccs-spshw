@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import ipaddress
 import itertools
 import json
 import sys
@@ -83,6 +84,7 @@ class SpsStation(SKAObsDevice):
     # e.g. "10.130.0.1/25" means "address 10.130.0.1 on network 10.130.0.0/25"
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
+    CspIngestIp = device_property(dtype=str, default_value="")
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -113,6 +115,7 @@ class SpsStation(SKAObsDevice):
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
+        self._data_received_result: Optional[tuple[str, str]] = ("", "")
 
     def init_device(self: SpsStation) -> None:
         """
@@ -137,6 +140,7 @@ class SpsStation(SKAObsDevice):
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
+            f"\tCspIngestIp: {self.CspIngestIp}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -174,8 +178,9 @@ class SpsStation(SKAObsDevice):
             self.SubrackFQDNs,
             self.TileFQDNs,
             self.DaqTRL,
-            self.SdnFirstInterface,
-            self.SdnGateway,
+            ipaddress.IPv4Interface(self.SdnFirstInterface),
+            ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
+            ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
             self.AntennaConfigURI,
             self.logger,
             self._max_workers,
@@ -206,6 +211,7 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
+            ("AcquireDataForCalibration", "acquire_data_for_calibration", None),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
@@ -283,6 +289,8 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("dataReceivedResult", True, False)
+            self._device.set_archive_event("dataReceivedResult", True, False)
 
             super().do()
 
@@ -359,7 +367,10 @@ class SpsStation(SKAObsDevice):
         """
         bandpass_data_shape = (256, 512)
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -383,6 +394,10 @@ class SpsStation(SKAObsDevice):
             self._adc_power = state_change.get("adc_power")
             self.push_change_event("adcPower", self._adc_power)
             self.push_archive_event("adcPower", self._adc_power)
+        if "dataReceivedResult" in state_change:
+            self._data_received_result = state_change.get("dataReceivedResult")
+            self.push_change_event("dataReceivedResult", self._data_received_result)
+            self.push_archive_event("dataReceivedResult", self._data_received_result)
 
         if "xPolBandpass" in state_change:
             x_bandpass_data = state_change.get("xPolBandpass")
@@ -488,6 +503,20 @@ class SpsStation(SKAObsDevice):
         :return: The last block of y-polarised bandpass data.
         """
         return self._y_bandpass_data
+
+    @attribute(
+        dtype=("str",),
+        max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
+    )
+    def dataReceivedResult(self: SpsStation) -> tuple[str, str] | None:
+        """
+        Read the result of the receiving of data.
+
+        :return: A tuple containing the data mode of transmission and a json
+            string with any additional data about the data such as the file
+            name.
+        """
+        return self._data_received_result
 
     @attribute(dtype=str)
     def daqTRL(self: SpsStation) -> str:
@@ -888,6 +917,16 @@ class SpsStation(SKAObsDevice):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
+
+    @attribute(dtype="DevString")
+    def healthReport(self: SpsStation) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
 
     @attribute(
         dtype="DevString",
@@ -991,6 +1030,28 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(
+        dtype_in="DevLong",
+        dtype_out="DevVarLongStringArray",
+    )
+    def AcquireDataForCalibration(
+        self: SpsStation, channel: int
+    ) -> DevVarLongStringArrayType:
+        """
+        Start acquiring data for calibration.
+
+        :param channel: channel to calibrate for
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
+            >>> dp.command_inout("AcquireDataForCalibration", 153)
+        """
+        handler = self.get_command_object("AcquireDataForCalibration")
+        (return_code, message) = handler(channel)
         return ([return_code], [message])
 
     @command(

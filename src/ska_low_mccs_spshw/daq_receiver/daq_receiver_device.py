@@ -11,7 +11,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import json
 import logging
-from typing import Any, Optional, Union, cast
+from typing import Any, Optional, Union
 
 import numpy as np
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
@@ -293,7 +293,10 @@ class MccsDaqReceiver(SKABaseDevice):
         self._health_state = (
             HealthState.UNKNOWN
         )  # InitCommand.do() does this too late.# noqa: E501
-        self._health_model = DaqHealthModel(self._component_state_callback)
+        self._health_model = DaqHealthModel(
+            self._health_changed,
+            ignore_power_state=True,
+        )
         self._received_data_mode = ""
         self._received_data_result = ""
         self._x_bandpass_plot = np.zeros(shape=(256, 512), dtype=float)
@@ -405,16 +408,13 @@ class MccsDaqReceiver(SKABaseDevice):
         action = action_map[communication_state]
         if action is not None:
             self.op_state_model.perform_action(action)
-
-        self._health_model.is_communicating(
-            communication_state == CommunicationStatus.ESTABLISHED
+        self._health_model.update_state(
+            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
         )
 
-    # pylint: disable = too-many-arguments
     def _component_state_callback(
         self: MccsDaqReceiver,
         fault: Optional[bool] = None,
-        health: Optional[HealthState] = None,
         x_bandpass_plot: Optional[np.ndarray] = None,
         y_bandpass_plot: Optional[np.ndarray] = None,
         rms_plot: Optional[np.ndarray] = None,
@@ -427,7 +427,6 @@ class MccsDaqReceiver(SKABaseDevice):
         the state of the component changes.
 
         :param fault: New fault state of device.
-        :param health: New health state of device.
         :param x_bandpass_plot: A filepath for a bandpass plot.
         :param y_bandpass_plot: A filepath for a bandpass plot.
         :param rms_plot: A filepath for an rms plot.
@@ -435,14 +434,9 @@ class MccsDaqReceiver(SKABaseDevice):
         """
         if fault:
             self.op_state_model.perform_action("component_fault")
-            self._health_model.component_fault(True)
+            self._health_model.update_state(fault=True)
         elif fault is False:
-            self._health_model.component_fault(False)
-
-        if health is not None:
-            if self._health_state != health:
-                self._health_state = cast(HealthState, health)
-                self.push_change_event("healthState", health)
+            self._health_model.update_state(fault=False)
 
         if x_bandpass_plot is not None:
             if isinstance(x_bandpass_plot, list):
@@ -485,17 +479,25 @@ class MccsDaqReceiver(SKABaseDevice):
         self.logger.info(
             "Data of type %s has been written to file %s", data_mode, file_name
         )
-        metadata_dict = json.loads(metadata)
+        try:
+            metadata_dict = json.loads(metadata)
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.warning(f"Failed to load metadata: {repr(e)}")
+            metadata_dict = {}
+
         event_value: dict[str, Union[str, int]] = {
             "data_mode": data_mode,
             "file_name": file_name,
             "metadata": metadata_dict,
         }
-        if "additional_info" in metadata_dict:
-            if data_mode == "station":
-                event_value["amount_of_data"] = metadata_dict["additional_info"]
-            elif data_mode != "correlator":
-                event_value["tile"] = metadata_dict["additional_info"]
+        if metadata_dict:
+            if "additional_info" in metadata_dict:
+                if data_mode == "station":
+                    event_value["amount_of_data"] = metadata_dict["additional_info"]
+                elif data_mode != "correlator":
+                    event_value["tile"] = metadata_dict["additional_info"]
+        else:
+            self.logger.info(f"No metadata found for {data_mode=}, {file_name=}")
 
         result = json.dumps(event_value)
         if (
@@ -508,6 +510,22 @@ class MccsDaqReceiver(SKABaseDevice):
                 "dataReceivedResult",
                 (self._received_data_mode, self._received_data_result),
             )
+
+    def _health_changed(self: MccsDaqReceiver, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state != health:
+            self._health_state = health
+            self.push_change_event("healthState", health)
+            self.push_archive_event("healthState", health)
 
     # --------
     # Commands
@@ -950,6 +968,15 @@ class MccsDaqReceiver(SKABaseDevice):
         :return: The last block of rms data.
         """
         return self._rms_plot
+
+    @attribute(dtype="DevString")
+    def healthReport(self: MccsDaqReceiver) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
 
 
 # ----------

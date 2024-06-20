@@ -140,6 +140,21 @@ def station_device_fixture(
     yield test_context.get_sps_station_device()
 
 
+@pytest.fixture(name="daq_device")
+def daq_device_fixture(
+    test_context: SpsTangoTestHarnessContext,
+) -> DeviceProxy:
+    """
+    Fixture that returns the SPS station Tango device under test.
+
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
+
+    :yield: the station Tango device under test.
+    """
+    yield test_context.get_daq_device()
+
+
 def test_Off(
     station_device: SpsStation,
     change_event_callbacks: MockTangoEventCallbackGroup,
@@ -1410,3 +1425,59 @@ def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
     station_device.daqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
 
     assert station_device.daqTRL == "NEW_DAQ_TRL"
+
+
+def test_AcquireDataForCalibration(
+    station_device: SpsStation,
+    daq_device: DeviceProxy,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the AcquireDaqtaForCalibration command.
+
+    :param station_device: The station device to use.
+    :param daq_device: the DAQ device proxy that would receive the data
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    channel = 106
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    daq_device.adminMode = 0
+
+    for tile in mock_tile_device_proxies:
+        tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.1)
+    station_device.AcquireDataForCalibration(channel)
+    tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
+
+    # Wait for LRCs to execute
+    timeout = 20
+    time_waited = 0
+    while not tile_command_mock.called:
+        time.sleep(1)
+        time_waited += 1
+        if time_waited >= timeout:
+            assert False, "Command SendDataSamples not called on tile"
+
+    tile_command_mock.assert_called_once()
+    assert json.loads(tile_command_mock.call_args[0][0]) == {
+        "data_type": "channel",
+        "first_channel": channel,
+        "last_channel": channel,
+    }
+    assert (
+        json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
+        == "CORRELATOR_DATA"
+    )

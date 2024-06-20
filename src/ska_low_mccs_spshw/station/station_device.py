@@ -347,7 +347,7 @@ class SpsStation(SKAObsDevice):
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ
+    # pylint: disable-next=arguments-differ, too-many-branches
     def _component_state_changed(  # type: ignore[override]
         self: SpsStation,
         *,

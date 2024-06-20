@@ -970,10 +970,17 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.OFF
             else:
                 evaluated_power_state = PowerState.UNKNOWN
+
+            if any(
+                power_state == PowerState.UNKNOWN
+                for power_state in self._daq_power_state.values()
+            ):
+                evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
+                f"\tDAQ: {self._daq_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)
@@ -2767,11 +2774,12 @@ class SpsStationComponentManager(
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         for _ in range(max_tries):
             daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
+            if len(daq_status["Running Consumers"]) > 1:
+                if any(
+                    status_list[0] == daq_mode
+                    for status_list in daq_status["Running Consumers"]
+                ):
+                    break
             time.sleep(tick)
 
         assert (

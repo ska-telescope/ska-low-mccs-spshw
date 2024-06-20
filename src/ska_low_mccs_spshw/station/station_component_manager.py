@@ -2774,16 +2774,16 @@ class SpsStationComponentManager(
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         for _ in range(max_tries):
             daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
-            if len(daq_status["Running Consumers"]) > 1:
-                if any(
-                    status_list[0] == daq_mode
-                    for status_list in daq_status["Running Consumers"]
-                ):
-                    break
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                break
             time.sleep(tick)
 
         assert (
-            daq_mode in daq_status["Running Consumers"][0]
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
         ), f"Failed to start {daq_mode}."
 
         self.set_lmc_download(

@@ -81,9 +81,9 @@ def test_context_fixture(
     sdn_gateway: str,
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
     daq_trl: str,
-    daq_id: int,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
@@ -95,11 +95,12 @@ def test_context_fixture(
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
         devices
+    :param mock_daq_device_proxy: a fixture returning a mocked MccsDaqReceiver
+        for unittests.
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
         control behaviours.
     :param daq_trl: a Tango Resource Locator of a DAQ instance.
-    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: a test context.
     """
@@ -118,8 +119,7 @@ def test_context_fixture(
         device_class=patched_sps_station_device_class,
     )
 
-    harness.set_daq_instance()
-    harness.set_daq_device(daq_id=daq_id, address=None)
+    harness.add_mock_daq_device(mock_daq_device_proxy)
 
     with harness as context:
         yield context
@@ -1431,6 +1431,7 @@ def test_AcquireDataForCalibration(
     station_device: SpsStation,
     daq_device: DeviceProxy,
     mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -1440,6 +1441,7 @@ def test_AcquireDataForCalibration(
     :param daq_device: the DAQ device proxy that would receive the data
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
         the required tile behaviours.
+    :param mock_daq_device_proxy: A fixture returning a mocked MccsDaqReceiver device.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
@@ -1461,6 +1463,24 @@ def test_AcquireDataForCalibration(
     time.sleep(0.1)
     station_device.AcquireDataForCalibration(channel)
     tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
+
+    # This sleep is needed because AcquireDataForCalibration will
+    # Check Running Consumers is None before starting DAQ.
+    time.sleep(2)
+
+    def _mocked_daq_status_callable() -> str:
+        return json.dumps(
+            {
+                "Running Consumers": [["CORRELATOR_DATA", 8]],
+                "Receiver Interface": "eth0",
+                "Receiver Ports": [4660],
+                "Receiver IP": ["10.244.170.166"],
+                "Bandpass Monitor": False,
+                "Daq Health": ["OK", 0],
+            }
+        )
+
+    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable)
 
     # Wait for LRCs to execute
     timeout = 20

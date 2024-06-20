@@ -115,6 +115,7 @@ class SpsStation(SKAObsDevice):
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
+        self._data_received_result: Optional[tuple[str, str]] = ("", "")
 
     def init_device(self: SpsStation) -> None:
         """
@@ -210,6 +211,7 @@ class SpsStation(SKAObsDevice):
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
+            ("AcquireDataForCalibration", "acquire_data_for_calibration", None),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
@@ -287,6 +289,8 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("tileProgrammingState", True, False)
             self._device.set_change_event("adcPower", True, False)
             self._device.set_archive_event("adcPower", True, False)
+            self._device.set_change_event("dataReceivedResult", True, False)
+            self._device.set_archive_event("dataReceivedResult", True, False)
 
             super().do()
 
@@ -390,6 +394,10 @@ class SpsStation(SKAObsDevice):
             self._adc_power = state_change.get("adc_power")
             self.push_change_event("adcPower", self._adc_power)
             self.push_archive_event("adcPower", self._adc_power)
+        if "dataReceivedResult" in state_change:
+            self._data_received_result = state_change.get("dataReceivedResult")
+            self.push_change_event("dataReceivedResult", self._data_received_result)
+            self.push_archive_event("dataReceivedResult", self._data_received_result)
 
         if "xPolBandpass" in state_change:
             x_bandpass_data = state_change.get("xPolBandpass")
@@ -495,6 +503,20 @@ class SpsStation(SKAObsDevice):
         :return: The last block of y-polarised bandpass data.
         """
         return self._y_bandpass_data
+
+    @attribute(
+        dtype=("str",),
+        max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
+    )
+    def dataReceivedResult(self: SpsStation) -> tuple[str, str] | None:
+        """
+        Read the result of the receiving of data.
+
+        :return: A tuple containing the data mode of transmission and a json
+            string with any additional data about the data such as the file
+            name.
+        """
+        return self._data_received_result
 
     @attribute(dtype=str)
     def daqTRL(self: SpsStation) -> str:
@@ -1008,6 +1030,28 @@ class SpsStation(SKAObsDevice):
         """
         handler = self.get_command_object("StartAcquisition")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(
+        dtype_in="DevLong",
+        dtype_out="DevVarLongStringArray",
+    )
+    def AcquireDataForCalibration(
+        self: SpsStation, channel: int
+    ) -> DevVarLongStringArrayType:
+        """
+        Start acquiring data for calibration.
+
+        :param channel: channel to calibrate for
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
+            >>> dp.command_inout("AcquireDataForCalibration", 153)
+        """
+        handler = self.get_command_object("AcquireDataForCalibration")
+        (return_code, message) = handler(channel)
         return ([return_code], [message])
 
     @command(

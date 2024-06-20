@@ -287,21 +287,24 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.set_source(tango.DevSource.DEV)
 
             self._proxy.add_change_event_callback(
-                "xPolBandpass", self._bandpass_callback
+                "xPolBandpass", self._daq_data_callback
             )
             self._proxy.add_change_event_callback(
-                "yPolBandpass", self._bandpass_callback
+                "yPolBandpass", self._daq_data_callback
+            )
+            self._proxy.add_change_event_callback(
+                "dataReceivedResult", self._daq_data_callback
             )
         super()._update_communication_state(communication_state)
 
-    def _bandpass_callback(
+    def _daq_data_callback(
         self: _DaqProxy,
         attribute_name: str,
         attribute_data: Any,
         attribute_quality: Any,
     ) -> None:
         """
-        Extract bandpass data from event and call cb to update.
+        Extract bandpass data or data received from event and call cb to update.
 
         :param attribute_name: Name of attribute that changed.
         :param attribute_data: New value of attribute.
@@ -314,10 +317,13 @@ class _DaqProxy(DeviceComponentManager):
             elif attribute_name.lower() == "ypolbandpass":
                 self.logger.debug("Processing change event for yPolBandpass")
                 self._component_state_callback(yPolBandpass=attribute_data)
+            elif attribute_name.lower() == "datareceivedresult":
+                self.logger.debug("Processing change event for dataReceivedResult")
+                self._component_state_callback(dataReceivedResult=attribute_data)
             else:
                 self.logger.error(
                     f"Got unexpected change event for: {attribute_name} "
-                    "in DaqProxy._bandpass_callback."
+                    "in DaqProxy._daq_data_callback."
                 )
 
 
@@ -392,11 +398,11 @@ class SpsStationComponentManager(
         self._power_state_lock = threading.RLock()
         self._tile_power_states = {fqdn: PowerState.UNKNOWN for fqdn in tile_fqdns}
         self._tile_id_mapping: dict[str, int] = {}
-        number_of_tiles = len(tile_fqdns)
+        self._number_of_tiles = len(tile_fqdns)
         self._adc_power: dict[int, Optional[list[float]]] = {}
         self._static_delays: dict[int, Optional[list[float]]] = {}
         self._preadu_levels: dict[int, Optional[list[float]]] = {}
-        for logical_tile_id in range(number_of_tiles):
+        for logical_tile_id in range(self._number_of_tiles):
             self._adc_power[logical_tile_id] = None
             self._static_delays[logical_tile_id] = None
             self._preadu_levels[logical_tile_id] = None
@@ -930,6 +936,10 @@ class SpsStationComponentManager(
             y_bandpass_data = state_change.get("yPolBandpass")
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
+        if "dataReceivedResult" in state_change:
+            data_received_result = state_change.get("dataReceivedResult")
+            if self._component_state_callback is not None:
+                self._component_state_callback(dataReceivedResult=data_received_result)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -2687,6 +2697,153 @@ class SpsStationComponentManager(
                     result=(ResultCode.FAILED, "Start acquisition task failed"),
                 )
             return
+
+    def acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        channel: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the acquire data for calibration method.
+
+        This method returns immediately after it submitted
+        `self._acquire_data_for_calibration` for execution.
+
+        :param channel: channel to calibrate for
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        if channel < 0 or channel > 510:
+            self.logger.error(f"Invalid channel{channel}")
+            return (TaskStatus.REJECTED, "Invalid channel")
+
+        return self.submit_task(
+            self._acquire_data_for_calibration,
+            args=[channel],
+            task_callback=task_callback,
+        )
+
+    def _configure_station_for_calibration(self: SpsStationComponentManager) -> None:
+        daq_mode: str = "CORRELATOR_DATA"
+        nof_correlator_samples: int = 1835008
+        receiver_frame_size: int = 9000
+        nof_channels: int = 1
+
+        max_tries: int = 10
+        tick: float = 0.5
+
+        # Get DAQ running with correlator
+        assert self._daq_proxy is not None
+        assert self._daq_proxy._proxy is not None
+        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+
+        # TODO: We have to stop all consumers before sending again
+        # https://jira.skatelescope.org/browse/MCCS-2183
+        if len(daq_status["Running Consumers"]) > 0:
+            self.logger.info("Stopping all consumers...")
+            rc, _ = self._daq_proxy._proxy.Stop()
+            if rc != ResultCode.OK:
+                self.logger.warning("Unable to stop daq consumers.")
+            for _ in range(max_tries):
+                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+                if len(daq_status["Running Consumers"]) == 0:
+                    continue
+                time.sleep(tick)
+            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
+        self._daq_proxy._proxy.configure(
+            json.dumps(
+                {
+                    "nof_tiles": self._number_of_tiles,
+                    "nof_channels": nof_channels,
+                    "directory": "correlator_data",  # Appended to ADR-55 path.
+                    "nof_correlator_samples": nof_correlator_samples,
+                    "receiver_frame_size": receiver_frame_size,
+                }
+            )
+        )
+        self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                break
+            time.sleep(tick)
+
+        assert (
+            daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+        self.set_lmc_download(
+            mode="10g",
+            payload_length=8192,  # Default for using 10g
+            dst_ip=daq_status["Receiver IP"][0],
+            dst_port=daq_status["Receiver Ports"][0],
+        )
+
+    @check_communicating
+    def _acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        channel: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Acquire data for calibration.
+
+        :param channel: channel to calibrate for
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        data_send_mode: str = "channel"
+
+        # Verify all tiles are acquiring data
+        for tile in self._tile_proxies.values():
+            assert tile._proxy is not None  # for the type checker
+            if not tile._proxy.tileProgrammingState == "Synchronised":
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            "AcquireDataForCalibration failed. Tiles not synchronised.",
+                        ),
+                    )
+                return
+
+        try:
+            self.logger.info(
+                "AcquireDataForCalibration configuring tiles and daq for calibration"
+            )
+            self._configure_station_for_calibration()
+        except AssertionError as e:
+            self.logger.error(f"Unable to configure station {repr(e)}")
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.FAILED,
+                    result=(
+                        ResultCode.FAILED,
+                        "AcquireDataForCalibration failed. "
+                        f"Unable to configure station {repr(e)}",
+                    ),
+                )
+            return
+
+        # Send data from tpms
+        self.send_data_samples(
+            json.dumps(
+                {
+                    "data_type": data_send_mode,
+                    "first_channel": channel,
+                    "last_channel": channel,
+                }
+            )
+        )
+        self.logger.debug(f"Raw channel spigot sent for {channel=}")
 
     @check_communicating
     def set_channeliser_rounding(

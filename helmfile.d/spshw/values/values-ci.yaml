@@ -10,6 +10,12 @@ platform:
       storage_class: nfss1
 
   array:
+    cabinetbanks:
+      cb-1:
+        id: 1
+        stations:
+          - ci-1
+          - ci-2
     stations:
       ci-1:
         id: 1

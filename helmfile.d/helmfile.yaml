@@ -8,17 +8,21 @@ environments:
       - platform/minikube.yaml
       - spshw/values/values-ci.yaml
   stfc-ral:
+    kubeContext: stfc-ral
     values:
       - platform/stfc-ral.yaml
   stfc-ral-software:
+    kubeContext: stfc-ral
     values:
       - platform/stfc-ral.yaml
       - spshw/values/values-ral-software.yaml
   stfc-ral-firmware:
+    kubeContext: stfc-ral
     values:
       - platform/stfc-ral.yaml
       - spshw/values/values-ral-firmware.yaml
   stfc-ral-partial:
+    kubeContext: stfc-ral
     values:
       - platform/stfc-ral.yaml
       - spshw/values/values-ral-partial.yaml

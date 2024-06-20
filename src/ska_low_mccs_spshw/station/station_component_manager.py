@@ -970,10 +970,17 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.OFF
             else:
                 evaluated_power_state = PowerState.UNKNOWN
+
+            if any(
+                power_state == PowerState.UNKNOWN
+                for power_state in self._daq_power_state.values()
+            ):
+                evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
+                f"\tDAQ: {self._daq_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)
@@ -2775,7 +2782,8 @@ class SpsStationComponentManager(
             time.sleep(tick)
 
         assert (
-            daq_mode in daq_status["Running Consumers"][0]
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
         ), f"Failed to start {daq_mode}."
 
         self.set_lmc_download(

@@ -10,7 +10,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import copy
 from typing import Any, Optional
 
 from ska_control_model import HealthState
@@ -49,7 +48,7 @@ class TileHealthModel(BaseHealthModel):
 
     def evaluate_health(
         self: TileHealthModel,
-    ) -> HealthState:
+    ) -> tuple[HealthState, str]:
         """
         Compute overall health of the station.
 
@@ -62,21 +61,25 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-        tile_health = super().evaluate_health()
-        intermediate_healths = self._intermediate_healths
-
+        tile_health, tile_report = super().evaluate_health()
+        intermediate_healths = self.intermediate_healths
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,
             HealthState.DEGRADED,
             HealthState.OK,
         ]:
-            if self._health_rules.rules[health](intermediate_healths, tile_health):
-                return health
-        return HealthState.UNKNOWN
+            if health == tile_health:
+                return tile_health, tile_report
+            result, report = self._health_rules.rules[health](intermediate_healths)
+            if result:
+                return health, report
+        return HealthState.UNKNOWN, "No rules matched"
 
     @property
-    def _intermediate_healths(self: TileHealthModel) -> dict[str, HealthState]:
+    def intermediate_healths(
+        self: TileHealthModel,
+    ) -> dict[str, tuple[HealthState, str]]:
         """
         Get the intermediate health roll-up states.
 
@@ -111,26 +114,3 @@ class TileHealthModel(BaseHealthModel):
         self._health_rules._thresholds = self._merge_dicts(
             self._health_rules.default_thresholds, params
         )
-
-    def _merge_dicts(
-        self: TileHealthModel, dict_a: dict[str, Any], dict_b: dict[str, Any]
-    ) -> dict[str, Any]:
-        """
-        Merge two nested dictionaries, taking values from b when available.
-
-        This is necessary for nested dictionaries of thresholds
-
-        TODO: Move into common repo
-
-        :param dict_a: the dictionary to take from if not in dictionary b
-        :param dict_b: the dictionary to preferentially take from
-        :return: the merged dictionary
-        """
-        output = copy.deepcopy(dict_a)
-        for key, new_val in dict_b.items():
-            cur_val = dict_a[key]
-            if isinstance(new_val, dict) and isinstance(cur_val, dict):
-                output[key] = self._merge_dicts(cur_val, new_val)
-            else:
-                output[key] = new_val
-        return output

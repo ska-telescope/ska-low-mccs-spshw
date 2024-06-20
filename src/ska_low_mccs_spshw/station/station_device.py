@@ -363,7 +363,10 @@ class SpsStation(SKAObsDevice):
         """
         bandpass_data_shape = (256, 512)
         super()._component_state_changed(fault=fault, power=power)
-        self._health_model.update_state(fault=fault, power=power)
+        if power is not None:
+            self._health_model.update_state(fault=fault, power=power)
+        else:
+            self._health_model.update_state(fault=fault)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -892,6 +895,16 @@ class SpsStation(SKAObsDevice):
         :param argin: JSON-string of dictionary of health states
         """
         self._health_model.health_params = json.loads(argin)
+        self._health_model.update_health()
+
+    @attribute(dtype="DevString")
+    def healthReport(self: SpsStation) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
 
     @attribute(
         dtype="DevString",

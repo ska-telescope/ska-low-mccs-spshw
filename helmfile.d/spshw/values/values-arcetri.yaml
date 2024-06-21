@@ -2,12 +2,6 @@ defaults:
   logging_level_default: 5
 
 overrides:
-  array:
-    cabinetbanks:
-      arcetri:
-        id: 1
-        stations:
-          - arcetri
     stations:
       arcetri:
         sps:

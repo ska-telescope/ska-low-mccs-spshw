@@ -7,11 +7,6 @@ platform:
 
   array:
     name: oxford
-    cabinetbanks:
-      oxford:
-        id: 1
-        stations:
-          - oxford
     stations:
       oxford:
         id: 1

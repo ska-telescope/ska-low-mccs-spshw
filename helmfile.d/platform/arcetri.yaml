@@ -7,11 +7,6 @@ platform:
 
   array:
     name: arcetri
-    cabinetbanks:
-      arcetri:
-        id: 1
-        stations:
-          - arcetri
     stations:
       arcetri:
         id: 1

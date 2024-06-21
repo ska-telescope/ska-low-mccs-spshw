@@ -7,11 +7,6 @@ platform:
 
   array:
     name: gmrt
-    cabinetbanks:
-      gmrt:
-        id: 1
-        stations:
-          - gmrt
     stations:
       gmrt:
         id: 1

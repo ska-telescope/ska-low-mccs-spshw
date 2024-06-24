@@ -181,6 +181,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
+                    initial_value=True,
                 ),
                 "stationId": AttributeManager(
                     functools.partial(self.post_change_event, "stationId"),
@@ -580,12 +581,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.logger.warning(
                     f"Attribute {attr_name} changed to {attr_value}, "
                     "this is above maximum alarm, Shutting down TPM."
-                )
-                self.component_manager.off()
-            if attr.is_min_alarm():
-                self.logger.warning(
-                    f"Attribute {attr_name} changed to {attr_value}, "
-                    "this is below minimum alarm, Shutting down TPM."
                 )
                 self.component_manager.off()
         except Exception as e:  # pylint: disable=broad-except

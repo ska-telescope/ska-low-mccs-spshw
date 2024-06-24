@@ -652,7 +652,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             self.logger.warning(
                                 "Unable to connect with at least 1 FPGA"
                             )
-                            return TpmStatus.UNCONNECTED
                     _is_programmed = self.tile.is_programmed()
                     if _is_programmed is False:
                         status = TpmStatus.UNPROGRAMMED

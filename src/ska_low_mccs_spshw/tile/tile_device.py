@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import functools
 import importlib  # allow forward references in type hints
+import ipaddress
 import itertools
 import json
 import logging
@@ -609,7 +610,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         self.logger.debug(self.component_manager.info)
         # Returning the info fails as we can't json serialise IPV4Addresses.
-        return str(self)
+        info: dict[str, Any] = self.component_manager.info
+        # Convert IPAddresses to serialisable format.
+        for k, v in info.items():
+            if isinstance(v, ipaddress.IPv4Address):
+                info[k] = str(v)
+        return json.dumps(info)
+        # return str(self)
 
     # Needed?
     @tile_info.write  # type: ignore[no-redef]

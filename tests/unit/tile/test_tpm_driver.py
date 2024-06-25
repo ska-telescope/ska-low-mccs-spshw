@@ -418,9 +418,9 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         tpm_driver._tpm_status = TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
-            mocked_sync_time
-        )
+        tile_simulator.tpm._register_map[
+            "fpga1.pps_manager.sync_time_val"
+        ] = mocked_sync_time
 
         # assert the tpm_driver has different values to the simulator
         assert tpm_driver.adc_rms != list(tile_simulator._adc_rms)

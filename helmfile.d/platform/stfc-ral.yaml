@@ -12,6 +12,19 @@ platform:
       jupyterhub: true
   array:
     name: stfc-ral
+    cabinetbanks:
+      stfc-ral-firmware:
+        id: 1
+        stations:
+          - stfc-ral-firmware
+      stfc-ral-software:
+        id: 2
+        stations:
+          - stfc-ral-software
+      stfc-ral-partial:
+        id: 3
+        stations:
+          - stfc-ral-partial
     stations:
       stfc-ral-firmware:
         id: 1

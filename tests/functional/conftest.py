@@ -206,6 +206,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "daq_yPolBandpass",
         "data_received_callback",
         "tile_adminMode",
+        "device_state",
         timeout=30.0,
     )
 

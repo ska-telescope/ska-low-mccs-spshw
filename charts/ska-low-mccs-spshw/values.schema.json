@@ -64,6 +64,14 @@
                   "type": "string",
                   "format": "ipv4"
                 },
+                "csp_ingest_ip": {
+                  "type": "string",
+                  "format": "ipv4"
+                },
+                "daq_trl": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+                },
                 "antenna_config_uri": {
                   "type": "array",
                   "items": {
@@ -96,7 +104,8 @@
                 "antenna_config_uri",
                 "subracks",
                 "tpms"
-              ]
+              ],
+              "additionalProperties": false
             }
           }
         },

@@ -611,20 +611,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.logger.debug(self.component_manager.info)
         # Returning the info fails as we can't json serialise IPV4Addresses.
         info: dict[str, Any] = self.component_manager.info
-        # Convert IPAddresses to serialisable format.
-        self.logger.debug(f"Info BEFORE: {info}")
         self._convert_ip_to_str(info)
-        # for k, v in info.items():
-        #     # self.logger.debug(f"{k=} : {v=} TypeOf[{type(v)}]")
-        #     if isinstance(v, ipaddress.IPv4Address):
-        #         info[k] = str(v)
-        self.logger.debug(f"Info AFTER: {info}")
+        # Prints out a nice table to the logs.
+        self.logger.info(str(self))
         return json.dumps(info)
         # return str(self)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
+        """
+        Convert IPAddresses to str in (possibly nested) dict.
+
+        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+        """
         for k, v in nested_dict.items():
-            self.logger.debug(f"{k=} : {v=} TypeOf[{type(v)}]")
             if isinstance(v, ipaddress.IPv4Address):
                 nested_dict[k] = str(v)
             elif isinstance(v, dict):

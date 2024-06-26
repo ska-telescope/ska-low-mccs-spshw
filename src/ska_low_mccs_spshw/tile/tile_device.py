@@ -11,13 +11,13 @@ from __future__ import annotations
 import copy
 import functools
 import importlib  # allow forward references in type hints
-import ipaddress
 import itertools
 import json
 import logging
 import os.path
 import sys
 from dataclasses import dataclass
+from ipaddress import IPv4Address
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -608,14 +608,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        self.logger.debug(self.component_manager.info)
-        # Returning the info fails as we can't json serialise IPV4Addresses.
         info: dict[str, Any] = self.component_manager.info
         self._convert_ip_to_str(info)
-        # Prints out a nice table to the logs.
-        self.logger.info(str(self))
+        if info != {}:
+            # Prints out a nice table to the logs if populated.
+            self.logger.info(str(self))
         return json.dumps(info)
-        # return str(self)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -624,7 +622,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
         """
         for k, v in nested_dict.items():
-            if isinstance(v, ipaddress.IPv4Address):
+            if isinstance(v, IPv4Address):
                 nested_dict[k] = str(v)
             elif isinstance(v, dict):
                 self._convert_ip_to_str(v)
@@ -3976,6 +3974,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :rtype: str
         """
         info = self.component_manager.info
+        print(f"infO: {info}")
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"

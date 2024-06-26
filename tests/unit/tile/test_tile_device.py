@@ -382,9 +382,11 @@ class TestMccsTile:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        # TODO: Fix this test.
-        tile_info = tile_device.tile_info
-        print(f"tile_info: {tile_device.tile_info}")
+        # Sleep until the attribute has been populated.
+        while json.loads(tile_device.tile_info) == {}:
+            time.sleep(1)
+        tile_info = json.loads(tile_device.tile_info)
+
         keys = ["hardware", "fpga_firmware", "network"]
         assert all(key in tile_info.keys() for key in keys)
 

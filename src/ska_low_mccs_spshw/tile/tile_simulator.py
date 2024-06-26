@@ -12,6 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import functools
+import json
 import logging
 import random
 import re
@@ -1305,7 +1306,25 @@ class TileSimulator:
         :returns: A string of tile information.
         """
         self.logger.debug("getting tile info")
-        return str(self)
+        # return str(self)
+        assert self.tpm is not None
+        info: dict[str, Any] = self.tpm.info
+        self._convert_ip_to_str(info)
+        # Prints out a nice table to the logs.
+        self.logger.info(str(self))
+        return json.dumps(info)
+
+    def _convert_ip_to_str(self: TileSimulator, nested_dict: dict[str, Any]) -> None:
+        """
+        Convert IPAddresses to str in (possibly nested) dict.
+
+        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+        """
+        for k, v in nested_dict.items():
+            if isinstance(v, IPv4Address):
+                nested_dict[k] = str(v)
+            elif isinstance(v, dict):
+                self._convert_ip_to_str(v)
 
     @check_mocked_overheating
     @connected

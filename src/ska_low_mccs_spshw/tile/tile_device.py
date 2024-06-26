@@ -613,6 +613,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         info: dict[str, Any] = self.component_manager.info
         # Convert IPAddresses to serialisable format.
         for k, v in info.items():
+            print(f"{k=} : {v=} TypeOf[{type(v)}]")
             if isinstance(v, ipaddress.IPv4Address):
                 info[k] = str(v)
         return json.dumps(info)

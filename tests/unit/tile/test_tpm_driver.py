@@ -57,6 +57,7 @@ def tpm_driver_fixture(
         tpm_version,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
     )
 
 
@@ -1082,6 +1083,7 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
             tpm_version_to_test,
             callbacks["communication_status"],
             callbacks["component_state"],
+            callbacks["attribute_state"],
         )
         assert driver.firmware_name == expected_firmware_name
 

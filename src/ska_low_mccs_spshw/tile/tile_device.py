@@ -237,6 +237,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
+            self._attribute_change_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -442,6 +443,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         else:
             self._health_model.update_state(fault=fault)
 
+    def _attribute_change_callback(
+        self: MccsTile,
+        **state_change: Any,
+    ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
                 self.tile_health_structure = attribute_value
@@ -1279,7 +1284,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._attribute_state["channeliserRounding"].read()[0] is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
-        return self._attribute_state["channeliserRounding"].read()
+        return self._attribute_state["channeliserRounding"].read()[0]
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -1335,7 +1340,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return self._attribute_state["cspRounding"].read()
+        return self._attribute_state["cspRounding"].read()[0]
 
     @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:

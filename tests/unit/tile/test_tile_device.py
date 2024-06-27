@@ -107,7 +107,7 @@ def on_tile_device_fixture(
 
     tile_device.MockTpmOn()
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed"
+        "NotProgrammed", lookahead=2, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
@@ -437,7 +437,9 @@ class TestMccsTile:
         static_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
-            tile_health_structure=TileData.get_tile_defaults(),
+        )
+        static_tile_component_manager._tpm_driver._attribute_change_callback(
+            tile_health_structure=TileData.get_tile_defaults()
         )
 
         change_event_callbacks["state"].assert_change_event(DevState.ON)
@@ -474,7 +476,8 @@ class TestMccsTile:
         static_tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
-            tile_health_structure=TileData.get_tile_defaults(),
+        )
+        static_tile_component_manager._tpm_driver._attribute_change_callback(
             adc_rms=list(range(2, 34)),
         )
         change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
@@ -516,7 +519,7 @@ class TestMccsTile:
         tile_monitoring_defaults = copy.deepcopy(TileData.get_tile_defaults())
         tile_monitoring_defaults["timing"]["pps"]["status"] = False
 
-        static_tile_component_manager._update_component_state(
+        static_tile_component_manager._tpm_driver._attribute_change_callback(
             tile_health_structure=tile_monitoring_defaults,
         )
         change_event_callbacks["pps_present"].assert_change_event(False)
@@ -640,7 +643,7 @@ class TestMccsTile:
         )
         # Lookahead of 2 due to the transition to Unknown first.
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Off", lookahead=2, consume_nonmatches=True
+            "Off", lookahead=3, consume_nonmatches=True
         )
         tile_device.MockTpmOn()
 

@@ -129,6 +129,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._sysref_present = True
         self._pll_locked = True
         self._register_list = self.REGISTER_LIST
+        self._info: dict[str, Any] = {}
 
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
@@ -293,6 +294,7 @@ class TpmDriver(MccsBaseComponentManager):
                     self._update_component_state(
                         tile_health_structure=self._tile_health_structure
                     )
+                    self._info = self.tile.info
                 # Commands checked only when initialised
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
@@ -803,6 +805,16 @@ class TpmDriver(MccsBaseComponentManager):
         """
         self.logger.debug("TpmDriver: timing")
         return self._tile_health_structure["timing"]
+
+    @property
+    def info(self: TpmDriver) -> dict[str, Any]:
+        """
+        Return a dictionary of TPM info.
+
+        :return: Info in the TPM
+        """
+        self.logger.debug("TpmDriver: get info")
+        return self._info
 
     @property
     def io(self: TpmDriver) -> dict[str, Any]:

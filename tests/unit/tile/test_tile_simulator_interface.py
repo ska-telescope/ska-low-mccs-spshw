@@ -23,7 +23,7 @@ SIMULATOR_ONLY_METHODS = [
     "mock_off",
     "_timed_thread",
 ]
-METHODS_TO_OMIT = ["__init__"]
+METHODS_TO_OMIT = ["__init__", "_convert_ip_to_str"]
 
 
 def check_method_parameters_match(

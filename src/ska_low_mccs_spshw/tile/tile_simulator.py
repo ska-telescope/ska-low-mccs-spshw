@@ -442,7 +442,7 @@ class MockTpm:
         self: MockTpm,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """
         Return a 40G configuration.
 

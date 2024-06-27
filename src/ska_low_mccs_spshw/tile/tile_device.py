@@ -3974,7 +3974,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :rtype: str
         """
         info = self.component_manager.info
-        print(f"infO: {info}")
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"

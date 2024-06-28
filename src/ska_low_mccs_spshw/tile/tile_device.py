@@ -18,7 +18,7 @@ import os.path
 import sys
 from dataclasses import dataclass
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Optional
+from typing import Any, Callable, Final
 
 import numpy as np
 import tango
@@ -448,8 +448,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def _component_state_changed(  # type: ignore[override]
         self: MccsTile,
         *,
-        fault: Optional[bool] = None,
-        power: Optional[PowerState] = None,
+        fault: bool | None = None,
+        power: PowerState | None = None,
         **state_change: Any,
     ) -> None:
         """
@@ -487,7 +487,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self: MccsTile,
         health_structure: dict[str, Any],
         dictionary_path: list[str],
-    ) -> Optional[Any]:
+    ) -> Any:
         """
         Unpack the monitoring point value from dictionary.
 
@@ -951,7 +951,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         min_alarm=4.55,
         max_alarm=5.45,
     )
-    def voltageMon(self: MccsTile) -> Optional[float]:
+    def voltageMon(self: MccsTile) -> float | None:
         """
         Return the internal 5V supply of the TPM.
 
@@ -1111,7 +1111,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         ]
 
     @attribute(dtype=("DevDouble",), max_dim_x=32)
-    def adcPower(self: MccsTile) -> Optional[list[float]]:
+    def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
 
@@ -1152,7 +1152,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
-    def pendingDataRequests(self: MccsTile) -> Optional[bool]:
+    def pendingDataRequests(self: MccsTile) -> bool | None:
         """
         Check for pending data requests.
 
@@ -1161,7 +1161,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.pending_data_requests
 
     @attribute(dtype="DevBoolean")
-    def isBeamformerRunning(self: MccsTile) -> Optional[bool]:
+    def isBeamformerRunning(self: MccsTile) -> bool | None:
         """
         Check if beamformer is running.
 
@@ -1188,7 +1188,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self: MccsTile) -> tuple[Optional[int], float, tango.AttrQuality]:
+    def ppsDelay(self: MccsTile) -> tuple[int | None, float, tango.AttrQuality]:
         """
         Return the delay between PPS and 10 MHz clock.
 
@@ -1200,7 +1200,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self._attribute_state["ppsDelay"].read()
 
     @attribute(dtype="DevLong")
-    def ppsDelayCorrection(self: MccsTile) -> Optional[int]:
+    def ppsDelayCorrection(self: MccsTile) -> int | None:
         """
         Return the correction made to the pps delay.
 
@@ -1277,7 +1277,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.sysref_present
 
     @attribute(dtype="DevBoolean")
-    def pllLocked(self: MccsTile) -> Optional[bool]:
+    def pllLocked(self: MccsTile) -> bool | None:
         """
         Report if ADC clock PLL is in locked state.
 
@@ -1344,7 +1344,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype=("DevLong",),
         max_dim_x=384,
     )
-    def cspRounding(self: MccsTile) -> Optional[np.ndarray]:
+    def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
         CSP formatter rounding.
 
@@ -1389,7 +1389,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.set_preadu_levels(list(levels))
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
-    def beamformerTable(self: MccsTile) -> Optional[list[int]]:
+    def beamformerTable(self: MccsTile) -> list[int] | None:
         """
         Get beamformer region table.
 
@@ -1642,7 +1642,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.GetFirmwareAvailableCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new GetFirmwareAvailableCommand instance.
@@ -1731,7 +1731,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.GetRegisterListCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new GetRegisterListCommand instance.
@@ -1780,7 +1780,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ReadRegisterCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ReadRegisterCommand instance.
@@ -1854,7 +1854,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.WriteRegisterCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new WriteRegisterCommand instance.
@@ -1920,7 +1920,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ReadAddressCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ReadAddressCommand instance.
@@ -1986,7 +1986,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.WriteAddressCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new WriteAddressCommand instance.
@@ -2072,7 +2072,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.Configure40GCoreCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new Configure40GCoreCommand instance.
@@ -2184,7 +2184,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.Get40GCoreConfigurationCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new Get40GCoreConfigurationCommand instance.
@@ -2290,7 +2290,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.SetLmcDownloadCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new SetLmcDownloadCommand instance.
@@ -2395,7 +2395,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.SetLmcIntegratedDownloadCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new SetLmcIntegratedDownloadCommand instance.
@@ -2488,7 +2488,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.SetAttributeThresholdsCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new SetAttributeThresholdsCommand instance.
@@ -2583,7 +2583,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.GetArpTableCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new GetArpTableCommand instance.
@@ -2638,7 +2638,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.SetBeamFormerRegionsCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new SetBeamFormerRegionsCommand instance.
@@ -2769,7 +2769,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ConfigureStationBeamformerCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ConfigureStationBeamformerCommand instance.
@@ -2859,7 +2859,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.LoadCalibrationCoefficientsCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new LoadCalibrationCoefficientsCommand instance.
@@ -2975,7 +2975,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ApplyCalibrationCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ApplyCalibrationCommand instance.
@@ -3128,7 +3128,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ApplyPointingDelaysCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ApplyPointingDelayommand instance.
@@ -3204,7 +3204,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.StartBeamformerCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new StartBeamformerCommand instance.
@@ -3278,7 +3278,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.StopBeamformerCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new StopBeamformerCommand instance.
@@ -3349,7 +3349,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ConfigureIntegratedChannelDataCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ConfigureIntegratedChannelDataCommand instance.
@@ -3444,7 +3444,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ConfigureIntegratedBeamDataCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ConfigureIntegratedBeamDataCommand instance.
@@ -3523,7 +3523,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.StopIntegratedDataCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new StopIntegratedDataCommand instance.
@@ -3588,7 +3588,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.SendDataSamplesCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new SendDataSamplesCommand instance.
@@ -3696,7 +3696,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.StopDataTransmissionCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new StopDataTransmissionCommand instance.
@@ -3768,8 +3768,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self: MccsTile.StartAcquisitionCommand,
             command_tracker: CommandTracker,
             component_manager: TileComponentManager,
-            callback: Optional[Callable] = None,
-            logger: Optional[logging.Logger] = None,
+            callback: Callable | None = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new instance.
@@ -3838,7 +3838,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         def __init__(
             self: MccsTile.ConfigureTestGeneratorCommand,
             component_manager: TileComponentManager,
-            logger: Optional[logging.Logger] = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new ConfigureTestGeneratorCommand instance.

@@ -202,13 +202,13 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
 
     *    yield "CHECK_CPLD_COMMS"
     *    yield "CONNECT"
-    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
-        yield "FIRMWARE_AVALIABLE"
+        yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
 
 
@@ -220,13 +220,13 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
 
     *    yield "CHECK_CPLD_COMMS"
     *    yield "CONNECT"
-    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
-        yield "FIRMWARE_AVALIABLE"
+        yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
 
 
@@ -242,7 +242,7 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "IS_PROGRAMMED"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
-    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_INFO"
     """
     while True:
@@ -252,7 +252,7 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
-        yield "FIRMWARE_AVALIABLE"
+        yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
 
 
@@ -282,7 +282,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "STATION_ID"
     *    yield "TILE_ID"
     *    yield "BEAMFORMER_TABLE"
-    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_INFO"
     """
     while True:
@@ -306,7 +306,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "STATION_ID"
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
-        yield "FIRMWARE_AVALIABLE"
+        yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
 
 
@@ -336,7 +336,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "STATION_ID"
     *    yield "TILE_ID"
     *    yield "BEAMFORMER_TABLE"
-    *    yield "FIRMWARE_AVALIABLE"
+    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_BEAMFORMER_FRAME"
     *    yield "TILE_INFO"
     """
@@ -361,7 +361,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "STATION_ID"
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
-        yield "FIRMWARE_AVALIABLE"
+        yield "FIRMWARE_AVAILABLE"
         yield "TILE_BEAMFORMER_FRAME"
         yield "TILE_INFO"
 

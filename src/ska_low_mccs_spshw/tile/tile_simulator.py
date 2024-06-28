@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, List, Optional, TypeVar, Union, cast
+from typing import Any, Callable, List, TypeVar, Union, cast
 
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
@@ -331,7 +331,6 @@ class MockTpm:
         # low level details and just assume all went ok.
         self.logger = logger
         self._is_programmed = False
-        self._mocked_pll_locked_status = copy.deepcopy(self.PLL_LOCKED_REGISTER)
         self.beam1 = StationBeamformer()
         self.beam2 = StationBeamformer()
         self.preadu = [PreAdu(logger)] * 2
@@ -669,7 +668,7 @@ class MockTpm:
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Optional[Any]:
+    ) -> Any:
         """
         Get register value.
 
@@ -680,13 +679,13 @@ class MockTpm:
         :return: Values
         """
         if register == ("pll", 0x508):
-            return self._mocked_pll_locked_status
+            return self.PLL_LOCKED_REGISTER
         if isinstance(register, int):
             register = hex(register)
 
         return self._register_map.get(register)
 
-    def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
+    def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """
         Get address value.
 
@@ -711,7 +710,7 @@ class MockTpm:
             key = str(address + i)
             self._address_map.update({key: value})
 
-    def __getitem__(self: MockTpm, key: Any) -> Optional[Any]:
+    def __getitem__(self: MockTpm, key: Any) -> Any:
         """
         Check if the specified key is a memory address or register name.
 
@@ -725,7 +724,7 @@ class MockTpm:
         if key == "" or key == "unknown":
             raise LibraryError(f"Unknown register: {key}")
         if key == ("pll", 1288):
-            return self._mocked_pll_locked_status
+            return self.PLL_LOCKED_REGISTER
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value: Any) -> None:
@@ -1940,7 +1939,7 @@ class TileSimulator:
     def send_beam_data(
         self: TileSimulator,
         timeout: int = 0,
-        timestamp: Optional[int] = None,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -2175,6 +2174,7 @@ class TileSimulator:
         Get station ID.
 
         :return: station ID programmed in HW
+        :rtype: int
         """
         return self._station_id
 

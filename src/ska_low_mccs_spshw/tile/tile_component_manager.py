@@ -178,7 +178,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             preadu_levels=None,
             static_delays=None,
             channeliser_rounding=None,
-            firmware_avaliable=None,
+            firmware_available=None,
             beamformer_table=None,
             phase_terminal_count=None,
             beamformer_running=None,
@@ -221,9 +221,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "FIRMWARE_AVALIABLE":
+            case "FIRMWARE_AVAILABLE":
                 request = TileRequest(
-                    "firmware_avaliable",
+                    "firmware_available",
                     self.tile.get_firmware_list,
                     publish=True,
                 )

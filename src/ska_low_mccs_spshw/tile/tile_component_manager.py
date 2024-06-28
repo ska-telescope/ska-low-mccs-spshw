@@ -734,6 +734,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         "temperatures",
         "currents",
         "timing",
+        "info",
         "io",
         "dsp",
         "adcs",

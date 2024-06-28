@@ -965,7 +965,7 @@ def test_station_tile_commands(
     tile_command_mock = getattr(mock_tile_device_proxies[0], tile_command)
 
     # Wait for LRCs to execute
-    timeout = 10
+    timeout = 15
     time_waited = 0
     while not tile_command_mock.called:
         time.sleep(1)

@@ -10,6 +10,7 @@
 """This module contains tests of the TPM driver."""
 from __future__ import annotations
 
+import json
 import logging
 import time
 import unittest.mock
@@ -2241,9 +2242,11 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
     @pytest.mark.parametrize(
         ("attribute"),
         [
+            # ("active_40g_port"),
             ("voltages"),
             ("temperatures"),
             ("currents"),
+            ("info"),
             ("io"),
             ("dsp"),
             ("board_temperature"),
@@ -2299,6 +2302,34 @@ class TestTpmDriver:  # pylint: disable=too-many-public-methods
         """
         tile_simulator.connect()
         _ = getattr(tpm_driver, attribute)
+
+    def test_read_tile_info(
+        self: TestTpmDriver,
+        tpm_driver: TpmDriver,
+        tile_simulator: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test we can read tile info.
+
+        :param tpm_driver: The tpm driver under test.
+        :param tile_simulator: A mock object representing
+            a simulated tile (`TileSimulator`)_simulator
+        """
+        tile_simulator.connect()
+        tile_simulator.tpm._is_programmed = True
+        tpm_driver._tpm_status = TpmStatus.SYNCHRONISED
+
+        # Pull attr
+        tile_info = json.loads(tile_simulator.tile_info)
+        print(f"tile_info: {tile_info}")
+
+        # Check some (not all) values are as set in tile simulator.
+        assert tile_info["hardware"]["HARDWARE_REV"] == "<current hardware revision>"
+        assert tile_info["hardware"]["BOARD_MODE"] == "<current board mode>"
+        assert tile_info["hardware"]["LOCATION"] == "<current hardware location>"
+        assert tile_info["hardware"]["DDR_SIZE_GB"] == "<current hardware DDR size>"
+        assert tile_info["fpga_firmware"]["compile_time"] == "<mock_time>"
+        assert tile_info["network"]["1g_netmask"] == "123.123.123.101"
 
     def test_write_read_registers(
         self: TestTpmDriver,

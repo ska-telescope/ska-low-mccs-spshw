@@ -17,6 +17,7 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
+from ipaddress import IPv4Address
 from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
@@ -596,6 +597,45 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevString",
+        label="tile_info",
+    )
+    def tile_info(self: MccsTile) -> str:
+        """
+        Return all the tile info available.
+
+        :return: info available
+        """
+        info: dict[str, Any] = self.component_manager.info
+        self._convert_ip_to_str(info)
+        if info != {}:
+            # Prints out a nice table to the logs if populated.
+            self.logger.info(str(self))
+        return json.dumps(info)
+
+    def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
+        """
+        Convert IPAddresses to str in (possibly nested) dict.
+
+        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+        """
+        for k, v in nested_dict.items():
+            if isinstance(v, IPv4Address):
+                nested_dict[k] = str(v)
+            elif isinstance(v, dict):
+                self._convert_ip_to_str(v)
+
+    # Needed?
+    @tile_info.write  # type: ignore[no-redef]
+    def tile_info(self: MccsTile, value: str) -> None:
+        """
+        Set the firmware version.
+
+        :param value: firmware version
+        """
+        self.component_manager.info = value
 
     @attribute(
         dtype="DevString",
@@ -3925,6 +3965,66 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    def __str__(self: MccsTile) -> str:
+        """
+        Produce list of tile information.
+
+        :return: Information string
+        :rtype: str
+        """
+        info = self.component_manager.info
+        return (
+            f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
+            f"Serial Number: {info['hardware']['SN']} \n"
+            f"{'_'*90} \n"
+            f"{' '*29}| \n"
+            f"Classification               | "
+            f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
+            f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
+            f"Serial Number                | {info['hardware']['SN']} \n"
+            f"BIOS Revision                | {info['hardware']['bios']} \n"
+            f"Board Location               | {info['hardware']['LOCATION']} \n"
+            f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
+            f"GB per FPGA \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
+            f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
+            f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
+            f"UTC \n"
+            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} "
+            f" \n"
+            f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
+            f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
+            f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"1G (MGMT) IP Address         | {str(info['network']['1g_ip_address'])} \n"
+            f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
+            f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
+            f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
+            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            f" \n"
+            f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
+            f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
+            f"40G Port 1 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p1'])} \n"
+            f"40G Port 1 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p1'])} \n"
+            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
+            f" \n"
+            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
+            f" \n"
+            f"40G Port 2 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p2'])} \n"
+            f"40G Port 2 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p2'])} \n"
+            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
+            f" \n"
+            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
+            f" \n"
+        )
 
 
 # ----------

@@ -639,9 +639,6 @@ class TpmDriver(MccsBaseComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
         self._set_tpm_status(status)
-        # TODO: decide whether or not to remove this workaround once SKB-272 is resolved
-        # Poll to update internal state after erasing
-        self._poll()
 
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initialises tile."""

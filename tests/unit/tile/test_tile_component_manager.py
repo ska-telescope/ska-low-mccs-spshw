@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import datetime
+import ipaddress
 import json
 import logging
 import time
@@ -935,14 +936,15 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         """
         assert tile_component_manager.get_40g_configuration(-1, 0) == []
         assert tile_component_manager.get_40g_configuration(9) == []
-
+        mock_src_ip = 167774722
+        mock_dst_ip = 167774723
         tile_component_manager.configure_40g_core(
             1,
             0,
             0x123456,
-            "mock_src_ip",
+            str(ipaddress.IPv4Address(mock_src_ip)),
             8888,
-            "mock_dst_ip",
+            str(ipaddress.IPv4Address(mock_dst_ip)),
             3333,
         )
 
@@ -950,9 +952,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "core_id": 1,
             "arp_table_entry": 0,
             "src_mac": 0x123456,
-            "src_ip": "mock_src_ip",
+            "src_ip": str(ipaddress.IPv4Address(mock_src_ip)),
             "src_port": 8888,
-            "dst_ip": "mock_dst_ip",
+            "dst_ip": str(ipaddress.IPv4Address(mock_dst_ip)),
             "dst_port": 3333,
             "rx_port_filter": None,
             "netmask": None,

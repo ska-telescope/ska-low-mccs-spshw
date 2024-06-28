@@ -75,9 +75,8 @@ class TileRequest:
         return result
 
 
-# pylint: disable=too-few-public-methods
 class TileLRCRequest(TileRequest):
-    """Class representing an Long Running Command request."""
+    """Class handling a Long Running Command request."""
 
     def __init__(
         self: TileLRCRequest,
@@ -103,8 +102,51 @@ class TileLRCRequest(TileRequest):
         self.task_callback = task_callback
         super().__init__(name, command_object, *args, publish=publish, **kwargs)
 
-    def abort(self: TileLRCRequest) -> None:
-        """Abort a Long running Command."""
+    def notify_queued(self: TileLRCRequest) -> None:
+        """Notify task callback that this command is QUEUED."""
+        if self.task_callback:
+            self.task_callback(
+                status=TaskStatus.QUEUED,
+            )
+
+    def notify_completed(self: TileLRCRequest) -> None:
+        """Notify task callback that this command has COMPLETED."""
+        if self.task_callback:
+            self.task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Command executed to completion."),
+            )
+
+    def notify_failed(self: TileLRCRequest, message: str = "") -> None:
+        """
+        Notify task callback that this command is FAILED.
+
+        :param message: an optional message to report to the
+            task callback.
+        """
+        if self.task_callback:
+            self.task_callback(
+                status=TaskStatus.FAILED,
+                result=(ResultCode.FAILED, message),
+            )
+
+    def notify_in_progress(self: TileLRCRequest) -> None:
+        """Notify task callback that this command is IN_PROGRESS."""
+        if self.task_callback:
+            self.task_callback(
+                status=TaskStatus.IN_PROGRESS,
+            )
+
+    def notify_removed_from_queue(self: TileLRCRequest) -> None:
+        """
+        Notify task callback that this command has been removed.
+
+        NOTE: Since we have just wiped this request
+        it will never be picked up during a poll,
+        we must abort the command. The client to the LRC will
+        then see QUEUED -> ABORTED, and the command will never be
+        executed.
+        """
         if self.task_callback:
             self.task_callback(
                 status=TaskStatus.ABORTED,
@@ -371,7 +413,7 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         self._check_global_alarms = True
 
     def desire_initialise(
-        self, request: Any, wipe_time: Optional[float] = None
+        self, request: TileLRCRequest, wipe_time: Optional[float] = None
     ) -> None:
         """
         Register a request to initialize a device.
@@ -384,9 +426,10 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if wipe_time is None:
             wipe_time = time.time() + 60
         self.command_wipe_time["initialise"] = wipe_time
+        self.initialise_request.notify_queued()
 
     def desire_download_firmware(
-        self, request: Any, wipe_time: Optional[float] = None
+        self, request: TileLRCRequest, wipe_time: Optional[float] = None
     ) -> None:
         """
         Register a request to download new firmware to a device.
@@ -399,9 +442,10 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if wipe_time is None:
             wipe_time = time.time() + 60
         self.command_wipe_time["download_firmware"] = wipe_time
+        self.download_firmware_request.notify_queued()
 
     def desire_start_acquisition(
-        self, request: Any, wipe_time: Optional[float] = None
+        self, request: TileLRCRequest, wipe_time: Optional[float] = None
     ) -> None:
         """
         Register a request to download new firmware to a device.
@@ -414,6 +458,7 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if wipe_time is None:
             wipe_time = time.time() + 60
         self.command_wipe_time["start_acquisition"] = wipe_time
+        self.start_acquisition_request.notify_queued()
 
     def get_request(  # pylint: disable=too-many-return-statements, too-many-branches
         self, tpm_status: TpmStatus
@@ -431,15 +476,15 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                 match command:
                     case "initialise":
                         if self.initialise_request:
-                            self.initialise_request.abort()
+                            self.initialise_request.notify_removed_from_queue()
                             self.initialise_request = None
                     case "download_firmware":
                         if self.download_firmware_request:
-                            self.download_firmware_request.abort()
+                            self.download_firmware_request.notify_removed_from_queue()
                             self.download_firmware_request = None
                     case "start_acquisition":
                         if self.start_acquisition_request:
-                            self.start_acquisition_request.abort()
+                            self.start_acquisition_request.notify_removed_from_queue()
                             self.start_acquisition_request = None
 
         # Key connection commands come first

@@ -121,7 +121,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
-        self.command_task_callback: Optional[Callable] = None
+        self.active_lrc_request: Optional[TileLRCRequest] = None
         self._request_provider: Optional[TileRequestProvider] = None
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
@@ -361,13 +361,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
-        self.command_task_callback = None
+        self.active_lrc_request = None
         if isinstance(poll_request, TileLRCRequest):
             self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
-            self.command_task_callback = poll_request.task_callback
-            if self.command_task_callback:
-                # self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
-                self.command_task_callback(status=TaskStatus.IN_PROGRESS)
+            self.active_lrc_request = poll_request
+            self.active_lrc_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
@@ -392,11 +390,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.error(f"Failed poll with exception : {exception}")
 
         # Update command tracker if defined in request.
-        if self.command_task_callback:
-            self.command_task_callback(
-                status=TaskStatus.FAILED,
-                result=(ResultCode.FAILED, f"Exception: {repr(exception)}"),
-            )
+        if self.active_lrc_request:
+            self.active_lrc_request.notify_failed(f"Exception: {repr(exception)}")
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
@@ -468,12 +463,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
-        if self.command_task_callback:
+        if self.active_lrc_request:
             self.logger.error("LRC completed")
-            self.command_task_callback(
-                status=TaskStatus.COMPLETED,
-                result=(ResultCode.OK, "Command executed to completion."),
-            )
+            self.active_lrc_request.notify_completed()
+
         self.update_fault_state(poll_success=True)
 
         # We managed to poll hardware therefore we are PowerState.ON.
@@ -549,8 +542,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # The on command is completed when initialisation has completed.
         subrack_on_command_proxy(self._subrack_tpm_id)
 
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
         request = TileLRCRequest(
             name="initialise",
             command_object=self._execute_initialise,
@@ -721,8 +712,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
             return None
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
         request = TileLRCRequest(
             name="initialise",
             command_object=self._execute_initialise,
@@ -730,8 +719,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             program_fpga=program_fpga,
             pps_delay_correction=self._pps_delay_correction,
         )
-        self.logger.info("Initialise command placed in poll QUEUE")
         self._request_provider.desire_initialise(request)
+        self.logger.info("Initialise command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -825,16 +814,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
             return None
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
         request = TileLRCRequest(
             name="download_firmware",
             command_object=self._download_firmware,
             task_callback=task_callback,
             bitfile=argin,
         )
-        self.logger.info("Download_firmware command placed in poll QUEUE")
         self._request_provider.desire_download_firmware(request)
+        self.logger.info("Download_firmware command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -879,8 +866,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
             return None
-        if task_callback:
-            task_callback(status=TaskStatus.QUEUED)
         request = TileLRCRequest(
             name="start_acquisition",
             command_object=self._start_acquisition,
@@ -888,8 +873,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             start_time=start_time,
             delay=delay,
         )
-        self.logger.info("StartAcquisition command placed in poll QUEUE")
         self._request_provider.desire_start_acquisition(request)
+        self.logger.info("StartAcquisition command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating

@@ -251,6 +251,8 @@ def all_available_consumers_fixture() -> list[str]:
     """
     All consumers list.
 
+    # Note: RAW_STATION_BEAM must *not* be added to this fixture.
+
     :return: a list of all available consumers.
     """
     return [

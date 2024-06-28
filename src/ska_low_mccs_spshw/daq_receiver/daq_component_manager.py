@@ -144,6 +144,9 @@ class DaqComponentManager(TaskExecutorComponentManager):
             "nof_beam_samples": 42,
             "nof_beam_channels": 384,
             "nof_station_samples": 262144,
+            "integrated_channel_bitwidth": 16,
+            "continuous_channel_bitwidth": 16,
+            "persist_all_buffers": True,
             "append_integrated": True,
             "sampling_time": 1.1325,
             "sampling_rate": (800e6 / 2.0) * (32.0 / 27.0) / 512.0,
@@ -162,7 +165,12 @@ class DaqComponentManager(TaskExecutorComponentManager):
             "max_filesize": None,
             "acquisition_duration": -1,
             "acquisition_start_time": -1,
+            "station_beam_source": "",
+            "station_beam_start_channel": 0,
+            "station_beam_dada": False,
+            "station_beam_individual_channels": False,
             "description": "",
+            "daq_library": None,
             "observation_metadata": {},  # This is populated automatically
         }
         return daq_config

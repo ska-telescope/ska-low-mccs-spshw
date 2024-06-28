@@ -89,7 +89,10 @@ files = [
 [package.dependencies]
 lazy-object-proxy = ">=1.4.0"
 typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.11\""}
-wrapt = {version = ">=1.11,<2", markers = "python_version < \"3.11\""}
+wrapt = [
+    {version = ">=1.11,<2", markers = "python_version < \"3.11\""},
+    {version = ">=1.14,<2", markers = "python_version >= \"3.11\""},
+]
 
 [[package]]
 name = "astropy"
@@ -1667,7 +1670,7 @@ email = ["email-validator (>=1.0.3)"]
 [[package]]
 name = "pydantic-core"
 version = "2.20.0"
-description = ""
+description = "Core functionality for Pydantic validation and serialization"
 category = "main"
 optional = false
 python-versions = ">=3.8"
@@ -1830,8 +1833,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
-resolved_reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
+reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
+resolved_reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
 
 [[package]]
 name = "pyflakes"
@@ -1875,7 +1878,10 @@ files = [
 [package.dependencies]
 astroid = ">=2.15.8,<=2.17.0-dev0"
 colorama = {version = ">=0.4.5", markers = "sys_platform == \"win32\""}
-dill = {version = ">=0.2", markers = "python_version < \"3.11\""}
+dill = [
+    {version = ">=0.2", markers = "python_version < \"3.11\""},
+    {version = ">=0.3.6", markers = "python_version >= \"3.11\""},
+]
 isort = ">=4.2.5,<6"
 mccabe = ">=0.6,<0.8"
 platformdirs = ">=2.2.0"
@@ -2427,11 +2433,6 @@ dev = ["cython-lint (>=0.12.2)", "doit (>=0.36.0)", "mypy (==1.10.0)", "pycodest
 doc = ["jupyterlite-pyodide-kernel", "jupyterlite-sphinx (>=0.13.1)", "jupytext", "matplotlib (>=3.5)", "myst-nb", "numpydoc", "pooch", "pydata-sphinx-theme (>=0.15.2)", "sphinx (>=5.0.0)", "sphinx-design (>=0.4.0)"]
 test = ["Cython", "array-api-strict", "asv", "gmpy2", "hypothesis (>=6.30)", "meson", "mpmath", "ninja", "pooch", "pytest", "pytest-cov", "pytest-timeout", "pytest-xdist", "scikit-umfpack", "threadpoolctl"]
 
-[package.source]
-type = "legacy"
-url = "https://pypi.org/simple"
-reference = "PyPI-public"
-
 [[package]]
 name = "setuptools"
 version = "70.1.1"
@@ -2619,7 +2620,11 @@ files = [
 [package.dependencies]
 debugpy = ">=1.6.2,<2.0.0"
 jsonschema = ">=4.17.3,<5.0.0"
-numpy = {version = ">=1.21.6", markers = "python_version == \"3.10\""}
+numpy = [
+    {version = ">=1.21.6", markers = "python_version == \"3.10\""},
+    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
+    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
+]
 pytango = ">=9.3.3,<10.0.0"
 ska-control-model = ">=0.3.4,<0.4.0"
 ska-ser-logging = ">=0.4.1,<0.5.0"
@@ -3451,4 +3456,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"  
-content-hash = "2746c7f2f5a1e523e9e4d3fda13770d661cf07d175e51c51bf34f80ca6142ec3"
+content-hash = "9577f86fa0f0ad0c3edce2bb65067a1b8bb30129409420c0837df85a9930b917"

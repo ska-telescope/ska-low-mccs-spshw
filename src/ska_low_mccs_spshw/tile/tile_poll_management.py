@@ -422,6 +422,13 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        # Remove download firmware and startacquisition command if exist.
+        if self.download_firmware_request:
+            self.download_firmware_request.notify_removed_from_queue()
+            self.download_firmware_request = None
+        if self.start_acquisition_request:
+            self.start_acquisition_request.notify_removed_from_queue()
+            self.start_acquisition_request = None
         self.initialise_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60

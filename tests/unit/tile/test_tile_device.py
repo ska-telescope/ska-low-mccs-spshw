@@ -480,7 +480,10 @@ class TestMccsTile:
         static_tile_component_manager._tpm_driver._attribute_change_callback(
             adc_rms=list(range(2, 34)),
         )
-        change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
+        # lookahead since we push with each poll on hardware
+        change_event_callbacks["adc_power"].assert_change_event(
+            list(range(2, 34)), lookahead=2
+        )
 
     def test_ppsPresent(
         self: TestMccsTile,

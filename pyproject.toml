@@ -16,7 +16,7 @@ url = 'https://pypi.org/simple'
 
 [tool.poetry.dependencies]
 python = "^3.10"  
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="c03cf53881f5a25b8629eaabbcd669b79dafd081",  subdirectory = "python" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="a33209c2c9899bf8b565c99186abbaf7605ad6ee",  subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
@@ -37,7 +37,9 @@ future = "^0.18.3"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
-ska-low-mccs-daq-interface = "^0.2.0"
+# ska-low-mccs-daq-interface = "^0.2.0"
+ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-2173" }
+astropy = "~5.3.4"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -86,7 +88,8 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-ska-low-mccs-daq-interface = "^0.2.0"
+# ska-low-mccs-daq-interface = "^0.2.0"
+ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-2173" }
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]

@@ -16,7 +16,7 @@ from typing import Any, Callable, Iterator, TypeVar, cast
 
 from ska_control_model import ResultCode, TaskStatus
 
-__all__ = ["acquire_timeout", "int2ip", "abort_task_on_exception"]
+__all__ = ["acquire_timeout", "abort_task_on_exception"]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
 
@@ -79,23 +79,6 @@ def check_hardware_lock_claimed(func: Wrapped) -> Wrapped:
         return func(component, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)
-
-
-def int2ip(addr: int) -> str:
-    """
-    Convert integer IPV4 into formatted dot address.
-
-    :param addr: Integer IPV4 address
-    :return: dot formatted IPV4 address
-    """
-    # If parameter is already a string, just return it. No checking
-    if isinstance(addr, str):
-        return addr
-    ip = [0, 0, 0, 0]
-    for i in range(4):
-        ip[i] = addr & 0xFF
-        addr = addr >> 8
-    return f"{ip[3]}.{ip[2]}.{ip[1]}.{ip[0]}"
 
 
 def abort_task_on_exception(func: Wrapped) -> Wrapped:

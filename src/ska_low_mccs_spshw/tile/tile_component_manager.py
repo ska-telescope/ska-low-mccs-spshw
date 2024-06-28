@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import copy
+import ipaddress
 import logging
 import threading
 import time
@@ -42,12 +43,7 @@ from .tile_poll_management import (
 from .tile_simulator import TileSimulator
 from .time_util import TileTime
 from .tpm_status import TpmStatus
-from .utils import (
-    abort_task_on_exception,
-    acquire_timeout,
-    check_hardware_lock_claimed,
-    int2ip,
-)
+from .utils import abort_task_on_exception, acquire_timeout, check_hardware_lock_claimed
 
 __all__ = ["TileComponentManager"]
 
@@ -142,7 +138,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._tile_id = tile_id
         self._csp_rounding = np.array(self.CSP_ROUNDING)
         self._test_generator_active = False
-        if tpm_version not in ["tpm_v1_2", "tpm_v1_6"]:
+        if tpm_version not in self.FIRMWARE_NAME:
             self.logger.warning(
                 "TPM version "
                 + tpm_version
@@ -1934,7 +1930,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info(f"Beam: {beam_index} delays: {delay_array}")
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
-            delay_array = delay_array + [[0.0, 0.0]] * (16 - nof_items)
+            delay_array.extend([[0.0, 0.0]] * (16 - nof_items))
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2406,8 +2402,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # convert in more readable format
         for core in self._forty_gb_core_list:
             self.logger.info(f"{core}")
-            core["src_ip"] = int2ip(core["src_ip"])
-            core["dst_ip"] = int2ip(core["dst_ip"])
+            core["src_ip"] = str(ipaddress.IPv4Address(core["src_ip"]))
+            core["dst_ip"] = str(ipaddress.IPv4Address(core["dst_ip"]))
         return self._forty_gb_core_list
 
     def _get_40g_core_configuration(

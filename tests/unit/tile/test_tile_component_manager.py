@@ -10,13 +10,13 @@
 from __future__ import annotations
 
 import datetime
+import json
 import logging
 import time
 import unittest.mock
 from typing import Any
 
 import numpy as np
-import json
 import pytest
 import pytest_mock
 import tango
@@ -308,29 +308,6 @@ class TestTileComponentManager:
             )
         else:
             callbacks["communication_status"].assert_not_called()
-
-    def test_tile_info(
-        self: TestTileComponentManager,
-        tile_component_manager: TileComponentManager,
-        callbacks: MockCallableGroup,
-    ) -> None:
-        """
-        Test that we can access the `info` attribute.
-
-        :param tile_component_manager: the tile component manager
-            under test
-        :param callbacks: dictionary of driver callbacks.
-        """
-        tile_component_manager.start_communicating()
-        callbacks["communication_status"].assert_call(
-            CommunicationStatus.NOT_ESTABLISHED
-        )
-        tile_component_manager._tpm_power_state_changed(PowerState.ON)
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
-        tile_info = tile_component_manager._tpm_driver._tile_health_structure["info"]
-        # Check keys are present.
-        keys = ["hardware", "fpga_firmware", "network"]
-        assert all(key in tile_info.keys() for key in keys)
 
     def test_off_on(
         self: TestTileComponentManager,
@@ -2509,16 +2486,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # check not updated if failed.
         assert tile_component_manager._fpga_current_frame != 5
-        
+
     def test_read_tile_info(
         self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
         tile_simulator: unittest.mock.Mock,
     ) -> None:
         """
         Test we can read tile info.
 
-        :param tpm_driver: The tpm driver under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)_simulator
         """

@@ -18,7 +18,7 @@ import os.path
 import sys
 from dataclasses import dataclass
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Optional, cast
+from typing import Any, Callable, Final, Optional
 
 import numpy as np
 import tango
@@ -158,6 +158,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
+            "tile_info": "tile_info",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -634,7 +635,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        info: dict[str, Any] = self.component_manager.info
+        info: dict[str, Any] = self._attribute_state["tile_info"].read()[0]
         self._convert_ip_to_str(info)
         if info != {}:
             # Prints out a nice table to the logs if populated.
@@ -652,16 +653,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 nested_dict[k] = str(v)
             elif isinstance(v, dict):
                 self._convert_ip_to_str(v)
-
-    # Needed?
-    @tile_info.write  # type: ignore[no-redef]
-    def tile_info(self: MccsTile, value: str) -> None:
-        """
-        Set the firmware version.
-
-        :param value: firmware version
-        """
-        self.component_manager.info = value
 
     @attribute(
         dtype="DevString",
@@ -3999,7 +3990,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: Information string
         :rtype: str
         """
-        info = self.component_manager.info
+        info = self._attribute_state["tile_info"].read()[0]
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"

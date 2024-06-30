@@ -186,25 +186,6 @@ class MccsDaqReceiver(SKABaseDevice):
     # -----------------
     # Device Properties
     # -----------------
-    ReceiverInterface = device_property(
-        dtype=str,
-        mandatory=False,
-        # pylint: disable-next=line-too-long
-        doc="The interface on which the DAQ receiver is listening for traffic.",  # noqa: E501
-        default_value="",
-    )
-    # TODO: Remove ReceiverIp property?
-    ReceiverIp = device_property(
-        dtype=str,
-        mandatory=False,
-        doc="The IP address this DAQ receiver is monitoring.",
-        default_value="",
-    )
-    ReceiverPorts = device_property(
-        dtype=str,
-        doc="The port/s this DaqReceiver is monitoring.",
-        default_value="4660",
-    )
     Host = device_property(
         dtype=str, doc="The host for communication with the DAQ receiver."
     )
@@ -274,9 +255,6 @@ class MccsDaqReceiver(SKABaseDevice):
         version = f"{device_name} Software Version: {self._version_id}"
         properties = (
             f"Initialised {device_name} device with properties:\n"
-            f"\tReceiverInterface: {self.ReceiverInterface}\n"
-            f"\tReceiverIp: {self.ReceiverIp}\n"
-            f"\tReceiverPorts: {self.ReceiverPorts}\n"
             f"\tHost: {self.Host}\n"
             f"\tPort: {self.Port}\n"
             f"\tDaqId: {self.DaqId}\n"
@@ -312,9 +290,6 @@ class MccsDaqReceiver(SKABaseDevice):
         """
         return DaqComponentManager(
             self.DaqId,
-            self.ReceiverInterface,
-            self.ReceiverIp,
-            self.ReceiverPorts,
             f"{self.Host}:{self.Port}",
             self.ConsumersToStart,
             self.SkuidUrl,

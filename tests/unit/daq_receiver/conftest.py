@@ -102,9 +102,6 @@ def daq_component_manager_fixture(
     """
     return DaqComponentManager(
         daq_id,
-        "eth0",
-        "172.17.0.230",
-        "[4660]",
         test_context.get_daq_server_address(daq_id),
         "",
         skuid_url,

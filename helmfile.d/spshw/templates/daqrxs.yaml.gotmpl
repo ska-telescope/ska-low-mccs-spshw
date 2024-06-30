@@ -12,18 +12,24 @@
   {{- $sps_spec := dig "sps" (dict "enabled" false) $station_spec}}
   {{- $daq_spec := dig "daq" dict $sps_spec}}
   
+  {{- $common_config := pick $daq_spec "receiver_ip"}}
+  {{- $_ := set $common_config "grpc_port" (dig "grpc_port" 50051 $daq_spec)}}
+  {{- $_ := set $common_config "receiver_interface" (dig "receiver_interface" "eth0" $daq_spec)}}
+  {{- $_ := set $common_config "receiver_port" (dig "receiver_port" 4660 $daq_spec)}}
+
   {{- $calibration_daq_spec := dig "calibration_daq" dict $daq_spec}}
   {{- $calibration_daq_enabled := pluck "enabled" $calibration_daq_spec $daq_spec $sps_spec $station_spec (dict "enabled" true) | first}}
   {{- $calibration_daq_simulated := pluck "simulated" $calibration_daq_spec $sps_spec $station_spec (dict "simulated" false) | first}}
   {{- if (and $calibration_daq_enabled (not $calibration_daq_simulated))}}
-    {{- $calibration_daq_name := dig "name" (printf "calibration-daqrx-%s" $station_name) $calibration_daq_spec}}
+    {{- $calibration_daq_name := dig "name" (printf "%s-calibration" $station_name) $calibration_daq_spec}}
     {{- if hasKey $calibration_daq_spec "ip"}}
       {{- $daq_to_ingress := pick $calibration_daq_spec "ip" "port"}}
       {{- $_ := set $daqs_to_egress $calibration_daq_name $daq_to_ingress}}
     {{- else}}
-      {{- $daq_to_launch := pick $cluster_daq_spec "nvidia_gpu" "annotations" "node_selector" "affinity" "tolerations"}}
-      {{- $_ := set $daq_to_launch "storage" $daq_storage_name}}
-      {{- $_ := set $daqs_to_launch $calibration_daq_name $daq_to_launch}}
+      {{- $calibration_daq_to_launch := pick $cluster_daq_spec "nvidia_gpu" "annotations" "node_selector" "affinity" "tolerations"}}
+      {{- $_ := set $calibration_daq_to_launch "storage" $daq_storage_name}}
+      {{- $calibration_daq_to_launch = mergeOverwrite $calibration_daq_to_launch $common_config}}
+      {{- $_ := set $daqs_to_launch $calibration_daq_name $calibration_daq_to_launch}}
     {{- end}}
   {{- end}}
 
@@ -31,14 +37,15 @@
   {{- $bandpass_daq_enabled := pluck "enabled" $bandpass_daq_spec $daq_spec $sps_spec $station_spec (dict "enabled" true) | first}}
   {{- $bandpass_daq_simulated := pluck "simulated" $bandpass_daq_spec $sps_spec $station_spec (dict "simulated" false) | first}}
   {{- if (and $bandpass_daq_enabled (not $bandpass_daq_simulated))}}
-    {{- $bandpass_daq_name := dig "name" (printf "bandpass-daqrx-%s" $station_name) $bandpass_daq_spec}}
+    {{- $bandpass_daq_name := dig "name" (printf "%s-bandpass" $station_name) $bandpass_daq_spec}}
     {{- if hasKey $bandpass_daq_spec "ip"}}
       {{- $daq_to_ingress := pick $bandpass_daq_spec "ip" "port"}}
       {{- $_ := set $daqs_to_egress $bandpass_daq_name $bandpass_daq_spec}}
     {{- else}}
-      {{- $daq_to_launch := pick $cluster_daq_spec "annotations" "node_selector" "affinity" "tolerations"}}
-      {{- $_ := set $daq_to_launch "nvidia_gpu" false}}
-      {{- $_ := set $daqs_to_launch $bandpass_daq_name $daq_to_launch}}
+      {{- $bandpass_daq_to_launch := pick $cluster_daq_spec "annotations" "node_selector" "affinity" "tolerations"}}
+      {{- $_ := set $bandpass_daq_to_launch "nvidia_gpu" false}}
+      {{- $bandpass_daq_to_launch = mergeOverwrite $bandpass_daq_to_launch $common_config}}
+      {{- $_ := set $daqs_to_launch $bandpass_daq_name $bandpass_daq_to_launch}}
     {{- end}}
   {{- end}}
 {{- end}}

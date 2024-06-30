@@ -136,25 +136,6 @@
                   "type": "integer",
                   "minimum": 1
                 },
-                "receiver_interface": {
-                  "type": "string",
-                  "pattern": "^[a-z0-9]+$"
-                },
-                "receiver_ip": {
-                  "type": "string",
-                  "oneOf": [
-                    {
-                      "format": "ipv4"
-                    },
-                    {
-                      "maxLength": 0
-                    }
-                  ]
-                },
-                "receiver_port": {
-                  "type": "integer",
-                  "minimum": 1
-                },
                 "skuid_url": {
                   "type": "string",
                   "format": "uri"
@@ -168,10 +149,7 @@
               "required": [
                 "id",
                 "host",
-                "port",
-                "receiver_interface",
-                "receiver_ip",
-                "receiver_port"
+                "port"
               ],
               "additionalProperties": false
             }

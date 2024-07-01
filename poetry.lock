@@ -1833,8 +1833,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
-resolved_reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
+reference = "44705affebc0bcd689902da58471fb81fad0d779"
+resolved_reference = "44705affebc0bcd689902da58471fb81fad0d779"
 
 [[package]]
 name = "pyflakes"
@@ -3456,4 +3456,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"  
-content-hash = "9577f86fa0f0ad0c3edce2bb65067a1b8bb30129409420c0837df85a9930b917"
+content-hash = "794a1feeabfb7d3ad3e4b56cd438a04ce29b0e59e4c9bbf3ed31d4d2a6821f9f"

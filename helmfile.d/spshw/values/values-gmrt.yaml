@@ -8,7 +8,10 @@ overrides:
       gmrt:
         sps:
           daq:
-            simulated: true
+            calibration:
+              simulated: true
+            bandpass:
+              simulated: true
           subracks:
             sr1:
               simulated: true

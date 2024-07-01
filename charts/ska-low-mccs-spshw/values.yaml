@@ -56,7 +56,7 @@ deviceServers: {} # e.g....
   #       sdn_first_interface: 10.130.0.1/25
   #       sdn_gateway: 10.130.0.126
   #       csp_ingest_ip: 10.132.254.0
-  #       daq_trl: low-mccs/daqreceiver/s8-1
+  #       daq_trl: low-mccs/calibration-daq/s8-1
   #       antenna_config_uri:
   #       - "car:ska-low-aavs3?main"
   #       - "instrument/mccs-configuration/aavs3.yaml"
@@ -69,7 +69,7 @@ deviceServers: {} # e.g....
   #       logging_level_default: 5
   # daqs:
   #   s8-1:
-  #     low-mccs/daqreceiver/s8-1:
+  #     low-mccs/calibration-daq/s8-1:
   #       id: 345
   #       host: daq-simulator-s8-1
   #       port: 50051

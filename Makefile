@@ -164,6 +164,25 @@ k8s-do-test:
 
 
 ########################################################################
+# HELMFILE
+########################################################################
+helmfile-lint:
+	for environment in aa0.5-production aavs3-production arcetri gmrt low-itf oxford psi-low stfc-ral ; do \
+        echo "Linting helmfile against environment '$$environment'" ; \
+		helmfile -e $$environment lint ; \
+		EXIT_CODE=$$? ; \
+		if [ $$EXIT_CODE -gt 0 ]; then \
+		echo "Linting of helmfile against environment '$$environment' FAILED." ; \
+		break ; \
+		fi ; \
+	done ; \
+	exit $$EXIT_CODE
+
+.PHONY: helmfile-lint
+
+
+
+########################################################################
 # PRIVATE OVERRIDES
 ########################################################################
 

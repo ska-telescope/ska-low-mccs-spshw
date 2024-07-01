@@ -107,7 +107,7 @@ def on_tile_device_fixture(
 
     tile_device.MockTpmOn()
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed", lookahead=2, consume_nonmatches=True
+        "NotProgrammed"
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
@@ -641,6 +641,7 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
+        # Lookahead of 2 due to the transition to Unknown first.
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Off", lookahead=2, consume_nonmatches=True
         )

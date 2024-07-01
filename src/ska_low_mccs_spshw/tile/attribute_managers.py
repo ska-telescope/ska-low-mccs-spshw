@@ -57,9 +57,7 @@ class AttributeManager:
         :param value: the value we want to update attribute with.
         :param post: Optional flag to post an update.
         """
-        value_changed = False
-        if value != self._value:
-            value_changed = True
+        value_changed = value != self._value
         self._value = value
         self._last_update = time.time()
         if self._value is None:

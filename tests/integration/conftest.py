@@ -79,7 +79,7 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
-@pytest.fixture(name="daq_id", scope="session")
+@pytest.fixture(name="daq_id")
 def daq_id_fixture() -> int:
     """
     Return the daq id of this daq receiver.

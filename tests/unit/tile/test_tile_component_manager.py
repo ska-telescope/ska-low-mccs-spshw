@@ -168,11 +168,32 @@ class TestTileComponentManager:
                             "MCU_wd": 0,
                         }
                     },
-                    lookahead=3,
+                    lookahead=4,
                 )
-                callbacks["component_state"].assert_call(power=power_state, lookahead=3)
+                try:
+                    callbacks["component_state"].assert_call(
+                        power=PowerState.ON, lookahead=3
+                    )
+                except AssertionError:
+                    # MccsSubrack will report the power of the TPM.
+                    # If the value reported by the MccsSubrack is
+                    # inconsistent with the value
+                    # reported from polling, we are in state FAULT. For example:
+                    # - MccsSubrack reports the TPM as NOT ON,
+                    # but we can poll the hardware.
+                    # Therefore depending on the exact timing of the poll
+                    # relative to the MccsSubrack TPM power callback,
+                    # we may find a transient FAULT.
+                    callbacks["component_state"].assert_call(
+                        power=PowerState.ON, fault=True, lookahead=4
+                    )
+                    # The lookahead is needed due to monitoring values being passed
+                    # to this callback.
+                    # For commands being executed e.g initialise,
+                    # the callback can be called multiple times.
+                    callbacks["component_state"].assert_call(fault=False, lookahead=6)
                 callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
                 )
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert

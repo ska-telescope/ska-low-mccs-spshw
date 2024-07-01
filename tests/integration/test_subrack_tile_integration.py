@@ -928,9 +928,6 @@ class TestMccsTileTpmDriver:
         # Set the alarming value in backend TileSimulator
         tile_device.SetHealthStructureInBackend(json.dumps({attribute: alarm_value}))
 
-        # sleep to allow a poll
-        time.sleep(0.5)
-
         change_event_callbacks["generic_health_attribute"].assert_change_event(
             alarm_value
         )

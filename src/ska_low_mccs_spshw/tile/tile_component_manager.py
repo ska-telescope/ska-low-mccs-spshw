@@ -13,7 +13,7 @@ import ipaddress
 import logging
 import threading
 import time
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, NoReturn, Optional, cast
 
 import numpy as np
 import tango
@@ -1128,7 +1128,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def clock_present(self: TileComponentManager) -> None:
+    def clock_present(self: TileComponentManager) -> NoReturn:
         """
         Check if 10 MHz clock signal is present.
 
@@ -1140,7 +1140,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def sysref_present(self: TileComponentManager) -> None:
+    def sysref_present(self: TileComponentManager) -> NoReturn:
         """
         Check if SYSREF signal is present.
 

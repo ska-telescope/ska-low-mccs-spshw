@@ -18,7 +18,7 @@ import os.path
 import sys
 from dataclasses import dataclass
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final
+from typing import Any, Callable, Final, NoReturn
 
 import numpy as np
 import tango
@@ -473,6 +473,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.tile_health_structure = attribute_value
                 self._health_model.update_state(tile_health_structure=attribute_value)
                 self.update_tile_health_attributes()
+            if attribute_name == "tile_info":
+                self._convert_ip_to_str(attribute_value)
             else:
                 try:
                     self.logger.info(f"Update attribute {attribute_name}")
@@ -636,7 +638,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: info available
         """
         info: dict[str, Any] = self._attribute_state["tile_info"].read()[0]
-        self._convert_ip_to_str(info)
         if info != {}:
             # Prints out a nice table to the logs if populated.
             self.logger.info(str(self))
@@ -1259,22 +1260,26 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return automatic_state_analysis
 
     @attribute(dtype="DevBoolean")
-    def clockPresent(self: MccsTile) -> None:
+    def clockPresent(self: MccsTile) -> NoReturn:
         """
         Report if 10 MHz clock signal is present at the TPM input.
 
-        :return: presence of 10 MHz clock signal
+        :raises NotImplementedError: not implemented in aavs-system.
         """
-        return self.component_manager.clock_present
+        raise NotImplementedError(
+            "method clockPresent not yet implemented in aavs-system"
+        )
 
     @attribute(dtype="DevBoolean")
-    def sysrefPresent(self: MccsTile) -> None:
+    def sysrefPresent(self: MccsTile) -> NoReturn:
         """
         Report if SYSREF signal is present at the FPGA.
 
-        :return: presence of SYSREF signal
+        :raises NotImplementedError: not implemented in aavs-system.
         """
-        return self.component_manager.sysref_present
+        raise NotImplementedError(
+            "method sysrefPresent not yet implemented in aavs-system"
+        )
 
     @attribute(dtype="DevBoolean")
     def pllLocked(self: MccsTile) -> bool | None:

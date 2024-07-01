@@ -566,12 +566,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             )
             self.component_manager.off()
 
+    # pylint: disable=too-many-arguments
     def post_change_event(
         self: MccsTile,
         name: str,
         attr_value: Any,
         attr_time: float,
         attr_quality: tango.AttrQuality,
+        value_changed: bool,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
@@ -582,10 +584,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             time the attribute was updated.
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
+        :param value_changed: a flag representing if the value changed
+            from the previous value.
         """
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        self.push_change_event(name, attr_value, attr_time, attr_quality)
+        if value_changed:
+            self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.

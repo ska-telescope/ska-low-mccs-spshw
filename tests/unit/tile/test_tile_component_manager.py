@@ -114,9 +114,7 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.OFF, lookahead=2
-        )
+        callbacks["attribute_state"].assert_call(programming_state=TpmStatus.OFF)
         callbacks["communication_status"].assert_not_called()
 
         # Stop communicating will break the connection with the subrack

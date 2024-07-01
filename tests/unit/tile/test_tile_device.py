@@ -480,10 +480,7 @@ class TestMccsTile:
         static_tile_component_manager._tpm_driver._attribute_change_callback(
             adc_rms=list(range(2, 34)),
         )
-        # lookahead since we push with each poll on hardware
-        change_event_callbacks["adc_power"].assert_change_event(
-            list(range(2, 34)), lookahead=2
-        )
+        change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
 
     def test_ppsPresent(
         self: TestMccsTile,
@@ -644,9 +641,8 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["tile_programming_state"],
         )
-        # Lookahead of 2 due to the transition to Unknown first.
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Off", lookahead=3, consume_nonmatches=True
+            "Off", lookahead=2, consume_nonmatches=True
         )
         tile_device.MockTpmOn()
 

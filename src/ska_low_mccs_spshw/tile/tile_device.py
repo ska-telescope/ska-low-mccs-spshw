@@ -1315,7 +1315,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._attribute_state["channeliserRounding"].read()[0] is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
-        return self._attribute_state["channeliserRounding"].read()
+        return self._attribute_state["channeliserRounding"].read()[0]
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:

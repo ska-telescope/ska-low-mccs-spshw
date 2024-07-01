@@ -469,12 +469,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._health_model.update_state(fault=fault)
 
         for attribute_name, attribute_value in state_change.items():
+            if attribute_name == "tile_info":
+                self._convert_ip_to_str(attribute_value)
             if attribute_name == "tile_health_structure":
                 self.tile_health_structure = attribute_value
                 self._health_model.update_state(tile_health_structure=attribute_value)
                 self.update_tile_health_attributes()
-            if attribute_name == "tile_info":
-                self._convert_ip_to_str(attribute_value)
             else:
                 try:
                     self.logger.info(f"Update attribute {attribute_name}")

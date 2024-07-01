@@ -72,6 +72,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        update_attribute_callback: Callable[..., None],
         _tile: Optional[TileSimulator] = None,
     ) -> None:
         """
@@ -106,14 +107,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
+        :param update_attribute_callback: Callback to call when attribute
+            is updated.
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param _tile: Optional tile to inject.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
-
+        self._update_attribute_callback = update_attribute_callback
         self.fault_state: Optional[bool] = None
 
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
@@ -167,27 +171,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
             poll_rate=poll_rate,
-            adc_rms=None,
-            tile_health_structure=None,
-            pll_locked=None,
-            global_status_alarms=None,
-            programming_state=TpmStatus.UNKNOWN.pretty_name(),
-            pps_delay_correction=None,
-            pps_delay=None,
-            csp_rounding=None,
-            preadu_levels=None,
-            static_delays=None,
-            channeliser_rounding=None,
-            firmware_available=None,
-            beamformer_table=None,
-            phase_terminal_count=None,
-            beamformer_running=None,
-            tile_beamformer_frame=None,
-            arp_table=None,
-            station_id=None,
-            tile_id=None,
-            is_programmed=None,
-            tile_info=None,
         )
 
     def get_request(  # type: ignore[override]
@@ -207,7 +190,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         self.logger.debug(f"\n{'New Poll':-^{40}}\n")
         tpm_status: TpmStatus = TpmStatus(self.tpm_status)
-        self._update_component_state(programming_state=tpm_status.pretty_name())
+        self._update_attribute_callback(programming_state=tpm_status.pretty_name())
 
         self.logger.debug(f"Getting request for state ({tpm_status.name}) ...")
         request_spec = self._request_provider.get_request(tpm_status)
@@ -475,7 +458,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         # Publish all responses to TANGO interface.
         if poll_response.publish:
-            self._update_component_state(  # type: ignore[misc]
+            self._update_attribute_callback(  # type: ignore[misc]
                 **{poll_response.command: poll_response.data},
             )
         super().poll_succeeded(poll_response)
@@ -490,7 +473,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
         self._request_provider = None
-        self._update_component_state(programming_state=TpmStatus.UNKNOWN.pretty_name())
+        self._update_attribute_callback(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
         self.power_state = PowerState.UNKNOWN
         super().polling_stopped()
 
@@ -733,8 +718,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Initialise the TPM.
 
-        #NOTE: this method will be called within a hardware_lock.
-
         :param program_fpga: True if we want to program the fpga before
             initialisation.
         :param pps_delay_correction: the delay correction to apply to the
@@ -742,7 +725,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if program_fpga:
             self.tile.erase_fpgas()
-            self._update_component_state(
+            self._update_attribute_callback(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
             )
 
@@ -757,7 +740,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Initialisation after programming the FPGA
         #
         if prog_status:
-            self._update_component_state(
+            self._update_attribute_callback(
                 programming_state=TpmStatus.PROGRAMMED.pretty_name()
             )
             #
@@ -2022,7 +2005,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.set_first_last_tile(is_first, is_last)
                     self._nof_blocks = nof_channels // 8
                     beamformer_table = self.tile.get_beamformer_table()
-                    self._update_component_state(beamformer_table=beamformer_table)
+                    self._update_attribute_callback(beamformer_table=beamformer_table)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -2178,7 +2161,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     write_successful = self.tile.set_csp_rounding(rounding[0])
                     if write_successful:
                         self._csp_rounding = rounding
-                        self._update_component_state(
+                        self._update_attribute_callback(
                             csp_rounding=self._csp_rounding.tolist()
                         )
                     else:
@@ -2235,7 +2218,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     if not self.tile.set_time_delays(delays_float):
                         self.logger.warning("Failed to set static time delays.")
                     static_delays = self.get_static_delays()
-                    self._update_component_state(static_delays=static_delays)
+                    self._update_attribute_callback(static_delays=static_delays)
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -2299,7 +2282,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 for chan in range(32):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_component_state(
+                        self._update_attribute_callback(
                             channeliser_rounding=copy.deepcopy(trunc)
                         )
                     # pylint: disable=broad-except
@@ -2642,7 +2625,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 self.tile.set_phase_terminal_count(value)
                 read_value = self.tile.get_phase_terminal_count()
-                self._update_component_state(phase_terminal_count=read_value)
+                self._update_attribute_callback(phase_terminal_count=read_value)
             else:
                 raise TimeoutError(
                     "Failed set phase_terminal_count, lock not acquired in time."

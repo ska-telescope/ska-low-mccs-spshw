@@ -262,6 +262,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
+            self._update_attribute_callback,
             # self._tile_device_state_callback,
         )
 
@@ -443,6 +444,27 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             communicating=(communication_state == CommunicationStatus.ESTABLISHED)
         )
 
+    def _update_attribute_callback(
+        self: MccsTile,
+        **state_change: Any,
+    ) -> None:
+        for attribute_name, attribute_value in state_change.items():
+            if attribute_name == "tile_info":
+                self._convert_ip_to_str(attribute_value)
+            if attribute_name == "tile_health_structure":
+                self.tile_health_structure = attribute_value
+                self._health_model.update_state(tile_health_structure=attribute_value)
+                self.update_tile_health_attributes()
+            else:
+                try:
+                    self.logger.info(f"Update attribute {attribute_name}")
+                    tango_name = self.attr_map[attribute_name]
+                    self._attribute_state[tango_name].update(attribute_value)
+                except KeyError as e:
+                    self.logger.error(f"Key Error {repr(e)}")
+                except Exception as e:  # pylint: disable=broad-except
+                    self.logger.error(f"Caught unexpected exception: {repr(e)}")
+
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ
     def _component_state_changed(  # type: ignore[override]
@@ -467,23 +489,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._health_model.update_state(fault=fault, power=power)
         else:
             self._health_model.update_state(fault=fault)
-
-        for attribute_name, attribute_value in state_change.items():
-            if attribute_name == "tile_info":
-                self._convert_ip_to_str(attribute_value)
-            if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value
-                self._health_model.update_state(tile_health_structure=attribute_value)
-                self.update_tile_health_attributes()
-            else:
-                try:
-                    self.logger.info(f"Update attribute {attribute_name}")
-                    tango_name = self.attr_map[attribute_name]
-                    self._attribute_state[tango_name].update(attribute_value)
-                except KeyError as e:
-                    self.logger.error(f"Key Error {repr(e)}")
-                except Exception as e:  # pylint: disable=broad-except
-                    self.logger.error(f"Caught unexpected exception: {repr(e)}")
 
     def unpack_monitoring_point(
         self: MccsTile,
@@ -587,12 +592,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             )
             self.component_manager.off()
 
+    # pylint: disable=too-many-arguments
     def post_change_event(
         self: MccsTile,
         name: str,
         attr_value: Any,
         attr_time: float,
         attr_quality: tango.AttrQuality,
+        value_changed: bool,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
@@ -603,14 +610,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             time the attribute was updated.
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
+        :param value_changed: a flag representing if the value changed
+            from the previous value.
         """
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
-        # https://gitlab.com/tango-controls/pytango/-/issues/615
-        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        self.push_change_event(name, attr_value, attr_time, attr_quality)
+        if value_changed:
+            self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.

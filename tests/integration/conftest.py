@@ -192,8 +192,30 @@ def patched_tile_device_class_fixture(
             tile_component_manager._component_state_callback = (
                 self._component_state_changed
             )
+            tile_component_manager._update_attribute_callback = (
+                self._update_attribute_callback
+            )
 
             return tile_component_manager
+
+        @command(dtype_in="DevVoid")
+        def cleanup(self: PatchedTileDevice) -> None:
+            """
+            Clear up patched callbacks to ensure safe teardown.
+
+            With the PollingComponentManager, it seems that during teardown the polling
+            thread is still running and it will still have a callback to the TANGO
+            device, this can cause segfault during a tango operation, not sure why?
+            Removal of the callbacks will remove this issue completely,
+            but there is clearly some bad clearup somewhere. I see errors when pushing
+            TileProgrammingstate during teardown DevFailed attribute does not exist.
+            This has never been seen in deployment, and is believed only to
+            exist in test context.
+            """
+            self.component_manager._update_attribute_callback = unittest.mock.Mock()
+            self.component_manager._component_state_callback = unittest.mock.Mock()
+            self.component_manager._communication_state_callback = unittest.mock.Mock()
+            del self.component_manager
 
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(
@@ -237,6 +259,13 @@ def patched_tile_device_class_fixture(
     return PatchedTileDevice
 
 
+# @pytest.fixture(scope="session")
+# def some_function_name():
+#     print("this is setup")
+#     yield
+#     print("this is teardown")
+
+
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(
@@ -276,6 +305,7 @@ def tile_component_manager_fixture(
         tpm_version,
         get_subrack_name(subrack_id),
         subrack_bay,
+        unittest.mock.Mock(),
         unittest.mock.Mock(),
         unittest.mock.Mock(),
         tile_simulator,

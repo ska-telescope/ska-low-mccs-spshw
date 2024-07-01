@@ -479,9 +479,8 @@ class TestMccsTile:
         tile_component_manager._update_component_state(
             fault=False,
             power=PowerState.ON,
-            tile_health_structure=TileData.get_tile_defaults(),
-            adc_rms=list(range(2, 34)),
         )
+        tile_component_manager._update_attribute_callback(adc_rms=list(range(2, 34)))
         change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
 
     def test_tile_info(

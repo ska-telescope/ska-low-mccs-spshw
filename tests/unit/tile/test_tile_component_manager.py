@@ -94,16 +94,16 @@ class TestTileComponentManager:
         match power_state:
             case PowerState.ON:
                 callbacks["component_state"].assert_call(power=power_state)
-                callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.UNCONNECTED.pretty_name()
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
                 )
             case PowerState.UNKNOWN:
                 pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 callbacks["component_state"].assert_call(power=power_state, lookahead=2)
-                callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=2
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
                 )
 
         callbacks["communication_status"].assert_not_called()
@@ -158,7 +158,7 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         match power_state:
             case PowerState.ON:
-                callbacks["component_state"].assert_call(
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -192,12 +192,12 @@ class TestTileComponentManager:
                     # For commands being executed e.g initialise,
                     # the callback can be called multiple times.
                     callbacks["component_state"].assert_call(fault=False, lookahead=6)
-                callbacks["component_state"].assert_call(
+                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
                 )
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
-                callbacks["component_state"].assert_call(
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -207,20 +207,20 @@ class TestTileComponentManager:
                             "MCU_wd": 0,
                         }
                     },
-                    lookahead=3,
+                    lookahead=4,
                 )
                 callbacks["component_state"].assert_call(
-                    power=PowerState.ON, fault=True, lookahead=3
+                    power=PowerState.ON, fault=True, lookahead=4
                 )
-                callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
                 )
 
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 # We start in UNKNOWN so no need to assert
 
-                callbacks["component_state"].assert_call(
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -230,13 +230,13 @@ class TestTileComponentManager:
                             "MCU_wd": 0,
                         }
                     },
-                    lookahead=3,
+                    lookahead=4,
                 )
                 callbacks["component_state"].assert_call(
-                    power=PowerState.ON, fault=True, lookahead=3
+                    power=PowerState.ON, fault=True, lookahead=4
                 )
-                callbacks["component_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
                 )
 
         tile_component_manager.stop_communicating()
@@ -357,8 +357,10 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.OFF.pretty_name()
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.OFF.pretty_name(),
+            lookahead=2,
+            consume_nonmatches=True,
         )
 
         callbacks["component_state"].assert_not_called()
@@ -401,7 +403,7 @@ class TestTileComponentManager:
         callbacks["component_state"].assert_call(
             power=PowerState.OFF, lookahead=10, consume_nonmatches=True
         )
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name()
         )
 
@@ -542,7 +544,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             # the callback can be called multiple times.
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -1671,6 +1673,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             2,
             callbacks["communication_status"],
             callbacks["component_state"],
+            callbacks["attribute_state"],
             unittest.mock.Mock(),
         )
 
@@ -2863,8 +2866,10 @@ class TestDynamicSimulator:
             # the callback can be called multiple times.
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
-        callbacks["component_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
+            lookahead=2,
+            consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
@@ -2872,7 +2877,7 @@ class TestDynamicSimulator:
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
         )
         return dynamic_tile_component_manager

@@ -57,6 +57,7 @@ class AttributeManager:
         :param value: the value we want to update attribute with.
         :param post: Optional flag to post an update.
         """
+        value_changed = value != self._value
         self._value = value
         self._last_update = time.time()
         if self._value is None:
@@ -64,7 +65,7 @@ class AttributeManager:
         else:
             self.update_quality()
         if post:
-            self.notify()
+            self.notify(value_changed)
 
     def update_quality(self: AttributeManager) -> None:
         """Update the attribute quality factor."""
@@ -78,9 +79,14 @@ class AttributeManager:
         """
         return self._value, self._last_update, self._quality
 
-    def notify(self: AttributeManager) -> None:
-        """Notify callback with value."""
-        self._value_time_quality_callback(*self.read())
+    def notify(self: AttributeManager, value_changed: bool) -> None:
+        """
+        Notify callback with value.
+
+        :param value_changed: a flag representing if the value changed
+            from the previous value.
+        """
+        self._value_time_quality_callback(*self.read(), value_changed)
         if self.alarm_handler is not None:
             self.alarm_handler()
 

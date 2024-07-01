@@ -139,6 +139,7 @@ def callbacks_fixture() -> MockCallableGroup:
     return MockCallableGroup(
         "communication_status",
         "component_state",
+        "attribute_state",
         "task",
         "task_lrc",
         timeout=10.0,
@@ -247,6 +248,7 @@ def tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
         tile_simulator,
     )
 
@@ -311,6 +313,7 @@ def dynamic_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
         dynamic_tile_simulator,
     )
 
@@ -359,7 +362,9 @@ def patched_tile_device_class_fixture(
             tile_component_manager.set_component_state_callback(
                 self._component_state_changed,
             )
-
+            tile_component_manager._update_attribute_callback = (
+                self._update_attribute_callback
+            )
             return tile_component_manager
 
         @command()

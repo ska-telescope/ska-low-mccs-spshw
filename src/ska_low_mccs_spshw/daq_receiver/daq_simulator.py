@@ -75,7 +75,7 @@ def check_initialisation(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
-# TODO: Redefined for now, to avoid having to import from pydaq.
+# TODO: Redefined for now, to avoid having to import from pydaq. (Import errors)
 # This really should not be exposed through the control interface at all.
 class DaqModes(IntEnum):
     """Data acquisition modes."""
@@ -89,6 +89,7 @@ class DaqModes(IntEnum):
     STATION_BEAM_DATA = 6
     CORRELATOR_DATA = 7
     ANTENNA_BUFFER = 8
+    RAW_STATION_BEAM = 10
 
 
 def convert_daq_modes(consumers_to_start: str) -> list[DaqModes]:

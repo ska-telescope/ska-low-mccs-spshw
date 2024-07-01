@@ -69,6 +69,7 @@ class TpmDriver(MccsBaseComponentManager):
         tpm_version: str,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        attribute_change_callback: Callable[..., None],
     ) -> None:
         """
         Initialise a new TPM driver instance passing in the Tile object.
@@ -83,8 +84,11 @@ class TpmDriver(MccsBaseComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be called when the
             component state changes.
+        :param attribute_change_callback: Callback to call when attribute
+            is updated.
         """
         self.logger = logger
+        self._attribute_change_callback = attribute_change_callback
         self._hardware_lock = threading.Lock()
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
@@ -144,13 +148,6 @@ class TpmDriver(MccsBaseComponentManager):
             component_state_changed_callback,
             max_workers=1,
             fault=None,
-            programming_state=TpmStatus.UNKNOWN,
-            tile_health_structure=self._tile_health_structure,
-            adc_rms=self._adc_rms,
-            static_delays=self._static_delays,
-            preadu_levels=self._preadu_levels,
-            csp_rounding=None,
-            channeliser_rounding=None,
         )
 
         self._poll_rate = 2.0
@@ -291,7 +288,7 @@ class TpmDriver(MccsBaseComponentManager):
                     # self._clock_present = method_to_be_written
                     self._pll_locked = self.tile.check_pll_locked()
                     self._tile_health_structure = self.tile.get_health_status()
-                    self._update_component_state(
+                    self._attribute_change_callback(
                         tile_health_structure=self._tile_health_structure
                     )
                     self._info = self.tile.info
@@ -299,7 +296,7 @@ class TpmDriver(MccsBaseComponentManager):
                 # Potential crash if polled on a uninitialised board
                 if self._tpm_status in (TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED):
                     self._adc_rms = self.tile.get_adc_rms()
-                    self._update_component_state(adc_rms=self._adc_rms)
+                    self._attribute_change_callback(adc_rms=self._adc_rms)
                     self._pending_data_requests = (
                         self.tile.check_pending_data_requests()
                     )
@@ -322,9 +319,13 @@ class TpmDriver(MccsBaseComponentManager):
                         # self._channeliser_truncation = method_to_be_written
                         # self._csp_rounding = method_to_be_written
                         self._preadu_levels = self.tile.get_preadu_levels()
-                        self._update_component_state(preadu_levels=self._preadu_levels)
+                        self._attribute_change_callback(
+                            preadu_levels=self._preadu_levels
+                        )
                         self._static_delays = self._get_static_delays()
-                        self._update_component_state(static_delays=self._static_delays)
+                        self._attribute_change_callback(
+                            static_delays=self._static_delays
+                        )
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
                         self._beamformer_table = self.tile.get_beamformer_table()
@@ -438,7 +439,7 @@ class TpmDriver(MccsBaseComponentManager):
         """
         if new_status != self._tpm_status:
             self._tpm_status = new_status
-            self._update_component_state(programming_state=new_status)
+            self._attribute_change_callback(programming_state=new_status)
 
     def _update_tpm_status(self: TpmDriver) -> None:
         """Update the value of _tpm_status according to hardware state."""
@@ -638,9 +639,6 @@ class TpmDriver(MccsBaseComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
         self._set_tpm_status(status)
-        # TODO: decide whether or not to remove this workaround once SKB-272 is resolved
-        # Poll to update internal state after erasing
-        self._poll()
 
     def initialise(self: TpmDriver) -> None:
         """Download firmware, if not already downloaded, and initialises tile."""
@@ -1386,7 +1384,7 @@ class TpmDriver(MccsBaseComponentManager):
                 for chan in range(32):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
-                        self._update_component_state(
+                        self._attribute_change_callback(
                             channeliser_rounding=copy.deepcopy(trunc)
                         )
                     # pylint: disable=broad-except
@@ -1503,7 +1501,7 @@ class TpmDriver(MccsBaseComponentManager):
                     write_successful = self.tile.set_csp_rounding(rounding[0])
                     if write_successful:
                         self._csp_rounding = rounding
-                        self._update_component_state(
+                        self._attribute_change_callback(
                             csp_rounding=self._csp_rounding.tolist()
                         )
                     else:
@@ -1536,7 +1534,7 @@ class TpmDriver(MccsBaseComponentManager):
                 try:
                     self.tile.set_preadu_levels(levels)
                     self._preadu_levels = self.tile.get_preadu_levels()
-                    self._update_component_state(preadu_levels=self._preadu_levels)
+                    self._attribute_change_callback(preadu_levels=self._preadu_levels)
                     if self._preadu_levels != levels:
                         self.logger.warning("TpmDriver: Updating PreADU levels failed")
                 # pylint: disable=broad-except

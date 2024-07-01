@@ -60,6 +60,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        attribute_change_callback: Callable[..., None],
         _tpm_driver: Optional[TpmDriver] = None,
     ) -> None:
         """
@@ -96,12 +97,13 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param attribute_change_callback: Callback to call when attribute
+            is updated.
         :param _tpm_driver: a optional TpmDriver to inject for testing.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_tpm_id = subrack_tpm_id
         self._power_state_lock = threading.RLock()
-
         self.power_state: PowerState = PowerState.UNKNOWN
 
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
@@ -140,6 +142,7 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             tpm_version,
             self._tpm_communication_state_changed,
             self._update_component_state,
+            attribute_change_callback,
         )
 
         def _update_component_power_state(power_state: PowerState) -> None:
@@ -167,13 +170,6 @@ class TileComponentManager(MccsBaseComponentManager, TaskExecutorComponentManage
             max_workers=1,
             fault=None,
             power=PowerState.UNKNOWN,
-            programming_state=TpmStatus.UNKNOWN,
-            tile_health_structure=self._tpm_driver._tile_health_structure,
-            adc_rms=self._tpm_driver._adc_rms,
-            static_delays=self._tpm_driver._static_delays,
-            preadu_levels=self._tpm_driver._preadu_levels,
-            csp_rounding=None,
-            channeliser_rounding=None,
         )
 
     def start_communicating(self: TileComponentManager) -> None:

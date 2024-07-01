@@ -237,6 +237,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
+            self._attribute_change_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -442,6 +443,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         else:
             self._health_model.update_state(fault=fault)
 
+    def _attribute_change_callback(
+        self: MccsTile,
+        **state_change: Any,
+    ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
                 self.tile_health_structure = attribute_value
@@ -561,12 +566,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             )
             self.component_manager.off()
 
+    # pylint: disable=too-many-arguments
     def post_change_event(
         self: MccsTile,
         name: str,
         attr_value: Any,
         attr_time: float,
         attr_quality: tango.AttrQuality,
+        value_changed: bool,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
@@ -577,10 +584,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             time the attribute was updated.
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
+        :param value_changed: a flag representing if the value changed
+            from the previous value.
         """
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        self.push_change_event(name, attr_value, attr_time, attr_quality)
+        if value_changed:
+            self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.
@@ -1279,7 +1289,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._attribute_state["channeliserRounding"].read()[0] is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
-        return self._attribute_state["channeliserRounding"].read()
+        return self._attribute_state["channeliserRounding"].read()[0]
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -1335,7 +1345,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return self._attribute_state["cspRounding"].read()
+        return self._attribute_state["cspRounding"].read()[0]
 
     @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:

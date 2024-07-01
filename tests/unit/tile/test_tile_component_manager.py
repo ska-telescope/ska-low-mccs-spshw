@@ -114,7 +114,7 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["component_state"].assert_call(programming_state=TpmStatus.OFF)
+        callbacks["attribute_state"].assert_call(programming_state=TpmStatus.OFF)
         callbacks["communication_status"].assert_not_called()
 
         # Stop communicating will break the connection with the subrack
@@ -122,7 +122,7 @@ class TestTileComponentManager:
         tile_component_manager.stop_communicating()
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
 
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNKNOWN, lookahead=2
         )
         callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
@@ -381,11 +381,11 @@ class TestStaticSimulatorCommon:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["component_state"].assert_call(power=PowerState.ON)
         callbacks["component_state"].assert_call(fault=False, lookahead=3)
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED
         )
-        callbacks["component_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(programming_state=TpmStatus.PROGRAMMED)
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.INITIALISED, lookahead=2
         )
         return static_tile_component_manager
@@ -992,15 +992,15 @@ class TestDynamicSimulatorCommon:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["component_state"].assert_call(power=PowerState.ON)
         callbacks["component_state"].assert_call(fault=False, lookahead=2)
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED,
             lookahead=2,
             consume_nonmatches=True,
         )
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.PROGRAMMED, lookahead=2, consume_nonmatches=True
         )
-        callbacks["component_state"].assert_call(
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.INITIALISED,
             lookahead=2,
             consume_nonmatches=True,

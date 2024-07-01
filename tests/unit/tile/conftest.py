@@ -138,6 +138,7 @@ def callbacks_fixture() -> MockCallableGroup:
     return MockCallableGroup(
         "communication_status",
         "component_state",
+        "attribute_state",
         "task",
         "task_lrc",
         timeout=5.0,
@@ -212,6 +213,7 @@ def dynamic_tpm_driver_fixture(
         tpm_version,
         unittest.mock.Mock(),
         unittest.mock.Mock(),
+        unittest.mock.Mock(),
     )
 
 
@@ -241,6 +243,7 @@ def tpm_driver_fixture(
         station_id,
         tile_simulator,
         tpm_version,
+        unittest.mock.Mock(),
         unittest.mock.Mock(),
         unittest.mock.Mock(),
     )
@@ -295,6 +298,7 @@ def tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
     )
 
 
@@ -369,6 +373,7 @@ def dynamic_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
         dynamic_tpm_driver,
     )
     dynamic_tpm_driver._communication_state_callback = (  # type: ignore
@@ -377,6 +382,7 @@ def dynamic_tile_component_manager_fixture(
     dynamic_tpm_driver._component_state_callback = (
         component_manager._update_component_state
     )
+    dynamic_tpm_driver._attribute_change_callback = callbacks["attribute_state"]
     return component_manager
 
 
@@ -431,23 +437,26 @@ def static_tile_component_manager_fixture(
         subrack_tpm_id,
         callbacks["communication_status"],
         callbacks["component_state"],
+        callbacks["attribute_state"],
         tpm_driver,
     )
     tpm_driver._communication_state_callback = (  # type: ignore
         component_manager._tpm_communication_state_changed
     )
     tpm_driver._component_state_callback = component_manager._update_component_state
+    tpm_driver._attribute_change_callback = callbacks["attribute_state"]
     return component_manager
 
 
 @pytest.fixture(name="patched_tile_device_class")
 def patched_tile_device_class_fixture(
-    static_tile_component_manager: TileComponentManager,
+    static_tile_component_manager: TileComponentManager, tpm_driver: TpmDriver
 ) -> type[MccsTile]:
     """
     Return a tile device class patched with extra methods for testing.
 
     :param static_tile_component_manager: A mock component manager.
+    :param tpm_driver: a fixture with the TpmDriver.
 
     :return: a tile device class patched with extra methods for testing.
 
@@ -482,6 +491,7 @@ def patched_tile_device_class_fixture(
             static_tile_component_manager.set_component_state_callback(
                 self._component_state_changed,
             )
+            tpm_driver._attribute_change_callback = self._attribute_change_callback
 
             return static_tile_component_manager
 

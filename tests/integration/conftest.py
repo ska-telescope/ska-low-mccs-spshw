@@ -205,6 +205,8 @@ def patched_tile_device_class_fixture(
             )
             tpm_driver._component_state_callback = self._component_state_changed
 
+            tpm_driver._attribute_change_callback = self._attribute_change_callback
+
             return tile_component_manager
 
         @command()
@@ -312,6 +314,7 @@ def tile_component_manager_fixture(
         subrack_bay,
         unittest.mock.Mock(),
         unittest.mock.Mock(),
+        unittest.mock.Mock(),
         tpm_driver,
     )
 
@@ -342,6 +345,7 @@ def tpm_driver_fixture(
         station_id,
         tile_simulator,
         tpm_version,
+        unittest.mock.Mock(),
         unittest.mock.Mock(),
         unittest.mock.Mock(),
     )

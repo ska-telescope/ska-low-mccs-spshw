@@ -259,13 +259,6 @@ def patched_tile_device_class_fixture(
     return PatchedTileDevice
 
 
-# @pytest.fixture(scope="session")
-# def some_function_name():
-#     print("this is setup")
-#     yield
-#     print("this is teardown")
-
-
 # pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(

@@ -913,25 +913,6 @@ class TileSimulator:
         }
         # return self._register_map.get(str(address), 0)
 
-    def check_communication(self: TileSimulator) -> dict[str, bool]:
-        """
-        Check status of connection to TPM CPLD and FPGAs.
-
-        Examples:
-            OK Status:
-            {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
-
-            TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
-            {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
-
-            TPM OFF or Network Issue:
-            {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
-
-        :Returns: dictionary of connection status
-        """
-        status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
-        return status
-
     @check_mocked_overheating
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:

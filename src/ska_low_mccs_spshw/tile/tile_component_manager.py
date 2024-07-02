@@ -643,7 +643,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             try:
                 with self._hardware_lock:
                     core_communication = self.tile.check_communication()
-                    self._update_component_state(core_communication=core_communication)
+                    self._update_attribute_callback(
+                        core_communication=core_communication
+                    )
                     if core_communication["CPLD"]:
                         if (
                             not core_communication["FPGA0"]

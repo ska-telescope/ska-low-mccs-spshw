@@ -40,7 +40,11 @@ from ska_tango_base.commands import (
 )
 from tango.server import attribute, command, device_property
 
-from .attribute_managers import AttributeManager, BoolAttributeManager
+from .attribute_managers import (
+    AlarmAttributeManager,
+    AttributeManager,
+    BoolAttributeManager,
+)
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
 from .tpm_status import TpmStatus
@@ -176,6 +180,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - ppsPresent: tango does not have good ALARMs for Boolean
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
+        # - alarms: alarms raised by firmware are collected in a dictionary.
+        # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
                 "ppsPresent": BoolAttributeManager(
@@ -213,6 +219,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.self_shutdown, "fpga2Temperature"
                     ),
                 ),
+                "alarms": AlarmAttributeManager(
+                    functools.partial(self.post_change_event, "alarms"),
+                ),
             }
         )
 
@@ -221,7 +230,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
             "io": ["io"],
-            "alarms": ["alarms"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
             "temperatures": ["temperatures"],
@@ -752,13 +760,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype="DevString",
         label="alarms",
     )
-    def alarms(self: MccsTile) -> str:
+    def alarms(self: MccsTile) -> tuple[str, float, tango.AttrQuality]:
         """
         Return the TPM's alarm status.
 
         :return: the TPM's alarm status
         """
-        return json.dumps(self._attribute_state["alarms"].read()[0])
+        return (
+            json.dumps(self._attribute_state["alarms"].read()[0]),
+            self._attribute_state["alarms"].read()[1],
+            self._attribute_state["alarms"].read()[2],
+        )
 
     @attribute(
         dtype="DevString",

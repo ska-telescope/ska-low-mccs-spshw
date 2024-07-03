@@ -362,6 +362,7 @@ def daq_bandpass_monitor_running(
 
 
 @when("the DAQ is commanded to stop monitoring bandpasses")
+@then("the DAQ is commanded to stop monitoring bandpasses")
 def daq_stop_bandpass_monitor(daq_device: tango.DeviceProxy) -> None:
     """
     Stop monitoring for bandpasses.

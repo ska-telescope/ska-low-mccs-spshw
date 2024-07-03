@@ -227,12 +227,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.ping()
                     # pylint: disable=broad-except
-                except Exception:
+                except Exception as e:
                     # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
                     error_flag = True
-                finally:
-                    # Check core communications every poll.
-                    self.logger.warning("Checking communication with CPLD and FPGAs")
                 if error_flag:
                     self.tile.tpm = None
                     request = TileRequest("connect", self.connect)

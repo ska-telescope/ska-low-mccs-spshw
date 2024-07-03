@@ -1291,14 +1291,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         automatic_state_analysis: tango.DevState = super().dev_state()
         force_alarm: bool = False
-        try:
-            if self._attribute_state["ppsPresent"].read()[0] is False:
-                self.logger.warning("no PPS signal present, raising ALARM")
-                force_alarm = True
-            if force_alarm:
-                return tango.DevState.ALARM
-        except Exception as e:  # pylint: disable=broad-except
-            self.logger.error(f"Exception raised {repr(e)}")
+        if self._attribute_state["ppsPresent"].read()[0] is False:
+            self.logger.warning("no PPS signal present, raising ALARM")
+            force_alarm = True
+        if force_alarm:
             return tango.DevState.ALARM
         return automatic_state_analysis
 

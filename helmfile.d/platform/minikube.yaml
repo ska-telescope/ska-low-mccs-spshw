@@ -11,8 +11,7 @@ platform:
         url: ""  # Override any set value, so we deploy ska-ser-skuid ourselves
     daq:
       storage_class: standard
-      runtime_class: ~  # We're assuming no GPUs accessible from minikube
-      gpu_limit: ~  # We're assuming no GPUs accessible from minikube
+      nvidia_gpu: false  # We're assuming no GPUs accessible from minikube
       node_selector: ~
       affinity: ~
       tolerations: ~

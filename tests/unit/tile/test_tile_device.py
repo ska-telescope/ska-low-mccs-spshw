@@ -18,6 +18,7 @@ from typing import Any, Iterator, Optional
 
 import numpy as np
 import pytest
+import tango
 from ska_control_model import (
     AdminMode,
     CommunicationStatus,
@@ -63,6 +64,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "communication_state",
         "tile_programming_state",
         "lrc_command",
+        "alarms",
         "adc_power",
         "pps_present",
         "track_lrc_command",
@@ -1652,16 +1654,20 @@ class TestMccsTileCommands:
     def test_set_firmware_temperature_thresholds(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test device attributes that map through to the component.
+        Test we can set the temperature threshold to trigger a simulated overheating.
 
-        Thus require the component to be connected and turned on before
-        a read / write can be effected.
+        This test checks the following:
+        - The ``SetFirmwareTemperatureThresholds`` an EngineeringMode command.
+        - This command cannot be called with a threshold above 50.
 
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
         """
         board_alarm_threshold = json.loads(
             on_tile_device.firmwareTemperatureThresholds
@@ -1680,6 +1686,23 @@ class TestMccsTileCommands:
                 )
             )
         on_tile_device.adminMode = AdminMode.ENGINEERING
+        on_tile_device.subscribe_event(
+            "alarms",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["alarms"],
+        )
+        change_event_callbacks["alarms"].assert_change_event(Anything)
+        with pytest.raises(DevFailed):
+            # Setting a threshold to high
+            on_tile_device.SetFirmwareTemperatureThresholds(
+                json.dumps(
+                    {
+                        "board_temperature_threshold": [20, 60],
+                        "fpga1_temperature_threshold": [20, 60],
+                        "fpga2_temperature_threshold": [20, 60],
+                    }
+                )
+            )
         on_tile_device.SetFirmwareTemperatureThresholds(
             json.dumps(
                 {
@@ -1695,3 +1718,7 @@ class TestMccsTileCommands:
 
         assert final_board_alarm_threshold != board_alarm_threshold
         assert final_board_alarm_threshold == [20, 30]
+        # The simulated overheating event should raise an ALARM on
+        # the device.
+        change_event_callbacks["alarms"].assert_change_event(Anything)
+        assert on_tile_device.state() == tango.DevState.ALARM

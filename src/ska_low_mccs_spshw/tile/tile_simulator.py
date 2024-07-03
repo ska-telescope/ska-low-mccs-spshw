@@ -2252,10 +2252,12 @@ class TileSimulator:
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"
             )
+            self._global_status_alarms["temperature_alm"] = 2
             self._is_fpga1_connectable = False
             self._is_fpga2_connectable = False
             self.tpm_mocked_overheating = True
         else:
+            self._global_status_alarms["temperature_alm"] = 0
             self.tpm_mocked_overheating = False
             self._is_fpga1_connectable = True
             self._is_fpga2_connectable = True

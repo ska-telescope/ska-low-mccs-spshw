@@ -146,6 +146,7 @@ def daq_device_is_in_admin_mode_offline(
 
 
 @given("the DAQ has no consumers running")
+@then("the DAQ has no consumers running")
 def daq_device_has_no_running_consumers(
     daq_receiver: tango.DeviceProxy,
 ) -> None:

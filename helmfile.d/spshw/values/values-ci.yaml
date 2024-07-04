@@ -39,7 +39,7 @@ platform:
             path: "instrument/mccs-configuration/aavs3.yaml"
       real-daq-1:
         id: 1
-        storage: {}
+        storage:
           daq-data:
             storage_class: nfss1  # optional but recommend; if omitted, the cluster default will be used
             size: "250Mi"

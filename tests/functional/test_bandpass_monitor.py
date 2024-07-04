@@ -182,6 +182,7 @@ def tile_ready_to_send_to_daq(
 
 
 @given("no consumers are running")
+@then("no consumers are running")
 def daq_device_has_no_running_consumers(
     daq_device: tango.DeviceProxy,
 ) -> None:

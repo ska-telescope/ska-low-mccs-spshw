@@ -2486,7 +2486,7 @@ class SpsStationComponentManager(
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be depending on assumptions about TRL structure
             tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
-            delays_for_tile = tile_delays[tile_no]
+            delays_for_tile = tile_delays[tile_no - 1]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
     def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:

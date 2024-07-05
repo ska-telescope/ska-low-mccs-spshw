@@ -1791,8 +1791,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
-resolved_reference = "1866115f9694f5c234ae1a087f82170fbd09a33f"
+reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
+resolved_reference = "a8c2e7175e6a4704d336114724267fd24cbcdd31"
 
 [[package]]
 name = "pyflakes"
@@ -2610,14 +2610,14 @@ reference = 'ska-nexus'
 
 [[package]]
 name = "ska-telmodel"
-version = "1.17.1"
+version = "1.18.0"
 description = "SKA telescope model library"
 category = "main"
 optional = false
 python-versions = ">=3.10.0,<4.0.0"
 files = [
-    {file = "ska_telmodel-1.17.1-py3-none-any.whl", hash = "sha256:6ce98c91ff52d05e7438e43782338f3ac7c62f4ce2f193682f37d25683bcd2c3"},
-    {file = "ska_telmodel-1.17.1.tar.gz", hash = "sha256:6c68ea6cd46d48b2b5fdef9afb4d0109332fbad85550e075fe14e13b711df265"},
+    {file = "ska_telmodel-1.18.0-py3-none-any.whl", hash = "sha256:d2139cc83af4ffbdd10e362ac8f66f78907864f076d52867dc1ef97f460f17ee"},
+    {file = "ska_telmodel-1.18.0.tar.gz", hash = "sha256:0a62f4bb77477bcadb2f823f5a6341223554d1321469a30c3172f64c2e727375"},
 ]
 
 [package.dependencies]
@@ -3408,4 +3408,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"  
-content-hash = "363a10c1c5fe00440473fd3f77f9976ea3b88fa8a326ac4dbd3b223f487a9ba4"
+content-hash = "118ccbe336f71666d2bfb3ecb3b2971c92c7a342388bdb6cad5b6989eaeb7353"

@@ -233,6 +233,7 @@ def test_trigger_adc_equalisation(
         assert value > expected_preadu - 1
 
 
+# pylint: disable=too-many-locals
 def test_load_pointing_delays(
     station_component_manager: SpsStationComponentManager,
     mock_tile_proxy: MccsDeviceProxy,
@@ -274,12 +275,15 @@ def test_load_pointing_delays(
 
     # We have a mapping, lets give an argument, this arg
     # is un-realistic but useful for testing
-    antenna_order_delays = [float(x) for x in range(513)]
+    beam_idx = 0
+    antenna_order_delays = [float(x) for x in range(512)]
 
-    station_component_manager.load_pointing_delays(copy.deepcopy(antenna_order_delays))
+    station_component_manager.load_pointing_delays(
+        beam_idx, copy.deepcopy(antenna_order_delays)
+    )
 
     # The zero-th element should be the zero-th element of the original input
-    expected_tile_arg = [antenna_order_delays[0]] + [0.0] * 32
+    expected_tile_arg = [beam_idx] + [0.0] * 32
 
     # The rest of the args should be pairs of (delay, delay_rate) for each channel
     for channel in range(16):
@@ -291,8 +295,8 @@ def test_load_pointing_delays(
             y_channel = antenna_config["tpm_y_channel"]
             if tile_no == tile_id and int(y_channel / 2) == channel:
                 delay, delay_rate = (
+                    antenna_order_delays[antenna_no * 2 - 2],
                     antenna_order_delays[antenna_no * 2 - 1],
-                    antenna_order_delays[antenna_no * 2],
                 )
         expected_tile_arg[2 * channel + 1] = delay
         expected_tile_arg[2 * channel + 2] = delay_rate

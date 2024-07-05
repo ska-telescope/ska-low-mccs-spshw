@@ -1,0 +1,27 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/SpsStation_LoadPointingDelays.json",
+    "title": "SpsStation LoadPointingDelays schema",
+    "description": "Schema for SpsStation's LoadPointingDelays command",
+    "type": "object",
+    "properties": {
+        "beam_index": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+        },
+        "delay_array": {
+            "type": "array",
+            "items": {
+                "type": "float"
+            },
+            "minItems": 512,
+            "maxItems": 512
+        }
+    },
+    "required": [
+        "beam_index",
+        "delay_array"
+    ],
+    "additionalProperties": false
+}

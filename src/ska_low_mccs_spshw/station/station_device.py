@@ -11,12 +11,14 @@
 
 from __future__ import annotations
 
+import importlib
 import ipaddress
 import itertools
 import json
+import logging
 import sys
 from functools import wraps
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import tango
@@ -29,7 +31,7 @@ from ska_control_model import (
     ResultCode,
 )
 from ska_tango_base import SKABaseDevice
-from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
+from ska_tango_base.commands import FastCommand, JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
 
@@ -41,6 +43,50 @@ from .station_obs_state_model import SpsStationObsStateModel
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
 __all__ = ["SpsStation", "main"]
+
+
+class _LoadPointingDelaysCommand(FastCommand):
+    """A class for the ``LoadPointingDelays`` command."""
+
+    SCHEMA: Final = json.loads(
+        importlib.resources.read_text(
+            "ska_low_mccs_spshw.station.schemas",
+            "SpsStation_LoadPointingdelays.json",
+        )
+    )
+
+    def __init__(  # type: ignore
+        self: _LoadPointingDelaysCommand,
+        component_manager: SpsStationComponentManager,
+        logger: Optional[logging.Logger] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param component_manager: the SpsStationComponentManger this
+            command belongs to.
+        :param logger: a logger for this command to use.
+        """
+        self._component_manager = component_manager
+        super().__init__(logger, self.SCHEMA)
+
+    # pylint: disable=arguments-differ
+    def do(  # type: ignore[override]
+        self: _LoadPointingDelaysCommand,
+        beam_index: int,
+        delay_array: list[float],
+    ) -> tuple[ResultCode, str]:
+        """
+        Stateless hook for device ``LoadPointingDelays`` command.
+
+        :param beam_index: the beam to apply the pointing delays for
+        :param delay_array: an flattened array of delay/delay rates.
+            delays + delay rates, delay in seconds
+            and the delay rate in seconds/second
+
+        :return: A tuple with information about command execution.
+        """
+        return self._component_manager.load_pointing_delays(beam_index, delay_array)
 
 
 def engineering_mode_required(func: Callable) -> Callable:
@@ -238,6 +284,17 @@ class SpsStation(SKAObsDevice):
                     logger=self.logger,
                     validator=validator,
                 ),
+            )
+
+        for command_name, command_object in [
+            (
+                "LoadPointingDelays",
+                _LoadPointingDelaysCommand,
+            )
+        ]:
+            self.register_command_object(
+                command_name,
+                command_object(self.component_manager, self.logger),
             )
 
     class InitCommand(SKAObsDevice.InitCommand):
@@ -1151,6 +1208,41 @@ class SpsStation(SKAObsDevice):
     # Fast Commands
     # -------------
 
+    @command(
+        dtype_in="DevVarDoubleArray",
+        dtype_out="DevVarLongStringArray",
+    )
+    def LoadPointingDelays(
+        self: SpsStation, argin: list[float]
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the pointing delay parameters of this Station's Tiles.
+
+        :param argin: an array containing a beam index followed by
+            pairs of antenna delays + delay rates, delay in seconds
+            and the delay rate in seconds/second
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> # example delays: 256 values from -32 to +32 ns, rates = 0
+        >>> delays = [step * 0.25e-9 for step in list(range(-128, 128))]
+        >>> rates = [0.0]*256
+        >>> beam = 0.0
+        >>> dp = tango.DeviceProxy("mccs/station/01")
+        >>> arg = [beam]
+        >>> for i in range(256)
+        >>>   arg.append(delays[i])
+        >>>   arg.append(rates[i])
+        >>> dp.command_inout("LoadPointingDelays", arg)
+        """
+        handler = self.get_command_object("LoadPointingDelays")
+        (result_code, message) = handler(argin)
+        return ([result_code], [message])
+
     @command(dtype_out="DevVarLongStringArray")
     def UpdateStaticDelays(self: SpsStation) -> DevVarLongStringArrayType:
         """
@@ -1538,52 +1630,6 @@ class SpsStation(SKAObsDevice):
         self.component_manager.apply_calibration(switch_time)
         return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
         # handler = self.get_command_object("ApplyCalibration")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
-
-    @command(
-        dtype_in="DevVarDoubleArray",
-        dtype_out="DevVarLongStringArray",
-    )
-    def LoadPointingDelays(
-        self: SpsStation, argin: list[float]
-    ) -> DevVarLongStringArrayType:
-        """
-        Set the pointing delay parameters of this Station's Tiles.
-
-        :param argin: an array containing a beam index followed by
-            pairs of antenna delays + delay rates, delay in seconds
-            and the delay rate in seconds/second
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-        :raises ValueError: if parameters are illegal or inconsistent
-
-        :example:
-
-        >>> # example delays: 256 values from -32 to +32 ns, rates = 0
-        >>> delays = [step * 0.25e-9 for step in list(range(-128, 128))]
-        >>> rates = [0.0]*256
-        >>> beam = 0.0
-        >>> dp = tango.DeviceProxy("mccs/station/01")
-        >>> arg = [beam]
-        >>> for i in range(256)
-        >>>   arg.append(delays[i])
-        >>>   arg.append(rates[i])
-        >>> dp.command_inout("LoadPointingDelays", arg)
-        """
-        if len(argin) < 513:  # self._antennas_per_tile * 2 + 1:
-            self.component_manager.logger.error("Insufficient parameters")
-            raise ValueError("Insufficient parameters")
-        beam_index = int(argin[0])
-        if beam_index < 0 or beam_index > 7:
-            self.component_manager.logger.error("Invalid beam index")
-            raise ValueError("Invalid beam index")
-
-        self.component_manager.load_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
-        # handler = self.get_command_object("LoadPointingDelays")
         # (return_code, message) = handler(argin)
         # return ([return_code], [message])
 

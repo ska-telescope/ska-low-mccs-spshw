@@ -699,12 +699,24 @@ class SpsStationComponentManager(
             for channel_delay in channel_delays
         ]
 
-    def _calculate_delays_per_tile(
+    def _calculate_delay_array_per_tile(
         self: SpsStationComponentManager,
+        beam_index: float,
         antenna_order_delays: list[float],
     ) -> dict[int, list[float]]:
-        beam_index = antenna_order_delays[0]
+        """
+        Return a dictionary with a delay array per tile.
 
+        This dictionary has the following structure:
+
+        {logical_tile_id (Zero based): [beam_index] + [delay, delayrates] * 16}
+
+        :param beam_index: the beam index.
+        :param antenna_order_delays: Delays ordered by eep id.
+
+        :returns: a dictionary containing delay_arrays for each tile
+            {logical_tile_id (Zero based): [beam_index] + [delay, delayrates] * 16}
+        """
         # pre-allocate arrays for each of our tiles
         tile_delays: dict[int, list] = {}
         # element 0: beam index
@@ -714,14 +726,6 @@ class SpsStationComponentManager(
             assert tile_proxy._proxy is not None
             tile_no = tile_proxy._proxy.logicalTileId
             tile_delays[tile_no] = [beam_index] + [0.0] * TileData.ADC_CHANNELS
-
-        # remove element 0 from antenna_order_delays to aid in indexing,
-        # we have used it now
-        antenna_order_delays = antenna_order_delays[1:]
-
-        # This array should now be of even length as it corresponds to pairs of
-        # delay/delay rates
-        assert len(antenna_order_delays) % 2 == 0
 
         # Loop through each pair of delay/delay rates
         for antenna_no in range(len(antenna_order_delays) // 2):
@@ -2467,8 +2471,10 @@ class SpsStationComponentManager(
             tile._proxy.ApplyCalibration(switch_time)
 
     def load_pointing_delays(
-        self: SpsStationComponentManager, delay_list: list[float]
-    ) -> None:
+        self: SpsStationComponentManager,
+        beam_index: int,
+        delay_array: list[float],
+    ) -> tuple[ResultCode, str]:
         """
         Specify the delay in seconds and the delay rate in seconds/second.
 
@@ -2476,18 +2482,28 @@ class SpsStationComponentManager(
         specifies which beam is desired (range 0-47, limited to 7 in the current
         firmware)
 
-        :param delay_list: delay in seconds, and delay rate in seconds/second
+        :param beam_index: The index of the beam this delay applies to.
+        :param delay_array: A flattened array of 512 values containing delay/delay
+            rate pairs.
+
+        :returns: a tuple contining the result code and str
         """
-        tile_delays = self._calculate_delays_per_tile(delay_list)
+        try:
+            tile_delays = self._calculate_delay_array_per_tile(beam_index, delay_array)
+            self.logger.debug("Delay array calculated for each tile, Applying...")
+        except ValueError as ve:
+            error_message = f"Unable to obtain a delay array per tile: {ve}"
+            self.logger.error(error_message)
+            return ResultCode.FAILED, error_message
 
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
-
-            # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
-            # But this code should not be depending on assumptions about TRL structure
-            tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
-            delays_for_tile = tile_delays[tile_no - 1]
+            # Zero based configuration.
+            tile_no = tile_proxy._proxy.logicalTileId
+            delays_for_tile = tile_delays[tile_no]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
+
+        return ResultCode.OK, "LoadPointingDelays command completed OK"
 
     def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
         """

@@ -159,6 +159,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
+            "pll_status_adc0": "pll_status_adc0",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -227,6 +228,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "timing": ["timing"],
             "currents": ["currents"],
             "voltageMon": ["voltages", "MON_5V0"],
+            "pll_status_adc0": ["adcs", "pll_status", "ADC0"],
         }
 
         for attr_name in self._attribute_state:
@@ -631,9 +633,33 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         except tango.DevFailed:
             self.logger.debug("no alarm defined")
 
+    def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
+        """
+        Convert IPAddresses to str in (possibly nested) dict.
+
+        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+        """
+        for k, v in nested_dict.items():
+            if isinstance(v, IPv4Address):
+                nested_dict[k] = str(v)
+            elif isinstance(v, dict):
+                self._convert_ip_to_str(v)
+
     # ----------
     # Attributes
     # ----------
+
+    @attribute(
+        dtype="DevString",
+        label="adcs",
+    )
+    def pll_status_adc0(self: MccsTile) -> str:
+        """
+        Return the pll status of ADC0.
+
+        :return: the pll status of ADC0
+        """
+        return json.dumps(self._attribute_state["pll_status_adc0"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -650,18 +676,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             # Prints out a nice table to the logs if populated.
             self.logger.info(str(self))
         return json.dumps(info)
-
-    def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
-        """
-        Convert IPAddresses to str in (possibly nested) dict.
-
-        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
-        """
-        for k, v in nested_dict.items():
-            if isinstance(v, IPv4Address):
-                nested_dict[k] = str(v)
-            elif isinstance(v, dict):
-                self._convert_ip_to_str(v)
 
     @attribute(
         dtype="DevString",

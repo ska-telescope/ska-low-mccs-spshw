@@ -159,7 +159,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
-            "pll_status_adc0": "pll_status_adc0",
+            "pll_status_adcs": "pll_status_adcs",
+            "qpll_status": "qpll_status",
+            "f2f_pll_status": "f2f_pll_status",
+            "timing_pll_status": "timing_pll_status",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -228,7 +231,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "timing": ["timing"],
             "currents": ["currents"],
             "voltageMon": ["voltages", "MON_5V0"],
-            "pll_status_adc0": ["adcs", "pll_status", "ADC0"],
+            "pll_status_adcs": ["adcs", "pll_status"],
+            "qpll_status": ["io", "jesd_interface", "qpll_status"],
+            "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
+            "timing_pll_status": ["timing", "pll"],
         }
 
         for attr_name in self._attribute_state:
@@ -651,15 +657,51 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="adcs",
+        label="pll_status_adcs",
     )
-    def pll_status_adc0(self: MccsTile) -> str:
+    def pll_status_adcs(self: MccsTile) -> str:
         """
-        Return the pll status of ADC0.
+        Return the pll status of all ADCs.
 
-        :return: the pll status of ADC0
+        :return: the pll status of all ADCs
         """
-        return json.dumps(self._attribute_state["pll_status_adc0"].read()[0])
+        return json.dumps(self._attribute_state["pll_status_adcs"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="qpll_status",
+    )
+    def qpll_status(self: MccsTile) -> str:
+        """
+        Return the jesd qpll status for both FPGAs.
+
+        :return: the jesd qpll status for both FPGAs
+        """
+        return json.dumps(self._attribute_state["qpll_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="f2f_pll_status",
+    )
+    def f2f_pll_status(self: MccsTile) -> str:
+        """
+        Return the f2f pll status for both FPGAs.
+
+        :return: the f2f pll status for both FPGAs
+        """
+        return json.dumps(self._attribute_state["f2f_pll_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="timing_pll_status",
+    )
+    def timing_pll_status(self: MccsTile) -> str:
+        """
+        Return the timing pll status.
+
+        :return: the timing pll status
+        """
+        return json.dumps(self._attribute_state["timing_pll_status"].read()[0])
 
     @attribute(
         dtype="DevString",

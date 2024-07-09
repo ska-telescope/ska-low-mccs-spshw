@@ -2808,6 +2808,9 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
         data_send_mode: str = "channel"
 
         # Verify all tiles are acquiring data
@@ -2853,6 +2856,11 @@ class SpsStationComponentManager(
             )
         )
         self.logger.debug(f"Raw channel spigot sent for {channel=}")
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+            )
 
     @check_communicating
     def set_channeliser_rounding(

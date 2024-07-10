@@ -159,10 +159,31 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
             "tile_info": "tile_info",
-            "pll_status_adcs": "pll_status_adcs",
+            "adc_pll_status": "adc_pll_status",
             "qpll_status": "qpll_status",
             "f2f_pll_status": "f2f_pll_status",
+            "f2f_soft_errors": "f2f_soft_errors",
+            "f2f_hard_errors": "f2f_hard_errors",
             "timing_pll_status": "timing_pll_status",
+            "adc_sysref_timing_requirements": "adc_sysref_timing_requirements",
+            "adc_sysref_counter": "adc_sysref_counter",
+            "clocks": "clocks",
+            "clock_managers": "clock_managers",
+            "lane_error_count": "lane_error_count",
+            "lane_status": "lane_status",
+            "link_status": "link_status",
+            "resync_count": "resync_count",
+            "ddr_initialisation": "ddr_initialisation",
+            "ddr_reset_counter": "ddr_reset_counter",
+            "arp": "arp",
+            "udp_status": "udp_status",
+            "crc_error_count": "crc_error_count",
+            "bip_error_count": "bip_error_count",
+            "decode_error_count": "decode_error_count",
+            "linkup_loss_count": "linkup_loss_count",
+            "tile_beamformer_status": "tile_beamformer_status",
+            "station_beamformer_status": "station_beamformer_status",
+            "station_beamformer_error_count": "station_beamformer_error_count",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -231,10 +252,35 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "timing": ["timing"],
             "currents": ["currents"],
             "voltageMon": ["voltages", "MON_5V0"],
-            "pll_status_adcs": ["adcs", "pll_status"],
+            "adc_pll_status": ["adcs", "pll_status"],
             "qpll_status": ["io", "jesd_interface", "qpll_status"],
             "f2f_pll_status": ["io", "f2f_interface", "pll_status"],
+            "f2f_soft_errors": ["io", "f2f_interface", "soft_error"],
+            "f2f_hard_errors": ["io", "f2f_interface", "hard_error"],
             "timing_pll_status": ["timing", "pll"],
+            "adc_sysref_timing_requirements": ["adcs", "sysref_timing_requirements"],
+            "adc_sysref_counter": ["adcs", "sysref_counter"],
+            "clocks": ["timing", "clocks"],
+            "clock_managers": ["timing", "clock_managers"],
+            "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
+            "lane_status": ["io", "jesd_interface", "lane_status"],
+            "link_status": ["io", "jesd_interface", "link_status"],
+            "resync_count": ["io", "jesd_interface", "resync_count"],
+            "ddr_initialisation": ["io", "ddr_interface", "initialisation"],
+            "ddr_reset_counter": ["io", "ddr_interface", "reset_counter"],
+            "arp": ["io", "udp_interface", "arp"],
+            "udp_status": ["io", "udp_interface", "status"],
+            "crc_error_count": ["io", "udp_interface", "crc_error_count"],
+            "bip_error_count": ["io", "udp_interface", "bip_error_count"],
+            "decode_error_count": ["io", "udp_interface", "decode_error_count"],
+            "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
+            "tile_beamformer_status": ["dsp", "tile_beamf"],
+            "station_beamformer_status": ["dsp", "station_beamf", "status"],
+            "station_beamformer_error_count": [
+                "dsp",
+                "station_beamf",
+                "ddr_parity_error_count",
+            ],
         }
 
         for attr_name in self._attribute_state:
@@ -657,15 +703,271 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
-        label="pll_status_adcs",
+        label="adc_pll_status",
     )
-    def pll_status_adcs(self: MccsTile) -> str:
+    def adc_pll_status(self: MccsTile) -> str:
         """
         Return the pll status of all ADCs.
 
         :return: the pll status of all ADCs
         """
-        return json.dumps(self._attribute_state["pll_status_adcs"].read()[0])
+        return json.dumps(self._attribute_state["adc_pll_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="tile_beamformer_status",
+    )
+    def tile_beamformer_status(self: MccsTile) -> str:
+        """
+        Return the status of the tile beamformer.
+
+        :return: the status of the tile beamformer.
+        """
+        return json.dumps(self._attribute_state["tile_beamformer_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="station_beamformer_status",
+    )
+    def station_beamformer_status(self: MccsTile) -> str:
+        """
+        Return the status of the station beamformer.
+
+        :return: the status of the station beamformer.
+        """
+        return json.dumps(self._attribute_state["station_beamformer_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="station_beamformer_error_count",
+    )
+    def station_beamformer_error_count(self: MccsTile) -> str:
+        """
+        Return the station beamformer error count per FPGA.
+
+        :return: the station beamformer error count per FPGA.
+        """
+        return json.dumps(
+            self._attribute_state["station_beamformer_error_count"].read()[0]
+        )
+
+    @attribute(
+        dtype="DevString",
+        label="crc_error_count",
+    )
+    def crc_error_count(self: MccsTile) -> str:
+        """
+        Return the crc error count per FPGA.
+
+        :return: the crc error count per FPGA.
+        """
+        return json.dumps(self._attribute_state["crc_error_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="bip_error_count",
+    )
+    def bip_error_count(self: MccsTile) -> str:
+        """
+        Return the bip error count per FPGA.
+
+        :return: the bip error count per FPGA.
+        """
+        return json.dumps(self._attribute_state["bip_error_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="decode_error_count",
+    )
+    def decode_error_count(self: MccsTile) -> str:
+        """
+        Return the decode error count per FPGA.
+
+        :return: the decode error count per FPGA.
+        """
+        return json.dumps(self._attribute_state["decode_error_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="linkup_loss_count",
+    )
+    def linkup_loss_count(self: MccsTile) -> str:
+        """
+        Return the linkup loss count per FPGA.
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(self._attribute_state["linkup_loss_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="arp",
+    )
+    def arp(self: MccsTile) -> str:
+        """
+        Return the arp status.
+
+        :return: the arp status.
+        """
+        return json.dumps(self._attribute_state["arp"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="udp_status",
+    )
+    def udp_status(self: MccsTile) -> str:
+        """
+        Return the UDP status.
+
+        :return: the UDP status.
+        """
+        return json.dumps(self._attribute_state["udp_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="ddr_initialisation",
+    )
+    def ddr_initialisation(self: MccsTile) -> str:
+        """
+        Return the ddr initialisation status.
+
+        :return: the ddr initialisation status.
+        """
+        return json.dumps(self._attribute_state["ddr_initialisation"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="ddr_reset_counter",
+    )
+    def ddr_reset_counter(self: MccsTile) -> str:
+        """
+        Return the ddr reset count per FPGA.
+
+        :return: the ddr reset count per FPGA.
+        """
+        return json.dumps(self._attribute_state["ddr_reset_counter"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="f2f_soft_errors",
+    )
+    def f2f_soft_errors(self: MccsTile) -> str:
+        """
+        Return the f2f interface soft error count.
+
+        :return: the f2f interface soft error count.
+        """
+        return json.dumps(self._attribute_state["f2f_soft_errors"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="f2f_hard_errors",
+    )
+    def f2f_hard_errors(self: MccsTile) -> str:
+        """
+        Return the f2f interface hard error count.
+
+        :return: the f2f interface hard error count.
+        """
+        return json.dumps(self._attribute_state["f2f_hard_errors"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="resync_count",
+    )
+    def resync_count(self: MccsTile) -> str:
+        """
+        Return the resync count per FPGA.
+
+        :return: the resync count per FPGA.
+        """
+        return json.dumps(self._attribute_state["resync_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="lane_status",
+    )
+    def lane_status(self: MccsTile) -> str:
+        """
+        Return the lane status.
+
+        :return: the lane status.
+        """
+        return json.dumps(self._attribute_state["lane_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="link_status",
+    )
+    def link_status(self: MccsTile) -> str:
+        """
+        Return the link status.
+
+        :return: the link status.
+        """
+        return json.dumps(self._attribute_state["link_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="lane_error_count",
+    )
+    def lane_error_count(self: MccsTile) -> str:
+        """
+        Return the error count per lane, per core, per FPGA.
+
+        :return: the error count per lane, per core, per FPGA.
+        """
+        return json.dumps(self._attribute_state["lane_error_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="clock_managers",
+    )
+    def clock_managers(self: MccsTile) -> str:
+        """
+        Return the status of clock managers for both FPGAs.
+
+        :return: the status of clock managers for both FPGAs.
+        """
+        return json.dumps(self._attribute_state["clock_managers"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="clocks",
+    )
+    def clocks(self: MccsTile) -> str:
+        """
+        Return the status of clocks for both FPGAs.
+
+        :return: the status of clocks for both FPGAs.
+        """
+        return json.dumps(self._attribute_state["clocks"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="adc_sysref_counter",
+    )
+    def adc_sysref_counter(self: MccsTile) -> str:
+        """
+        Return the sysref_counter of all ADCs.
+
+        :return: the sysref_counter of all ADCs
+        """
+        return json.dumps(self._attribute_state["adc_sysref_counter"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="adc_sysref_timing_requirements",
+    )
+    def adc_sysref_timing_requirements(self: MccsTile) -> str:
+        """
+        Return the sysref_timing_requirements of all ADCs.
+
+        :return: the sysref_timing_requirements of all ADCs
+        """
+        return json.dumps(
+            self._attribute_state["adc_sysref_timing_requirements"].read()[0]
+        )
 
     @attribute(
         dtype="DevString",

@@ -2,6 +2,10 @@
 
 ## unreleased
 
+[MCCS-2059] Add monitoring point attributes to MccsTile.
+            Update ska-tango-util to 0.4.11
+            Rename 'CHANGELOG' to 'CHANGELOG.md'
+
 ## 0.15.0
 
 * [MCCS-2176] Update RAL Platform Spec

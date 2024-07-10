@@ -709,6 +709,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the pll status of all ADCs.
 
+        Expected: `True` if PLL locked and loss of lock flag is low
+            (lock has not fallen).
+
         :return: the pll status of all ADCs
         """
         return json.dumps(self._attribute_state["adc_pll_status"].read()[0])
@@ -720,6 +723,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def tile_beamformer_status(self: MccsTile) -> str:
         """
         Return the status of the tile beamformer.
+
+        Expected: `True` if status OK.
 
         :return: the status of the tile beamformer.
         """
@@ -733,6 +738,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the status of the station beamformer.
 
+        Expected: `True` if status OK.
+
         :return: the status of the station beamformer.
         """
         return json.dumps(self._attribute_state["station_beamformer_status"].read()[0])
@@ -744,6 +751,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def station_beamformer_error_count(self: MccsTile) -> str:
         """
         Return the station beamformer error count per FPGA.
+
+        Expected: 0 if no parity errors detected.
 
         :return: the station beamformer error count per FPGA.
         """
@@ -759,6 +768,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the crc error count per FPGA.
 
+        Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
+
         :return: the crc error count per FPGA.
         """
         return json.dumps(self._attribute_state["crc_error_count"].read()[0])
@@ -770,6 +781,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def bip_error_count(self: MccsTile) -> str:
         """
         Return the bip error count per FPGA.
+
+        Expected: 0 if no bit-interleaved parity (BIP) errors detected.
 
         :return: the bip error count per FPGA.
         """
@@ -783,6 +796,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the decode error count per FPGA.
 
+        Expected: 0 if errors have not been detected.
+            Note: This counter increments when at least one error is
+            detected in a clock cycle.
+
         :return: the decode error count per FPGA.
         """
         return json.dumps(self._attribute_state["decode_error_count"].read()[0])
@@ -794,6 +811,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def linkup_loss_count(self: MccsTile) -> str:
         """
         Return the linkup loss count per FPGA.
+
+        Expected: 0 if no link loss events are detected.
 
         :return: the linkup loss count per FPGA.
         """
@@ -807,6 +826,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the arp status.
 
+        Expected: `True` if table entries are valid and resolved.
+
         :return: the arp status.
         """
         return json.dumps(self._attribute_state["arp"].read()[0])
@@ -818,6 +839,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def udp_status(self: MccsTile) -> str:
         """
         Return the UDP status.
+
+        Expected: `True` if virtual lanes aligned and no BIP or CRC errors.
 
         :return: the UDP status.
         """
@@ -831,6 +854,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the ddr initialisation status.
 
+        Expected: True if DDR interface was successfully initialised.
+
         :return: the ddr initialisation status.
         """
         return json.dumps(self._attribute_state["ddr_initialisation"].read()[0])
@@ -842,6 +867,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def ddr_reset_counter(self: MccsTile) -> str:
         """
         Return the ddr reset count per FPGA.
+
+        Expected: 0 if no reset events have occurred.
 
         :return: the ddr reset count per FPGA.
         """
@@ -855,6 +882,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the f2f interface soft error count.
 
+        Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
+
         :return: the f2f interface soft error count.
         """
         return json.dumps(self._attribute_state["f2f_soft_errors"].read()[0])
@@ -866,6 +895,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def f2f_hard_errors(self: MccsTile) -> str:
         """
         Return the f2f interface hard error count.
+
+        Expected: 0 if no hard errors detected in FPGA-to-FPGA interface.
+            Hard errors require the interface to be reset. This likely means
+            reinitialising the TPM entirely due to the impact on beamformers.
 
         :return: the f2f interface hard error count.
         """
@@ -879,6 +912,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the resync count per FPGA.
 
+        Expected: 0 if no resync events have ocurred.
+
         :return: the resync count per FPGA.
         """
         return json.dumps(self._attribute_state["resync_count"].read()[0])
@@ -891,6 +926,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the lane status.
 
+        Expected: `True` if no errors detected on any lane.
+
         :return: the lane status.
         """
         return json.dumps(self._attribute_state["lane_status"].read()[0])
@@ -901,7 +938,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def link_status(self: MccsTile) -> str:
         """
-        Return the link status.
+        Return the jesd link status.
+
+        Expected: `True` if link up and synchronised.
 
         :return: the link status.
         """
@@ -915,6 +954,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the error count per lane, per core, per FPGA.
 
+        Expected: 0 for all lanes.
+
         :return: the error count per lane, per core, per FPGA.
         """
         return json.dumps(self._attribute_state["lane_error_count"].read()[0])
@@ -925,9 +966,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def clock_managers(self: MccsTile) -> str:
         """
-        Return the status of clock managers for both FPGAs.
+        Return the PLL lock status and lock loss counter for C2C, JESD and DSP.
 
-        :return: the status of clock managers for both FPGAs.
+        Expected: `(True, 0)` per interface if PLL locked and no lock loss events.
+
+        :return: the PLL lock status and lock loss counter for C2C, JESD and DSP.
         """
         return json.dumps(self._attribute_state["clock_managers"].read()[0])
 
@@ -937,9 +980,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def clocks(self: MccsTile) -> str:
         """
-        Return the status of clocks for both FPGAs.
+        Return the status of clocks for the interfaces of both FPGAs.
 
-        :return: the status of clocks for both FPGAs.
+        Expected: `True` per interface if status is OK.
+
+        :return: the status of clocks for the interfaces of both FPGAs.
         """
         return json.dumps(self._attribute_state["clocks"].read()[0])
 
@@ -950,6 +995,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def adc_sysref_counter(self: MccsTile) -> str:
         """
         Return the sysref_counter of all ADCs.
+
+        Expected: `True` if SYSREF counter is incrementing (SYSREF is present)
 
         :return: the sysref_counter of all ADCs
         """
@@ -963,6 +1010,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the sysref_timing_requirements of all ADCs.
 
+        Expected: `True` if setup and hold requirements for SYSREF are met.
+
         :return: the sysref_timing_requirements of all ADCs
         """
         return json.dumps(
@@ -975,9 +1024,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def qpll_status(self: MccsTile) -> str:
         """
-        Return the jesd qpll status for both FPGAs.
+        Return the QPLL lock status and lock loss counter.
 
-        :return: the jesd qpll status for both FPGAs
+        Expected: `True, 0` if QPLL locked and no lock loss events detected.
+        Increments for each lock loss event.
+
+        :return: the QPLL lock status and lock loss counter.
         """
         return json.dumps(self._attribute_state["qpll_status"].read()[0])
 
@@ -987,9 +1039,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def f2f_pll_status(self: MccsTile) -> str:
         """
-        Return the f2f pll status for both FPGAs.
+        Return the PLL lock status and lock loss counter.
 
-        :return: the f2f pll status for both FPGAs
+        Expected: `True, 0` if PLL locked and no lock loss events detected.
+        Increments for each lock loss event.
+
+        :return: the PLL lock status and lock loss counter.
         """
         return json.dumps(self._attribute_state["f2f_pll_status"].read()[0])
 
@@ -999,9 +1054,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def timing_pll_status(self: MccsTile) -> str:
         """
-        Return the timing pll status.
+        Return the PLL lock status and lock loss counter.
 
-        :return: the timing pll status
+        Expected: `True, 0` if PLL locked and no lock loss events detected.
+        Increments for each lock loss event.
+        These are combined readings for both PLLs within the AD9528.
+
+        :return: the PLL lock status and lock loss counter.
         """
         return json.dumps(self._attribute_state["timing_pll_status"].read()[0])
 

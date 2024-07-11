@@ -1462,20 +1462,28 @@ class SpsStationComponentManager(
         timeout = 30
         tick = 2
         for tile_trl, tile_proxy in self._tile_proxies.items():
-            last_time = time.time() + timeout
             tile = tile_proxy._proxy
             if tile is None:
                 self.logger.error(f"{tile_trl} proxy not set up.")
                 return ResultCode.FAILED
-            while time.time() < last_time:
+
+            deadline = time.time() + timeout
+            while time.time() < deadline:
                 self.logger.debug(f"Waiting on {tile_trl} ARP table.")
-                if tile.GetArpTable() != '{"0": [], "1": []}':
-                    break
+                # mitigation for SKB-427 - ephemeral exception in MccsTile.GetArpTable()
+                try:
+                    arp_table = tile.GetArpTable()
+                except tango.DevFailed as e:
+                    self.logger.warning(e)
+                else:
+                    if arp_table != '{"0": [], "1": []}':
+                        self.logger.debug(f"Got ARP table for {tile_trl}")
+                        break
                 time.sleep(tick)
-            if tile.GetArpTable() == '{"0": [], "1": []}':
+            else:
                 self.logger.error(f"Failed to populate ARP table of {tile_trl}")
                 return ResultCode.FAILED
-            self.logger.debug(f"Got ARP table for {tile_trl}")
+
         return ResultCode.OK
 
     @check_communicating

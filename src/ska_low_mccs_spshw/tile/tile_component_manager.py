@@ -244,8 +244,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.get_health_status,
                     publish=True,
                 )
-            case "TILE_INFO":
-                request = TileRequest("tile_info", self.tile.info, publish=True)
             case "ADC_RMS":
                 request = TileRequest("adc_rms", self.tile.get_adc_rms, publish=True)
             case "PLL_LOCKED":
@@ -608,6 +606,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
         self._subrack_says_tpm_power = event_value
+
+    def tile_info(self: TileComponentManager) -> dict[str, Any]:
+        """
+        Return information about the tile.
+
+        :return: information relevant to tile.
+
+        :raises TimeoutError: if lock not acquired in time.
+        """
+        with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
+            if acquired:
+                return self.tile.info
+        raise TimeoutError("Failed to acquire lock in time.")
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:

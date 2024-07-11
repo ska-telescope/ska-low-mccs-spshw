@@ -102,6 +102,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._health_model: TileHealthModel
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
+        self._info: dict[str, Any] = {}
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
@@ -158,7 +159,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "tile_id": "logicalTileId",
             "station_id": "stationId",
             "tile_beamformer_frame": "currentTileBeamformerFrame",
-            "tile_info": "tile_info",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -449,8 +449,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
-            if attribute_name == "tile_info":
-                self._convert_ip_to_str(attribute_value)
             if attribute_name == "tile_health_structure":
                 self.tile_health_structure = attribute_value
                 self._health_model.update_state(tile_health_structure=attribute_value)
@@ -645,7 +643,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: info available
         """
-        info: dict[str, Any] = self._attribute_state["tile_info"].read()[0]
+        self._info = self.component_manager.tile_info()
+        self._convert_ip_to_str(self._info)
+        info: dict[str, Any] = self._info
         if info != {}:
             # Prints out a nice table to the logs if populated.
             self.logger.info(str(self))
@@ -4003,7 +4003,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: Information string
         :rtype: str
         """
-        info = self._attribute_state["tile_info"].read()[0]
+        info = self._info
         return (
             f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
             f"Serial Number: {info['hardware']['SN']} \n"

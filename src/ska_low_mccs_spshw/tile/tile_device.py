@@ -615,8 +615,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             attr_value = json.dumps(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        if value_changed:
-            self.push_change_event(name, attr_value, attr_time, attr_quality)
+        if not value_changed:
+            return
+        self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
         # set_value must be called after push_change_event.

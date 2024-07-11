@@ -1509,7 +1509,7 @@ class SpsStationComponentManager(
                 assert proxy._proxy is not None
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
-                time.sleep(2)  # stagger initialisation by 2 seconds per tile
+                time.sleep(0.5)  # stagger initialisation by 0.5 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
@@ -1520,8 +1520,10 @@ class SpsStationComponentManager(
         last_time = time.time() + timeout
         while time.time() < last_time:
             time.sleep(tick)
-            states = self.tile_programming_state()
-            self.logger.debug(f"tileProgrammingState: {states}")
+            try:
+                states = self.tile_programming_state()
+            except tango.CommunicationFailed:
+                continue
             if all(state in ["Initialised", "Synchronised"] for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")

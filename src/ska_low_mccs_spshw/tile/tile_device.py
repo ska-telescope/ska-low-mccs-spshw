@@ -4121,7 +4121,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.SetFirmwareTemperatureThresholdsCommand`.
+            Implement :py:meth:`.MccsTile.SetFirmwareTemperatureThresholds` command.
 
             :param args: unspecified positional arguments. This should be empty and is
                 provided for type hinting only

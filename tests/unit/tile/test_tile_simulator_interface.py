@@ -71,7 +71,7 @@ def test_interface() -> None:
     Test that the TileSimulator interface is correct.
 
     The TileSimulator aims to mock the aavs-system.
-    This test is to ensure that the methods are avaliable
+    This test is to ensure that the methods are available
     and have the correct signatures.
     """
     # Omit select methods.

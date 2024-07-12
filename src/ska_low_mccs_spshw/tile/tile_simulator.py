@@ -1058,6 +1058,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Initialise tile.
@@ -1104,6 +1105,8 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param global_start_time: Sets internal TPM start time,
+            used to synchronize to other TPM's
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -1625,6 +1628,7 @@ class TileSimulator:
         nof_antennas: int,
         ref_epoch: int = -1,
         start_time: int | None = 0,
+        new_spead_header_format: bool = False,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1634,6 +1638,8 @@ class TileSimulator:
         :param nof_antennas: Number of antennas in the station
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
+        :param new_spead_header_format: Sets the CSP spead header to the version
+            specified in ICD ECP-230134
 
         :return: a bool representing if command executed without error.
         """
@@ -1859,7 +1865,7 @@ class TileSimulator:
         first_channel: int = 0,
         last_channel: int = 511,
         timestamp: int | None = None,
-        seconds: float = 0.2,
+        seconds: float = 0.4,
     ) -> None:
         """
         Send channelised data from the TPM.
@@ -1967,14 +1973,14 @@ class TileSimulator:
         self: TileSimulator,
         start_time: int | None = None,
         delay: int = 2,
-        tpm_start_time: int | None = None,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :param tpm_start_time: TPM will act as if it is
+        :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
         if start_time is None:
@@ -2179,6 +2185,8 @@ class TileSimulator:
             maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
         :param fpga2_alarm_threshold: A tuple containing the minimum and
             maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+
+        :raises ValueError: is the value set is not in the set range.
         """
         self.logger.info("Not yet complete")
 
@@ -2207,7 +2215,7 @@ class TileSimulator:
                     "board_alarm_threshold"
                 ] = board_alarm_threshold
             else:
-                self.logger.info(
+                raise ValueError(
                     f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
                 )
         if fpga1_alarm_threshold is not None:
@@ -2218,7 +2226,7 @@ class TileSimulator:
                     "fpga1_alarm_threshold"
                 ] = fpga1_alarm_threshold
             else:
-                self.logger.info(
+                raise ValueError(
                     f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
                 )
         if fpga2_alarm_threshold is not None:
@@ -2229,7 +2237,7 @@ class TileSimulator:
                     "fpga2_alarm_threshold"
                 ] = fpga2_alarm_threshold
             else:
-                self.logger.debug(
+                raise ValueError(
                     f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
                 )
         self.evaluate_mcu_action()

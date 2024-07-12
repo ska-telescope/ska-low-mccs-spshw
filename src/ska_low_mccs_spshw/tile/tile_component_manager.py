@@ -282,7 +282,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
             case "IS_BEAMFORMER_RUNNING":
                 request = TileRequest(
-                    "beamformer_running", self.tile.beamformer_is_running, publish=True
+                    "beamformer_running",
+                    self.tile.beamformer_is_running,
+                    publish=True,
                 )
             case "PHASE_TERMINAL_COUNT":
                 request = TileRequest(
@@ -2848,7 +2850,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         board_alarm_threshold: tuple[float, float] | None = None,
         fpga1_alarm_threshold: tuple[float, float] | None = None,
         fpga2_alarm_threshold: tuple[float, float] | None = None,
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Set the temperature thresholds.
 
@@ -2862,18 +2864,37 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
         :param fpga2_alarm_threshold: A tuple containing the minimum and
             maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+
+        :return: a tuple containing a ``ResultCode`` and string with information about
+            the execution outcome.
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                self.tile.set_tpm_temperature_thresholds(
-                    board_alarm_threshold=board_alarm_threshold,
-                    fpga1_alarm_threshold=fpga1_alarm_threshold,
-                    fpga2_alarm_threshold=fpga2_alarm_threshold,
-                )
+                try:
+                    self.tile.set_tpm_temperature_thresholds(
+                        board_alarm_threshold=board_alarm_threshold,
+                        fpga1_alarm_threshold=fpga1_alarm_threshold,
+                        fpga2_alarm_threshold=fpga2_alarm_threshold,
+                    )
+                except ValueError as ve:
+                    value_error_message = (
+                        f"Failed to set the tpm temperature thresholds {ve}"
+                    )
+                    self.logger.error(value_error_message)
+                    return (ResultCode.FAILED, value_error_message)
+                except Exception as e:  # pylint: disable=broad-except
+                    message = f"Unexpected exception raised {repr(e)}"
+                    self.logger.error(message)
+                    return (ResultCode.FAILED, message)
+
             else:
-                self.logger.warning(
+                lock_failed_message = (
                     "Failed to acquire lock for set_tpm_temperature_thresholds."
                 )
+                self.logger.warning(lock_failed_message)
+                return (ResultCode.FAILED, lock_failed_message)
+
+        return (ResultCode.OK, "Command executed.")
 
     # -----------------------------
     # Test generator methods

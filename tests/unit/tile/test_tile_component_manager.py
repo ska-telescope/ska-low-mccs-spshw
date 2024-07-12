@@ -1535,7 +1535,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             tile_component_manager.read_address(4, len(expected_read)) == expected_read
         )
 
-    def test_firmware_avaliable(
+    def test_firmware_available(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,

@@ -4090,7 +4090,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     class SetFirmwareTemperatureThresholdsCommand(FastCommand):
         """Class for handling the SetFirmwareTemperatureThresholds(argin) command."""
 
-        SUCCEEDED_MESSAGE = "Command executed."
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.tile.schemas",
@@ -4122,7 +4121,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             **kwargs: Any,
         ) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
+            Implement :py:meth:`.MccsTile.SetFirmwareTemperatureThresholdsCommand`.
 
             :param args: unspecified positional arguments. This should be empty and is
                 provided for type hinting only
@@ -4137,25 +4136,33 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold")
             fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold")
 
-            self._component_manager.set_tpm_temperature_thresholds(
+            return self._component_manager.set_tpm_temperature_thresholds(
                 board_alarm_threshold=board_temperature_threshold,
                 fpga1_alarm_threshold=fpga1_temperature_threshold,
                 fpga2_alarm_threshold=fpga2_temperature_threshold,
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetFirmwareTemperatureThresholds(
-        self: MccsTile, argin: list[float]
+        self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
         """
         Specify the temperature thresholds in the firmware.
 
         NOTE: This method may only be used in ENGINEERING mode.
-        fpga1_temperature_threshold.
 
-        :param argin: An array containing: Temperature parameter
-            with minimal and maximal thresholds.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * board_temperature_threshold - an array containing
+                a minimum and maximum value for the board temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
+            * fpga1_temperature_threshold - an array containing
+                a minimum and maximum value for the fpga1 temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
+            * fpga2_temperature_threshold - an array containing
+                a minimum and maximum value for the fpga2 temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

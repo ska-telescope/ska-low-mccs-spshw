@@ -46,11 +46,13 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
 
     :return: a mock MccsSubrack device builder.
     """
+    # Logical tile id is the zero based TPM number.
+    logical_tile_id = tile_id - 1
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
     builder.add_attribute("cspRounding", [2] * 384)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
-    builder.add_attribute("logicalTileId", tile_id)
+    builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
     return builder
 

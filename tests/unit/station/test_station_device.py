@@ -1461,7 +1461,8 @@ def test_AcquireDataForCalibration(
     for tile in mock_tile_device_proxies:
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
-    station_device.AcquireDataForCalibration(channel)
+
+    [_], [command_id] = station_device.AcquireDataForCalibration(channel)
     tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
 
     # This sleep is needed because AcquireDataForCalibration will
@@ -1501,3 +1502,5 @@ def test_AcquireDataForCalibration(
         json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
         == "CORRELATOR_DATA"
     )
+
+    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"

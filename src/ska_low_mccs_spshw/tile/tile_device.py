@@ -1006,11 +1006,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the board temperature
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["boardTemperature"].read()[0] is None:
-            temp = self.component_manager.board_temperature
-            self._attribute_state["boardTemperature"].update(temp, post=False)
-        return self._attribute_state["boardTemperature"].read()
+        return self._attribute_state["boardTemperature"].read()[0]
 
     @attribute(
         dtype="DevDouble",
@@ -1028,11 +1024,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 1
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["fpga1Temperature"].read()[0] is None:
-            temp = self.component_manager.fpga1_temperature
-            self._attribute_state["fpga1Temperature"].update(temp, post=False)
-        return self._attribute_state["fpga1Temperature"].read()
+        return self._attribute_state["fpga1Temperature"].read()[0]
 
     @attribute(
         dtype="DevDouble",
@@ -1050,11 +1042,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 2
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["fpga2Temperature"].read()[0] is None:
-            temp = self.component_manager.fpga2_temperature
-            self._attribute_state["fpga2Temperature"].update(temp, post=False)
-        return self._attribute_state["fpga2Temperature"].read()
+        return self._attribute_state["fpga2Temperature"].read()[0]
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
     def fpgasUnixTime(self: MccsTile) -> list[int]:

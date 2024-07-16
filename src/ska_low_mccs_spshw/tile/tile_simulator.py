@@ -2188,11 +2188,7 @@ class TileSimulator:
 
         :raises ValueError: is the value set is not in the set range.
         """
-        self.logger.info("Not yet complete")
 
-        # TODO: In this method we should be checking if we an overheating event is
-        # Happening. If it is we will need to mock the CPLD halting power to
-        # the overheating component.
         def _is_in_range_20_50(value: float) -> bool:
             """
             Return True if value is larger than 20 and less than 50.

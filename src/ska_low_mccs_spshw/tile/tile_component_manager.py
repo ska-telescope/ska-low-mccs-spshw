@@ -2734,7 +2734,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def voltage_mon(self: TileComponentManager) -> bool:
+    def voltage_mon(self: TileComponentManager) -> float:
         """
         Return the internal 5V supply of the TPM.
 
@@ -2749,7 +2749,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def fpga1_temperature(self: TileComponentManager) -> bool:
+    def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.
 
@@ -2766,7 +2766,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def fpga2_temperature(self: TileComponentManager) -> bool:
+    def fpga2_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 2.
 
@@ -2783,7 +2783,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def board_temperature(self: TileComponentManager) -> bool:
+    def board_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of the TPM.
 

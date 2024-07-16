@@ -147,6 +147,16 @@ class TileHealthRules(HealthRules):
                             f"{min_max[p]['min']} - {min_max[p]['max']}",
                         )
                     )
+                elif isinstance(min_max[p], list):
+                    states[p] = (
+                        (HealthState.OK, "")
+                        if list(p_state) == min_max[p]
+                        else (
+                            HealthState.FAILED,
+                            f'Monitoring point "{path}/{p}": '
+                            f"{list(p_state)} =/= {min_max[p]}",
+                        )
+                    )
                 else:
                     states[p] = (
                         (HealthState.OK, "")

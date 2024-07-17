@@ -10,6 +10,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import logging
 from typing import Any, Optional
 
 from ska_control_model import HealthState
@@ -61,8 +62,11 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
+        logging.debug("TileHealthModel: evaluate_health")
         tile_health, tile_report = super().evaluate_health()
+        logging.debug(f"super tile_health={tile_health} tile_report = {tile_report}")
         intermediate_healths = self.intermediate_healths
+        logging.debug(f"intermediate healths = {intermediate_healths}")
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,
@@ -70,9 +74,14 @@ class TileHealthModel(BaseHealthModel):
             HealthState.OK,
         ]:
             if health == tile_health:
+                logging.debug(f"matched: {health} super tile_report:{tile_report}")
                 return tile_health, tile_report
+            logging.debug(f"not matched eval {health}")
+            logging.debug(f"rule = {self._health_rules.rules[health]}")
             result, report = self._health_rules.rules[health](intermediate_healths)
+            logging.debug(f"result = {result} report = {report}")
             if result:
+                logging.debug(f"result true report = {report}")
                 return health, report
         return HealthState.UNKNOWN, "No rules matched"
 

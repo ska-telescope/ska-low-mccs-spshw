@@ -153,6 +153,10 @@ class TileHealthRules(HealthRules):
         debug(f"monitoring points={monitoring_points}")
         debug(f"min_max = {min_max}")
 
+        if not monitoring_points and "hardware" in min_max:
+            debug("empty monitoring points/hardware min_max")
+            return (HealthState.OK, "")
+
         for p, p_state in monitoring_points.items():
             debug(f"p={p} p_state={p_state}")
             if isinstance(p_state, dict):

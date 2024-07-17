@@ -150,6 +150,7 @@ class TileHealthRules(HealthRules):
                 self.logger.debug(msg)
 
         debug("in compute intermediate state")
+        debug(f"monitoring points={monitoring_points}")
         debug(f"min_max = {min_max}")
 
         for p, p_state in monitoring_points.items():
@@ -201,6 +202,8 @@ class TileHealthRules(HealthRules):
                             f"{p_state} =/= {min_max[p]}",
                         )
                     )
+
+        debug(f"returning states from states={states}")
         return self._combine_states(*states.values())
 
     def _combine_states(

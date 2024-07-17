@@ -20,7 +20,7 @@ from .tile_data import TileData
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any):
         """
         Initialise this device object.
 

@@ -10,7 +10,6 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import logging
 from typing import Any, Optional
 
 from ska_control_model import HealthState
@@ -44,8 +43,17 @@ class TileHealthModel(BaseHealthModel):
             health state.
         :param thresholds: the threshold parameters for the health rules
         """
+        self.logger = None
         self._health_rules = TileHealthRules(thresholds)
         super().__init__(health_changed_callback)
+
+    def set_logger(self, logger: Any) -> None:
+        """
+        Set logger for debugging.
+
+        :param logger: a logger.
+        """
+        self.logger = logger
 
     def evaluate_health(
         self: TileHealthModel,
@@ -62,11 +70,16 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-        logging.debug("TileHealthModel: evaluate_health")
+
+        def debug(msg: str) -> None:
+            if self.logger:
+                self.logger.debug(msg)
+
+        debug("TileHealthModel: evaluate_health")
         tile_health, tile_report = super().evaluate_health()
-        logging.debug(f"super tile_health={tile_health} tile_report = {tile_report}")
+        debug(f"super tile_health={tile_health} tile_report = {tile_report}")
         intermediate_healths = self.intermediate_healths
-        logging.debug(f"intermediate healths = {intermediate_healths}")
+        debug(f"intermediate healths = {intermediate_healths}")
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,
@@ -74,14 +87,14 @@ class TileHealthModel(BaseHealthModel):
             HealthState.OK,
         ]:
             if health == tile_health:
-                logging.debug(f"matched: {health} super tile_report:{tile_report}")
+                debug(f"matched: {health} super tile_report:{tile_report}")
                 return tile_health, tile_report
-            logging.debug(f"not matched eval {health}")
-            logging.debug(f"rule = {self._health_rules.rules[health]}")
+            debug(f"not matched eval {health}")
+            debug(f"rule = {self._health_rules.rules[health]}")
             result, report = self._health_rules.rules[health](intermediate_healths)
-            logging.debug(f"result = {result} report = {report}")
+            debug(f"result = {result} report = {report}")
             if result:
-                logging.debug(f"result true report = {report}")
+                debug(f"result true report = {report}")
                 return health, report
         return HealthState.UNKNOWN, "No rules matched"
 

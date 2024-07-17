@@ -20,6 +20,24 @@ from .tile_data import TileData
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
+    def __init__(self, *args, **kwargs):
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        super().__init__(*args, **kwargs)
+        self.logger = None
+
+    def set_logger(self: TileHealthRules, logger: Any) -> None:
+        """
+        Set logger for debugging.
+
+        :param logger: a logger.
+        """
+        self.logger = logger
+
     def unknown_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
@@ -126,7 +144,16 @@ class TileHealthRules(HealthRules):
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
+
+        def debug(msg: str) -> None:
+            if hasattr(self, "logger") and self.logger is not None:
+                self.logger.debug(msg)
+
+        debug("in compute intermediate state")
+        debug(f"min_max = {min_max}")
+
         for p, p_state in monitoring_points.items():
+            debug(f"p={p} p_state={p_state}")
             if isinstance(p_state, dict):
                 states[p] = self.compute_intermediate_state(
                     p_state, min_max[p], path=f"{path}/{p}"
@@ -138,6 +165,7 @@ class TileHealthRules(HealthRules):
                         f"Monitoring point {p} is None.",
                     )
                 elif isinstance(min_max[p], dict):
+                    debug("is dict")
                     states[p] = (
                         (HealthState.OK, "")
                         if min_max[p]["min"] <= p_state <= min_max[p]["max"]
@@ -148,6 +176,7 @@ class TileHealthRules(HealthRules):
                         )
                     )
                 elif isinstance(min_max[p], list):
+                    debug("is list")
                     states[p] = (
                         (HealthState.OK, "")
                         if list(p_state) == min_max[p]
@@ -157,7 +186,9 @@ class TileHealthRules(HealthRules):
                             f"{list(p_state)} =/= {min_max[p]}",
                         )
                     )
+                    debug(f"states[p] = {states[p]}")
                 else:
+                    debug("catch all")
                     states[p] = (
                         (HealthState.OK, "")
                         if p_state == min_max[p]

@@ -190,4 +190,8 @@ class TileHealthRules(HealthRules):
                 if state == HealthState.OK:
                     return state, ""
                 return state, " | ".join(filtered_results[state])
-        return HealthState.UNKNOWN, "No health state matches"
+
+        return (
+            HealthState.UNKNOWN,
+            f"No health state matches: args:{args} filtered results:{filtered_results}",
+        )

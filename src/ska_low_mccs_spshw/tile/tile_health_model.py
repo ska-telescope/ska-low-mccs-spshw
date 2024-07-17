@@ -54,6 +54,7 @@ class TileHealthModel(BaseHealthModel):
         :param logger: a logger.
         """
         self.logger = logger
+        self._health_rules.set_logger(logger)
 
     def evaluate_health(
         self: TileHealthModel,

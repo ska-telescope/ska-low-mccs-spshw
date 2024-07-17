@@ -256,6 +256,7 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
     :param daq: the DAQ receiver Tango device
     :param no_of_iters: number of times to iterate
     """
+    print(f"Daq state: {daq.state()}")
     status = json.loads(daq.DaqStatus())
     if status["Running Consumers"] == []:
         return

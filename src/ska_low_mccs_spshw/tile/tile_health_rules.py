@@ -128,9 +128,18 @@ class TileHealthRules(HealthRules):
         states: dict[str, tuple[HealthState, str]] = {}
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
-                states[p] = self.compute_intermediate_state(
-                    p_state, min_max[p], path=f"{path}/{p}"
-                )
+                if p in min_max:
+                    states[p] = self.compute_intermediate_state(
+                        p_state, min_max[p], path=f"{path}/{p}"
+                    )
+                else:
+                    # TODO: MCCS-2196 - Updating the tile_health_attribute
+                    # in aavs-system can cause a key error to be raised.
+                    print(
+                        f"\nMonitoring point {p} is not being evaluated as part of the "
+                        "tiles health.\n"
+                    )
+                    continue
             else:
                 if p_state is None and min_max[p] is not None:
                     states[p] = (

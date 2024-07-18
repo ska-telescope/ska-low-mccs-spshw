@@ -192,6 +192,7 @@ def unconnected_tpm_read_request_iterator() -> Iterator[str]:
     while True:
         yield "CONNECT"
         yield "CHECK_CPLD_COMMS"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def unknown_tpm_read_request_iterator() -> Iterator[str]:
@@ -210,6 +211,7 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
@@ -228,6 +230,7 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def programmed_tpm_read_request_iterator() -> Iterator[str]:
@@ -254,6 +257,7 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
         yield "PLL_LOCKED"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def initialised_tpm_read_request_iterator() -> Iterator[str]:
@@ -308,6 +312,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "BEAMFORMER_TABLE"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def synchronised_tpm_read_request_iterator() -> Iterator[str]:
@@ -364,6 +369,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_BEAMFORMER_FRAME"
         yield "TILE_INFO"
+        yield "CHECK_BOARD_TEMPERATURE"
 
 
 class TileRequestProvider:  # pylint: disable=too-many-instance-attributes

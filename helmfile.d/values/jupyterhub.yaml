@@ -6,6 +6,9 @@
 # e.g 192.168.49.2/jupyterhub/
 hub:
   baseUrl: /jupyterhub
+  db:
+    pvc:
+      storage: 2Gi
 ingress:
   enabled: true
   ingressClassName: nginx

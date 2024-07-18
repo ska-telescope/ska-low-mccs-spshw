@@ -1641,6 +1641,11 @@ class TileSimulator:
         :param new_spead_header_format: Sets the CSP spead header to the version
             specified in ICD ECP-230134
 
+        NOTE: param ``new_spead_header_format`` has been nenamed ``ska_spead_header``.
+        This method was missed in the current version of aavs-system. Once this change
+        is merged the test ``test_tile_simulator_interface`` should complain forcing us
+        to correct the name.
+
         :return: a bool representing if command executed without error.
         """
         if self._is_spead_header_write_successful:

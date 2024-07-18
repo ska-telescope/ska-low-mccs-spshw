@@ -204,19 +204,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "boardTemperature": AttributeManager(
                     functools.partial(self.post_change_event, "boardTemperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "boardTemperature"
+                        self.shutdown_on_max_alarm, "boardTemperature"
                     ),
                 ),
                 "fpga1Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga1Temperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "fpga1Temperature"
+                        self.shutdown_on_max_alarm, "fpga1Temperature"
                     ),
                 ),
                 "fpga2Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga2Temperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "fpga2Temperature"
+                        self.shutdown_on_max_alarm, "fpga2Temperature"
                     ),
                 ),
                 "alarms": AlarmAttributeManager(
@@ -576,9 +576,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.push_change_event("healthState", health)
             self.push_archive_event("healthState", health)
 
-    def self_shutdown(self: MccsTile, attr_name: str) -> None:
+    def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """
-        Turn off TPM.
+        Turn off TPM when attribute in question is in max_alarm state.
 
         :param attr_name: the name of the attribute causing the shutdown.
         """

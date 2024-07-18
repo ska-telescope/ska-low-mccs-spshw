@@ -721,10 +721,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["adc_pll_status"].read()[0])
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="tile_beamformer_status",
     )
-    def tile_beamformer_status(self: MccsTile) -> str:
+    def tile_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the tile beamformer.
 
@@ -732,18 +732,18 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.tile_beamformer_status
-            'true'
+            True
 
 
         :return: the status of the tile beamformer.
         """
-        return json.dumps(self._attribute_state["tile_beamformer_status"].read()[0])
+        return self._attribute_state["tile_beamformer_status"].read()[0]
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="station_beamformer_status",
     )
-    def station_beamformer_status(self: MccsTile) -> str:
+    def station_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the station beamformer.
 
@@ -751,11 +751,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.station_beamformer_status
-            'true'
+            True
 
         :return: the status of the station beamformer.
         """
-        return json.dumps(self._attribute_state["station_beamformer_status"].read()[0])
+        return self._attribute_state["station_beamformer_status"].read()[0]
 
     @attribute(
         dtype="DevString",
@@ -854,10 +854,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["linkup_loss_count"].read()[0])
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="arp",
     )
-    def arp(self: MccsTile) -> str:
+    def arp(self: MccsTile) -> bool:
         """
         Return the arp status.
 
@@ -865,17 +865,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.arp
-            'true'
+            True
 
         :return: the arp status.
         """
-        return json.dumps(self._attribute_state["arp"].read()[0])
+        return self._attribute_state["arp"].read()[0]
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="udp_status",
     )
-    def udp_status(self: MccsTile) -> str:
+    def udp_status(self: MccsTile) -> bool:
         """
         Return the UDP status.
 
@@ -883,17 +883,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.udp_status
-            'false'
+            False
 
         :return: the UDP status.
         """
-        return json.dumps(self._attribute_state["udp_status"].read()[0])
+        return self._attribute_state["udp_status"].read()[0]
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="ddr_initialisation",
     )
-    def ddr_initialisation(self: MccsTile) -> str:
+    def ddr_initialisation(self: MccsTile) -> bool:
         """
         Return the ddr initialisation status.
 
@@ -901,11 +901,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.ddr_initialisation
-            'true'
+            True
 
         :return: the ddr initialisation status.
         """
-        return json.dumps(self._attribute_state["ddr_initialisation"].read()[0])
+        return self._attribute_state["ddr_initialisation"].read()[0]
 
     @attribute(
         dtype="DevString",
@@ -926,10 +926,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["ddr_reset_counter"].read()[0])
 
     @attribute(
-        dtype="DevString",
+        dtype="DevShort",
         label="f2f_soft_errors",
     )
-    def f2f_soft_errors(self: MccsTile) -> str:
+    def f2f_soft_errors(self: MccsTile) -> int:
         """
         Return the f2f interface soft error count.
 
@@ -937,17 +937,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             tile.f2f_soft_errors
-            '0'
+            0
 
         :return: the f2f interface soft error count.
         """
-        return json.dumps(self._attribute_state["f2f_soft_errors"].read()[0])
+        return self._attribute_state["f2f_soft_errors"].read()[0]
 
     @attribute(
-        dtype="DevString",
+        dtype="DevShort",
         label="f2f_hard_errors",
     )
-    def f2f_hard_errors(self: MccsTile) -> str:
+    def f2f_hard_errors(self: MccsTile) -> int:
         """
         Return the f2f interface hard error count.
 
@@ -957,11 +957,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.f2f_hard_errors
-            '0'
+            0
 
         :return: the f2f interface hard error count.
         """
-        return json.dumps(self._attribute_state["f2f_hard_errors"].read()[0])
+        return self._attribute_state["f2f_hard_errors"].read()[0]
 
     @attribute(
         dtype="DevString",
@@ -982,10 +982,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["resync_count"].read()[0])
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="lane_status",
     )
-    def lane_status(self: MccsTile) -> str:
+    def lane_status(self: MccsTile) -> bool:
         """
         Return the lane status.
 
@@ -993,17 +993,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.lane_status
-            'true'
+            True
 
         :return: the lane status.
         """
-        return json.dumps(self._attribute_state["lane_status"].read()[0])
+        return self._attribute_state["lane_status"].read()[0]
 
     @attribute(
-        dtype="DevString",
+        dtype="DevBoolean",
         label="link_status",
     )
-    def link_status(self: MccsTile) -> str:
+    def link_status(self: MccsTile) -> bool:
         """
         Return the jesd link status.
 
@@ -1011,11 +1011,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :example:
             >>> tile.link_status
-            'true'
+            True
 
         :return: the link status.
         """
-        return json.dumps(self._attribute_state["link_status"].read()[0])
+        return self._attribute_state["link_status"].read()[0]
 
     @attribute(
         dtype="DevString",

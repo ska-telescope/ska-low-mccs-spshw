@@ -707,10 +707,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def adc_pll_status(self: MccsTile) -> str:
         """
-        Return the pll status of all ADCs.
+        Return the pll status of all 16 ADCs.
 
         Expected: `True` if PLL locked and loss of lock flag is low
             (lock has not fallen).
+
+        :example:
+            >>> tile.adc_pll_status
+            '{"ADC0": [true, true], "ADC1": [true, true], ..., "ADC15": [true, true]}'
 
         :return: the pll status of all ADCs
         """
@@ -726,6 +730,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` if status OK.
 
+        :example:
+            >>> tile.tile_beamformer_status
+            'true'
+
+
         :return: the status of the tile beamformer.
         """
         return json.dumps(self._attribute_state["tile_beamformer_status"].read()[0])
@@ -740,6 +749,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` if status OK.
 
+        :example:
+            >>> tile.station_beamformer_status
+            'true'
+
         :return: the status of the station beamformer.
         """
         return json.dumps(self._attribute_state["station_beamformer_status"].read()[0])
@@ -753,6 +766,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the station beamformer error count per FPGA.
 
         Expected: 0 if no parity errors detected.
+
+        :example:
+            >>> tile.station_beamformer_error_count
+            '{"FPGA0": 0, "FPGA1": 0}'
 
         :return: the station beamformer error count per FPGA.
         """
@@ -770,6 +787,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: 0 if no Cyclic Redundancy Check (CRC) errors detected.
 
+        :example:
+            >>> tile.crc_error_count
+            '{"FPGA0": 0, "FPGA1": 0}'
+
         :return: the crc error count per FPGA.
         """
         return json.dumps(self._attribute_state["crc_error_count"].read()[0])
@@ -783,6 +804,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the bip error count per FPGA.
 
         Expected: 0 if no bit-interleaved parity (BIP) errors detected.
+
+        :example:
+            >>> tile.bip_error_count
+            '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0},
+            "FPGA1": {"lane0": 6, "lane1": 6, "lane2": 5, "lane3": 7}}'
 
         :return: the bip error count per FPGA.
         """
@@ -800,6 +826,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Note: This counter increments when at least one error is
             detected in a clock cycle.
 
+        :example:
+            >>> tile.decode_error_count
+            '{"FPGA0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0},
+            "FPGA1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0}}'
+
         :return: the decode error count per FPGA.
         """
         return json.dumps(self._attribute_state["decode_error_count"].read()[0])
@@ -813,6 +844,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the linkup loss count per FPGA.
 
         Expected: 0 if no link loss events are detected.
+
+        :example:
+            >>> tile.linkup_loss_count
+            '{"FPGA0": 0, "FPGA1": 0}'
 
         :return: the linkup loss count per FPGA.
         """
@@ -828,6 +863,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` if table entries are valid and resolved.
 
+        :example:
+            >>> tile.arp
+            'true'
+
         :return: the arp status.
         """
         return json.dumps(self._attribute_state["arp"].read()[0])
@@ -841,6 +880,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the UDP status.
 
         Expected: `True` if virtual lanes aligned and no BIP or CRC errors.
+
+        :example:
+            >>> tile.udp_status
+            'false'
 
         :return: the UDP status.
         """
@@ -856,6 +899,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: True if DDR interface was successfully initialised.
 
+        :example:
+            >>> tile.ddr_initialisation
+            'true'
+
         :return: the ddr initialisation status.
         """
         return json.dumps(self._attribute_state["ddr_initialisation"].read()[0])
@@ -870,6 +917,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: 0 if no reset events have occurred.
 
+        :example:
+            >>> tile.ddr_reset_counter
+            '{"FPGA0": 0, "FPGA1": 0}'
+
         :return: the ddr reset count per FPGA.
         """
         return json.dumps(self._attribute_state["ddr_reset_counter"].read()[0])
@@ -883,6 +934,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the f2f interface soft error count.
 
         Expected: 0 if no soft errors detected in FPGA-to-FPGA interface.
+
+        :example:
+            tile.f2f_soft_errors
+            '0'
 
         :return: the f2f interface soft error count.
         """
@@ -900,6 +955,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Hard errors require the interface to be reset. This likely means
             reinitialising the TPM entirely due to the impact on beamformers.
 
+        :example:
+            >>> tile.f2f_hard_errors
+            '0'
+
         :return: the f2f interface hard error count.
         """
         return json.dumps(self._attribute_state["f2f_hard_errors"].read()[0])
@@ -913,6 +972,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the resync count per FPGA.
 
         Expected: 0 if no resync events have ocurred.
+
+        :example:
+            >>> tile.resync_count
+            '{"FPGA0": 0, "FPGA1": 0}'
 
         :return: the resync count per FPGA.
         """
@@ -928,6 +991,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` if no errors detected on any lane.
 
+        :example:
+            >>> tile.lane_status
+            'true'
+
         :return: the lane status.
         """
         return json.dumps(self._attribute_state["lane_status"].read()[0])
@@ -941,6 +1008,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the jesd link status.
 
         Expected: `True` if link up and synchronised.
+
+        :example:
+            >>> tile.link_status
+            'true'
 
         :return: the link status.
         """
@@ -956,6 +1027,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: 0 for all lanes.
 
+        :example:
+            >>> tile.lane_error_count
+            '{"FPGA0": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
+            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},
+            "Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
+            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}},
+            "FPGA1": {"Core0": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
+            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0},
+            "Core1": {"lane0": 0, "lane1": 0, "lane2": 0, "lane3": 0,
+            "lane4": 0, "lane5": 0, "lane6": 0, "lane7": 0}}}'
+
         :return: the error count per lane, per core, per FPGA.
         """
         return json.dumps(self._attribute_state["lane_error_count"].read()[0])
@@ -969,6 +1051,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the PLL lock status and lock loss counter for C2C, JESD and DSP.
 
         Expected: `(True, 0)` per interface if PLL locked and no lock loss events.
+
+        :example:
+            >>> tile.clock_managers
+            '{"FPGA0": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],
+            "DSP_MMCM": [true, 0]},
+            "FPGA1": {"C2C_MMCM": [true, 0], "JESD_MMCM": [true, 0],
+            "DSP_MMCM": [true, 0]}}'
 
         :return: the PLL lock status and lock loss counter for C2C, JESD and DSP.
         """
@@ -984,6 +1073,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` per interface if status is OK.
 
+        :example:
+            >>> tile.clocks
+            '{"FPGA0": {"JESD": true, "DDR": true, "UDP": true},
+            "FPGA1": {"JESD": true, "DDR": true, "UDP": true}}'
+
         :return: the status of clocks for the interfaces of both FPGAs.
         """
         return json.dumps(self._attribute_state["clocks"].read()[0])
@@ -998,6 +1092,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True` if SYSREF counter is incrementing (SYSREF is present)
 
+        :example:
+            >>> tile.adc_sysref_counter
+            '{"ADC0": true, "ADC1": true, "ADC2": true, ..., "ADC15": true}'
+
         :return: the sysref_counter of all ADCs
         """
         return json.dumps(self._attribute_state["adc_sysref_counter"].read()[0])
@@ -1011,6 +1109,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Return the sysref_timing_requirements of all ADCs.
 
         Expected: `True` if setup and hold requirements for SYSREF are met.
+
+        :example:
+            >>> tile.adc_sysref_timing_requirements
+            '{"ADC0": true, "ADC1": true, "ADC2": true, ..., "ADC15": true}'
 
         :return: the sysref_timing_requirements of all ADCs
         """
@@ -1029,6 +1131,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Expected: `True, 0` if QPLL locked and no lock loss events detected.
         Increments for each lock loss event.
 
+        :example:
+            >>> tile.qpll_status
+            '{"FPGA0": [true, 0], "FPGA1": [true, 0]}'
+
         :return: the QPLL lock status and lock loss counter.
         """
         return json.dumps(self._attribute_state["qpll_status"].read()[0])
@@ -1043,6 +1149,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         Expected: `True, 0` if PLL locked and no lock loss events detected.
         Increments for each lock loss event.
+
+        :example:
+            >>> tile.f2f_pll_status
+            '[true, 0]'
 
         :return: the PLL lock status and lock loss counter.
         """
@@ -1060,6 +1170,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Increments for each lock loss event.
         These are combined readings for both PLLs within the AD9528.
 
+        :example:
+            >>> tile.timing_pll_status
+            '[true, 0]'
+
         :return: the PLL lock status and lock loss counter.
         """
         return json.dumps(self._attribute_state["timing_pll_status"].read()[0])
@@ -1071,6 +1185,27 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     def tile_info(self: MccsTile) -> str:
         """
         Return all the tile info available.
+
+        :example:
+            >>> tile.tile_info
+            '{"hardware": {"ip_address_eep": "10.0.10.2",
+            "netmask_eep": "255.255.255.0", "gateway_eep": "255.255.255.255",
+            "SN": "0850423050008", "PN": "iTPM_ADU_2.0",
+            "bios": "v?.?.? (CPLD_0x23092511-MCU_0xb000011a_0x20230209_0x0)",
+            "BOARD_MODE": "NO-ADA", "LOCATION": "65535:255:255",
+            "HARDWARE_REV": "v2.0.1a", "DDR_SIZE_GB": "4"},
+            "fpga_firmware": {"design": "tpm_test", "build": "2004",
+            "compile_time": "2024-05-29 02:00:36.158315",
+            "compile_user": "gitlab-runner", "compile_host":
+            "te7homer linux-4.15.0-213-generic-x86_64-with-ubuntu-18.04-bionic",
+            "git_branch": "detached head", "git_commit": "", "version": ""},
+            "network": {"1g_ip_address": "10.132.0.46",
+            "1g_mac_address": "fc:0f:e7:e6:43:6c", "1g_netmask": "255.255.255.0",
+            "1g_gateway": "10.132.0.254", "40g_ip_address_p1": "10.130.0.108",
+            "40g_mac_address_p1": "62:00:0A:82:00:6C", "40g_gateway_p1": "10.130.0.126",
+            "40g_netmask_p1": "255.255.255.128", "40g_ip_address_p2": "0.0.0.0",
+            "40g_mac_address_p2": "02:00:00:00:00:00",
+            "40g_gateway_p2": "10.130.0.126", "40g_netmask_p2": "255.255.255.128"}}'
 
         :return: info available
         """

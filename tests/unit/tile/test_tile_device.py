@@ -1020,11 +1020,21 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
+        print(f"Running command {command_name}")
         [[task_status], [command_id]] = getattr(tile_device, command_name)(command_args)
 
+        print(f"Command {command_name} assertions")
         assert task_status == TaskStatus.IN_PROGRESS
         assert command_name in command_id.split("_")[-1]
-
+        #print(f"Command id {command_id}")
+        #print(change_event_callbacks["lrc_command"]._call_queue.get()[1][0].attr_value.value)
+        print((command_id, "STAGING"))
+        assert change_event_callbacks["lrc_command"]._call_queue.get()[1][0].attr_value.value == (command_id, "STAGING")
+        #print(change_event_callbacks["lrc_command"]._call_queue.get())
+        #print(change_event_callbacks["lrc_command"]._call_queue.get())
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "STAGING")
+        )
         change_event_callbacks["lrc_command"].assert_change_event(
             (command_id, "QUEUED")
         )
@@ -1093,6 +1103,9 @@ class TestMccsTileCommands:
             json.dumps({"delay": 5})
         )
 
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "STAGING")
+        )
         change_event_callbacks["lrc_command"].assert_change_event(
             (command_id, "QUEUED")
         )
@@ -1602,8 +1615,8 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.adminMode == AdminMode.OFFLINE
 
-        tile_device.adminMode = AdminMode.MAINTENANCE
-        assert tile_device.adminMode == AdminMode.MAINTENANCE
+        tile_device.adminMode = AdminMode.ENGINEERING
+        assert tile_device.adminMode == AdminMode.ENGINEERING
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()

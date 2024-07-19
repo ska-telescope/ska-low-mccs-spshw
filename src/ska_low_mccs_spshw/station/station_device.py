@@ -125,7 +125,6 @@ class SpsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -183,7 +182,6 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
             self.AntennaConfigURI,
             self.logger,
-            self._max_workers,
             self._communication_state_changed,
             self._component_state_changed,
             self._health_model.tile_health_changed,

@@ -57,7 +57,6 @@ class _SubrackProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -68,8 +67,6 @@ class _SubrackProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -84,7 +81,6 @@ class _SubrackProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -127,7 +123,6 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -139,8 +134,6 @@ class _TileProxy(DeviceComponentManager):
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -156,7 +149,6 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -228,7 +220,6 @@ class _DaqProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -239,8 +230,6 @@ class _DaqProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -255,7 +244,6 @@ class _DaqProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -347,7 +335,6 @@ class SpsStationComponentManager(
         csp_ingest_ip: ipaddress.IPv4Address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -371,8 +358,6 @@ class SpsStationComponentManager(
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -417,7 +402,6 @@ class SpsStationComponentManager(
                 station_id,
                 logical_tile_id,
                 logger,
-                max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
@@ -430,7 +414,6 @@ class SpsStationComponentManager(
                 subrack_fqdn,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
@@ -444,7 +427,6 @@ class SpsStationComponentManager(
                 self._daq_trl,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, self._daq_trl
                 ),
@@ -507,7 +489,6 @@ class SpsStationComponentManager(
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            max_workers=1,
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,

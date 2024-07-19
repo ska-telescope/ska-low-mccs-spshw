@@ -121,7 +121,7 @@ not included.
 Low level firmware access
 --------------------------
 These commands are used for accessing hardware functions which are not normally used 
-and should be available only in maintenance mode. These commands allow to 
+and should be available only in engineering mode. These commands allow to 
 re-initialise the FPGA, to reprogram the FPGAs with different personalities, and
 to access individual hardware registers. 
 

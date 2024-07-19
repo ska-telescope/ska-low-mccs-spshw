@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_SetTemperatureThresholds.json",
+    "title": "MccsTile SetTemperatureThresholds schema",
+    "description": "Schema for MccsTile's SetTemperatureThresholds command",
+    "type": "object",
+    "properties": {
+        "board_temperature_threshold": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "minimum": 20,
+                "maximum": 50
+            },
+            "minItems": 2,
+            "maxItems": 2
+        },
+        "fpga1_temperature_threshold": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "minimum": 20,
+                "maximum": 50
+            },
+            "minItems": 2,
+            "maxItems": 2
+        },
+        "fpga2_temperature_threshold": {
+            "type": "array",
+            "items": {
+                "type": "number",
+                "minimum": 20,
+                "maximum": 50
+            },
+            "minItems": 2,
+            "maxItems": 2
+        }
+    }
+}

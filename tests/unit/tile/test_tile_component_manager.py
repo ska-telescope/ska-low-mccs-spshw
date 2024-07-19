@@ -95,6 +95,10 @@ class TestTileComponentManager:
             case PowerState.ON:
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=2,
+                )
+                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
                 )
             case PowerState.UNKNOWN:
@@ -159,6 +163,10 @@ class TestTileComponentManager:
         match power_state:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -198,6 +206,10 @@ class TestTileComponentManager:
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
+                callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
                             "I2C_access_alm": 0,
@@ -219,7 +231,10 @@ class TestTileComponentManager:
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 # We start in UNKNOWN so no need to assert
-
+                callbacks["attribute_state"].assert_call(
+                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    lookahead=4,
+                )
                 callbacks["attribute_state"].assert_call(
                     **{
                         "global_status_alarms": {
@@ -545,7 +560,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=2
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
@@ -1520,7 +1535,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             tile_component_manager.read_address(4, len(expected_read)) == expected_read
         )
 
-    def test_firmware_avaliable(
+    def test_firmware_available(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
@@ -2868,7 +2883,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=2,
+            lookahead=3,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -2878,7 +2893,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=3
         )
         return dynamic_tile_component_manager
 

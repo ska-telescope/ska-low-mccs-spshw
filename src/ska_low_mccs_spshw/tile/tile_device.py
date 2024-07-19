@@ -40,7 +40,11 @@ from ska_tango_base.commands import (
 )
 from tango.server import attribute, command, device_property
 
-from .attribute_managers import AttributeManager, BoolAttributeManager
+from .attribute_managers import (
+    AlarmAttributeManager,
+    AttributeManager,
+    BoolAttributeManager,
+)
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
 from .tpm_status import TpmStatus
@@ -148,7 +152,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "is_programmed": "isProgrammed",
             "beamformer_table": "beamformerTable",
             "io": "io",
-            "alarms": "alarms",
             "dsp": "dsp",
             "voltages": "voltages",
             "temperatures": "temperatures",
@@ -185,6 +188,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
             "station_beamformer_error_count": "station_beamformer_error_count",
+            "core_communication": "coreCommunicationStatus",
+            "global_status_alarms": "alarms",
+            "board_temperature": "boardTemperature",
         }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
@@ -200,11 +206,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - ppsPresent: tango does not have good ALARMs for Boolean
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
+        # - alarms: alarms raised by firmware are collected in a dictionary.
+        # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
+                    initial_value=True,
                 ),
                 "stationId": AttributeManager(
                     functools.partial(self.post_change_event, "stationId"),
@@ -221,20 +230,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "boardTemperature": AttributeManager(
                     functools.partial(self.post_change_event, "boardTemperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "boardTemperature"
+                        self.shutdown_on_max_alarm, "boardTemperature"
                     ),
                 ),
                 "fpga1Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga1Temperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "fpga1Temperature"
+                        self.shutdown_on_max_alarm, "fpga1Temperature"
                     ),
                 ),
                 "fpga2Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga2Temperature"),
                     alarm_handler=functools.partial(
-                        self.self_shutdown, "fpga2Temperature"
+                        self.shutdown_on_max_alarm, "fpga2Temperature"
                     ),
+                ),
+                "alarms": AlarmAttributeManager(
+                    functools.partial(self.post_change_event, "alarms"),
                 ),
             }
         )
@@ -243,9 +255,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "ppsPresent": ["timing", "pps", "status"],
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
-            "boardTemperature": ["temperatures", "board"],
             "io": ["io"],
-            "alarms": ["alarms"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
             "temperatures": ["temperatures"],
@@ -327,6 +337,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            (
+                "SetFirmwareTemperatureThresholds",
+                self.SetFirmwareTemperatureThresholdsCommand,
+            ),
             ("GetRegisterList", self.GetRegisterListCommand),
             ("ReadRegister", self.ReadRegisterCommand),
             ("WriteRegister", self.WriteRegisterCommand),
@@ -617,9 +631,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.push_change_event("healthState", health)
             self.push_archive_event("healthState", health)
 
-    def self_shutdown(self: MccsTile, attr_name: str) -> None:
+    def shutdown_on_max_alarm(self: MccsTile, attr_name: str) -> None:
         """
-        Turn off TPM.
+        Turn off TPM when attribute in question is in max_alarm state.
 
         :param attr_name: the name of the attribute causing the shutdown.
         """
@@ -630,12 +644,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.logger.warning(
                     f"Attribute {attr_name} changed to {attr_value}, "
                     "this is above maximum alarm, Shutting down TPM."
-                )
-                self.component_manager.off()
-            if attr.is_min_alarm():
-                self.logger.warning(
-                    f"Attribute {attr_name} changed to {attr_value}, "
-                    "this is below minimum alarm, Shutting down TPM."
                 )
                 self.component_manager.off()
         except Exception as e:  # pylint: disable=broad-except
@@ -1305,13 +1313,17 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype="DevString",
         label="alarms",
     )
-    def alarms(self: MccsTile) -> str:
+    def alarms(self: MccsTile) -> tuple[str, float, tango.AttrQuality]:
         """
         Return the TPM's alarm status.
 
         :return: the TPM's alarm status
         """
-        return json.dumps(self._attribute_state["alarms"].read()[0])
+        return (
+            json.dumps(self._attribute_state["alarms"].read()[0]),
+            self._attribute_state["alarms"].read()[1],
+            self._attribute_state["alarms"].read()[2],
+        )
 
     @attribute(
         dtype="DevString",
@@ -1547,11 +1559,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the board temperature
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["boardTemperature"].read()[0] is None:
-            temp = self.component_manager.board_temperature
-            self._attribute_state["boardTemperature"].update(temp, post=False)
-        return self._attribute_state["boardTemperature"].read()
+        return self._attribute_state["boardTemperature"].read()[0]
 
     @attribute(
         dtype="DevDouble",
@@ -1569,11 +1577,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 1
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["fpga1Temperature"].read()[0] is None:
-            temp = self.component_manager.fpga1_temperature
-            self._attribute_state["fpga1Temperature"].update(temp, post=False)
-        return self._attribute_state["fpga1Temperature"].read()
+        return self._attribute_state["fpga1Temperature"].read()[0]
 
     @attribute(
         dtype="DevDouble",
@@ -1591,11 +1595,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 2
         """
-        # Force a read if we have no cached value yet
-        if self._attribute_state["fpga2Temperature"].read()[0] is None:
-            temp = self.component_manager.fpga2_temperature
-            self._attribute_state["fpga2Temperature"].update(temp, post=False)
-        return self._attribute_state["fpga2Temperature"].read()
+        return self._attribute_state["fpga2Temperature"].read()[0]
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
     def fpgasUnixTime(self: MccsTile) -> list[int]:
@@ -1701,6 +1701,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
             )
         return self._attribute_state["currentTileBeamformerFrame"].read()[0]
+
+    @attribute(dtype="DevString")
+    def coreCommunicationStatus(self: MccsTile) -> str | None:
+        """
+        Return status of connection to TPM, CPLD and FPGAs.
+
+        Return True if communication is OK else False
+
+        :example:
+
+        >>> core_communication_status = tile_proxy.coreCommunicationStatus
+        >>> print(core_communication_status)
+        >>> {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
+
+        :return: dictionary containing if the CPLD and FPGAs are
+            connectable or None if not yet polled.
+        """
+        return json.dumps(self._attribute_state["coreCommunicationStatus"].read()[0])
 
     @attribute(dtype="DevLong")
     def currentFrame(self: MccsTile) -> int:
@@ -4609,6 +4627,101 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
             f" \n"
         )
+
+    class SetFirmwareTemperatureThresholdsCommand(FastCommand):
+        """Class for handling the SetFirmwareTemperatureThresholds(argin) command."""
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_SetTemperatureThresholds.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new SetFirmwareTemperatureThresholdsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator(
+                "SetFirmwareTemperatureThresholds", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetFirmwareTemperatureThresholdsCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetFirmwareTemperatureThresholds` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            board_temperature_threshold = kwargs.get("board_temperature_threshold")
+            fpga1_temperature_threshold = kwargs.get("fpga1_temperature_threshold")
+            fpga2_temperature_threshold = kwargs.get("fpga2_temperature_threshold")
+
+            return self._component_manager.set_tpm_temperature_thresholds(
+                board_alarm_threshold=board_temperature_threshold,
+                fpga1_alarm_threshold=fpga1_temperature_threshold,
+                fpga2_alarm_threshold=fpga2_temperature_threshold,
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetFirmwareTemperatureThresholds(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Specify the temperature thresholds in the firmware.
+
+        NOTE: This method may only be used in ENGINEERING mode.
+
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * board_temperature_threshold - an array containing
+                a minimum and maximum value for the board temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
+            * fpga1_temperature_threshold - an array containing
+                a minimum and maximum value for the fpga1 temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
+            * fpga2_temperature_threshold - an array containing
+                a minimum and maximum value for the fpga2 temperature threshold.
+                Must be in range (20 - 50 (Degree Celcius))
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        :raises PermissionError: If this command is executed when not in
+            ENGINEERING mode.
+
+        :example:
+
+        >>> thresholds = {"board_temperature_threshold": [30, 45]}
+        >>> json_thresholds = json.loads(thresholds)
+        >>> tile_device.SetFirmwareTemperatureThresholds(json_thresholds)
+        """
+        if self._admin_mode != AdminMode.ENGINEERING:
+            raise PermissionError("Must be in engineering mode to use this command.")
+        handler = self.get_command_object("SetFirmwareTemperatureThresholds")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
 
 # ----------

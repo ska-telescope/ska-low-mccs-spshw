@@ -123,7 +123,9 @@ class TileHealthRules(HealthRules):
         states = {}
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
-                states[p] = self.compute_intermediate_state(p_state, min_max[p])
+                sub_min_max = min_max.get(p)
+                if sub_min_max:  # skip monitor points without a min_max
+                    states[p] = self.compute_intermediate_state(p_state, sub_min_max)
             else:
                 if p_state is None and min_max[p] is not None:
                     states[p] = HealthState.UNKNOWN

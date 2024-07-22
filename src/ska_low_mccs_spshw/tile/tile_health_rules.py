@@ -185,8 +185,6 @@ class TileHealthRules(HealthRules):
                                 f"{p_state} =/= {min_max[p]}",
                             )
                         )
-            except KeyError as ke:
-                print(f"Caught KeyError: {ke}")
         return self._combine_states(*states.values())
 
     def _combine_states(

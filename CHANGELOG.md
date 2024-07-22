@@ -2,6 +2,68 @@
 
 ## unreleased
 
+[MCCS-2059] Add monitoring point attributes to MccsTile.
+            Update ska-tango-util to 0.4.11
+            Rename 'CHANGELOG' to 'CHANGELOG.md'
+
+## 0.15.0
+
+* [MCCS-2176] Update RAL Platform Spec
+* [MCCS-2044]: Fix automerge issues
+* [MCCS-2044] Add AcquireDataForCalibration method to SpsStation.
+* [MCCS-1530] Add functional testing for health computation and aggregation
+* [MCCS-2180] CSP ingest IP
+* [MCCS-2153] Add MCCS schemas to TelModel
+* [MCCS-2048] [MCCS-2114] Add InitialiseStation to the self check list + set src IP before initialise
+* [SPRTS-101]: prevent subrack from staying in UNKNOWN when polling fails
+* [MCCS-2116]: Fix timeout error in spsStation.StopDataTransmission
+* [MCCS-2121]: Update platform spec
+* [MCCS-2117] Update ska-low-mccs-daq-interface to use gRPC wait_for_ready flag.
+* [MCCS-2041] remove references to pyfabil tpm
+* [MCCS-2120] Support DAQ data sync
+* [MCCS-2109]: Reject calls to SpsStation.Off.
+* [MCCS-2041]: Add configurable shutdown temperatures.
+* [MCCS-2111]: Correct TileProgrammingState pushing.
+* [MCCS-2113]: Remove the postgresql dependency. No longer used.
+* [MCCS-2048] StationSelfCheckManager
+* [MCCS-2021]: Changes to get mccs deployed at RAL
+* [MCCS-2108] Fix docs
+* [MCCS-2107] remove deprecated environments
+* [MCCS-1507] update test to use tile simulator
+* [MCCS-2054] [MCCS-2035] Remove calibration devices
+* [MCCS-2103] gateway support
+* [MCCS-2037] Update Tile temperatures to push ALARM
+* [MCCS-1507] update tile simulator interface
+* [MCCS-2060] Add eda-config.yaml with all spshw attributes.
+* [MCCS-2095] Fix antenna mapping bug
+* [SPRTS-126]: expose missing health structures and fix default health parameters
+* [MCCS-2089] Add PyPi as source for Poetry and update daq image used.
+* [MCCS-2040] Link functional tests to requirements
+* [MCCS-2084] Fix cluster domain configuration issue.
+* [MCCS-1793] Update aavs system tag
+* [MCCS-1883] Add bandpass attribute to sps station
+* [MCCS-2070] string keys
+* [MCCS-2076] Update ska-low-mccs-common dependency
+* [MCCS-1988] Add SpsStation.UpdateCalibration()
+* [MCCS-1998] - Update spsstation task_callback with command result
+* [MCCS-2008] Fix Tile Simulator crash in timing thread
+* [MCCS-2056] Make antenna config as agnostic as possible
+* [MCCS-2066] station address handling
+* [MCCS-1995] -dirty fix
+* [MCCS-1780] Cannot stop beam data
+* [MCCS-1982] Implement single 40G connection in MCCS
+* [MCCS-1995] values schema
+* [MCCS-1970] Fix tile state discovery and add test
+* [MCCS-1961] Update rounding attributes
+* [MCCS-1986] Fix delay mapping
+* [MCCS-1986] Fix adc_data
+* [MCCS-1551] Functional tests for the bandpass monitor process
+* [MCCS-1983] Map antenna order to channel order in SpsStation.LoadPointingDelays
+* [MCCS-1793] Fix pps-delay bug. It was being used for a correction and a delay incorrectly
+* [MCCS-1978] infra-managed Low ITF credentials
+* [MCCS-1925] Update ppsPresent to a DevBoolean, the EDA is configured for a boolean.
+* [MCCS-2176] Update RAL platform spec to 0.5.0
+
 ## 0.14.0
 
 * [MCCS-1957] Support deployment namespace override

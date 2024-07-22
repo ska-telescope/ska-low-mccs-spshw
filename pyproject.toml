@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.14.0"
+version = "0.15.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -10,14 +10,16 @@ documentation = "https://developer.skatelescope.org/projects/ska-low-mccs-spshw"
 [[tool.poetry.source]]
 name = 'ska-nexus'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
+secondary=true
 [[tool.poetry.source]]
 name = "PyPI-public"
 url = 'https://pypi.org/simple'
+secondary=true
 
 [tool.poetry.dependencies]
 python = "~3.10"  
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", branch="master", subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", branch="master"}
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="a91a4a5ba537d2a1de82c9748f2642f1d47e02de" , subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "9f1bb23a7d6a8a81e536396071120a734704ff2d" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "9.4.2"
@@ -25,8 +27,8 @@ PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^0.20.0"
-ska-control-model = "^0.3.1"
-ska-low-mccs-common = "^0.10.0"
+ska-control-model = "^0.3.4"
+ska-low-mccs-common = "~0.10.2"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"
@@ -34,8 +36,11 @@ annotated-types = "^0.6.0"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 typing-extensions = "^4.7.1"
 future = "^0.18.3"
-# ska-low-mccs-daq-interface = "^0.1.1"
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
+jsonschema = "~4.22.0"
+referencing = "~0.28.4"
+jsonschema-specifications = "~2023.03.6"
+ska-low-mccs-daq-interface = "^0.2.0"
+astropy="5.3.4"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -84,8 +89,7 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-# ska-low-mccs-daq-interface = "^0.1.1"
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="main" }
+ska-low-mccs-daq-interface = "^0.2.0"
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]

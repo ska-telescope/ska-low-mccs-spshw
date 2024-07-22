@@ -67,7 +67,7 @@ def get_daq_name(station_label: str | None = None) -> str:
 
     :return: the DAQ Tango device name
     """
-    return f"low-mccs/daqreceiver/{station_label or DEFAULT_STATION_LABEL}"
+    return f"low-mccs/calibration-daq/{station_label or DEFAULT_STATION_LABEL}"
 
 
 class SpsTangoTestHarnessContext:
@@ -369,6 +369,19 @@ class SpsTangoTestHarness:
         """
         self._tango_test_harness.add_mock_device(
             get_tile_name(tile_id, station_label=self._station_label), mock
+        )
+
+    def add_mock_daq_device(
+        self: SpsTangoTestHarness,
+        mock: unittest.mock.Mock,
+    ) -> None:
+        """
+        Add a mock daq Tango device to this test harness.
+
+        :param mock: the mock to be used as a mock daq device.
+        """
+        self._tango_test_harness.add_mock_device(
+            get_daq_name(self._station_label), mock
         )
 
     def set_daq_instance(

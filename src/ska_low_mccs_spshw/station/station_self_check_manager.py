@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING, Optional
 
 from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
+from .tests.test_station_initialise import InitialiseStation
 from .tests.test_tango import BasicTangoTest
 
 __all__ = ["SpsStationSelfCheckManager"]
@@ -59,7 +60,7 @@ class SpsStationSelfCheckManager:
                 subrack_trls=list(self._subrack_trls),
                 daq_trl=self._daq_trl,
             )
-            for tpm_test in [BasicTangoTest]
+            for tpm_test in [BasicTangoTest, InitialiseStation]
         ]
         self._tpm_test_names = [tpm_test.__class__.__name__ for tpm_test in tpm_tests]
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {

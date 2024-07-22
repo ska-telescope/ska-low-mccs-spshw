@@ -12,12 +12,14 @@ from __future__ import annotations  # allow forward references in type hints
 
 import copy
 import functools
+import json
 import logging
 import random
 import re
 import threading
 import time
-from typing import Any, Callable, List, Optional, TypeVar, Union, cast
+from ipaddress import IPv4Address
+from typing import Any, Callable, Final, List, TypeVar, Union, cast
 
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
@@ -224,12 +226,59 @@ class StationBeamformer:
         return self._is_running
 
 
+class MockTpmFirmwareInformation:
+    """Simulator for firmware information."""
+
+    def __init__(self: MockTpmFirmwareInformation) -> None:
+        self._reset_information()
+
+    def _reset_information(self: MockTpmFirmwareInformation) -> None:
+        """Reset firmware information."""
+        self._major = -1
+        self._minor = -1
+        self._host = "<mock_host>"
+        self._design = "<mock_design>"
+        self._user = "<mock_user>"
+        self._time = "<mock_time>"
+        self._build = "<mock_build>"
+        self._board = "<mock_board>"
+        self._git_branch = "<mock_branch>"
+        self._git_commit = "<mock_commit>"
+        self._git_dirty_flag = "<mock_dirty_flag>"
+        self._firmware_version = "<mock_firmware_version"
+
+    def get_design(self: MockTpmFirmwareInformation) -> str:
+        return self._design
+
+    def get_build(self: MockTpmFirmwareInformation) -> str:
+        return self._build
+
+    def get_time(self: MockTpmFirmwareInformation) -> str:
+        return self._time
+
+    def get_user(self: MockTpmFirmwareInformation) -> str:
+        return self._user
+
+    def get_host(self: MockTpmFirmwareInformation) -> str:
+        return self._host
+
+    def get_git_branch(self: MockTpmFirmwareInformation) -> str:
+        return self._git_branch
+
+    def get_git_commit(self: MockTpmFirmwareInformation) -> str:
+        return self._git_commit
+
+    def get_firmware_version(self: MockTpmFirmwareInformation) -> str:
+        return self._firmware_version
+
+
 class MockTpm:
     """Simulator for a pyfabil::Tpm class."""
 
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
+    PLL_LOCKED_REGISTER: Final = 0xE7
     _register_map: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -287,6 +336,158 @@ class MockTpm:
         self.preadu = [PreAdu(logger)] * 2
         self._station_beamf = [self.beam1, self.beam2]
         self._address_map: dict[str, int] = {}
+        self.tpm_firmware_information = MockTpmFirmwareInformation()
+        self._40g_configuration: dict[str, Any] = {}
+
+    def get_board_info(self: MockTpm) -> dict[str, Any]:
+        """
+        Retrieve TPM board information.
+
+        :return: A dictionary of board info.
+        """
+        board_info = {
+            "ip_address": self.get_ip(),
+            "netmask": self.get_netmask(),
+            "gateway": self.get_gateway(),
+            "ip_address_eep": self.get_ip_eep(),
+            "netmask_eep": self.get_netmask_eep(),
+            "gateway_eep": self.get_gateway_eep(),
+            "MAC": self.get_mac(),
+            "SN": self.get_serial_number(),
+            "PN": self.get_part_number(),
+            "bios": self.get_bios(),
+        }
+        return board_info
+
+    def get_ip(self: MockTpm) -> str:
+        """
+        Return a mock ip string.
+
+        :return: A string ip.
+        """
+        return "123.123.123.100"
+
+    def get_netmask(self: MockTpm) -> str:
+        """
+        Return a mock netmask string.
+
+        :return: A string netmask.
+        """
+        return "123.123.123.101"
+
+    def get_gateway(self: MockTpm) -> str:
+        """
+        Return a mock gateway string.
+
+        :return: A string gateway.
+        """
+        return "123.123.123.102"
+
+    def get_ip_eep(self: MockTpm) -> str:
+        """
+        Return a mock ip_eep string.
+
+        :return: A string ip_eep.
+        """
+        return "123.123.123.103"
+
+    def get_netmask_eep(self: MockTpm) -> str:
+        """
+        Return a mock netmask_eep string.
+
+        :return: A string netmask_eep.
+        """
+        return "123.123.123.104"
+
+    def get_gateway_eep(self: MockTpm) -> str:
+        """
+        Return a mock gateway_eep string.
+
+        :return: A string gateway_eep.
+        """
+        return "123.123.123.105"
+
+    def get_mac(self: MockTpm) -> str:
+        """
+        Return a mock mac address string.
+
+        :return: A string mac address.
+        """
+        return "e1:13:9a:7d:18:7d"
+
+    def get_serial_number(self: MockTpm) -> str:
+        """
+        Return a mock serial_number string.
+
+        :return: A string serial_number.
+        """
+        return "1234567890"
+
+    def get_part_number(self: MockTpm) -> str:
+        """
+        Return a mock part_number string.
+
+        :return: A string part_number.
+        """
+        return "0987654321"
+
+    def get_bios(self: MockTpm) -> str:
+        """
+        Return a mock bios string.
+
+        :return: A string bios version.
+        """
+        return "TileSimulatorBios"
+
+    def get_40g_core_configuration(
+        self: MockTpm,
+        core_id: int = -1,
+        arp_table_entry: int = 0,
+    ) -> dict[str, Any]:
+        """
+        Return a 40G configuration.
+
+        :param core_id: id of the core for which a configuration is to
+            be returned. Defaults to -1, in which case all core
+            configurations are returned, defaults to -1
+        :param arp_table_entry: ARP table entry to use
+
+        :return: core configuration or list of core configurations or none
+        """
+        # Fake some values. In reality we'd query the TPM here.
+        self._40g_configuration = {
+            "core_id": core_id,
+            "arp_table_entry": arp_table_entry,
+            "src_mac": self._get_src_mac(),
+            "src_ip": self._get_src_ip(),
+            "dst_ip": self._get_dst_ip(),
+            "src_port": self._get_src_port(),
+            "dst_port": self._get_dst_port(),
+            "netmask": self._get_netmask(),
+            "gateway_ip": self._get_gateway_ip(),
+        }
+        return self._40g_configuration
+
+    def _get_src_mac(self: MockTpm) -> int:
+        return 107752315813889
+
+    def _get_src_ip(self: MockTpm) -> int:
+        return 167774722
+
+    def _get_dst_ip(self: MockTpm) -> int:
+        return 167774723
+
+    def _get_src_port(self: MockTpm) -> int:
+        return 1234
+
+    def _get_dst_port(self: MockTpm) -> int:
+        return 5678
+
+    def _get_netmask(self: MockTpm) -> int:
+        return 4294967040
+
+    def _get_gateway_ip(self: MockTpm) -> int:
+        return 167774721
 
     def find_register(
         self: MockTpm,
@@ -345,6 +546,103 @@ class MockTpm:
         """
         return self.preadu
 
+    @property
+    def info(self: MockTpm) -> dict[str, Any]:
+        """
+        Report MockTPM information.
+
+        :return: the info
+        """
+        # TODO: Update this with representative data and types rather
+        # than just arbitrary strings.
+        communication_status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
+        info: dict[str, Any] = {}
+        info["hardware"] = self.get_board_info()
+        info["hardware"]["HARDWARE_REV"] = "<current hardware revision>"
+        info["hardware"]["BOARD_MODE"] = "<current board mode>"
+        info["hardware"]["LOCATION"] = "<current hardware location>"
+        info["hardware"]["DDR_SIZE_GB"] = "<current hardware DDR size>"
+
+        # Skip this as we're using strings for now.
+        # # Convert EEP information to IPv4Address type
+        info["hardware"]["ip_address_eep"] = IPv4Address(
+            info["hardware"]["ip_address_eep"]
+        )
+        info["hardware"]["netmask_eep"] = IPv4Address(info["hardware"]["netmask_eep"])
+        info["hardware"]["gateway_eep"] = IPv4Address(info["hardware"]["gateway_eep"])
+        # Populate Firmware Build information from first FPGA
+        info["fpga_firmware"] = {}
+        info["fpga_firmware"]["design"] = self.tpm_firmware_information.get_design()
+        info["fpga_firmware"]["build"] = self.tpm_firmware_information.get_build()
+        info["fpga_firmware"][
+            "version"
+        ] = self.tpm_firmware_information.get_firmware_version()
+        info["fpga_firmware"]["compile_time"] = self.tpm_firmware_information.get_time()
+        info["fpga_firmware"]["compile_user"] = self.tpm_firmware_information.get_user()
+        info["fpga_firmware"]["compile_host"] = self.tpm_firmware_information.get_host()
+        info["fpga_firmware"][
+            "git_branch"
+        ] = self.tpm_firmware_information.get_git_branch()
+        info["fpga_firmware"][
+            "git_commit"
+        ] = self.tpm_firmware_information.get_git_commit()
+        # Dictionary manipulation, move 1G network information
+        info["network"] = {}
+        info["network"]["1g_ip_address"] = IPv4Address(info["hardware"]["ip_address"])
+        info["network"]["1g_mac_address"] = info["hardware"]["MAC"]
+        info["network"]["1g_netmask"] = IPv4Address(info["hardware"]["netmask"])
+        info["network"]["1g_gateway"] = IPv4Address(info["hardware"]["gateway"])
+        del info["hardware"]["ip_address"]
+        del info["hardware"]["MAC"]
+        del info["hardware"]["netmask"]
+        del info["hardware"]["gateway"]
+        # TODO: What should we do about this bit? Where to check comms in sim?
+        # Add 40G network information, using ARP table entry for station beam packets
+        if communication_status["FPGA0"] and communication_status["FPGA1"]:
+            config_40g_1 = self.get_40g_core_configuration(arp_table_entry=0, core_id=0)
+            config_40g_2 = self.get_40g_core_configuration(arp_table_entry=0, core_id=1)
+            if config_40g_1 is not None:
+                info["network"]["40g_ip_address_p1"] = IPv4Address(
+                    config_40g_1["src_ip"]
+                )
+                mac = config_40g_1["src_mac"]
+                info["network"]["40g_mac_address_p1"] = ":".join(
+                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+                )
+                info["network"]["40g_gateway_p1"] = IPv4Address(
+                    config_40g_1["gateway_ip"]
+                )
+                info["network"]["40g_netmask_p1"] = IPv4Address(config_40g_1["netmask"])
+
+            if config_40g_2 is not None:
+                info["network"]["40g_ip_address_p2"] = IPv4Address(
+                    config_40g_2["src_ip"]
+                )
+                mac = config_40g_2["src_mac"]
+                info["network"]["40g_mac_address_p2"] = ":".join(
+                    f"{(mac >> (i * 8)) & 0xFF:02X}" for i in reversed(range(6))
+                )
+                info["network"]["40g_gateway_p2"] = IPv4Address(
+                    config_40g_2["gateway_ip"]
+                )
+                info["network"]["40g_netmask_p2"] = IPv4Address(config_40g_2["netmask"])
+        else:
+            info["network"].update(
+                dict.fromkeys(
+                    [
+                        "40g_ip_address_p1",
+                        "40g_mac_address_p1",
+                        "40g_gateway_p1",
+                        "40g_netmask_p1",
+                        "40g_ip_address_p2",
+                        "40g_mac_address_p2",
+                        "40g_gateway_p2",
+                        "40g_netmask_p2",
+                    ]
+                )
+            )
+        return info
+
     def write_register(
         self: MockTpm,
         register: int | str,
@@ -370,7 +668,7 @@ class MockTpm:
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Optional[Any]:
+    ) -> Any:
         """
         Get register value.
 
@@ -381,12 +679,13 @@ class MockTpm:
         :return: Values
         """
         if register == ("pll", 0x508):
-            return 0xE7
+            return self.PLL_LOCKED_REGISTER
         if isinstance(register, int):
             register = hex(register)
+
         return self._register_map.get(register)
 
-    def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
+    def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """
         Get address value.
 
@@ -411,7 +710,7 @@ class MockTpm:
             key = str(address + i)
             self._address_map.update({key: value})
 
-    def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
+    def __getitem__(self: MockTpm, key: Any) -> Any:
         """
         Check if the specified key is a memory address or register name.
 
@@ -424,6 +723,8 @@ class MockTpm:
             key = hex(key)
         if key == "" or key == "unknown":
             raise LibraryError(f"Unknown register: {key}")
+        if key == ("pll", 1288):
+            return self.PLL_LOCKED_REGISTER
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value: Any) -> None:
@@ -520,6 +821,15 @@ class TileSimulator:
     TILE_MONITORING_POINTS = copy.deepcopy(TileData.get_tile_defaults())
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
+    TPM_TEMPERATURE_THRESHOLDS = {
+        "board_warning_threshold": (-273.0, 90.0),
+        "board_alarm_threshold": (-273.0, 90.0),
+        "fpga1_warning_threshold": (-273.0, 90.0),
+        "fpga1_alarm_threshold": (-273.0, 90.0),
+        "fpga2_warning_threshold": (-273.0, 90.0),
+        "fpga2_alarm_threshold": (-273.0, 90.0),
+    }
+
     FIRMWARE_NAME = "itpm_v1_6.bit"
     FIRMWARE_LIST = [
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
@@ -527,8 +837,8 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 1
-    TILE_ID = 0
     CSP_SPEAD_FORMAT = "SKA"
+    TILE_ID = 1
 
     def __init__(
         self: TileSimulator,
@@ -551,6 +861,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
@@ -579,6 +890,10 @@ class TileSimulator:
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
+        self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
+        self._is_cpld_connectable = True
+        self._is_fpga1_connectable = True
+        self._is_fpga2_connectable = True
         self._global_status_alarms: dict[str, int] = {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
@@ -653,6 +968,15 @@ class TileSimulator:
         """
         return copy.deepcopy(self._global_status_alarms)
 
+    @connected
+    def get_temperature(self: TileSimulator) -> float:
+        """
+        Get the board temperature.
+
+        :return: a float with the board temperature.
+        """
+        return self._tile_health_structure["temperatures"]["board"]
+
     @check_mocked_overheating
     @connected
     def initialise_beamformer(
@@ -685,17 +1009,23 @@ class TileSimulator:
         if bitfile is None:
             self.logger.error("Provided bitfile is None type")
             raise LibraryError("bitfile is None type")
-
+        # Every time we reprogram the temperature thresholds get reset.
+        self._tpm_temperature_thresholds = {
+            "board_warning_threshold": (-273.0, 90.0),
+            "board_alarm_threshold": (-273.0, 90.0),
+            "fpga1_warning_threshold": (-273.0, 90.0),
+            "fpga1_alarm_threshold": (-273.0, 90.0),
+            "fpga2_warning_threshold": (-273.0, 90.0),
+            "fpga2_alarm_threshold": (-273.0, 90.0),
+        }
+        self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
     @check_mocked_overheating
     @connected
-    def erase_fpga(self: TileSimulator, force: bool = True) -> None:
-        """
-        Erase the fpga firmware.
-
-        :param force: force the erase.
-        """
+    def erase_fpgas(self: TileSimulator) -> None:
+        """Erase the fpga firmware."""
+        self.logger.error("erasing in tile sim")
         assert self.tpm
         self.tpm._is_programmed = False
 
@@ -777,8 +1107,8 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
-        :param global_start_time: TPM will act as if it is
-            started at this time (seconds)
+        :param global_start_time: Sets internal TPM start time,
+            used to synchronize to other TPM's
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -796,8 +1126,138 @@ class TileSimulator:
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
-        time.sleep(random.randint(1, 2))
+        time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
+
+    @connected
+    def find_register(
+        self: TileSimulator, string: str = "", display: bool = False, info: bool = False
+    ) -> list[None | RegisterInfo]:
+        """
+        Return register information from a provided search string.
+
+        Note: this is a wrapper method of 'pyfabil.tpm.find_register'
+
+        :param string: Regular expression to search against
+        :param display: True to output result to console
+        :param info: print a message with additional information if True.
+
+        :return: List of found registers
+        """
+        assert self.tpm
+        return self.tpm.find_register(string, display, info)
+
+    @connected
+    def check_pll_locked(
+        self: TileSimulator,
+    ) -> bool:
+        """
+        Check in hardware if PLL is locked.
+
+        :return: True if PLL is locked.
+        """
+        assert self.tpm
+        pll_status = self.tpm["pll", 0x508]  # type: ignore
+        return pll_status in [0xF2, 0xE7]
+
+    @connected
+    def get_beamformer_table(self: TileSimulator, fpga_id: int = 0) -> list[list[int]]:
+        """
+        Return the beamformer table.
+
+        Returns a table with the following entries for each 8-channel block:
+        >> 0: start physical channel (64-440)
+        >> 1: beam_index:  subarray beam used for this region, range [0:48)
+        >> 2: subarray_id: ID of the subarray [1:48]
+        >>     Here is the same for all channels
+        >> 3: subarray_logical_channel: Logical channel in the subarray
+        >>     Here equal to the station logical channel
+        >> 4: subarray_beam_id: ID of the subarray beam
+        >> 5: substation_id: ID of the substation
+        >> 6: aperture_id:  ID of the aperture (station*100+substation?)
+
+        :param fpga_id: A parameter to specify what fpga we want
+            to return the beamformer table for. (Default fpga_id = 0)
+
+        Note: this is a wrapper method of 'pyfabil.tpm.station_beamf.get_channel_table'
+
+        :return: Nx7 table with one row every 8 channels
+        """
+        assert self.tpm
+        return self.tpm.station_beamf[fpga_id].get_channel_table()
+
+    @connected
+    def define_channel_table(
+        self: TileSimulator, region_array: list[list[int]], fpga_id: None | int = None
+    ) -> bool:
+        """
+        Set frequency regions.
+
+        Regions are defined in a 2-d array, for a maximum of 16 regions.
+        Each element in the array defines a region, with the form:
+        >>    [start_ch, nof_ch, beam_index, <optional>
+        >>    subarray_id, subarray_logical_ch, aperture_id, substation_id]
+        >>    0: start_ch:    region starting channel (currently must be a
+        >>        multiple of 2, LS bit discarded)
+        >>    1: nof_ch:      size of the region: must be multiple of 8 chans
+        >>    2: beam_index:  subarray beam used for this region, range [0:48)
+        >>    3: subarray_id: ID of the subarray [1:48]
+        >>    4: subarray_logical_channel: Logical channel in the subarray
+        >>        it is the same for all (sub)stations in the subarray
+        >>        Defaults to station logical channel
+        >>    5: subarray_beam_id: ID of the subarray beam
+        >>        Defaults to beam index
+        >>    6: substation_ID: ID of the substation
+        >>        Defaults to 0 (no substation)
+        >>    7: aperture_id:  ID of the aperture (station*100+substation?)
+        >>        Defaults to
+
+        Total number of channels must be <= 384
+        The routine computes the arrays beam_index, region_off, region_sel,
+        and the total number of channels nof_chans,
+        and programs it in the hardware.
+        Optional parameters are placeholders for firmware supporting
+        more than 1 subarray. Current firmware supports only one subarray
+        and substation, so corresponding IDs must be the same in each row
+
+        :param fpga_id: the id of the fpga we want to define the channel table for.
+            if None both are configured.
+        :param region_array: bidimensional array, one row for each
+                        spectral region, 3 or 8 items long
+
+        :return: True if OK
+        """
+        assert self.tpm
+        if fpga_id is None:
+            # define in both fpga.
+            self.tpm.station_beamf[0].define_channel_table(region_array)
+            self.tpm.station_beamf[1].define_channel_table(region_array)
+            return True
+
+        self.tpm.station_beamf[fpga_id].define_channel_table(region_array)
+        return True
+
+    @connected
+    def get_tpm_temperature_thresholds(
+        self: TileSimulator,
+    ) -> dict[str, tuple[float, float]]:
+        """
+        Return a dictionary of temperature thresholds.
+
+        return structure looks like:
+        >>{
+        >>    "board_warning_threshold": (min, max),
+        >>    "board_alarm_threshold"  : (min, max),
+        >>    "fpga1_warning_threshold": (min, max),
+        >>    "fpga1_alarm_threshold": (min, max),
+        >>    "fpga2_warning_threshold": (min, max),
+        >>    "fpga2_alarm_threshold": (min, max),
+        >>}
+
+        :return: A dictionary containing the temperature thresholds.
+        :rtype: dict
+        """
+        return self._tpm_temperature_thresholds
 
     @check_mocked_overheating
     @connected
@@ -841,6 +1301,7 @@ class TileSimulator:
         return self._pps_delay
 
     @check_mocked_overheating
+    @connected
     def is_programmed(self: TileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
@@ -850,6 +1311,34 @@ class TileSimulator:
         if self.tpm is None:
             return False
         return self.tpm._is_programmed
+
+    @property
+    def tile_info(self: TileSimulator) -> str:
+        """
+        Report tile firmware information.
+
+        :returns: A string of tile information.
+        """
+        self.logger.debug("getting tile info")
+        # return str(self)
+        assert self.tpm is not None
+        info: dict[str, Any] = self.tpm.info
+        self._convert_ip_to_str(info)
+        # Prints out a nice table to the logs.
+        self.logger.info(str(self))
+        return json.dumps(info)
+
+    def _convert_ip_to_str(self: TileSimulator, nested_dict: dict[str, Any]) -> None:
+        """
+        Convert IPAddresses to str in (possibly nested) dict.
+
+        :param nested_dict: A (possibly nested) dict with IPAddresses to convert.
+        """
+        for k, v in nested_dict.items():
+            if isinstance(v, IPv4Address):
+                nested_dict[k] = str(v)
+            elif isinstance(v, dict):
+                self._convert_ip_to_str(v)
 
     @check_mocked_overheating
     @connected
@@ -907,7 +1396,7 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict | list[dict] | None:
+    ) -> dict[str, Any] | list[dict] | None:
         """
         Return a 40G configuration.
 
@@ -918,6 +1407,21 @@ class TileSimulator:
 
         :return: core configuration or list of core configurations or none
         """
+        # Fake some values. In reality we'd query the TPM here.
+        if self.tpm is not None:
+            self._40g_configuration = {
+                "core_id": core_id,
+                "arp_table_entry": arp_table_entry,
+                "src_mac": self.tpm._get_src_mac(),
+                "src_ip": self.tpm._get_src_ip(),
+                "dst_ip": self.tpm._get_dst_ip(),
+                "src_port": self.tpm._get_src_port(),
+                "dst_port": self.tpm._get_dst_port(),
+                "netmask": self.tpm._get_netmask(),
+                "gateway_ip": self.tpm._get_gateway_ip(),
+            }
+        if core_id == -1:
+            return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
             if item.get("core_id") == core_id:
                 if item.get("arp_table_entry") == arp_table_entry:
@@ -945,8 +1449,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -1007,21 +1511,33 @@ class TileSimulator:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
 
-    def mock_off(self: TileSimulator) -> None:
+    def mock_off(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = False
+        if lock:
+            self.mock_connection_success = False
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = False
 
-    def mock_on(self: TileSimulator) -> None:
+    def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = True
+        if lock:
+            self.mock_connection_success = True
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = True
 
     @check_mocked_overheating
     @connected
@@ -1108,7 +1624,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def define_spead_header(
-        self,
+        self: TileSimulator,
         station_id: int,
         subarray_id: int,
         nof_antennas: int,
@@ -1125,6 +1641,10 @@ class TileSimulator:
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
         :param ska_spead_header_format: True for new (SKA) CBF SPEAD header format
+
+        This method was missed in the current version of aavs-system. Once this change
+        is merged the test ``test_tile_simulator_interface`` should complain forcing us
+        to correct the name.
 
         :return: a bool representing if command executed without error.
         """
@@ -1166,7 +1686,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def load_calibration_coefficients(
-        self: TileSimulator, antenna: int, calibration_coefficients: list[complex]
+        self: TileSimulator, antenna: int, calibration_coefficients: list[list[complex]]
     ) -> None:
         """
         Load calibration coefficients.
@@ -1371,9 +1891,13 @@ class TileSimulator:
             number_of_samples = new_value
         self.stop_data_transmission()
 
-        assert self.dst_ip
-        assert self.dst_port
-        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        if not self.dst_ip:
+            _dst_ip: str = ""
+        if not self.dst_port:
+            _dst_port: int = 8080
+        _dst_ip = self.dst_ip or _dst_ip
+        _dst_port = self.dst_port or _dst_port
+        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_channelised_data(
             1, number_of_samples, first_channel, last_channel
         )
@@ -1403,7 +1927,7 @@ class TileSimulator:
     @connected
     def send_channelised_data_narrowband(
         self: TileSimulator,
-        frequency: int,
+        frequency: float,
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
@@ -1429,7 +1953,7 @@ class TileSimulator:
     def send_beam_data(
         self: TileSimulator,
         timeout: int = 0,
-        timestamp: int = 0,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1486,8 +2010,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
@@ -1651,6 +2175,127 @@ class TileSimulator:
             and self.tpm.beam2.is_running()  # type: ignore
         )
 
+    def set_tpm_temperature_thresholds(
+        self: TileSimulator,
+        board_alarm_threshold: tuple[float, float] | None = None,
+        fpga1_alarm_threshold: tuple[float, float] | None = None,
+        fpga2_alarm_threshold: tuple[float, float] | None = None,
+    ) -> None:
+        """
+        Set the temperature thresholds.
+
+        NOTE: Warning this method can configure the shutdown temperature of
+        components and must be used with care. This method is capped to a minimum
+        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+
+        :param board_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the board (unit: Degree Celsius)
+        :param fpga1_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
+        :param fpga2_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+
+        :raises ValueError: is the value set is not in the set range.
+        """
+
+        def _is_in_range_20_50(value: float) -> bool:
+            """
+            Return True if value is larger than 20 and less than 50.
+
+            :param value: value under test
+
+            :return: True when test value in range.
+            """
+            min_settable = 20
+            max_settable = 50
+            if min_settable <= value <= max_settable:
+                return True
+            return False
+
+        if board_alarm_threshold is not None:
+            if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
+                board_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "board_alarm_threshold"
+                ] = board_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga1_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga1_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga1_alarm_threshold"
+                ] = fpga1_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga2_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga2_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga2_alarm_threshold"
+                ] = fpga2_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        self.evaluate_mcu_action()
+
+    def evaluate_mcu_action(self: TileSimulator) -> None:
+        """
+        Evaluate thresholds to temperatures.
+
+        In the case of overheating, we will mock the action of the
+        MCU (micro controller unit).
+        """
+        if (
+            self._tile_health_structure["temperatures"]["board"]
+            > self._tpm_temperature_thresholds["board_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA0"]
+            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA1"]
+            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"][1]
+        ):
+            self.logger.warning(
+                "We are overheating, CPLD is turning the overheating components OFF!"
+            )
+            self._global_status_alarms["temperature_alm"] = 2
+            self._is_fpga1_connectable = False
+            self._is_fpga2_connectable = False
+            self.tpm_mocked_overheating = True
+        else:
+            self._global_status_alarms["temperature_alm"] = 0
+            self.tpm_mocked_overheating = False
+            self._is_fpga1_connectable = True
+            self._is_fpga2_connectable = True
+
+    def check_communication(self: TileSimulator) -> dict[str, bool]:
+        """
+        Return status of connection to TPM CPLD and FPGAs.
+
+        :example:
+
+        >> OK Status:
+          {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
+        >> TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
+          {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
+        >> TPM OFF or Network Issue:
+          {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
+
+        :return: a dictionary with the key communication information.
+        """
+        return {
+            "CPLD": self._is_cpld_connectable,
+            "FPGA0": self._is_fpga1_connectable,
+            "FPGA1": self._is_fpga2_connectable,
+        }
+
     @check_mocked_overheating
     @connected
     def get_phase_terminal_count(self: TileSimulator) -> int:
@@ -1674,7 +2319,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_preadu_levels(self, levels: list[float]) -> None:
+    def set_preadu_levels(self: TileSimulator, levels: list[float]) -> None:
         """
         Set preADU attenuation levels.
 
@@ -1688,7 +2333,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def get_preadu_levels(self) -> list[float]:
+    def get_preadu_levels(self: TileSimulator) -> list[float]:
         """
         Get preADU attenuation levels.
 
@@ -1724,7 +2369,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self: TileSimulator, name: str) -> Any:
         """
         Get the attribute.
 
@@ -1735,12 +2380,73 @@ class TileSimulator:
             the named attribute.
 
         :return: the requested attribute
-        :rtype: object
         """
         if self.tpm:
             return getattr(self.tpm, name)
         else:
             raise AttributeError("'Tile' or 'TPM' object have no attribute " + name)
+
+    def __str__(self: TileSimulator) -> str:
+        """
+        Produce a list of tile information.
+
+        :return: Information string
+        :rtype: str
+        """
+        if self.tpm is None:
+            return ""
+        info: dict[str, Any] = self.tpm.info
+        return (
+            f"\nTile Processing Module {info['hardware']['HARDWARE_REV']} "
+            f"Serial Number: {info['hardware']['SN']} \n"
+            f"{'_'*90} \n"
+            f"{' '*29}| \n"
+            f"Classification               | "
+            f"{info['hardware']['PN']}-{info['hardware']['BOARD_MODE']} \n"
+            f"Hardware Revision            | {info['hardware']['HARDWARE_REV']} \n"
+            f"Serial Number                | {info['hardware']['SN']} \n"
+            f"BIOS Revision                | {info['hardware']['bios']} \n"
+            f"Board Location               | {info['hardware']['LOCATION']} \n"
+            f"DDR Memory Capacity          | {info['hardware']['DDR_SIZE_GB']} "
+            f"GB per FPGA \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"FPGA Firmware Design         | {info['fpga_firmware']['design']} \n"
+            f"FPGA Firmware Revision       | {info['fpga_firmware']['build']} \n"
+            f"FPGA Firmware Compile Time   | {info['fpga_firmware']['compile_time']} "
+            f"UTC \n"
+            f"FPGA Firmware Compile User   | {info['fpga_firmware']['compile_user']} "
+            f" \n"
+            f"FPGA Firmware Compile Host   | {info['fpga_firmware']['compile_host']} \n"
+            f"FPGA Firmware Git Branch     | {info['fpga_firmware']['git_branch']} \n"
+            f"FPGA Firmware Git Commit     | {info['fpga_firmware']['git_commit']} \n"
+            f"{'_'*29}|{'_'*60} \n"
+            f"{' '*29}| \n"
+            f"1G (MGMT) IP Address         | {str(info['network']['1g_ip_address'])} \n"
+            f"1G (MGMT) MAC Address        | {info['network']['1g_mac_address']} \n"
+            f"1G (MGMT) Netmask            | {str(info['network']['1g_netmask'])} \n"
+            f"1G (MGMT) Gateway IP         | {str(info['network']['1g_gateway'])} \n"
+            f"EEP IP Address               | {str(info['hardware']['ip_address_eep'])}"
+            f" \n"
+            f"EEP Netmask                  | {str(info['hardware']['netmask_eep'])} \n"
+            f"EEP Gateway IP               | {str(info['hardware']['gateway_eep'])} \n"
+            f"40G Port 1 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p1'])} \n"
+            f"40G Port 1 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p1'])} \n"
+            f"40G Port 1 Netmask           | {str(info['network']['40g_netmask_p1'])}"
+            f" \n"
+            f"40G Port 1 Gateway IP        | {str(info['network']['40g_gateway_p1'])}"
+            f" \n"
+            f"40G Port 2 IP Address        | "
+            f"{str(info['network']['40g_ip_address_p2'])} \n"
+            f"40G Port 2 MAC Address       | "
+            f"{str(info['network']['40g_mac_address_p2'])} \n"
+            f"40G Port 2 Netmask           | {str(info['network']['40g_netmask_p2'])}"
+            f" \n"
+            f"40G Port 2 Gateway IP        | {str(info['network']['40g_gateway_p2'])}"
+            f" \n"
+        )
 
 
 class DynamicTileSimulator(TileSimulator):

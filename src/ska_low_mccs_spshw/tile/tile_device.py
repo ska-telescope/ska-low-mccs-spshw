@@ -4434,6 +4434,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: json dictionary with optional keywords:
 
         * start_time - (ISO UTC time) start time
+        * global_reference_time - (ISO UTC time) reference time for the SPS
         * delay - (int) delay start if StartTime is not specified, default 0.2s
 
         :return: A tuple containing a return code and a string

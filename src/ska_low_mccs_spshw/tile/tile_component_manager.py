@@ -132,7 +132,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._pps_delay_correction: int = 0
         self._fpga_reference_time = 0
-        self._global_reference_time = 0
+        self._global_reference_time: int | None = None
         self._forty_gb_core_list: list = []
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
@@ -865,7 +865,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         task_callback: Optional[Callable] = None,
         *,
         start_time: Optional[str] = None,
-        global_start_time: Optional[str] = None,
+        global_reference_time: Optional[str] = None,
         delay: int = 2,
     ) -> tuple[TaskStatus, str] | None:
         """
@@ -873,7 +873,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param task_callback: Update task state, defaults to None
         :param start_time: the acquisition start time
-        :param global_start_time: the start time assumed for starting the timestamp
+        :param global_reference_time: the start time assumed for starting the timestamp
         :param delay: a delay to the acquisition start
 
         :return: A tuple containing a task status and a unique id string to
@@ -889,7 +889,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_object=self._start_acquisition,
             task_callback=task_callback,
             start_time=start_time,
-            global_start_time=global_start_time,
+            global_reference_time=global_reference_time,
             delay=delay,
         )
         self._request_provider.desire_start_acquisition(request)
@@ -901,17 +901,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def _start_acquisition(
         self: TileComponentManager,
         start_time: Optional[str] = None,
-        global_start_time: Optional[str] = None,
+        global_reference_time: Optional[str] = None,
         delay: int = 2,
     ) -> None:
         """
         Start acquisition using slow command.
 
         :param start_time: the time at which to start data acquisition, defaults to None
-        :param global_start_time: the start time assumed for starting the timestamp
+        :param global_reference_time: the start time assumed for starting the timestamp
         :param delay: delay start, defaults to 2
         """
-        if self._tpm_status == TpmStatus.SYNCHRONISED:
+        if self.tpm_status == TpmStatus.SYNCHRONISED:
             self.logger.warning(
                 "TPM already synchronized, start_acquisition command ignored"
             )
@@ -927,9 +927,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         started = False
         if global_reference_time is None:
-            global_reference_time = self._global_reference_time
+            global_reference_timestamp = self._global_reference_time
         else:
-            self._global_reference_time = global_reference_time
+            global_reference_timestamp = self._tile_time.timestamp_from_utc_time(
+                global_reference_time
+            )
+            self._global_reference_time = global_reference_timestamp
         self.logger.info(f"Start acquisition: start time: {start_time}, delay: {delay}")
 
         try:
@@ -937,7 +940,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.tile.reset_eth_errors()
             self.tile.check_arp_table()
             # Start data acquisition on board
-            self.tile.start_acquisition(start_frame, delay, global_reference_time)
+            self.tile.start_acquisition(start_frame, delay, global_reference_timestamp)
             started = True
             self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
         # pylint: disable=broad-except
@@ -1280,7 +1283,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param reference_time: Reference time representing timestamp for frame 0
         """
         if reference_time == "":
-            global_reference_time = 0
+            global_reference_time = None
         else:
             global_reference_time = self._tile_time.timestamp_from_utc_time(
                 reference_time
@@ -2257,7 +2260,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @property
-    def csp_spead_format(self: TpmDriver) -> str:
+    def csp_spead_format(self: TileComponentManager) -> str:
         """
         Get CSP SPEAD format.
 
@@ -2270,7 +2273,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         return self._csp_spead_format
 
     @csp_spead_format.setter
-    def csp_spead_format(self: TpmDriver, spead_format: str) -> None:
+    def csp_spead_format(self: TileComponentManager, spead_format: str) -> None:
         """
         Set CSP SPEAD format.
 
@@ -2286,7 +2289,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
             spead_format = "AAVS"
         self._csp_spead_format = spead_format
-        if self._tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
+        if self.tpm_status != TpmStatus.SYNCHRONISED:  # will be set later
             return
 
         hw_spead_format = spead_format == "SKA"
@@ -2894,6 +2897,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return self.tile.get_health_status()["temperatures"]["board"]
         raise TimeoutError(
             "Failed to check board_temperature, lock not acquired in time."
+        )
 
     @property
     @check_communicating

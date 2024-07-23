@@ -470,11 +470,13 @@ class TestMccsTileTpmDriver:
         start_time = datetime.datetime.strftime(
             datetime.datetime.fromtimestamp(int(time.time()) + delay_time), RFC_FORMAT
         )
-        [[result_code], [message]] = tile_device.StartAcquisition(
-            json.dumps({"start_time": start_time})
+
+        execute_lrc_to_completion(
+            change_event_callbacks,
+            tile_device,
+            "StartAcquisition",
+            json.dumps({"start_time": start_time}),
         )
-        assert result_code == ResultCode.QUEUED
-        assert "StartAcquisition" in message.split("_")[-1]
 
         initial_frame = tile_device.currentFrame
         sleep_time = delay_time + 0.5  # seconds
@@ -952,12 +954,6 @@ class TestMccsTileTpmDriver:
             subrack_device,
             daq_device,
             change_event_callbacks,
-        )
-        # Force a poll to get the initial values.
-        request_provider = tile_component_manager._request_provider
-        assert request_provider is not None
-        request_provider.get_request = (  # type: ignore[method-assign]
-            unittest.mock.Mock(return_value="HEALTH_STATUS")
         )
 
         # sleep to allow a poll

@@ -724,7 +724,9 @@ class SpsStationComponentManager(
 
         :returns: list of static delays in tile/channel order
         """
-        tile_delays = [[0] * TileData.ADC_CHANNELS] * len(self._tile_proxies)
+        tile_delays = [
+            [0] * TileData.ADC_CHANNELS for _ in range(len(self._tile_proxies))
+        ]
         for antenna_config in self._antenna_mapping.values():
             try:
                 tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]

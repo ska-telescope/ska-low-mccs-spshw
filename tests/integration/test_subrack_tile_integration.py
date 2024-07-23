@@ -397,7 +397,9 @@ class TestMccsTileTpmDriver:
         )
         ([result_code], [on_command_id]) = tile_device.On()
         assert result_code == ResultCode.QUEUED
-
+        change_event_callbacks["tile_command_status"].assert_change_event(
+            (on_command_id, "STAGING")
+        )
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "QUEUED")
         )

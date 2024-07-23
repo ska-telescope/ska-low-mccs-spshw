@@ -331,6 +331,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
                 )
+            case "TILE_INFO":
+                # TODO Add appropriate request
+                request = TileRequest(
+                    "tile_info",
+                    self.tile.info,
+                )
+                return None
             case _:
                 message = f"Unrecognised poll request {repr(request_spec)}"
                 self.logger.error(message)
@@ -525,7 +532,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     result=(ResultCode.REJECTED, "No request provider"),
                 )
             raise AssertionError(
-                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Cannot execute 'TileComponentManager.on'. "
                 "request provider is not yet initialised."
             )
         subrack_on_command_proxy = MccsCommandProxy(
@@ -889,8 +896,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_object=self._start_acquisition,
             task_callback=task_callback,
             start_time=start_time,
-            global_reference_time=global_reference_time,
             delay=delay,
+            global_reference_time=global_reference_time,
         )
         self._request_provider.desire_start_acquisition(request)
         self.logger.info("StartAcquisition command placed in poll QUEUE")
@@ -901,8 +908,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def _start_acquisition(
         self: TileComponentManager,
         start_time: Optional[str] = None,
-        global_reference_time: Optional[str] = None,
         delay: int = 2,
+        global_reference_time: Optional[str] = None,
     ) -> None:
         """
         Start acquisition using slow command.
@@ -911,6 +918,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param global_reference_time: the start time assumed for starting the timestamp
         :param delay: delay start, defaults to 2
         """
+        self.logger.debug("Start acquisition started")
         if self.tpm_status == TpmStatus.SYNCHRONISED:
             self.logger.warning(
                 "TPM already synchronized, start_acquisition command ignored"

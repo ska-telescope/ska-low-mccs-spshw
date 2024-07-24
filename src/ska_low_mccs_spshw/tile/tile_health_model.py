@@ -71,16 +71,8 @@ class TileHealthModel(BaseHealthModel):
 
         :return: an overall health of the station
         """
-
-        def debug(msg: str) -> None:
-            if self.logger:
-                self.logger.debug(msg)
-
-        debug("TileHealthModel: evaluate_health")
         tile_health, tile_report = super().evaluate_health()
-        debug(f"super tile_health={tile_health} tile_report = {tile_report}")
         intermediate_healths = self.intermediate_healths
-        debug(f"intermediate healths = {intermediate_healths}")
         for health in [
             HealthState.FAILED,
             HealthState.UNKNOWN,
@@ -88,14 +80,9 @@ class TileHealthModel(BaseHealthModel):
             HealthState.OK,
         ]:
             if health == tile_health:
-                debug(f"matched: {health} super tile_report:{tile_report}")
                 return tile_health, tile_report
-            debug(f"not matched eval {health}")
-            debug(f"rule = {self._health_rules.rules[health]}")
             result, report = self._health_rules.rules[health](intermediate_healths)
-            debug(f"result = {result} report = {report}")
             if result:
-                debug(f"result true report = {report}")
                 return health, report
         return HealthState.UNKNOWN, "No rules matched"
 

@@ -145,20 +145,10 @@ class TileHealthRules(HealthRules):
         """
         states: dict[str, tuple[HealthState, str]] = {}
 
-        def debug(msg: str) -> None:
-            if hasattr(self, "logger") and self.logger is not None:
-                self.logger.debug(msg)
-
-        debug("in compute intermediate state")
-        debug(f"monitoring points={monitoring_points}")
-        debug(f"min_max = {min_max}")
-
         if not monitoring_points and "hardware" in min_max:
-            debug("empty monitoring points/hardware min_max")
             return (HealthState.OK, "")
 
         for p, p_state in monitoring_points.items():
-            debug(f"p={p} p_state={p_state}")
             if isinstance(p_state, dict):
                 if p in min_max:
                     states[p] = self.compute_intermediate_state(
@@ -179,7 +169,6 @@ class TileHealthRules(HealthRules):
                         f"Monitoring point {p} is None.",
                     )
                 elif isinstance(min_max[p], dict):
-                    debug("is dict")
                     states[p] = (
                         (HealthState.OK, "")
                         if min_max[p]["min"] <= p_state <= min_max[p]["max"]
@@ -190,7 +179,6 @@ class TileHealthRules(HealthRules):
                         )
                     )
                 elif isinstance(min_max[p], list):
-                    debug("is list")
                     states[p] = (
                         (HealthState.OK, "")
                         if list(p_state) == min_max[p]
@@ -200,9 +188,7 @@ class TileHealthRules(HealthRules):
                             f"{list(p_state)} =/= {min_max[p]}",
                         )
                     )
-                    debug(f"states[p] = {states[p]}")
                 else:
-                    debug("catch all")
                     states[p] = (
                         (HealthState.OK, "")
                         if p_state == min_max[p]
@@ -216,7 +202,6 @@ class TileHealthRules(HealthRules):
                         )
                     )
 
-        debug(f"returning states from states={states}")
         return self._combine_states(*states.values())
 
     def _combine_states(

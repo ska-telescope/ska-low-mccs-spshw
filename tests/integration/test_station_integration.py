@@ -531,9 +531,10 @@ class TestStationTileIntegration:
         )
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
+        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
+
         # Force a poll on the backend simulator.
         tile_device.UpdateAttributes()
-        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
 
         # This will cause the Tile to push a change event.
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
@@ -547,12 +548,10 @@ class TestStationTileIntegration:
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,
         # Finally check `SpsStation` attribute value.
         desired_preadu_levels = np.array([24.0] * 32)
-        sps_station_device.preaduLevels = desired_preadu_levels
-
-        # Not equal because we need the MccsTile to change value.
         assert not np.array_equal(
             sps_station_device.preaduLevels, desired_preadu_levels
         )
+        sps_station_device.preaduLevels = desired_preadu_levels
 
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
             desired_preadu_levels.tolist()

@@ -1,0 +1,17 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_Get40gCoreConfiguration.json",
+    "title": "MccsTile Get40gCoreConfiguration schema",
+    "description": "Schema for MccsTile's Get40gCoreConfiguration command",
+    "type": "object",
+    "properties": {
+        "core_id": {
+            "description": "Core ID",
+            "type": "integer"
+        },
+        "arp_table_entry": {
+            "description": "ARP table entry",
+            "type": "integer"
+        }
+    }
+}

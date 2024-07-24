@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import time
 import unittest
 from typing import Any, Iterator
 
@@ -218,6 +219,7 @@ def patched_tile_device_class_fixture(
             tpm_driver._last_update_time_1 = 0.0
             tpm_driver._last_update_time_2 = 0.0
             tpm_driver._update_attributes()
+            time.sleep(0.1)
 
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(

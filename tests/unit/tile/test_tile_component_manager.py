@@ -87,7 +87,7 @@ class TestTileComponentManager:
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
 
-    def test_state_with_adminode(
+    def test_state_with_adminmode(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
         callbacks: MockCallableGroup,

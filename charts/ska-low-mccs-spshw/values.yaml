@@ -51,10 +51,12 @@ image:
 deviceServers: {} # e.g....
   # spsstations:
   #   s8-1:
-  #     low-mccs/daqreceiver/s8-1:
+  #     low-mccs/spsstation/s8-1:
   #       station_id: 345
   #       sdn_first_interface: 10.130.0.1/25
   #       sdn_gateway: 10.130.0.126
+  #       csp_ingest_ip: 10.132.254.0
+  #       daq_trl: low-mccs/daqreceiver/s8-1
   #       antenna_config_uri:
   #       - "car:ska-low-aavs3?main"
   #       - "instrument/mccs-configuration/aavs3.yaml"

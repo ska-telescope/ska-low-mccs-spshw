@@ -1,0 +1,18 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_WriteRegister.json",
+    "title": "MccsTile WriteRegister schema",
+    "description": "Schema for MccsTile's WriteRegister command",
+    "type": "object",
+    "properties": {
+        "register_name": {
+            "description": "Register fully qualified string representation",
+            "type": "string"
+        },
+        "values": {
+            "description": "List of 32-bit values to write",
+            "type": "array"
+        }
+    },
+    "required": ["register_name", "values"]
+}

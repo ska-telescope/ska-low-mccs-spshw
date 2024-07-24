@@ -15,11 +15,14 @@ from types import FunctionType
 import pytest
 from pyaavs.tile import Tile as AavsTile
 from pyaavs.tile import TileHealthMonitor
-from pyfabil.boards.tpm import TPM
 
 from ska_low_mccs_spshw.tile import TileSimulator
 
-SIMULATOR_ONLY_METHODS = ["mock_on", "mock_off", "_timed_thread"]
+SIMULATOR_ONLY_METHODS = [
+    "mock_on",
+    "mock_off",
+    "_timed_thread",
+]
 METHODS_TO_OMIT = ["__init__"]
 
 
@@ -85,13 +88,9 @@ def test_interface() -> None:
         for x, y in TileHealthMonitor.__dict__.items()
         if isinstance(y, FunctionType)
     }
-    pyfabil_tpm_methods = {
-        x: y for x, y in TPM.__dict__.items() if isinstance(y, FunctionType)
-    }
 
     # The TileSimulator simulates a flat aavs.tile.
     flattened_aavs_tile = {}
-    flattened_aavs_tile.update(pyfabil_tpm_methods)
     flattened_aavs_tile.update(tile_health_methods)
     flattened_aavs_tile.update(aavs_tile_methods)
 

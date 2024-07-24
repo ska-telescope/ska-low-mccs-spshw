@@ -1,0 +1,50 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_ConfigureTestGenerator.json",
+    "title": "MccsTile ConfigureTestGenerator schema",
+    "description": "Schema for MccsTile's ConfigureTestGenerator command",
+    "type": "object",
+    "properties": {
+        "set_time": {
+            "description": "Time to start the generator, in UTC ISO format",
+            "type": "string"
+        },
+        "tone_frequency": {
+            "description": "Tone 1 frequency in Hz of DDC 0",
+            "type": "number"
+        },
+        "tone_amplitude": {
+            "description": "Tone 1 peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU",
+            "type": "number"
+        },
+        "tone_2_frequency": {
+            "description": "Tone 2 frequency in Hz of DDC 1",
+            "type": "number"
+        },
+        "tone_2_amplitude": {
+            "description": "Tone 2 peak amplitude, normalized to 31.875 ADC units, resolution 0.125 ADU",
+            "type": "number"
+        },
+        "noise_amplitude": {
+            "description": "Amplitude of pseudorandom noise normalized to 26.03 ADC units, resolution 0.102 ADU",
+            "type": "number"
+        },
+        "pulse_frequency": {
+            "description": "Code for pulse frequency. Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 7
+        },
+        "pulse_amplitude": {
+            "description": "pulse peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU",
+            "type": "number"
+        },
+        "adc_channels": {
+            "description": "ADC channels",
+            "type": "array",
+            "items": {
+                "type": "integer"
+            }
+        }
+    }
+}

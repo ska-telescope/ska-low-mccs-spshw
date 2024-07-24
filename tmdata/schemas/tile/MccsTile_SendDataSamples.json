@@ -1,0 +1,82 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_SendDataSamples.json",
+    "title": "MccsTile SendDataSamples schema",
+    "description": "Schema for MccsTile's SendDataSamples command",
+    "type": "object",
+    "properties": {
+        "data_type": {
+            "description": "type of snapshot data (mandatory): raw, channel, channel_continuous, narrowband, beam",
+            "type": "string",
+            "enum": ["raw", "channel", "channel_continuous", "narrowband", "beam"]
+        }
+    },
+    "required": [ "data_type" ],
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "data_type": {
+                        "const": "channel"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "first_channel": {
+                        "description": "First channel to send",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 511
+                    },
+                    "last_channel": {
+                        "description": "Last channel to send",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 511
+                    }
+                }
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "data_type": {
+                        "const": "channel_continuous"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "channel_id": {
+                        "description": "Channel ID",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 511
+                    }
+                },
+                "required": [ "channel_id" ]
+            }
+        },
+        {
+            "if": {
+                "properties": {
+                    "data_type": {
+                        "const": "narrowband"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "frequency": {
+                        "description": "Sky frequency of band centre, in Hz",
+                        "type": "number",
+                        "minimum": 1e6,
+                        "maximum": 399e6
+                    }
+                },
+                "required": [ "frequency" ]
+            }
+        }
+    ]
+}

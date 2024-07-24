@@ -1,0 +1,29 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_ConfigureStationBeamformer.json",
+    "title": "MccsTile ConfigureStationBeamformer schema",
+    "description": "Schema for MccsTile's ConfigureStationBeamformer command",
+    "type": "object",
+    "properties": {
+        "start_channel": {
+            "description": "Start channel",
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 504
+        },
+        "n_channels": {
+            "description": "Number of channels",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 511
+        },
+        "is_first": {
+            "description": "Is first",
+            "type": "boolean"
+        },
+        "is_last": {
+            "description": "Is last",
+            "type": "boolean"
+        }
+    }
+}

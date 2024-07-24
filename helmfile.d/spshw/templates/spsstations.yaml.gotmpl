@@ -16,18 +16,13 @@
 
   {{- if $spsstation_enabled}}
     {{- $spsstation_trl := printf "low-mccs/spsstation/%s" $station_name}}
-    {{- $spsstation_instance := dict}}
+    {{- $spsstation_instance := pick $sps_spec "sdn_first_interface" "sdn_gateway" "csp_ingest_ip"}}
     {{- $_ := set $spsstation_instance "station_id" $station_spec.id}}
 
     {{- $spsstation_logging_level_defaults := pluck "logging_level_default" $spsstation_spec $defaults}}
     {{- if $spsstation_logging_level_defaults}}
       {{- $_ := set $spsstation_instance "logging_level_default" (first $spsstation_logging_level_defaults)}}
     {{- end }}
-
-    {{- $_ := set $spsstation_instance "sdn_first_interface" $sps_spec.sdn_first_interface}}
-    {{- with $sps_spec | get "sdn_gateway" ""}}
-    {{- $_ := set $spsstation_instance "sdn_gateway" .}}
-    {{- end}}
 
     {{- $antenna_config_uri_list := list}}
     {{- $antenna_config_uri := dig "sps" "antenna_config_uri" "uri" "" $station_spec}}

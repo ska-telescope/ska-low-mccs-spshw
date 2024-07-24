@@ -7,6 +7,7 @@
 """This module defined a pytest harness for unit testing the SPS Station module."""
 from __future__ import annotations
 
+import json
 import logging
 import unittest.mock
 
@@ -52,6 +53,31 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.add_attribute("logicalTileId", tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
     return builder
+
+
+@pytest.fixture(name="mock_daq_device_proxy")
+def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
+    """
+    Fixture that provides mock MccsDaqReceiver device proxy.
+
+    :return: a mock MccsDaqReceiver device proxy.
+    """
+    builder = MockDeviceBuilder()
+    builder.set_state(tango.DevState.ON)
+    builder.add_command(
+        "DaqStatus",
+        json.dumps(
+            {
+                "Running Consumers": [],
+                "Receiver Interface": "eth0",
+                "Receiver Ports": [4660],
+                "Receiver IP": ["10.244.170.166"],
+                "Bandpass Monitor": False,
+                "Daq Health": ["OK", 0],
+            }
+        ),
+    )
+    return builder()
 
 
 @pytest.fixture(name="mock_tile_device_proxy")
@@ -177,7 +203,7 @@ def antenna_uri_fixture() -> list[str]:
     :returns: A URI for antenna data.
     """
     return [
-        "car:ska-low-aavs3?main",
+        "gitlab://gitlab.com/ska-telescope/ska-low-aavs3?a7d76d9f#tmdata",
         "instrument/mccs-configuration/aavs3.yaml",
     ]
 

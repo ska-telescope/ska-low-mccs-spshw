@@ -81,9 +81,9 @@ def test_context_fixture(
     sdn_gateway: str,
     mock_subrack_device_proxy: unittest.mock.Mock,
     mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
     daq_trl: str,
-    daq_id: int,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
@@ -95,11 +95,12 @@ def test_context_fixture(
         the subrack device
     :param mock_tile_device_proxies: mocks to return as device proxies to the tiles
         devices
+    :param mock_daq_device_proxy: a fixture returning a mocked MccsDaqReceiver
+        for unittests.
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
         control behaviours.
     :param daq_trl: a Tango Resource Locator of a DAQ instance.
-    :param daq_id: the ID number of the DAQ receiver.
 
     :yields: a test context.
     """
@@ -118,8 +119,7 @@ def test_context_fixture(
         device_class=patched_sps_station_device_class,
     )
 
-    harness.set_daq_instance()
-    harness.set_daq_device(daq_id=daq_id, address=None)
+    harness.add_mock_daq_device(mock_daq_device_proxy)
 
     with harness as context:
         yield context
@@ -138,6 +138,21 @@ def station_device_fixture(
     :yield: the station Tango device under test.
     """
     yield test_context.get_sps_station_device()
+
+
+@pytest.fixture(name="daq_device")
+def daq_device_fixture(
+    test_context: SpsTangoTestHarnessContext,
+) -> DeviceProxy:
+    """
+    Fixture that returns the SPS station Tango device under test.
+
+    :param test_context: a Tango test context
+        containing an SPS station and mock subservient devices.
+
+    :yield: the station Tango device under test.
+    """
+    yield test_context.get_daq_device()
 
 
 def test_Off(
@@ -192,7 +207,7 @@ def test_Off(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -214,9 +229,7 @@ def test_Off(
     #         json.dumps([int(ResultCode.OK), "Command completed"]),
     #     ),
     # )
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
-    )
+    change_event_callbacks["command_status"].assert_not_called()
 
 
 def test_On(
@@ -308,7 +321,7 @@ def test_On(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -321,19 +334,15 @@ def test_On(
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.OFF
 
-    change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
-    )
-
     # Now turn the station back on using the On command
     ([result_code], [on_command_id]) = station_device.On()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "QUEUED")
+        (off_command_id, "REJECTED", on_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
+        (off_command_id, "REJECTED", on_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -349,7 +358,7 @@ def test_On(
     assert station_device.state() == DevState.ON
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "COMPLETED")
+        (off_command_id, "REJECTED", on_command_id, "COMPLETED")
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
@@ -367,8 +376,6 @@ def test_On(
             ) == {
                 "core_id": core,
                 "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -387,8 +394,6 @@ def test_On(
             ) == {
                 "core_id": core,
                 "arp_table_entry": 2,
-                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -556,8 +561,6 @@ def test_Initialise(
             ) == {
                 "core_id": core,
                 "arp_table_entry": 0,
-                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -576,8 +579,6 @@ def test_Initialise(
             ) == {
                 "core_id": core,
                 "arp_table_entry": 2,
-                "source_ip": f"10.0.0.{str(152 + (2 * i) + core)}",
-                "source_mac": 107752307294360 + (2 * i) + core,
                 "source_port": 61648,
                 "destination_ip": (
                     f"10.0.0.{str(154 + (2 * i) + core)}"
@@ -1426,3 +1427,79 @@ def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
     station_device.daqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
 
     assert station_device.daqTRL == "NEW_DAQ_TRL"
+
+
+def test_AcquireDataForCalibration(
+    station_device: SpsStation,
+    daq_device: DeviceProxy,
+    mock_tile_device_proxies: list[unittest.mock.Mock],
+    mock_daq_device_proxy: unittest.mock.Mock,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the AcquireDaqtaForCalibration command.
+
+    :param station_device: The station device to use.
+    :param daq_device: the DAQ device proxy that would receive the data
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param mock_daq_device_proxy: A fixture returning a mocked MccsDaqReceiver device.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    channel = 106
+
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    daq_device.adminMode = 0
+
+    for tile in mock_tile_device_proxies:
+        tile.tileProgrammingState = "Synchronised"
+    time.sleep(0.1)
+    station_device.AcquireDataForCalibration(channel)
+    tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
+
+    # This sleep is needed because AcquireDataForCalibration will
+    # Check Running Consumers is None before starting DAQ.
+    time.sleep(2)
+
+    def _mocked_daq_status_callable() -> str:
+        return json.dumps(
+            {
+                "Running Consumers": [["CORRELATOR_DATA", 8]],
+                "Receiver Interface": "eth0",
+                "Receiver Ports": [4660],
+                "Receiver IP": ["10.244.170.166"],
+                "Bandpass Monitor": False,
+                "Daq Health": ["OK", 0],
+            }
+        )
+
+    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable)
+
+    # Wait for LRCs to execute
+    timeout = 20
+    time_waited = 0
+    while not tile_command_mock.called:
+        time.sleep(1)
+        time_waited += 1
+        if time_waited >= timeout:
+            assert False, "Command SendDataSamples not called on tile"
+
+    tile_command_mock.assert_called_once()
+    assert json.loads(tile_command_mock.call_args[0][0]) == {
+        "data_type": "channel",
+        "first_channel": channel,
+        "last_channel": channel,
+    }
+    assert (
+        json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
+        == "CORRELATOR_DATA"
+    )

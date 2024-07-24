@@ -88,6 +88,7 @@ class TpmDriver(MccsBaseComponentManager):
         self._hardware_lock = threading.Lock()
         self._component_state_changed_callback = component_state_changed_callback
         self._tile_id = tile_id
+        self._thresholds = None
         self._station_id = station_id
         self._firmware_name = self.FIRMWARE_NAME[tpm_version]
         self._firmware_list = copy.deepcopy(self.FIRMWARE_LIST)
@@ -130,6 +131,10 @@ class TpmDriver(MccsBaseComponentManager):
         self._sysref_present = True
         self._pll_locked = True
         self._register_list = self.REGISTER_LIST
+
+        self.src_ip_40g_fpga1: str | None = None
+        self.src_ip_40g_fpga2: str | None = None
+
         # Hardware
         self._tpm_version = tpm_version
         self.tile = tile
@@ -285,7 +290,7 @@ class TpmDriver(MccsBaseComponentManager):
                 if (current_time - self._last_update_time_1) > time_interval_1:
                     self._last_update_time_1 = current_time
                     # self._clock_present = method_to_be_written
-                    self._pll_locked = self._check_pll_locked()
+                    self._pll_locked = self.tile.check_pll_locked()
                     self._tile_health_structure = self.tile.get_health_status()
                     self._update_component_state(
                         tile_health_structure=self._tile_health_structure
@@ -322,9 +327,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self._update_component_state(static_delays=self._static_delays)
                         self._station_id = self.tile.get_station_id()
                         self._tile_id = self.tile.get_tile_id()
-                        self._beamformer_table = self.tile.tpm.station_beamf[
-                            0
-                        ].get_channel_table()
+                        self._beamformer_table = self.tile.get_beamformer_table()
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.debug(f"Failed to update key hardware attributes: {e}")
@@ -625,7 +628,7 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.erase_fpga()
+                    self.tile.erase_fpgas()
                     self._is_programmed = False
                     status = TpmStatus.UNPROGRAMMED
                     self._register_list = self.REGISTER_LIST
@@ -667,13 +670,18 @@ class TpmDriver(MccsBaseComponentManager):
             with self._hardware_lock:
                 self.logger.debug("Lock acquired")
                 self.logger.info(
-                    "initialising tile with a "
-                    f"pps correction of {self._desired_pps_delay_correction}"
+                    "initialising tile with: \n"
+                    f"* tile ID of {self._tile_id} \n"
+                    f"* pps correction of {self._desired_pps_delay_correction} \n"
+                    f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
+                    f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
                 )
                 self.tile.initialise(
                     tile_id=self._tile_id,
                     pps_delay=self._desired_pps_delay_correction,
                     active_40g_ports_setting="port1-only",
+                    src_ip_fpga1=self.src_ip_40g_fpga1,
+                    src_ip_fpga2=self.src_ip_40g_fpga2,
                 )
                 self.tile.set_station_id(0, 0)
             self.logger.debug("Lock released")
@@ -1019,7 +1027,7 @@ class TpmDriver(MccsBaseComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    regmap = self.tile.tpm.find_register("")
+                    regmap = self.tile.find_register("")
                     for reg in regmap:
                         reglist.append(reg.name)
                 # pylint: disable=broad-except
@@ -1038,7 +1046,7 @@ class TpmDriver(MccsBaseComponentManager):
         :return: values read from the register
         """
         assert self.tile.tpm is not None  # for the type checker
-        if len(self.tile.tpm.find_register(register_name)) == 0:
+        if len(self.tile.find_register(register_name)) == 0:
             self.logger.error("Register '" + register_name + "' not present")
             return []
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1074,7 +1082,7 @@ class TpmDriver(MccsBaseComponentManager):
         devname = ""
         regname = devname + register_name
         assert self.tile.tpm is not None  # for the type checker
-        if len(self.tile.tpm.find_register(regname)) == 0:
+        if len(self.tile.find_register(regname)) == 0:
             self.logger.error("Register '" + regname + "' not present")
         else:
             with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
@@ -1265,6 +1273,26 @@ class TpmDriver(MccsBaseComponentManager):
         with self._hardware_lock:
             self._arp_table = self.tile.get_arp_table()
         return self._arp_table
+
+    def get_tpm_temperature_thresholds(
+        self: TpmDriver,
+    ) -> None | dict[str, tuple[int, int]]:
+        """
+        Return the temperature thresholds in firmware.
+
+        :returns: A dictionary containing the thresholds or
+            None if lock could not be acquired in 0.4 seconds.
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                _thresholds = self.tile.get_tpm_temperature_thresholds()
+                self._thresholds = _thresholds
+            else:
+                self.logger.warning(
+                    "Failed to acquire lock get_tpm_temperature_thresholds."
+                    "returning cached value."
+                )
+        return self._thresholds
 
     def set_lmc_download(
         self: TpmDriver,
@@ -1596,19 +1624,6 @@ class TpmDriver(MccsBaseComponentManager):
         """
         return self._pll_locked
 
-    def _check_pll_locked(self: TpmDriver) -> bool:
-        """
-        Check in hardware if PLL is locked.
-
-        Requires to be run inside a thread protected code block
-        TODO To be moved in pyaavs.Tile
-        :return: True if PPS is locked
-        """
-        pll_status = self.tile.tpm["pll", 0x508]
-        pll_lock = pll_status in [0xF2, 0xE7]
-        self._pll_locked = pll_lock
-        return pll_lock
-
     def _collapse_regions(self: TpmDriver, regions: list[list[int]]) -> list[list[int]]:
         """
         Collapse the frequency regions if they are contiguous.
@@ -1699,9 +1714,7 @@ class TpmDriver(MccsBaseComponentManager):
                         self.tile.set_beamformer_regions(collapsed_regions)
                     else:
                         self.logger.error("No valid beamformer regions specified")
-                    self._beamformer_table = self.tile.tpm.station_beamf[
-                        0
-                    ].get_channel_table()
+                    self._beamformer_table = self.tile.get_beamformer_table()
                     self.tile.define_spead_header(
                         station_id=self._station_id,
                         subarray_id=subarray_id,
@@ -1763,10 +1776,7 @@ class TpmDriver(MccsBaseComponentManager):
             if acquired:
                 try:
                     self.tile.set_spead_format(self._csp_spead_format == "SKA")
-                    self.tile.tpm.station_beamf[0].define_channel_table(
-                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                    )
-                    self.tile.tpm.station_beamf[1].define_channel_table(
+                    self.tile.define_channel_table(
                         [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
                     self.tile.set_first_last_tile(is_first, is_last)
@@ -2569,8 +2579,8 @@ class TpmDriver(MccsBaseComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_time)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
-                    self.tile.tpm["fpga1.test_generator.control.load_dds0"] = 1
-                    self.tile.tpm["fpga2.test_generator.control.load_dds0"] = 1
+                    self.tile["fpga1.test_generator.control.load_dds0"] = 1
+                    self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
                 # pylint: disable=broad-except
                 except Exception as e:

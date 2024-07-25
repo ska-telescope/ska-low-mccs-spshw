@@ -140,6 +140,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_list: Optional[list[dict[str, Any]]] = None
         self._station_id = station_id
         self._tile_id = tile_id
+        self._tpm_status = TpmStatus.UNKNOWN
         self._csp_rounding = np.array(self.CSP_ROUNDING)
         self._test_generator_active = False
         if tpm_version not in self.FIRMWARE_NAME:
@@ -190,11 +191,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 "The request provider is None, unable to get next request"
             )
         self.logger.debug(f"\n{'New Poll':-^{40}}\n")
-        tpm_status: TpmStatus = TpmStatus(self.tpm_status)
-        self._update_attribute_callback(programming_state=tpm_status.pretty_name())
+        self._tpm_status = TpmStatus(self.tpm_status)
+        self._update_attribute_callback(
+            programming_state=self._tpm_status.pretty_name()
+        )
 
-        self.logger.debug(f"Getting request for state ({tpm_status.name}) ...")
-        request_spec = self._request_provider.get_request(tpm_status)
+        self.logger.debug(f"Getting request for state ({self._tpm_status.name}) ...")
+        request_spec = self._request_provider.get_request(self._tpm_status)
 
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
@@ -382,6 +385,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Update command tracker if defined in request.
         if self.active_lrc_request:
             self.active_lrc_request.notify_failed(f"Exception: {repr(exception)}")
+            self.active_lrc_request = None
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
@@ -456,6 +460,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if self.active_lrc_request:
             self.logger.error("LRC completed")
             self.active_lrc_request.notify_completed()
+            self.active_lrc_request = None
 
         self.update_fault_state(poll_success=True)
 
@@ -610,6 +615,29 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
+
+            if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+                run_initialisation = False
+                if self.active_lrc_request is None:
+                    run_initialisation = True
+                elif self.active_lrc_request.name.lower() != "initialise":
+                    run_initialisation = True
+                if run_initialisation:
+                    request = TileLRCRequest(
+                        name="initialise",
+                        command_object=self._execute_initialise,
+                        task_callback=None,
+                        program_fpga=False,
+                        pps_delay_correction=self._pps_delay_correction,
+                    )
+                    self.logger.info(
+                        "Subrack has registered that the TPM has power "
+                        "but is not yet initialised of synchronised. "
+                        "Initialising."
+                    )
+                    assert self._request_provider is not None
+                    self.logger.info("Initialise command placed in poll QUEUE")
+                    self._request_provider.desire_initialise(request)
         else:
             self._tile_time.set_reference_time(0)
 

@@ -1553,7 +1553,7 @@ class SpsStation(SKAObsDevice):
 
         :param argin: an array containing a beam index followed by
             pairs of antenna delays + delay rates, delay in seconds
-            and the delay rate in seconds/second
+            and the delay rate in seconds/second. In order of antenna EEP.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1608,7 +1608,7 @@ class SpsStation(SKAObsDevice):
         >>> dp.command_inout("ApplyPointingDelays", time_string)
         """
         self.component_manager.apply_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return ([ResultCode.OK], ["ApplyPointingDelays command completed OK"])
         # handler = self.get_command_object("ApplyPointingDelays")
         # (return_code, message) = handler(argin)
         # return ([return_code], [message])

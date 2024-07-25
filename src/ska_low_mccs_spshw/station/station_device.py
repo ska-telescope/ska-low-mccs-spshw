@@ -961,6 +961,18 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.test_list
 
+    @attribute(dtype=("DevFloat",), max_dim_x=513)
+    def lastPointingDelays(self: SpsStation) -> list:
+        """
+        Return last pointing delays applied to the tiles.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in antenna EEP order.
+
+        :returns: last pointing delays applied to the tiles.
+        """
+        return self.component_manager.last_pointing_delays
+
     # -------------
     # Slow Commands
     # -------------

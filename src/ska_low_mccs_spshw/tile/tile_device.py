@@ -2129,6 +2129,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the health report.
         """
+        self._health_model.set_logger(self.logger)
         return self._health_model.health_report
 
     @attribute(dtype="DevString")

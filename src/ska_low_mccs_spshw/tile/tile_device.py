@@ -1952,6 +1952,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         self.component_manager.csp_rounding = rounding
 
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: MccsTile) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        """
+        self.component_manager.global_reference_time = reference_time
+
     @attribute(
         dtype=(float,),
         max_dim_x=32,
@@ -2172,6 +2190,48 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA2
         """
         self.component_manager.src_ip_40g_fpga2 = argin
+
+    @attribute(
+        dtype="DevString",
+        label="cspSpeadFormat",
+    )
+    def cspSpeadFormat(self: MccsTile) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format not in ["AAVS", "SKA"]:
+            self.logger.warning(
+                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
+            )
+            spead_format = "AAVS"
+        if (
+            self._attribute_state["tileProgrammingState"].read()[0]
+            != TpmStatus.SYNCHRONISED.pretty_name()
+        ):  # will be set later
+            return
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
     # # --------
     # # Commands

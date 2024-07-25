@@ -596,11 +596,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        print("Subrack power change event ngidng")
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
-            print("I know i'm a simulation")
             if event_value == PowerState.ON:
                 self.logger.warning("Mocking tpm on")
                 self.tile.mock_on()

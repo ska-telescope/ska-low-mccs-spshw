@@ -411,7 +411,6 @@ def patched_tile_device_class_fixture(
         @command()
         def MockTpmOn(self: PatchedTileDevice) -> None:
             """Mock power on the tpm."""
-            print("Subrack power changed!")
             self.component_manager._subrack_says_tpm_power_changed(
                 f"tpm{tile_id}PowerState",
                 PowerState.ON,

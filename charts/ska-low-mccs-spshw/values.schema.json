@@ -168,10 +168,7 @@
               "required": [
                 "id",
                 "host",
-                "port",
-                "receiver_interface",
-                "receiver_ip",
-                "receiver_port"
+                "port"
               ],
               "additionalProperties": false
             }

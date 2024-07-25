@@ -20,6 +20,24 @@ from .tile_data import TileData
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
+    def __init__(self, *args: Any, **kwargs: Any):
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        super().__init__(*args, **kwargs)
+        self.logger = None
+
+    def set_logger(self: TileHealthRules, logger: Any) -> None:
+        """
+        Set logger for debugging.
+
+        :param logger: a logger.
+        """
+        self.logger = logger
+
     def unknown_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
@@ -126,6 +144,10 @@ class TileHealthRules(HealthRules):
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
+
+        if not monitoring_points and "hardware" in min_max:
+            return (HealthState.OK, "")
+
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
                 if p in min_max:
@@ -156,6 +178,16 @@ class TileHealthRules(HealthRules):
                             f"{min_max[p]['min']} - {min_max[p]['max']}",
                         )
                     )
+                elif isinstance(min_max[p], list):
+                    states[p] = (
+                        (HealthState.OK, "")
+                        if list(p_state) == min_max[p]
+                        else (
+                            HealthState.FAILED,
+                            f'Monitoring point "{path}/{p}": '
+                            f"{list(p_state)} =/= {min_max[p]}",
+                        )
+                    )
                 else:
                     states[p] = (
                         (HealthState.OK, "")
@@ -169,6 +201,7 @@ class TileHealthRules(HealthRules):
                             f"{p_state} =/= {min_max[p]}",
                         )
                     )
+
         return self._combine_states(*states.values())
 
     def _combine_states(
@@ -189,4 +222,8 @@ class TileHealthRules(HealthRules):
                 if state == HealthState.OK:
                     return state, ""
                 return state, " | ".join(filtered_results[state])
-        return HealthState.UNKNOWN, "No health state matches"
+
+        return (
+            HealthState.UNKNOWN,
+            f"No health state matches: args:{args} filtered results:{filtered_results}",
+        )

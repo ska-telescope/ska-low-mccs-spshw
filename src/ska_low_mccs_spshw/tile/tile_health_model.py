@@ -43,8 +43,18 @@ class TileHealthModel(BaseHealthModel):
             health state.
         :param thresholds: the threshold parameters for the health rules
         """
+        self.logger = None
         self._health_rules = TileHealthRules(thresholds)
         super().__init__(health_changed_callback)
+
+    def set_logger(self, logger: Any) -> None:
+        """
+        Set logger for debugging.
+
+        :param logger: a logger.
+        """
+        self.logger = logger
+        self._health_rules.set_logger(logger)
 
     def evaluate_health(
         self: TileHealthModel,

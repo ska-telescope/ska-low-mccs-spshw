@@ -838,6 +838,7 @@ class TileSimulator:
     ]
     STATION_ID = 1
     TILE_ID = 1
+    CSP_SPEAD_FORMAT = "SKA"
 
     def __init__(
         self: TileSimulator,
@@ -878,6 +879,7 @@ class TileSimulator:
         self.dst_port: int | None = None
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
+        self.csp_spead_format = self.CSP_SPEAD_FORMAT
         self._is_arp_table_healthy: bool = True
         self._is_set_first_last_tile_write_successful: bool = True
         self._is_spead_header_write_successful: bool = True
@@ -1019,6 +1021,15 @@ class TileSimulator:
         self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
 
+    @property
+    def spead_ska_format_supported(self) -> bool:
+        """
+        Check if new (SKA) format for CSP SPEAD header is supported.
+
+        :return: True if new (SKA) format for CSP SPEAD header is supported
+        """
+        return True
+
     @check_mocked_overheating
     @connected
     def erase_fpgas(self: TileSimulator) -> None:
@@ -1105,8 +1116,8 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
-        :param global_start_time: Sets internal TPM start time,
-            used to synchronize to other TPM's
+        :param global_start_time: TPM will act as if it is
+            started at this time (seconds)
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -1628,7 +1639,7 @@ class TileSimulator:
         nof_antennas: int,
         ref_epoch: int = -1,
         start_time: int | None = 0,
-        new_spead_header_format: bool = False,
+        ska_spead_header_format: bool = False,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1638,13 +1649,8 @@ class TileSimulator:
         :param nof_antennas: Number of antennas in the station
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
-        :param new_spead_header_format: Sets the CSP spead header to the version
-            specified in ICD ECP-230134
+        :param ska_spead_header_format: True for new (SKA) CBF SPEAD header format
 
-        NOTE: param ``new_spead_header_format`` has been nenamed ``ska_spead_header``.
-        This method was missed in the current version of aavs-system. Once this change
-        is merged the test ``test_tile_simulator_interface`` should complain forcing us
-        to correct the name.
 
         :return: a bool representing if command executed without error.
         """
@@ -1988,8 +1994,13 @@ class TileSimulator:
         :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
-        if start_time is None:
-            sync_time = time.time() + delay
+        self.logger.error(f"{start_time=},{delay=},{global_start_time=}")
+        # if global start time is set, either in parameter or in attribute,
+        # use it as sync time
+        if global_start_time:
+            sync_time = global_start_time
+        elif start_time is None:
+            sync_time = int(time.time()) + delay
         else:
             sync_time = start_time + delay
 
@@ -2342,6 +2353,26 @@ class TileSimulator:
             attenuation = self.tpm.preadu[preadu_id].get_attenuation()[preadu_ch]
             levels.append(attenuation)
         return levels
+
+    def set_spead_format(self, ska_spead_header_format: bool) -> None:
+        """
+        Set CSP SPEAD format.
+
+        :param ska_spead_header_format: True for new (SKA) format, False for old (AAVS)
+        """
+        spead_format = "AAVS"
+        if ska_spead_header_format:
+            spead_format = "SKA"
+        self.csp_spead_format = spead_format
+
+    @property
+    def ska_spead_header(self) -> bool:
+        """
+        Return format of the CSP Spead header.
+
+        :return: True for new new (SKA) format, False for old (AAVS)
+        """
+        return self.csp_spead_format == "SKA"
 
     @check_mocked_overheating
     @connected

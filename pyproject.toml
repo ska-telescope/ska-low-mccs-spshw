@@ -18,8 +18,8 @@ secondary=true
 
 [tool.poetry.dependencies]
 python = "~3.10"  
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="386c6e78e23f0d2edad9897f1af06e24c47e62d8" , subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "a8c2e7175e6a4704d336114724267fd24cbcdd31" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", branch="master", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", branch="master"}
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "9.4.2"
@@ -36,11 +36,11 @@ annotated-types = "^0.6.0"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 typing-extensions = "^4.7.1"
 future = "^0.18.3"
+astropy="5.3.4"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
 ska-low-mccs-daq-interface = "^0.2.0"
-astropy="5.3.4"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"

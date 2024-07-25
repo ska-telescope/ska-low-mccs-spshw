@@ -666,6 +666,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("tile_id", TileSimulator.TILE_ID, [123]),
             ("station_id", TileSimulator.STATION_ID, [321]),
             ("test_generator_active", False, [True]),
+            ("csp_spead_format", TileSimulator.CSP_SPEAD_FORMAT, ["AAVS"]),
         ),
     )
     def test_write_attribute(

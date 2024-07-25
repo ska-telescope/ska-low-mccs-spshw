@@ -525,7 +525,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     result=(ResultCode.REJECTED, "No request provider"),
                 )
             raise AssertionError(
-                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Cannot execute 'TileComponentManager.on'. "
                 "request provider is not yet initialised."
             )
         subrack_on_command_proxy = MccsCommandProxy(
@@ -844,7 +844,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.info("TileComponentManager: initialisation completed")
 
             if self._global_reference_time:
-                self.logger.debug("Global start time specifed, starting acquisition")
+                self.logger.debug(
+                    "Global reference time specifed, starting acquisition"
+                )
                 self._start_acquisition()
 
     @abort_task_on_exception
@@ -906,7 +908,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         *,
         start_time: Optional[str] = None,
         delay: int = 2,
-        global_start_time: Optional[str] = None,
+        global_reference_time: Optional[str] = None,
     ) -> tuple[TaskStatus, str] | None:
         """
         Submit the start_acquisition slow task.
@@ -914,7 +916,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_callback: Update task state, defaults to None
         :param start_time: the acquisition start time
         :param delay: a delay to the acquisition start
-        :param global_start_time: the start time assumed for starting the timestamp
+        :param global_reference_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
@@ -933,14 +935,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 start_timestamp = None
             delay = 0
 
-        if global_start_time is None:
+        if global_reference_time is None:
             global_start_timestamp = None
         else:
             global_start_timestamp = self._tile_time.timestamp_from_utc_time(
-                global_start_time
+                global_reference_time
             )
             if global_start_timestamp < 0:
-                self.logger.error("Invalid time for global_start_time")
+                self.logger.error("Invalid time for global_reference_time")
                 global_start_timestamp = None
             delay = 0
 

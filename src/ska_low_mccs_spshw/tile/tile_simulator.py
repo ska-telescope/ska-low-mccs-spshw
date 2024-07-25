@@ -1994,7 +1994,7 @@ class TileSimulator:
         :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
-        self.logger.error(f"{start_time=},{delay=},{global_start_time=}")
+        self.logger.debug(f"{start_time=},{delay=},{global_start_time=}")
         # if global start time is set, either in parameter or in attribute,
         # use it as sync time
         if global_start_time:

@@ -10,7 +10,7 @@
             "type": "string",
             "format": "time"
         },
-        "global_sync_time": {
+        "global_reference_time": {
             "description": "Reference time used for timestamp",
             "type": "string",
             "format": "time"

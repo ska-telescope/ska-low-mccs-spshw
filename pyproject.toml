@@ -40,7 +40,7 @@ jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
 # ska-low-mccs-daq-interface = "^0.2.0"
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-2173" }
+ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", rev= "c22d2ea903f3aa9f4bec345ea083cbb3038c48a6" }
 astropy = "~5.3.4"
 
 # The following have been added for the DaqSimulator.
@@ -91,7 +91,7 @@ PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 # ska-low-mccs-daq-interface = "^0.2.0"
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", branch="mccs-2173" }
+ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", rev="c22d2ea903f3aa9f4bec345ea083cbb3038c48a6" }
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]

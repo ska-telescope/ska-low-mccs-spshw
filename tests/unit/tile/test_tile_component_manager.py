@@ -382,8 +382,11 @@ class TestTileComponentManager:
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
-            lookahead=2,
+            lookahead=5,  # Unknown for number of polls until subrack callback.
             consume_nonmatches=True,
         )
 

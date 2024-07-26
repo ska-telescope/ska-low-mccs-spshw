@@ -1547,24 +1547,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=70.0,
-        min_alarm=16.0,
-        max_alarm=65.0,
-    )
-    def boardTemperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the board temperature.
-
-        :return: the board temperature
-        """
-        return self._attribute_state["boardTemperature"].read()[0]
-
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.1,
-        min_value=15.0,
         max_value=75.0,
         min_alarm=16.0,
         max_alarm=68.0,
@@ -1827,6 +1809,25 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         analysis as to whether they are in ALARM or not,
 
         e.g. DevBoolean
+
+        NOTE: https://gitlab.com/tango-controls/pytango/-/issues/623.
+        The automated state analysis can segfault if an exception is
+        raised in a specific order of evaluation for attribute with min_max
+        alarms. The solutions are dire:
+        1. Live with a segfault until it is fixed in cpptango.
+        2. Dont allow reporting any attributes with min_max alarm until
+        you know none will raise an exception. This will obstruct critical
+        information.
+        3. Remove all min_max. This will remove critical functionality.
+        4. Give attributes a min_max alarm level a made up initial value in range.
+        this seems like the worst option as is making up data.
+        5. Re-order attributes such that the chance of a segfault is minimised.
+
+        Option 5 was chosen by placing boardTemperature at the bottom. I hate doing this
+        but all options seem dire. This seemed like the least destructive,
+        it reduces chance of segfault since it is the first attribute to be read.
+        Meaning it will have a value when the others have a value of NONE,
+        hence raise an exception.
 
         :return: the 'tango.DevState' calculated
         """
@@ -2233,6 +2234,31 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.component_manager.csp_spead_format = spead_format
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+
+    @attribute(
+        dtype="DevDouble",
+        abs_change=0.1,
+        min_value=15.0,
+        max_value=70.0,
+        min_alarm=16.0,
+        max_alarm=65.0,
+    )
+    def boardTemperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
+        """
+        Return the board temperature.
+
+        NOTE: Do not move this attribute.
+        It is updated first of all the attributes with min_max alarms.
+        so must be evaluated last. see note in dev_state for more
+        info. This is a horrible solution, but a better one is
+        not immediatly avaliable or clear.
+        see https://gitlab.com/tango-controls/pytango/-/issues/623
+
+        :return: the board temperature
+        """
+        return self._attribute_state["boardTemperature"].read()[0]
 
     # # --------
     # # Commands

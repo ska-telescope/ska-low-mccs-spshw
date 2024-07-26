@@ -243,6 +243,7 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "CSP_ROUNDING"
     *    yield "CHANNELISER_ROUNDING"
     *    yield "IS_PROGRAMMED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
     *    yield "FIRMWARE_AVAILABLE"
@@ -253,11 +254,11 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
         yield "CSP_ROUNDING"
         yield "CHANNELISER_ROUNDING"
         yield "IS_PROGRAMMED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def initialised_tpm_read_request_iterator() -> Iterator[str]:
@@ -272,6 +273,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "IS_PROGRAMMED"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "ADC_RMS"
     *    yield "PLL_LOCKED"
@@ -296,6 +298,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "ADC_RMS"
         yield "PLL_LOCKED"
@@ -312,7 +315,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "BEAMFORMER_TABLE"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def synchronised_tpm_read_request_iterator() -> Iterator[str]:
@@ -327,6 +329,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "IS_PROGRAMMED"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "ADC_RMS"
     *    yield "PLL_LOCKED"
@@ -352,6 +355,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "ADC_RMS"
         yield "PLL_LOCKED"
@@ -369,7 +373,6 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_BEAMFORMER_FRAME"
         yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 class TileRequestProvider:  # pylint: disable=too-many-instance-attributes

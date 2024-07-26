@@ -265,7 +265,7 @@ def patched_tile_device_class_fixture(
                         value,
                     )
 
-                except Exception as e:
+                except Exception as e:  # pylint: disable=broad-exception-caught
                     pytest.fail(
                         f"Failed to set {attribute} = {value} "
                         f"in backend TileSimulator : {repr(e)}"

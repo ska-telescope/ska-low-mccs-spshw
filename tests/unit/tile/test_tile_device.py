@@ -673,7 +673,6 @@ class TestMccsTile:
         assert tile_device.adminMode == AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
-        tile_device.initialise()
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=4
         )
@@ -1105,30 +1104,6 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         change_event_callbacks["state"].assert_change_event(DevState.ON)
-
-        [[task_status], [command_id]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
-        )
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "QUEUED")
-        )
-        # This will never be picked up since we need to be Initialised or
-        # Synchronised to execute. This is by default 60 seconds, but this test speeds
-        # that up.
-        request_provider = tile_component_manager._request_provider
-        if request_provider:
-            request_provider.command_wipe_time["start_acquisition"] = time.time() + 5
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "ABORTED")
-        )
-
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
         execute_lrc_to_completion(
             change_event_callbacks,
@@ -1618,6 +1593,11 @@ class TestMccsTileCommands:
         )
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.adminMode == AdminMode.OFFLINE
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
 
         tile_device.adminMode = AdminMode.MAINTENANCE
         assert tile_device.adminMode == AdminMode.MAINTENANCE
@@ -1625,6 +1605,10 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=5, consume_nonmatches=True
+        )
+        change_event_callbacks["tile_programming_state"].assert_not_called()
         args = [
             {
                 "tone_frequency": 100e6,

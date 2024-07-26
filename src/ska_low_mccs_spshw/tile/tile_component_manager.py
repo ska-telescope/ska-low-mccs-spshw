@@ -618,9 +618,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
             if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
                 run_initialisation = False
-                if self.active_lrc_request is None:
-                    run_initialisation = True
-                elif self.active_lrc_request.name.lower() != "initialise":
+                if (
+                    self._request_provider
+                    and self._request_provider.initialise_request is None
+                    and self.active_lrc_request is None
+                    or self.active_lrc_request
+                    and self.active_lrc_request.name.lower() != "initialise"
+                ):
                     run_initialisation = True
                 if run_initialisation:
                     request = TileLRCRequest(

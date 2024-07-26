@@ -152,7 +152,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._tpm_version = tpm_version
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
-        self.last_pointing_delays: list = [[0.0 ,0.0] for _ in range(16)]
+        self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or TileSimulator(logger)

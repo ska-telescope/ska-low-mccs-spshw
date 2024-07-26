@@ -217,7 +217,6 @@ class TileHealthRules(HealthRules):
                                 f"{p_state} =/= {min_max[p]}",
                             )
                         )
-                    )
 
         return self._combine_states(*states.values())
 

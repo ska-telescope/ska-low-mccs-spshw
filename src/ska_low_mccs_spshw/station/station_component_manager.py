@@ -1250,6 +1250,7 @@ class SpsStationComponentManager(
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
 
+        # TODO MCCS-2212 Must revise the possible cases, avoiding potential deadlocks.
         if all(
             proxy._proxy is not None
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}

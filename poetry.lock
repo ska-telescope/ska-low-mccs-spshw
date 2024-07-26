@@ -2,7 +2,7 @@
 
 [[package]]
 name = "aavs-system"
-version = "1.1"
+version = "1.2.0"
 description = "AAVS Software"
 category = "main"
 optional = false
@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "master"
-resolved_reference = "a91a4a5ba537d2a1de82c9748f2642f1d47e02de"
+reference = "d99770b7214abdaa1791dd6f5b38025977beb8ba"
+resolved_reference = "d99770b7214abdaa1791dd6f5b38025977beb8ba"
 subdirectory = "python"
 [[package]]
 name = "alabaster"
@@ -1774,7 +1774,7 @@ test = ["pytest", "pytest-doctestplus (>=0.7)"]
 
 [[package]]
 name = "pyfabil"
-version = "1.2.0"
+version = "1.3.0"
 description = "A general Python package for interfacing with FPGA boards"
 category = "main"
 optional = false
@@ -1791,8 +1791,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "master"
-resolved_reference = "9f1bb23a7d6a8a81e536396071120a734704ff2d"
+reference = "d2aea7c2255b5532a1fc71529fcb933e5a99ed5d"
+resolved_reference = "d2aea7c2255b5532a1fc71529fcb933e5a99ed5d"
 
 [[package]]
 name = "pyflakes"
@@ -3413,4 +3413,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"  
-content-hash = "0b0736474367eb933bdde2b01702b6b7c1b6f690df76b272cb2c329fb34e7210"
+content-hash = "8ddfe7011c71941ebfec9293bd320c2a90c10f6d87a903e27a60093536e8a1a9"

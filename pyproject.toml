@@ -18,8 +18,8 @@ secondary=true
 
 [tool.poetry.dependencies]
 python = "~3.10"  
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", branch="master", subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", branch="master"}
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="d99770b7214abdaa1791dd6f5b38025977beb8ba", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev="d2aea7c2255b5532a1fc71529fcb933e5a99ed5d"}
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "9.4.2"

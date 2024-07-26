@@ -2225,11 +2225,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
             )
             spead_format = "AAVS"
-        if (
-            self._attribute_state["tileProgrammingState"].read()[0]
-            != TpmStatus.SYNCHRONISED.pretty_name()
-        ):  # will be set later
-            return
         if spead_format in ["AAVS", "SKA"]:
             self.component_manager.csp_spead_format = spead_format
         else:

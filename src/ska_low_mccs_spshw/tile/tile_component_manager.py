@@ -984,14 +984,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Check if ARP table is populated before starting
             self.tile.reset_eth_errors()
             self.tile.check_arp_table()
-            self.logger.info("doijsodij")
             # Start data acquisition on board
             self.tile.start_acquisition(
                 start_time,
                 delay,
                 global_reference_time,
             )
-            self.logger.info("doijsodij")
             executed = True
             self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
         # pylint: disable=broad-except
@@ -1449,18 +1447,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self._csp_spead_format = spead_format
         hw_spead_format = spead_format == "SKA"
-        if self.tile.spead_ska_format_supported:
-            with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-                if acquired:
+        if not self.is_programmed:
+            self.logger.debug("speadFormat not set in hardware, tile not connected")
+            return
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                if self.tile.spead_ska_format_supported:
                     try:
                         self.tile.set_spead_format(hw_spead_format)
                     # pylint: disable=broad-except
                     except Exception as e:
                         self.logger.warning(f"TpmDriver: Tile access failed: {e}")
-                else:
-                    self.logger.warning("Failed to acquire hardware lock")
-        elif spead_format == 1:
-            self.logger.error("SKA SPEAD format not supported in firmware")
+                elif hw_spead_format:
+                    self.logger.error("SKA SPEAD format not supported in firmware")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
 
     # -----------------------------
     # FastCommands
@@ -2139,9 +2140,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :raises ValueError: if the tpm is value None.
         """
         self.logger.debug(
-            "TpmDriver: initialise_beamformer for chans {start_channel}:{nof_channels}"
+            "initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
-        fmt = None
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2155,7 +2155,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self._nof_blocks = nof_channels // 8
                     beamformer_table = self.tile.get_beamformer_table()
                     self._update_attribute_callback(beamformer_table=beamformer_table)
-                    fmt = self.tile.new_spead_header  # debug
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -2163,7 +2162,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-            self.logger.debug(f"SPEAD format: {fmt}")
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
@@ -2202,7 +2200,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             nof_blocks += region[1] // 8
         self._nof_blocks = nof_blocks
         self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
-        fmt = None
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2221,7 +2218,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         ref_epoch=self._fpga_reference_time,
                         ska_spead_header_format=self._csp_spead_format == "SKA",
                     )
-                    fmt = self.tile.new_spead_header
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -2229,7 +2225,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-            self.logger.debug(f"SPEAD format: {fmt}")
 
     def _collapse_regions(
         self: TileComponentManager, regions: list[list[int]]
@@ -2966,6 +2961,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
+        if not self.tile:  # Tile unconnected
+            return False
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.is_programmed()

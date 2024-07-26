@@ -39,15 +39,21 @@ server:
           - name: "DaqId"
             values:
             - {{quote $this_daq.id}}
+{{- with $this_daq.receiver_interface}}
           - name: "ReceiverInterface"
             values:
-            - {{quote $this_daq.receiver_interface}}
+            - {{quote .}}
+{{- end}}
+{{- with $this_daq.receiver_ip}}
           - name: "ReceiverIp"
             values:
-            - {{quote $this_daq.receiver_ip}}
+            - {{quote .}}
+{{- end}}
+{{- with $this_daq.receiver_port}}
           - name: "ReceiverPort"
             values:
-            - {{quote $this_daq.receiver_port}}
+            - {{quote .}}
+{{- end}}
           - name: "Host"
             values:
             - {{$this_daq.host}}

@@ -20,7 +20,6 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy
 from tango.server import command
 
-from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqSimulator
 from ska_low_mccs_spshw.subrack import SubrackSimulator
 from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulator
 from tests.harness import (
@@ -124,7 +123,7 @@ def integration_test_context_fixture(
         subrack_bay=subrack_bay,
         device_class=patched_tile_device_class,
     )
-    harness.set_daq_instance(DaqSimulator())
+    harness.set_daq_instance()
     harness.set_daq_device(daq_id, address=None)
     harness.set_sps_station_device(
         subrack_ids=[subrack_id],

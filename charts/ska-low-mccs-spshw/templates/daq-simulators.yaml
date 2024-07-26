@@ -57,7 +57,12 @@ spec:
         command:
           - "DaqSimulator"
         env:
-          - name: DAQ_SIMULATOR_PORT
-            value: {{$port | quote}}
+          - name: DAQ_RECEIVER_INTERFACE
+            value: {{$spec.receiver_interface | quote}}
+          - name: DAQ_RECEIVER_IP
+            value: {{get $spec "receiver_ip" | default "" | quote}}
+          - name: DAQ_RECEIVER_PORTS
+            value: {{$spec.receiver_port | quote}}
+
 {{- end}}
 {{- end}}

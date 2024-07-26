@@ -197,6 +197,23 @@ def patched_tile_device_class_fixture(
 
             return tile_component_manager
 
+        def delete_device(self: PatchedTileDevice) -> None:
+            """
+            Clean up callbacks to ensure safe teardown.
+
+            With the PollingComponentManager, seemingly only
+            the Tile, during teardown a segfault can be raised,
+            not sure why?. This method is needed in addition to
+            cleanup incase the test fails and cleanup is not called
+            before teardown, This method on its own reduced the chance
+            of a segfault in the event of test failure,
+            but does not eliminate possibility.
+            """
+            self.component_manager._update_attribute_callback = unittest.mock.Mock()
+            self.component_manager._component_state_callback = unittest.mock.Mock()
+            self.component_manager._communication_state_callback = unittest.mock.Mock()
+            super().delete_device()
+
         @command(dtype_in="DevVoid")
         def cleanup(self: PatchedTileDevice) -> None:
             """
@@ -214,7 +231,6 @@ def patched_tile_device_class_fixture(
             self.component_manager._update_attribute_callback = unittest.mock.Mock()
             self.component_manager._component_state_callback = unittest.mock.Mock()
             self.component_manager._communication_state_callback = unittest.mock.Mock()
-            del self.component_manager
 
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(
@@ -249,7 +265,7 @@ def patched_tile_device_class_fixture(
                         value,
                     )
 
-                except Exception as e:  # pylint: disable=broad-except
+                except Exception as e:
                     pytest.fail(
                         f"Failed to set {attribute} = {value} "
                         f"in backend TileSimulator : {repr(e)}"
@@ -258,7 +274,6 @@ def patched_tile_device_class_fixture(
     return PatchedTileDevice
 
 
-# pylint: disable=too-many-arguments
 @pytest.fixture(name="tile_component_manager")
 def tile_component_manager_fixture(
     logger: logging.Logger,

@@ -89,6 +89,9 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
         # For each power_state the subrack claims,
         # check the tile arrives at correct state.
         match power_state:

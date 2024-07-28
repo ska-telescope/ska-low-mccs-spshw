@@ -716,7 +716,7 @@ class TestMccsTile:
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
-                list(float(i) for i in range(32)),
+                TileSimulator.ADC_RMS,
                 None,
             ),
             ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
@@ -751,6 +751,8 @@ class TestMccsTile:
             device.
         :param write_value: value to be written as part of the test.
         """
+        max_wait: int = 14  # seconds
+        tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
         with pytest.raises(
@@ -781,23 +783,45 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=4
         )
-        time.sleep(3)
-        if isinstance(initial_value, dict):
-            initial_value = json.dumps(initial_value)
-        elif isinstance(initial_value, list):
-            initial_value = np.array(initial_value)
-            assert (getattr(tile_device, attribute) == initial_value).all()
+        deadline = time.time() + max_wait
+        while time.time() < deadline:
+            try:
+                if isinstance(initial_value, dict):
+                    assert getattr(tile_device, attribute) == json.dumps(initial_value)
+                elif isinstance(initial_value, list):
+                    assert (
+                        getattr(tile_device, attribute) == np.array(initial_value)
+                    ).all()
+                else:
+                    assert getattr(tile_device, attribute) == initial_value
+            except tango.DevFailed as df:
+                assert (
+                    f"Read value for attribute {attribute} has not been updated"
+                    in str(df)
+                )
+                time.sleep(tick)
+                continue
+            break
         else:
-            assert getattr(tile_device, attribute) == initial_value
+            pytest.fail("Initial value could not be read in time.")
 
         if write_value is not None:
             tile_device.write_attribute(attribute, write_value)
-            time.sleep(3)
-            if isinstance(write_value, list):
-                write_value = np.array(write_value)
-                assert (getattr(tile_device, attribute) == write_value).all()
+            deadline = time.time() + max_wait
+            while time.time() < deadline:
+                try:
+                    if isinstance(write_value, list):
+                        assert (
+                            getattr(tile_device, attribute) == np.array(write_value)
+                        ).all()
+                    else:
+                        assert getattr(tile_device, attribute) == write_value
+                except AssertionError:
+                    time.sleep(tick)
+                    continue
+                break
             else:
-                assert getattr(tile_device, attribute) == write_value
+                pytest.fail("Value failed to change in time.")
 
     def test_antennaIds(
         self: TestMccsTile,

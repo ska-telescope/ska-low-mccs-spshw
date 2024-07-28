@@ -201,36 +201,20 @@ def patched_tile_device_class_fixture(
             """
             Clean up callbacks to ensure safe teardown.
 
-            With the PollingComponentManager, seemingly only
-            the Tile, during teardown a segfault can be raised,
-            not sure why?. This method is needed in addition to
-            cleanup incase the test fails and cleanup is not called
-            before teardown, This method on its own reduced the chance
-            of a segfault in the event of test failure,
-            but does not eliminate possibility.
+            During teardown of the MccsTile device a segfault can occur.
+            This is beleived to be due to the injection of the
+            TileComponentManager. The teardown of the MccsTile device in the context was
+            occuring before the teardown of the injected tilecomponentmanager,
+            this was leading to messages reporting that we were trying to
+            push a nonexistent attribute from TANGO during
+            teardown (when the attribute did exist).
+            Although i was not able to convince myself fully that this was concrete,
+            the act of stopping communication and joining the polling thread
+            removes the issue during teardown. This is supporting of the theory above.
             """
-            self.component_manager._update_attribute_callback = unittest.mock.Mock()
-            self.component_manager._component_state_callback = unittest.mock.Mock()
-            self.component_manager._communication_state_callback = unittest.mock.Mock()
+            tile_component_manager.stop_communicating()
+            tile_component_manager._poller._polling_thread.join()
             super().delete_device()
-
-        @command(dtype_in="DevVoid")
-        def cleanup(self: PatchedTileDevice) -> None:
-            """
-            Clear up patched callbacks to ensure safe teardown.
-
-            With the PollingComponentManager, it seems that during teardown the polling
-            thread is still running and it will still have a callback to the TANGO
-            device, this can cause segfault during a tango operation, not sure why?
-            Removal of the callbacks will remove this issue completely,
-            but there is clearly some bad clearup somewhere. I see errors when pushing
-            TileProgrammingstate during teardown DevFailed attribute does not exist.
-            This has never been seen in deployment, and is believed only to
-            exist in test context.
-            """
-            self.component_manager._update_attribute_callback = unittest.mock.Mock()
-            self.component_manager._component_state_callback = unittest.mock.Mock()
-            self.component_manager._communication_state_callback = unittest.mock.Mock()
 
         @command(dtype_in="DevString")
         def SetHealthStructureInBackend(

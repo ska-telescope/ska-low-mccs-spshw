@@ -128,13 +128,6 @@ def test_initialise_can_execute(
 
     wait_for_completed_command_to_clear_from_queue(tile_device)
 
-    # Some strange teardown issues that causes a segfault. My initial idea is that
-    # The tango server is being torn down before the tile_component_manager is, this
-    # means that the callbacks can attempt an operation on a non existent server.
-    # Here we remove the callbacks from the component_manager meaning we will not
-    # Be attempting any TANGO operations during teardown
-    tile_device.cleanup()
-
 
 class TestStationTileIntegration:
     """Test the integration between the Station and the Tile."""
@@ -310,12 +303,6 @@ class TestStationTileIntegration:
             assert tile_device.tileProgrammingState == "Initialised"
             wait_for_completed_command_to_clear_from_queue(tile_device)
             wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_pps_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -379,12 +366,6 @@ class TestStationTileIntegration:
         assert np.array_equal(final_corrections, desired_pps_corrections)
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_adc_power_change(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -451,12 +432,6 @@ class TestStationTileIntegration:
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_static_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -532,12 +507,6 @@ class TestStationTileIntegration:
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable-next=too-many-arguments
     def test_sps_preadu_levels_coherent_with_tile_simulator(
@@ -627,12 +596,6 @@ class TestStationTileIntegration:
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable-next=too-many-arguments
     def test_csp_rounding(
@@ -712,12 +675,6 @@ class TestStationTileIntegration:
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_channeliser_rounding(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -797,9 +754,3 @@ class TestStationTileIntegration:
         )
         wait_for_completed_command_to_clear_from_queue(tile_device)
         wait_for_completed_command_to_clear_from_queue(sps_station_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()

@@ -1031,6 +1031,7 @@ class SpsStation(SKAObsDevice):
             self.component_manager.csp_spead_format = spead_format
         else:
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+
     @attribute(dtype=("DevFloat",), max_dim_x=513)
     def lastPointingDelays(self: SpsStation) -> list:
         """

@@ -15,6 +15,7 @@ import tango
 __all__ = [
     "AttributeManager",
     "BoolAttributeManager",
+    "AlarmAttributeManager",
 ]
 
 
@@ -134,3 +135,36 @@ class BoolAttributeManager(AttributeManager):
             if self._alarm_on_true is self._value
             else tango.AttrQuality.ATTR_VALID
         )
+
+
+class AlarmAttributeManager(AttributeManager):
+    """An AttributeManager for alarm attribute."""
+
+    def __init__(
+        self: AlarmAttributeManager,
+        value_time_quality_callback: Callable,
+        initial_value: bool | None = None,
+        alarm_handler: None | Callable = None,
+    ) -> None:
+        """
+        Initialise a new AlarmAttributeManager.
+
+        :param initial_value: The initial value for this attribute.
+        :param value_time_quality_callback: A hook to call with the attribute
+            value, timestamp, and quality factor.
+        :param alarm_handler: A hook to call upon alarming.
+        """
+        super().__init__(
+            value_time_quality_callback,
+            initial_value=initial_value,
+            alarm_handler=alarm_handler,
+        )
+
+    def update_quality(self: AlarmAttributeManager) -> None:
+        """Update attribute quality."""
+        if any(alarm_value == 2 for alarm_value in self._value.values()):
+            self._quality = tango.AttrQuality.ATTR_ALARM
+        elif any(alarm_value == 1 for alarm_value in self._value.values()):
+            self._quality = tango.AttrQuality.ATTR_WARNING
+        else:
+            self._quality = tango.AttrQuality.ATTR_VALID

@@ -961,6 +961,18 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.test_list
 
+    @attribute(dtype=("DevFloat",), max_dim_x=513)
+    def lastPointingDelays(self: SpsStation) -> list:
+        """
+        Return last pointing delays applied to the tiles.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in antenna EEP order.
+
+        :returns: last pointing delays applied to the tiles.
+        """
+        return self.component_manager.last_pointing_delays
+
     # -------------
     # Slow Commands
     # -------------
@@ -1553,7 +1565,7 @@ class SpsStation(SKAObsDevice):
 
         :param argin: an array containing a beam index followed by
             pairs of antenna delays + delay rates, delay in seconds
-            and the delay rate in seconds/second
+            and the delay rate in seconds/second. In order of antenna EEP.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1608,7 +1620,7 @@ class SpsStation(SKAObsDevice):
         >>> dp.command_inout("ApplyPointingDelays", time_string)
         """
         self.component_manager.apply_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
+        return ([ResultCode.OK], ["ApplyPointingDelays command completed OK"])
         # handler = self.get_command_object("ApplyPointingDelays")
         # (return_code, message) = handler(argin)
         # return ([return_code], [message])

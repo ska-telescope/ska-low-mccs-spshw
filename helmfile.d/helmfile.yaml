@@ -33,37 +33,37 @@ environments:
   aa0.5-production:
     kubeContext: infra:au-aa-mccs-cloud01-k8s
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/aa0.5.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-1.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-6.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s9-2.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s10-3.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/aa0.5.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-1.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-6.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s9-2.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s10-3.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
       - spshw/values/values-aa0-5.yaml
   aa0.5-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/aa0.5.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-1.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-6.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s9-2.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
-      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s10-3.yaml?ref=dadce509ffe4dc2d4eb18d545482b74d2e9aafcd
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/aa0.5.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-1.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s8-6.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s9-2.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
+      - git::https://gitlab.com/ska-telescope/ska-low-deployment.git@tmdata/instrument/mccs-configuration/s10-3.yaml?ref=f0f1478a2b5ebc240222db8ede01b94aa7f977a9
       - spshw/values/values-aa0-5.yaml
       - platform/minikube.yaml
   aavs3-production:
     kubeContext: infra:au-itf-aavs302-k8s
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=534edc4d41aa6fa9cdd225135d6f4b651832a796
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=d2b1606c6249c193e4ac08932951da2043fbf21a
       - spshw/values/values-aavs3.yaml
   aavs3-staging:
     kubeContext: infra:au-itf-k8s-master01-k8s
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=534edc4d41aa6fa9cdd225135d6f4b651832a796
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=d2b1606c6249c193e4ac08932951da2043fbf21a
       - spshw/values/values-aavs3.yaml
       - spshw/values/values-aavs3-staging.yaml
   aavs3-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=534edc4d41aa6fa9cdd225135d6f4b651832a796
+      - git::https://gitlab.com/ska-telescope/ska-low-aavs3.git@/tmdata/instrument/mccs-configuration/aavs3.yaml?ref=d2b1606c6249c193e4ac08932951da2043fbf21a
       - spshw/values/values-aavs3.yaml
       - platform/minikube.yaml
   arcetri:
@@ -81,12 +81,12 @@ environments:
   low-itf:
     kubeContext: infra:au-itf-k8s-master01-k8s
     values:
-      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=b8ca6729ed90371cb2c21fe619559f48fc87a879
+      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=d82c9910a6286a5ec258a32366f4ce2930cee5d6
       - spshw/values/values-low-itf.yaml
   low-itf-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=b8ca6729ed90371cb2c21fe619559f48fc87a879
+      - git::https://gitlab.com/ska-telescope/aiv/ska-low-itf.git@/helmfile.d/values/platform.yaml?ref=d82c9910a6286a5ec258a32366f4ce2930cee5d6
       - spshw/values/values-low-itf.yaml
       - platform/minikube.yaml
   oxford:
@@ -98,12 +98,12 @@ environments:
   psi-low:
     kubeContext: psi-low
     values:
-      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=b66eb07e50e52177f647124d584c2a4ce07c3000
+      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=a066f45a12d373328189f390c220184cf13c1af0
       - spshw/values/values-psi-low.yaml
   psi-low-minikube:
     kubeContext: minikube
     values:
-      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=b66eb07e50e52177f647124d584c2a4ce07c3000
+      - git::https://gitlab.com/ska-telescope/ska-psi-low.git@/helmfile.d/values/platform.yaml?ref=a066f45a12d373328189f390c220184cf13c1af0
       - spshw/values/values-psi-low.yaml
       - platform/minikube.yaml
       - spshw/values/values-psi-low-minikube.yaml
@@ -126,13 +126,13 @@ releases:
     chart: ../charts/ska-low-mccs-spshw
     version: ~0.15.0
     values:
-      - values/globals.yaml.gotmpl
-      - spshw/templates/spsstations.yaml.gotmpl
-      - spshw/templates/subracks.yaml.gotmpl
-      - spshw/templates/tpms.yaml.gotmpl
-      - spshw/templates/daqs.yaml.gotmpl
-      - spshw/templates/daqrxs.yaml.gotmpl
-      - spshw/templates/helm-values.yaml.gotmpl
+      - .deploy/helmfile.d/templates/globals.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/daqs.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/spsstations.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/subracks.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/tpms.yaml.gotmpl
+      - .deploy/helmfile.d/templates/spshw/ska-low-mccs-daq.yaml.gotmpl
+      - .deploy/helmfile.d/templates/helm-values.yaml.gotmpl
 
 {{- $_tango_host_provided := dig "platform" "cluster" "services" "tango-base" "tango-host" "" .Values}}
 {{- $tango_host_provided := dig "overrides" "cluster" "services" "tango-base" "tango-host" $_tango_host_provided .Values}}
@@ -142,7 +142,7 @@ releases:
     chart: skao/ska-tango-base
     version: ~0.4.7
     values:
-      - values/globals.yaml.gotmpl
+      - .deploy/helmfile.d/templates/globals.yaml.gotmpl
 {{- end}}
 
 {{- $_skuid_provided := dig "platform" "cluster" "services" "skuid" "url" "" .Values}}
@@ -153,7 +153,7 @@ releases:
     chart: skao/ska-ser-skuid
     version: ~3.3.3
     values:
-      - values/skuid.yaml
+      - .deploy/helmfile.d/templates/skuid.yaml
 {{- end}}
 
 {{- $_jupyterhub_provided := dig "platform" "cluster" "services" "jupyterhub" false .Values}}
@@ -164,7 +164,7 @@ releases:
     chart: jupyterhub/jupyterhub
     version: 3.1.0
     values:
-      - values/jupyterhub.yaml
+      - .deploy/helmfile.d/templates/jupyterhub.yaml
 {{- end}}
 
 {{- $_taranta_platform_provided := dig "platform" "cluster" "services" "taranta-platform" false .Values}}
@@ -197,13 +197,13 @@ releases:
     chart: skao/ska-tango-taranta
     version: ~2.5.1
     values:
-      - values/taranta.yaml
+      - .deploy/helmfile.d/templates/taranta.yaml
 
   - name: tangogql
     namespace: {{.Namespace | default "ska-low-mccs"}}
     chart: skao/ska-tango-tangogql
     version: ~1.3.10
     values:
-      - values/globals.yaml.gotmpl
+      - .deploy/helmfile.d/templates/globals.yaml.gotmpl
       - ska-tango-base:
           enabled: false

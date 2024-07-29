@@ -152,6 +152,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._tpm_version = tpm_version
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
+        self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or TileSimulator(logger)
@@ -216,6 +217,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
+            case "CHECK_BOARD_TEMPERATURE":
+                request = TileRequest(
+                    "board_temperature",
+                    self.tile.get_temperature,
+                    publish=True,
+                )
             case "CONNECT":
                 error_flag = False
                 try:
@@ -244,8 +251,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.get_health_status,
                     publish=True,
                 )
-            case "TILE_INFO":
-                request = TileRequest("tile_info", self.tile.info, publish=True)
             case "ADC_RMS":
                 request = TileRequest("adc_rms", self.tile.get_adc_rms, publish=True)
             case "PLL_LOCKED":
@@ -278,7 +283,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
             case "IS_BEAMFORMER_RUNNING":
                 request = TileRequest(
-                    "beamformer_running", self.tile.beamformer_is_running, publish=True
+                    "beamformer_running",
+                    self.tile.beamformer_is_running,
+                    publish=True,
                 )
             case "PHASE_TERMINAL_COUNT":
                 request = TileRequest(
@@ -609,6 +616,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info(f"subrack says power is {PowerState(event_value).name}")
         self._subrack_says_tpm_power = event_value
 
+    def tile_info(self: TileComponentManager) -> dict[str, Any]:
+        """
+        Return information about the tile.
+
+        :return: information relevant to tile.
+
+        :raises TimeoutError: if lock not acquired in time.
+        """
+        with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
+            if acquired:
+                return self.tile.info
+        raise TimeoutError("Failed to acquire lock in time.")
+
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
@@ -623,6 +643,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             try:
                 with self._hardware_lock:
+                    core_communication = self.tile.check_communication()
+                    self._update_attribute_callback(
+                        core_communication=core_communication
+                    )
+                    if core_communication["CPLD"]:
+                        if (
+                            not core_communication["FPGA0"]
+                            or not core_communication["FPGA1"]
+                        ):
+                            self.logger.warning(
+                                "Unable to connect with at least 1 FPGA"
+                            )
                     _is_programmed = self.tile.is_programmed()
                     if _is_programmed is False:
                         status = TpmStatus.UNPROGRAMMED
@@ -1288,7 +1320,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def get_tpm_temperature_thresholds(
         self: TileComponentManager,
-    ) -> None | dict[str, tuple[int, int]]:
+    ) -> None | dict[str, tuple[float, float]]:
         """
         Return the temperature thresholds in firmware.
 
@@ -1893,9 +1925,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param beam_index: the beam to which the pointing delay should
             be applied
         """
-        self.logger.info("TileComponentManager: set_pointing_delay")
+        self.logger.info("TileComponentManager: load_pointing_delays")
         nof_items = len(delay_array)
         self.logger.info(f"Beam: {beam_index} delays: {delay_array}")
+        self.last_pointing_delays = delay_array
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
             delay_array.extend([[0.0, 0.0]] * (16 - nof_items))
@@ -2703,7 +2736,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def voltage_mon(self: TileComponentManager) -> bool:
+    def voltage_mon(self: TileComponentManager) -> float:
         """
         Return the internal 5V supply of the TPM.
 
@@ -2718,7 +2751,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def fpga1_temperature(self: TileComponentManager) -> bool:
+    def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.
 
@@ -2735,7 +2768,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def fpga2_temperature(self: TileComponentManager) -> bool:
+    def fpga2_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 2.
 
@@ -2752,7 +2785,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def board_temperature(self: TileComponentManager) -> bool:
+    def board_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of the TPM.
 
@@ -2812,6 +2845,58 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         raise TimeoutError(
             "Failed to check programmed state, lock not acquired in time."
         )
+
+    @check_communicating
+    def set_tpm_temperature_thresholds(
+        self: TileComponentManager,
+        board_alarm_threshold: tuple[float, float] | None = None,
+        fpga1_alarm_threshold: tuple[float, float] | None = None,
+        fpga2_alarm_threshold: tuple[float, float] | None = None,
+    ) -> tuple[ResultCode, str]:
+        """
+        Set the temperature thresholds.
+
+        NOTE: Warning this method can configure the shutdown temperature of
+        components and must be used with care. This method is capped to a minimum
+        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+
+        :param board_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the board (unit: Degree Celsius)
+        :param fpga1_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
+        :param fpga2_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+
+        :return: a tuple containing a ``ResultCode`` and string with information about
+            the execution outcome.
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile.set_tpm_temperature_thresholds(
+                        board_alarm_threshold=board_alarm_threshold,
+                        fpga1_alarm_threshold=fpga1_alarm_threshold,
+                        fpga2_alarm_threshold=fpga2_alarm_threshold,
+                    )
+                except ValueError as ve:
+                    value_error_message = (
+                        f"Failed to set the tpm temperature thresholds {ve}"
+                    )
+                    self.logger.error(value_error_message)
+                    return (ResultCode.FAILED, value_error_message)
+                except Exception as e:  # pylint: disable=broad-except
+                    message = f"Unexpected exception raised {repr(e)}"
+                    self.logger.error(message)
+                    return (ResultCode.FAILED, message)
+
+            else:
+                lock_failed_message = (
+                    "Failed to acquire lock for set_tpm_temperature_thresholds."
+                )
+                self.logger.warning(lock_failed_message)
+                return (ResultCode.FAILED, lock_failed_message)
+
+        return (ResultCode.OK, "Command executed.")
 
     # -----------------------------
     # Test generator methods

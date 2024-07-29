@@ -26,6 +26,7 @@ import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
 from ska_control_model import (
+    AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -41,11 +42,56 @@ from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
 
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
+
 from ..tile.tile_data import TileData
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
+
+
+def retry_command_on_exception(
+    device_proxy: tango.Deviceproxy,
+    command_name: str,
+    command_arguments: Any = None,
+    timeout: int = 30,
+) -> Any:
+    """
+    Retry command when DevFailed exception raised.
+
+    NOTE: By default this command will retry the command up to 30 seconds
+
+    :param device_proxy: A 'tango.DeviceProxy' to the backend device.
+    :param command_name: A string containing the command name.
+    :param command_arguments: The arguments to pass to command.
+        defaults to None
+    :param timeout: A max time in seconds before we give up trying
+
+    :returns: The response from the command.
+
+    :raises TimeoutError: if the command did not execute without exception in
+        timeout period.
+    """
+    assert (
+        device_proxy.adminMode == AdminMode.ONLINE
+    ), "Unable to execute command on a OFFLINE device."
+    tick = 2
+    terminate_time = time.time() + timeout
+    while time.time() < terminate_time:
+        try:
+            if command_arguments is None:
+                return getattr(device_proxy, command_name)()
+            return getattr(device_proxy, command_name)(command_arguments)
+        except tango.DevFailed as df:
+            print(
+                f"{device_proxy.dev_name()} failed to communicate with backend.\n"
+                f"{df}"
+            )
+            time.sleep(tick)
+    raise TimeoutError(
+        f"Unable to execute command {command_name} on {device_proxy.dev_name()}"
+    )
 
 
 class _SubrackProxy(DeviceComponentManager):
@@ -502,6 +548,7 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
+        self.last_pointing_delays = [0.0] * 513
 
         super().__init__(
             logger,
@@ -648,7 +695,7 @@ class SpsStationComponentManager(
                 antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
                 tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
                 self._antenna_mapping[antenna_number] = {
-                    "tpm": tpm_number,
+                    "tpm": tpm_number,  # 1 based numbering
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
                     "delay": antenna_config["delay"],
@@ -675,7 +722,9 @@ class SpsStationComponentManager(
 
         :returns: list of static delays in tile/channel order
         """
-        tile_delays = [[0] * TileData.ADC_CHANNELS] * len(self._tile_proxies)
+        tile_delays = [
+            [0] * TileData.ADC_CHANNELS for _ in range(len(self._tile_proxies))
+        ]
         for antenna_config in self._antenna_mapping.values():
             try:
                 tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
@@ -729,7 +778,7 @@ class SpsStationComponentManager(
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
             # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"] - 1
             channel = (
                 self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
             )  # y channel, even
@@ -2480,6 +2529,8 @@ class SpsStationComponentManager(
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
 
+        self.last_pointing_delays = delay_list
+
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 
@@ -2744,23 +2795,32 @@ class SpsStationComponentManager(
         # Get DAQ running with correlator
         assert self._daq_proxy is not None
         assert self._daq_proxy._proxy is not None
-        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+
+        daq_status = json.loads(
+            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+        )
 
         # TODO: We have to stop all consumers before sending again
         # https://jira.skatelescope.org/browse/MCCS-2183
         if len(daq_status["Running Consumers"]) > 0:
             self.logger.info("Stopping all consumers...")
-            rc, _ = self._daq_proxy._proxy.Stop()
+            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
             if rc != ResultCode.OK:
                 self.logger.warning("Unable to stop daq consumers.")
             for _ in range(max_tries):
-                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+                daq_status = json.loads(
+                    retry_command_on_exception(
+                        self._daq_proxy._proxy, "DaqStatus", None
+                    )
+                )
                 if len(daq_status["Running Consumers"]) == 0:
                     continue
                 time.sleep(tick)
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
-        self._daq_proxy._proxy.configure(
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "configure",
             json.dumps(
                 {
                     "nof_tiles": self._number_of_tiles,
@@ -2769,12 +2829,16 @@ class SpsStationComponentManager(
                     "nof_correlator_samples": nof_correlator_samples,
                     "receiver_frame_size": receiver_frame_size,
                 }
-            )
+            ),
         )
-        self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+        retry_command_on_exception(
+            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
+        )
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         for _ in range(max_tries):
-            daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            )
             if any(
                 status_list[0] == daq_mode
                 for status_list in daq_status["Running Consumers"]
@@ -2808,30 +2872,42 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
+        states = self.tile_programming_state()
+        self.logger.debug(f"tileProgrammingState: {states}")
+        if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.REJECTED,
+                    result=(
+                        ResultCode.REJECTED,
+                        "AcquireDataForCalibration failed. Tiles not synchronised.",
+                    ),
+                )
+            return
+
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
-        data_send_mode: str = "channel"
-
-        # Verify all tiles are acquiring data
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if not tile._proxy.tileProgrammingState == "Synchronised":
+        def _check_aborted() -> bool:
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("AcquireDataForCalibration task has been aborted")
                 if task_callback:
                     task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(
-                            ResultCode.FAILED,
-                            "AcquireDataForCalibration failed. Tiles not synchronised.",
-                        ),
+                        status=TaskStatus.ABORTED,
+                        result=(ResultCode.ABORTED, "Task aborted"),
                     )
-                return
+                return True
+            return False
+
+        data_send_mode: str = "channel"
 
         try:
             self.logger.info(
                 "AcquireDataForCalibration configuring tiles and daq for calibration"
             )
             self._configure_station_for_calibration()
+            if _check_aborted():
+                return
         except AssertionError as e:
             self.logger.error(f"Unable to configure station {repr(e)}")
             if task_callback:
@@ -2899,6 +2975,8 @@ class SpsStationComponentManager(
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
+
+        self._channeliser_rounding = list(channeliser_rounding)
 
         result_code = ResultCode.OK
         message = ""

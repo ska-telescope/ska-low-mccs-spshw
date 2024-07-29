@@ -2231,6 +2231,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
     @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=2,  # [Delay, delay rate]
+        max_dim_y=16,  # channel (same for x and y)
+    )
+    def lastPointingDelays(self: MccsTile) -> list[list]:
+        """
+        Return last pointing delays applied to the tile.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in channel order, with each pair corresponding to
+        a delay and delay rate.
+
+        :returns: last pointing delays applied to the tile.
+        """
+        return self.component_manager.last_pointing_delays
+
+    @attribute(
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
@@ -3727,7 +3744,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
             :param argin: an array containing a beam index and antenna
-                delays
+                delays. In tile channel order.
             :param args: unspecified positional arguments. This should be empty and is
                 provided for type hinting only
             :param kwargs: unspecified keyword arguments. This should be empty and is

@@ -152,6 +152,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._tpm_version = tpm_version
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
+        self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or TileSimulator(logger)
@@ -1924,9 +1925,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param beam_index: the beam to which the pointing delay should
             be applied
         """
-        self.logger.info("TileComponentManager: set_pointing_delay")
+        self.logger.info("TileComponentManager: load_pointing_delays")
         nof_items = len(delay_array)
         self.logger.info(f"Beam: {beam_index} delays: {delay_array}")
+        self.last_pointing_delays = delay_array
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
             delay_array.extend([[0.0, 0.0]] * (16 - nof_items))

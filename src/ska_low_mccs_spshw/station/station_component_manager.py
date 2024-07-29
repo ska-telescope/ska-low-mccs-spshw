@@ -548,6 +548,7 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
+        self.last_pointing_delays = [0.0] * 513
 
         super().__init__(
             logger,
@@ -694,7 +695,7 @@ class SpsStationComponentManager(
                 antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
                 tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
                 self._antenna_mapping[antenna_number] = {
-                    "tpm": tpm_number,
+                    "tpm": tpm_number,  # 1 based numbering
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
                     "delay": antenna_config["delay"],
@@ -777,7 +778,7 @@ class SpsStationComponentManager(
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
             # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"] - 1
             channel = (
                 self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
             )  # y channel, even
@@ -2527,6 +2528,8 @@ class SpsStationComponentManager(
         :param delay_list: delay in seconds, and delay rate in seconds/second
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
+
+        self.last_pointing_delays = delay_list
 
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None

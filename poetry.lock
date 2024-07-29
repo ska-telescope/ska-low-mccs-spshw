@@ -3045,14 +3045,19 @@ reference = "PyPI-public"
 [[package]]
 name = "setuptools"
 <<<<<<< HEAD
+<<<<<<< HEAD
 version = "72.1.0"
 =======
 version = "71.1.0"
 >>>>>>> ce73d45c ([MCCS-2135] Update MCCS to pull tags rather than commits)
+=======
+version = "72.1.0"
+>>>>>>> ba7ca6f0 (Made them use tag rather than rev)
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.8"
 files = [
+<<<<<<< HEAD
 <<<<<<< HEAD
     {file = "setuptools-72.1.0-py3-none-any.whl", hash = "sha256:5a03e1860cf56bb6ef48ce186b0e557fdba433237481a9a625176c2831be15d1"},
     {file = "setuptools-72.1.0.tar.gz", hash = "sha256:8d243eff56d095e5817f796ede6ae32941278f542e0f941867cc05ae52b162ec"},
@@ -3060,6 +3065,10 @@ files = [
     {file = "setuptools-71.1.0-py3-none-any.whl", hash = "sha256:33874fdc59b3188304b2e7c80d9029097ea31627180896fb549c578ceb8a0855"},
     {file = "setuptools-71.1.0.tar.gz", hash = "sha256:032d42ee9fb536e33087fb66cac5f840eb9391ed05637b3f2a76a7c8fb477936"},
 >>>>>>> ce73d45c ([MCCS-2135] Update MCCS to pull tags rather than commits)
+=======
+    {file = "setuptools-72.1.0-py3-none-any.whl", hash = "sha256:5a03e1860cf56bb6ef48ce186b0e557fdba433237481a9a625176c2831be15d1"},
+    {file = "setuptools-72.1.0.tar.gz", hash = "sha256:8d243eff56d095e5817f796ede6ae32941278f542e0f941867cc05ae52b162ec"},
+>>>>>>> ba7ca6f0 (Made them use tag rather than rev)
 ]
 
 [package.extras]
@@ -4233,7 +4242,11 @@ reference = "PyPI-public"
 lock-version = "2.0"
 python-versions = "~3.10"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "c723a65b51eee47064530015df67897b8d79edac0b37bc0620a8d90ebb9cbb62"
 =======
 content-hash = "5e9f65df9941d86ac1d3dea43128d7caef5072db859908713b5e3d4408e08ab2"
 >>>>>>> ce73d45c ([MCCS-2135] Update MCCS to pull tags rather than commits)
+=======
+content-hash = "0d83f910229238d30a16f5b8f07cba8d835cf77ca6c61373c5acafd7d780054a"
+>>>>>>> ba7ca6f0 (Made them use tag rather than rev)

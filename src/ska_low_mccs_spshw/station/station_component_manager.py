@@ -2976,6 +2976,8 @@ class SpsStationComponentManager(
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
+        self._channeliser_rounding = channeliser_rounding
+
         result_code = ResultCode.OK
         message = ""
         for proxy in self._tile_proxies.values():

@@ -2298,7 +2298,7 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of LMC channel.
 
@@ -2307,6 +2307,10 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         self._lmc_param["mode"] = mode
         self._lmc_param["payload_length"] = payload_length
@@ -2316,10 +2320,9 @@ class SpsStationComponentManager(
         self._lmc_param["netmask_40g"] = self._sdn_netmask
         self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.SetLmcDownload(json_param)
+        return self.execute_asynch(
+            "SetLmcDownload", json_param, require_initialised=True
+        )
 
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
@@ -2329,7 +2332,7 @@ class SpsStationComponentManager(
         dst_ip: str = "",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of integrated LMC channel.
 
@@ -2341,6 +2344,10 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         self._lmc_integrated_mode = mode
         self._lmc_channel_payload_length = channel_payload_length
@@ -2359,10 +2366,9 @@ class SpsStationComponentManager(
                 "gateway_40g": self._sdn_gateway,
             }
         )
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.SetLmcIntegratedDownload(json_param)
+        return self.execute_asynch(
+            "SetLmcIntegratedDownload", json_param, require_initialised=True
+        )
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -2452,7 +2458,7 @@ class SpsStationComponentManager(
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -2460,24 +2466,32 @@ class SpsStationComponentManager(
             region containing a start channel, the size of the region
             (which must be a multiple of 8), and a beam index (between 0 and 7)
             and a substation ID (not used)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         self._beamformer_table = copy.deepcopy(beamformer_table)
-        self._set_beamformer_table()
+        return self._set_beamformer_table()
 
     def _set_beamformer_table(
         self: SpsStationComponentManager,
-    ) -> None:
-        """Set the frequency regions to be beamformed into a single beam."""
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Set the frequency regions to be beamformed into a single beam.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
         beamformer_regions = []
         for entry in self._beamformer_table:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(f"Set beamformer table on tile {tile._proxy.name()}")
-                tile._proxy.SetBeamformerRegions(
-                    list(itertools.chain.from_iterable(beamformer_regions))
-                )
+        return self.execute_asynch(
+            "SetBeamformerRegions",
+            list(itertools.chain.from_iterable(beamformer_regions)),
+            require_initialised=True,
+        )
 
     def load_calibration_coefficients(
         self: SpsStationComponentManager, calibration_coefficients: list[float]
@@ -2501,7 +2515,9 @@ class SpsStationComponentManager(
         coefs[0] = float(tile_antenna)
         proxy.LoadCalibrationCoefficients(coefs)
 
-    def apply_calibration(self: SpsStationComponentManager, switch_time: str) -> None:
+    def apply_calibration(
+        self: SpsStationComponentManager, switch_time: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Switch the calibration bank.
 
@@ -2510,10 +2526,12 @@ class SpsStationComponentManager(
 
         :param switch_time: an optional time at which to perform the
             switch
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyCalibration(switch_time)
+        return self.execute_asynch("ApplyCalibration", switch_time)
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
@@ -2540,15 +2558,19 @@ class SpsStationComponentManager(
             delays_for_tile = tile_delays[tile_no - 1]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
-    def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
+    def apply_pointing_delays(
+        self: SpsStationComponentManager, load_time: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Load the pointing delay at a specified time.
 
         :param load_time: time at which to load the pointing delay
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyPointingDelays(load_time)
+        return self.execute_asynch("ApplyPointingDelays", load_time)
 
     def start_beamformer(
         self: SpsStationComponentManager,
@@ -2556,7 +2578,7 @@ class SpsStationComponentManager(
         duration: float,
         subarray_beam_id: int,
         scan_id: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Start the beamformer at the specified time.
 
@@ -2566,6 +2588,10 @@ class SpsStationComponentManager(
             defaults to -1 (run forever)
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "start_time": start_time,
@@ -2574,22 +2600,26 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StartBeamformer(json_argument)
+        return self.execute_asynch("StartBeamformer", json_argument)
 
-    def stop_beamformer(self: SpsStationComponentManager) -> None:
-        """Stop the beamformer."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopBeamformer()
+    def stop_beamformer(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop the beamformer.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self.execute_asynch("StopBeamformer")
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2600,6 +2630,10 @@ class SpsStationComponentManager(
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "integration_time": integration_time,
@@ -2607,16 +2641,14 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureIntegratedChannelData(json_argument)
+        return self.execute_asynch("ConfigureIntegratedChannelData", json_argument)
 
     def configure_integrated_beam_data(
         self: SpsStationComponentManager,
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2627,6 +2659,10 @@ class SpsStationComponentManager(
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "integration_time": integration_time,
@@ -2634,56 +2670,59 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureIntegratedBeamData(json_argument)
+        return self.execute_asynch("ConfigureIntegratedBeamData", json_argument)
 
-    def stop_integrated_data(self: SpsStationComponentManager) -> None:
-        """Stop the integrated data."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopIntegratedData()
+    def stop_integrated_data(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop the integrated data.
 
-    def send_data_samples(self: SpsStationComponentManager, argin: str) -> None:
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self.execute_asynch("StopIntegratedData")
+
+    def send_data_samples(
+        self: SpsStationComponentManager, argin: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Front end for send_xxx_data methods.
 
         :param argin: Json encoded parameter List
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.SendDataSamples(argin)
+        return self.execute_asynch("SendDataSamples", argin)
 
-    def stop_data_transmission(self: SpsStationComponentManager) -> None:
-        """Stop data transmission for send_channelised_data_continuous."""
-        future_results = [
-            dev._proxy.command_inout(
-                "StopDataTransmission",
-                green_mode=tango.GreenMode.Futures,
-                wait=False,
-            )
-            for dev in self._tile_proxies.values()
-            if dev._proxy is not None
-        ]
-        futures.wait(future_results)
-        if len(future_results) != len(self._tile_proxies):
-            self.logger.warning(
-                "StopDataTransmission how not been called on all Tiles."
-            )
-        self.logger.debug(
-            "Tiles response from StopDataTransmission: "
-            f" {[f.result() for f in future_results]}"
-        )
+    def stop_data_transmission(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop data transmission for send_channelised_data_continuous.
 
-    def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self.execute_asynch("StopDataTransmission")
+
+    def configure_test_generator(
+        self: SpsStationComponentManager, argin: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Distribute to tiles command configure_test_generator.
 
         :param argin: Json encoded parameter List
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureTestGenerator(argin)
+        return self.execute_asynch("ConfigureTestGenerator", argin)
 
     def start_acquisition(
         self: SpsStationComponentManager,
@@ -3085,3 +3124,83 @@ class SpsStationComponentManager(
         if docs is None:
             return f"{test_name} appears to have no description."
         return docs
+
+    # pylint: disable=broad-exception-caught
+    def execute_asynch(
+        self: SpsStationComponentManager,
+        command_name: str,
+        command_args: Optional[Any] = None,
+        timeout: int = 20,
+        require_initialised: bool = False,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Execute a given command on all tile proxies using green_mode futures.
+
+        This is for commands which return a DevVarLongStringArrayType.
+
+        :param command_name: command to execute.
+        :param command_args: args to execute commands with.
+        :param timeout: timeout in which to expect command completion.
+        :param require_initialised: if this command can only execute on an initialised
+            tile.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        command_args = [command_args] if command_args is not None else []
+        try:
+            self.logger.debug(f"calling {command_name} with {command_args}")
+            future_results: list[futures.Future] = [
+                dev._proxy.command_inout(
+                    command_name,
+                    *command_args,
+                    green_mode=tango.GreenMode.Futures,
+                    wait=False,
+                )
+                for dev in self._tile_proxies.values()
+                if dev._proxy is not None
+                and (
+                    not require_initialised
+                    or dev._proxy.tileProgrammingState
+                    in ["Initialised", "Synchronised"]
+                )
+            ]
+            if not future_results:
+                msg = f"{command_name} has not been called on any tiles."
+                self.logger.error(msg)
+                return [ResultCode.FAILED], [msg]
+            if len(future_results) != len(self._tile_proxies):
+                self.logger.warning(f"{command_name} has not been called on all tiles.")
+            complete_futures, incomplete_futures = futures.wait(
+                future_results, timeout=timeout
+            )
+            if not incomplete_futures:
+                msg = f"{len(incomplete_futures)} commands failed to complete in time."
+                self.logger.warning(msg)
+                return [ResultCode.FAILED], [msg]
+
+            results: list[ResultCode] = []
+            for future in complete_futures:
+                # If the Future contains an error, result() will re-raise it.
+                try:
+                    # Expect tuple[list[ResultCode], list[Optional[str]]]
+                    results.append(ResultCode(future.result()[0][0]))
+                except Exception as e:
+                    self.logger.error(
+                        f"Error executing {command_name} on a tile: {repr(e)}"
+                    )
+                    results.append(ResultCode.FAILED)
+
+            result_names = [result.name for result in results]
+            self.logger.debug(f"Tiles response from {command_name}: {result_names}")
+            if all(result == ResultCode.OK for result in results):
+                return [ResultCode.OK], [f"{command_name} completed OK."]
+            return [ResultCode.FAILED], [
+                f"{command_name} didn't complete OK. Results: {result_names}"
+            ]
+
+        except Exception as e:
+            msg = f"Exception calling {command_name} : {repr(e)}."
+            self.logger.error(msg)
+            return [ResultCode.FAILED], [msg]

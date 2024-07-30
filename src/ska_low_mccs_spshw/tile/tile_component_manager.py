@@ -617,7 +617,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
             if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
-                run_initialisation = False
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
@@ -625,8 +624,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     or self.active_lrc_request
                     and self.active_lrc_request.name.lower() != "initialise"
                 ):
-                    run_initialisation = True
-                if run_initialisation:
                     request = TileLRCRequest(
                         name="initialise",
                         command_object=self._execute_initialise,

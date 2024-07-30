@@ -54,6 +54,27 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
+    for command_name in [
+        "SetLmcDownload",
+        "SendDataSamples",
+        "SetLmcIntegratedDownload",
+        "StartBeamformer",
+        "ConfigureIntegratedChannelData",
+        "StartAcquisition",
+        "StopDataTransmission",
+        "StopIntegratedData",
+        "StopBeamformer",
+        "ConfigureTestGenerator",
+        "ConfigureIntegratedBeamData",
+        "ApplyPointingDelays",
+        "ApplyCalibration",
+        "SetBeamformerRegions",
+        "SetBeamFormerTable",
+        "LoadCalibrationCoefficients",
+    ]:
+        builder.add_command(
+            command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
+        )
     return builder
 
 

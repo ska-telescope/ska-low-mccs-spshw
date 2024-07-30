@@ -2513,7 +2513,7 @@ class SpsStationComponentManager(
         assert proxy is not None  # for the type checker
         coefs = copy.deepcopy(calibration_coefficients)
         coefs[0] = float(tile_antenna)
-        proxy.LoadCalibrationCoefficients(coefs)
+        proxy.LoadCalibrationCoefficients(list(coefs))
 
     def apply_calibration(
         self: SpsStationComponentManager, switch_time: str
@@ -3148,9 +3148,9 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
+        self.logger.debug(f"calling {command_name} with {command_args=}")
         command_args = [command_args] if command_args is not None else []
         try:
-            self.logger.debug(f"calling {command_name} with {command_args}")
             future_results: list[futures.Future] = [
                 dev._proxy.command_inout(
                     command_name,
@@ -3175,7 +3175,7 @@ class SpsStationComponentManager(
             complete_futures, incomplete_futures = futures.wait(
                 future_results, timeout=timeout
             )
-            if not incomplete_futures:
+            if incomplete_futures:
                 msg = f"{len(incomplete_futures)} commands failed to complete in time."
                 self.logger.warning(msg)
                 return [ResultCode.FAILED], [msg]

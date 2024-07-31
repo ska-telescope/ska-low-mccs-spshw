@@ -89,6 +89,9 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
         # For each power_state the subrack claims,
         # check the tile arrives at correct state.
         match power_state:
@@ -164,7 +167,18 @@ class TestTileComponentManager:
             case PowerState.ON:
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
+                    lookahead=5,
+                )
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
+                    lookahead=2,
+                    consume_nonmatches=True,
+                )
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                )
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
                 )
                 callbacks["attribute_state"].assert_call(
                     **{
@@ -176,7 +190,7 @@ class TestTileComponentManager:
                             "MCU_wd": 0,
                         }
                     },
-                    lookahead=4,
+                    lookahead=5,
                 )
                 try:
                     callbacks["component_state"].assert_call(
@@ -200,9 +214,7 @@ class TestTileComponentManager:
                     # For commands being executed e.g initialise,
                     # the callback can be called multiple times.
                     callbacks["component_state"].assert_call(fault=False, lookahead=6)
-                callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
-                )
+                assert tile_component_manager._tpm_status == TpmStatus.INITIALISED
             case PowerState.UNKNOWN:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
@@ -373,8 +385,11 @@ class TestTileComponentManager:
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
         callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
+        callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
-            lookahead=2,
+            lookahead=5,  # Unknown for number of polls until subrack callback.
             consume_nonmatches=True,
         )
 

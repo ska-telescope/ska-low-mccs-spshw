@@ -224,8 +224,10 @@ class DaqComponentManager(TaskExecutorComponentManager):
             task_callback(status=TaskStatus.IN_PROGRESS)
         # Check data directory is in correct format, if not then reconfigure.
         # This delays the start call by a lot if SKUID isn't there.
+        self.logger.error("Before ADR55 check")
         if not self._data_directory_format_adr55_compliant():
             config = {"directory": self._construct_adr55_filepath()}
+            self.logger.error("After ADR55 check")
             self.configure_daq(json.dumps(config))
             self.logger.info(
                 "Data directory automatically reconfigured to: %s", config["directory"]
@@ -508,7 +510,9 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: Whether the current directory is ADR-55 compliant.
         """
+        self.logger.error("Before getconfig")
         current_directory = self.get_configuration()["directory"].split("/", maxsplit=5)
+        self.logger.error("After getconfig")
         # Reconstruct ADR-55 relevant part of the fp to match against.
         current_directory_root = "/".join(current_directory[0:5])
         return PurePath(current_directory_root).match(f"/product/*/{SUBSYSTEM_SLUG}/*")

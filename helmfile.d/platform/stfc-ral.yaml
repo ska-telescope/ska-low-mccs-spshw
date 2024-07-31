@@ -97,6 +97,7 @@ platform:
         sps:
           sdn_first_interface: 10.130.0.100/25  # Tile 40G IP allocation starting at .100
           sdn_gateway: 10.130.0.126
+          csp_ingest_ip: 10.132.61.3
           subracks:
             sr2:
               srmb_host: 10.132.0.34

@@ -69,7 +69,6 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
         "ApplyPointingDelays",
         "ApplyCalibration",
         "SetBeamformerRegions",
-        "SetBeamFormerTable",
         "LoadCalibrationCoefficients",
     ]:
         builder.add_command(

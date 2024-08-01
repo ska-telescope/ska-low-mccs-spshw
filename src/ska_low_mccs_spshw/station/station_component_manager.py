@@ -3175,11 +3175,6 @@ class SpsStationComponentManager(
             complete_futures, incomplete_futures = futures.wait(
                 future_results, timeout=timeout
             )
-            if incomplete_futures:
-                msg = f"{len(incomplete_futures)} commands failed to complete in time."
-                self.logger.warning(msg)
-                return [ResultCode.FAILED], [msg]
-
             results: list[ResultCode] = []
             for future in complete_futures:
                 # If the Future contains an error, result() will re-raise it.
@@ -3194,6 +3189,12 @@ class SpsStationComponentManager(
 
             result_names = [result.name for result in results]
             self.logger.debug(f"Tiles response from {command_name}: {result_names}")
+
+            if incomplete_futures:
+                msg = f"{len(incomplete_futures)} commands failed to complete in time."
+                self.logger.warning(msg)
+                return [ResultCode.FAILED], [f"{msg} Results: {result_names}"]
+
             if all(result == ResultCode.OK for result in results):
                 return [ResultCode.OK], [f"{command_name} completed OK."]
             return [ResultCode.FAILED], [

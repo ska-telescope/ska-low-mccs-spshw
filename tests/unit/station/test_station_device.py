@@ -357,6 +357,8 @@ def test_On(
     for mock_tile_proxy in mock_tile_device_proxies:
         mock_tile_proxy.tileProgrammingState = "Initialised"
 
+    # The mock takes a non-negligible amount of time to write attributes
+    # Brief sleep needed to allow it to write the tileProgrammingState
     time.sleep(0.1)
 
     change_event_callbacks["state"].assert_change_event(DevState.STANDBY)

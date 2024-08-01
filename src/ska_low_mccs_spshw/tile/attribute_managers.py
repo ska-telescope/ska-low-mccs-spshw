@@ -87,9 +87,10 @@ class AttributeManager:
         :param value_changed: a flag representing if the value changed
             from the previous value.
         """
-        self._value_time_quality_callback(*self.read(), value_changed)
-        if self.alarm_handler is not None:
-            self.alarm_handler()
+        if value_changed:
+            self._value_time_quality_callback(*self.read())
+            if self.alarm_handler is not None:
+                self.alarm_handler()
 
 
 class BoolAttributeManager(AttributeManager):
@@ -138,7 +139,13 @@ class BoolAttributeManager(AttributeManager):
 
 
 class AlarmAttributeManager(AttributeManager):
-    """An AttributeManager for alarm attribute."""
+    """
+    An AttributeManager for alarm attribute.
+
+    The quality of the alarm attribute is specific to custom
+    values. This manager will evaluate the attribute quality
+    against these values.
+    """
 
     def __init__(
         self: AlarmAttributeManager,
@@ -160,8 +167,21 @@ class AlarmAttributeManager(AttributeManager):
             alarm_handler=alarm_handler,
         )
 
+    def _is_valid(self: AlarmAttributeManager, value: dict[str, int]) -> bool:
+        """
+        Is the value a valid input.
+
+        :param value: the value to check if valid.
+
+        :returns: True is the value is valid.
+        """
+        return isinstance(value, dict)
+
     def update_quality(self: AlarmAttributeManager) -> None:
         """Update attribute quality."""
+        if not self._is_valid(self._value):
+            self._quality = tango.AttrQuality.ATTR_INVALID
+            return
         if any(alarm_value == 2 for alarm_value in self._value.values()):
             self._quality = tango.AttrQuality.ATTR_ALARM
         elif any(alarm_value == 1 for alarm_value in self._value.values()):

@@ -1745,7 +1745,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self: MccsTile) -> tuple[int | None, float, tango.AttrQuality]:
+    def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
 

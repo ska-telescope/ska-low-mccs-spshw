@@ -9,7 +9,6 @@
 from __future__ import annotations
 
 import unittest
-from typing import Callable
 from unittest.mock import ANY
 
 import pytest
@@ -23,29 +22,21 @@ from ska_low_mccs_spshw.tile.attribute_managers import (
 
 
 @pytest.fixture(name="alarm_handle", scope="module")
-def alarm_handle_fixture() -> Callable[[], unittest.mock.Mock]:
+def alarm_handle_fixture() -> unittest.mock.Mock:
     """
-    Fixture that provides a mock factory for device proxy mocks.
+    Fixture that provides a mock to call for alarm handling.
 
-    This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
-    to provide mocks with specified behaviours.
-
-    :return: a factory for device proxy mocks
+    :return: a mock to call for alarm handling.
     """
     return unittest.mock.Mock()
 
 
 @pytest.fixture(name="post_change_event_callback", scope="module")
-def post_change_event_callback_fixture() -> Callable[[], unittest.mock.Mock]:
+def post_change_event_callback_fixture() -> unittest.mock.Mock:
     """
-    Fixture that provides a mock factory for device proxy mocks.
+    Fixture that provides a mock to call for value change handling.
 
-    This default factory
-    provides vanilla mocks, but this fixture can be overridden by test modules/classes
-    to provide mocks with specified behaviours.
-
-    :return: a factory for device proxy mocks
+    :return: a mock to call for value change handling
     """
     return unittest.mock.Mock()
 
@@ -230,9 +221,9 @@ class TestAlarmAttributeManager:
             "MCU_wd": 0,
         }
         alarm_value_2: dict[str, int] = {
-            "I2C_access_alm": 2,
+            "I2C_access_alm": 0,
             "temperature_alm": 1,
-            "voltage_alm": 0,
+            "voltage_alm": 2,
             "SEM_wd": 0,
             "MCU_wd": 0,
         }

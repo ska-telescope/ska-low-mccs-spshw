@@ -87,9 +87,10 @@ class AttributeManager:
         :param value_changed: a flag representing if the value changed
             from the previous value.
         """
-        self._value_time_quality_callback(*self.read(), value_changed)
-        if self.alarm_handler is not None:
-            self.alarm_handler()
+        if value_changed:
+            self._value_time_quality_callback(*self.read())
+            if self.alarm_handler is not None:
+                self.alarm_handler()
 
 
 class BoolAttributeManager(AttributeManager):

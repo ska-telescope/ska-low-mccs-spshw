@@ -1,11 +1,18 @@
+defaults:
+  logging_level_default: 5
+
 platform:
-  cluster:
-    domain: lowitf.internal.skao.int
-    services:
-      tango-base:
-        tango-host: ""  # Override to empty, so we deploy ska-tango-base ourselves
-      skuid:
-        url: ""  # Override any set value, so we deploy ska-ser-skuid ourselves
+  array:
+    station_clusters:
+      "o1":
+        stations:
+          "1":
+            sps:
+              subracks:
+                "1":
+                  srmb_host: subrack_simulator
+                  srmb_port: 8081
+                  simulated: true
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
@@ -14,7 +21,7 @@ platform:
 # helm_values:
 #   image:
 #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.12.0-dev.c7e00ca93
+#     tag: 0.11.0-dev.cc21201e6
 
 #   ska-low-mccs-daq:
 #     image:

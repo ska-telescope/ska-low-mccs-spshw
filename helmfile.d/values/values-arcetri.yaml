@@ -1,7 +1,7 @@
 defaults:
   logging_level_default: 5
 
-overrides:
+platform:
     stations:
       arcetri:
         sps:

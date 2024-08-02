@@ -497,7 +497,7 @@ class TestTileComponentManager:
 
         # We initially submit the on command to the Subrack and place a
         # Initialise command in the queue.
-        mock_subrack_device_proxy.PowerOnTpm.assert_last_call()
+        mock_subrack_device_proxy.PowerOnTpm.assert_last_call(1)
 
         # mock an event from subrack announcing it to be turned on
         tile_component_manager._subrack_says_tpm_power_changed(
@@ -1385,9 +1385,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # Assert values have been updated.
         assert tile_component_manager.pps_delay == tile_simulator._pps_delay

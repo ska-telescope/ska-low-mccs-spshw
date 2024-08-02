@@ -254,12 +254,6 @@ class TestSubrackTileIntegration:
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         change_event_callbacks["tile_state"].assert_not_called()
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
 
 class TestMccsTileTpmDriver:
@@ -465,13 +459,11 @@ class TestMccsTileTpmDriver:
         start_time = datetime.datetime.strftime(
             datetime.datetime.fromtimestamp(int(time.time()) + delay_time), RFC_FORMAT
         )
-
-        execute_lrc_to_completion(
-            change_event_callbacks,
-            tile_device,
-            "StartAcquisition",
-            json.dumps({"start_time": start_time}),
+        [[result_code], [message]] = tile_device.StartAcquisition(
+            json.dumps({"start_time": start_time})
         )
+        assert result_code == ResultCode.QUEUED
+        assert "StartAcquisition" in message.split("_")[-1]
 
         initial_frame = tile_device.currentFrame
         sleep_time = delay_time + 0.5  # seconds
@@ -479,12 +471,6 @@ class TestMccsTileTpmDriver:
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
@@ -539,12 +525,6 @@ class TestMccsTileTpmDriver:
             json.dumps({"data_type": "raw"})
         )
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_configure_40g_core(
         self: TestMccsTileTpmDriver,
@@ -592,12 +572,6 @@ class TestMccsTileTpmDriver:
         # check is a subset
         assert config.items() <= result.items()
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
@@ -646,12 +620,6 @@ class TestMccsTileTpmDriver:
         ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
@@ -698,12 +666,6 @@ class TestMccsTileTpmDriver:
         expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
@@ -756,12 +718,6 @@ class TestMccsTileTpmDriver:
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable=too-many-arguments
     def test_pps_present(
@@ -814,12 +770,6 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.state() == tango.DevState.ALARM
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable=too-many-arguments
     def test_pps_delay(
@@ -876,12 +826,6 @@ class TestMccsTileTpmDriver:
         assert np.array_equal(final_corrections, tile_under_test_pps_delay)
         # assert tile_device.ppsDelay == tile_under_test_pps_delay
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -988,12 +932,6 @@ class TestMccsTileTpmDriver:
         )
         assert tile_device.state() == tango.DevState.ALARM
         tile_device.unsubscribe_event(sub_id)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -1101,12 +1039,6 @@ class TestMccsTileTpmDriver:
         # and report the Power as OFF.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
         assert tile_device.state() == tango.DevState.OFF
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -1220,12 +1152,6 @@ class TestMccsTileTpmDriver:
         assert tile_device.get_attribute_config(attribute).max_alarm == str(
             less_than_initial_value
         )
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()
 
     def test_tile_state_rediscovery(
         self: TestMccsTileTpmDriver,
@@ -1292,9 +1218,3 @@ class TestMccsTileTpmDriver:
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
         wait_for_completed_command_to_clear_from_queue(tile_device)
-        # Some strange teardown issues that causes a segfault. My initial idea is that
-        # The tango server is being torn down before the tile_component_manager is, this
-        # means that the callbacks can attempt an operation on a non existent server.
-        # Here we remove the callbacks from the component_manager meaning we will not
-        # Be attempting any TANGO operations during teardown
-        tile_device.cleanup()

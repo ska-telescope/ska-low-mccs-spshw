@@ -15,6 +15,8 @@ import ipaddress
 import itertools
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Optional, cast
 
@@ -775,6 +777,46 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.csp_source_port
 
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: SpsStation) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: SpsStation, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        :raises ValueError: if specified time not in ISO format or < TAI2000
+        """
+        #   tai_2000_epoch = int(AstropyTime('2000-01-01 00:00:00',
+        #                        scale='tai').unix) - extra_leap_seconds
+        tai_2000_epoch = 946684763
+        # check syntax and positive time.
+        # TODO Convert to astropy Time
+        rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+        try:
+            # time_ref = Time(reference_time, format="isot").unix
+            dt = datetime.strptime(reference_time, rfc_format)
+            time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
+        except ValueError as error:
+            self.logger.error(f"Invalid ISO time: {error}")
+            raise ValueError(error) from error
+        time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
+        if time_ref < int(time.time()) - 864000:
+            raise ValueError("Reference time too old: more than 10 days")
+        self.component_manager.global_reference_time = (
+            # Time(time_ref, format="unix").isot + "Z"
+            datetime.strftime(
+                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
+            )
+        )
+
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:
         """
@@ -960,6 +1002,35 @@ class SpsStation(SKAObsDevice):
         :return: the list of self-check tests available.
         """
         return self.component_manager.test_list
+
+    @attribute(dtype="DevString")
+    def cspSpeadFormat(self: SpsStation) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: SpsStation, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
     @attribute(dtype=("DevFloat",), max_dim_x=513)
     def lastPointingDelays(self: SpsStation) -> list:
@@ -1206,9 +1277,9 @@ class SpsStation(SKAObsDevice):
         >> dp.command_inout("SetLmcDownload", jstr)
         """
         params = json.loads(argin)
-        mode = params.get("mode", "40G")
+        mode = params.get("mode", "10G")
 
-        if mode.upper == "40G":
+        if mode.upper() == "40G":
             mode = "10G"
         payload_length = params.get("payload_length", None)
         if payload_length is None:
@@ -1927,8 +1998,8 @@ class SpsStation(SKAObsDevice):
         * set_time: time at which the generator is set, for synchronization
             among different TPMs. In UTC ISO format (string)
         * adc_channels: list of adc channels which will be substituted with
-            the generated signal. It is a 32 integer, with each bit representing
-            an input channel. Default: all if at least q source is specified,
+            the generated signal. 32 bit integer, with each bit representing
+            an input channel. Default: all if at least 1 source is specified,
             none otherwises.
 
         :return: A tuple containing a return code and a string

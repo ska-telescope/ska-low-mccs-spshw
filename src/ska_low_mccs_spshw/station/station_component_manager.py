@@ -3173,6 +3173,8 @@ class SpsStationComponentManager(
                 return [ResultCode.FAILED], [msg]
             if len(future_results) != len(self._tile_proxies):
                 self.logger.warning(f"{command_name} has not been called on all tiles.")
+            self.logger.error(f"{future_results=}")
+            self.logger.error(f"{type(future_results)=}")
             complete_futures, incomplete_futures = futures.wait(
                 future_results, timeout=timeout
             )

@@ -3147,6 +3147,7 @@ class SpsStationComponentManager(
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
+        :raises Exception: if we have an unforseen error.
         """
         self.logger.debug(f"calling {command_name} with {command_args=}")
         command_args = [command_args] if command_args is not None else []
@@ -3202,6 +3203,5 @@ class SpsStationComponentManager(
             ]
 
         except Exception as e:
-            msg = f"Exception calling {command_name} : {repr(e)}."
-            self.logger.error(msg)
-            return [ResultCode.FAILED], [msg]
+            self.logger.error(f"Exception calling {command_name} : {repr(e)}.")
+            raise e

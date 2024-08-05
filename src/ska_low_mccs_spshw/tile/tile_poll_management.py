@@ -428,6 +428,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if self.start_acquisition_request:
             self.start_acquisition_request.notify_removed_from_queue()
             self.start_acquisition_request = None
+        if self.initialise_request:
+            self.initialise_request.notify_removed_from_queue()
+            self.initialise_request = None
         self.initialise_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60
@@ -444,6 +447,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        if self.download_firmware_request:
+            self.download_firmware_request.notify_removed_from_queue()
+            self.download_firmware_request = None
         self.download_firmware_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60
@@ -460,6 +466,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        if self.start_acquisition_request:
+            self.start_acquisition_request.notify_removed_from_queue()
+            self.start_acquisition_request = None
         self.start_acquisition_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60

@@ -653,14 +653,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             )
             self.component_manager.off()
 
-    # pylint: disable=too-many-arguments
     def post_change_event(
         self: MccsTile,
         name: str,
         attr_value: Any,
         attr_time: float,
         attr_quality: tango.AttrQuality,
-        value_changed: bool,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
@@ -671,15 +669,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             time the attribute was updated.
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
-        :param value_changed: a flag representing if the value changed
-            from the previous value.
         """
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        if not value_changed:
-            return
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
@@ -1751,7 +1745,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self: MccsTile) -> tuple[int | None, float, tango.AttrQuality]:
+    def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
 
@@ -1760,7 +1754,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._attribute_state["ppsDelay"].read()[0] is None:
             power = self.component_manager.pps_delay
             self._attribute_state["ppsDelay"].update(power, post=False)
-        return self._attribute_state["ppsDelay"].read()
+        return self._attribute_state["ppsDelay"].read()[0]
 
     @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> int | None:
@@ -1952,6 +1946,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Current hardware supports only a single value, thus oly 1st value is used
         """
         self.component_manager.csp_rounding = rounding
+
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: MccsTile) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        """
+        self.component_manager.global_reference_time = reference_time
 
     @attribute(
         dtype=(float,),
@@ -2174,6 +2186,43 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA2
         """
         self.component_manager.src_ip_40g_fpga2 = argin
+
+    @attribute(
+        dtype="DevString",
+        label="cspSpeadFormat",
+    )
+    def cspSpeadFormat(self: MccsTile) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format not in ["AAVS", "SKA"]:
+            self.logger.warning(
+                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
+            )
+            spead_format = "AAVS"
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
 
     @attribute(
         dtype=(("DevFloat",),),
@@ -4428,6 +4477,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: json dictionary with optional keywords:
 
         * start_time - (ISO UTC time) start time
+        * global_reference_time - (ISO UTC time) reference time for the SPS
         * delay - (int) delay start if StartTime is not specified, default 0.2s
 
         :return: A tuple containing a return code and a string

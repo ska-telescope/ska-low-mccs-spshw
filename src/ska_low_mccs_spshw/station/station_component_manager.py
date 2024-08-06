@@ -508,6 +508,8 @@ class SpsStationComponentManager(
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
+        self._csp_spead_format = "SKA"
+        self._global_reference_time = ""
 
         # TODO: this needs to be scaled,
         self.tile_attributes_to_subscribe = [
@@ -537,6 +539,7 @@ class SpsStationComponentManager(
         self._lmc_beam_payload_length = 8192
 
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
+        self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
@@ -735,12 +738,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1249,13 +1252,15 @@ class SpsStationComponentManager(
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
 
+        # TODO MCCS-2212 Must revise the possible cases, avoiding potential deadlocks.
         if all(
             proxy._proxy is not None
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()
         ):
             self.logger.debug("Tiles already initialised")
-            result_code = ResultCode.FAILED
+            result_code = ResultCode.OK
+            return
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
@@ -1463,11 +1468,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
 
         return ResultCode.FAILED
@@ -1560,11 +1568,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
@@ -1599,6 +1610,8 @@ class SpsStationComponentManager(
             tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
+            tile.cspSpeadFormat = self._csp_spead_format
+            tile.globalReferenceTime = self._global_reference_time
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
@@ -2011,6 +2024,31 @@ class SpsStationComponentManager(
                 f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
             )
             proxy._proxy.cspRounding = truncation
+
+    @property
+    def global_reference_time(self: SpsStationComponentManager) -> str:
+        """
+        Return the UTC time used as global synchronization time.
+
+        :return: UTC time in ISOT format used as global synchronization time
+        """
+        return self._global_reference_time
+
+    @global_reference_time.setter  # type: ignore[no-redef]
+    def global_reference_time(
+        self: SpsStationComponentManager, reference_time: str
+    ) -> None:
+        """
+        Set the Unix time used as global synchronization time.
+
+        Time will be used by all tiles as a common start time for timestamps.
+        If specified, StartAcquisition is also performed in Station.On()
+        :param reference_time: Reference time in ISOT format, or null string
+        """
+        self._global_reference_time = reference_time
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.globalReferenceTime = reference_time
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
@@ -2472,7 +2510,11 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        self._beamformer_table = copy.deepcopy(beamformer_table)
+        number_entries = len(beamformer_table)
+        for i in range(number_entries):
+            self._beamformer_table[i] = beamformer_table[i]
+        for i in range(number_entries, 48):
+            self._beamformer_table[i] = [0, 0, 0, 0, 0, 0, 0]
         return self._set_beamformer_table()
 
     def _set_beamformer_table(
@@ -2485,6 +2527,10 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
+        # At least one entry in the beamformer table must be not null
+        # Entries with start channel = 0 are ignored in MccsTile
+        if all(entry[0] == 0 for entry in self._beamformer_table):
+            self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         beamformer_regions = []
         for entry in self._beamformer_table:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
@@ -2897,6 +2943,39 @@ class SpsStationComponentManager(
             dst_ip=daq_status["Receiver IP"][0],
             dst_port=daq_status["Receiver Ports"][0],
         )
+
+    @property
+    def csp_spead_format(self: SpsStationComponentManager) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.setter  # type: ignore[no-redef]
+    def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self._csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+            return
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.cspSpeadFormat = spead_format
 
     @check_communicating
     def _acquire_data_for_calibration(

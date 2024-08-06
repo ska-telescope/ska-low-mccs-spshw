@@ -867,13 +867,15 @@ def test_Standby(
                 4,
                 2,
                 102,
-            ],
+            ]
+            + [0, 8, 0, 0, 0, 0, 0, 0] * 40,
         ),
         pytest.param(
             "SetBeamFormerTable",
             [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102],
             "SetBeamformerRegions",
-            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102],
+            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102]
+            + [0, 8, 0, 0, 0, 0, 0, 0] * 46,
         ),
         pytest.param(
             "SetLmcIntegratedDownload",
@@ -898,8 +900,8 @@ def test_Standby(
             "SetLmcDownload",
             json.dumps(
                 {
-                    "mode": "40G",
-                    "payload_length": 1024,
+                    "mode": "10G",
+                    "payload_length": 8192,
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,
@@ -943,7 +945,7 @@ def test_station_tile_commands(
 
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
-    time.sleep(0.1)
+    time.sleep(0.2)
 
     if command_args is None:
         getattr(station_device, command)()
@@ -1212,7 +1214,7 @@ def test_beamformerTable(
     time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
     assert np.all(
-        station_device.beamformerTable
+        station_device.beamformerTable[0:14]
         == np.array([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
     )
 

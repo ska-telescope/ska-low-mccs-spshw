@@ -23,13 +23,13 @@ aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="3
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "a8c2e7175e6a4704d336114724267fd24cbcdd31" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
-pytango = "9.4.2"
+pytango = "9.5.1"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^0.20.0"
 ska-control-model = "^0.3.4"
-ska-low-mccs-common = "~0.11.0"
+ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev = "9ef0cff6b4ccba6914cfed3475d7e351d74435cb"}
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"

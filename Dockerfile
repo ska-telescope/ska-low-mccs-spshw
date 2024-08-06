@@ -7,6 +7,8 @@ FROM artefact.skao.int/ska-tango-images-pytango-runtime:9.5.0 AS runtime
 COPY --from=buildenv . .
 USER root
 
+RUN make install-firmware
+
 RUN apt-get update && apt-get install -y git
 
 RUN pip install -e .

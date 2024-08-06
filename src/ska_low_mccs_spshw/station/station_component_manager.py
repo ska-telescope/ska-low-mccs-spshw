@@ -18,7 +18,7 @@ import json
 import logging
 import threading
 import time
-from concurrent import futures
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from statistics import mean
 from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
 
@@ -37,6 +37,7 @@ from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
 )
+from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_low_mccs_common.utils import threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
@@ -3134,7 +3135,7 @@ class SpsStationComponentManager(
         require_initialised: bool = False,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
-        Execute a given command on all tile proxies using green_mode futures.
+        Execute a given command on all tile proxies in separate threads.
 
         This is for commands which return a DevVarLongStringArrayType.
 
@@ -3147,63 +3148,67 @@ class SpsStationComponentManager(
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
-        :raises Exception: if we have an unforseen error.
         """
         self.logger.debug(f"calling {command_name} with {command_args=}")
         command_args = [command_args] if command_args is not None else []
-        try:
-            future_results: list[futures.Future] = [
-                dev._proxy.command_inout(
+
+        # Ideally we wouldn't handle the exceptions, and let them hit the user.
+        # However we need to do more work in MccsTile before that. I'd like to get
+        # to a situation where MccsTile returns ResultCode.FAILED if we're OK with
+        # the failure (e.g failed to acquire lock), but raises an exception to us if
+        # something really janky happened, which should be sent straight to the user.
+        def _run_while_handling_errors(
+            proxy: MccsDeviceProxy,
+        ) -> tuple[list[ResultCode], list[Optional[str]]]:
+            try:
+                return proxy.command_inout(
                     command_name,
                     *command_args,
-                    green_mode=tango.GreenMode.Futures,
-                    wait=False,
                 )
-                for dev in self._tile_proxies.values()
-                if dev._proxy is not None
-                and (
-                    not require_initialised
-                    or dev._proxy.tileProgrammingState
-                    in ["Initialised", "Synchronised"]
+            except Exception as e:
+                self.logger.error(
+                    f"Error running {command_name} on {proxy.dev_name()}: {repr(e)}"
                 )
-            ]
-            if not future_results:
-                msg = f"{command_name} has not been called on any tiles."
-                self.logger.error(msg)
-                return [ResultCode.FAILED], [msg]
-            if len(future_results) != len(self._tile_proxies):
-                self.logger.warning(f"{command_name} has not been called on all tiles.")
-            self.logger.error(f"{future_results=}")
-            self.logger.error(f"{type(future_results)=}")
-            complete_futures, incomplete_futures = futures.wait(
-                future_results, timeout=timeout
+                return [ResultCode.FAILED], [repr(e)]
+
+        commands_to_execute = [
+            (_run_while_handling_errors, dev._proxy)
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+            and (
+                not require_initialised
+                or dev._proxy.tileProgrammingState in ["Initialised", "Synchronised"]
             )
-            results: list[ResultCode] = []
-            for future in complete_futures:
-                # If the Future contains an error, result() will re-raise it.
-                try:
-                    # Expect tuple[list[ResultCode], list[Optional[str]]]
-                    results.append(ResultCode(future.result()[0][0]))
-                except Exception as e:
-                    self.logger.error(
-                        f"Error executing {command_name} on a tile: {repr(e)}"
-                    )
-                    results.append(ResultCode.FAILED)
+        ]
+        if not commands_to_execute:
+            msg = f"{command_name} wouldn't be called on any tiles."
+            self.logger.error(msg)
+            return [ResultCode.FAILED], [msg]
 
-            result_names = [result.name for result in results]
-            self.logger.debug(f"Tiles response from {command_name}: {result_names}")
+        if len(commands_to_execute) != len(self._tile_proxies):
+            self.logger.warning(f"{command_name} won't be called on all tiles.")
 
-            if incomplete_futures:
-                msg = f"{len(incomplete_futures)} commands failed to complete in time."
-                self.logger.warning(msg)
-                return [ResultCode.FAILED], [f"{msg} Results: {result_names}"]
-
-            if all(result == ResultCode.OK for result in results):
-                return [ResultCode.OK], [f"{command_name} completed OK."]
-            return [ResultCode.FAILED], [
-                f"{command_name} didn't complete OK. Results: {result_names}"
+        # We'd really prefer to use GreenMode.Asyncio or similar here. But both appear
+        # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
+        # tango.asyncio.DeviceProxy to use that functionality, which would involve a
+        # general refactor of SpsStation. So for now we just spin up some threads, and
+        # execute each synchronous call in it's own thread manually.
+        with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
+            futures: list[Future] = [
+                executor.submit(command, proxy)
+                for command, proxy in commands_to_execute
             ]
+            complete, incomplete = wait(futures, timeout=timeout)
+            if incomplete:
+                msg = f"{len(incomplete)} commands failed to complete in time."
+                self.logger.warning(msg)
+                return [ResultCode.FAILED], [msg]
+            results = [future.result() for future in complete]
 
-        except Exception as e:
-            self.logger.error(f"Exception calling {command_name} : {repr(e)}.")
-            raise e
+        result_codes, _ = zip(*results)
+        self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
+        if all(result == ResultCode.OK for result in result_codes):
+            return [ResultCode.OK], [f"{command_name} finished OK."]
+        return [ResultCode.FAILED], [
+            f"{command_name} didn't finish OK. Results: {str(results)}"
+        ]

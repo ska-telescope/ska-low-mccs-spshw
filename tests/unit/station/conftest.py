@@ -74,6 +74,12 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
         builder.add_command(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
         )
+    # Dummy commands for testing the async commands method
+    builder.add_command("FailedCommand", ([ResultCode.FAILED], ["Command failed."]))
+    builder.add_command(
+        "RejectedCommand", ([ResultCode.REJECTED], ["Command rejected."])
+    )
+    builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     return builder
 
 

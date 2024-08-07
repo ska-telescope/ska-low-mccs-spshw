@@ -501,3 +501,66 @@ def test_run_test(
             "Not all tests passed, check report.",
         ),
     )
+
+
+@pytest.mark.parametrize(
+    [
+        "command",
+        "expected_station_result",
+        "expected_tile_result",
+    ],
+    [
+        pytest.param(
+            "FailedCommand",
+            ResultCode.FAILED,
+            ResultCode.FAILED,
+        ),
+        pytest.param(
+            "RejectedCommand",
+            ResultCode.FAILED,
+            ResultCode.REJECTED,
+        ),
+        pytest.param(
+            "GoodCommand",
+            ResultCode.OK,
+            ResultCode.OK,
+        ),
+    ],
+)
+def test_async_commands(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    command: str,
+    expected_station_result: ResultCode,
+    expected_tile_result: ResultCode,
+) -> None:
+    """
+    Test the method to run commands async.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param command: command to call on the tiles.
+    :param expected_station_result: expected result from station.
+    :param expected_tile_result: expected result from tiles.
+    """
+    # Before we establish connection, we shouldn't attempt these on any tiles.
+    result, message = station_component_manager._execute_async_on_tiles(command)
+
+    assert result[0] == ResultCode.REJECTED
+    assert message[0] is not None
+    assert f"{command} wouldn't be called on any tiles" in message[0]
+
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    # Now we've established connection, we should be attempting.
+    result, message = station_component_manager._execute_async_on_tiles(command)
+
+    assert result[0] == expected_station_result
+    assert message[0] is not None
+    assert str(expected_tile_result) in message[0]

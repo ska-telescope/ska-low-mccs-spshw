@@ -3290,7 +3290,7 @@ class SpsStationComponentManager(
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
-        if all(result == ResultCode.OK for result in result_codes):
+        if all(result[0] == ResultCode.OK for result in result_codes):
             return [ResultCode.OK], [f"{command_name} finished OK."]
         return [ResultCode.FAILED], [
             f"{command_name} didn't finish OK. Results: {str(results)}"

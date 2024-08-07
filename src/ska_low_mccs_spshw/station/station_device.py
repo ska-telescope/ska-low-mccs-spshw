@@ -1879,7 +1879,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendDataSamples", jstr)
         """
-        params = json.loads(argin)
+        params: dict = json.loads(argin)
 
         # Check for mandatory parameters and syntax.
         # argin is left as is and forwarded to tiles
@@ -1920,7 +1920,9 @@ class SpsStation(SKAObsDevice):
                     "frequency must be between 1 and 390 MHz"
                 )
                 raise ValueError("frequency must be between 1 and 390 MHz")
-        return self.component_manager.send_data_samples(argin)
+        force = params.pop("force", False)
+        argin = json.dumps(params)
+        return self.component_manager.send_data_samples(argin, force=force)
 
     @command(
         dtype_out="DevVarLongStringArray",

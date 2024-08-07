@@ -738,12 +738,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -2736,17 +2736,34 @@ class SpsStationComponentManager(
         return self._execute_async_on_tiles("StopIntegratedData")
 
     def send_data_samples(
-        self: SpsStationComponentManager, argin: str
+        self: SpsStationComponentManager, argin: str, force: bool = False
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Front end for send_xxx_data methods.
 
         :param argin: Json encoded parameter List
+        :param force: whether to cancel ongoing requests first.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
             information purpose only.
         """
+        pending_requests = [
+            dev._proxy.pendingDataRequests
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+        ]
+        if any(pending_requests):
+            if force:
+                result_code, message = self.stop_data_transmission()
+            else:
+                return [ResultCode.REJECTED], [
+                    f"Current pending data requests: {pending_requests}."
+                    " Call with 'force: True' to abort current send operations."
+                ]
+
+            if result_code[0] != ResultCode.OK:
+                return result_code, [f"Couldn't stop data transmission: {message[0]}"]
         return self._execute_async_on_tiles("SendDataSamples", argin)
 
     def stop_data_transmission(

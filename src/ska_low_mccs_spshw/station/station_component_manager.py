@@ -2359,7 +2359,7 @@ class SpsStationComponentManager(
         self._lmc_param["netmask_40g"] = self._sdn_netmask
         self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
-        return self.execute_asynch(
+        return self._execute_async_on_tiles(
             "SetLmcDownload", json_param, require_initialised=True
         )
 
@@ -2405,7 +2405,7 @@ class SpsStationComponentManager(
                 "gateway_40g": self._sdn_gateway,
             }
         )
-        return self.execute_asynch(
+        return self._execute_async_on_tiles(
             "SetLmcIntegratedDownload", json_param, require_initialised=True
         )
 
@@ -2534,7 +2534,7 @@ class SpsStationComponentManager(
         beamformer_regions = []
         for entry in self._beamformer_table:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
-        return self.execute_asynch(
+        return self._execute_async_on_tiles(
             "SetBeamformerRegions",
             list(itertools.chain.from_iterable(beamformer_regions)),
             require_initialised=True,
@@ -2578,7 +2578,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("ApplyCalibration", switch_time)
+        return self._execute_async_on_tiles("ApplyCalibration", switch_time)
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
@@ -2617,7 +2617,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("ApplyPointingDelays", load_time)
+        return self._execute_async_on_tiles("ApplyPointingDelays", load_time)
 
     def start_beamformer(
         self: SpsStationComponentManager,
@@ -2647,7 +2647,7 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         json_argument = json.dumps(parameter_list)
-        return self.execute_asynch("StartBeamformer", json_argument)
+        return self._execute_async_on_tiles("StartBeamformer", json_argument)
 
     def stop_beamformer(
         self: SpsStationComponentManager,
@@ -2659,7 +2659,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("StopBeamformer")
+        return self._execute_async_on_tiles("StopBeamformer")
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
@@ -2688,7 +2688,9 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        return self.execute_asynch("ConfigureIntegratedChannelData", json_argument)
+        return self._execute_async_on_tiles(
+            "ConfigureIntegratedChannelData", json_argument
+        )
 
     def configure_integrated_beam_data(
         self: SpsStationComponentManager,
@@ -2717,7 +2719,9 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        return self.execute_asynch("ConfigureIntegratedBeamData", json_argument)
+        return self._execute_async_on_tiles(
+            "ConfigureIntegratedBeamData", json_argument
+        )
 
     def stop_integrated_data(
         self: SpsStationComponentManager,
@@ -2729,7 +2733,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("StopIntegratedData")
+        return self._execute_async_on_tiles("StopIntegratedData")
 
     def send_data_samples(
         self: SpsStationComponentManager, argin: str
@@ -2743,7 +2747,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("SendDataSamples", argin)
+        return self._execute_async_on_tiles("SendDataSamples", argin)
 
     def stop_data_transmission(
         self: SpsStationComponentManager,
@@ -2755,7 +2759,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("StopDataTransmission")
+        return self._execute_async_on_tiles("StopDataTransmission")
 
     def configure_test_generator(
         self: SpsStationComponentManager, argin: str
@@ -2769,7 +2773,7 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self.execute_asynch("ConfigureTestGenerator", argin)
+        return self._execute_async_on_tiles("ConfigureTestGenerator", argin)
 
     def start_acquisition(
         self: SpsStationComponentManager,
@@ -3206,7 +3210,7 @@ class SpsStationComponentManager(
         return docs
 
     # pylint: disable=broad-exception-caught
-    def execute_asynch(
+    def _execute_async_on_tiles(
         self: SpsStationComponentManager,
         command_name: str,
         command_args: Optional[Any] = None,

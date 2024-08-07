@@ -3266,10 +3266,13 @@ class SpsStationComponentManager(
         if not commands_to_execute:
             msg = f"{command_name} wouldn't be called on any tiles."
             self.logger.error(msg)
-            return [ResultCode.FAILED], [msg]
+            return [ResultCode.REJECTED], [msg]
 
         if len(commands_to_execute) != len(self._tile_proxies):
-            self.logger.warning(f"{command_name} won't be called on all tiles.")
+            self.logger.warning(
+                f"{command_name} won't be called on all tiles. Will be called"
+                f" on: {[proxy.dev_name() for _, proxy in commands_to_execute]}"
+            )
 
         # We'd really prefer to use GreenMode.Asyncio or similar here. But both appear
         # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a

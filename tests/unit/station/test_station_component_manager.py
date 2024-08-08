@@ -563,4 +563,4 @@ def test_async_commands(
 
     assert result[0] == expected_station_result
     assert message[0] is not None
-    assert str(expected_tile_result) in message[0]
+    assert expected_tile_result.name in message[0]

@@ -20,7 +20,13 @@ Defines the deployment for MccsTile Tango devices.
 
 */}}
 {{- $node_selector := dict}}
-{{- $tiles := dig "tpms" dict .Values.deviceServers}}
+
+{{- $tiles := dict}}
+{{- range $server_name, $this_server := (dig "tpms" dict .Values.deviceServers)}}
+{{- if $this_server}}
+{{- $_ := set $tiles $server_name $this_server}}
+{{- end}}
+{{- end}}
 {{- if $tiles}}
 name: tile-{{.Release.Name}}
 function: ska-low-mccs-spshw-tile
@@ -39,6 +45,7 @@ server:
       - name: MccsTile
         devices:
 {{- range $tile_name, $this_tile := $this_server}}
+{{- if $this_tile}}
         - name: {{$tile_name}}
           properties:
           - name: "TileId"
@@ -84,6 +91,7 @@ server:
 so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_tile.nodeSelector}}
 {{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

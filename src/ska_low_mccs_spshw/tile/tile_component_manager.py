@@ -2367,7 +2367,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Read the cached value for the static delays, in sample.
 
-        :return: static delay, in samples one per TPM input
+        :return: static delay, in nanoseconds one per TPM input
         """
         self.logger.debug("TileComponentManager: static_delays")
         delays = []
@@ -2389,15 +2389,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Set the static delays.
 
-        :param delays: Delay in nanoseconds, nominal = 0, positive delay adds
+        :param delays: Static zenith delays, one per input channel,
+            in nanoseconds, nominal = 0, positive delay adds
             delay to the signal stream
-
-        :param delays: Static zenith delays, one per input channel
         """
         self.logger.info("TileComponentManager: set_static_delays")
-        delays_float = []
-        for d in delays:
-            delays_float.append(float(d))
+        delays_float = [float(d) for d in delays]
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:

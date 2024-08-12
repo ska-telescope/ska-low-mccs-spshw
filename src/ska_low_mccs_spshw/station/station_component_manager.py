@@ -1941,7 +1941,7 @@ class SpsStationComponentManager(
         Get static time delay correction.
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in samples (positive = increase the signal delay) to correct for
+        Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)

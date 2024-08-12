@@ -10,12 +10,18 @@ subsystem: low-mccs-spshw
 telescope: SKA-low
 
 labels:
-  app: ska-low-mccs-spshw 
+  app: ska-low-mccs-spshw-rawbeam
+
 
 global:
-  minikube: true
-  tango_host: databaseds-tango-base:10000
-  cluster_domain: cluster.local
+  cluster_domain: mccs.low.internal.skao.int
+  # cluster_domain: aavs302.lowitf.internal.skao.int
+  minikube: false
+  tango_host: databaseds:10000
+  operator: false
+  # minikube: true
+  # tango_host: databaseds-tango-base:10000
+  # cluster_domain: cluster.local
 
 livenessProbe:
   initialDelaySeconds: 0
@@ -43,74 +49,60 @@ resources:
     memory: 50Mi
 
 image:
-  registry: artefact.skao.int
+  registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
   name: ska-low-mccs-spshw
-  tag: ~ # defaults to chart's appVersion when empty
+  tag: 0.15.0-dev.ceddf6331
   pullPolicy: IfNotPresent
 
-deviceServers: {} # e.g....
-  # spsstations:
-  #   s8-1:
-  #     low-mccs/spsstation/s8-1:
-  #       station_id: 345
-  #       sdn_first_interface: 10.130.0.1/25
-  #       sdn_gateway: 10.130.0.126
-  #       csp_ingest_ip: 10.132.254.0
-  #       daq_trl: low-mccs/calibration-daq/s8-1
-  #       antenna_config_uri:
-  #       - "car:ska-low-aavs3?main"
-  #       - "instrument/mccs-configuration/aavs3.yaml"
-  #       - "a1"
-  #       subracks:
-  #       - "s8-1-1"
-  #       tpms:
-  #       - "s8-1-10"
-  #       - "s8-1-13"
-  #       logging_level_default: 5
-  # daqs:
-  #   s8-1:
-  #     low-mccs/calibration-daq/s8-1:
-  #       id: 345
-  #       host: daq-simulator-s8-1
-  #       port: 50051
-  #       receiver_interface: eth0
-  #       receiver_ip: ""
-  #       receiver_port: 4660
-  #       skuid_url: http://skuid-svc:9870/
-  #       logging_level_default: 5
-  # subracks:
-  #   s8-1-1:
-  #     low-mccs/subrack/s8-1-1:
-  #       srmb_host: subrack-simulator-s8-1
-  #       srmb_port: 8081
-  #       logging_level_default: 5
-  #       nodeSelector:
-  #         kubernetes.io/hostname: psi-node3
-  # tpms:
-  #   s8-1-10:
-  #     low-mccs/tile/s8-1-10:
-  #       tile_id: 10
-  #       station_id: 345
-  #       host: 10.0.10.201
-  #       port: 10000
-  #       version: tpm_v1_6
-  #       subrack: "s8-1-1"
-  #       subrack_slot: 1
-  #       simulation_config: 1
-  #       test_config: 1
-  #       logging_level_default: 5
-  #       nodeSelector:
-  #         kubernetes.io/hostname: psi-node3
+# deviceServers:
+#   daqs:
+#     aavs3-rawbeam:
+#       low-mccs/daqreceiver/aavs3-rawbeam:
+#         id: 1
+#         host: daqrx-aavs3-rawbeam
+#         port: 50051
+#         receiver_interface: sdn1
+#         receiver_port: 4660
+#         skuid_url: http://ska-ser-skuid-ska-low-aavs3-svc:9870/
+#         logging_level_default: 5
 
-simulators: {} # e.g.
-  # daqs:
-  #   s8-1:
-  #     host: daq-simulator-s8-1
-  #     port: 50051
-  # subracks:
-  #   s8-1-1:
-  #     srmb_host: subrack-simulator-s8-1
-  #     srmb_port: 8081
+# ska-low-mccs-daq:
+#   receivers:
+#     aavs3-rawbeam:
+#       grpc_port: 50051
+#       receiver_nad: kube-system/aavs3-sps@sdn1
+#       receiver_interface: sdn1
+#       receiver_port: 4660
+#       storage: daq-data
 
-pgadmin4:
-  enabled: false
+deviceServers:
+  daqs:
+    s8-1-rawbeam:
+      low-mccs/daqreceiver/s8-1-rawbeam:
+        id: 1
+        host: daqrx-s8-1-rawbeam
+        port: 50051
+        skuid_url: http://ska-ser-skuid-ska-low-skaffold-svc:9870/
+        logging_level_default: 5
+    s8-6-rawbeam:
+      low-mccs/daqreceiver/s8-6-rawbeam:
+        id: 2
+        host: daqrx-s8-6-rawbeam
+        port: 50051
+        skuid_url: http://ska-ser-skuid-ska-low-skaffold-svc:9870/
+        logging_level_default: 5
+
+ska-low-mccs-daq:
+  receivers:
+    s8-1-rawbeam:
+      grpc_port: 50051
+      receiver_nad: kube-system/sdn-sps@sdn1
+      receiver_interface: sdn1
+      receiver_port: 4660
+      storage: daq-data-sync
+    s8-6-rawbeam:
+      grpc_port: 50051
+      receiver_nad: kube-system/sdn-sps@sdn1
+      receiver_interface: sdn1
+      receiver_port: 4660
+      storage: daq-data-sync

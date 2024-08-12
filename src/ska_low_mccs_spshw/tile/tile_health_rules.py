@@ -189,19 +189,34 @@ class TileHealthRules(HealthRules):
                         )
                     )
                 else:
-                    states[p] = (
-                        (HealthState.OK, "")
-                        if p_state == min_max[p]
-                        # TODO: MCCS-1979
-                        or "/udp_interface/status" == f"{path}/{p}"
-                        or "/udp_interface/bip_error_count/FPGA1/" in f"{path}/{p}"
-                        else (
-                            HealthState.FAILED,
-                            f'Monitoring point "{path}/{p}": '
-                            f"{p_state} =/= {min_max[p]}",
+                    if p_state is None and min_max[p] is not None:
+                        states[p] = (
+                            HealthState.UNKNOWN,
+                            f"Monitoring point {p} is None.",
                         )
-                    )
-
+                    elif isinstance(min_max[p], dict):
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            else (
+                                HealthState.FAILED,
+                                f'Monitoring point "{path}/{p}": {p_state} not in range'
+                                f" {min_max[p]['min']} - {min_max[p]['max']}",
+                            )
+                        )
+                    else:
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if p_state == min_max[p]
+                            # TODO: MCCS-1979
+                            or "/udp_interface/status" == f"{path}/{p}"
+                            or "/udp_interface/bip_error_count/FPGA1/" in f"{path}/{p}"
+                            else (
+                                HealthState.FAILED,
+                                f'Monitoring point "{path}/{p}": '
+                                f"{p_state} =/= {min_max[p]}",
+                            )
+                        )
         return self._combine_states(*states.values())
 
     def _combine_states(

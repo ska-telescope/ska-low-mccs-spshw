@@ -44,6 +44,7 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         Then the DAQ is in the ON state
         And the DAQ is in health state OK
         And the DAQ is in raw data mode
+        And the DAQ has no consumers running
 
         Examples:
         |     station_name    |
@@ -61,6 +62,7 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         Then the DAQ is in the ON state
         And the DAQ is in health state OK
         And the DAQ is in channelised data mode
+        And the DAQ has no consumers running
 
         Examples:
         |      station_name   |

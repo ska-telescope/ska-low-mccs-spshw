@@ -23,6 +23,7 @@ Feature: Test bandpass monitor
         And the bandpass monitor is running
         When the DAQ is commanded to stop monitoring bandpasses
         Then the DAQ reports that it is stopping monitoring bandpasses
+        And no consumers are running
 
     @XTP-34300
     Scenario: Receive bandpass data
@@ -37,4 +38,7 @@ Feature: Test bandpass monitor
         When the Tile is commanded to send integrated channel data
         Then the DAQ reports that it has received integrated channel data
         And the DAQ saves bandpass data to its relevant attributes
+        And the DAQ is commanded to stop monitoring bandpasses
+        And the DAQ reports that it is stopping monitoring bandpasses
+        And no consumers are running
 

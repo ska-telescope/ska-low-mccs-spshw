@@ -187,7 +187,6 @@ releases:
   - name: ska-low-mccs-spshw
     namespace: {{.Namespace | default "ska-low-mccs"}}
     chart: ../charts/ska-low-mccs-spshw
-    version: ~0.16.0
     values:
       - .deploy/helmfile.d/templates/globals.yaml.gotmpl
       - .deploy/helmfile.d/templates/spshw/daqs.yaml.gotmpl

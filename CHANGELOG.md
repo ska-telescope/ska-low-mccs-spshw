@@ -2,6 +2,12 @@
 
 ## unreleased
 
+## 0.16.1
+
+* [LOW-952] Point at ska-low-tmdata for AA0.5 telmodel data
+* [MCCS-2216] Support nulls in chart values
+* [MCCS-2223] Fix static delay docs
+
 ## 0.16.0
 
 * [MCCS-2135] Pull versions of aavs-system and pyfabil based on tags rather than specific commits.

@@ -192,7 +192,6 @@ def unconnected_tpm_read_request_iterator() -> Iterator[str]:
     while True:
         yield "CONNECT"
         yield "CHECK_CPLD_COMMS"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def unknown_tpm_read_request_iterator() -> Iterator[str]:
@@ -209,7 +208,6 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
@@ -226,7 +224,6 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def programmed_tpm_read_request_iterator() -> Iterator[str]:

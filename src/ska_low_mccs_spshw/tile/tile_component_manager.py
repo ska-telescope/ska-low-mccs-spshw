@@ -640,6 +640,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     assert self._request_provider is not None
                     self.logger.info("Initialise command placed in poll QUEUE")
                     self._request_provider.desire_initialise(request)
+
         else:
             self._tile_time.set_reference_time(0)
 

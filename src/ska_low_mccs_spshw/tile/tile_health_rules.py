@@ -9,6 +9,7 @@
 """A file to store health transition rules for tile."""
 from __future__ import annotations
 
+from traceback import print_stack
 from typing import Any
 
 from ska_control_model import HealthState
@@ -148,6 +149,7 @@ class TileHealthRules(HealthRules):
         if not monitoring_points and "hardware" in min_max:
             return (HealthState.OK, "")
 
+        err = False
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
                 if p in min_max:
@@ -161,6 +163,7 @@ class TileHealthRules(HealthRules):
                         f"\nMonitoring point {p} is not being evaluated as part of the "
                         "tiles health.\n"
                     )
+                    err = True
                     continue
             else:
                 if p_state is None and min_max[p] is not None:
@@ -201,6 +204,9 @@ class TileHealthRules(HealthRules):
                             f"{p_state} =/= {min_max[p]}",
                         )
                     )
+
+        if err:
+            print_stack()
 
         return self._combine_states(*states.values())
 

@@ -774,8 +774,8 @@ class SpsStationComponentManager(
 
         # Loop through each pair of delay/delay rates
         for antenna_no in range(len(antenna_order_delays) // 2):
-            delay = antenna_order_delays[antenna_no * 2]
-            delay_rate = antenna_order_delays[antenna_no * 2 + 1]
+            delay = antenna_order_delays[antenna_no * 2] * -1
+            delay_rate = antenna_order_delays[antenna_no * 2 + 1] * -1
 
             # Fetch which tpm this antenna belongs to
             tile_no = self._antenna_mapping[antenna_no + 1]["tpm"] - 1

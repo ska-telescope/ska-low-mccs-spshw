@@ -380,7 +380,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param exception: exception code raised from poll.
         """
-        self.logger.error(f"Failed poll with exception : {exception}")
+        self.logger.exception(f"Failed poll with exception : {exception}")
 
         # Update command tracker if defined in request.
         if self.active_lrc_request:

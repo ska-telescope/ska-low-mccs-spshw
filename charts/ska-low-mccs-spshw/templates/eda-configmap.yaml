@@ -7,4 +7,4 @@ metadata:
     eda-config: ska-low-mccs-spshw
 data:
   eda-config.yaml: |-
-    {{- .Files.Get "../../../resources/eda-config.yaml" | nindent 4}}
+    {{- .Files.Get "data/eda-config.yaml" | nindent 4}}

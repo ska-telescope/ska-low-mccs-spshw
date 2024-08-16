@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [MCCS-2222] Include MccsTile attributes added as part of MCCS-2059 in the EDA config.
+
 ## 0.16.1
 
 * [LOW-952] Point at ska-low-tmdata for AA0.5 telmodel data

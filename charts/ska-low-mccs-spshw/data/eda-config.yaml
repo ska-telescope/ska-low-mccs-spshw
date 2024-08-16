@@ -416,6 +416,81 @@ configuration:
       dspHealth:
         code_push_event: true
         archive_period: 0
+      adc_pll_status:
+        code_push_event: true
+        archive_period: 0
+      tile_beamformer_status:
+        code_push_event: true
+        archive_period: 0
+      station_beamformer_status:
+        code_push_event: true
+        archive_period: 0
+      station_beamformer_error_count:
+        code_push_event: true
+        archive_period: 0
+      crc_error_count:
+        code_push_event: true
+        archive_period: 0
+      bip_error_count:
+        code_push_event: true
+        archive_period: 0
+      decode_error_count:
+        code_push_event: true
+        archive_period: 0
+      linkup_loss_count:
+        code_push_event: true
+        archive_period: 0
+      arp:
+        code_push_event: true
+        archive_period: 0
+      udp_status:
+        code_push_event: true
+        archive_period: 0
+      ddr_initialisation:
+        code_push_event: true
+        archive_period: 0
+      ddr_reset_counter:
+        code_push_event: true
+        archive_period: 0
+      f2f_soft_errors:
+        code_push_event: true
+        archive_period: 0
+      f2f_hard_errors:
+        code_push_event: true
+        archive_period: 0
+      resync_count:
+        code_push_event: true
+        archive_period: 0
+      lane_status:
+        code_push_event: true
+        archive_period: 0
+      link_status:
+        code_push_event: true
+        archive_period: 0
+      lane_error_count:
+        code_push_event: true
+        archive_period: 0
+      clock_managers:
+        code_push_event: true
+        archive_period: 0
+      clocks:
+        code_push_event: true
+        archive_period: 0
+      adc_sysref_counter:
+        code_push_event: true
+        archive_period: 0
+      adc_ssref_timing_requirements:
+        code_push_event: true
+        archive_period: 0
+      qpll_status:
+        code_push_event: true
+        archive_period: 0
+      f2f_pll_status:
+        code_push_event: true
+        archive_period: 0
+      timing_pll_status:
+        code_push_event: true
+        archive_period: 0
       State:
         code_push_event: true
         archive_period: 0

@@ -8,10 +8,6 @@ USER root
 
 RUN apt-get update && apt-get install -y git
 
-RUN poetry config virtualenvs.create false
-
-COPY pyproject.toml poetry.lock* ./
-
-RUN poetry install --only main
+RUN pip install -e .
 
 USER tango

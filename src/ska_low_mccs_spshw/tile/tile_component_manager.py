@@ -140,7 +140,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_list: Optional[list[dict[str, Any]]] = None
         self._station_id = station_id
         self._tile_id = tile_id
+        self._tpm_status = TpmStatus.UNKNOWN
         self._csp_rounding = np.array(self.CSP_ROUNDING)
+        self._csp_spead_format = "SKA"
+        self._global_reference_time: int | None = None
         self._test_generator_active = False
         if tpm_version not in self.FIRMWARE_NAME:
             self.logger.warning(
@@ -152,6 +155,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._tpm_version = tpm_version
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
+        self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or TileSimulator(logger)
@@ -189,11 +193,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 "The request provider is None, unable to get next request"
             )
         self.logger.debug(f"\n{'New Poll':-^{40}}\n")
-        tpm_status: TpmStatus = TpmStatus(self.tpm_status)
-        self._update_attribute_callback(programming_state=tpm_status.pretty_name())
+        self._tpm_status = TpmStatus(self.tpm_status)
+        self._update_attribute_callback(
+            programming_state=self._tpm_status.pretty_name()
+        )
 
-        self.logger.debug(f"Getting request for state ({tpm_status.name}) ...")
-        request_spec = self._request_provider.get_request(tpm_status)
+        self.logger.debug(f"Getting request for state ({self._tpm_status.name}) ...")
+        request_spec = self._request_provider.get_request(self._tpm_status)
 
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
@@ -381,6 +387,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Update command tracker if defined in request.
         if self.active_lrc_request:
             self.active_lrc_request.notify_failed(f"Exception: {repr(exception)}")
+            self.active_lrc_request = None
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
@@ -455,6 +462,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if self.active_lrc_request:
             self.logger.error("LRC completed")
             self.active_lrc_request.notify_completed()
+            self.active_lrc_request = None
 
         self.update_fault_state(poll_success=True)
 
@@ -523,7 +531,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     result=(ResultCode.REJECTED, "No request provider"),
                 )
             raise AssertionError(
-                "Cannot execute 'TileComponentManager.start_acquisition'. "
+                "Cannot execute 'TileComponentManager.on'. "
                 "request provider is not yet initialised."
             )
         subrack_on_command_proxy = MccsCommandProxy(
@@ -608,6 +616,30 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
+
+            if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+                if (
+                    self._request_provider
+                    and self._request_provider.initialise_request is None
+                    and self.active_lrc_request is None
+                    or self.active_lrc_request
+                    and self.active_lrc_request.name.lower() != "initialise"
+                ):
+                    request = TileLRCRequest(
+                        name="initialise",
+                        command_object=self._execute_initialise,
+                        task_callback=None,
+                        program_fpga=False,
+                        pps_delay_correction=self._pps_delay_correction,
+                    )
+                    self.logger.info(
+                        "Subrack has registered that the TPM has power "
+                        "but is not yet initialised of synchronised. "
+                        "Initialising."
+                    )
+                    assert self._request_provider is not None
+                    self.logger.info("Initialise command placed in poll QUEUE")
+                    self._request_provider.desire_initialise(request)
         else:
             self._tile_time.set_reference_time(0)
 
@@ -626,6 +658,41 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 return self.tile.info
         raise TimeoutError("Failed to acquire lock in time.")
+
+    @property
+    def global_reference_time(self: TileComponentManager) -> str | None:
+        """
+        Return the Unix time used as global synchronization time.
+
+        :return: Unix time used as global synchronization time
+        """
+        self.logger.debug(f"Global reference time read {self._global_reference_time}")
+        if self._global_reference_time:
+            return self._tile_time.format_time_from_timestamp(
+                self._global_reference_time
+            )
+        return ""
+
+    @global_reference_time.setter
+    def global_reference_time(self: TileComponentManager, reference_time: str) -> None:
+        """
+        Set the Unix time used as global synchronization time.
+
+        :param reference_time: Reference time representing timestamp for frame 0
+        """
+        if reference_time == "":
+            global_reference_time = None
+        else:
+            global_reference_time = self._tile_time.timestamp_from_utc_time(
+                reference_time
+            )
+        start_time = global_reference_time
+
+        self.logger.debug(f"Global reference time set to {start_time}")
+        if start_time is None or start_time <= 0:
+            self._global_reference_time = None
+        else:
+            self._global_reference_time = start_time
 
     @property
     def tpm_status(self: TileComponentManager) -> TpmStatus:
@@ -797,12 +864,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             #
             self.logger.info("TileComponentManager: reset_and_initialise_beamformer")
             self.tile.initialise_beamformer(128, 8)
+
             self.tile.set_first_last_tile(False, False)
 
             # self.tile.post_synchronisation()
             self.tile.set_station_id(self._station_id, self._tile_id)
 
             self.logger.info("TileComponentManager: initialisation completed")
+
+            if self._global_reference_time:
+                self.logger.debug(
+                    "Global reference time specifed, starting acquisition"
+                )
+                self._start_acquisition()
 
     @abort_task_on_exception
     @check_communicating
@@ -863,6 +937,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         *,
         start_time: Optional[str] = None,
         delay: int = 2,
+        global_reference_time: Optional[str] = None,
     ) -> tuple[TaskStatus, str] | None:
         """
         Submit the start_acquisition slow task.
@@ -870,6 +945,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_callback: Update task state, defaults to None
         :param start_time: the acquisition start time
         :param delay: a delay to the acquisition start
+        :param global_reference_time: the start time assumed for starting the timestamp
 
         :return: A tuple containing a task status and a unique id string to
             identify the command
@@ -879,12 +955,33 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 task_callback(status=TaskStatus.REJECTED)
             self.logger.error("task REJECTED no request_provider")
             return None
+        if start_time is None:
+            start_timestamp = None
+        else:
+            start_timestamp = self._tile_time.timestamp_from_utc_time(start_time)
+            if start_timestamp < 0:
+                self.logger.error("Invalid time for start_time")
+                start_timestamp = None
+            delay = 0
+
+        if global_reference_time is None:
+            global_start_timestamp = None
+        else:
+            global_start_timestamp = self._tile_time.timestamp_from_utc_time(
+                global_reference_time
+            )
+            if global_start_timestamp < 0:
+                self.logger.error("Invalid time for global_reference_time")
+                global_start_timestamp = None
+            delay = 0
+
         request = TileLRCRequest(
             name="start_acquisition",
             command_object=self._start_acquisition,
             task_callback=task_callback,
-            start_time=start_time,
+            start_time=start_timestamp,
             delay=delay,
+            global_reference_time=global_start_timestamp,
         )
         self._request_provider.desire_start_acquisition(request)
         self.logger.info("StartAcquisition command placed in poll QUEUE")
@@ -894,7 +991,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_hardware_lock_claimed
     def _start_acquisition(
         self: TileComponentManager,
-        start_time: Optional[str] = None,
+        start_time: Optional[int] = None,
+        global_reference_time: Optional[int] = None,
         delay: int = 2,
     ) -> None:
         """
@@ -902,30 +1000,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
+        :param global_reference_time: the start time assumed for starting the timestamp
         """
-        if start_time is None:
-            start_frame = None
+        if global_reference_time is None:
+            global_reference_time = self._global_reference_time
         else:
-            start_frame = self._tile_time.timestamp_from_utc_time(start_time)
-            if start_frame < 0:
-                self.logger.error("Invalid time")
-            delay = 0
+            self._global_reference_time = global_reference_time
 
-        started = False
+        executed = False
         self.logger.info(f"Start acquisition: start time: {start_time}, delay: {delay}")
         try:
             # Check if ARP table is populated before starting
             self.tile.reset_eth_errors()
             self.tile.check_arp_table()
             # Start data acquisition on board
-            self.tile.start_acquisition(start_frame, delay)
-            started = True
+            self.tile.start_acquisition(
+                start_time,
+                delay,
+                global_reference_time,
+            )
+            executed = True
             self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
         # pylint: disable=broad-except
         except Exception as e:
             self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
-        if not started:
+        if not executed:
             return
         self.logger.info("Waiting for start acquisition")
         max_timeout = 60  # Maximum delay, in 0.1 seconds
@@ -942,6 +1042,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.warning(
                 f"Acquisition not started after {max_timeout*0.1} seconds"
             )
+            self._tile_time.set_reference_time(0)
+        else:
+            self._tile_time.set_reference_time(self._fpga_reference_time)
 
     # --------------------------------
     # Properties
@@ -1346,6 +1449,48 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 return self.tile.get_pps_delay(enable_correction=False)
         raise TimeoutError("Failed to read pps_delay, lock not acquired in time.")
+
+    @property
+    def csp_spead_format(self: TileComponentManager) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.setter
+    def csp_spead_format(self: TileComponentManager, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        self._csp_spead_format = spead_format
+        hw_spead_format = spead_format == "SKA"
+        if not self.is_programmed:
+            self.logger.debug("speadFormat not set in hardware, tile not connected")
+            return
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                if self.tile.spead_ska_format_supported:
+                    try:
+                        self.tile.set_spead_format(hw_spead_format)
+                    # pylint: disable=broad-except
+                    except Exception as e:
+                        self.logger.warning(f"TpmDriver: Tile access failed: {e}")
+                elif hw_spead_format:
+                    self.logger.error("SKA SPEAD format not supported in firmware")
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
 
     # -----------------------------
     # FastCommands
@@ -1923,9 +2068,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param beam_index: the beam to which the pointing delay should
             be applied
         """
-        self.logger.info("TileComponentManager: set_pointing_delay")
+        self.logger.info("TileComponentManager: load_pointing_delays")
         nof_items = len(delay_array)
         self.logger.info(f"Beam: {beam_index} delays: {delay_array}")
+        self.last_pointing_delays = delay_array
         # 16 values required (16 antennas). Fill with zeros if less are specified
         if nof_items < 16:
             delay_array.extend([[0.0, 0.0]] * (16 - nof_items))
@@ -2023,12 +2169,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.info("TileComponentManager: initialise_beamformer")
+        self.logger.debug(
+            "initialise_beamformer for chans {start_channel}:{nof_channels}"
+        )
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
+                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
                     self.tile.define_channel_table(
                         [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
                     )
@@ -2077,21 +2226,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             aperture_id = regions[0][7]
         collapsed_regions = self._collapse_regions(regions)
         nof_blocks = 0
-        for region in regions:
+        for region in collapsed_regions:
             nof_blocks += region[1] // 8
         self._nof_blocks = nof_blocks
         self.logger.info(f"Setting beamformer table for {self._nof_blocks} blocks")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self.tile.set_beamformer_regions(collapsed_regions)
+                    if nof_blocks > 0:
+                        self.tile.set_beamformer_regions(collapsed_regions)
+                    else:
+                        self.logger.error("No valid beamformer regions specified")
                     if self.tile.tpm is None:
                         raise ValueError("Cannot read register on unconnected TPM.")
+                    beamformer_table = self.tile.get_beamformer_table()
+                    self._update_attribute_callback(beamformer_table=beamformer_table)
                     self.tile.define_spead_header(
-                        self._station_id,
-                        subarray_id,
-                        aperture_id,
-                        self._fpga_reference_time,
+                        station_id=self._station_id,
+                        subarray_id=subarray_id,
+                        nof_antennas=aperture_id,
+                        ref_epoch=self._fpga_reference_time,
+                        ska_spead_header_format=self._csp_spead_format == "SKA",
                     )
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -2211,7 +2366,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Read the cached value for the static delays, in sample.
 
-        :return: static delay, in samples one per TPM input
+        :return: static delay, in nanoseconds one per TPM input
         """
         self.logger.debug("TileComponentManager: static_delays")
         delays = []
@@ -2233,15 +2388,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Set the static delays.
 
-        :param delays: Delay in nanoseconds, nominal = 0, positive delay adds
+        :param delays: Static zenith delays, one per input channel,
+            in nanoseconds, nominal = 0, positive delay adds
             delay to the signal stream
-
-        :param delays: Static zenith delays, one per input channel
         """
         self.logger.info("TileComponentManager: set_static_delays")
-        delays_float = []
-        for d in delays:
-            delays_float.append(float(d))
+        delays_float = [float(d) for d in delays]
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -2836,6 +2988,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
+        if not self.tile:  # Tile unconnected
+            return False
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.is_programmed()

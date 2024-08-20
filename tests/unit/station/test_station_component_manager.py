@@ -264,7 +264,7 @@ def test_load_pointing_delays(
     for tpm in range(16):
         for channel in channels:
             station_component_manager._antenna_mapping[antenna_no] = {
-                "tpm": tpm,  # tpm is zero based
+                "tpm": tpm + 1,  # tpm is 1 based
                 "tpm_y_channel": channel * 2,
                 "tpm_x_channel": channel * 2 + 1,
                 "delay": 1,
@@ -286,7 +286,7 @@ def test_load_pointing_delays(
             antenna_no,
             antenna_config,
         ) in station_component_manager._antenna_mapping.items():
-            tile_no = antenna_config["tpm"] + 1
+            tile_no = antenna_config["tpm"]
             y_channel = antenna_config["tpm_y_channel"]
             if tile_no == tile_id and int(y_channel / 2) == channel:
                 delay, delay_rate = (

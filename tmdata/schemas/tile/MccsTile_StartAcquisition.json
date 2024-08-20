@@ -6,7 +6,12 @@
     "type": "object",
     "properties": {
         "start_time": {
-            "description": "",
+            "description": "ISO time for starting the ADC acquisition",
+            "type": "string",
+            "format": "time"
+        },
+        "global_reference_time": {
+            "description": "Reference time used for timestamp",
             "type": "string",
             "format": "time"
         },

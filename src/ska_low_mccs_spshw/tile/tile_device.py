@@ -653,14 +653,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             )
             self.component_manager.off()
 
-    # pylint: disable=too-many-arguments
     def post_change_event(
         self: MccsTile,
         name: str,
         attr_value: Any,
         attr_time: float,
         attr_quality: tango.AttrQuality,
-        value_changed: bool,
     ) -> None:
         """
         Post a Archive and Change TANGO event.
@@ -671,15 +669,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             time the attribute was updated.
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
-        :param value_changed: a flag representing if the value changed
-            from the previous value.
         """
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
         self.logger.debug(f"Pushing the new value {name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
-        if not value_changed:
-            return
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 
         # https://gitlab.com/tango-controls/pytango/-/issues/615
@@ -1547,24 +1541,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
-        max_value=70.0,
-        min_alarm=16.0,
-        max_alarm=65.0,
-    )
-    def boardTemperature(
-        self: MccsTile,
-    ) -> tuple[float | None, float, tango.AttrQuality] | None:
-        """
-        Return the board temperature.
-
-        :return: the board temperature
-        """
-        return self._attribute_state["boardTemperature"].read()[0]
-
-    @attribute(
-        dtype="DevDouble",
-        abs_change=0.1,
-        min_value=15.0,
         max_value=75.0,
         min_alarm=16.0,
         max_alarm=68.0,
@@ -1769,7 +1745,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong")
-    def ppsDelay(self: MccsTile) -> tuple[int | None, float, tango.AttrQuality]:
+    def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
 
@@ -1778,7 +1754,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         if self._attribute_state["ppsDelay"].read()[0] is None:
             power = self.component_manager.pps_delay
             self._attribute_state["ppsDelay"].update(power, post=False)
-        return self._attribute_state["ppsDelay"].read()
+        return self._attribute_state["ppsDelay"].read()[0]
 
     @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> int | None:
@@ -1827,6 +1803,25 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         analysis as to whether they are in ALARM or not,
 
         e.g. DevBoolean
+
+        NOTE: https://gitlab.com/tango-controls/pytango/-/issues/623.
+        The automated state analysis can segfault if an exception is
+        raised in a specific order of evaluation for attribute with min_max
+        alarms. The solutions are dire:
+        1. Live with a segfault until it is fixed in cpptango.
+        2. Dont allow reporting any attributes with min_max alarm until
+        you know none will raise an exception. This will obstruct critical
+        information.
+        3. Remove all min_max. This will remove critical functionality.
+        4. Give attributes a min_max alarm level a made up initial value in range.
+        this seems like the worst option as is making up data.
+        5. Re-order attributes such that the chance of a segfault is minimised.
+
+        Option 5 was chosen by placing boardTemperature at the bottom. I hate doing this
+        but all options seem dire. This seemed like the least destructive,
+        it reduces chance of segfault since it is the first attribute to be read.
+        Meaning it will have a value when the others have a value of NONE,
+        hence raise an exception.
 
         :return: the 'tango.DevState' calculated
         """
@@ -1908,7 +1903,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         Get static time delay correction.
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in samples (positive = increase the signal delay) to correct for
+        Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)
@@ -1920,7 +1915,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Set static time delay.
 
-        :param delays: Delay in samples (positive = increase the signal delay)
+        :param delays: Delay in nanoseconds (positive = increase the signal delay)
              to correct for static delay mismathces, e.g. cable length.
         """
         self.component_manager.set_static_delays(delays)
@@ -1951,6 +1946,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Current hardware supports only a single value, thus oly 1st value is used
         """
         self.component_manager.csp_rounding = rounding
+
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: MccsTile) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        """
+        self.component_manager.global_reference_time = reference_time
 
     @attribute(
         dtype=(float,),
@@ -2173,6 +2186,85 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: source IP for FPGA2
         """
         self.component_manager.src_ip_40g_fpga2 = argin
+
+    @attribute(
+        dtype="DevString",
+        label="cspSpeadFormat",
+    )
+    def cspSpeadFormat(self: MccsTile) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format not in ["AAVS", "SKA"]:
+            self.logger.warning(
+                "Invalid CSP SPEAD format: should be AAVS|SKA. Using AAVS"
+            )
+            spead_format = "AAVS"
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+
+    @attribute(
+        dtype=(("DevFloat",),),
+        max_dim_x=2,  # [Delay, delay rate]
+        max_dim_y=16,  # channel (same for x and y)
+    )
+    def lastPointingDelays(self: MccsTile) -> list[list]:
+        """
+        Return last pointing delays applied to the tile.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in channel order, with each pair corresponding to
+        a delay and delay rate.
+
+        :returns: last pointing delays applied to the tile.
+        """
+        return self.component_manager.last_pointing_delays
+
+    @attribute(
+        dtype="DevDouble",
+        abs_change=0.1,
+        min_value=15.0,
+        max_value=70.0,
+        min_alarm=16.0,
+        max_alarm=65.0,
+    )
+    def boardTemperature(
+        self: MccsTile,
+    ) -> tuple[float | None, float, tango.AttrQuality] | None:
+        """
+        Return the board temperature.
+
+        NOTE: Do not move this attribute.
+        It is updated first of all the attributes with min_max alarms.
+        so must be evaluated last. see note in dev_state for more
+        info. This is a horrible solution, but a better one is
+        not immediatly avaliable or clear.
+        see https://gitlab.com/tango-controls/pytango/-/issues/623
+
+        :return: the board temperature
+        """
+        return self._attribute_state["boardTemperature"].read()[0]
 
     # # --------
     # # Commands
@@ -3646,7 +3738,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             Implement :py:meth:`.MccsTile.LoadPointingDelays` command functionality.
 
             :param argin: an array containing a beam index and antenna
-                delays
+                delays. In tile channel order.
             :param args: unspecified positional arguments. This should be empty and is
                 provided for type hinting only
             :param kwargs: unspecified keyword arguments. This should be empty and is
@@ -4385,6 +4477,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param argin: json dictionary with optional keywords:
 
         * start_time - (ISO UTC time) start time
+        * global_reference_time - (ISO UTC time) reference time for the SPS
         * delay - (int) delay start if StartTime is not specified, default 0.2s
 
         :return: A tuple containing a return code and a string

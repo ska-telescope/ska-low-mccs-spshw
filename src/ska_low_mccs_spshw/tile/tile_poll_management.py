@@ -204,13 +204,11 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "CHECK_CPLD_COMMS"
     *    yield "CONNECT"
     *    yield "FIRMWARE_AVAILABLE"
-    *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
-        yield "TILE_INFO"
         yield "CHECK_BOARD_TEMPERATURE"
 
 
@@ -223,13 +221,11 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "CHECK_CPLD_COMMS"
     *    yield "CONNECT"
     *    yield "FIRMWARE_AVAILABLE"
-    *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
-        yield "TILE_INFO"
         yield "CHECK_BOARD_TEMPERATURE"
 
 
@@ -243,21 +239,20 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "CSP_ROUNDING"
     *    yield "CHANNELISER_ROUNDING"
     *    yield "IS_PROGRAMMED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
     *    yield "FIRMWARE_AVAILABLE"
-    *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
         yield "CSP_ROUNDING"
         yield "CHANNELISER_ROUNDING"
         yield "IS_PROGRAMMED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
         yield "FIRMWARE_AVAILABLE"
-        yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def initialised_tpm_read_request_iterator() -> Iterator[str]:
@@ -272,6 +267,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "IS_PROGRAMMED"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "ADC_RMS"
     *    yield "PLL_LOCKED"
@@ -287,7 +283,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "TILE_ID"
     *    yield "BEAMFORMER_TABLE"
     *    yield "FIRMWARE_AVAILABLE"
-    *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -296,6 +291,7 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "ADC_RMS"
         yield "PLL_LOCKED"
@@ -311,8 +307,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
         yield "FIRMWARE_AVAILABLE"
-        yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 def synchronised_tpm_read_request_iterator() -> Iterator[str]:
@@ -327,6 +321,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "IS_PROGRAMMED"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
+    *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "ADC_RMS"
     *    yield "PLL_LOCKED"
@@ -343,7 +338,6 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "BEAMFORMER_TABLE"
     *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_BEAMFORMER_FRAME"
-    *    yield "TILE_INFO"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -352,6 +346,7 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "IS_PROGRAMMED"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
+        yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "ADC_RMS"
         yield "PLL_LOCKED"
@@ -368,8 +363,6 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "BEAMFORMER_TABLE"
         yield "FIRMWARE_AVAILABLE"
         yield "TILE_BEAMFORMER_FRAME"
-        yield "TILE_INFO"
-        yield "CHECK_BOARD_TEMPERATURE"
 
 
 class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
@@ -435,6 +428,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if self.start_acquisition_request:
             self.start_acquisition_request.notify_removed_from_queue()
             self.start_acquisition_request = None
+        if self.initialise_request:
+            self.initialise_request.notify_removed_from_queue()
+            self.initialise_request = None
         self.initialise_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60
@@ -451,6 +447,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        if self.download_firmware_request:
+            self.download_firmware_request.notify_removed_from_queue()
+            self.download_firmware_request = None
         self.download_firmware_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60
@@ -467,6 +466,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        if self.start_acquisition_request:
+            self.start_acquisition_request.notify_removed_from_queue()
+            self.start_acquisition_request = None
         self.start_acquisition_request = request
         if wipe_time is None:
             wipe_time = time.time() + 60

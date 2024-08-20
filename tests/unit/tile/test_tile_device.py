@@ -673,7 +673,6 @@ class TestMccsTile:
         assert tile_device.adminMode == AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
-        tile_device.initialise()
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=4
         )
@@ -717,7 +716,7 @@ class TestMccsTile:
             (
                 "adcPower",
                 # pytest.approx(tuple(float(i) for i in range(32))),
-                list(float(i) for i in range(32)),
+                TileSimulator.ADC_RMS,
                 None,
             ),
             ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
@@ -752,6 +751,8 @@ class TestMccsTile:
             device.
         :param write_value: value to be written as part of the test.
         """
+        max_wait: int = 14  # seconds
+        tick: float = 0.1  # seconds
         assert tile_device.adminMode == AdminMode.OFFLINE
         mock_subrack_device_proxy.configure_mock(tpm1PowerState=PowerState.ON)
         with pytest.raises(
@@ -782,23 +783,45 @@ class TestMccsTile:
         change_event_callbacks["tile_programming_state"].assert_change_event(
             "Initialised", lookahead=4
         )
-        time.sleep(3)
-        if isinstance(initial_value, dict):
-            initial_value = json.dumps(initial_value)
-        elif isinstance(initial_value, list):
-            initial_value = np.array(initial_value)
-            assert (getattr(tile_device, attribute) == initial_value).all()
+        deadline = time.time() + max_wait
+        while time.time() < deadline:
+            try:
+                if isinstance(initial_value, dict):
+                    assert getattr(tile_device, attribute) == json.dumps(initial_value)
+                elif isinstance(initial_value, list):
+                    assert (
+                        getattr(tile_device, attribute) == np.array(initial_value)
+                    ).all()
+                else:
+                    assert getattr(tile_device, attribute) == initial_value
+            except tango.DevFailed as df:
+                assert (
+                    f"Read value for attribute {attribute} has not been updated"
+                    in str(df)
+                )
+                time.sleep(tick)
+                continue
+            break
         else:
-            assert getattr(tile_device, attribute) == initial_value
+            pytest.fail("Initial value could not be read in time.")
 
         if write_value is not None:
             tile_device.write_attribute(attribute, write_value)
-            time.sleep(3)
-            if isinstance(write_value, list):
-                write_value = np.array(write_value)
-                assert (getattr(tile_device, attribute) == write_value).all()
+            deadline = time.time() + max_wait
+            while time.time() < deadline:
+                try:
+                    if isinstance(write_value, list):
+                        assert (
+                            getattr(tile_device, attribute) == np.array(write_value)
+                        ).all()
+                    else:
+                        assert getattr(tile_device, attribute) == write_value
+                except AssertionError:
+                    time.sleep(tick)
+                    continue
+                break
             else:
-                assert getattr(tile_device, attribute) == write_value
+                pytest.fail("Value failed to change in time.")
 
     def test_antennaIds(
         self: TestMccsTile,
@@ -1108,33 +1131,6 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
 
         change_event_callbacks["state"].assert_change_event(DevState.ON)
-
-        [[task_status], [command_id]] = tile_device.StartAcquisition(
-            json.dumps({"delay": 5})
-        )
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "STAGING")
-        )
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "QUEUED")
-        )
-        # This will never be picked up since we need to be Initialised or
-        # Synchronised to execute. This is by default 60 seconds, but this test speeds
-        # that up.
-        request_provider = tile_component_manager._request_provider
-        if request_provider:
-            request_provider.command_wipe_time["start_acquisition"] = time.time() + 5
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            (command_id, "ABORTED")
-        )
-
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        execute_lrc_to_completion(
-            change_event_callbacks, tile_device, "Initialise", None
-        )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
         execute_lrc_to_completion(
             change_event_callbacks,
@@ -1624,6 +1620,11 @@ class TestMccsTileCommands:
         )
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         assert tile_device.adminMode == AdminMode.OFFLINE
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
 
         tile_device.adminMode = AdminMode.ENGINEERING
         assert tile_device.adminMode == AdminMode.ENGINEERING
@@ -1631,6 +1632,10 @@ class TestMccsTileCommands:
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=5, consume_nonmatches=True
+        )
+        change_event_callbacks["tile_programming_state"].assert_not_called()
         args = [
             {
                 "tone_frequency": 100e6,

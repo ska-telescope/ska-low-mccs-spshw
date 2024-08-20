@@ -497,7 +497,7 @@ class TestTileComponentManager:
 
         # We initially submit the on command to the Subrack and place a
         # Initialise command in the queue.
-        mock_subrack_device_proxy.PowerOnTpm.assert_last_call(1)
+        mock_subrack_device_proxy.PowerOnTpm.assert_last_call()
 
         # mock an event from subrack announcing it to be turned on
         tile_component_manager._subrack_says_tpm_power_changed(

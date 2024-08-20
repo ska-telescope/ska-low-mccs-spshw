@@ -201,12 +201,10 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
     :yields: the name of an attribute group to be read from the device.
 
     *    yield "CHECK_CPLD_COMMS"
-    *    yield "CONNECT"
     *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
-        yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
 
 
@@ -217,12 +215,10 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
     :yields: the name of an attribute group to be read from the device.
 
     *    yield "CHECK_CPLD_COMMS"
-    *    yield "CONNECT"
     *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
-        yield "CONNECT"
         yield "FIRMWARE_AVAILABLE"
 
 

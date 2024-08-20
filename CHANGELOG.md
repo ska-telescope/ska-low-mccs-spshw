@@ -2,9 +2,43 @@
 
 ## unreleased
 
-[MCCS-2059] Add monitoring point attributes to MccsTile.
+* [MCCS-2222] Include MccsTile attributes added as part of MCCS-2059 in the EDA config.
+
+## 0.16.1
+
+* [LOW-952] Point at ska-low-tmdata for AA0.5 telmodel data
+* [MCCS-2216] Support nulls in chart values
+* [MCCS-2223] Fix static delay docs
+
+## 0.16.0
+
+* [MCCS-2135] Pull versions of aavs-system and pyfabil based on tags rather than specific commits.
+* [MCCS-2014] Add support for SP-3800 in MccsTile and SpsStation.
+* [MCCS-2213] Remove local platform specs and templates and instead pull them from TelModel.
+* [MCCS-2215] Update to latest version of `ska-low-mccs-common`
+* [MCCS-2190] Update attributes to only push change events when the value changes.
+* [SKB-452] Update Tile so that if not initialised or synchronised when its subrack reports power `ON` it will initialise itself.
+* [SKB-324] [SKB-387] Change subrack fan speed parameter to require an integer to avoid an exception being raised by the SMB. Update local cached value of `SpsStation.SetChanneliserRounding` properly.
+* [SKB-460] Fix inconsistency in `ApplyPointingDelays` command naming. Fix an off-by-one error in `ApplyPointingDelays`. Add attributes to Tile and Station containing the last pointing delays.
+* [MCCS-2202] Update to the latest platform specs, helm templates and daq version.
+* [MCCS-2200] Re-order attributes to greatly reduce the chance of encountering a cpptango segfault.
+* [MCCS-2191] Move a lot of Daq configuration to the Daq repo and remove from this one.
+* [MCCS-2210] Fix `UpdateStaticDelays` bug to properly allow Tiles to have different delays.
+* [SKB-435] Improve defaults for some parameters, cast tuples to lists when comparing with lists, add info metadata block. Generally improve Tile health issues.
+* [MCCS-2200] Add `retry_command_on_exception` to improve reliability when facing timeouts.
+* [MCCS-2059] Add monitoring point attributes to MccsTile.
             Update ska-tango-util to 0.4.11
             Rename 'CHANGELOG' to 'CHANGELOG.md'
+* [LOW-938] Add `ska-low-deployment` as `.deploy` submodule containing all helmfile templates and remove them locally.
+* [MCCS-1508] Improve monitoring of overheating event.
+* [MCCS-2200] Remove tile_info from polling loop (takes too long) and add claiming of hardware lock from a bad rebase.
+* [MCCS-2189] Add ability to expose Daq's data services. Update relevant helmfile templates.
+* [MCCS-2197] Correct `AcquireDataForCalibration` command to properly clear the LRC queue so it doesn't fill to capacity.
+* [MCCS-2195] Fix an "off by one" indexing error in station component manager.
+* [MCCS-1507] Reimplement TileComponentManager as a PollingComponentManager. Removes TileOrchestrator. Fixes SKB-281.
+* [SKB-408] Change polling to push archive events when a value is polled instead of only on change.
+* [MCCS-2189] Update to latest daq version and 0.6.0 specs
+* [MCCS-2078] Add `tile.tile_info` attribute
 
 ## 0.15.0
 

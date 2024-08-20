@@ -2971,7 +2971,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "0.10.2"
+version = "0.12.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -2997,8 +2997,8 @@ transitions = "^0.9.0"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git"
-reference = "835333758d0d288ff2ac9f13eb1de7b556e2ab2c"
-resolved_reference = "835333758d0d288ff2ac9f13eb1de7b556e2ab2c"
+reference = "556b912d3b3a08f4cac7d42548f5446a32c5d920"
+resolved_reference = "556b912d3b3a08f4cac7d42548f5446a32c5d920"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -3078,13 +3078,13 @@ reference = "skao"
 
 [[package]]
 name = "ska-tango-base"
-version = "1.0.0"
+version = "1.1.0"
 description = "SKA Tango base classes"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "ska_tango_base-1.0.0-py3-none-any.whl", hash = "sha256:edb86c02f7de36b8b8b8ea379e986de7885e48feb2b6aa4210233ff163f4ae0c"},
-    {file = "ska_tango_base-1.0.0.tar.gz", hash = "sha256:20636bb3b3966caa37c53a972ac4031c3d6cf7eebb0bce4e99064f90a76fb5a5"},
+    {file = "ska_tango_base-1.1.0-py3-none-any.whl", hash = "sha256:a6ed82824caaa978894e3df0f375d175068b4599848744e2a7c80cd04f27d779"},
+    {file = "ska_tango_base-1.1.0.tar.gz", hash = "sha256:1076ed4d537f2eb444f1e97cccb3938c58e49e37adc9e9f298f118f342ba16c4"},
 ]
 
 [package.dependencies]
@@ -4066,4 +4066,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "01b0c0507c7234dc9a5dada00c7d42601a5dd27d0cb78c881741baddcc4cd0fd"
+content-hash = "cd7b2d5c49ef0d8a6a8aced2f73fc2f116573432cbcf34471dab9a4de173c214"

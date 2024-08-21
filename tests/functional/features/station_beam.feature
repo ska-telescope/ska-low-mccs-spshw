@@ -4,7 +4,7 @@ Feature: Test station pointing
     Scenario: Correcting delayed beam
         Given a station that is online
         And a subrack that is online
-        And a set of tiles that are in maintenance
+        And a set of tiles that are in engineering
         And a DAQ instance which is online
         And the station is configured
         And the station is synchronised

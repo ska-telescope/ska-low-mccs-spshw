@@ -2,6 +2,9 @@
 
 ## unreleased
 
+## 0.17.0
+
+* [MCCS-2141] Update ska-tango-base to 1.0.0
 * [MCCS-2222] Include MccsTile attributes added as part of MCCS-2059 in the EDA config.
 
 ## 0.16.1

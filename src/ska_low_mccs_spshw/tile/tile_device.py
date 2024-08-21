@@ -4607,11 +4607,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Check if command is allowed.
 
-        It is allowed only in maintenance mode.
+        It is allowed only in engineering mode.
 
         :returns: whether the command is allowed
         """
-        return self.admin_mode_model.admin_mode == AdminMode.MAINTENANCE
+        return self.admin_mode_model.admin_mode == AdminMode.ENGINEERING
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

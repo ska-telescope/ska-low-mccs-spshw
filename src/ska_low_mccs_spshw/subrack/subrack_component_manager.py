@@ -93,7 +93,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
-            1,
             communication_state_changed_callback,
             component_state_changed_callback,
             tpm_present=None,

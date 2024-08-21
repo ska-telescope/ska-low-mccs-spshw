@@ -29,7 +29,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^1.0.0"
 ska-control-model = "^1.0.0"
-ska-low-mccs-common =  { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev = "556b912d3b3a08f4cac7d42548f5446a32c5d920" }
+ska-low-mccs-common = "^0.12.0"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"
@@ -41,7 +41,7 @@ astropy="5.3.4"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", rev = "7fcb3c3d0091a47b85f45b21aa11785550a4f446" }
+ska-low-mccs-daq-interface = "^0.3.0"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -89,7 +89,7 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-ska-low-mccs-daq-interface = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git", rev = "7fcb3c3d0091a47b85f45b21aa11785550a4f446" }
+ska-low-mccs-daq-interface = "^0.3.0"
 ska-telmodel = "^1.4.1"
 
 [tool.poetry.scripts]

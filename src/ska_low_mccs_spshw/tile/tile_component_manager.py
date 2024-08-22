@@ -604,7 +604,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):

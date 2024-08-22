@@ -184,6 +184,9 @@ def test_off_on(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
@@ -374,6 +377,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ([result_code], [tpm_on_command_id]) = subrack_device.PowerOnTpm(tpm_to_power)
         assert result_code == ResultCode.QUEUED
 
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "STAGING")
+        )
         change_event_callbacks["command_status"].assert_change_event(
             (tpm_on_command_id, "QUEUED")
         )

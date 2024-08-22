@@ -106,7 +106,7 @@ def check_subrack_is_online_and_on(
     """
     admin_mode = subrack_device.adminMode
     print(f"Subrack device is in admin_mode {admin_mode.name}")
-    assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.MAINTENANCE]
+    assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
 
     subrack_device.subscribe_event(
         "state",
@@ -114,7 +114,7 @@ def check_subrack_is_online_and_on(
         change_event_callbacks["subrack_state"],
     )
 
-    # Test can run in ONLINE or MAINTENANCE admin mode,
+    # Test can run in ONLINE or ENGINEERING admin mode,
     # so we only need to act if the admin mode is OFFLINE
     if admin_mode == AdminMode.OFFLINE:
         change_event_callbacks.assert_change_event(

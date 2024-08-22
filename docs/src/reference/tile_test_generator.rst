@@ -76,8 +76,8 @@ which accepts a json description of the test generator setting, and the
 attribute "TestGeneratorMode", which is True if some input channels are
 using the test generator.
 
-The command can be used only in MAINTENANCE AdminMode. When the Tile
-AdminMode is changed from MAINTENANCE, the generator is always turned off.
+The command can be used only in ENGINEERING AdminMode. When the Tile
+AdminMode is changed from ENGINEERING, the generator is always turned off.
 
 ConfigureTestGenerator command
 ==============================
@@ -125,8 +125,8 @@ The Station device exposes the generator using a command
 setting, and the attribute "TestGeneratorMode", which is True if the
 test generator is active.
 
-The command can be used only in MAINTENANCE AdminMode. When the Tile
-AdminMode is changed from MAINTENANCE, the generator is always turned off.
+The command can be used only in ENGINEERING AdminMode. When the Tile
+AdminMode is changed from ENGINEERING, the generator is always turned off.
 
 ConfigureTestGenerator command
 ==============================

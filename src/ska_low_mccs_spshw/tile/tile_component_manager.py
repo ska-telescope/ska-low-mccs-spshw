@@ -545,7 +545,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             name="initialise",
             command_object=self._execute_initialise,
             task_callback=task_callback,
-            program_fpga=False,
+            force_reprogramming=False,
             pps_delay_correction=self._pps_delay_correction,
         )
         self.logger.info("Initialise command placed in poll QUEUE")
@@ -629,7 +629,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         name="initialise",
                         command_object=self._execute_initialise,
                         task_callback=None,
-                        program_fpga=False,
+                        force_reprogramming=False,
                         pps_delay_correction=self._pps_delay_correction,
                     )
                     self.logger.info(
@@ -777,7 +777,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-        program_fpga: bool = True,
+        force_reprogramming: bool = True,
     ) -> tuple[TaskStatus, str] | None:
         """
         Submit the initialise slow task.
@@ -785,7 +785,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         This method returns immediately after it is submitted for polling.
 
         :param task_callback: Update task state, defaults to None
-        :param program_fpga: Force FPGA reprogramming, for complete initialisation
+        :param force_reprogramming: Force FPGA reprogramming,
+            for complete initialisation
 
         :returns: A tuple containing a task status and a unique id string to
             identify the command
@@ -799,7 +800,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             name="initialise",
             command_object=self._execute_initialise,
             task_callback=task_callback,
-            program_fpga=program_fpga,
+            force_reprogramming=force_reprogramming,
             pps_delay_correction=self._pps_delay_correction,
         )
         self._request_provider.desire_initialise(request)
@@ -810,18 +811,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_hardware_lock_claimed
     def _execute_initialise(
         self: TileComponentManager,
-        program_fpga: bool,
+        force_reprogramming: bool,
         pps_delay_correction: int,
     ) -> None:
         """
         Initialise the TPM.
 
-        :param program_fpga: True if we want to program the fpga before
-            initialisation.
+        :param force_reprogramming: Force FPGA reprogramming,
+            for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        if program_fpga:
+        if force_reprogramming:
             self.tile.erase_fpgas()
             self._update_attribute_callback(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()

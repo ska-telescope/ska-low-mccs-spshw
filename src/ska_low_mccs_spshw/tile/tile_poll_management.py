@@ -201,11 +201,9 @@ def unknown_tpm_read_request_iterator() -> Iterator[str]:
     :yields: the name of an attribute group to be read from the device.
 
     *    yield "CHECK_CPLD_COMMS"
-    *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
-        yield "FIRMWARE_AVAILABLE"
 
 
 def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
@@ -215,11 +213,9 @@ def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
     :yields: the name of an attribute group to be read from the device.
 
     *    yield "CHECK_CPLD_COMMS"
-    *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
-        yield "FIRMWARE_AVAILABLE"
 
 
 def programmed_tpm_read_request_iterator() -> Iterator[str]:
@@ -235,7 +231,6 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "CHECK_BOARD_TEMPERATURE"
     *    yield "HEALTH_STATUS"
     *    yield "PLL_LOCKED"
-    *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -245,7 +240,6 @@ def programmed_tpm_read_request_iterator() -> Iterator[str]:
         yield "CHECK_BOARD_TEMPERATURE"
         yield "HEALTH_STATUS"
         yield "PLL_LOCKED"
-        yield "FIRMWARE_AVAILABLE"
 
 
 def initialised_tpm_read_request_iterator() -> Iterator[str]:
@@ -275,7 +269,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "STATION_ID"
     *    yield "TILE_ID"
     *    yield "BEAMFORMER_TABLE"
-    *    yield "FIRMWARE_AVAILABLE"
     """
     while True:
         yield "CHECK_CPLD_COMMS"
@@ -299,7 +292,6 @@ def initialised_tpm_read_request_iterator() -> Iterator[str]:
         yield "STATION_ID"
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
-        yield "FIRMWARE_AVAILABLE"
 
 
 def synchronised_tpm_read_request_iterator() -> Iterator[str]:
@@ -329,7 +321,6 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
     *    yield "STATION_ID"
     *    yield "TILE_ID"
     *    yield "BEAMFORMER_TABLE"
-    *    yield "FIRMWARE_AVAILABLE"
     *    yield "TILE_BEAMFORMER_FRAME"
     """
     while True:
@@ -354,7 +345,6 @@ def synchronised_tpm_read_request_iterator() -> Iterator[str]:
         yield "STATION_ID"
         yield "TILE_ID"
         yield "BEAMFORMER_TABLE"
-        yield "FIRMWARE_AVAILABLE"
         yield "TILE_BEAMFORMER_FRAME"
 
 
@@ -391,7 +381,6 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         self.initialise_request: Optional[Any] = None
         self.download_firmware_request: Optional[Any] = None
         self.start_acquisition_request: Optional[Any] = None
-
         self._desire_connection = False
         self._check_global_alarms = False
         self.command_wipe_time: dict[str, float] = {}

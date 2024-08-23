@@ -210,12 +210,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "FIRMWARE_AVAILABLE":
-                request = TileRequest(
-                    "firmware_available",
-                    self.tile.get_firmware_list,
-                    publish=True,
-                )
             case "CHECK_CPLD_COMMS":
                 request = TileRequest(
                     "global_status_alarms",

@@ -1161,7 +1161,10 @@ class TestMccsTileCommands:
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
-            match="Communication with component is not established",
+            match=(
+                "To execute this command we must be in state "
+                "'Programmed', 'Initialised' or 'Synchronised'!"
+            ),
         ):
             _ = off_tile_device.GetFirmwareAvailable()
         # self.turn_tile_on(off_tile_device, change_event_callbacks)

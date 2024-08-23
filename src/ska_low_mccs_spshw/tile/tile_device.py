@@ -1537,6 +1537,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_programmed
 
+    def is_programmed(self: MccsTile) -> bool:
+        """
+        Return a flag representing whether we are programmed or not.
+
+        :return: True if Tile is in Programmed, Initialised or Synchronised states.
+        """
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
+        if prog_state in ["Programmed", "Initialised", "Synchronised"]:
+            return True
+        reason = "CommandNotAllowed"
+        msg = (
+            "To execute this command we must be in state "
+            "'Programmed', 'Initialised' or 'Synchronised'! "
+            f"Tile is currently in state {prog_state}"
+        )
+        tango.Except.throw_exception(reason, msg, self.get_name())
+        return False
+
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -2348,7 +2366,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             return json.dumps(self._component_manager.firmware_available)
 
-    @command(dtype_out="DevString")
+    @command(dtype_out="DevString", fisallowed="is_programmed")
     def GetFirmwareAvailable(self: MccsTile) -> str:
         """
         Get available firmware.

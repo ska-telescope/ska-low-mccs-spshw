@@ -100,6 +100,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             backplane_temperatures=None,
             board_temperatures=None,
             board_current=None,
+            cpld_pll_locked=None,
             power_supply_currents=None,
             power_supply_fan_speeds=None,
             power_supply_powers=None,
@@ -107,6 +108,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
+            subrack_pll_locked=None,
+            subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB

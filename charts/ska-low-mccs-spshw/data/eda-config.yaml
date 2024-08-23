@@ -201,6 +201,9 @@ configuration:
       boardCurrent:
         code_push_event: true
         archive_period: 0
+      cpldPllLocked:
+        code_push_event: true
+        archive_period: 0
       powerSupplyCurrents:
         code_push_event: true
         archive_period: 0
@@ -220,6 +223,12 @@ configuration:
         code_push_event: true
         archive_period: 0
       subrackFanModes:
+        code_push_event: true
+        archive_period: 0
+      subrackPllLocked:
+        code_push_event: true
+        archive_period: 0
+      subrackTimestamp:
         code_push_event: true
         archive_period: 0
       tpmCurrents:

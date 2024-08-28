@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.
+
 ## 0.17.0
 
 * [MCCS-2141] Update ska-tango-base to 1.0.0

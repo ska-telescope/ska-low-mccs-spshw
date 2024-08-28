@@ -4,6 +4,7 @@
 
 * [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.
 * [LOW-995] Speed up SpsStation initialisation by reducing delay between TPM operations.
+* [LOW-991] Fix bug in platform spec parsing introduced by new spec schema.
 
 ## 0.17.0
 

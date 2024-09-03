@@ -3014,21 +3014,20 @@ name = "ska-low-mccs-daq-interface"
 version = "0.3.0"
 description = "SKA Low MCCS DAQ Interface repository specifies the client-server interface between the DAQ and its monitoring and control component."
 optional = false
-python-versions = ">=3.10,<4.0"
-files = [
-    {file = "ska_low_mccs_daq_interface-0.3.0-py3-none-any.whl", hash = "sha256:c6f93d26cfae8cee9aa259be0bc821b7265f0c6b57e8c1813688b56ad007bf01"},
-    {file = "ska_low_mccs_daq_interface-0.3.0.tar.gz", hash = "sha256:5182e8f746fb02931239963090fd2d1025ddff3163b12abc48d4d966381a9478"},
-]
+python-versions = "^3.10"
+files = []
+develop = false
 
 [package.dependencies]
-grpcio = ">=1.54.2,<2.0.0"
-grpcio-tools = ">=1.54.2,<2.0.0"
-ska-control-model = ">=1.0.0,<2.0.0"
+grpcio = "^1.54.2"
+grpcio-tools = "^1.54.2"
+ska-control-model = "^1.0.0"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = "skao"
+type = "git"
+url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git"
+reference = "374870735b889d32ba3f286248f4cdab19183599"
+resolved_reference = "374870735b889d32ba3f286248f4cdab19183599"
 
 [[package]]
 name = "ska-ser-logging"
@@ -4090,4 +4089,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "5f798e1b2af97ec5dfd9ce10b6e99b97e49b5813c188dcd4a2a4f1bcf8e9e755"
+content-hash = "d4e7252e20131d166af012d68aa9715f90cbde2802fe37ea72ca7ef3e1b3448d"

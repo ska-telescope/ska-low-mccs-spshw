@@ -127,7 +127,6 @@ class SpsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -185,7 +184,6 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
             self.AntennaConfigURI,
             self.logger,
-            self._max_workers,
             self._communication_state_changed,
             self._component_state_changed,
             self._health_model.tile_health_changed,
@@ -593,7 +591,7 @@ class SpsStation(SKAObsDevice):
         Get static time delay correction.
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in samples (positive = increase the signal delay) to correct for
+        Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)
@@ -605,7 +603,7 @@ class SpsStation(SKAObsDevice):
         """
         Set static time delay.
 
-        :param delays: Delay in samples (positive = increase the signal delay)
+        :param delays: Delay in nanoseconds (positive = increase the signal delay)
              to correct for static delay mismathces, e.g. cable length.
              2 values per antenna (pol. X and Y), 32 values per tile, 512 total.
         """

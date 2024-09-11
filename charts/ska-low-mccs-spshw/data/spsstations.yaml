@@ -21,7 +21,12 @@ Defines the deployment for SpsStation Tango devices.
           logging_level_default: 5
 
 */}}
-{{- $spsstations := dig "spsstations" dict .Values.deviceServers}}
+{{- $spsstations := dict}}
+{{- range $server_name, $this_server := (dig "spsstations" dict .Values.deviceServers)}}
+{{- if $this_server}}
+{{- $_ := set $spsstations $server_name $this_server}}
+{{- end}}
+{{- end}}
 {{- if $spsstations}}
 name: "spsstation-{{.Release.Name}}"
 function: ska-low-mccs-spshw-spsstation
@@ -40,6 +45,7 @@ server:
         - name: "SpsStation"
           devices:
 {{- range $spsstation_name, $this_spsstation := $this_server}}
+{{- if $this_spsstation}}
             - name: {{$spsstation_name}}
               properties:
                 - name: "StationId"
@@ -76,6 +82,7 @@ server:
                 - name: "LoggingLevelDefault"
                   values:
                     - {{quote .}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

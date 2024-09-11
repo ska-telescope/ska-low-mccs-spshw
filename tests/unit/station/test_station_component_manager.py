@@ -145,7 +145,6 @@ def station_component_manager_fixture(
         None,  # csp_ingest_ip,
         antenna_uri,
         logger,
-        1,
         callbacks["communication_status"],
         callbacks["component_state"],
         callbacks["tile_health"],

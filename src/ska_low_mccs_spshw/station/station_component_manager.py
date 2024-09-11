@@ -379,6 +379,7 @@ class SpsStationComponentManager(
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
+        channeliser_rounding: list[int] | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -402,6 +403,7 @@ class SpsStationComponentManager(
         :param sdn_gateway: IP address of the SDN gateway,
             or None if the network has no gateway.
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
+        :param channeliser_rounding: The channeliser rounding to use for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
@@ -524,7 +526,7 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
-        self._channeliser_rounding = [3] * 512
+        self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [3] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)

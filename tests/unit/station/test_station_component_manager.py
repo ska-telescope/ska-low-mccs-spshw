@@ -143,6 +143,7 @@ def station_component_manager_fixture(
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
         None,  # csp_ingest_ip,
+        None,  # channeliser_rounding,
         antenna_uri,
         logger,
         callbacks["communication_status"],

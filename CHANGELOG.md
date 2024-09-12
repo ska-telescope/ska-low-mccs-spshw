@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
+
 ## 0.17.0
 
 * [MCCS-2141] Update ska-tango-base to 1.0.0

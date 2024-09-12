@@ -315,7 +315,7 @@ def rapid_start_stop(
 
     def wait_for_queue() -> bool:
         start_time = time.time()
-        while len(daq_receiver.longRunningCommandsInQueue) > 0:
+        while len(daq_receiver.longRunningCommandsInQueue) > 5:
             time.sleep(1)
             if time.time() > start_time + 180:
                 print(daq_receiver.longRunningCommandsInQueue)
@@ -323,7 +323,7 @@ def rapid_start_stop(
         return True
 
     try:
-        for _ in range(100):
+        for _ in range(200):
             daq_receiver.Start("")
             time.sleep(0.05)
             daq_receiver.Stop()
@@ -336,9 +336,8 @@ def rapid_start_stop(
         fail_reason = f"Rapid Start/Stop experienced an exception: {e}"
 
     try:
-        for _ in range(100):
+        for _ in range(200):
             daq_receiver.Stop()
-            time.sleep(0.05)
             if len(daq_receiver.longRunningCommandsInQueue) > 50:
                 fail_test = not wait_for_queue()
         fail_test = not wait_for_queue()

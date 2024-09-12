@@ -81,16 +81,6 @@ def station_name_fixture(true_context: bool) -> str:
     return "real-daq-1"
 
 
-@pytest.fixture(name="subrack_id")
-def subrack_id_fixture() -> int:
-    """
-    Get the subrack id to use in the test.
-
-    :return: subrack id.
-    """
-    return 1
-
-
 @pytest.fixture(name="tile_id")
 def tile_id_fixture() -> int:
     """

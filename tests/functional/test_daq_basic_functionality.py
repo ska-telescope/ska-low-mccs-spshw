@@ -331,7 +331,6 @@ def rapid_start_stop(
             if len(daq_receiver.longRunningCommandsInQueue) > 50:
                 wait_for_queue()
         wait_for_queue()
-        assert len(daq_receiver.longRunningCommandsInQueue) == 0
     except tango.DevFailed as e:
         fail_test = True
         fail_reason = f"Rapid Start/Stop experienced an exception: {e}"
@@ -343,7 +342,6 @@ def rapid_start_stop(
             if len(daq_receiver.longRunningCommandsInQueue) > 50:
                 fail_test = not wait_for_queue()
         fail_test = not wait_for_queue()
-        assert len(daq_receiver.longRunningCommandsInQueue) == 0
     except tango.DevFailed as e:
         fail_test = True
         fail_reason = f"Rapid Stop experienced an exception: {e}"

@@ -263,7 +263,8 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
     if no_of_iters == 1:
         pytest.fail("Consumers not stopped.")
 
-    sleep(1)
+    # Sleeps for 1, 4, 9, 16 seconds.
+    sleep((6 - no_of_iters) ** 2)
     return poll_until_consumers_stopped(daq, no_of_iters - 1)
 
 

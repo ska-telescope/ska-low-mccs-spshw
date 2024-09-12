@@ -1105,7 +1105,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Act
         tile_component_manager.initialise(
-            program_fpga=True, task_callback=callbacks["task"]
+            force_reprogramming=True, task_callback=callbacks["task"]
         )
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -1477,7 +1477,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
         with tile_component_manager._hardware_lock:
             tile_component_manager._execute_initialise(
-                program_fpga=True, pps_delay_correction=0
+                force_reprogramming=True, pps_delay_correction=0
             )
         assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         with tile_component_manager._hardware_lock:
@@ -1613,7 +1613,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert initial_time1 == final_time1
 
         tile_component_manager.initialise(
-            program_fpga=True, task_callback=callbacks["task"]
+            force_reprogramming=True, task_callback=callbacks["task"]
         )
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -1651,7 +1651,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Act
         tile_component_manager.initialise(
-            program_fpga=True,
+            force_reprogramming=True,
             task_callback=callbacks["task"],
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)

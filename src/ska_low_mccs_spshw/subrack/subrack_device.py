@@ -6,7 +6,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module provides a Tango device for a PSI-Low subrack."""
+"""This module provides a Tango device for an SPS subrack."""
 from __future__ import annotations
 
 import importlib
@@ -264,7 +264,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
 class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
-    """A Tango device for monitor and control of the PSI-Low subrack."""
+    """A Tango device for monitor and control of an SPS subrack."""
 
     # ----------
     # Properties
@@ -282,6 +282,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         "backplane_temperatures": "backplaneTemperatures",
         "board_temperatures": "boardTemperatures",
         "board_current": "boardCurrent",
+        "cpld_pll_locked": "cpldPllLocked",
         "power_supply_currents": "powerSupplyCurrents",
         "power_supply_powers": "powerSupplyPowers",
         "power_supply_voltages": "powerSupplyVoltages",
@@ -289,6 +290,8 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         "subrack_fan_speeds": "subrackFanSpeeds",
         "subrack_fan_speeds_percent": "subrackFanSpeedsPercent",
         "subrack_fan_mode": "subrackFanModes",
+        "subrack_pll_locked": "subrackPllLocked",
+        "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
@@ -794,6 +797,23 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("boardCurrent", None) or []
 
+    @attribute(dtype=bool, label="CPLD PLL locked")
+    def cpldPllLocked(self: MccsSubrack) -> bool:
+        """
+        Handle a Tango attribute read of the subrack CPLD PLL locked attribute.
+
+        :return: whether the CPLD PLL is locked.
+        """
+        return self._cpld_pll_locked()
+
+    def _cpld_pll_locked(self: MccsSubrack) -> bool:
+        """
+        Handle a Tango attribute read of the subrack CPLD PLL locked attribute.
+
+        :return: whether the CPLD PLL is locked.
+        """
+        return self._hardware_attributes.get("cpldPllLocked", None)
+
     @attribute(
         dtype=(float,), max_dim_x=2, label="power supply currents", abs_change=0.1
     )
@@ -951,6 +971,44 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             this returns an empty list.
         """
         return self._hardware_attributes.get("subrackFanModes", None) or []
+
+    @attribute(dtype=bool, label="PLL locked")
+    def subrackPllLocked(self: MccsSubrack) -> bool:
+        """
+        Handle a Tango attribute read of the subrack PLL locked attribute.
+
+        :return: whether the subrack PLL is locked.
+        """
+        return self._subrack_pll_locked()
+
+    def _subrack_pll_locked(self: MccsSubrack) -> bool:
+        """
+        Handle a Tango attribute read of the subrack PLL locked attribute.
+
+        :return: whether the subrack PLL is locked.
+        """
+        return self._hardware_attributes.get("subrackPllLocked", None)
+
+    @attribute(
+        dtype=int,
+        label="Timestamp",
+        abs_change=1,
+    )
+    def subrackTimestamp(self: MccsSubrack) -> int:
+        """
+        Handle a Tango attribute read of the subrack timestamp attribute.
+
+        :return: the subrack timestamp
+        """
+        return self._subrack_timestamp()
+
+    def _subrack_timestamp(self: MccsSubrack) -> int:
+        """
+        Handle a Tango attribute read of the subrack timestamp attribute.
+
+        :return: the subrack timestamp
+        """
+        return self._hardware_attributes.get("subrackTimestamp", None)
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float]:

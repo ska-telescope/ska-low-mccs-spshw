@@ -42,6 +42,16 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
+FIRMWARE_VERSION = 6.0.0
+DESIRED_FIRMWARE_FILE_NAME = itpm_v1_6.bit
+
+install-firmware:
+	mkdir temp_firmware
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska_low_sps_tpmfirmware-$(FIRMWARE_VERSION).tar.gz
+	gzip -d temp_firmware/firmware_files.tar.gz
+	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
+	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+	rm -rf temp_firmware
 
 ########################################################################
 # HELM

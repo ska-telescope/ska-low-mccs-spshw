@@ -55,6 +55,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": 1.1,
             "writable": False,
         },
+        "cpld_pll_locked": {
+            "length": None,
+            "default": False,
+            "writable": False,
+        },
         "power_supply_fan_speeds": {
             "length": 2,
             "default": [93.0, 94.0],
@@ -78,6 +83,16 @@ class SubrackSimulator(SubrackProtocol):
         "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
+            "writable": False,
+        },
+        "subrack_pll_locked": {
+            "length": None,
+            "default": False,
+            "writable": False,
+        },
+        "subrack_timestamp": {
+            "length": None,
+            "default": 1234567890,
             "writable": False,
         },
         "tpm_currents": {

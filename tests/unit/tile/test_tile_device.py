@@ -1055,6 +1055,7 @@ class TestMccsTileCommands:
                 command_args
             )
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
         tile_device.MockTpmOn()
@@ -1064,7 +1065,9 @@ class TestMccsTileCommands:
 
         assert task_status == TaskStatus.IN_PROGRESS
         assert command_name in command_id.split("_")[-1]
-
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (command_id, "STAGING")
+        )
         change_event_callbacks["lrc_command"].assert_change_event(
             (command_id, "QUEUED")
         )
@@ -1121,7 +1124,7 @@ class TestMccsTileCommands:
             [[task_status], [command_id]] = tile_device.StartAcquisition(
                 json.dumps({"delay": 5})
             )
-
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         wait_for_completed_command_to_clear_from_queue(tile_device)
 
@@ -1158,7 +1161,10 @@ class TestMccsTileCommands:
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
-            match="Communication with component is not established",
+            match=(
+                "To execute this command we must be in state "
+                "'Programmed', 'Initialised' or 'Synchronised'!"
+            ),
         ):
             _ = off_tile_device.GetFirmwareAvailable()
         # self.turn_tile_on(off_tile_device, change_event_callbacks)
@@ -1623,8 +1629,8 @@ class TestMccsTileCommands:
             change_event_callbacks["tile_programming_state"],
         )
 
-        tile_device.adminMode = AdminMode.MAINTENANCE
-        assert tile_device.adminMode == AdminMode.MAINTENANCE
+        tile_device.adminMode = AdminMode.ENGINEERING
+        assert tile_device.adminMode == AdminMode.ENGINEERING
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
         tile_device.MockTpmOn()

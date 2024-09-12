@@ -205,6 +205,36 @@ class TestMccsDaqReceiver:
         assert result_code == ResultCode.OK
         assert response == "Daq stopped"
 
+    def test_skb_431(
+        self: TestMccsDaqReceiver,
+        device_under_test: tango.DeviceProxy,
+    ) -> None:
+        """
+        Test for skb-431.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        device_under_test.adminMode = AdminMode.ONLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
+
+        def wait_for_queue() -> None:
+            while len(device_under_test.longRunningCommandsInQueue) > 0:
+                print("---------------------------")
+                print(device_under_test.longRunningCommandsInQueue)
+                sleep(1)
+
+        for _ in range(100):
+            device_under_test.Start("")
+            sleep(0.05)
+            device_under_test.Stop()
+            sleep(0.05)
+            if len(device_under_test.longRunningCommandsInQueue) > 50:
+                wait_for_queue()
+        wait_for_queue()
+        assert len(device_under_test.longRunningCommandsInQueue) == 0
+
 
 class TestPatchedDaq:
     """

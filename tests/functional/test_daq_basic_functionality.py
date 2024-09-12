@@ -286,7 +286,7 @@ def daq_sent_start_channelised(
     daq_receiver.Start('{"modes_to_start": "DaqModes.CHANNEL_DATA"}')
 
 
-@then("the DAQ is in channelised data mode")
+@then("DAQ is in channelised data mode")
 def check_daq_config_is_channelised(
     daq_receiver: tango.DeviceProxy,
 ) -> None:
@@ -296,3 +296,46 @@ def check_daq_config_is_channelised(
     :param daq_receiver: The daq_receiver fixture to use.
     """
     poll_until_consumer_running(daq_receiver, "CHANNEL_DATA", no_of_iters=25)
+
+
+@when("I rapidly start and stop DAQ successfully")
+def rapid_start_stop(
+    daq_receiver: tango.DeviceProxy,
+) -> None:
+    """
+    Attempt to trigger SKB-431 by rapidly starting and stopping DAQ.
+
+    :param daq_receiver: The daq_receiver fixture to use.
+    """
+    # pylint: disable=import-outside-toplevel
+    from time import sleep
+
+    def wait_for_queue() -> None:
+        while len(daq_receiver.longRunningCommandsInQueue) > 0:
+            sleep(1)
+
+    try:
+        for _ in range(100):
+            daq_receiver.Start("")
+            sleep(0.05)
+            daq_receiver.Stop()
+            sleep(0.05)
+            if len(daq_receiver.longRunningCommandsInQueue) > 50:
+                wait_for_queue()
+        wait_for_queue()
+        assert len(daq_receiver.longRunningCommandsInQueue) == 0
+    # pylint: disable=broad-exception-caught
+    except Exception as e:
+        pytest.fail(f"Rapid Start/Stop experienced an exception: {e}")
+
+
+@then("we don't experience CORBA timeouts")
+def no_corba_timeouts(
+    daq_receiver: tango.DeviceProxy,
+) -> None:
+    """
+    Just need to get here without errors.
+
+    :param daq_receiver: The daq_receiver fixture to use.
+    """
+    assert daq_receiver

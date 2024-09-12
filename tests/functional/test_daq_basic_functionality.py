@@ -310,12 +310,17 @@ def rapid_start_stop(
     # pylint: disable=import-outside-toplevel
     import time
 
-    def wait_for_queue() -> None:
+    fail_test = False
+    fail_reason = "Timeout waiting for queue"
+
+    def wait_for_queue() -> bool:
         start_time = time.time()
         while len(daq_receiver.longRunningCommandsInQueue) > 0:
             time.sleep(1)
             if time.time() > start_time + 180:
-                pytest.fail("Wait time for command queue timed out.")
+                print(daq_receiver.longRunningCommandsInQueue)
+                return False
+        return True
 
     try:
         for _ in range(100):
@@ -328,18 +333,23 @@ def rapid_start_stop(
         wait_for_queue()
         assert len(daq_receiver.longRunningCommandsInQueue) == 0
     except tango.DevFailed as e:
-        pytest.fail(f"Rapid Start/Stop experienced an exception: {e}")
+        fail_test = True
+        fail_reason = f"Rapid Start/Stop experienced an exception: {e}"
 
     try:
         for _ in range(100):
             daq_receiver.Stop()
             time.sleep(0.05)
             if len(daq_receiver.longRunningCommandsInQueue) > 50:
-                wait_for_queue()
-        wait_for_queue()
+                fail_test = not wait_for_queue()
+        fail_test = not wait_for_queue()
         assert len(daq_receiver.longRunningCommandsInQueue) == 0
     except tango.DevFailed as e:
-        pytest.fail(f"Rapid Stop experienced an exception: {e}")
+        fail_test = True
+        fail_reason = f"Rapid Stop experienced an exception: {e}"
+
+    if fail_test:
+        pytest.fail(f"Test failed: {fail_reason}")
 
 
 @then("we don't experience CORBA timeouts")

@@ -2,7 +2,8 @@ Feature: Test health
     Test that health is being computed and aggregated correctly
 
     Scenario: Healthy when everything is on and operational
-        Given a DAQ that is online
+        Given running against a station with 1 tile.
+        And a DAQ that is online
         And a Subrack that is online
         And a Tile that is online
         And a Station that is online
@@ -18,7 +19,8 @@ Feature: Test health
         And the Station reports that its HealthState is OK
 
     Scenario: Failed when tile monitoring point is out of bounds
-        Given a Subrack that is online
+        Given running against a station with 1 tile.
+        And a Subrack that is online
         And a Tile that is online
         And a Station that is online
         And the Station has been commanded to turn On
@@ -33,7 +35,8 @@ Feature: Test health
         And the Subrack reports that its HealthState is OK
 
     Scenario: Failed when subrack monitoring point is out of bounds
-        Given a Subrack that is online
+        Given running against a station with 1 tile.
+        And a Subrack that is online
         And a Tile that is online
         And a Station that is online
         And the Station has been commanded to turn On

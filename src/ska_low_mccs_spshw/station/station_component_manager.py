@@ -3245,14 +3245,18 @@ class SpsStationComponentManager(
             )
         ]
         if not commands_to_execute:
-            msg = f"{command_name} wouldn't be called on any tiles."
+            msg = (
+                f"{command_name} wouldn't be called on any tiles."
+                " Check MccsTile adminMode/tileProgrammingState."
+            )
             self.logger.error(msg)
             return [ResultCode.REJECTED], [msg]
 
         if len(commands_to_execute) != len(self._tile_proxies):
             self.logger.warning(
                 f"{command_name} won't be called on all tiles. Will be called"
-                f" on: {[proxy.dev_name() for _, proxy in commands_to_execute]}"
+                f" on: {[proxy.dev_name() for _, proxy in commands_to_execute]}."
+                " Check MccsTile adminMode/tileProgrammingState."
             )
 
         # We'd really prefer to use GreenMode.Asyncio or similar here. But both appear

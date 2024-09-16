@@ -2,6 +2,12 @@
 
 ## unreleased
 
+* [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.
+* [LOW-995] Speed up SpsStation initialisation by reducing delay between TPM operations.
+* [LOW-991] Fix bug in platform spec parsing introduced by new spec schema.
+* [MCCS-2230] Respect default receiver interface configured in DAQ receivers via environment.
+* [SKB-494] Update DAQ to support new SPEAD format.
+
 ## 0.17.0
 
 * [MCCS-2141] Update ska-tango-base to 1.0.0

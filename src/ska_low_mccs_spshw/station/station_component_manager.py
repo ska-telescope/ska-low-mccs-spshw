@@ -536,6 +536,9 @@ class SpsStationComponentManager(
         self._cable_lengths: dict[int, float] = {}
         self.last_pointing_delays = [0.0] * 513
 
+        # Flag for whether to execute MccsTile batch commands async or sync.
+        self.excecute_async = True
+
         super().__init__(
             logger,
             communication_state_changed_callback,
@@ -3237,9 +3240,9 @@ class SpsStationComponentManager(
                 )
             except Exception as e:
                 self.logger.error(
-                    f"Error running {command_name} on {proxy.dev_name()}: {repr(e)}"
+                    f"Error running {command_name} on {proxy.dev_name()}: {e}"
                 )
-                return [ResultCode.FAILED], [repr(e)]
+                return [ResultCode.FAILED], [str(e)]
 
         commands_to_execute = [
             (_run_while_handling_errors, dev._proxy)
@@ -3265,22 +3268,26 @@ class SpsStationComponentManager(
                 " Check MccsTile adminMode/tileProgrammingState."
             )
 
-        # We'd really prefer to use GreenMode.Asyncio or similar here. But both appear
-        # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
-        # tango.asyncio.DeviceProxy to use that functionality, which would involve a
-        # general refactor of SpsStation. So for now we just spin up some threads, and
-        # execute each synchronous call in it's own thread manually.
-        with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
-            futures: list[Future] = [
-                executor.submit(command, proxy)
-                for command, proxy in commands_to_execute
-            ]
-            complete, incomplete = wait(futures, timeout=timeout)
-            if incomplete:
-                msg = f"{len(incomplete)} commands failed to complete in time."
-                self.logger.warning(msg)
-                return [ResultCode.FAILED], [msg]
-            results = [future.result() for future in complete]
+        if not self.excecute_async:
+            self.logger.debug(f"Calling {command_name} synchronously.")
+            results = [command(proxy) for command, proxy in commands_to_execute]
+        else:
+            # We'd really prefer to use GreenMode.Asyncio or similar here. This appears
+            # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
+            # tango.asyncio.DeviceProxy to use that functionality, which would involve a
+            # general refactor of SpsStation. So for now we just spin up some threads,
+            # and execute each synchronous call in it's own thread manually.
+            with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
+                futures: list[Future] = [
+                    executor.submit(command, proxy)
+                    for command, proxy in commands_to_execute
+                ]
+                complete, incomplete = wait(futures, timeout=timeout)
+                if incomplete:
+                    msg = f"{len(incomplete)} commands failed to complete in time."
+                    self.logger.warning(msg)
+                    return [ResultCode.FAILED], [msg]
+                results = [future.result() for future in complete]
 
         result_codes, _ = zip(*results)
         self.logger.debug(f"Tiles response from {command_name}: {str(results)}")

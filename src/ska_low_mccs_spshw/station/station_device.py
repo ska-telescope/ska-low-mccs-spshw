@@ -1042,6 +1042,30 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.last_pointing_delays
 
+    @attribute(dtype="DevBoolean")
+    def executeAsync(self: SpsStation) -> bool:
+        """
+        Return whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :returns: whether to execute MccsTile methods asynchronously.
+        """
+        return self.component_manager.excecute_async
+
+    @executeAsync.write  # type: ignore[no-redef]
+    def executeAsync(self: SpsStation, execute_async: bool) -> None:
+        """
+        Set whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :param execute_async: whether to execute MccsTile methods asynchronously.
+        """
+        self.component_manager.excecute_async = execute_async
+
     # -------------
     # Slow Commands
     # -------------

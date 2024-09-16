@@ -133,7 +133,5 @@ helmfile-lint:
   stage: lint
   tags:
     - ska-default
-  before_script:
-    - pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel
   script:
     - make helmfile-lint

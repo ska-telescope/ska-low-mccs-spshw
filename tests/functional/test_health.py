@@ -114,6 +114,27 @@ def device_proxies_fixture(
     }
 
 
+@given("running against a station with 1 tile.")
+def station_has_one_tile(
+    station_name: str,
+    true_context: bool,
+) -> None:
+    """
+    Test requires a single Tile belonging to it.
+
+    :param station_name: the name of the station this is being tested against.
+    :param true_context: whether to test against an existing Tango deployment
+    """
+    if true_context:
+        db = tango.Database()
+        devices_exported = db.get_device_exported(f"low-mccs/tile/{station_name}-*")
+        if len(devices_exported) > 1:
+            pytest.skip(
+                "This test does not yet support stations with more than 1 Tile. "
+                "State of Station is wrapped up to UNKNOWN when more than one Tile"
+            )
+
+
 @given(parsers.cfparse("a {device} that is online"))
 def device_online(
     device: str,

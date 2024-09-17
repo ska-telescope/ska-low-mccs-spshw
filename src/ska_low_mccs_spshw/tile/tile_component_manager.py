@@ -210,12 +210,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "FIRMWARE_AVAILABLE":
-                request = TileRequest(
-                    "firmware_available",
-                    self.tile.get_firmware_list,
-                    publish=True,
-                )
             case "CHECK_CPLD_COMMS":
                 request = TileRequest(
                     "global_status_alarms",
@@ -545,7 +539,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             name="initialise",
             command_object=self._execute_initialise,
             task_callback=task_callback,
-            program_fpga=False,
+            force_reprogramming=False,
             pps_delay_correction=self._pps_delay_correction,
         )
         self.logger.info("Initialise command placed in poll QUEUE")
@@ -604,7 +598,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -630,7 +623,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         name="initialise",
                         command_object=self._execute_initialise,
                         task_callback=None,
-                        program_fpga=False,
+                        force_reprogramming=False,
                         pps_delay_correction=self._pps_delay_correction,
                     )
                     self.logger.info(
@@ -641,6 +634,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     assert self._request_provider is not None
                     self.logger.info("Initialise command placed in poll QUEUE")
                     self._request_provider.desire_initialise(request)
+
         else:
             self._tile_time.set_reference_time(0)
 
@@ -777,7 +771,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def initialise(
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
-        program_fpga: bool = True,
+        force_reprogramming: bool = True,
     ) -> tuple[TaskStatus, str] | None:
         """
         Submit the initialise slow task.
@@ -785,7 +779,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         This method returns immediately after it is submitted for polling.
 
         :param task_callback: Update task state, defaults to None
-        :param program_fpga: Force FPGA reprogramming, for complete initialisation
+        :param force_reprogramming: Force FPGA reprogramming,
+            for complete initialisation
 
         :returns: A tuple containing a task status and a unique id string to
             identify the command
@@ -799,7 +794,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             name="initialise",
             command_object=self._execute_initialise,
             task_callback=task_callback,
-            program_fpga=program_fpga,
+            force_reprogramming=force_reprogramming,
             pps_delay_correction=self._pps_delay_correction,
         )
         self._request_provider.desire_initialise(request)
@@ -810,18 +805,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_hardware_lock_claimed
     def _execute_initialise(
         self: TileComponentManager,
-        program_fpga: bool,
+        force_reprogramming: bool,
         pps_delay_correction: int,
     ) -> None:
         """
         Initialise the TPM.
 
-        :param program_fpga: True if we want to program the fpga before
-            initialisation.
+        :param force_reprogramming: Force FPGA reprogramming,
+            for complete initialisation
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        if program_fpga:
+        if force_reprogramming:
             self.tile.erase_fpgas()
             self._update_attribute_callback(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
@@ -2367,7 +2362,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Read the cached value for the static delays, in sample.
 
-        :return: static delay, in samples one per TPM input
+        :return: static delay, in nanoseconds one per TPM input
         """
         self.logger.debug("TileComponentManager: static_delays")
         delays = []
@@ -2389,15 +2384,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Set the static delays.
 
-        :param delays: Delay in nanoseconds, nominal = 0, positive delay adds
+        :param delays: Static zenith delays, one per input channel,
+            in nanoseconds, nominal = 0, positive delay adds
             delay to the signal stream
-
-        :param delays: Static zenith delays, one per input channel
         """
         self.logger.info("TileComponentManager: set_static_delays")
-        delays_float = []
-        for d in delays:
-            delays_float.append(float(d))
+        delays_float = [float(d) for d in delays]
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:

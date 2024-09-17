@@ -172,6 +172,21 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
         tpm_powers=expected_tpm_powers,
     )
 
+    subrack_simulator.simulate_attribute("cpld_pll_locked", False)
+    callbacks["component_state"].assert_call(
+        cpld_pll_locked=False,
+    )
+    subrack_simulator.simulate_attribute("subrack_pll_locked", False)
+    callbacks["component_state"].assert_call(
+        subrack_pll_locked=False,
+    )
+
+    new_timestamp = 1234567891
+    subrack_simulator.simulate_attribute("subrack_timestamp", new_timestamp)
+    callbacks["component_state"].assert_call(
+        subrack_timestamp=new_timestamp,
+    )
+
 
 def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,

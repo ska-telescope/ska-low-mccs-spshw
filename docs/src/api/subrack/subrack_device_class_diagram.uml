@@ -22,6 +22,7 @@ class MccsSubrack {
   +backplaneTemperatures()
   +boardCurrent()
   +boardTemperatures()
+  +cpldPllLocked()
   +delete_device()
   +health_changed()
   +init_command_objects()
@@ -39,6 +40,8 @@ class MccsSubrack {
   +subrackFanMode()
   +subrackFanSpeeds()
   +subrackFanSpeedsPercent()
+  +subrackPllLocked()
+  +subrackTimestamp()
   +tpmCount()
   +tpmCurrents()
   +tpmPowers()
@@ -60,6 +63,7 @@ class SubrackHardwareManager {
   +bay_count
   +board_current
   +board_temperatures
+  +cpld_pll_locked
   +power_supply_currents
   +power_supply_fan_speeds
   +power_supply_powers
@@ -67,6 +71,8 @@ class SubrackHardwareManager {
   +subrack_fan_modes
   +subrack_fan_speeds
   +subrack_fan_speeds_percent
+  +subrack_pll_locked
+  +subrack_timestamp
   +tpm_count
   +tpm_currents
   +tpm_powers

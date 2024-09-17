@@ -145,7 +145,6 @@ def station_component_manager_fixture(
         None,  # csp_ingest_ip,
         antenna_uri,
         logger,
-        1,
         callbacks["communication_status"],
         callbacks["component_state"],
         callbacks["tile_health"],
@@ -344,24 +343,17 @@ def test_find_by_key(
         under test
     :param generic_nested_dict: generic nested dict for use in the test.
     """
-    results = []
-    for value in station_component_manager._find_by_key(generic_nested_dict, "key3"):
-        results.append(value)
-    assert results[0] == [1, 2, 3, 4, 5]
-    assert results[1] == [6, 7, 8, 9, 10]
+    result = station_component_manager._find_by_key(generic_nested_dict, "key3")
+    assert result == [6, 7, 8, 9, 10]
 
-    assert (
-        next(station_component_manager._find_by_key(generic_nested_dict, "key5"))
-        == "some string"
-    )
+    result = station_component_manager._find_by_key(generic_nested_dict, "key5")
+    assert result == "some string"
 
-    assert next(
-        station_component_manager._find_by_key(generic_nested_dict, "key2")
-    ) == {"key3": [1, 2, 3, 4, 5]}
+    result = station_component_manager._find_by_key(generic_nested_dict, "key2")
+    assert result == {"key3": [1, 2, 3, 4, 5]}
 
-    assert next(
-        station_component_manager._find_by_key(generic_nested_dict, "key4")
-    ) == {"key5": "some string", "key6": ["string1", "string2"]}
+    result = station_component_manager._find_by_key(generic_nested_dict, "key4")
+    assert result == {"key5": "some string", "key6": ["string1", "string2"]}
 
 
 def test_get_static_delays(
@@ -549,7 +541,7 @@ def test_async_commands(
 
     assert result[0] == ResultCode.REJECTED
     assert message[0] is not None
-    assert f"{command} wouldn't be called on any tiles" in message[0]
+    assert f"{command} wouldn't be called on any MccsTiles" in message[0]
 
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 
@@ -563,4 +555,4 @@ def test_async_commands(
 
     assert result[0] == expected_station_result
     assert message[0] is not None
-    assert str(expected_tile_result) in message[0]
+    assert expected_tile_result.name in message[0]

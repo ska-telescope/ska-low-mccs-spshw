@@ -2744,13 +2744,12 @@ class SpsStationComponentManager(
             if dev._proxy is not None
         ]
         if any(pending_requests):
-            if force:
-                result_code, message = self.stop_data_transmission()
-            else:
+            if not force:
                 return [ResultCode.REJECTED], [
                     f"Current pending data requests: {pending_requests}."
                     " Call with 'force: True' to abort current send operations."
                 ]
+            result_code, message = self.stop_data_transmission()
 
             if result_code[0] != ResultCode.OK:
                 return result_code, [f"Couldn't stop data transmission: {message[0]}"]

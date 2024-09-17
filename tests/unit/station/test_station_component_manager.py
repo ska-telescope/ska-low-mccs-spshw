@@ -541,7 +541,7 @@ def test_async_commands(
 
     assert result[0] == ResultCode.REJECTED
     assert message[0] is not None
-    assert f"{command} wouldn't be called on any tiles" in message[0]
+    assert f"{command} wouldn't be called on any MccsTiles" in message[0]
 
     assert station_component_manager.communication_state == CommunicationStatus.DISABLED
 

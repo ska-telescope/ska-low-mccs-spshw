@@ -2737,7 +2737,9 @@ class SpsStationComponentManager(
             message indicating status. The message is for
             information purpose only.
         """
-        return self._execute_async_on_tiles("SendDataSamples", argin)
+        return self._execute_async_on_tiles(
+            "SendDataSamples", argin, require_synchronised=True
+        )
 
     def stop_data_transmission(
         self: SpsStationComponentManager,
@@ -3206,6 +3208,7 @@ class SpsStationComponentManager(
         command_args: Optional[Any] = None,
         timeout: int = 20,
         require_initialised: bool = False,
+        require_synchronised: bool = False,
     ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Execute a given command on all tile proxies in separate threads.
@@ -3216,6 +3219,8 @@ class SpsStationComponentManager(
         :param command_args: args to execute commands with.
         :param timeout: timeout in which to expect command completion.
         :param require_initialised: if this command can only execute on an initialised
+            tile.
+        :param require_synchronised: if this command can only execute on a synchronised
             tile.
 
         :return: A tuple containing a return code and a string
@@ -3242,7 +3247,9 @@ class SpsStationComponentManager(
                 self.logger.error(
                     f"Error running {command_name} on {proxy.dev_name()}: {e}"
                 )
-                return [ResultCode.FAILED], [str(e)]
+                return [ResultCode.FAILED], [
+                    f"Command raised {str(type(e))}, check logs."
+                ]
 
         commands_to_execute = [
             (_run_while_handling_errors, dev._proxy)
@@ -3252,12 +3259,20 @@ class SpsStationComponentManager(
                 not require_initialised
                 or dev._proxy.tileProgrammingState in ["Initialised", "Synchronised"]
             )
+            and (
+                not require_synchronised
+                or dev._proxy.tileProgrammingState in ["Synchronised"]
+            )
         ]
         if not commands_to_execute:
             msg = (
-                f"{command_name} wouldn't be called on any tiles."
-                " Check MccsTile adminMode/tileProgrammingState."
+                f"{command_name} wouldn't be called on any MccsTiles."
+                " Check MccsTile adminMode."
             )
+            if require_initialised:
+                msg += f" {command_name} requires Initialised MccsTiles."
+            if require_synchronised:
+                msg += f" {command_name} requires Synchronised MccsTiles."
             self.logger.error(msg)
             return [ResultCode.REJECTED], [msg]
 

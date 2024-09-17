@@ -3264,24 +3264,40 @@ class SpsStationComponentManager(
                 or dev._proxy.tileProgrammingState in ["Synchronised"]
             )
         ]
-        if not commands_to_execute:
-            msg = (
-                f"{command_name} wouldn't be called on any MccsTiles."
-                " Check MccsTile adminMode."
-            )
+
+        def _build_msg(
+            command_name: str,
+            base_msg: str,
+            require_initialised: bool,
+            require_synchronised: bool,
+        ) -> str:
             if require_initialised:
-                msg += f" {command_name} requires Initialised MccsTiles."
+                base_msg += f" {command_name} requires Initialised MccsTiles."
             if require_synchronised:
-                msg += f" {command_name} requires Synchronised MccsTiles."
+                base_msg += f" {command_name} requires Synchronised MccsTiles."
+            return base_msg
+
+        if not commands_to_execute:
+            msg = _build_msg(
+                command_name,
+                f"{command_name} wouldn't be called on any MccsTiles."
+                " Check MccsTile adminMode.",
+                require_initialised,
+                require_synchronised,
+            )
             self.logger.error(msg)
             return [ResultCode.REJECTED], [msg]
 
         if len(commands_to_execute) != len(self._tile_proxies):
-            self.logger.warning(
-                f"{command_name} won't be called on all tiles. Will be called"
-                f" on: {[proxy.dev_name() for _, proxy in commands_to_execute]}."
-                " Check MccsTile adminMode/tileProgrammingState."
+            msg = _build_msg(
+                command_name,
+                f"{command_name} won't be called on all tiles. Will be called on: "
+                f"{[proxy.dev_name() for _, proxy in commands_to_execute]}."
+                " Check MccsTile adminMode.",
+                require_initialised,
+                require_synchronised,
             )
+            self.logger.warning(msg)
 
         if not self.excecute_async:
             self.logger.debug(f"Calling {command_name} synchronously.")

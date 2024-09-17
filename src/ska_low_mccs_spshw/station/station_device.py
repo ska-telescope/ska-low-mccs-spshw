@@ -282,6 +282,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
+            self._device.set_change_event("ppsDelayDelta", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
@@ -291,6 +292,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("adcPower", True, False)
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_archive_event("dataReceivedResult", True, False)
+            self._device.set_archive_event("ppsDelayDelta", True, False)
 
             super().do()
 
@@ -458,6 +460,10 @@ class SpsStation(SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
+        if "ppsDelayDelta" in state_change:
+            pps_delay_delta = state_change.get("ppsDelayDelta")
+            self.push_change_event("ppsDelayDelta", pps_delay_delta)
+            self.push_archive_event("ppsDelayDelta", pps_delay_delta)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -485,7 +491,7 @@ class SpsStation(SKAObsDevice):
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
-        Read the last bandpass plot data for the x-polarisation.
+        Read the last badpass plot data for the x-polarisation.
 
         :return: The last block of x-polarised bandpass data.
         """
@@ -710,6 +716,20 @@ class SpsStation(SKAObsDevice):
             Values are internally rounded to 1.25 ns units.
         """
         self.component_manager.pps_delay_corrections = delays
+
+    @attribute(dtype="DevLong", max_warning="4", max_alarm="8")
+    def ppsDelayDelta(self: SpsStation) -> int:
+        """
+        Get difference between maximum and minimum delays.
+
+        Returns the difference between max and min delays used for this station.
+        This can be used to detect "drifting" delays.
+
+        :return: Difference between maximum and minimum delays.
+        """
+        return max(self.component_manager.pps_delays) - min(
+            self.component_manager.pps_delays
+        )
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:

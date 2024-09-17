@@ -261,7 +261,10 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
         return
 
     if no_of_iters == 1:
-        pytest.fail(f'Consumers not stopped: {status["Running Consumers"]}')
+        msg = f'Consumers not stopped: {status["Running Consumers"]}.\n'
+        msg += f"CommandResult: {daq.longRunningCommandResult}\n"
+        msg += f"CommandQueue: {daq.longRunningCommandsInQueue}\n"
+        pytest.fail(msg)
 
     # Sleeps for 1, 4, 9, 16 seconds.
     sleep((6 - no_of_iters) ** 2)
@@ -269,7 +272,7 @@ def poll_until_consumers_stopped(daq: tango.DeviceProxy, no_of_iters: int = 5) -
 
 
 def poll_until_command_result(
-    device: tango.DeviceProxy, expected_result: str, cmd_id: str, no_of_iters: int = 5
+    device: tango.DeviceProxy, cmd_id: str, expected_result: str, no_of_iters: int = 5
 ) -> None:
     """
     Poll until command has reached state.
@@ -281,16 +284,25 @@ def poll_until_command_result(
     :param cmd_id: The command ID we're interested in.
     :param no_of_iters: number of times to iterate
     """
-    if device.CheckLongRunningCommandStatus(cmd_id) == expected_result:
+    lrc_result = None
+    lrc_status = device.longRunningCommandStatus
+    try:
+        # Extract the result of the cmd_id.
+        lrc_result = lrc_status[lrc_status.index(cmd_id) + 1]
+    except ValueError as e:
+        lrc_result = e
+        # pass
+    if lrc_result == expected_result:
         return
     if no_of_iters == 1:
         pytest.fail(
             f"Command {cmd_id} did not reach desired state: "
-            f"{device.longRunningCommandStatus}"
+            f"{device.longRunningCommandStatus}\n"
+            f"Result: {lrc_result}"
         )
-    while device.CheckLongRunningCommandStatus(cmd_id) != expected_result:
+    if lrc_result != expected_result:
         time.sleep(1)
-        poll_until_command_result(device, expected_result, cmd_id, no_of_iters - 1)
+        poll_until_command_result(device, cmd_id, expected_result, no_of_iters - 1)
 
 
 # pylint: disable=inconsistent-return-statements
@@ -355,3 +367,20 @@ def expect_attribute(
                 return True
     finally:
         tango_device.unsubscribe_event(subscription_id)
+
+
+def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
+    """
+    Verify that the bandpass monitor is in the desired state.
+
+    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
+    :param state: the desired state of the bandpass monitor.
+    """
+    time_elapsed = 0
+    timeout = 10
+    while time_elapsed < timeout:
+        if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state:
+            break
+        time.sleep(1)
+        time_elapsed += 1
+    assert json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state

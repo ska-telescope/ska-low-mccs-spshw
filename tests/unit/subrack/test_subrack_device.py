@@ -54,6 +54,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "backplaneTemperatures",
         "boardTemperatures",
         "boardCurrent",
+        "cpldPllLocked",
         "powerSupplyCurrents",
         "powerSupplyFanSpeeds",
         "powerSupplyPowers",
@@ -61,11 +62,14 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
         "subrackFanModes",
+        "subrackPllLocked",
+        "subrackTimestamp",
         "tpmCurrents",
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         timeout=2.0,
+        assert_no_error=False,
     )
 
 
@@ -184,6 +188,9 @@ def test_off_on(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
@@ -275,6 +282,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("backplaneTemperatures", []),
         ("boardTemperatures", []),
         ("boardCurrent", []),
+        ("cpldPllLocked", None),
         ("powerSupplyCurrents", []),
         ("powerSupplyFanSpeeds", []),
         ("powerSupplyPowers", []),
@@ -282,6 +290,8 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("subrackFanSpeeds", []),
         ("subrackFanSpeedsPercent", []),
         ("subrackFanModes", []),
+        ("subrackPllLocked", None),
+        ("subrackTimestamp", None),
         ("tpmCurrents", []),
         ("tpmPowers", []),
         # ("tpmTemperatures", []),  # Not implemented on SMB
@@ -313,9 +323,15 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
             expected_power_state
         )
 
-    change_event_callbacks["boardCurrent"].assert_change_event(
-        subrack_device_attribute_values["boardCurrent"]
-    )
+    for attribute_name in [
+        "boardCurrent",
+        "cpldPllLocked",
+        "subrackPllLocked",
+        "subrackTimestamp",
+    ]:
+        change_event_callbacks[attribute_name].assert_change_event(
+            subrack_device_attribute_values[attribute_name]
+        )
 
     # TODO: Tango events provide array values as numpy arrays, and numpy
     # refuses to compare arrays using equality:
@@ -374,6 +390,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ([result_code], [tpm_on_command_id]) = subrack_device.PowerOnTpm(tpm_to_power)
         assert result_code == ResultCode.QUEUED
 
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "STAGING")
+        )
         change_event_callbacks["command_status"].assert_change_event(
             (tpm_on_command_id, "QUEUED")
         )

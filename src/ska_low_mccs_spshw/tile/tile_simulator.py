@@ -1790,7 +1790,7 @@ class TileSimulator:
         self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
-        last_channel: int = 512,
+        last_channel: int = 511,
     ) -> None:
         """
         Configure and start continuous integrated channel data.
@@ -1813,7 +1813,7 @@ class TileSimulator:
         self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
-        last_channel: int = 192,
+        last_channel: int = 191,
     ) -> None:
         """
         Configure and start continuous integrated beam data.

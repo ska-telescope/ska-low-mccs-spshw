@@ -202,7 +202,9 @@ def test_Off(
 
     ([result_code], [off_command_id]) = station_device.Off()
     assert result_code == ResultCode.QUEUED
-
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
@@ -318,6 +320,9 @@ def test_On(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
@@ -338,6 +343,9 @@ def test_On(
     ([result_code], [on_command_id]) = station_device.On()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "REJECTED", on_command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "REJECTED", on_command_id, "QUEUED")
     )
@@ -533,6 +541,9 @@ def test_Initialise(
     ([result_code], [command_id]) = station_device.Initialise()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "IN_PROGRESS")
@@ -675,6 +686,9 @@ def test_Standby(
     ([result_code], [command_id]) = station_device.Standby()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "IN_PROGRESS")

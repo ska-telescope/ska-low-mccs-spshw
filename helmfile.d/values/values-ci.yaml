@@ -3,64 +3,57 @@ defaults:
 
 platform:
   metadata:
-    version: 0.7.0
+    version: 0.8.0
 
   cluster:
     daq:
       storage_class: nfss1
 
-  array:
-    stations:
-      ci-1:
-        id: 1
-        sps:
-          sdn_first_interface: 10.0.0.152/25
-          daq:
-            calibration:
-              simulated: true
-            bandpass:
-              simulated: true
-          subracks:
-            sr1:
-              simulated: true
-              srmb_host: srmb-1
-              srmb_port: 8081
-          tpms:
-            tpm10:
-              id: 9
-              simulated: true
-              host: 10.0.10.201
-              port: 10000
-              version: tpm_v1_6
-              subrack: sr1
-              subrack_slot: 1
-          antenna_config_uri:
-            uri: "car:ska-low-aavs3?main"
-            path: "instrument/mccs-configuration/aavs3.yaml"
-      real-daq-1:
-        id: 1
-        storage:
-          daq-data:
-            storage_class: nfss1  # optional but recommend; if omitted, the cluster default will be used
-            size: "250Mi"
-            labels: {}  # optional
-            annotations: {}  # optional
-        sps:
-          sdn_first_interface: 10.1.0.152/25
-          subracks:
-            sr1:
-              simulated: true
-              srmb_host: srmb-1
-              srmb_port: 8081
-          tpms:
-            tpm10:
-              id: 9
-              simulated: true
-              host: 10.0.10.201
-              port: 10000
-              version: tpm_v1_6
-              subrack: sr1
-              subrack_slot: 1
+  stations:
+    ci-1:
+      id: 1
+      sps:
+        sdn_first_interface: 10.0.0.152/25
+        daq:
+          calibration:
+            simulated: true
+          bandpass:
+            simulated: true
+        subracks:
+          sr1:
+            simulated: true
+            srmb_host: srmb-1
+            srmb_port: 8081
+        tpms:
+          tpm10:
+            id: 9
+            simulated: true
+            host: 10.0.10.201
+            port: 10000
+            version: tpm_v1_6
+            subrack: sr1
+            subrack_slot: 1
+        antenna_config_uri:
+          uri: "car:ska-low-aavs3?main"
+          path: "instrument/mccs-configuration/aavs3.yaml"
+    real-daq-1:
+      id: 1
+      sps:
+        sdn_first_interface: 10.1.0.152/25
+        subracks:
+          sr1:
+            simulated: true
+            srmb_host: srmb-1
+            srmb_port: 8081
+        tpms:
+          tpm10:
+            id: 9
+            simulated: true
+            host: 10.0.10.201
+            port: 10000
+            version: tpm_v1_6
+            subrack: sr1
+            subrack_slot: 1
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.

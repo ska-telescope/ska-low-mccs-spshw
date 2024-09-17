@@ -20,7 +20,7 @@ import threading
 import time
 from concurrent import futures
 from statistics import mean
-from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
+from typing import Any, Callable, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
@@ -103,7 +103,6 @@ class _SubrackProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -114,8 +113,6 @@ class _SubrackProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -130,7 +127,6 @@ class _SubrackProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -173,7 +169,6 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -185,8 +180,6 @@ class _TileProxy(DeviceComponentManager):
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -202,7 +195,6 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -274,7 +266,6 @@ class _DaqProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -285,8 +276,6 @@ class _DaqProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -301,7 +290,6 @@ class _DaqProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -393,7 +381,6 @@ class SpsStationComponentManager(
         csp_ingest_ip: ipaddress.IPv4Address | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -417,8 +404,6 @@ class SpsStationComponentManager(
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -463,7 +448,6 @@ class SpsStationComponentManager(
                 station_id,
                 logical_tile_id,
                 logger,
-                max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
@@ -476,7 +460,6 @@ class SpsStationComponentManager(
                 subrack_fqdn,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
@@ -490,7 +473,6 @@ class SpsStationComponentManager(
                 self._daq_trl,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, self._daq_trl
                 ),
@@ -557,7 +539,6 @@ class SpsStationComponentManager(
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            max_workers=1,
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,
@@ -627,22 +608,28 @@ class SpsStationComponentManager(
 
         return ordered_data
 
-    def _find_by_key(
-        self: SpsStationComponentManager, data: dict, target: str
-    ) -> Generator:
+    @staticmethod
+    def _find_by_key(data: dict, target: str) -> Any:
         """
-        Traverse nested dictionary, yield next value for given target.
+        Search nested dict breadth-first for the first target key and return its value.
+
+        This method is used to find station and antenna config within Low platform spec
+        files, and should eventually be replaced by functions specifically designed to
+        parse these files, aware of schema versions, etc, probably within ska-telmodel.
 
         :param data: generic nested dictionary to traverse through.
-        :param target: key to find the next value of.
+        :param target: key to find the first value of.
 
-        :yields: the next value for given key.
+        :returns: the next value for given key.
         """
-        for key, value in data.items():
+        bfs_queue = list(data.items())
+        while bfs_queue:
+            key, value = bfs_queue.pop(0)
             if key == target:
-                yield value
-            elif isinstance(value, dict):
-                yield from self._find_by_key(value, target)
+                return value
+            if isinstance(value, dict):
+                bfs_queue.extend(value.items())
+        return None
 
     def _get_mappings(
         self: SpsStationComponentManager,
@@ -675,7 +662,7 @@ class SpsStationComponentManager(
             )
             return
 
-        stations = list(self._find_by_key(full_dict, "stations"))
+        stations = self._find_by_key(full_dict, "stations")
         if not stations:
             self.logger.error(
                 f"Couldn't find station {self._station_id} in imported TMData."
@@ -684,10 +671,10 @@ class SpsStationComponentManager(
 
         # Look through all the stations on this cluster, find antennas on this station.
         antennas = {}
-        for station in stations:
-            for _, station_config in station.items():
-                if station_config["id"] == self._station_id:
-                    antennas = next(self._find_by_key(station_config, "antennas"))
+        for station_config in stations.values():
+            if station_config["id"] == self._station_id:
+                antennas = self._find_by_key(station_config, "antennas")
+                break
 
         if not antennas:
             self.logger.error(f"Couldn't find antennas on station {self._station_id}.")
@@ -1184,7 +1171,7 @@ class SpsStationComponentManager(
             results = []
             for proxy in self._tile_proxies.values():
                 [task_status, task_id] = proxy.off()
-                time.sleep(2)  # stagger power on by 2 seconds per tile
+                time.sleep(0.25)  # stagger power off by 0.25 seconds per tile
                 results.append(task_status)
             if ResultCode.FAILED in results:
                 result_code = ResultCode.FAILED
@@ -1459,7 +1446,7 @@ class SpsStationComponentManager(
                     assert proxy._proxy is not None
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
                     result_code = proxy.on()
-                    time.sleep(4)  # stagger power on by 4 seconds per tile
+                    time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                     results.append(result_code)
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
@@ -1558,7 +1545,7 @@ class SpsStationComponentManager(
                 assert proxy._proxy is not None
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
-                time.sleep(2)  # stagger initialisation by 2 seconds per tile
+                time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
             return ResultCode.FAILED

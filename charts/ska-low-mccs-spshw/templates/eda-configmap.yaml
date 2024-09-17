@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mccs-spshw-eda-config
+  namespace: {{$.Release.Namespace}}
+  labels:
+    eda-config: ska-low-mccs-spshw
+data:
+  eda-config.yaml: |-
+    {{- .Files.Get "data/eda-config.yaml" | nindent 4}}

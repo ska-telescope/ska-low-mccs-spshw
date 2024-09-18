@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import gc
 import json
+import unittest
 from typing import Any, Iterator
 
 import pytest
@@ -110,6 +111,53 @@ def subrack_device_fixture(
     :yield: the subrack Tango device under test.
     """
     yield test_context.get_subrack_device(subrack_id)
+
+
+@pytest.mark.xfail(reason="Capturing SKB-519")
+def test_failed_poll(
+    subrack_device: MccsSubrack,
+    subrack_simulator: Any,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test our ability to handle a transient failure.
+
+    A poll can fail for a number of reasons, namely:
+      - An unhandled exception raised in firmware
+      - A connection error (TODO MCCS-1329)
+      - Other.. (TODO MCCS-1329)
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    for _ in range(3):  # run a intermittent poll 3 times.
+        # Mocking a transient exception should cause a transient state flip
+        # between ON -> UNKNOWN -> ON. The subrack is using a PowerSupplyProxySimulator,
+        # This cannot be relied upon to provide any REAL information. Therefore,
+        # the state of the subrack is solely evaluated from the response from a poll
+        # TODO: MCCS-1329: evaluate what a failed poll actually means using error
+        # codes.
+        subrack_simulator._get_attribute_tpm_powers = unittest.mock.Mock(
+            side_effect=Exception("Mocked transient exception")
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        subrack_simulator._get_attribute_tpm_powers.reset_mock()
+        subrack_simulator._get_attribute_tpm_powers = unittest.mock.Mock(
+            return_value=[2.5] * 8
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["state"].assert_not_called()
 
 
 def test_off_on(

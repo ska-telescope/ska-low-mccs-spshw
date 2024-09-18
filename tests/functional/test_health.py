@@ -114,7 +114,7 @@ def device_proxies_fixture(
     }
 
 
-@given("running against a station with 1 tile.")
+@given("running against a real station with 1 tile.")
 def station_has_one_tile(
     station_name: str,
     true_context: bool,
@@ -127,12 +127,16 @@ def station_has_one_tile(
     """
     if true_context:
         db = tango.Database()
-        devices_exported = db.get_device_exported(f"low-mccs/tile/{station_name}-*")
+        devices_exported = list(
+            db.get_device_exported(f"low-mccs/tile/{station_name}-*")
+        )
         if len(devices_exported) > 1:
             pytest.skip(
                 "This test does not yet support stations with more than 1 Tile. "
                 "State of Station is wrapped up to UNKNOWN when more than one Tile"
             )
+        return
+    pytest.skip("This test must be running in a true context.")
 
 
 @given(parsers.cfparse("a {device} that is online"))

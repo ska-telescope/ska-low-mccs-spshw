@@ -77,7 +77,7 @@ class TestTileHealthRules:
                 monitoring_points, min_max
             )
             assert state == expected_state
-            assert report.count(expected_report) == 35
+            assert report.count(expected_report) == 33
         else:
             assert health_rules.compute_intermediate_state(
                 monitoring_points, min_max

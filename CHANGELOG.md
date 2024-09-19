@@ -3,6 +3,7 @@
 ## unreleased
 
 * [SKB-433] Allow aborting of SendDataSamples()
+* [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
 
 ## 0.17.1
 

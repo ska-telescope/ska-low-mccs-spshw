@@ -1864,6 +1864,7 @@ class SpsStation(SKAObsDevice):
                     "channel_continuous", "narrowband", "beam"
         * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+        * force - (bool) Whether or not to cancel ongoing data requests.
 
         Depending on the data type:
         raw:

@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [SKB-433] Allow aborting of SendDataSamples()
+
 ## 0.17.1
 
 * [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.

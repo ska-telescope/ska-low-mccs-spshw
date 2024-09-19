@@ -54,6 +54,32 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
     builder.add_attribute("logicalTileId", logical_tile_id)
     builder.add_command("dev_name", get_tile_name(tile_id, "ci-1"))
+    for command_name in [
+        "SetLmcDownload",
+        "SendDataSamples",
+        "SetLmcIntegratedDownload",
+        "StartBeamformer",
+        "ConfigureIntegratedChannelData",
+        "StartAcquisition",
+        "StopDataTransmission",
+        "StopIntegratedData",
+        "StopBeamformer",
+        "ConfigureTestGenerator",
+        "ConfigureIntegratedBeamData",
+        "ApplyPointingDelays",
+        "ApplyCalibration",
+        "SetBeamformerRegions",
+        "LoadCalibrationCoefficients",
+    ]:
+        builder.add_command(
+            command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
+        )
+    # Dummy commands for testing the async commands method
+    builder.add_command("FailedCommand", ([ResultCode.FAILED], ["Command failed."]))
+    builder.add_command(
+        "RejectedCommand", ([ResultCode.REJECTED], ["Command rejected."])
+    )
+    builder.add_command("GoodCommand", ([ResultCode.OK], ["Command completed OK."]))
     return builder
 
 

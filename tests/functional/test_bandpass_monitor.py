@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import time
-from typing import Any
+from typing import Any, Generator
 
 import numpy as np
 import pytest
@@ -24,6 +24,7 @@ from tests.functional.conftest import (
     expect_attribute,
     poll_until_consumers_stopped,
     poll_until_state_change,
+    verify_bandpass_state,
 )
 from tests.harness import get_daq_name, get_subrack_name, get_tile_name
 
@@ -97,7 +98,11 @@ def daq_device_fixture(station_name: str) -> tango.DeviceProxy:
 
     :return: a ``tango.DeviceProxy`` to the DAQ device under test.
     """
-    return tango.DeviceProxy(get_daq_name(station_name))
+    daq_device = tango.DeviceProxy(get_daq_name(station_name))
+    if daq_device.adminMode != AdminMode.ONLINE:
+        daq_device.adminMode = AdminMode.ONLINE
+    poll_until_state_change(daq_device, tango.DevState.ON)
+    return daq_device
 
 
 @given("the Tile is available", target_fixture="tile_device")
@@ -321,7 +326,7 @@ def daq_bandpass_monitor_running(
     daq_device: tango.DeviceProxy,
     plot_directory: str,
     change_event_callbacks: MockTangoEventCallbackGroup,
-) -> None:
+) -> Generator:
     """
     Start the bandpass monitor.
 
@@ -329,6 +334,8 @@ def daq_bandpass_monitor_running(
     :param plot_directory: the directory to plots are stored to.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+
+    :yields: To return cleanup
     """
     daq_device.subscribe_event(
         "xPolBandpass",
@@ -360,6 +367,13 @@ def daq_bandpass_monitor_running(
         consume_nonmatches=True,
     )
     verify_bandpass_state(daq_device, True)
+
+    yield
+
+    # Cleanup: Turn off bandpass monitor here if it's still on.
+    if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] is True:
+        daq_device.StopBandpassMonitor()
+        verify_bandpass_state(daq_device, False)
 
 
 @when("the DAQ is commanded to stop monitoring bandpasses")
@@ -432,20 +446,3 @@ def daq_bandpasses_saved(
     assert np.count_nonzero(daq_device.xPolBandpass) > 0
     change_event_callbacks["daq_yPolBandpass"].assert_change_event(Anything)
     assert np.count_nonzero(daq_device.yPolBandpass) > 0
-
-
-def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
-    """
-    Verify that the bandpass monitor is in the desired state.
-
-    :param daq_device: A 'tango.DeviceProxy' to the Daq device.
-    :param state: the desired state of the bandpass monitor.
-    """
-    time_elapsed = 0
-    timeout = 10
-    while time_elapsed < timeout:
-        if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state:
-            break
-        time.sleep(1)
-        time_elapsed += 1
-    assert json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state

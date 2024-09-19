@@ -13,9 +13,9 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         And the DAQ is in health state OK
 
         Examples:
-        |     station_name    |
-        |        ci-1         |
-        |     real-daq-1      |
+            | station_name |
+            | ci-1         |
+            | real-daq-1   |
 
 
     Scenario Outline: Turning the DAQ off
@@ -29,9 +29,9 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         And the DAQ is in health state UNKNOWN
 
         Examples:
-        |      station_name   |
-        |        ci-1         |
-        |     real-daq-1      |
+            | station_name |
+            | ci-1         |
+            | real-daq-1   |
 
     @XTP-21184
     Scenario Outline: Configuring the DAQ to raw data
@@ -47,9 +47,9 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         And the DAQ has no consumers running
 
         Examples:
-        |     station_name    |
-        |        ci-1         |
-        |     real-daq-1      |
+            | station_name |
+            | ci-1         |
+            | real-daq-1   |
 
     @XTP-21185
     Scenario Outline: Configuring the DAQ to channelised data
@@ -65,29 +65,29 @@ Feature: DAQ functionality As a developer, I want to be able to configure the DA
         And the DAQ has no consumers running
 
         Examples:
-        |      station_name   |
-        |        ci-1         |
-        |     real-daq-1      |
+            | station_name |
+            | ci-1         |
+            | real-daq-1   |
 
-    # @XTP-21186 @xfail
-    # Scenario: Applying the calibration values
-    #     Given the DAQ is available
-    #     And the DAQ is in the ON state
-    #     And the DAQ is in health state OK
-    #     And the DAQ is configured to channelised data
-    #     When I send the start command
-    #     Then the DAQ is in the ON state
-    #     And the DAQ is in health state OK
-    #     And the DAQ applys the calibration values
+# @XTP-21186 @xfail
+# Scenario: Applying the calibration values
+#     Given the DAQ is available
+#     And the DAQ is in the ON state
+#     And the DAQ is in health state OK
+#     And the DAQ is configured to channelised data
+#     When I send the start command
+#     Then the DAQ is in the ON state
+#     And the DAQ is in health state OK
+#     And the DAQ applys the calibration values
 
-    # @XTP-21187 @xfail
-    # Scenario: DAQ error handling
-    #     Given the DAQ is available
-    #     And the DAQ is in the ON state
-    #     And the DAQ is in health state OK
-    #     And the DAQ is receiving data
-    #     When the DAQ receives a corrupted stream
-    #     Then the DAQ should report the error
-    #     And the DAQ should restart the data acquisition
-    #     And the DAQ should be in the ON state
-    #     And the DAQ should be in health state OK
+# @XTP-21187 @xfail
+# Scenario: DAQ error handling
+#     Given the DAQ is available
+#     And the DAQ is in the ON state
+#     And the DAQ is in health state OK
+#     And the DAQ is receiving data
+#     When the DAQ receives a corrupted stream
+#     Then the DAQ should report the error
+#     And the DAQ should restart the data acquisition
+#     And the DAQ should be in the ON state
+#     And the DAQ should be in health state OK

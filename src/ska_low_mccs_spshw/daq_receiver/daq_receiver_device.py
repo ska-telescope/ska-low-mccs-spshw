@@ -7,8 +7,6 @@
 
 """This module implements the MccsDaqReceiver device."""
 
-# pylint: disable = too-many-lines
-
 from __future__ import annotations  # allow forward references in type hints
 
 import json
@@ -337,13 +335,25 @@ class MccsDaqReceiver(SKABaseDevice):
             ("SetConsumers", self.SetConsumersCommand),
             ("DaqStatus", self.DaqStatusCommand),
             ("GetConfiguration", self.GetConfigurationCommand),
-            ("Stop", self.StopCommand),
-            # ("StartBandpassMonitor", self.StartBandpassMonitorCommand),
             ("StopBandpassMonitor", self.StopBandpassMonitorCommand),
         ]:
             self.register_command_object(
                 command_name,
                 command_object(self.component_manager, self.logger),
+            )
+
+        for command_name, method_name in [
+            ("Stop", "stop_daq"),
+        ]:
+            self.register_command_object(
+                command_name,
+                SubmittedSlowCommand(
+                    command_name,
+                    self._command_tracker,
+                    self.component_manager,
+                    method_name,
+                    logger=self.logger,
+                ),
             )
 
         for command_name, command_class in [
@@ -620,36 +630,6 @@ class MccsDaqReceiver(SKABaseDevice):
         handler = self.get_command_object("Start")
         (result_code, message) = handler(**kwargs)
         return ([result_code], [message])
-
-    class StopCommand(FastCommand):
-        """Class for handling the Stop() command."""
-
-        def __init__(  # type: ignore
-            self: MccsDaqReceiver.StopCommand,
-            component_manager,
-            logger: Optional[logging.Logger] = None,
-        ) -> None:
-            """
-            Initialise a new StopCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        # pylint: disable=arguments-differ
-        def do(  # type: ignore[override]
-            self: MccsDaqReceiver.StopCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement MccsDaqReceiver.StopCommand command functionality.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            return self._component_manager.stop_daq()
 
     @command(dtype_out="DevVarLongStringArray")
     def Stop(self: MccsDaqReceiver) -> DevVarLongStringArrayType:

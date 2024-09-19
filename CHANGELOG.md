@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
+
 ## 0.17.1
 
 * [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.

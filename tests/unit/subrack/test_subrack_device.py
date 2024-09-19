@@ -178,7 +178,6 @@ def test_fast_adminMode_switch(
         print(f"Iteration {i}")
 
 
-@pytest.mark.xfail(reason="Capturing SKB-519")
 def test_failed_poll(
     subrack_device: MccsSubrack,
     subrack_simulator: Any,

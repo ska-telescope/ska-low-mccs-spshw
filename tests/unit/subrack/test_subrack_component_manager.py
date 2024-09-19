@@ -219,8 +219,7 @@ class TestOff:
         )
         callbacks["task"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
@@ -309,8 +308,7 @@ class TestOn:
 
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
@@ -458,8 +456,7 @@ class TestOn:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
@@ -520,8 +517,7 @@ class TestOn:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 

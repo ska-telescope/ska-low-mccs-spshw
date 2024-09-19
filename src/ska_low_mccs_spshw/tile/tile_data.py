@@ -76,8 +76,6 @@ class TileData:
             "VM_CLK1B": None,
             "VM_MGT0_AUX": None,
             "VM_MGT1_AUX": None,
-            "VM_ADA0": None,
-            "VM_ADA1": None,
             "VM_PLL": None,
             "VM_DDR1_VTT": None,
             "VM_DDR1_VDD": None,

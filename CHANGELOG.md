@@ -3,7 +3,14 @@
 ## unreleased
 
 * [SKB-433] Allow aborting of SendDataSamples()
+
+## 0.17.2
+
+* [MCCS-1979] Correct tile health monitoring for single 40g QSFP
+* [SKB-426] Remove ADA coltages from health rollup
+* [SKB-526] Fix channeliser rounding ordering
 * [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
+* [SKB-433] Update SpsStation to use ThreadPools
 
 ## 0.17.1
 

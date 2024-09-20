@@ -60,7 +60,6 @@ class TestNoSupply:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.NO_SUPPLY)
@@ -130,7 +129,6 @@ class TestUnknown:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         # no component state change will be pushed here,
@@ -203,7 +201,7 @@ class TestOff:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+        # callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.OFF)

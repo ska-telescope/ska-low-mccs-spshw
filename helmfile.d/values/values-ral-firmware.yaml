@@ -28,13 +28,17 @@ platform:
       stfc-ral-partial:
         enabled: false
     stations:
-      stfc-ral-software:
-        enabled: false
-      stfc-ral-firmware:
-        enabled: true
-      stfc-ral-partial:
-        enabled: false
+    - stfc-ral-software:
+    - stfc-ral-firmware:
+    - stfc-ral-partial:
 
+  stations:
+    stfc-ral-software:
+      enabled: false
+    stfc-ral-firmware:
+      enabled: true
+    stfc-ral-partial:
+      enabled: false
 
 
 # Use helm_values to set arbitrary helm values.

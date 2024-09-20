@@ -9,6 +9,12 @@ Defines the deployment for SpsStation Tango devices.
           sdn_first_interface: 10.130.0.1/25
           sdn_gateway: 10.130.0.126
           csp_ingest_ip: 10.132.254.1
+          channeliser_rounding:
+          - 3
+          - 3
+...
+          - 2
+          - 2
           antenna_config_uri:
           - "car:ska-low-aavs3?main"
           - "instrument/mccs-configuration/aavs3.yaml"
@@ -54,6 +60,13 @@ server:
                 - name: "AntennaConfigURI"
                   values:
 {{- toYaml $this_spsstation.antenna_config_uri | nindent 20}}
+{{- with $this_spsstation.channeliser_rounding}}
+                - name: "ChanneliserRounding"
+                  values:
+{{- range $value := .}}
+                  - {{quote .}}
+{{- end}}
+{{- end}}
                 - name: "SdnFirstInterface"
                   values:
                     - {{quote $this_spsstation.sdn_first_interface}}

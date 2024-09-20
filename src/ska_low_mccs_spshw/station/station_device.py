@@ -87,6 +87,7 @@ class SpsStation(SKAObsDevice):
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
     CspIngestIp = device_property(dtype=str, default_value="")
+    ChanneliserRounding = device_property(dtype=(int,), default_value=[])
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -142,6 +143,7 @@ class SpsStation(SKAObsDevice):
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
             f"\tCspIngestIp: {self.CspIngestIp}\n"
+            f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -182,6 +184,7 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+            self.ChanneliserRounding,
             self.AntennaConfigURI,
             self.logger,
             self._communication_state_changed,

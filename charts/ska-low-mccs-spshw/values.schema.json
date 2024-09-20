@@ -87,6 +87,24 @@
                               "type": "string",
                               "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
                             },
+                            "channeliser_rounding": {
+                              "type": "array",
+                              "items": {
+                                "type": "integer",
+                                "minimumValue": 0,
+                                "maximumValue": 7
+                              },
+                              "oneOf": [
+                                {
+                                  "minItems": 1,
+                                  "maxItems": 1
+                                },
+                                {
+                                  "minItems": 512,
+                                  "maxItems": 512
+                                }
+                              ]
+                            },
                             "antenna_config_uri": {
                               "type": "array",
                               "items": {

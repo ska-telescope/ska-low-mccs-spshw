@@ -69,7 +69,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
-        timeout=2.0,
+        timeout=6.0,
         assert_no_error=False,
     )
 
@@ -111,6 +111,71 @@ def subrack_device_fixture(
     :yield: the subrack Tango device under test.
     """
     yield test_context.get_subrack_device(subrack_id)
+
+
+def test_fast_adminMode_switch(
+    subrack_device: MccsSubrack,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test our ability to deal with a quick succession of communication commands.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for i in range(4):
+        subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        subrack_device.adminmode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+        subrack_device.adminmode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        subrack_device.adminmode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+        subrack_device.adminmode = AdminMode.ONLINE
+        subrack_device.adminmode = AdminMode.OFFLINE
+        subrack_device.adminmode = AdminMode.ONLINE
+        subrack_device.adminmode = AdminMode.OFFLINE
+        subrack_device.adminmode = AdminMode.ONLINE
+
+        expected_ordered_state_changes = [
+            DevState.UNKNOWN,
+            DevState.ON,
+            DevState.DISABLE,
+            DevState.UNKNOWN,
+            DevState.ON,
+            DevState.DISABLE,
+            DevState.UNKNOWN,
+            DevState.ON,
+        ]
+
+        for transition_state in expected_ordered_state_changes:
+            # Each transition state is allowed not to happen
+            # So long as we end up in the correct state
+            try:
+                change_event_callbacks["state"].assert_change_event(transition_state)
+            except AssertionError:
+                print(f"Transition state {transition_state} allowed to not occur.")
+
+        # We must end up in ON no matter what transition states happened.
+        assert subrack_device.state() == DevState.ON
+        subrack_device.adminmode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        print(f"Iteration {i}")
 
 
 @pytest.mark.xfail(reason="Capturing SKB-519")

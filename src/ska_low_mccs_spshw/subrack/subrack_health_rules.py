@@ -231,6 +231,7 @@ class SubrackHealthRules(HealthRules):
             len(tpm_voltages) == 0
             or len(tpm_currents) == 0
             or len(tpm_power_states) == 0
+            or len(tpm_present) == 0
         ):
             return (
                 False,

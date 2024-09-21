@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import gc
 import json
+import time
 import unittest
 from typing import Any, Iterator
 
@@ -123,6 +124,9 @@ def test_fast_adminMode_switch(
     :param subrack_device: the subrack Tango device under test.
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+
+    :raises TimeoutError: when we failed to arrive at the final state after
+        a specified timeout period.
     """
     subrack_device.subscribe_event(
         "state",
@@ -171,8 +175,22 @@ def test_fast_adminMode_switch(
             except AssertionError:
                 print(f"Transition state {transition_state} allowed to not occur.")
 
-        # We must end up in ON no matter what transition states happened.
-        assert subrack_device.state() == DevState.ON
+        assert subrack_device.adminMode == AdminMode.ONLINE
+        deadline = time.time() + 10
+        while time.time() < deadline:
+            try:
+                assert subrack_device.state() == DevState.ON
+                change_event_callbacks["state"].assert_not_called()
+                break
+            except AssertionError:
+                print("Subrack not yet ON. Waiting ...")
+                time.sleep(0.4)
+        else:
+            raise TimeoutError(
+                "Subrack never reached the ON state. "
+                f"Current state {subrack_device.state()}: "
+                f"{subrack_device.AdminMode}"
+            )
         subrack_device.adminmode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         print(f"Iteration {i}")

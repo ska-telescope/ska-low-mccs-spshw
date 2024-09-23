@@ -1,8 +1,11 @@
 # Version History
 
-## unreleased
+## Unreleased
+
+## 0.17.3
 
 * [SKB-433] Allow aborting of SendDataSamples()
+* [MCCS-2259] Add channeliser rounding property
 
 ## 0.17.2
 

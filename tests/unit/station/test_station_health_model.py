@@ -28,9 +28,29 @@ class TestSpsStationHealthModel:
         :return: Health model to be used.
         """
         health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
-        health_model.update_state(communicating=True, power=PowerState.ON)
+        health_model.update_state(
+            communicating=True, power=PowerState.ON, pps_delay_delta=0
+        )
 
         return health_model
+
+    @pytest.fixture
+    def drifting_pps_health_model(
+        self: TestSpsStationHealthModel,
+    ) -> SpsStationHealthModel:
+        """
+        Fixture to return a station health model.
+
+        :return: Health model to be used.
+        """
+        drifting_pps_health_model = SpsStationHealthModel(
+            ["subrack"], ["tile"], MockCallable()
+        )
+        drifting_pps_health_model.update_state(
+            communicating=True, power=PowerState.ON, pps_delay_delta=6
+        )
+
+        return drifting_pps_health_model
 
     @pytest.mark.parametrize(
         ("sub_devices", "thresholds", "expected_health", "expected_report"),
@@ -96,9 +116,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -115,9 +135,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -347,7 +367,6 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
-
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,
@@ -480,6 +499,7 @@ class TestSpsStationHealthModel:
         health_model._tile_health = sub_devices["tile"]
 
         health_model.health_params = init_thresholds
+
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,
@@ -489,4 +509,77 @@ class TestSpsStationHealthModel:
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,
+        )
+
+    @pytest.mark.parametrize(
+        (
+            "sub_devices",
+            "expected_init_health",
+            "expected_init_report",
+            "expected_final_health",
+            "expected_final_report",
+        ),
+        [
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                HealthState.DEGRADED,
+                "Difference in ppsDelays between Tiles has exceeded 4ns. "
+                "ppsDelayDelta: 6ns",
+                id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
+            ),
+        ],
+    )
+    def test_station_health_with_pps_drift(
+        self: TestSpsStationHealthModel,
+        health_model: SpsStationHealthModel,
+        sub_devices: dict,
+        expected_init_health: HealthState,
+        expected_init_report: str,
+        expected_final_health: HealthState,
+        expected_final_report: str,
+    ) -> None:
+        """
+        Tests of the station health model for a changed health.
+
+        The properties of the health model are set and checked, then the health states
+        of subservient devices are updated and the health is checked against the new
+        expected value.
+
+        :param health_model: The station health model to use
+        :param sub_devices: the devices for which the station cares about health,
+            and their healths
+        :param expected_init_health: the expected initial health
+        :param expected_init_report: the expected initial health report
+        :param expected_final_health: the expected final health
+        :param expected_final_report: the expected final health report
+        """
+        health_model._subrack_health = sub_devices["subrack"]
+        health_model._tile_health = sub_devices["tile"]
+        assert health_model.evaluate_health() == (
+            expected_init_health,
+            expected_init_report,
+        )
+
+        # Set pps above drift threshold.
+        health_model.update_state(pps_delay_delta=6)
+        assert health_model.evaluate_health() == (
+            expected_final_health,
+            expected_final_report,
+        )
+
+        # Set pps below drift threshold.
+        health_model.update_state(pps_delay_delta=3)
+        assert health_model.evaluate_health() == (
+            expected_init_health,
+            expected_init_report,
         )

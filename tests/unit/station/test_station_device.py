@@ -1520,14 +1520,3 @@ def test_AcquireDataForCalibration(
     )
 
     assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
-
-
-def test_pps_delay_delta(station_device: SpsStation) -> None:
-    """
-    Test that ppsDelayDelta alarms correctly.
-
-    :param station_device: The station device to use.
-    """
-    station_device.adminMode = 0
-    print(station_device.ppsDelays)
-    print(station_device.ppsDelayDelta)

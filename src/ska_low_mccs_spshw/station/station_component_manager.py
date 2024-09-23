@@ -497,6 +497,7 @@ class SpsStationComponentManager(
             "adcPower",
             "staticTimeDelays",
             "preaduLevels",
+            "ppsDelays",
         ]
 
         self._source_port = 0xF0D0
@@ -522,6 +523,7 @@ class SpsStationComponentManager(
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
+        self._pps_delay_delta = 0
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
         self._channeliser_rounding = [3] * 512
@@ -904,6 +906,12 @@ class SpsStationComponentManager(
                 self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+            case "ppsDelays":
+                self._pps_delay_delta = max(attribute_value.tolist()) - min(
+                    attribute_value.tolist()
+                )
+                if self._component_state_callback:
+                    self._component_state_callback(ppsDelayDelta=self._pps_delay_delta)
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"
@@ -1891,6 +1899,18 @@ class SpsStationComponentManager(
             assert proxy._proxy is not None  # for the type checker
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
+
+    @property
+    def pps_delay_delta(self: SpsStationComponentManager) -> int:
+        """
+        Get PPS delay delta.
+
+        Returns the difference between the maximum and minimum delays so
+        that users can track an observed pps drift.
+
+        :return: Maximum delay difference between tiles in ns.
+        """
+        return self._pps_delay_delta
 
     @property
     def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:

@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [SKB-507] Added `ppsDelayDelta` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelayDelta` is observed to be >4ns.
+
 ## 0.17.1
 
 * [SKB-524] Update ska-low-mccs-daq dependency to allow specifying resources for DAQ receiver Pods.

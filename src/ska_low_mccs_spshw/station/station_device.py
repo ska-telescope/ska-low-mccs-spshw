@@ -349,7 +349,7 @@ class SpsStation(SKAObsDevice):
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ, too-many-branches
+    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
     def _component_state_changed(  # type: ignore[override]
         self: SpsStation,
         *,
@@ -464,6 +464,7 @@ class SpsStation(SKAObsDevice):
             pps_delay_delta = state_change.get("ppsDelayDelta")
             self.push_change_event("ppsDelayDelta", pps_delay_delta)
             self.push_archive_event("ppsDelayDelta", pps_delay_delta)
+            self._health_model.update_state(pps_delay_delta=pps_delay_delta)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -717,7 +718,7 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.pps_delay_corrections = delays
 
-    @attribute(dtype="DevLong", max_warning="4", max_alarm="8")
+    @attribute(dtype="DevLong")
     def ppsDelayDelta(self: SpsStation) -> int:
         """
         Get difference between maximum and minimum delays.
@@ -727,9 +728,7 @@ class SpsStation(SKAObsDevice):
 
         :return: Difference between maximum and minimum delays.
         """
-        return max(self.component_manager.pps_delays) - min(
-            self.component_manager.pps_delays
-        )
+        return self.component_manager.pps_delay_delta
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:

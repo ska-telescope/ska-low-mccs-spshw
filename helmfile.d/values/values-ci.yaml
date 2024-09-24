@@ -9,6 +9,11 @@ platform:
     daq:
       storage_class: nfss1
 
+  array:
+    stations:
+      - ci-1
+      - real-daq-1
+  
   stations:
     ci-1:
       id: 1

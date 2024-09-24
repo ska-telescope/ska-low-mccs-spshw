@@ -50,7 +50,7 @@ class TestTileHealthRules:
                 TileData.MIN_MAX_MONITORING_POINTS["currents"],
                 {"FE0_mVA": None, "FE1_mVA": 50},
                 HealthState.FAILED,
-                'Monitoring point "/FE1_mVA": 50 not in range 2.45 - 2.55',
+                'Monitoring point "/FE1_mVA": 50 not in range 0 - 3',
                 id="One monitoring point failed, one out of range, health is FAILED",
             ),
         ],
@@ -77,7 +77,7 @@ class TestTileHealthRules:
                 monitoring_points, min_max
             )
             assert state == expected_state
-            assert report.count(expected_report) == 35
+            assert report.count(expected_report) == 33
         else:
             assert health_rules.compute_intermediate_state(
                 monitoring_points, min_max

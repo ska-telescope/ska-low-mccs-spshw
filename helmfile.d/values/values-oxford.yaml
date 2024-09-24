@@ -2,17 +2,14 @@ defaults:
   logging_level_default: 5
 
 platform:
-  array:
-    station_clusters:
-      "o1":
-        stations:
+  stations:
+    oxford:
+      sps:
+        subracks:
           "1":
-            sps:
-              subracks:
-                "1":
-                  srmb_host: subrack_simulator
-                  srmb_port: 8081
-                  simulated: true
+            srmb_host: subrack_simulator
+            srmb_port: 8081
+            simulated: true
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.

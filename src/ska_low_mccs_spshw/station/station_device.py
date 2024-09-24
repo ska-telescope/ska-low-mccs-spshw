@@ -87,6 +87,7 @@ class SpsStation(SKAObsDevice):
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
     CspIngestIp = device_property(dtype=str, default_value="")
+    ChanneliserRounding = device_property(dtype=(int,), default_value=[])
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -142,6 +143,7 @@ class SpsStation(SKAObsDevice):
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
             f"\tCspIngestIp: {self.CspIngestIp}\n"
+            f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -182,6 +184,7 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+            self.ChanneliserRounding,
             self.AntennaConfigURI,
             self.logger,
             self._communication_state_changed,
@@ -1061,6 +1064,30 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.last_pointing_delays
 
+    @attribute(dtype="DevBoolean")
+    def executeAsync(self: SpsStation) -> bool:
+        """
+        Return whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :returns: whether to execute MccsTile methods asynchronously.
+        """
+        return self.component_manager.excecute_async
+
+    @executeAsync.write  # type: ignore[no-redef]
+    def executeAsync(self: SpsStation, execute_async: bool) -> None:
+        """
+        Set whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :param execute_async: whether to execute MccsTile methods asynchronously.
+        """
+        self.component_manager.excecute_async = execute_async
+
     # -------------
     # Slow Commands
     # -------------
@@ -1308,10 +1335,9 @@ class SpsStation(SKAObsDevice):
         src_port = params.get("source_port", 0xF0D0)
         dst_port = params.get("destination_port", 4660)
 
-        self.component_manager.set_lmc_download(
+        return self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
         )
-        return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1356,7 +1382,7 @@ class SpsStation(SKAObsDevice):
         src_port = params.get("source_port", 0xF0D0)
         dst_port = params.get("destination_port", 4660)
 
-        self.component_manager.set_lmc_integrated_download(
+        return self.component_manager.set_lmc_integrated_download(
             mode,
             channel_payload_length,
             beam_payload_length,
@@ -1364,7 +1390,6 @@ class SpsStation(SKAObsDevice):
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], ["SetLmcIntegratedDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1465,9 +1490,7 @@ class SpsStation(SKAObsDevice):
                 self.logger.error("Beam_index is out side of range 0-47")
                 raise ValueError("Beam_index is out side of range 0-47")
             beamformer_table.append(group)
-        self.component_manager.set_beamformer_table(beamformer_table)
-
-        return ([ResultCode.OK], ["SetBeamFormerTable command completed OK"])
+        return self.component_manager.set_beamformer_table(beamformer_table)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -1543,10 +1566,7 @@ class SpsStation(SKAObsDevice):
                 entry[3] = subarray_logical_channel
                 subarray_logical_channel = subarray_logical_channel + 8
                 beamformer_table.append(entry)
-        self.component_manager.set_beamformer_table(beamformer_table)
-        # handler = self.get_command_object("SetBeamformerRegions")
-        # (return_code, message) = handler(argin)
-        return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
+        return self.component_manager.set_beamformer_table(beamformer_table)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -1635,11 +1655,7 @@ class SpsStation(SKAObsDevice):
         """
         switch_time = argin
 
-        self.component_manager.apply_calibration(switch_time)
-        return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
-        # handler = self.get_command_object("ApplyCalibration")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
+        return self.component_manager.apply_calibration(switch_time)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -1707,11 +1723,7 @@ class SpsStation(SKAObsDevice):
         >>> time_string = switch time as ISO formatted time
         >>> dp.command_inout("ApplyPointingDelays", time_string)
         """
-        self.component_manager.apply_pointing_delays(argin)
-        return ([ResultCode.OK], ["ApplyPointingDelays command completed OK"])
-        # handler = self.get_command_object("ApplyPointingDelays")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
+        return self.component_manager.apply_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",
@@ -1747,10 +1759,9 @@ class SpsStation(SKAObsDevice):
         duration = params.get("duration", -1)
         subarray_beam_id = params.get("subarray_beam_id", -1)
         scan_id = params.get("scan_id", 0)
-        self.component_manager.start_beamformer(
+        return self.component_manager.start_beamformer(
             start_time, duration, subarray_beam_id, scan_id
         )
-        return ([ResultCode.OK], ["StartBeamformer command completed OK"])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1768,8 +1779,7 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopBeamformer")
         """
-        self.component_manager.stop_beamformer()
-        return ([ResultCode.OK], ["StopBeamformer command completed OK"])
+        return self.component_manager.stop_beamformer()
 
     @command(
         dtype_in="DevString",
@@ -1806,12 +1816,8 @@ class SpsStation(SKAObsDevice):
         first_channel = params.get("first_channel", 0)
         last_channel = params.get("last_channel", 511)
 
-        self.component_manager.configure_integrated_channel_data(
+        return self.component_manager.configure_integrated_channel_data(
             integration_time, first_channel, last_channel
-        )
-        return (
-            [ResultCode.OK],
-            ["ConfigureIntegratedChannelData command completed OK"],
         )
 
     @command(
@@ -1849,10 +1855,9 @@ class SpsStation(SKAObsDevice):
         first_channel = params.get("first_channel", 0)
         last_channel = params.get("last_channel", 191)
 
-        self.component_manager.configure_integrated_beam_data(
+        return self.component_manager.configure_integrated_beam_data(
             integration_time, first_channel, last_channel
         )
-        return ([ResultCode.OK], ["ConfigureIntegratedBeamData command completed OK"])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1865,8 +1870,7 @@ class SpsStation(SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        self.component_manager.stop_integrated_data()
-        return ([ResultCode.OK], ["StopIntegratedData command completed OK"])
+        return self.component_manager.stop_integrated_data()
 
     @command(
         dtype_in="DevString",
@@ -1882,6 +1886,7 @@ class SpsStation(SKAObsDevice):
                     "channel_continuous", "narrowband", "beam"
         * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+        * force - (bool) Whether or not to cancel ongoing data requests.
 
         Depending on the data type:
         raw:
@@ -1919,7 +1924,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendDataSamples", jstr)
         """
-        params = json.loads(argin)
+        params: dict = json.loads(argin)
 
         # Check for mandatory parameters and syntax.
         # argin is left as is and forwarded to tiles
@@ -1960,8 +1965,9 @@ class SpsStation(SKAObsDevice):
                     "frequency must be between 1 and 390 MHz"
                 )
                 raise ValueError("frequency must be between 1 and 390 MHz")
-        self.component_manager.send_data_samples(argin)
-        return ([ResultCode.OK], ["SendDataSamples command completed OK"])
+        force = params.pop("force", False)
+        argin = json.dumps(params)
+        return self.component_manager.send_data_samples(argin, force=force)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1979,8 +1985,7 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopDataTransmission")
         """
-        self.component_manager.stop_data_transmission()
-        return ([ResultCode.OK], ["StopDataTransmission command completed OK"])
+        return self.component_manager.stop_data_transmission()
 
     @command(
         dtype_in="DevString",
@@ -2032,8 +2037,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
-        self.component_manager.configure_test_generator(argin)
-        return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
+        return self.component_manager.configure_test_generator(argin)
 
 
 # ----------

@@ -29,7 +29,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^1.0.0"
 ska-control-model = "^1.0.0"
-ska-low-mccs-common = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git", rev="825020849992f542c92191f0b3024bd51ec129d2" }
+ska-low-mccs-common = "^0.13.0"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"

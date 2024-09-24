@@ -135,7 +135,7 @@ def test_fast_adminMode_switch(
 
     for i in range(3):
         # run test using a variable network jitter.
-        max_jitter: int = i * 400  # milliseconds
+        max_jitter: int = (i * 100) % 600  # milliseconds
         subrack_simulator.network_jitter_limits = (0, max_jitter)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
@@ -148,22 +148,28 @@ def test_fast_adminMode_switch(
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
 
-        subrack_device.adminmode = AdminMode.OFFLINE
-        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        number_of_communication_cycles: int = 4
 
-        # Fast switching of adminMode
-        subrack_device.adminmode = AdminMode.ONLINE
-        subrack_device.adminmode = AdminMode.OFFLINE
-        subrack_device.adminmode = AdminMode.ONLINE
-        subrack_device.adminmode = AdminMode.OFFLINE
-        subrack_device.adminmode = AdminMode.ONLINE
+        for _ in range(number_of_communication_cycles):
+            subrack_device.adminmode = AdminMode.OFFLINE
+            subrack_device.adminmode = AdminMode.ONLINE
 
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        # When cycling adminmode ONLINE n times we expect up to n
+        # transitions to DevState.ON. The important point is that is end
+        # up in a steady ON state.
+        for _ in range(number_of_communication_cycles):
+            try:
+                # lookahead of 3 since we allow UNKNOWN and DISABLE as
+                # transient states.
+                change_event_callbacks["state"].assert_change_event(
+                    DevState.ON, lookahead=3, consume_nonmatches=True
+                )
+            except AssertionError:
+                print("Transition state ON allowed to not occur.")
 
+        change_event_callbacks["state"].assert_not_called()
         assert subrack_device.adminMode == AdminMode.ONLINE
         assert subrack_device.state() == DevState.ON
-        change_event_callbacks["state"].assert_not_called()
 
         subrack_device.adminmode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)

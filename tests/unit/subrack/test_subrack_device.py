@@ -11,7 +11,6 @@ from __future__ import annotations
 import gc
 import json
 import time
-import unittest
 from typing import Any, Iterator
 
 import pytest
@@ -116,17 +115,16 @@ def subrack_device_fixture(
 
 def test_fast_adminMode_switch(
     subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test our ability to deal with a quick succession of communication commands.
 
     :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
-
-    :raises TimeoutError: when we failed to arrive at the final state after
-        a specified timeout period.
     """
     subrack_device.subscribe_event(
         "state",
@@ -135,7 +133,10 @@ def test_fast_adminMode_switch(
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
 
-    for i in range(4):
+    for i in range(3):
+        # run test using a variable network jitter.
+        max_jitter: int = i * 400  # milliseconds
+        subrack_simulator.network_jitter_limits = (0, max_jitter)
         subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.ON)
@@ -150,47 +151,20 @@ def test_fast_adminMode_switch(
         subrack_device.adminmode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
 
+        # Fast switching of adminMode
         subrack_device.adminmode = AdminMode.ONLINE
         subrack_device.adminmode = AdminMode.OFFLINE
         subrack_device.adminmode = AdminMode.ONLINE
         subrack_device.adminmode = AdminMode.OFFLINE
         subrack_device.adminmode = AdminMode.ONLINE
 
-        expected_ordered_state_changes = [
-            DevState.UNKNOWN,
-            DevState.ON,
-            DevState.DISABLE,
-            DevState.UNKNOWN,
-            DevState.ON,
-            DevState.DISABLE,
-            DevState.UNKNOWN,
-            DevState.ON,
-        ]
-
-        for transition_state in expected_ordered_state_changes:
-            # Each transition state is allowed not to happen
-            # So long as we end up in the correct state
-            try:
-                change_event_callbacks["state"].assert_change_event(transition_state)
-            except AssertionError:
-                print(f"Transition state {transition_state} allowed to not occur.")
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
 
         assert subrack_device.adminMode == AdminMode.ONLINE
-        deadline = time.time() + 10
-        while time.time() < deadline:
-            try:
-                assert subrack_device.state() == DevState.ON
-                change_event_callbacks["state"].assert_not_called()
-                break
-            except AssertionError:
-                print("Subrack not yet ON. Waiting ...")
-                time.sleep(0.4)
-        else:
-            raise TimeoutError(
-                "Subrack never reached the ON state. "
-                f"Current state {subrack_device.state()}: "
-                f"{subrack_device.AdminMode}"
-            )
+        assert subrack_device.state() == DevState.ON
+        change_event_callbacks["state"].assert_not_called()
+
         subrack_device.adminmode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         print(f"Iteration {i}")
@@ -198,15 +172,15 @@ def test_fast_adminMode_switch(
 
 def test_failed_poll(
     subrack_device: MccsSubrack,
-    subrack_simulator: Any,
+    subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test our ability to handle a transient failure.
 
     A poll can fail for a number of reasons, namely:
-      - An unhandled exception raised in firmware
-      - A connection error (TODO MCCS-1329)
+      - A connection timeout
+      - An unhandled exception raised in firmware (TODO MCCS-1329)
       - Other.. (TODO MCCS-1329)
 
     :param subrack_device: the subrack Tango device under test.
@@ -223,23 +197,16 @@ def test_failed_poll(
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    for _ in range(3):  # run a intermittent poll 3 times.
-        # Mocking a transient exception should cause a transient state flip
-        # between ON -> UNKNOWN -> ON. The subrack is using a PowerSupplyProxySimulator,
-        # This cannot be relied upon to provide any REAL information. Therefore,
-        # the state of the subrack is solely evaluated from the response from a poll
-        # TODO: MCCS-1329: evaluate what a failed poll actually means using error
-        # codes.
-        subrack_simulator._get_attribute_tpm_powers = unittest.mock.Mock(
-            side_effect=Exception("Mocked transient exception")
-        )
-        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-        subrack_simulator._get_attribute_tpm_powers.reset_mock()
-        subrack_simulator._get_attribute_tpm_powers = unittest.mock.Mock(
-            return_value=[2.5] * 8
-        )
-        change_event_callbacks["state"].assert_change_event(DevState.ON)
-        change_event_callbacks["state"].assert_not_called()
+    # simulate a large network latency
+    min_jitter: int = 10_000  # milliseconds
+    max_jitter: int = 15_000  # milliseconds
+    subrack_simulator.network_jitter_limits = (min_jitter, max_jitter)
+    # sleep to allow timeout.
+    time.sleep(min_jitter / 1000)
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    subrack_simulator.network_jitter_limits = (0, 0)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
 
 
 def test_off_on(

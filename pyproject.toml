@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.17.3"
+version = "0.17.4"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -29,7 +29,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^1.0.0"
 ska-control-model = "^1.0.0"
-ska-low-mccs-common = "^0.12.0"
+ska-low-mccs-common = "^0.13.0"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"

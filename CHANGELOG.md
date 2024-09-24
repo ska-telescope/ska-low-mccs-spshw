@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.17.4
+
+* [SKB-519] Prevent subrack from sticking in UNKNOWN after a failed poll.
+
 ## 0.17.3
 
 * [SKB-433] Allow aborting of SendDataSamples()

@@ -23,6 +23,7 @@ class SubrackHealthModel(BaseHealthModel):
 
     def __init__(
         self: SubrackHealthModel,
+        logger,
         component_state_changed_callback: HealthChangedCallbackProtocol,
         thresholds: Optional[dict[str, Any]] = None,
     ) -> None:
@@ -34,6 +35,7 @@ class SubrackHealthModel(BaseHealthModel):
             health state.
         :param thresholds: Thresholds for the subrack device.
         """
+        self.logger = logger
         self._health_rules = SubrackHealthRules(thresholds)
         super().__init__(component_state_changed_callback)
 
@@ -43,6 +45,12 @@ class SubrackHealthModel(BaseHealthModel):
 
         :param new_states: New states of the data points.
         """
+        self.logger.error(
+            f"new_states[power_supply_currents] == {new_states['power_supply_currents']}"
+        )
+        self.logger.error(
+            f"new_states[board_currents] == {new_states['board_currents']}"
+        )
         if "subrack_state_points" not in self._state:
             self._state["subrack_state_points"] = {}  # type: ignore
 
@@ -61,23 +69,23 @@ class SubrackHealthModel(BaseHealthModel):
 
         # set the old_value to the previous value if exists otherwise have it match new
         if "power_supply_voltages" in state_points:
-            self._state["subrack_state_points"][
-                "old_power_supply_voltages"
-            ] = state_points.get("power_supply_voltages")
+            self._state["subrack_state_points"]["old_power_supply_voltages"] = (
+                state_points.get("power_supply_voltages")
+            )
         else:
-            self._state["subrack_state_points"][
-                "old_power_supply_voltages"
-            ] = new_states.get("power_supply_voltages")
+            self._state["subrack_state_points"]["old_power_supply_voltages"] = (
+                new_states.get("power_supply_voltages")
+            )
 
         # set the old_value to the previous value if exists otherwise have it match new
         if "tpm_power_states" in state_points:
-            self._state["subrack_state_points"][
-                "old_tpm_power_states"
-            ] = state_points.get("tpm_power_states")
+            self._state["subrack_state_points"]["old_tpm_power_states"] = (
+                state_points.get("tpm_power_states")
+            )
         else:
-            self._state["subrack_state_points"][
-                "old_tpm_power_states"
-            ] = new_states.get("tpm_power_states")
+            self._state["subrack_state_points"]["old_tpm_power_states"] = (
+                new_states.get("tpm_power_states")
+            )
 
         self._state["subrack_state_points"] = (
             self._state["subrack_state_points"] | new_states

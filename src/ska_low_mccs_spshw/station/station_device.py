@@ -495,7 +495,7 @@ class SpsStation(SKAObsDevice):
     )
     def xPolBandpass(self: SpsStation) -> np.ndarray:
         """
-        Read the last badpass plot data for the x-polarisation.
+        Read the last bandpass plot data for the x-polarisation.
 
         :return: The last block of x-polarised bandpass data.
         """

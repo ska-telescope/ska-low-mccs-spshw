@@ -139,11 +139,15 @@ class SpsStationHealthRules(HealthRules):
 
         # Check ppsDelayDelta for drifting delays.
         if station_state["pps_delay_delta"] is not None:
-            if station_state["pps_delay_delta"] > 4:
+            if (
+                station_state["pps_delay_delta"]
+                > self._thresholds["pps_delta_degraded"]
+            ):
                 result = True
                 msg = (
-                    "Difference in ppsDelays between Tiles has exceeded "
-                    f"4ns. ppsDelayDelta: {station_state['pps_delay_delta']}ns"
+                    "Difference in ppsDelay between Tiles has exceeded "
+                    f"{self._thresholds['pps_delta_degraded']} samples. "
+                    f"ppsDelayDelta: {station_state['pps_delay_delta']}"
                 )
                 # Add to report or create new one.
                 if report == "":
@@ -204,4 +208,5 @@ class SpsStationHealthRules(HealthRules):
             "subrack_failed": 0.2,
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
+            "pps_delta_degraded": 4,
         }

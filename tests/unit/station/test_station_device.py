@@ -1058,12 +1058,14 @@ def test_SetCspIngest(
                 "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 4,
             },
             {
                 "subrack_degraded": 0.1,
                 "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 6,
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",

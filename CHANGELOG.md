@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [SKB-507] Added `ppsDelayDelta` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelayDelta` is observed to be >4 samples.
+
 ## 0.17.3
 
 * [SKB-433] Allow aborting of SendDataSamples()
@@ -10,12 +12,10 @@
 ## 0.17.2
 
 * [MCCS-1979] Correct tile health monitoring for single 40g QSFP
-* [SKB-426] Remove ADA coltages from health rollup
+* [SKB-426] Remove ADA voltages from health rollup
 * [SKB-526] Fix channeliser rounding ordering
 * [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
 * [SKB-433] Update SpsStation to use ThreadPools
-
-* [SKB-507] Added `ppsDelayDelta` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelayDelta` is observed to be >4ns.
 
 ## 0.17.1
 

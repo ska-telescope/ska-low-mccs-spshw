@@ -34,24 +34,6 @@ class TestSpsStationHealthModel:
 
         return health_model
 
-    @pytest.fixture
-    def drifting_pps_health_model(
-        self: TestSpsStationHealthModel,
-    ) -> SpsStationHealthModel:
-        """
-        Fixture to return a station health model.
-
-        :return: Health model to be used.
-        """
-        drifting_pps_health_model = SpsStationHealthModel(
-            ["subrack"], ["tile"], MockCallable()
-        )
-        drifting_pps_health_model.update_state(
-            communicating=True, power=PowerState.ON, pps_delay_delta=6
-        )
-
-        return drifting_pps_health_model
-
     @pytest.mark.parametrize(
         ("sub_devices", "thresholds", "expected_health", "expected_report"),
         [
@@ -533,8 +515,8 @@ class TestSpsStationHealthModel:
                 HealthState.OK,
                 "Health is OK.",
                 HealthState.DEGRADED,
-                "Difference in ppsDelays between Tiles has exceeded 4ns. "
-                "ppsDelayDelta: 6ns",
+                "Difference in ppsDelay between Tiles has exceeded 4 samples. "
+                "ppsDelayDelta: 6",
                 id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
             ),
         ],

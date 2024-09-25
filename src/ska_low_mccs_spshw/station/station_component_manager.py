@@ -500,7 +500,7 @@ class SpsStationComponentManager(
             "adcPower",
             "staticTimeDelays",
             "preaduLevels",
-            "ppsDelays",
+            "ppsDelay",
         ]
 
         self._source_port = 0xF0D0
@@ -912,7 +912,7 @@ class SpsStationComponentManager(
                 self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
-            case "ppsDelays":
+            case "ppsDelay":
                 self._pps_delay_delta = max(attribute_value.tolist()) - min(
                     attribute_value.tolist()
                 )
@@ -1913,8 +1913,9 @@ class SpsStationComponentManager(
 
         Returns the difference between the maximum and minimum delays so
         that users can track an observed pps drift.
+        Returns a result in samples, each sample is 1.25ns.
 
-        :return: Maximum delay difference between tiles in ns.
+        :return: Maximum delay difference between tiles in samples.
         """
         return self._pps_delay_delta
 

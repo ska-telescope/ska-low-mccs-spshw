@@ -64,10 +64,10 @@ platform:
 # These are passed through to the helm values file as-is.
 # For example,
 #
-helm_values:
-  image:
-    registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-    tag: 0.17.1-dirty
+# helm_values:
+#   image:
+#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#     tag: 0.17.1
 
 #   ska-low-mccs-daq:
 #     image:

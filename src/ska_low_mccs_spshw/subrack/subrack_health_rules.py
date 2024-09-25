@@ -231,10 +231,12 @@ class SubrackHealthRules(HealthRules):
             len(tpm_voltages) == 0
             or len(tpm_currents) == 0
             or len(tpm_power_states) == 0
+            or len(tpm_present) == 0
         ):
             return (
                 False,
-                f"One of {tpm_voltages}, {tpm_currents}, {tpm_power_states} is empty. ",
+                f"One of {tpm_present=}, {tpm_voltages=}, {tpm_currents=}, "
+                f"{tpm_power_states=} is empty. ",
             )
         for i, power_state in enumerate(tpm_power_states):
             if tpm_voltages[i] is None or tpm_currents[i] is None or not tpm_present[i]:

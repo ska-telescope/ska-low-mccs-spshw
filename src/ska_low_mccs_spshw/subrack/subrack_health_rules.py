@@ -303,9 +303,6 @@ class SubrackHealthRules(HealthRules):
         state = state_dict.get("subrack_state_points")
         assert isinstance(state, dict)
 
-        for i, power_state in enumerate(state["tpm_power_states"]):
-            if power_state == PowerState.UNKNOWN:
-                return True, f"TPM {i} power state is UNKNOWN"
         return False, ""
 
     # pylint: disable=too-many-locals
@@ -460,6 +457,11 @@ class SubrackHealthRules(HealthRules):
         if current_degraded:
             has_degraded = True
             report += current_report
+        # Check here for TPMs in UNKNOWN.
+        for i, power_state in enumerate(state["tpm_power_states"]):
+            if power_state == PowerState.UNKNOWN:
+                has_degraded = True
+                report += f"TPM {i} power state is UNKNOWN "
 
         return has_degraded, report
 

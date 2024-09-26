@@ -730,12 +730,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -992,13 +992,13 @@ class SpsStationComponentManager(
     ) -> None:
         with self._power_state_lock:
             power_states = list(self._tile_power_states.values())
-            if all(power_state == PowerState.ON for power_state in power_states):
+            if any(power_state == PowerState.ON for power_state in power_states):
                 evaluated_power_state = PowerState.ON
             elif all(
                 power_state == PowerState.NO_SUPPLY for power_state in power_states
             ):
                 evaluated_power_state = PowerState.OFF
-            elif all(
+            elif any(
                 power_state == PowerState.ON
                 for power_state in list(self._subrack_power_states.values())
             ) and all(
@@ -1017,11 +1017,6 @@ class SpsStationComponentManager(
             else:
                 evaluated_power_state = PowerState.UNKNOWN
 
-            if any(
-                power_state == PowerState.UNKNOWN
-                for power_state in self._daq_power_state.values()
-            ):
-                evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"

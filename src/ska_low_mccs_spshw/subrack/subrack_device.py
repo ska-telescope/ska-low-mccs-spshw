@@ -351,7 +351,6 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
-        self.logger.error("My branch started")
 
     class InitCommand(DeviceInitCommand):
         """Initialisation command class for this base device."""
@@ -393,8 +392,7 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
     def _init_state_model(self: MccsSubrack) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SubrackHealthModel(self.logger, self._health_changed)
-        self.logger.error("logger given to health")
+        self._health_model = SubrackHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 

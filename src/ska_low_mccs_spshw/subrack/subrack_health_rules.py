@@ -174,7 +174,6 @@ class SubrackHealthRules(HealthRules):
 
     def _check_current_diff(
         self: SubrackHealthRules,
-        tpm_currents: list[float],
         board_currents: list[float],
         power_supply_currents: list[float],
         rule_str: str,
@@ -185,23 +184,21 @@ class SubrackHealthRules(HealthRules):
         This makes sure that all the currents are adding up to give
         rougly the same value and we're not losing power somewhere.
 
-        :param tpm_currents: The currents of the tpms.
         :param board_currents: The currents of the boards.
         :param power_supply_currents: The currents of the power supplies.
         :param rule_str: The type of error threshold to be checking against.
 
         :return: True if any of the thresholds are breached, along with a text report.
         """
-        total_current = sum(tpm_currents) + sum(board_currents)
         if (
-            abs(sum(power_supply_currents) - total_current)
+            abs(sum(power_supply_currents) - sum(board_currents))
             > self._thresholds[f"{rule_str}max_current_diff"]
         ):
             return (
                 True,
                 f"For power supply currents {power_supply_currents}, the sum "
                 f"{sum(power_supply_currents)} differ from the total current "
-                f"{total_current} by more than "
+                f"{sum(board_currents)} by more than "
                 f"{self._thresholds[f'{rule_str}max_current_diff']}. ",
             )
         return False, ""
@@ -371,7 +368,6 @@ class SubrackHealthRules(HealthRules):
             has_failed = True
             report += fan_report
         current_failed, current_report = self._check_current_diff(
-            state["tpm_currents"],
             state["board_currents"],
             state["power_supply_currents"],
             fail_str,
@@ -452,7 +448,6 @@ class SubrackHealthRules(HealthRules):
             has_degraded = True
             report += fan_report
         current_degraded, current_report = self._check_current_diff(
-            state["tpm_currents"],
             state["board_currents"],
             state["power_supply_currents"],
             fail_str,

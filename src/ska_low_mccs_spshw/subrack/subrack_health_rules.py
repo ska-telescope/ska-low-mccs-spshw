@@ -281,6 +281,18 @@ class SubrackHealthRules(HealthRules):
                     f"TPM {i} PowerState is {power_state} but voltage is "
                     f"{tpm_voltages[i]} and current {tpm_currents[i]}. "
                 )
+
+        tpms_in_unknown = [
+            power_state == PowerState.UNKNOWN for power_state in tpm_power_states
+        ]
+        if (sum(tpms_in_unknown) / sum(tpm_present)) > self._thresholds[
+            f"{rule_str}fraction_tpm_unknown"
+        ]:
+            has_failed = True
+            for i, power in enumerate(tpm_power_states):
+                if power == PowerState.UNKNOWN:
+                    report += f"TPM {i} power state is UNKNOWN, "
+
         return has_failed, report
 
     def unknown_rule(  # type: ignore[override]
@@ -457,11 +469,6 @@ class SubrackHealthRules(HealthRules):
         if current_degraded:
             has_degraded = True
             report += current_report
-        # Check here for TPMs in UNKNOWN.
-        for i, power_state in enumerate(state["tpm_power_states"]):
-            if power_state == PowerState.UNKNOWN:
-                has_degraded = True
-                report += f"TPM {i} power state is UNKNOWN "
 
         return has_degraded, report
 
@@ -514,5 +521,7 @@ class SubrackHealthRules(HealthRules):
             "degraded_tpm_voltage_standby": 4.0,
             "failed_tpm_current_standby": 4.0,
             "degraded_tpm_current_standby": 3.0,
+            "degraded_fraction_tpm_unknown": 0.0,  # fraction allowed before degraded
+            "failed_fraction_tpm_unknown": 0.5,  # fraction allowed before failed
             "clock_presence": [],
         }

@@ -96,9 +96,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -115,9 +115,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -315,6 +315,56 @@ class TestSpsStationHealthModel:
                 "Health is OK.",
                 id="One tile unhealthy, expect DEGRADED, then tile becomes OK, "
                 "expect OK",
+            ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.DEGRADED
+                        for subrack_id in range(1)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                HealthState.DEGRADED,
+                "Too many subdevices are in a bad state: Tiles: [] "
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED']",
+                id="All devices healthy, expect OK, then 1 subrack DEGRADED,"
+                "expect DEGRADED",
+            ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.DEGRADED
+                        for subrack_id in range(3)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                HealthState.FAILED,
+                "Too many subdevices are in a bad state: Tiles: [] "
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED', "
+                "'low-mccs/subrack/ci-1-sr1 - DEGRADED', "
+                "'low-mccs/subrack/ci-1-sr2 - DEGRADED']",
+                id="All devices healthy, expect OK, then 3 subracks DEGRADED,"
+                "expect FAILED",
             ),
         ],
     )

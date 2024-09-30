@@ -60,6 +60,30 @@ class TestSubrackHealthModel:
                 "Health is OK.",
                 id="All devices healthy, expect OK",
             ),
+            pytest.param(
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.UNKNOWN,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                HealthState.DEGRADED,
+                "TPM 3 power state is UNKNOWN, ",
+                id="One TPM UNKNOWN, expect DEGRADED",
+            ),
         ],
     )
     def test_subrack_evaluate_health(
@@ -347,3 +371,179 @@ class TestSubrackHealthModel:
             end_expected_health,
             end_expected_report,
         )
+
+    @pytest.mark.parametrize(
+        (
+            "first_data",
+            "expected_first_health_report",
+            "second_data",
+            "expected_final_health_report",
+        ),
+        [
+            pytest.param(
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (HealthState.OK, "Health is OK."),
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.UNKNOWN,
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (HealthState.DEGRADED, "TPM 0 power state is UNKNOWN, "),
+                id="Transition from OK to DEGRADED",
+            ),
+            pytest.param(
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.UNKNOWN,
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.UNKNOWN,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (
+                    HealthState.DEGRADED,
+                    "TPM 0 power state is UNKNOWN, TPM 3 power state is UNKNOWN, ",
+                ),
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.ON,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (HealthState.OK, "Health is OK."),
+                id="Transition from DEGRADED to OK",
+            ),
+            pytest.param(
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.ON,
+                        PowerState.ON,
+                        PowerState.UNKNOWN,
+                        PowerState.ON,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (HealthState.DEGRADED, "TPM 2 power state is UNKNOWN, "),
+                {
+                    "board_temps": [50.0, 50.0],
+                    "backplane_temps": [50.0, 50.0],
+                    "subrack_fan_speeds": [60.0, 60.0],
+                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+                    "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+                    "tpm_power_states": [
+                        PowerState.UNKNOWN,
+                        PowerState.UNKNOWN,
+                        PowerState.UNKNOWN,
+                        PowerState.UNKNOWN,
+                    ],
+                    "tpm_present": [True, True, True, True],
+                    "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+                    "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+                },
+                (
+                    HealthState.FAILED,
+                    "TPM 0 power state is UNKNOWN, TPM 1 power state is UNKNOWN, "
+                    "TPM 2 power state is UNKNOWN, TPM 3 power state is UNKNOWN, ",
+                ),
+                id="Transition from DEGRADED to FAILED",
+            ),
+        ],
+    )
+    def test_subrack_evaluate_tpm_power_transitions(
+        self: TestSubrackHealthModel,
+        health_model: SubrackHealthModel,
+        first_data: dict[str, Any],
+        expected_first_health_report: tuple[HealthState, str],
+        second_data: dict[str, Any],
+        expected_final_health_report: tuple[HealthState, str],
+    ) -> None:
+        """
+        Tests for evaluating subrack health transition.
+
+        :param health_model: Health model fixture.
+        :param first_data: Health data values for health model.
+        :param second_data: Health data values for health model.
+        :param expected_first_health_report: Expected first health.
+        :param expected_final_health_report: Expected final health report.
+        """
+        assert health_model.evaluate_health() == (
+            HealthState.UNKNOWN,
+            "Failed to read subrack state",
+        )
+
+        health_model.update_data(first_data)
+
+        assert health_model.evaluate_health() == expected_first_health_report
+
+        health_model.update_data(second_data)
+
+        assert health_model.evaluate_health() == expected_final_health_report

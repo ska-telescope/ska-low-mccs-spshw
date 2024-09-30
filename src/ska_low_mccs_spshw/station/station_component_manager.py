@@ -730,12 +730,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
-                antenna_config["delay"]
-            )
-            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
-                antenna_config["delay"]
-            )
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -990,32 +990,46 @@ class SpsStationComponentManager(
     def _evaluate_power_state(
         self: SpsStationComponentManager,
     ) -> None:
+        # 1. Any Tile ON, result = ON. (Subrack must therefore be on.)
+        # 2. Any Subrack ON, All Tile OFF/NO_SUPP, result = STANDBY
+        # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
+        # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
+        # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
         with self._power_state_lock:
-            power_states = list(self._tile_power_states.values())
-            if any(power_state == PowerState.ON for power_state in power_states):
-                evaluated_power_state = PowerState.ON
-            elif all(
-                power_state == PowerState.NO_SUPPLY for power_state in power_states
-            ):
-                evaluated_power_state = PowerState.OFF
+            tile_power_states = list(self._tile_power_states.values())
+            subrack_power_states = list(self._subrack_power_states.values())
+            # Assume that with any Tile ON the subrack must also be ON.
+            if any(power_state == PowerState.ON for power_state in tile_power_states):
+                evaluated_power_state = PowerState.ON  # 1
             elif any(
-                power_state == PowerState.ON
-                for power_state in list(self._subrack_power_states.values())
+                power_state == PowerState.ON for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.STANDBY
+                evaluated_power_state = PowerState.STANDBY  # 2
             elif all(
-                power_state == PowerState.OFF
-                for power_state in list(self._subrack_power_states.values())
+                power_state == PowerState.NO_SUPPLY
+                for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state == PowerState.NO_SUPPLY for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.OFF
+                evaluated_power_state = PowerState.NO_SUPPLY  # 3
+            elif all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in subrack_power_states
+            ) and all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
+            ):
+                evaluated_power_state = PowerState.OFF  # 4
             else:
-                evaluated_power_state = PowerState.UNKNOWN
+                # We get here by:
+                # Any subrack UNKNOWN AND no subrack ON
+                # Any tile UNKNOWN AND no tile ON
+                self.logger.debug(f"tile powers: {tile_power_states}")
+                self.logger.debug(f"subrack powers: {subrack_power_states}")
+                evaluated_power_state = PowerState.UNKNOWN  # 5
 
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"

@@ -17,7 +17,8 @@ from typing import Iterator
 
 import numpy as np
 import pytest
-from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
+import tango
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -59,7 +60,11 @@ def fixture_test_context(
     """
     harness = SpsTangoTestHarness()
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
+    harness.add_mock_subrack_device(subrack_id + 1, mock_subrack_device_proxy)
     harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
+    harness.add_mock_tile_device(tile_id + 1, mock_tile_device_proxy)
+    harness.add_mock_tile_device(tile_id + 2, mock_tile_device_proxy)
+    harness.add_mock_tile_device(tile_id + 3, mock_tile_device_proxy)
     harness.set_daq_instance()
     harness.set_daq_device(daq_id=daq_id, address=None)
     with harness:
@@ -138,8 +143,13 @@ def station_component_manager_fixture(
     """
     sps_station_component_manager = SpsStationComponentManager(
         1,
-        [get_subrack_name(subrack_id)],
-        [get_tile_name(tile_id)],
+        [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
+        [
+            get_tile_name(tile_id),
+            get_tile_name(tile_id + 1),
+            get_tile_name(tile_id + 2),
+            get_tile_name(tile_id + 3),
+        ],
         daq_trl,
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
@@ -406,7 +416,7 @@ def test_get_static_delays(
             expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
                 "delay"
             ]
-    assert static_delays == expected_static_delays
+    assert static_delays[0 : len(expected_static_delays)] == expected_static_delays
 
 
 def test_self_check(
@@ -597,3 +607,101 @@ def test_send_data_samples(
         json.dumps({"data_type": "raw"})
     )
     assert result == ResultCode.OK
+
+
+def test_power_state_transitions(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test SpsStation's state transitions.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED.
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    for subrack in station_component_manager._subrack_proxies.values():
+        assert subrack._proxy is not None
+        assert subrack._proxy.state() == tango.DevState.ON
+    for tile in station_component_manager._tile_proxies.values():
+        assert tile._proxy is not None
+        assert tile._proxy.state() == tango.DevState.ON
+
+    callbacks["component_state"].assert_call(power=PowerState.ON)
+    assert station_component_manager._component_state["power"] == PowerState.ON
+
+    tile_names = list(station_component_manager._tile_proxies.keys())
+    subrack_names = list(station_component_manager._subrack_proxies.keys())
+
+    # Start with all ON.
+    # Any Tiles ON, Station should be ON
+    station_component_manager._tile_state_changed(tile_names[0], power=PowerState.OFF)
+    assert station_component_manager._component_state["power"] == PowerState.ON
+    station_component_manager._tile_state_changed(tile_names[1], power=PowerState.OFF)
+    assert station_component_manager._component_state["power"] == PowerState.ON
+    station_component_manager._tile_state_changed(tile_names[2], power=PowerState.OFF)
+    assert station_component_manager._component_state["power"] == PowerState.ON
+
+    # Any Subrack ON, all Tiles OFF/NO_SUPP, Station should be STANDBY
+    station_component_manager._tile_state_changed(
+        tile_names[3], power=PowerState.NO_SUPPLY
+    )
+    assert station_component_manager._component_state["power"] == PowerState.STANDBY
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.OFF
+    )
+    assert station_component_manager._component_state["power"] == PowerState.STANDBY
+    # All Subracks OFF, all Tiles OFF, Station should be OFF
+    station_component_manager._subrack_state_changed(
+        subrack_names[1], power=PowerState.NO_SUPPLY
+    )
+    assert station_component_manager._component_state["power"] == PowerState.OFF
+    for subrack_name in subrack_names:
+        station_component_manager._subrack_state_changed(
+            subrack_name, power=PowerState.ON
+        )
+    # Subracks now ON, Station should be STANDBY again.
+    assert station_component_manager._component_state["power"] == PowerState.STANDBY
+    # All Tiles NO_SUPPLY, Subrack ON, Station should be STANDBY
+    for tile_name in tile_names:
+        station_component_manager._tile_state_changed(
+            tile_name, power=PowerState.NO_SUPPLY
+        )
+    assert station_component_manager._component_state["power"] == PowerState.STANDBY
+    # Turn a random Tile back ON, Station should be ON
+    tile_num = random.randint(0, 3)
+    station_component_manager._tile_state_changed(
+        tile_names[tile_num], power=PowerState.ON
+    )
+    assert station_component_manager._component_state["power"] == PowerState.ON
+    # Set all subracks and tiles to NO_SUPP, Station should be NO_SUPP
+    for subrack_name in subrack_names:
+        station_component_manager._subrack_state_changed(
+            subrack_name, power=PowerState.NO_SUPPLY
+        )
+    for tile_name in tile_names:
+        station_component_manager._tile_state_changed(
+            tile_name, power=PowerState.NO_SUPPLY
+        )
+    assert station_component_manager._component_state["power"] == PowerState.NO_SUPPLY
+
+    # Any subrack UNKNOWN AND no subrack ON, Station = UNKNOWN
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.UNKNOWN
+    )
+    assert station_component_manager._component_state["power"] == PowerState.UNKNOWN
+    # Any tile UNKNOWN AND no tile ON, Station = UNKNOWN
+    station_component_manager._subrack_state_changed(
+        subrack_names[0], power=PowerState.NO_SUPPLY
+    )
+    station_component_manager._tile_state_changed(
+        tile_names[0], power=PowerState.UNKNOWN
+    )
+    assert station_component_manager._component_state["power"] == PowerState.UNKNOWN

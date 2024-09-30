@@ -912,10 +912,9 @@ class SpsStationComponentManager(
                 self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
-            case "ppsDelay":
-                self._pps_delay_delta = max(attribute_value.tolist()) - min(
-                    attribute_value.tolist()
-                )
+            case "ppsdelay":
+                self._pps_delays[logical_tile_id] = attribute_value
+                self._pps_delay_delta = max(self._pps_delays) - min(self._pps_delays)
                 if self._component_state_callback:
                     self._component_state_callback(ppsDelayDelta=self._pps_delay_delta)
             case _:

@@ -17,6 +17,7 @@ from typing import Iterator
 
 import numpy as np
 import pytest
+import tango
 from ska_control_model import CommunicationStatus, ResultCode, TaskStatus
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
@@ -597,3 +598,56 @@ def test_send_data_samples(
         json.dumps({"data_type": "raw"})
     )
     assert result == ResultCode.OK
+
+
+def test_pps_delay_delta(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    mock_tile_proxy: MccsDeviceProxy,
+) -> None:
+    """
+    Test the method to run commands async.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param mock_tile_proxy: mock tile which the component manager has been given.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED.
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    assert station_component_manager._pps_delays == [0] * 16
+    assert station_component_manager.pps_delay_delta == 0
+
+    # Set 1 Tile's ppsDelay to 4 for a delta of 4.
+    station_component_manager._on_tile_attribute_change(
+        logical_tile_id=1,
+        attribute_name="ppsDelay",
+        attribute_value=4,
+        attribute_quality=tango.AttrQuality.ATTR_VALID,
+    )
+    assert station_component_manager.pps_delay_delta == 4
+
+    # Set all tiles to a delay of 4 for a delta of 0.
+    for tile_id in range(0, 16):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="ppsDelay",
+            attribute_value=4,
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+    print(station_component_manager._pps_delays)
+    assert station_component_manager.pps_delay_delta == 0
+
+    # Set 1 Tile to ppsDelay of 16 for a delta of 12.
+    station_component_manager._on_tile_attribute_change(
+        logical_tile_id=5,
+        attribute_name="ppsDelay",
+        attribute_value=16,
+        attribute_quality=tango.AttrQuality.ATTR_VALID,
+    )
+    assert station_component_manager.pps_delay_delta == 12

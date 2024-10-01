@@ -618,7 +618,7 @@ class SubrackDriver(
         values = poll_response.query_responses
         self.logger.debug("Pushing updates.")
 
-        self._update_component_state(fault=fault, **values)
+        self._update_component_state(power=PowerState.ON, fault=fault, **values)
 
     def polling_stopped(self: SubrackDriver) -> None:
         """
@@ -655,10 +655,7 @@ class SubrackDriver(
             tpm_voltages=None,
         )
 
-        # Not calling super().polling_stopped() here,
-        # because ska-tango-base inappropriately pushes power=UNKNOWN,
-        # but polling may have stopped because we learned that power is OFF.
-        self._update_communication_state(CommunicationStatus.DISABLED)
+        super().polling_stopped()
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:
         """
@@ -671,5 +668,6 @@ class SubrackDriver(
             attempt.
         """
         self.logger.exception(f"Poll failed: {exception}")
+        # TODO MCCS-1329: depending on the exception we may not be UNKNOWN.
         self._update_component_state(power=PowerState.UNKNOWN, fault=None)
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)

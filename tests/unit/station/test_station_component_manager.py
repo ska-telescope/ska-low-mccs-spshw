@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import ipaddress
+import json
 import logging
 import random
 import unittest.mock
@@ -143,6 +144,7 @@ def station_component_manager_fixture(
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
         None,  # csp_ingest_ip,
+        None,  # channeliser_rounding,
         antenna_uri,
         logger,
         callbacks["communication_status"],
@@ -556,3 +558,42 @@ def test_async_commands(
     assert result[0] == expected_station_result
     assert message[0] is not None
     assert expected_tile_result.name in message[0]
+
+
+def test_send_data_samples(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    mock_tile_proxy: MccsDeviceProxy,
+) -> None:
+    """
+    Test the method to run commands async.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param mock_tile_proxy: mock tile which the component manager has been given.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+
+    # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    mock_tile_proxy.tileProgrammingState = "Synchronised"
+    mock_tile_proxy.pendingDataRequests = True
+    [result], [msg] = station_component_manager.send_data_samples(
+        json.dumps({"data_type": "raw"})
+    )
+    assert result == ResultCode.REJECTED
+
+    [result], [msg] = station_component_manager.send_data_samples(
+        json.dumps({"data_type": "raw"}), force=True
+    )
+    assert result == ResultCode.OK
+
+    mock_tile_proxy.pendingDataRequests = False
+    [result], [msg] = station_component_manager.send_data_samples(
+        json.dumps({"data_type": "raw"})
+    )
+    assert result == ResultCode.OK

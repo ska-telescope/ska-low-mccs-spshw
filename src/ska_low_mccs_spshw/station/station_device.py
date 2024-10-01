@@ -87,6 +87,7 @@ class SpsStation(SKAObsDevice):
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
     CspIngestIp = device_property(dtype=str, default_value="")
+    ChanneliserRounding = device_property(dtype=(int,), default_value=[])
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -142,6 +143,7 @@ class SpsStation(SKAObsDevice):
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
             f"\tCspIngestIp: {self.CspIngestIp}\n"
+            f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -182,6 +184,7 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+            self.ChanneliserRounding,
             self.AntennaConfigURI,
             self.logger,
             self._communication_state_changed,
@@ -1864,6 +1867,7 @@ class SpsStation(SKAObsDevice):
                     "channel_continuous", "narrowband", "beam"
         * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+        * force - (bool) Whether or not to cancel ongoing data requests.
 
         Depending on the data type:
         raw:
@@ -1901,7 +1905,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendDataSamples", jstr)
         """
-        params = json.loads(argin)
+        params: dict = json.loads(argin)
 
         # Check for mandatory parameters and syntax.
         # argin is left as is and forwarded to tiles
@@ -1942,7 +1946,9 @@ class SpsStation(SKAObsDevice):
                     "frequency must be between 1 and 390 MHz"
                 )
                 raise ValueError("frequency must be between 1 and 390 MHz")
-        return self.component_manager.send_data_samples(argin)
+        force = params.pop("force", False)
+        argin = json.dumps(params)
+        return self.component_manager.send_data_samples(argin, force=force)
 
     @command(
         dtype_out="DevVarLongStringArray",

@@ -241,13 +241,3 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return cast(
             SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)
-
-    def _hardware_communication_state_changed(
-        self: SubrackComponentManager,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        super()._hardware_communication_state_changed(communication_state)
-
-        # TODO: This should be upstreamed to ska-low-mccs-common
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            self._update_component_state(power=PowerState.ON)

@@ -17,6 +17,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 from ska_control_model import AdminMode, HealthState
 
 from tests.functional.conftest import (
+    poll_until_command_result,
     poll_until_consumer_running,
     poll_until_consumers_stopped,
     poll_until_state_change,
@@ -156,7 +157,9 @@ def daq_device_has_no_running_consumers(
     """
     status = json.loads(daq_receiver.DaqStatus())
     if status["Running Consumers"] != []:
-        daq_receiver.Stop()  # Stops *all* consumers.
+        _, [cmd_id] = daq_receiver.Stop()  # Stops *all* consumers.
+        poll_until_command_result(daq_receiver, cmd_id, "COMPLETED")
+
         poll_until_consumers_stopped(daq_receiver)
 
 

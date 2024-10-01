@@ -913,8 +913,11 @@ class SpsStationComponentManager(
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
             case "ppsdelay":
+                # Only calc for TPMs actually present.
                 self._pps_delays[logical_tile_id] = attribute_value
-                self._pps_delay_delta = max(self._pps_delays) - min(self._pps_delays)
+                self._pps_delay_delta = max(
+                    self._pps_delays[0 : self._number_of_tiles]
+                ) - min(self._pps_delays[0 : self._number_of_tiles])
                 if self._component_state_callback:
                     self._component_state_callback(ppsDelayDelta=self._pps_delay_delta)
             case _:

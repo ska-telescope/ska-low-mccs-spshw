@@ -193,6 +193,10 @@ class SubrackHealthRules(HealthRules):
         :return: True if any of the thresholds are breached, along with a text report.
         """
         total_current = sum(tpm_currents) + sum(board_currents)
+        print(f"total_current: {total_current}")
+        print(f"tpm_currents: {tpm_currents}")
+        print(f"board_currents: {board_currents}")
+        print(f"power_supply_currents: {power_supply_currents}")
         if (
             abs(sum(power_supply_currents) - total_current)
             > self._thresholds[f"{rule_str}max_current_diff"]

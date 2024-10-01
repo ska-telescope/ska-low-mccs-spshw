@@ -539,11 +539,13 @@ class TestSubrackHealthModel:
             HealthState.UNKNOWN,
             "Failed to read subrack state",
         )
-
+        print(f"health 1: {health_model._state}")
         health_model.update_data(first_data)
+        print(f"health 2: {health_model._state}")
 
         assert health_model.evaluate_health() == expected_first_health_report
 
         health_model.update_data(second_data)
+        print(f"health 3: {health_model._state}")
 
         assert health_model.evaluate_health() == expected_final_health_report

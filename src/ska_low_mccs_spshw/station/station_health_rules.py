@@ -96,6 +96,22 @@ class SpsStationHealthRules(HealthRules):
             )
         else:
             report = ""
+
+        # Check ppsDelayDelta for drifting delays.
+        if station_state["pps_delay_delta"] is not None:
+            if station_state["pps_delay_delta"] > self._thresholds["pps_delta_failed"]:
+                result = True
+                msg = (
+                    "Difference in ppsDelay between Tiles has exceeded "
+                    f"{self._thresholds['pps_delta_failed']} samples. "
+                    f"ppsDelayDelta: {station_state['pps_delay_delta']}"
+                )
+                # Add to report or create new one.
+                if report == "":
+                    report = msg
+                else:
+                    report += " - " + msg
+
         return result, report
 
     def degraded_rule(  # type: ignore[override]
@@ -209,4 +225,5 @@ class SpsStationHealthRules(HealthRules):
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
             "pps_delta_degraded": 4,
+            "pps_delta_failed": 9,
         }

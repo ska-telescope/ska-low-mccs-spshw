@@ -498,6 +498,7 @@ class TestSpsStationHealthModel:
             "sub_devices",
             "expected_init_health",
             "expected_init_report",
+            "pps_drift_value",
             "expected_final_health",
             "expected_final_report",
         ),
@@ -514,10 +515,29 @@ class TestSpsStationHealthModel:
                 },
                 HealthState.OK,
                 "Health is OK.",
+                6,
                 HealthState.DEGRADED,
                 "Difference in ppsDelay between Tiles has exceeded 4 samples. "
                 "ppsDelayDelta: 6",
                 id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
+            ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                10,
+                HealthState.FAILED,
+                "Difference in ppsDelay between Tiles has exceeded 9 samples. "
+                "ppsDelayDelta: 10",
+                id="All devices healthy, expect OK, then pps drifts" "expect FAILED",
             ),
         ],
     )
@@ -527,6 +547,7 @@ class TestSpsStationHealthModel:
         sub_devices: dict,
         expected_init_health: HealthState,
         expected_init_report: str,
+        pps_drift_value: int,
         expected_final_health: HealthState,
         expected_final_report: str,
     ) -> None:
@@ -542,6 +563,7 @@ class TestSpsStationHealthModel:
             and their healths
         :param expected_init_health: the expected initial health
         :param expected_init_report: the expected initial health report
+        :param pps_drift_value: The value to update the pps drift to.
         :param expected_final_health: the expected final health
         :param expected_final_report: the expected final health report
         """
@@ -553,7 +575,7 @@ class TestSpsStationHealthModel:
         )
 
         # Set pps above drift threshold.
-        health_model.update_state(pps_delay_delta=6)
+        health_model.update_state(pps_delay_delta=pps_drift_value)
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,

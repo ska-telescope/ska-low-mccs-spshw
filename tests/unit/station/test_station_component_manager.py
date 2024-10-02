@@ -396,7 +396,7 @@ def test_get_static_delays(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # First we need an example mapping for our antennas, we only have 1 tile in tests,
+    # First we need an example mapping for our antennas, we have 4 tiles in tests,
     # but lets pretend we have a whole station
     channels = list(range(16))
 
@@ -415,15 +415,21 @@ def test_get_static_delays(
             antenna_no += 1
 
     static_delays = station_component_manager._update_static_delays()
-    expected_static_delays = [0 for _ in range(32)]
+    expected_static_delays = [
+        0 for _ in range(station_component_manager._number_of_tiles * 2 * len(channels))
+    ]
     for antenna, antenna_config in station_component_manager._antenna_mapping.items():
-        if int(antenna_config["tpm"]) == tile_id:
-            expected_static_delays[antenna_config["tpm_y_channel"]] = antenna_config[
-                "delay"
-            ]
-            expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
-                "delay"
-            ]
+        if int(antenna_config["tpm"]) in [
+            tile_id + i for i in range(0, station_component_manager._number_of_tiles)
+        ]:
+            expected_static_delays[
+                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                + antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
+            expected_static_delays[
+                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                + antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
     assert static_delays == expected_static_delays
 
 

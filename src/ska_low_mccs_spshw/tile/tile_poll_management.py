@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Optional
+from typing import Any, Callable, Optional
 
 from ska_control_model import ResultCode, TaskStatus
 
@@ -21,13 +21,7 @@ __all__ = [
     "TileLRCRequest",
     "TileRequest",
     "TileResponse",
-    "off_tpm_read_request_iterator",
-    "unconnected_tpm_read_request_iterator",
-    "unknown_tpm_read_request_iterator",
-    "unprogrammed_tpm_read_request_iterator",
-    "programmed_tpm_read_request_iterator",
-    "initialised_tpm_read_request_iterator",
-    "synchronised_tpm_read_request_iterator",
+    "RequestIterator",
 ]
 
 
@@ -168,184 +162,145 @@ class TileResponse:
     publish: bool
 
 
-def off_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is OFF.
+class RequestIterator:
+    """A class that returns attributes allowed given a TpmStatus."""
 
-    :yields: the name of an request group to be read from the device.
+    UNCONNECTED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS", "CONNECT"]
+    OFF_POLLED_ATTRIBUTES = ["CONNECT"]
+    UNKNOWN_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    PROGRAMMED_POLLED_ATTRIBUTES = [
+        "CHECK_CPLD_COMMS",
+        "CSP_ROUNDING",
+        "CHANNELISER_ROUNDING",
+        "IS_PROGRAMMED",
+        "CHECK_BOARD_TEMPERATURE",
+        "HEALTH_STATUS",
+        "PLL_LOCKED",
+    ]
+    INITIALISED_POLLED_ATTRIBUTES = [
+        "CHECK_CPLD_COMMS",
+        "CSP_ROUNDING",
+        "CHANNELISER_ROUNDING",
+        "IS_PROGRAMMED",
+        "HEALTH_STATUS",
+        "PLL_LOCKED",
+        "CHECK_BOARD_TEMPERATURE",
+        "HEALTH_STATUS",
+        "ADC_RMS",
+        "PLL_LOCKED",
+        "PENDING_DATA_REQUESTS",
+        "PPS_DELAY",
+        "PPS_DELAY_CORRECTION",
+        "IS_BEAMFORMER_RUNNING",
+        "FPGA_REFERENCE_TIME",
+        "PHASE_TERMINAL_COUNT",
+        "PREADU_LEVELS",
+        "STATIC_DELAYS",
+        "STATION_ID",
+        "TILE_ID",
+        "BEAMFORMER_TABLE",
+    ]
 
-    *    yield "CONNECT"
-    """
-    while True:
-        yield "CONNECT"
+    SYNCHRONISED_POLLED_ATTRIBUTES = [
+        "CHECK_CPLD_COMMS",
+        "CSP_ROUNDING",
+        "CHANNELISER_ROUNDING",
+        "IS_PROGRAMMED",
+        "HEALTH_STATUS",
+        "PLL_LOCKED",
+        "CHECK_BOARD_TEMPERATURE",
+        "HEALTH_STATUS",
+        "ADC_RMS",
+        "PLL_LOCKED",
+        "PENDING_DATA_REQUESTS",
+        "PPS_DELAY",
+        "PPS_DELAY_CORRECTION",
+        "IS_BEAMFORMER_RUNNING",
+        "FPGA_REFERENCE_TIME",
+        "PHASE_TERMINAL_COUNT",
+        "PREADU_LEVELS",
+        "STATIC_DELAYS",
+        "STATION_ID",
+        "TILE_ID",
+        "BEAMFORMER_TABLE",
+        "TILE_BEAMFORMER_FRAME",
+    ]
 
+    def __init__(self: RequestIterator):
+        """Construct a instance of RequestIterator."""
+        self.idx = 0
+        self._state = TpmStatus.UNKNOWN
+        self.allowed_attributes = {
+            TpmStatus.OFF: self.OFF_POLLED_ATTRIBUTES,
+            TpmStatus.UNKNOWN: self.UNKNOWN_POLLED_ATTRIBUTES,
+            TpmStatus.UNPROGRAMMED: self.UNPROGRAMMED_POLLED_ATTRIBUTES,
+            TpmStatus.UNCONNECTED: self.UNCONNECTED_POLLED_ATTRIBUTES,
+            TpmStatus.PROGRAMMED: self.PROGRAMMED_POLLED_ATTRIBUTES,
+            TpmStatus.INITIALISED: self.INITIALISED_POLLED_ATTRIBUTES,
+            TpmStatus.SYNCHRONISED: self.SYNCHRONISED_POLLED_ATTRIBUTES,
+        }
 
-def unconnected_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is NotConnected.
+    def calculate_stale_attributes(
+        self: RequestIterator, new_status: TpmStatus
+    ) -> set[Any]:
+        """
+        Return a set of attribute that will no longer be polled.
 
-    :yields: the name of an attribute group to be read from the device.
+        :param new_status: the new TpmStatus
 
-    *    yield "CONNECT"
-    *    yield "CHECK_CPLD_COMMS"
-    """
-    while True:
-        yield "CONNECT"
-        yield "CHECK_CPLD_COMMS"
+        :return: a set of attribute that will no longer be polled.
+        """
+        return set(self.allowed_attributes[self.state]) - set(
+            self.allowed_attributes[new_status]
+        )
 
+    @property
+    def state(self: RequestIterator) -> TpmStatus:
+        """
+        Return the TpmStatus.
 
-def unknown_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is Unknown.
+        :return: the TpmStatus
+        """
+        return self._state
 
-    :yields: the name of an attribute group to be read from the device.
+    @state.setter
+    def state(self: RequestIterator, new_state: TpmStatus) -> None:
+        """
+        Set the new TpmStatus.
 
-    *    yield "CHECK_CPLD_COMMS"
-    """
-    while True:
-        yield "CHECK_CPLD_COMMS"
+        :param new_state: the new TpmStatus.
+        """
+        if new_state != self._state:
+            print(f"{new_state=}")
+            # reset index to zero.
+            self.idx = 0
+            self._state = new_state
 
+    def __iter__(self: RequestIterator) -> RequestIterator:
+        """
+        Implement iter method.
 
-def unprogrammed_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is NotProgrammed.
+        :return: self.
+        """
+        return self
 
-    :yields: the name of an attribute group to be read from the device.
+    def __next__(self: RequestIterator) -> str:
+        """
+        Iterate over attributes allowed given current TpmStatus.
 
-    *    yield "CHECK_CPLD_COMMS"
-    """
-    while True:
-        yield "CHECK_CPLD_COMMS"
+        :raises AttributeError: when there are no attributes allowed in state.
+        :return: the next item.
+        """
+        allowed_attributes = self.allowed_attributes.get(self.state)
+        if allowed_attributes is None:
+            raise AttributeError(f"No attributes allowed in state {self.state}")
 
+        index = self.idx % len(allowed_attributes)
+        item = allowed_attributes[index]
 
-def programmed_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is Programmed.
-
-    :yields: the name of an attribute group to be read from the device.
-
-    *    yield "CHECK_CPLD_COMMS"
-    *    yield "CSP_ROUNDING"
-    *    yield "CHANNELISER_ROUNDING"
-    *    yield "IS_PROGRAMMED"
-    *    yield "CHECK_BOARD_TEMPERATURE"
-    *    yield "HEALTH_STATUS"
-    *    yield "PLL_LOCKED"
-    """
-    while True:
-        yield "CHECK_CPLD_COMMS"
-        yield "CSP_ROUNDING"
-        yield "CHANNELISER_ROUNDING"
-        yield "IS_PROGRAMMED"
-        yield "CHECK_BOARD_TEMPERATURE"
-        yield "HEALTH_STATUS"
-        yield "PLL_LOCKED"
-
-
-def initialised_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is Initialised.
-
-    :yields: the name of an attribute group to be read from the device.
-
-    *    yield "CHECK_CPLD_COMMS"
-    *    yield "CSP_ROUNDING"
-    *    yield "CHANNELISER_ROUNDING"
-    *    yield "IS_PROGRAMMED"
-    *    yield "HEALTH_STATUS"
-    *    yield "PLL_LOCKED"
-    *    yield "CHECK_BOARD_TEMPERATURE"
-    *    yield "HEALTH_STATUS"
-    *    yield "ADC_RMS"
-    *    yield "PLL_LOCKED"
-    *    yield "PENDING_DATA_REQUESTS"
-    *    yield "PPS_DELAY"
-    *    yield "PPS_DELAY_CORRECTION"
-    *    yield "IS_BEAMFORMER_RUNNING"
-    *    yield "FPGA_REFERENCE_TIME"
-    *    yield "PHASE_TERMINAL_COUNT"
-    *    yield "PREADU_LEVELS"
-    *    yield "STATIC_DELAYS"
-    *    yield "STATION_ID"
-    *    yield "TILE_ID"
-    *    yield "BEAMFORMER_TABLE"
-    """
-    while True:
-        yield "CHECK_CPLD_COMMS"
-        yield "CSP_ROUNDING"
-        yield "CHANNELISER_ROUNDING"
-        yield "IS_PROGRAMMED"
-        yield "HEALTH_STATUS"
-        yield "PLL_LOCKED"
-        yield "CHECK_BOARD_TEMPERATURE"
-        yield "HEALTH_STATUS"
-        yield "ADC_RMS"
-        yield "PLL_LOCKED"
-        yield "PENDING_DATA_REQUESTS"
-        yield "PPS_DELAY"
-        yield "PPS_DELAY_CORRECTION"
-        yield "IS_BEAMFORMER_RUNNING"
-        yield "FPGA_REFERENCE_TIME"
-        yield "PHASE_TERMINAL_COUNT"
-        yield "PREADU_LEVELS"
-        yield "STATIC_DELAYS"
-        yield "STATION_ID"
-        yield "TILE_ID"
-        yield "BEAMFORMER_TABLE"
-
-
-def synchronised_tpm_read_request_iterator() -> Iterator[str]:
-    """
-    Return an iterator yielding requests to be polled when TpmStatus is Initialised.
-
-    :yields: the name of an attribute group to be read from the device.
-
-    *    yield "CHECK_CPLD_COMMS"
-    *    yield "CSP_ROUNDING"
-    *    yield "CHANNELISER_ROUNDING"
-    *    yield "IS_PROGRAMMED"
-    *    yield "HEALTH_STATUS"
-    *    yield "PLL_LOCKED"
-    *    yield "CHECK_BOARD_TEMPERATURE"
-    *    yield "HEALTH_STATUS"
-    *    yield "ADC_RMS"
-    *    yield "PLL_LOCKED"
-    *    yield "PENDING_DATA_REQUESTS"
-    *    yield "PPS_DELAY"
-    *    yield "PPS_DELAY_CORRECTION"
-    *    yield "IS_BEAMFORMER_RUNNING"
-    *    yield "FPGA_REFERENCE_TIME"
-    *    yield "PHASE_TERMINAL_COUNT"
-    *    yield "PREADU_LEVELS"
-    *    yield "STATIC_DELAYS"
-    *    yield "STATION_ID"
-    *    yield "TILE_ID"
-    *    yield "BEAMFORMER_TABLE"
-    *    yield "TILE_BEAMFORMER_FRAME"
-    """
-    while True:
-        yield "CHECK_CPLD_COMMS"
-        yield "CSP_ROUNDING"
-        yield "CHANNELISER_ROUNDING"
-        yield "IS_PROGRAMMED"
-        yield "HEALTH_STATUS"
-        yield "PLL_LOCKED"
-        yield "CHECK_BOARD_TEMPERATURE"
-        yield "HEALTH_STATUS"
-        yield "ADC_RMS"
-        yield "PLL_LOCKED"
-        yield "PENDING_DATA_REQUESTS"
-        yield "PPS_DELAY"
-        yield "PPS_DELAY_CORRECTION"
-        yield "IS_BEAMFORMER_RUNNING"
-        yield "FPGA_REFERENCE_TIME"
-        yield "PHASE_TERMINAL_COUNT"
-        yield "PREADU_LEVELS"
-        yield "STATIC_DELAYS"
-        yield "STATION_ID"
-        yield "TILE_ID"
-        yield "BEAMFORMER_TABLE"
-        yield "TILE_BEAMFORMER_FRAME"
+        self.idx += 1
+        return item
 
 
 class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
@@ -359,28 +314,24 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
     * only attributes allowed to be polled given a TpmStatus are returned.
     """
 
-    def __init__(self) -> None:
-        """Initialise a new instance."""
-        self._programmed_tpm_read_request_iterator = (
-            programmed_tpm_read_request_iterator()
-        )
-        self._initialised_tpm_read_request_iterator = (
-            initialised_tpm_read_request_iterator()
-        )
-        self._synchronised_tpm_read_request_iterator = (
-            synchronised_tpm_read_request_iterator()
-        )
-        self._off_tpm_read_request_iterator = off_tpm_read_request_iterator()
-        self._unknown_tpm_read_request_iterator = unknown_tpm_read_request_iterator()
-        self._unconnected_tpm_read_request_iterator = (
-            unconnected_tpm_read_request_iterator()
-        )
-        self._unprogrammed_tpm_read_request_iterator = (
-            unprogrammed_tpm_read_request_iterator()
-        )
-        self.initialise_request: Optional[Any] = None
-        self.download_firmware_request: Optional[Any] = None
-        self.start_acquisition_request: Optional[Any] = None
+    def __init__(
+        self,
+        stale_attribute_callback: Callable | None = None,
+        _request_iterator: RequestIterator | None = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param stale_attribute_callback: an optional callback to
+            call with attributes no longer being updated.
+        :param _request_iterator: an optional RequestIterator to supply for
+            testing.
+        """
+        self._stale_attribute_callback = stale_attribute_callback
+        self.request_iterator = _request_iterator or RequestIterator()
+        self.initialise_request: Optional[TileLRCRequest] = None
+        self.download_firmware_request: Optional[TileLRCRequest] = None
+        self.start_acquisition_request: Optional[TileLRCRequest] = None
         self._desire_connection = False
         self._check_global_alarms = False
         self.command_wipe_time: dict[str, float] = {}
@@ -457,16 +408,8 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         self.command_wipe_time["start_acquisition"] = wipe_time
         self.start_acquisition_request.notify_queued()
 
-    def get_request(  # pylint: disable=too-many-return-statements, too-many-branches
-        self, tpm_status: TpmStatus
-    ) -> str | TileRequest | None:
-        """
-        Get the next request to execute on the Tile.
-
-        :param tpm_status: the tpm_status at the time of the request.
-
-        :return: the next request to execute on the Tile.
-        """
+    def _wipe_old_long_running_commands(self) -> None:
+        """Remove old commands."""
         # Check if the initialise LRC need to be aborted.
         for command, wipe_time in self.command_wipe_time.items():
             if time.time() > wipe_time:
@@ -484,6 +427,18 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                             self.start_acquisition_request.notify_removed_from_queue()
                             self.start_acquisition_request = None
 
+    def get_request(  # pylint: disable=too-many-return-statements
+        self, tpm_status: TpmStatus
+    ) -> str | TileRequest | None:
+        """
+        Get the next request to execute on the Tile.
+
+        :param tpm_status: the tpm_status at the time of the request.
+
+        :return: the next request to execute on the Tile.
+        """
+        self._wipe_old_long_running_commands()
+
         # Key connection commands come first
         if self._desire_connection:
             self._desire_connection = False
@@ -492,14 +447,9 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
             self._check_global_alarms = False
             return "CHECK_CPLD_COMMS"
 
+        # Check for any commands.
         match tpm_status:
-            case TpmStatus.OFF:
-                return next(self._off_tpm_read_request_iterator)
-            case TpmStatus.UNKNOWN:
-                return next(self._unknown_tpm_read_request_iterator)
-            case TpmStatus.UNCONNECTED:
-                return next(self._unconnected_tpm_read_request_iterator)
-            case TpmStatus.UNPROGRAMMED:
+            case TpmStatus.UNPROGRAMMED | TpmStatus.PROGRAMMED:
                 if self.initialise_request:
                     request = self.initialise_request
                     self.initialise_request = None
@@ -508,18 +458,7 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                     request = self.download_firmware_request
                     self.download_firmware_request = None
                     return request
-                return next(self._unprogrammed_tpm_read_request_iterator)
-            case TpmStatus.PROGRAMMED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self.download_firmware_request = None
-                    return request
-                return next(self._programmed_tpm_read_request_iterator)
-            case TpmStatus.INITIALISED:
+            case TpmStatus.INITIALISED | TpmStatus.SYNCHRONISED:
                 if self.initialise_request:
                     request = self.initialise_request
                     self.initialise_request = None
@@ -532,20 +471,14 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                     request = self.start_acquisition_request
                     self.start_acquisition_request = None
                     return request
-                return next(self._initialised_tpm_read_request_iterator)
-            case TpmStatus.SYNCHRONISED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self.download_firmware_request = None
-                    return request
-                if self.start_acquisition_request:
-                    request = self.start_acquisition_request
-                    self.start_acquisition_request = None
-                    return request
-                return next(self._synchronised_tpm_read_request_iterator)
-            case _:
-                return "RAISE_UNKNOWN_TPM_STATUS"
+
+        # Calculate attributes no longer being polled, and call a callback with them
+        # If a callback is available.
+        stale_attributes = self.request_iterator.calculate_stale_attributes(tpm_status)
+        self.request_iterator.state = tpm_status
+        if stale_attributes:
+            if self._stale_attribute_callback is not None:
+                self._stale_attribute_callback(stale_attributes)
+
+        # return next item to poll
+        return next(self.request_iterator)

@@ -41,7 +41,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -108,6 +108,8 @@ class TestSubrackHealthModel:
 
         health_model.update_data(data)
 
+        print(f"actual == {health_model.evaluate_health()}")
+        print(f"expected == {expected_final_health}, {expected_final_report}")
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,
@@ -121,7 +123,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -148,7 +150,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -342,7 +344,7 @@ class TestSubrackHealthModel:
             "board_temps": [50.0, 50.0],
             "backplane_temps": [50.0, 50.0],
             "subrack_fan_speeds": [60.0, 60.0],
-            "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+            "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
             "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
             "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
             "tpm_voltages": [5.0, 5.0, 5.0, 5.0],

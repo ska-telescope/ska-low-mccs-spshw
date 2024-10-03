@@ -6,11 +6,11 @@ display: ":0"
 xauthority: "~/.Xauthority"
 
 system: SW-infrastructure
-subsystem: low-mccs-spshw 
+subsystem: low-mccs-spshw
 telescope: SKA-low
 
 labels:
-  app: ska-low-mccs-spshw 
+  app: ska-low-mccs-spshw
 
 global:
   minikube: true
@@ -101,6 +101,17 @@ deviceServers: {} # e.g....
   #       logging_level_default: 5
   #       nodeSelector:
   #         kubernetes.io/hostname: psi-node3
+  # pdus:
+  #   pdu-ci-1:
+  #     low-mccs/pdu/ci-1:
+  #       device_definition: /app/filepath
+  #       host: localhost
+  #       port: 8080
+  #       user_name: test
+  #       auth_key: foo
+  #       priv_key: bar
+  #       max_snmp_objects: 10
+  #       update_rate: 10
 
 simulators: {} # e.g.
   # daqs:

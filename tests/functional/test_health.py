@@ -155,13 +155,13 @@ def device_online(
     change_event_callbacks.assert_change_event("device_state", Anything)
 
 
-@given("the {device} has been commanded to turn on")
-@when("the {device} has been commanded to turn on")
+@given(parsers.cfparse("the {device} has been commanded to turn on"))
+@when(parsers.cfparse("the {device} has been commanded to turn on"))
 def device_on(device: str, device_proxies: dict[str, tango.DeviceProxy]) -> None:
     """
     Command the device to turn on.
 
-    :param device: device to put online.
+    :param device: device to turn on.
     :param device_proxies: dictionary of device proxies.
     """
     device_proxies[device].On()

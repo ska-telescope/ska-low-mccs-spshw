@@ -155,15 +155,16 @@ def device_online(
     change_event_callbacks.assert_change_event("device_state", Anything)
 
 
-@given("the Station has been commanded to turn on")
-@when("the Station has been commanded to turn on")
-def station_on(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@given("the {device} has been commanded to turn on")
+@when("the {device} has been commanded to turn on")
+def device_on(device: str, device_proxies: dict[str, tango.DeviceProxy]) -> None:
     """
-    Command the station to turn on.
+    Command the device to turn on.
 
+    :param device: device to put online.
     :param device_proxies: dictionary of device proxies.
     """
-    device_proxies["Station"].On()
+    device_proxies[device].On()
 
 
 @given("the Station has been commanded to turn to standby")

@@ -46,3 +46,16 @@ Feature: Test health
         Then the Tile reports that its HealthState is OK
         And the Station reports that its HealthState is FAILED
         And the Subrack reports that its HealthState is FAILED
+
+    # This isn't really a health scenario but the code exists for these steps already.
+    # TODO: Refactor out generic test steps.
+    Scenario: Test Standby to On
+        Given a Station that is online
+        And a Subrack that is online
+        And a Tile that is online
+        And the Station has been commanded to turn to standby
+        And the Station reports that its state is STANDBY
+        And the Tile reports that its state is OFF
+        When the Tile has been commanded to turn on
+        Then the Tile reports that its state is ON
+        And the Station reports that its state is ON

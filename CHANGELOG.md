@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+* [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
+
 ## 0.17.4
 
 * [SKB-519] Prevent subrack from sticking in UNKNOWN after a failed poll.

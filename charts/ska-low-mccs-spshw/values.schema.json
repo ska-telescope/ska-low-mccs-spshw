@@ -395,6 +395,83 @@
               }
             }
           ]
+        },
+        "pdus": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "propertyNames": {
+                "$comment": "Slug used to construct server name, k8s pods, etc",
+                "format": "hostname"
+              },
+              "additionalProperties": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "propertyNames": {
+                      "$comment": "device TRL",
+                      "pattern": "^[a-z0-9-]+/[a-z0-9-]+/[a-z0-9-]+$"
+                    },
+                    "additionalProperties": {
+                      "oneOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "device_definition": {
+                              "type": "string"
+                            },
+                            "priv_key": {
+                              "type": "string"
+                            },
+                            "user_name": {
+                              "type": "string"
+                            },
+                            "auth_key": {
+                              "type": "string"
+                            },
+                            "community": {
+                              "type": "string"
+                            },
+                            "host": {
+                              "type": "string"
+                            },
+                            "port": {
+                              "type": "integer"
+                            },
+                            "update_rate": {
+                              "type": "integer"
+                            },
+                            "max_snmp_objects": {
+                              "type": "integer"
+                            },
+                            "logging_level_default": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 5
+                            }
+                          },
+                          "required": [
+                            "device_definition",
+                            "host"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
         }
       },
       "additionalProperties": false

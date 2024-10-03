@@ -13,7 +13,7 @@ platform:
     stations:
       - ci-1
       - real-daq-1
-  
+
   stations:
     ci-1:
       id: 1
@@ -24,6 +24,11 @@ platform:
             simulated: true
           bandpass:
             simulated: true
+        pdus:
+          pdur1:
+            host: 10.0.10.210
+            device_definition: src/ska_low_mccs_spshw/pdu/pdu/pdu.yaml
+            v2_community: private
         subracks:
           sr1:
             simulated: true

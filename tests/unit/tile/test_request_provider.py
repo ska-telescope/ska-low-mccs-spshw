@@ -76,6 +76,9 @@ class TestRequestProvider:
             command_object=unittest.mock.Mock(),
             task_callback=unittest.mock.Mock(),
         )
+        assert not isinstance(
+            tile_request_provider.get_request(TpmStatus.INITIALISED), TileLRCRequest
+        )
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         tile_request_provider.desire_initialise(request)
         assert isinstance(

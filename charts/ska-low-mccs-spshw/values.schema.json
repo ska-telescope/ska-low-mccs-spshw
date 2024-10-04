@@ -461,10 +461,7 @@
                           },
                           "required": [
                             "device_definition",
-                            "max_snmp_objects",
-                            "update_rate",
-                            "host",
-                            "port"
+                            "host"
                           ],
                           "additionalProperties": false
                         }

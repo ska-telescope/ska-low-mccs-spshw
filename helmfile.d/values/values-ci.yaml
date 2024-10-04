@@ -25,7 +25,7 @@ platform:
           bandpass:
             simulated: true
         pdus:
-          pdu_r1:
+          pdur1:
             host: 10.0.10.210
             device_definition: /workspaces/ska-low-mccs-spshw/src/ska_low_mccs_spshw/pdu/pdu/pdu.yaml
             v2_community: private

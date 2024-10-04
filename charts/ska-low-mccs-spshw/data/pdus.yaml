@@ -46,9 +46,11 @@ server:
                 - name: Host
                   values:
                     - {{quote $this_pdu.host}}
+{{- with $this_pdu.port}}
                 - name: Port
                   values:
-                    - {{quote $this_pdu.port}}
+                    - {{quote .}}
+{{- end}}
 {{- with $this_pdu.community}}
                 - name: V2Community
                   values:
@@ -69,12 +71,16 @@ server:
                   values:
                     - {{quote .}}
 {{- end}}
+{{- with $this_pdu.max_snmp_objects}}
                 - name: MaxObjectsPerSNMPCmd
                   values:
-                    - {{quote $this_pdu.max_snmp_objects}}
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.update_rate}}
                 - name: UpdateRate
                   values:
-                    - {{quote $this_pdu.update_rate}}
+                    - {{quote .}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

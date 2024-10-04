@@ -474,7 +474,7 @@ def test_Abort_On(
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Test the process of Aborting a turn on command
+    Test the process of Aborting a turn on command.
 
     :param station_device: the SPS station Tango device under test.
     :param mock_tile_device_proxies: mock tile proxies that have been configured with
@@ -482,7 +482,6 @@ def test_Abort_On(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-
     station_device.subscribe_event(
         "state",
         EventType.CHANGE_EVENT,

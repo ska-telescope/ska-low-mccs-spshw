@@ -165,10 +165,10 @@ class TileResponse:
 class RequestIterator:
     """A class that returns attributes allowed given a TpmStatus."""
 
-    UNCONNECTED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS", "CONNECT"]
+    UNCONNECTED_POLLED_ATTRIBUTES = ["CONNECT"]
     OFF_POLLED_ATTRIBUTES = ["CONNECT"]
-    UNKNOWN_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
-    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
+    UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT"]
+    UNPROGRAMMED_POLLED_ATTRIBUTES = ["CONNECT"]
     PROGRAMMED_POLLED_ATTRIBUTES = [
         "CHECK_CPLD_COMMS",
         "CSP_ROUNDING",
@@ -272,7 +272,6 @@ class RequestIterator:
         :param new_state: the new TpmStatus.
         """
         if new_state != self._state:
-            print(f"{new_state=}")
             # reset index to zero.
             self.idx = 0
             self._state = new_state

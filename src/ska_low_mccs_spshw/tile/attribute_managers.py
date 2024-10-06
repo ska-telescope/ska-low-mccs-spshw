@@ -27,6 +27,7 @@ class AttributeManager:
         value_time_quality_callback: Callable,
         initial_value: Any = None,
         alarm_handler: None | Callable = None,
+        converter: Callable | None = None,
     ) -> None:
         """
         Initialise a new AttributeManager.
@@ -40,8 +41,11 @@ class AttributeManager:
         :param value_time_quality_callback: A hook to call with the attribute
             value, timestamp, and quality factor upon update.
         :param alarm_handler: A hook to call when in ALARM.
+        :param converter: a optional function to conver the value coming in.
         """
+        self._converter = converter
         self.alarm_handler = alarm_handler
+        self._initial_value = initial_value
         self._value = initial_value
         self._quality = (
             tango.AttrQuality.ATTR_INVALID
@@ -59,11 +63,11 @@ class AttributeManager:
         :param post: Optional flag to post an update.
         """
         value_changed = value != self._value
-        self._value = value
         self._last_update = time.time()
-        if self._value is None:
+        if value is None:
             self._quality = tango.AttrQuality.ATTR_INVALID
         else:
+            self._value = self._converter(value) if self._converter else value
             self.update_quality()
         if post:
             self.notify(value_changed)
@@ -76,9 +80,12 @@ class AttributeManager:
         """
         Return the attribute value.
 
-        :return: the attribute value.
+        :return: A tuple with value, last_updated and quaility.
+            Or None if attribute has not had an update yet.
         """
-        return self._value, self._last_update, self._quality
+        if self._value is not None:
+            return self._value, self._last_update, self._quality
+        return self._value
 
     def notify(self: AttributeManager, value_changed: bool) -> None:
         """
@@ -88,7 +95,9 @@ class AttributeManager:
             from the previous value.
         """
         if value_changed:
-            self._value_time_quality_callback(*self.read())
+            self._value_time_quality_callback(
+                self._value, self._last_update, self._quality
+            )
             if self.alarm_handler is not None:
                 self.alarm_handler()
 

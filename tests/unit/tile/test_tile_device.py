@@ -583,12 +583,6 @@ class TestMccsTile:
         change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=10)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
 
-        # TODO: MCCS-2295: This sleep represents a bug. The device is entering OFF
-        # before the attributes are marked as INVALID. The is due to the
-        # `_update_component_state` being called in the poll_failed and
-        # poll_succeeded methods, but the check for attributes being
-        # invalid is in get_request. Meaning state gets updated first.
-        time.sleep(0.3)
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
                 try:

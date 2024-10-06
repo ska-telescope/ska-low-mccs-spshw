@@ -228,7 +228,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.logger.debug(f"Getting request for state ({self._tpm_status.name}) ...")
         request_spec = self._request_provider.get_request(self._tpm_status)
-
+        self._update_component_state(power=self.power_state, fault=self.fault_state)
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
             return request_spec
@@ -429,7 +429,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
 
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+        self.update_fault_state(poll_success=False)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
@@ -515,7 +515,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 **{poll_response.command: poll_response.data},
             )
         super().poll_succeeded(poll_response)
-        self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
     def mark_stale(self: TileComponentManager, names: set[str]) -> None:
         """

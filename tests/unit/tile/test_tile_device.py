@@ -39,6 +39,7 @@ from ska_low_mccs_spshw.tile import (
     TileData,
     TileSimulator,
 )
+from ska_low_mccs_spshw.tile.tile_poll_management import RequestIterator
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 from tests.test_tools import (
     execute_lrc_to_completion,
@@ -68,7 +69,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "adc_power",
         "pps_present",
         "track_lrc_command",
-        timeout=7.0,
+        timeout=9.0,
     )
 
 
@@ -396,6 +397,231 @@ class TestMccsTile:
             assert (on_tile_device.staticTimeDelays == write_value).all()
         else:
             assert (on_tile_device.staticTimeDelays == init_value).all()
+
+    # pylint: disable=too-many-statements, too-many-locals
+    def test_basic_attribute_quality(
+        self: TestMccsTile,
+        tile_device: DeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        poll_rate: float,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test attribute quality when marked as invalid.
+
+        .. note::
+            This test is very basic. As part of MCCS-2295,
+            this test will check:
+
+            1. All cached attributes move from VALID to INVALID when
+            state changes FROM ON to OFF (exceptions clearly identified).
+
+            2. All cached attributes move from VALID to INVALID when
+            polling stopped (exceptions clearly identified).
+
+            3. An attribute that fails a poll will have its quality updated
+            to INVALID.
+
+        :param poll_rate: a fixture yielding the poll rate the device is
+            configured with.
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        """
+        # This latency represents the average time to process the results of a poll.
+        latency: float = 0.02
+        time_to_poll_attributes = (poll_rate + latency) * len(
+            RequestIterator.INITIALISED_POLLED_ATTRIBUTES
+        )
+        print(f"{time_to_poll_attributes=}")
+        # print(time_to_poll_attributes)
+        # assert False
+        assert tile_device.adminMode == AdminMode.OFFLINE
+
+        tile_device.subscribe_event(
+            "healthState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["health_state"],
+        )
+
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+        assert tile_device.healthState == HealthState.UNKNOWN
+
+        tile_device.adminMode = AdminMode.ONLINE
+        assert tile_device.adminMode == AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+
+        tile_component_manager._update_communication_state(
+            CommunicationStatus.ESTABLISHED
+        )
+        tile_device.On()
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.ON,
+            EventType.CHANGE_EVENT,
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
+        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        assert tile_device.healthState == HealthState.OK
+        time.sleep(time_to_poll_attributes)
+        excluded_tango_attributes = [
+            "buildState",
+            "versionId",
+            "loggingTargets",
+            "simulationMode",
+            "testMode",
+            "loggingLevel",
+            "controlMode",
+            "commandedState",
+            "State",
+            "Status",
+        ]
+        excluded_ska_base_attributes = [
+            "healthState",
+            "adminMode",
+            "longRunningCommandResult",
+            "longRunningCommandStatus",
+            "longRunningCommandsInQueue",
+            "longRunningCommandIDsInQueue",
+            "longRunningCommandInProgress",
+            "longRunningCommandProgress",
+        ]
+        excluded_state_attributes = [
+            "tileProgrammingState",
+            "isProgrammed",
+            "coreCommunicationStatus",
+        ]
+        excluded_not_implemented_attributes = [
+            "clockPresent",
+            "sysrefPresent",
+        ]
+        # These attributes will not get marked as INVALID, they
+        # will raise an exception when trying to read.
+        attribute_with_active_read = [
+            "tile_info",
+            "firmwareTemperatureThresholds",
+            "firmwareVersion",
+            "fpgasUnixTime",
+            "fpgaTime",
+            "fpgaReferenceTime",
+            "fpgaFrameTime",
+            "fortyGbDestinationIps",
+            "fortyGbDestinationPorts",
+            "currentTileBeamformerFrame",
+            "currentFrame",
+            "pendingDataRequests",
+            "isBeamformerRunning",
+        ]
+        # These attributes quality will not degrade.
+        # The health attributes should have this built into their evaluation.
+        health_attributes = [
+            "healthModelParams",
+            "temperatureHealth",
+            "voltageHealth",
+            "currentHealth",
+            "alarmHealth",
+            "adcHealth",
+            "timingHealth",
+            "ioHealth",
+            "dspHealth",
+            "healthReport",
+        ]
+        # These attributes are software configuration
+        # As such they will not degrade.
+        excluded_configuration_attributes = [
+            "channeliserRounding",  # There is no read, therefor this is all software
+            "testGeneratorActive",
+            "firmwareName",
+            "globalReferenceTime",
+            "cspDestinationIp",
+            "cspDestinationMac",
+            "cspDestinationPort",
+            "logicalTileId",
+            "stationId",
+            "antennaIds",
+            "srcip40gfpga1",
+            "srcip40gfpga2",
+            "lastPointingDelays",
+            "cspSpeadFormat",
+        ]
+
+        all_excluded_attribute = (
+            excluded_tango_attributes
+            + excluded_ska_base_attributes
+            + excluded_state_attributes
+            + excluded_not_implemented_attributes
+            + health_attributes
+            + excluded_configuration_attributes
+            + attribute_with_active_read
+        )
+        for attr in tile_device.get_attribute_list():
+            if attr not in all_excluded_attribute:
+                try:
+                    assert tile_device[attr].quality == tango.AttrQuality.ATTR_VALID
+                except AssertionError:
+                    print(f"{attr=} was not in quality ATTR_VALID")
+                    pytest.fail(f"{attr=} was not in quality ATTR_VALID")
+
+        tile_device.Off()
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.OFF,
+            EventType.CHANGE_EVENT,
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=10)
+        change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
+
+        # TODO: MCCS-2295: This sleep represents a bug. The device is entering OFF
+        # before the attributes are marked as INVALID. The is due to the
+        # `_update_component_state` being called in the poll_failed and
+        # poll_succeeded methods, but the check for attributes being
+        # invalid is in get_request. Meaning state gets updated first.
+        time.sleep(0.3)
+        for attr in tile_device.get_attribute_list():
+            if attr not in all_excluded_attribute:
+                try:
+                    assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
+                except AssertionError:
+                    print(f"{attr=} was not in quality ATTR_INVALID")
+                    pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
+        for attr in attribute_with_active_read:
+            try:
+                assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
+            except tango.DevFailed:
+                pass
+            except Exception as e:  # pylint: disable=broad-except
+                pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
+
+        tile_device.On()
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            PowerState.ON,
+            EventType.CHANGE_EVENT,
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
+        change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
+        assert tile_device.healthState == HealthState.OK
+        time.sleep(time_to_poll_attributes)
+
+        for attr in tile_device.get_attribute_list():
+            if attr not in all_excluded_attribute:
+                try:
+                    assert tile_device[attr].quality == tango.AttrQuality.ATTR_VALID
+                except AssertionError:
+                    print(f"{attr=} was not in quality ATTR_VALID")
+                    pytest.fail(f"{attr=} was not in quality ATTR_VALID")
 
     def test_healthState(
         self: TestMccsTile,

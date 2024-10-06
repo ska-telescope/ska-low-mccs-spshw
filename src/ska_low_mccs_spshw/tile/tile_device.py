@@ -271,7 +271,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
-                    initial_value=True,
                 ),
                 "stationId": AttributeManager(
                     functools.partial(self.post_change_event, "stationId"),
@@ -577,18 +576,25 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     def _update_attribute_callback(
         self: MccsTile,
+        mark_invalid: bool = False,
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value
-                self._health_model.update_state(tile_health_structure=attribute_value)
-                self.update_tile_health_attributes()
+                self.tile_health_structure = attribute_value if not mark_invalid else {}
+                self._health_model.update_state(
+                    tile_health_structure=self.tile_health_structure
+                )
+                self.update_tile_health_attributes(mark_invalid=mark_invalid)
             else:
                 try:
-                    self.logger.info(f"Update attribute {attribute_name}")
+                    self.logger.debug(f"Update attribute {attribute_name}")
                     tango_name = self.attr_map[attribute_name]
-                    self._attribute_state[tango_name].update(attribute_value)
+                    if mark_invalid:
+                        self._attribute_state[tango_name].mark_stale()
+                    else:
+                        self._attribute_state[tango_name].update(attribute_value)
+
                 except KeyError as e:
                     self.logger.error(f"Key Error {repr(e)}")
                 except Exception as e:  # pylint: disable=broad-except
@@ -655,12 +661,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 break
         return None
 
-    def update_tile_health_attributes(self: MccsTile) -> None:
-        """Update TANGO attributes from the tile health structure dictionary."""
+    def update_tile_health_attributes(
+        self: MccsTile, mark_invalid: bool = False
+    ) -> None:
+        """
+        Update TANGO attributes from the tile health structure dictionary.
+
+        :param mark_invalid: True when values being reported are not valid.
+        """
         for (
             attribute_name,
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
+            if mark_invalid:
+                try:
+                    self._attribute_state[attribute_name].mark_stale()
+                except KeyError:
+                    self.logger.warning(f"Attribute {attribute_name} not found.")
+                continue
             attribute_value = self.unpack_monitoring_point(
                 copy.deepcopy(self.tile_health_structure),
                 dictionary_path,
@@ -668,7 +686,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             if attribute_value is None:
                 continue
             try:
-                self.logger.info(
+                self.logger.debug(
                     f"Updating health attribute {attribute_name} "
                     f"value to {attribute_value}"
                 )

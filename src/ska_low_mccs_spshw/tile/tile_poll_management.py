@@ -242,7 +242,7 @@ class RequestIterator:
         }
 
     def calculate_stale_attributes(
-        self: RequestIterator, new_status: TpmStatus
+        self: RequestIterator, new_status: TpmStatus | None
     ) -> set[Any]:
         """
         Return a set of attribute that will no longer be polled.
@@ -251,9 +251,11 @@ class RequestIterator:
 
         :return: a set of attribute that will no longer be polled.
         """
-        return set(self.allowed_attributes[self.state]) - set(
-            self.allowed_attributes[new_status]
-        )
+        if new_status:
+            return set(self.allowed_attributes[self.state]) - set(
+                self.allowed_attributes[new_status]
+            )
+        return set(self.allowed_attributes[self.state])
 
     @property
     def state(self: RequestIterator) -> TpmStatus:
@@ -425,6 +427,14 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                         if self.start_acquisition_request:
                             self.start_acquisition_request.notify_removed_from_queue()
                             self.start_acquisition_request = None
+
+    def __del__(self) -> None:
+        """Clean up and notify callbacks."""
+        stale_attributes = self.request_iterator.calculate_stale_attributes(None)
+        self.request_iterator.state = TpmStatus.UNKNOWN
+        if stale_attributes:
+            if self._stale_attribute_callback is not None:
+                self._stale_attribute_callback(stale_attributes)
 
     def get_request(  # pylint: disable=too-many-return-statements
         self, tpm_status: TpmStatus

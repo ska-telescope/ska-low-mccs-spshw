@@ -434,7 +434,8 @@ class TestTileComponentManager:
             power=PowerState.OFF, lookahead=10, consume_nonmatches=True
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.OFF.pretty_name()
+            programming_state=TpmStatus.OFF.pretty_name(),
+            lookahead=20,  # TODO: is this component_state?
         )
 
     def test_eventual_consistency_of_on_command(

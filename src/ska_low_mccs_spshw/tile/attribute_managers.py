@@ -72,6 +72,18 @@ class AttributeManager:
         if post:
             self.notify(value_changed)
 
+    def mark_stale(self: AttributeManager) -> None:
+        """Mark attribute as stale."""
+        if (
+            self._initial_value == self._value
+            or self._quality == tango.AttrQuality.ATTR_INVALID
+        ):
+            return
+        self._last_update = time.time()
+        self._quality = tango.AttrQuality.ATTR_INVALID
+        if self._value is not None:
+            self.notify(True)
+
     def update_quality(self: AttributeManager) -> None:
         """Update the attribute quality factor."""
         self._quality = tango.AttrQuality.ATTR_VALID

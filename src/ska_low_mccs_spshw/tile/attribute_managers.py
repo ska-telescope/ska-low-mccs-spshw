@@ -96,7 +96,7 @@ class AttributeManager:
             Or None if attribute has not had an update yet.
         """
         if self._value is not None:
-            return self._value, self._last_update, self._quality
+            return self._value, time.time(), self._quality
         return self._value
 
     def notify(self: AttributeManager, value_changed: bool) -> None:

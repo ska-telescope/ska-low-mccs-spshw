@@ -12,6 +12,7 @@ import copy
 import gc
 import itertools
 import json
+import random
 import time
 import unittest.mock
 from typing import Any, Iterator, Optional
@@ -69,6 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "adc_power",
         "pps_present",
         "track_lrc_command",
+        "attribute_state",
         timeout=9.0,
     )
 
@@ -704,6 +706,46 @@ class TestMccsTile:
         )
         tile_component_manager._update_attribute_callback(adc_rms=list(range(2, 34)))
         change_event_callbacks["adc_power"].assert_change_event(list(range(2, 34)))
+
+    @pytest.mark.parametrize(
+        "attribute_name",
+        [
+            "adcPower",
+            "preaduLevels",
+            "tileProgrammingState",
+        ],
+    )
+    def test_archive(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        attribute_name: str,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test the archiving of tile attributes.
+
+        As part of SKB-408, the archive rate can occur at any given cadence.
+        This test checks that the timestamp changes with each read of the attribute.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param attribute_name: a string with the attribute name under test.
+        """
+        on_tile_device.subscribe_event(
+            attribute_name,
+            EventType.ARCHIVE_EVENT,
+            change_event_callbacks["attribute_state"],
+        )
+        change_event_callbacks["attribute_state"].assert_change_event(Anything)
+
+        random_sleep = random.randrange(1, 4) / 10
+        t1 = on_tile_device.read_attribute(attribute_name).time.totime()
+        time.sleep(random_sleep)
+        t2 = on_tile_device.read_attribute(attribute_name).time.totime()
+        assert t2 - t1 == pytest.approx(random_sleep, 0.1)
 
     def test_tile_info(
         self: TestMccsTile,

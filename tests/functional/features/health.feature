@@ -53,7 +53,7 @@ Feature: Test health
         Given a Station that is online
         And a Subrack that is online
         And a Tile that is online
-        And the Station has been commanded to turn to standby
+        And the Station has been commanded to turn to Standby
         And the Station reports that its state is STANDBY
         And the Tile reports that its state is OFF
         When the Tile has been commanded to turn On
@@ -64,7 +64,7 @@ Feature: Test health
         Given a Station that is online
         And a Subrack that is online
         And a Tile that is online
-        And the Station has been commanded to turn to standby
+        And the Station has been commanded to turn to Standby
         And the Station reports that its state is STANDBY
         And the Tile reports that its state is OFF
         When the Station has been commanded to turn On

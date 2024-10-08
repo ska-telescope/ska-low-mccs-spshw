@@ -183,6 +183,23 @@ def device_on(
     command_info[device + "On"] = device_proxies[device].On()
 
 
+@given(parsers.cfparse("the {device} has been commanded to turn to Standby"))
+@when(parsers.cfparse("the {device} has been commanded to turn to Standby"))
+def device_standby(
+    device: str,
+    device_proxies: dict[str, tango.DeviceProxy],
+    command_info: dict[str, Any],
+) -> None:
+    """
+    Command the device to turn on.
+
+    :param device: device to turn on.
+    :param device_proxies: dictionary of device proxies.
+    :param command_info: dictionary to store command ID.
+    """
+    command_info[device + "Standby"] = device_proxies[device].Standby()
+
+
 @then(parsers.cfparse("the {device} {command} command finishes"))
 def device_command_finishes(
     device_proxies: dict[str, tango.DeviceProxy],

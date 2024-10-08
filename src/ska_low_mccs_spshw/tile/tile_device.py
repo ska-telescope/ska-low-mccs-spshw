@@ -1215,7 +1215,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has responded to a read with valid data.
+        Expected: `integer` number of times ddr interface has responded to a read
+        with valid data.
 
         :example:
             >>> tile.ddr_rd_dat_cnt

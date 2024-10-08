@@ -131,7 +131,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._info: dict[str, Any] = {}
 
     def init_device(self: MccsTile) -> None:
-        """Initialise the device."""
+        """
+        Initialise the device.
+
+        :raises TypeError: when attributes have a converter
+            that is not callable.
+        """
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
@@ -215,49 +220,45 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "board_temperature": "boardTemperature",
         }
 
+        attribute_converters = {
+            "adc_pll_status": _serialise_object,
+            "station_beamformer_error_count": _serialise_object,
+            "crc_error_count": _serialise_object,
+            "bip_error_count": _serialise_object,
+            "decode_error_count": _serialise_object,
+            "linkup_loss_count": _serialise_object,
+            "ddr_reset_counter": _serialise_object,
+            "resync_count": _serialise_object,
+            "lane_error_count": _serialise_object,
+            "clock_managers": _serialise_object,
+            "clocks": _serialise_object,
+            "adc_sysref_counter": _serialise_object,
+            "adc_sysref_timing_requirements": _serialise_object,
+            "coreCommunicationStatus": _serialise_object,
+            "qpll_status": _serialise_object,
+            "f2f_pll_status": _serialise_object,
+            "timing_pll_status": _serialise_object,
+            "voltages": _serialise_object,
+            "temperatures": _serialise_object,
+            "currents": _serialise_object,
+            "timing": _serialise_object,
+            "io": _serialise_object,
+            "dsp": _serialise_object,
+            "adcs": _serialise_object,
+            "beamformerTable": _flatten_list,
+        }
+
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
         self._attribute_state: dict[str, AttributeManager] = {}
 
         # generic atributes
         for attr_name in self.attr_map.values():
+            converter = attribute_converters.get(attr_name)
+            if converter is not None and not callable(converter):
+                raise TypeError(f"The converter for '{attr_name}' is not callable.")
             self._attribute_state[attr_name] = AttributeManager(
-                functools.partial(self.post_change_event, attr_name)
-            )
-
-        attributes_to_serialise = [
-            "adc_pll_status",
-            "station_beamformer_error_count",
-            "crc_error_count",
-            "bip_error_count",
-            "decode_error_count",
-            "linkup_loss_count",
-            "ddr_reset_counter",
-            "resync_count",
-            "lane_error_count",
-            "clock_managers",
-            "clocks",
-            "adc_sysref_counter",
-            "adc_sysref_timing_requirements",
-            "coreCommunicationStatus",
-            "qpll_status",
-            "f2f_pll_status",
-            "timing_pll_status",
-            "voltages",
-            "temperatures",
-            "currents",
-            "timing",
-            "io",
-            "dsp",
-            "adcs",
-        ]
-        for attribute_name in attributes_to_serialise:
-            self._attribute_state.update(
-                {
-                    attribute_name: AttributeManager(
-                        functools.partial(self.post_change_event, attribute_name),
-                        converter=_serialise_object,
-                    ),
-                }
+                functools.partial(self.post_change_event, attr_name),
+                converter=converter,
             )
 
         # Specialised attributes.
@@ -304,10 +305,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 ),
                 "alarms": AlarmAttributeManager(
                     functools.partial(self.post_change_event, "alarms"),
-                ),
-                "beamformerTable": AttributeManager(
-                    functools.partial(self.post_change_event, "beamformerTable"),
-                    converter=_flatten_list,
                 ),
             }
         )

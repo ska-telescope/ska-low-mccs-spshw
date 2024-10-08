@@ -525,9 +525,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         while len(names) != 0:
             val = names.pop()
-            if _ATTRIBUTE_MAP.get(val):
+            if _ATTRIBUTE_MAP.get(val) is not None:
                 mapped_val = _ATTRIBUTE_MAP[val]
-                self.logger.error(f"Making {mapped_val=} as invalid")
                 try:
                     self._update_attribute_callback(
                         mark_invalid=True, **{mapped_val: None}

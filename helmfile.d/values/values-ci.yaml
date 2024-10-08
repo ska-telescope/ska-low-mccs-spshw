@@ -27,7 +27,7 @@ platform:
         pdus:
           pdur1:
             host: 10.0.10.210
-            device_definition: /workspaces/ska-low-mccs-spshw/src/ska_low_mccs_spshw/pdu/pdu/pdu.yaml
+            device_definition: src/ska_low_mccs_spshw/pdu/pdu/pdu.yaml
             v2_community: private
         subracks:
           sr1:

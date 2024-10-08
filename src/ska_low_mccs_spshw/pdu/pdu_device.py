@@ -68,7 +68,7 @@ class MccsPdu(AttributePollingDevice):
         self._health_state: HealthState
         self._health_model: PduHealthModel
         self._dynamic_attrs: dict
-        self._version_id = sys.modules["ska_low_mccs"].__version__
+        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
 
         super().__init__(*args, **kwargs)
 
@@ -206,7 +206,7 @@ class MccsPdu(AttributePollingDevice):
         # and contains thousands of standard MIBs and vendor MIBs for COTS hardware.
         # Extra MIBs can be dropped in ./mib_library, which will be searched first.
         miblib = str(
-            importlib.resources.files("ska_sat_lmc.whiterabbit").joinpath("mib_library")
+            importlib.resources.files("ska_low_mccs_spshw.pdu").joinpath("mib_library")
         )
         self.logger.info("adding mib_library %s", miblib)
         addMibCompiler(

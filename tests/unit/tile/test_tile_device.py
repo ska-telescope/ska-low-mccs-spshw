@@ -95,6 +95,7 @@ def test_context_fixture(
     harness.add_tile_device(
         tile_id,
         device_class=patched_tile_device_class,
+        logging_level=2,
     )
     with harness as context:
         yield context

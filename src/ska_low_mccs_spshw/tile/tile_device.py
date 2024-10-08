@@ -107,6 +107,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
+        self._initial_pps_delay: int | None = None
 
     def init_device(self: MccsTile) -> None:
         """Initialise the device."""
@@ -146,6 +147,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "channeliser_rounding": "channeliserRounding",
             "pll_locked": "pllLocked",
             "pps_delay": "ppsDelay",
+            "pps_drift": "ppsDrift",
             "pps_delay_correction": "ppsDelayCorrection",
             "phase_terminal_count": "phaseTerminalCount",
             "beamformer_running": "isBeamformerRunning",
@@ -196,7 +198,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
         self._attribute_state: dict[str, AttributeManager] = {}
 
-        # generic atributes
+        # generic attributes
         for attr_name in self.attr_map.values():
             self._attribute_state[attr_name] = AttributeManager(
                 functools.partial(self.post_change_event, attr_name)
@@ -686,6 +688,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._multi_attr.check_alarm(name)
         except tango.DevFailed:
             self.logger.debug("no alarm defined")
+
+        if name == "ppsDelay":
+            self._health_model.update_data({name: attr_value})
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1767,19 +1772,32 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the delay between PPS and 10 MHz clock.
 
-        :return: Return the PPS delay in nanoseconds
+        :return: Return the PPS delay in 1.25ns units.
         """
         if self._attribute_state["ppsDelay"].read()[0] is None:
-            power = self.component_manager.pps_delay
-            self._attribute_state["ppsDelay"].update(power, post=False)
+            self._initial_pps_delay = self.component_manager.pps_delay
+            self._attribute_state["ppsDelay"].update(
+                self._initial_pps_delay, post=False
+            )
         return self._attribute_state["ppsDelay"].read()[0]
+
+    @attribute(dtype="DevLong")
+    def ppsDrift(self: MccsTile) -> int:
+        """
+        Return the observed drift in the ppsDelay of this Tile.
+
+        :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
+        """
+        if self._initial_pps_delay is None:
+            return 0
+        return abs(self.ppsDelay - self._initial_pps_delay)
 
     @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> int | None:
         """
         Return the correction made to the pps delay.
 
-        :return: Return the PPS delay in nanoseconds
+        :return: Return the PPS delay in 1.25ns units.
         """
         return self._attribute_state["ppsDelayCorrection"].read()[0]
 

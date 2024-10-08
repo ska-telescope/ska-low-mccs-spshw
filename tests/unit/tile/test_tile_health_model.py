@@ -167,6 +167,87 @@ class TestTileHealthModel:
 
     @pytest.mark.parametrize(
         [
+            "init_monitoring_points",
+            "init_health_state",
+            "init_health_report",
+            "final_monitoring_points",
+            "final_health_state",
+            "final_health_report",
+        ],
+        [
+            (
+                {},
+                HealthState.OK,
+                "Health is OK.",
+                {},
+                HealthState.OK,
+                "Health is OK.",
+            ),
+            (
+                {},
+                HealthState.OK,
+                "Health is OK.",
+                {"pps_drift": 5},
+                HealthState.DEGRADED,
+                "Intermediate health derived is in DEGRADED HealthState. "
+                'Cause: Monitoring point "/pps_drift": 5 over soft limit: 4',
+            ),
+            (
+                {},
+                HealthState.OK,
+                "Health is OK.",
+                {"pps_drift": 15},
+                HealthState.FAILED,
+                "Intermediate health derived is in FAILED HealthState. "
+                'Cause: Monitoring point "/pps_drift": 15 over hard limit: 10',
+            ),
+        ],
+    )
+    def test_derived_health_changed_value(  # pylint: disable=too-many-arguments
+        self: TestTileHealthModel,
+        health_model: TileHealthModel,
+        init_monitoring_points: dict[str, Any],
+        init_health_state: HealthState,
+        init_health_report: str,
+        final_monitoring_points: dict[str, Any],
+        final_health_state: HealthState,
+        final_health_report: str,
+    ) -> None:
+        """
+        Test the TileHealthModel for changing monitoring points.
+
+        :param health_model: the HealthModel to test
+        :param init_monitoring_points: the initial monitoring points,
+            using the defaults where not provided
+        :param init_health_state: the initial expected health state
+        :param init_health_report: the initial expected health report
+        :param final_monitoring_points: the new values of the monitoring points
+        :param final_health_state: the final expected health state
+        :param final_health_report: the initial final health report
+        """
+        health_model._state["tile_health_structure"] = TileData.get_tile_defaults()
+        health_model._state.update(
+            derived=health_model._merge_dicts(  # type: ignore[assignment]
+                health_model._state["derived"],  # type: ignore[arg-type]
+                init_monitoring_points,
+            )
+        )
+
+        assert (init_health_state, init_health_report) == health_model.evaluate_health()
+        health_model._state.update(
+            derived=health_model._merge_dicts(  # type: ignore[assignment]
+                health_model._state["derived"],  # type: ignore[arg-type]
+                final_monitoring_points,
+            )
+        )
+
+        assert (
+            final_health_state,
+            final_health_report,
+        ) == health_model.evaluate_health()
+
+    @pytest.mark.parametrize(
+        [
             "init_thresholds",
             "init_health_state",
             "init_health_report",

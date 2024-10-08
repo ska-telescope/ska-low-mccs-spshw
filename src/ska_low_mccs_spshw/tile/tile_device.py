@@ -1213,16 +1213,16 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     )
     def ddr_rd_dat_cnt(self: MccsTile) -> str:
         """
-        Return the read counter of the ddr interface.
+        Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been read.
+        Expected: `integer` number of times ddr interface has responded to a read with valid data.
 
         :example:
             >>> tile.ddr_rd_dat_cnt
             '{"FPGA0": 0,
             "FPGA1": 0}'
 
-        :return: number of times ddr interface has been read.
+        :return: number of times ddr interface has responded to a read with valid data.
         """
         return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
 

@@ -690,7 +690,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.logger.debug("no alarm defined")
 
         if name == "ppsDelay":
+            # Update health and push change event for ppsDrift.
             self._health_model.update_data({name: attr_value})
+            self.push_archive_event("ppsDrift", self.ppsDrift, attr_time, attr_quality)
+            self.push_change_event("ppsDrift", self.ppsDrift, attr_time, attr_quality)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """

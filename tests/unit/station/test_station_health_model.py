@@ -29,7 +29,7 @@ class TestSpsStationHealthModel:
         """
         health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
         health_model.update_state(
-            communicating=True, power=PowerState.ON, pps_delay_delta=0
+            communicating=True, power=PowerState.ON, pps_delay_spread=0
         )
 
         return health_model
@@ -518,7 +518,7 @@ class TestSpsStationHealthModel:
                 6,
                 HealthState.DEGRADED,
                 "Difference in ppsDelay between Tiles has exceeded 4 samples. "
-                "ppsDelayDelta: 6",
+                "ppsDelaySpread: 6",
                 id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
             ),
             pytest.param(
@@ -536,7 +536,7 @@ class TestSpsStationHealthModel:
                 10,
                 HealthState.FAILED,
                 "Difference in ppsDelay between Tiles has exceeded 9 samples. "
-                "ppsDelayDelta: 10",
+                "ppsDelaySpread: 10",
                 id="All devices healthy, expect OK, then pps drifts" "expect FAILED",
             ),
         ],
@@ -575,14 +575,14 @@ class TestSpsStationHealthModel:
         )
 
         # Set pps above drift threshold.
-        health_model.update_state(pps_delay_delta=pps_drift_value)
+        health_model.update_state(pps_delay_spread=pps_drift_value)
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,
         )
 
         # Set pps below drift threshold.
-        health_model.update_state(pps_delay_delta=3)
+        health_model.update_state(pps_delay_spread=3)
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,

@@ -214,7 +214,7 @@ class TestTileHealthModel:
         final_health_report: str,
     ) -> None:
         """
-        Test the TileHealthModel for changing monitoring points.
+        Test the TileHealthModel for changing derived monitoring points.
 
         :param health_model: the HealthModel to test
         :param init_monitoring_points: the initial monitoring points,

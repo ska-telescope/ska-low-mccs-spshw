@@ -526,7 +526,7 @@ class SpsStationComponentManager(
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
-        self._pps_delay_delta = 0
+        self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
@@ -915,11 +915,13 @@ class SpsStationComponentManager(
             case "ppsdelay":
                 # Only calc for TPMs actually present.
                 self._pps_delays[logical_tile_id] = attribute_value
-                self._pps_delay_delta = max(
+                self._pps_delay_spread = max(
                     self._pps_delays[0 : self._number_of_tiles]
                 ) - min(self._pps_delays[0 : self._number_of_tiles])
                 if self._component_state_callback:
-                    self._component_state_callback(ppsDelayDelta=self._pps_delay_delta)
+                    self._component_state_callback(
+                        ppsDelaySpread=self._pps_delay_spread
+                    )
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"
@@ -1909,7 +1911,7 @@ class SpsStationComponentManager(
         return copy.deepcopy(self._pps_delays)
 
     @property
-    def pps_delay_delta(self: SpsStationComponentManager) -> int:
+    def pps_delay_spread(self: SpsStationComponentManager) -> int:
         """
         Get PPS delay delta.
 
@@ -1919,7 +1921,7 @@ class SpsStationComponentManager(
 
         :return: Maximum delay difference between tiles in samples.
         """
-        return self._pps_delay_delta
+        return self._pps_delay_spread
 
     @property
     def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:

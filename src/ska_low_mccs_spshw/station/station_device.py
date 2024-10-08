@@ -285,7 +285,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
-            self._device.set_change_event("ppsDelayDelta", True, False)
+            self._device.set_change_event("ppsDelaySpread", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
@@ -295,7 +295,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("adcPower", True, False)
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_archive_event("dataReceivedResult", True, False)
-            self._device.set_archive_event("ppsDelayDelta", True, False)
+            self._device.set_archive_event("ppsDelaySpread", True, False)
 
             super().do()
 
@@ -463,11 +463,11 @@ class SpsStation(SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
-        if "ppsDelayDelta" in state_change:
-            pps_delay_delta = state_change.get("ppsDelayDelta")
-            self.push_change_event("ppsDelayDelta", pps_delay_delta)
-            self.push_archive_event("ppsDelayDelta", pps_delay_delta)
-            self._health_model.update_state(pps_delay_delta=pps_delay_delta)
+        if "ppsDelaySpread" in state_change:
+            pps_delay_spread = state_change.get("ppsDelaySpread")
+            self.push_change_event("ppsDelaySpread", pps_delay_spread)
+            self.push_archive_event("ppsDelaySpread", pps_delay_spread)
+            self._health_model.update_state(pps_delay_spread=pps_delay_spread)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -722,7 +722,7 @@ class SpsStation(SKAObsDevice):
         self.component_manager.pps_delay_corrections = delays
 
     @attribute(dtype="DevLong")
-    def ppsDelayDelta(self: SpsStation) -> int:
+    def ppsDelaySpread(self: SpsStation) -> int:
         """
         Get difference between maximum and minimum delays.
 
@@ -731,7 +731,7 @@ class SpsStation(SKAObsDevice):
 
         :return: Difference between maximum and minimum delays.
         """
-        return self.component_manager.pps_delay_delta
+        return self.component_manager.pps_delay_spread
 
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:

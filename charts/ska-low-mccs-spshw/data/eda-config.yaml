@@ -76,7 +76,7 @@ configuration:
       ppsDelayCorrections:
         code_push_event: true
         archive_period: 0
-      ppsDelayDelta:
+      ppsDelaySpread:
         code_push_event: true
         archive_period: 0
       beamformerTable:
@@ -366,6 +366,9 @@ configuration:
         code_push_event: true
         archive_period: 0
       ppsDelay:
+        code_push_event: true
+        archive_period: 0
+      ppsDelayDrift:
         code_push_event: true
         archive_period: 0
       ppsDelayCorrection:

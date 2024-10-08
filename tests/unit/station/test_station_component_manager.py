@@ -623,7 +623,7 @@ def test_send_data_samples(
     assert result == ResultCode.OK
 
 
-def test_pps_delay_delta(
+def test_pps_delay_spread(
     station_component_manager: SpsStationComponentManager,
     callbacks: MockCallableGroup,
     mock_tile_proxy: MccsDeviceProxy,
@@ -646,7 +646,7 @@ def test_pps_delay_delta(
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
     assert station_component_manager._pps_delays == [0] * 16
-    assert station_component_manager._pps_delay_delta == 0
+    assert station_component_manager._pps_delay_spread == 0
 
     # Set 1 Tile's ppsDelay to 4 for a delta of 4.
     station_component_manager._on_tile_attribute_change(
@@ -655,7 +655,7 @@ def test_pps_delay_delta(
         attribute_value=4,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
-    assert station_component_manager._pps_delay_delta == 4
+    assert station_component_manager._pps_delay_spread == 4
 
     # Set all tiles to a delay of 4 for a delta of 0.
     for tile_id in range(0, num_tiles_to_add):
@@ -665,8 +665,7 @@ def test_pps_delay_delta(
             attribute_value=4,
             attribute_quality=tango.AttrQuality.ATTR_VALID,
         )
-    print(station_component_manager._pps_delays)
-    assert station_component_manager.pps_delay_delta == 0
+    assert station_component_manager._pps_delay_spread == 0
 
     # Set 1 Tile to ppsDelay of 16 for a delta of 12.
     station_component_manager._on_tile_attribute_change(
@@ -675,4 +674,4 @@ def test_pps_delay_delta(
         attribute_value=16,
         attribute_quality=tango.AttrQuality.ATTR_VALID,
     )
-    assert station_component_manager.pps_delay_delta == 12
+    assert station_component_manager._pps_delay_spread == 12

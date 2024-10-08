@@ -97,14 +97,14 @@ class SpsStationHealthRules(HealthRules):
         else:
             report = ""
 
-        # Check ppsDelayDelta for drifting delays.
-        if station_state["pps_delay_delta"] is not None:
-            if station_state["pps_delay_delta"] > self._thresholds["pps_delta_failed"]:
+        # Check ppsDelaySpread for drifting delays.
+        if station_state["pps_delay_spread"] is not None:
+            if station_state["pps_delay_spread"] > self._thresholds["pps_delta_failed"]:
                 result = True
                 msg = (
                     "Difference in ppsDelay between Tiles has exceeded "
                     f"{self._thresholds['pps_delta_failed']} samples. "
-                    f"ppsDelayDelta: {station_state['pps_delay_delta']}"
+                    f"ppsDelaySpread: {station_state['pps_delay_spread']}"
                 )
                 # Add to report or create new one.
                 if report == "":
@@ -153,17 +153,17 @@ class SpsStationHealthRules(HealthRules):
         else:
             report = ""
 
-        # Check ppsDelayDelta for drifting delays.
-        if station_state["pps_delay_delta"] is not None:
+        # Check ppsDelaySpread for drifting delays.
+        if station_state["pps_delay_spread"] is not None:
             if (
-                station_state["pps_delay_delta"]
+                station_state["pps_delay_spread"]
                 > self._thresholds["pps_delta_degraded"]
             ):
                 result = True
                 msg = (
                     "Difference in ppsDelay between Tiles has exceeded "
                     f"{self._thresholds['pps_delta_degraded']} samples. "
-                    f"ppsDelayDelta: {station_state['pps_delay_delta']}"
+                    f"ppsDelaySpread: {station_state['pps_delay_spread']}"
                 )
                 # Add to report or create new one.
                 if report == "":

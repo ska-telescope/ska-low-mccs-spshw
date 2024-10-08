@@ -46,7 +46,7 @@ class SpsStationHealthModel(BaseHealthModel):
         }
         self._health_rules = SpsStationHealthRules(thresholds)
         # State entries to create.
-        super().__init__(health_changed_callback, pps_delay_delta=0)
+        super().__init__(health_changed_callback, pps_delay_spread=0)
 
     def subrack_health_changed(
         self: SpsStationHealthModel,

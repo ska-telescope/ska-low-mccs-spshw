@@ -516,11 +516,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         super().poll_succeeded(poll_response)
 
-    def mark_stale(self: TileComponentManager, names: set[str]) -> None:
+    def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
         """
-        Mark attributes as stale.
+        Trigger the callback when attributes are no longer provided for polling.
 
-        :param names: a set containing the attributes to mark as stale.
+        :param names: a set containing the attributes that will no longer
+            be provided for polling.
         """
         while len(names) != 0:
             val = names.pop()
@@ -539,7 +540,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
-        self._request_provider = TileRequestProvider(self.mark_stale)
+        self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack()
 

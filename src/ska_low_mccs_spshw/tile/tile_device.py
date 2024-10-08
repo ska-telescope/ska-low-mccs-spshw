@@ -76,11 +76,11 @@ def _flatten_list(val: list[list[Any]]) -> list[Any]:
 
 def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
     """
-    Flatten list to 1 dimensional.
+    Serialise to a json string.
 
-    :param val: the 2 dimensional list.
+    :param val: A dictionary or tuple to serialise.
 
-    :return: a 1 dimensional list.
+    :return: a json serialised string.
     """
     return json.dumps(val)
 

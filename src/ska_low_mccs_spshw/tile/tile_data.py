@@ -154,6 +154,10 @@ class TileData:
                 "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
                 "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
             },
+            "timestamp": {
+                "FPGA0": None,
+                "FPGA1": None,
+            },
             "pps": {"status": None},
             "pll": None,
         },
@@ -251,6 +255,9 @@ class TileData:
             "ddr_interface": {
                 "initialisation": None,
                 "reset_counter": {"FPGA0": None, "FPGA1": None},
+                "rd_cnt": {"FPGA0": None, "FPGA1": None},
+                "wr_cnt": {"FPGA0": None, "FPGA1": None},
+                "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
             },
             "f2f_interface": {
                 "pll_status": None,

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 
 import pytest
 import tango
@@ -155,26 +156,60 @@ def device_online(
     change_event_callbacks.assert_change_event("device_state", Anything)
 
 
-@given(parsers.cfparse("the {device} has been commanded to turn on"))
-@when(parsers.cfparse("the {device} has been commanded to turn on"))
-def device_on(device: str, device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@pytest.fixture(name="command_info")
+def command_info_fixture() -> dict[str, Any]:
+    """
+    Fixture to store command ID.
+
+    :returns: Empty dictionary.
+    """
+    return {}
+
+
+@given(parsers.cfparse("the {device} has been commanded to turn On"))
+@when(parsers.cfparse("the {device} has been commanded to turn On"))
+def device_on(
+    device: str,
+    device_proxies: dict[str, tango.DeviceProxy],
+    command_info: dict[str, Any],
+) -> None:
     """
     Command the device to turn on.
 
     :param device: device to turn on.
     :param device_proxies: dictionary of device proxies.
+    :param command_info: dictionary to store command ID.
     """
-    device_proxies[device].On()
+    command_info[device + "On"] = device_proxies[device].On()
 
 
-@given("the Station has been commanded to turn to standby")
-def station_standby(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@then(parsers.cfparse("the {device} {command} command finishes"))
+def device_command_finishes(
+    device_proxies: dict[str, tango.DeviceProxy],
+    device: str,
+    command: str,
+    command_info: dict[str, Any],
+) -> None:
     """
-    Command the station to turn to standby.
+    Wait for a command to complete.
 
     :param device_proxies: dictionary of device proxies.
+    :param device: device under test.
+    :param command: command to wait for
+    :param command_info: dictionary to store command ID.
     """
-    device_proxies["Station"].Standby()
+    _, command_id = command_info[device + command]
+    count = 0
+    while (
+        device_proxies[device].CheckLongRunningCommandStatus(command_id) != "COMPLETED"
+    ):
+        time.sleep(1)
+        count += 1
+        if count > 10:
+            pytest.fail(
+                f"{device}.{command} did not complete: "
+                f"{device_proxies[device].CheckLongRunningCommandStatus(command_id)}"
+            )
 
 
 @given(parsers.cfparse("the {device} reports that its {attribute} is {value}"))

@@ -9,7 +9,7 @@ Feature: Test health
         And the Station has been commanded to turn to standby
         And the Station reports that its state is STANDBY
         And the Tile reports that its state is OFF
-        When the Station has been commanded to turn on
+        When the Station has been commanded to turn On
         Then the Station reports that its state is ON
         And the Tile reports that its state is ON
         And the DAQ reports that its HealthState is OK
@@ -21,7 +21,7 @@ Feature: Test health
         Given a Subrack that is online
         And a Tile that is online
         And a Station that is online
-        And the Station has been commanded to turn on
+        And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tile reports that its state is ON
         And the Subrack reports that its HealthState is OK
@@ -36,7 +36,7 @@ Feature: Test health
         Given a Subrack that is online
         And a Tile that is online
         And a Station that is online
-        And the Station has been commanded to turn on
+        And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tile reports that its state is ON
         And the Subrack reports that its HealthState is OK
@@ -56,6 +56,19 @@ Feature: Test health
         And the Station has been commanded to turn to standby
         And the Station reports that its state is STANDBY
         And the Tile reports that its state is OFF
-        When the Tile has been commanded to turn on
+        When the Tile has been commanded to turn On
         Then the Tile reports that its state is ON
+        And the Station reports that its state is ON
+
+    Scenario: Test Station On
+        Given a Station that is online
+        And a Subrack that is online
+        And a Tile that is online
+        And the Station has been commanded to turn to standby
+        And the Station reports that its state is STANDBY
+        And the Tile reports that its state is OFF
+        When the Station has been commanded to turn On
+        Then the Tile reports that its state is ON
+        And the Station reports that its state is STANDBY
+        And the Station On command finishes
         And the Station reports that its state is ON

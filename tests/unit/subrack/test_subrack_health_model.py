@@ -65,7 +65,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -387,7 +387,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -407,7 +407,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -430,7 +430,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -453,7 +453,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -476,7 +476,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -496,7 +496,7 @@ class TestSubrackHealthModel:
                     "board_temps": [50.0, 50.0],
                     "backplane_temps": [50.0, 50.0],
                     "subrack_fan_speeds": [60.0, 60.0],
-                    "board_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
+                    "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_currents": [4.0, 4.0, 4.0, 4.0, 4.0],
                     "power_supply_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
                     "tpm_voltages": [5.0, 5.0, 5.0, 5.0],
@@ -544,8 +544,9 @@ class TestSubrackHealthModel:
         print(f"health 1: {health_model._state}")
         health_model.update_data(first_data)
         print(f"health 2: {health_model._state}")
-
-        assert health_model.evaluate_health() == expected_first_health_report
+        first_report = health_model.evaluate_health()
+        print(f"{first_report=}")
+        assert first_report == expected_first_health_report
 
         health_model.update_data(second_data)
         print(f"health 3: {health_model._state}")

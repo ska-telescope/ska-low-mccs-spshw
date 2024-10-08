@@ -541,6 +541,8 @@ class SpsStationComponentManager(
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
 
+        self._power_command_in_progress: bool = False
+
         super().__init__(
             logger,
             communication_state_changed_callback,
@@ -995,6 +997,9 @@ class SpsStationComponentManager(
         # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
         # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
         # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
+        if self._power_command_in_progress:
+            # Suppress power state evaluation whilst power command in progress.
+            return
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
             subrack_power_states = list(self._subrack_power_states.values())
@@ -1170,6 +1175,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         self.logger.debug("Starting standby sequence")
+        self._power_command_in_progress = True
         result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1216,6 +1222,8 @@ class SpsStationComponentManager(
             message = ""
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
+        self._power_command_in_progress = False
+        self._evaluate_power_state()
 
     def on(
         self: SpsStationComponentManager,
@@ -1247,6 +1255,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        self._power_command_in_progress = True
         message: str = ""
         self.logger.debug("Starting on sequence")
         if task_callback:
@@ -1261,6 +1270,8 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Tiles already initialised")
             result_code = ResultCode.OK
+            self._power_command_in_progress = False
+            self._evaluate_power_state()
             return
 
         if result_code == ResultCode.OK and not all(
@@ -1312,6 +1323,8 @@ class SpsStationComponentManager(
             message = "On Command failed"
         if task_callback:
             task_callback(status=task_status, result=(result_code, message))
+        self._power_command_in_progress = False
+        self._evaluate_power_state()
 
     def initialise(
         self: SpsStationComponentManager,

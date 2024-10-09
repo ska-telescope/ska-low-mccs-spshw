@@ -524,7 +524,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.update_tile_health_attributes()
             else:
                 try:
-                    self.logger.info(f"Update attribute {attribute_name}")
                     tango_name = self.attr_map[attribute_name]
                     self._attribute_state[tango_name].update(attribute_value)
                 except KeyError as e:
@@ -606,10 +605,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             if attribute_value is None:
                 continue
             try:
-                self.logger.info(
-                    f"Updating health attribute {attribute_name} "
-                    f"value to {attribute_value}"
-                )
                 self._attribute_state[attribute_name].update(attribute_value)
             except KeyError:
                 self.logger.warning(f"Attribute {attribute_name} not found.")
@@ -685,7 +680,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
         except tango.DevFailed:
-            self.logger.debug("no alarm defined")
+            self.logger.debug(f"No alarm defined for {name}")
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1450,7 +1445,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         station = self._attribute_state["stationId"].read()[0]
         message = f"stationId: read value = {station}"
-        self.logger.debug(message)
+        self.logger.info(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]
@@ -1461,7 +1456,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param value: the station id
         """
         message = f"stationId: write value = {value}"
-        self.logger.debug(message)
+        self.logger.info(message)
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
@@ -2509,7 +2504,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 raise ValueError("register name is a mandatory parameter")
             value = self._component_manager.read_register(name)
             message = f"Register {name} = {value}"
-            self.logger.debug(message)
+            self.logger.info(message)
             return value
 
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")

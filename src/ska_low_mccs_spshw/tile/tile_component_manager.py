@@ -192,13 +192,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        self.logger.debug(f"\n{'New Poll':-^{40}}\n")
         self._tpm_status = TpmStatus(self.tpm_status)
         self._update_attribute_callback(
             programming_state=self._tpm_status.pretty_name()
         )
 
-        self.logger.debug(f"Getting request for state ({self._tpm_status.name}) ...")
         request_spec = self._request_provider.get_request(self._tpm_status)
 
         # If already a request simply return.
@@ -454,7 +452,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             read.
         """
         if self.active_lrc_request:
-            self.logger.error("LRC completed")
             self.active_lrc_request.notify_completed()
             self.active_lrc_request = None
 
@@ -661,7 +658,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Unix time used as global synchronization time
         """
-        self.logger.debug(f"Global reference time read {self._global_reference_time}")
+        self.logger.info(f"Global reference time read {self._global_reference_time}")
         if self._global_reference_time:
             return self._tile_time.format_time_from_timestamp(
                 self._global_reference_time
@@ -683,7 +680,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         start_time = global_reference_time
 
-        self.logger.debug(f"Global reference time set to {start_time}")
+        self.logger.info(f"Global reference time set to {start_time}")
         if start_time is None or start_time <= 0:
             self._global_reference_time = None
         else:
@@ -869,9 +866,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.info("TileComponentManager: initialisation completed")
 
             if self._global_reference_time:
-                self.logger.debug(
-                    "Global reference time specifed, starting acquisition"
-                )
+                self.logger.info("Global reference time specifed, starting acquisition")
                 self._start_acquisition()
 
     @abort_task_on_exception
@@ -1473,7 +1468,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._csp_spead_format = spead_format
         hw_spead_format = spead_format == "SKA"
         if not self.is_programmed:
-            self.logger.debug("speadFormat not set in hardware, tile not connected")
+            self.logger.warning("speadFormat not set in hardware, tile not connected")
             return
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2165,8 +2160,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.debug(
-            "initialise_beamformer for chans {start_channel}:{nof_channels}"
+        self.logger.info(
+            f"initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2364,7 +2359,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: static delay, in nanoseconds one per TPM input
         """
-        self.logger.debug("TileComponentManager: static_delays")
         delays = []
         try:
             for i in range(16):

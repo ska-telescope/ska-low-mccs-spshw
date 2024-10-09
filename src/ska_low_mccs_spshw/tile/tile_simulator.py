@@ -2110,6 +2110,29 @@ class TileSimulator:
         """
         self.logger.error("test_generator_input_select not implemented in simulator")
 
+    @check_mocked_overheating
+    @connected
+    def set_pattern(
+        self: TileSimulator,
+        stage: str,
+        pattern: list[int],
+        adders: list[int],
+        start: bool,
+        shift: int = 0,
+        zero: int = 0,
+    ) -> None:
+        """
+        Configure the TPM pattern generator.
+
+        :param stage: placeholder
+        :param pattern: placeholder
+        :param adders: placeholder
+        :param start: placeholder
+        :param shift: placeholder
+        :param zero: placeholder
+        """
+        self.logger.error("set_pattern not implemented in simulator")
+
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
         while True:

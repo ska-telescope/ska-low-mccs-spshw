@@ -368,8 +368,6 @@ def test_On(
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
     time.sleep(0.1)
-
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.ON

@@ -999,6 +999,8 @@ class SpsStationComponentManager(
         # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
         if self._power_command_in_progress:
             # Suppress power state evaluation whilst power command in progress.
+            # This is to prevent the Station changing to DevState.ON before all tiles
+            # have had a chance to turn on.
             return
         with self._power_state_lock:
             tile_power_states = list(self._tile_power_states.values())
@@ -1298,6 +1300,9 @@ class SpsStationComponentManager(
             result_code = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
+            # End of the actual power on sequence.
+            self._power_command_in_progress = False
+            self._evaluate_power_state()
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")

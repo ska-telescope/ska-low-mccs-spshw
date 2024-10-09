@@ -180,7 +180,7 @@ def device_on(
     :param device_proxies: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
-    _, command_id = device_proxies[device].On()
+    _, [command_id] = device_proxies[device].On()
     command_info[device + "On"] = command_id
 
 
@@ -198,7 +198,7 @@ def device_standby(
     :param device_proxies: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
-    _, command_id = device_proxies[device].Standby()
+    _, [command_id] = device_proxies[device].Standby()
     command_info[device + "Standby"] = command_id
 
 

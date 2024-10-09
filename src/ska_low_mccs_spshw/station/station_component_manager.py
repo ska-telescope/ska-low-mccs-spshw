@@ -1109,6 +1109,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        self._power_command_in_progress = True
         if task_callback:
             task_callback(
                 status=TaskStatus.REJECTED,
@@ -1144,6 +1145,8 @@ class SpsStationComponentManager(
         #     task_status = TaskStatus.FAILED
         #     result_code = ResultCode.FAILED
         #     message = "Off Command Failed"
+        self._power_command_in_progress = False
+        self._evaluate_power_state()
 
     @check_communicating
     def standby(

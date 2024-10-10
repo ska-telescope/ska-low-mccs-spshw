@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING, Optional
 
 from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
+from .tests.test_daq import TestDaq
 from .tests.test_station_initialise import InitialiseStation
 from .tests.test_tango import BasicTangoTest
 
@@ -52,16 +53,28 @@ class SpsStationSelfCheckManager:
         self._daq_trl = daq_trl
         self._component_manager = component_manager
 
-        tpm_tests = [
-            tpm_test(
+        # Jank to get around https://github.com/python/mypy/issues/3115 and
+        # https://github.com/python/mypy/issues/16509
+        tpm_tests = []
+        for tpm_test in [BasicTangoTest, InitialiseStation]:
+            test_instance = tpm_test(
                 component_manager=self._component_manager,
                 logger=self.logger,
                 tile_trls=list(self._tile_trls),
                 subrack_trls=list(self._subrack_trls),
                 daq_trl=self._daq_trl,
             )
-            for tpm_test in [BasicTangoTest, InitialiseStation]
-        ]
+            tpm_tests.append(test_instance)
+        tpm_tests.append(
+            TestDaq(
+                component_manager=self._component_manager,
+                logger=self.logger,
+                tile_trls=list(self._tile_trls),
+                subrack_trls=list(self._subrack_trls),
+                daq_trl=self._daq_trl,
+            )
+        )
+
         self._tpm_test_names = [tpm_test.__class__.__name__ for tpm_test in tpm_tests]
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {
             tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests

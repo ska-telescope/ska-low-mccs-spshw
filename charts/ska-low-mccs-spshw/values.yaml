@@ -48,6 +48,8 @@ image:
   tag: ~ # defaults to chart's appVersion when empty
   pullPolicy: IfNotPresent
 
+daqDataRepository: daq-data
+
 deviceServers: {} # e.g....
   # spsstations:
   #   s8-1:

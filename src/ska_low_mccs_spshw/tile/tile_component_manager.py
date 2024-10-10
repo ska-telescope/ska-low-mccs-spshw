@@ -237,17 +237,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.warning("Request provider returned None.")
             return None
 
-        attribute_name = request_spec
-        match attribute_name:
+        match request_spec:
             case "CHECK_CPLD_COMMS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
             case "CHECK_BOARD_TEMPERATURE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_temperature,
                     publish=True,
                 )
@@ -267,106 +266,106 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     request = TileRequest("connect", self.connect)
             case "IS_PROGRAMMED":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.is_programmed,
                     publish=True,
                 )
             case "HEALTH_STATUS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
                 )
             case "ADC_RMS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name], self.tile.get_adc_rms, publish=True
+                    _ATTRIBUTE_MAP[request_spec], self.tile.get_adc_rms, publish=True
                 )
             case "PLL_LOCKED":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_pll_locked,
                     publish=True,
                 )
             case "PENDING_DATA_REQUESTS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_pending_data_requests,
                     publish=False,
                 )
             case "PPS_DELAY":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_pps_delay,
                     publish=True,
                 )
             case "ARP_TABLE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_arp_table,
                     publish=True,
                 )
             case "PPS_DELAY_CORRECTION":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     command_object=self._get_pps_delay_correction,
                     publish=True,
                 )
             case "IS_BEAMFORMER_RUNNING":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.beamformer_is_running,
                     publish=True,
                 )
             case "PHASE_TERMINAL_COUNT":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_phase_terminal_count,
                     publish=True,
                 )
             case "PREADU_LEVELS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_preadu_levels,
                     publish=True,
                 )
             case "STATIC_DELAYS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name], self.get_static_delays, publish=True
+                    _ATTRIBUTE_MAP[request_spec], self.get_static_delays, publish=True
                 )
             case "STATION_ID":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_station_id,
                     publish=True,
                 )
             case "TILE_ID":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name], self.tile.get_tile_id, publish=True
+                    _ATTRIBUTE_MAP[request_spec], self.tile.get_tile_id, publish=True
                 )
             case "CSP_ROUNDING":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name], self.csp_rounding, publish=True
+                    _ATTRIBUTE_MAP[request_spec], self.csp_rounding, publish=True
                 )
             case "CHANNELISER_ROUNDING":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self._channeliser_truncation,
                     publish=True,
                 )
             case "BEAMFORMER_TABLE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_beamformer_table,
                     publish=True,
                 )
             case "FPGA_REFERENCE_TIME":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.formatted_fpga_reference_time,
                 )
             case "TILE_BEAMFORMER_FRAME":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[attribute_name],
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
                 )

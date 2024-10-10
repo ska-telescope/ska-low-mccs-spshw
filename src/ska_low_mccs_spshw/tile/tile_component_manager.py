@@ -732,8 +732,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def ping(self: TileComponentManager) -> None:
         """Check we can communicate with TPM."""
-        with self._hardware_lock:
-            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+        if self.tile is not None:
+            with self._hardware_lock:
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
 
     @check_hardware_lock_claimed
     def _check_initialised(self: TileComponentManager) -> bool:

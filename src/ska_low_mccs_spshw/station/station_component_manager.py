@@ -1293,7 +1293,7 @@ class SpsStationComponentManager(
         ):
             self.logger.debug("Starting on sequence on tiles")
             result_code = self._turn_on_tiles(task_callback, task_abort_event)
-        print("11111111111")
+
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
             result_code = self._initialise_tile_parameters(

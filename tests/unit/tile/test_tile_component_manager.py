@@ -2464,6 +2464,42 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             mocked_input_params["zero"],
         )
 
+    def test_start_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the start_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.start_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.start_pattern_generator(mocked_stage)
+        tile_simulator.start_pattern.assert_called_with(mocked_stage)
+
+    def test_stop_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the stop_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.stop_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.stop_pattern_generator(mocked_stage)
+        tile_simulator.stop_pattern.assert_called_with(mocked_stage)
+
     def test_test_generator_input_select(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,

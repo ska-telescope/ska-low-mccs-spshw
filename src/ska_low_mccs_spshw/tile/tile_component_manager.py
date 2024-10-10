@@ -3194,7 +3194,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param stage: The stage in the signal chain where the pattern is injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-            or 'beamf' (output of tile beamformer).
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
         :param pattern: The data pattern in time order. This must be a list of integers
             with a length between 1 and 1024. The pattern represents values
             in time order (not antennas or polarizations).
@@ -3216,9 +3216,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Stop the pattern generator.
 
-        :param stage: The stage in the signal chain where the pattern is injected.
+        :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-            or 'beamf' (output of tile beamformer).
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
         """
         self.tile.stop_pattern(stage)
 
@@ -3226,8 +3226,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Start the pattern generator.
 
-        :param stage: The stage in the signal chain where the pattern is injected.
+        :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-            or 'beamf' (output of tile beamformer).
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
         """
         self.tile.start_pattern(stage)

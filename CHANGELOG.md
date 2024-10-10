@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.6
+
 * [SKB-507] Added `ppsDelaySpread` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelaySpread` is observed to be >4 samples and FAILED when >10. Added `ppsDelayDrift` attribute to `MccsTile` to track difference between current `ppsDelay` and its value at initialisation. Results in Tile HealthState.DEGRADED when >4 samples and FAILED when >10.
 
 ## 0.17.5

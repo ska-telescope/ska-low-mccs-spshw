@@ -50,7 +50,6 @@
     "required": [
         "stage",
         "pattern",
-        "adders",
-        "start"
+        "adders"
     ]
 }

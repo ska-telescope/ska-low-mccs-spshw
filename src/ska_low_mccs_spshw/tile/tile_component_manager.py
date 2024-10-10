@@ -3185,7 +3185,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         stage: str,
         pattern: list[int],
         adders: list[int],
-        start: bool,
+        start: bool = False,
         shift: int = 0,
         zero: int = 0,
     ) -> None:

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.17.5
+
+* [SKB-520] Correct Tile attribute quality reporting bug.
+* [MCCS-2258] Add test_ral_low manual stage to pipeline.
+* [SKB-447] Subrack health board current fix
+
 ## 0.17.4
 
 * [SKB-519] Prevent subrack from sticking in UNKNOWN after a failed poll.

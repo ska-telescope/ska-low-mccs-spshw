@@ -145,13 +145,13 @@ class TestDaq(TpmSelfCheckTest):
         test_adders = list(range(32))
         self._pattern = test_pattern
         self._adders = test_adders
-        self.tile_proxies[0].StopPattern("jesd")
+        self.tile_proxies[0].StopPatternGenerator("jesd")
         self.tile_proxies[0].ConfigurePatternGenerator(
             json.dumps(
                 {"stage": "jesd", "pattern": test_pattern, "adders": test_adders}
             )
         )
-        self.tile_proxies[0].StartPattern("jesd")
+        self.tile_proxies[0].StartPatternGenerator("jesd")
 
     def _send_raw_data(self: TestDaq, sync: bool) -> None:
         self.tile_proxies[0].SendDataSamples(
@@ -169,7 +169,7 @@ class TestDaq(TpmSelfCheckTest):
         data_handler = DataReceivedHandler(
             self.test_logger, self._data_received_callback
         )
-        self._observer.schedule(data_handler, "/product")
+        self._observer.schedule(data_handler, "/product", recursive=True)
         self._observer.start()
 
     def _stop_directory_watch(self: TestDaq) -> None:

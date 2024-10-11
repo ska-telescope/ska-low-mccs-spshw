@@ -132,9 +132,9 @@ class TestDaq(TpmSelfCheckTest):
         daq_status = json.loads(self.daq_proxy.DaqStatus())
         tpm_config = {
             "mode": "10G",
-            "destination_ip": daq_status["Receiver IP"][0],
-            "destination_port": daq_status["Receiver Ports"][0],
-            "channel_payload_length": 8192,
+            "dst_ip": daq_status["Receiver IP"][0],
+            "dst_port": daq_status["Receiver Ports"][0],
+            "payload_length": 8192,
         }
         self.component_manager.set_lmc_download(**tpm_config)
 

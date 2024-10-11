@@ -154,10 +154,6 @@ class TileData:
                 "FPGA0": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
                 "FPGA1": {"C2C_MMCM": None, "JESD_MMCM": None, "DSP_MMCM": None},
             },
-            "timestamp": {
-                "FPGA0": None,
-                "FPGA1": None,
-            },
             "pps": {"status": None},
             "pll": None,
         },

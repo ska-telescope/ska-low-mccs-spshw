@@ -212,9 +212,6 @@ tpm_monitoring_points:
         C2C_MMCM: !!python/tuple [True, 0]
         JESD_MMCM: !!python/tuple [True, 0]
         DSP_MMCM: !!python/tuple [True, 0]
-    timestamp:
-      FPGA0: "+1"
-      FPGA1: "+1"
     pps:
       status: True
     pll: !!python/tuple [True, 0]

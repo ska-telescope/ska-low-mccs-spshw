@@ -129,7 +129,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
-        self._initial_pps_delay: int | None = None
 
     def init_device(self: MccsTile) -> None:
         """
@@ -766,12 +765,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         except tango.DevFailed:
             # no alarm defined
             pass
-
-        if name == "ppsDelay":
-            # Update health and push change event for ppsDrift.
-            self._health_model.update_data({name: attr_value})
-            self.push_archive_event("ppsDrift", self.ppsDrift, attr_time, attr_quality)
-            self.push_change_event("ppsDrift", self.ppsDrift, attr_time, attr_quality)
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1863,9 +1856,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
         """
-        if self._initial_pps_delay is None:
-            return 0
-        return abs(self.ppsDelay - self._initial_pps_delay)
+        return self._attribute_state["ppsDrift"].read()
 
     @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> int | None:

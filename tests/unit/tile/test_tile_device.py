@@ -651,7 +651,6 @@ class TestMccsTile:
                 try:
                     assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
                 except AssertionError:
-                    print(f"{attr=} was not in quality ATTR_INVALID")
                     pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
         for attr in active_read_attributes:
             try:

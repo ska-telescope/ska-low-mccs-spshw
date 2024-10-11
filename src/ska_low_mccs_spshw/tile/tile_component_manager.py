@@ -63,6 +63,7 @@ _ATTRIBUTE_MAP: Final = {
     "STATION_ID": "station_id",
     "PHASE_TERMINAL_COUNT": "phase_terminal_count",
     "PPS_DELAY": "pps_delay",
+    "PPS_DRIFT": "pps_drift",
     "ADC_RMS": "adc_rms",
     "CHANNELISER_ROUNDING": "channeliser_rounding",
     "IS_PROGRAMMED": "is_programmed",
@@ -299,6 +300,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.get_pps_delay,
                     publish=True,
                 )
+            case "PPS_DRIFT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self._pps_drift,
+                    publish=True,
+                )
             case "ARP_TABLE":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -417,7 +424,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
-
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")

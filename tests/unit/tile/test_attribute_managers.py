@@ -8,7 +8,9 @@
 """This module contains the tests for the custum AttributeManagers."""
 from __future__ import annotations
 
+import json
 import unittest
+from typing import Any
 from unittest.mock import ANY
 
 import pytest
@@ -56,6 +58,25 @@ def attribute_manager_fixture(
     return AttributeManager(post_change_event_callback)
 
 
+@pytest.fixture(name="attribute_manager_with_converter")
+def attribute_manager_with_converter_fixture(
+    post_change_event_callback: unittest.mock.Mock,
+) -> AttributeManager:
+    """
+    Fixture returning a AttributeManager instance with a converter.
+
+    :param post_change_event_callback: a fixture containing
+        a mock to be called on change.
+
+    :return: a AttributeManager instance with a converter.
+    """
+
+    def _serialise_value(val: dict[str, Any] | tuple[str, str]) -> str:
+        return json.dumps(val)
+
+    return AttributeManager(post_change_event_callback, converter=_serialise_value)
+
+
 @pytest.fixture(name="alarm_attribute_manager")
 def alarm_attribute_manager_fixture(
     post_change_event_callback: unittest.mock.Mock,
@@ -97,12 +118,15 @@ class TestAttributeManager:
     def test_push_on_change(
         self: TestAttributeManager,
         attribute_manager: AttributeManager,
+        attribute_manager_with_converter: AttributeManager,
         post_change_event_callback: unittest.mock.Mock,
     ) -> None:
         """
         Test that we only push on change.
 
-        :param attribute_manager: a `AttributeManager` instance.
+        :param attribute_manager: an `AttributeManager` instance.
+        :param attribute_manager_with_converter: an `AttributeManager`
+            instance with a converter.
         :param post_change_event_callback: a fixture containing
             a mock to be called on change.
         """
@@ -113,6 +137,14 @@ class TestAttributeManager:
         )
         post_change_event_callback.reset_mock()
         attribute_manager.update(2)
+        post_change_event_callback.assert_not_called()
+        test_dictionary = {"foo": 1, "bar": 2}
+        attribute_manager_with_converter.update(test_dictionary)
+        post_change_event_callback.assert_called_once_with(
+            json.dumps(test_dictionary), ANY, tango.AttrQuality.ATTR_VALID
+        )
+        post_change_event_callback.reset_mock()
+        attribute_manager_with_converter.update(test_dictionary)
         post_change_event_callback.assert_not_called()
 
 

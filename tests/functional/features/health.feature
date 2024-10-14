@@ -72,3 +72,4 @@ Feature: Test health
         And the Station reports that its state is STANDBY
         And the Station On command finishes
         And the Station reports that its state is ON
+        And the Station reports that it is SYNCHRONISED

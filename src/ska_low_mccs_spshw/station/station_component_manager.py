@@ -1300,7 +1300,6 @@ class SpsStationComponentManager(
                 task_callback, task_abort_event
             )
             # End of the actual power on sequence.
-            self._evaluate_power_state()
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")

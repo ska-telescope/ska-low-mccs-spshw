@@ -310,3 +310,26 @@ def set_subrack_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> N
     }
     subrack_device = device_proxies["Subrack"]
     subrack_device.healthModelParams = json.dumps(new_board_params)
+
+
+@then(parsers.cfparse("the {device} reports that it is {programming_state}"))
+def check_device_programming_state(
+    device_proxies: dict[str, tango.DeviceProxy], device: str, programming_state: str
+) -> None:
+    """
+    Check the tileProgrammingState of a device.
+
+    :param device_proxies: dictionary of device proxies.
+    :param device: The device to check. Must be Station or Tile.
+    :param programming_state: The programming state to check for.
+    """
+    # List from Station, str from Tile.
+    device_programming_state = device_proxies[device].tileProgrammingState
+    if isinstance(device_programming_state, list):
+        # Assert all Tiles in the Station are in the specified state.
+        assert all(
+            tile_programming_state == programming_state
+            for tile_programming_state in device_programming_state
+        )
+    elif isinstance(device_programming_state, str):
+        assert device_programming_state == programming_state

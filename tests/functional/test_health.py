@@ -17,7 +17,7 @@ import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, scenarios, then, when
 from ska_control_model import AdminMode, HealthState
-from ska_tango_testing.mock.placeholders import Anything
+from ska_tango_testing.mock.placeholders import Anything, OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import (
@@ -169,7 +169,27 @@ def device_online(
         change_event_callbacks.assert_change_event(
             "device_state", tango.DevState.UNKNOWN
         )
-    change_event_callbacks.assert_change_event("device_state", Anything)
+    if device == "Tile":
+        # Tile can experience a transient FAULT on startup when the polling of the TPM
+        # was successful before the subrack calls back.
+        # This is FAULT due to inconsistency in state, this is a race condition
+        # that will dissapear when/if the subrack calls back with the power.
+        try:
+            change_event_callbacks.assert_change_event(
+                "device_state",
+                tango.DevState.FAULT,
+                lookahead=2,
+                consume_nonmatches=True,
+            )
+            change_event_callbacks.assert_change_event(
+                "device_state",
+                OneOf(tango.DevState.ON, tango.DevState.OFF),
+            )
+        except AssertionError:
+            if device_proxy.state() not in [tango.DevState.ON, tango.DevState.OFF]:
+                pytest.fail("Tile device did not reach expected ON or OFF states")
+    else:
+        change_event_callbacks.assert_change_event("device_state", Anything)
 
 
 @pytest.fixture(name="command_info")

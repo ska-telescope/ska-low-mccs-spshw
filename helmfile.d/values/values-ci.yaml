@@ -65,9 +65,9 @@ platform:
 # For example,
 #
 # helm_values:
-#   # image:
-#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#   #   tag: 0.11.0-dev.cc21201e6
+#   image:
+#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#     tag: 0.17.1
 
 #   ska-low-mccs-daq:
 #     image:

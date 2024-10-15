@@ -500,6 +500,7 @@ class SpsStationComponentManager(
             "adcPower",
             "staticTimeDelays",
             "preaduLevels",
+            "ppsDelay",
         ]
 
         self._source_port = 0xF0D0
@@ -525,6 +526,7 @@ class SpsStationComponentManager(
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
+        self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
@@ -910,6 +912,16 @@ class SpsStationComponentManager(
                 self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+            case "ppsdelay":
+                # Only calc for TPMs actually present.
+                self._pps_delays[logical_tile_id] = attribute_value
+                self._pps_delay_spread = max(
+                    self._pps_delays[0 : self._number_of_tiles]
+                ) - min(self._pps_delays[0 : self._number_of_tiles])
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        ppsDelaySpread=self._pps_delay_spread
+                    )
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"
@@ -1897,6 +1909,19 @@ class SpsStationComponentManager(
             assert proxy._proxy is not None  # for the type checker
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
+
+    @property
+    def pps_delay_spread(self: SpsStationComponentManager) -> int:
+        """
+        Get PPS delay delta.
+
+        Returns the difference between the maximum and minimum delays so
+        that users can track an observed pps drift.
+        Returns a result in samples, each sample is 1.25ns.
+
+        :return: Maximum delay difference between tiles in samples.
+        """
+        return self._pps_delay_spread
 
     @property
     def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:

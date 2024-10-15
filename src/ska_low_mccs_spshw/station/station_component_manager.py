@@ -1297,6 +1297,10 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
+        elif result_code is ResultCode.ABORTED:
+            self.logger.error("Initialisation aborted")
+            task_status = TaskStatus.ABORTED
+            message = "On Command aborted"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED

@@ -126,7 +126,7 @@ class TestDaq(TpmSelfCheckTest):
             json.dumps(
                 {
                     "directory": "/",
-                    "nof_tiles": 1,
+                    "nof_tiles": len(self.tile_proxies),
                     "nof_correlator_channels": 1,
                 }
             )

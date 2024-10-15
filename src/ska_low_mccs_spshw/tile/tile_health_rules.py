@@ -139,6 +139,7 @@ class TileHealthRules(HealthRules):
         """
         return TileData.MIN_MAX_MONITORING_POINTS
 
+    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],

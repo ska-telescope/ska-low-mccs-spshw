@@ -189,7 +189,7 @@ class TileHealthRules(HealthRules):
                     p_state_previous = self.previous_counters.get(p)
                     states[p] = (
                         (HealthState.OK, "")
-                        if p_state_previous and p_state_previous <= p_state
+                        if not p_state_previous or p_state_previous <= p_state
                         else (
                             HealthState.FAILED,
                             f'Monitoring point "{path}/{p}": should be strictly'

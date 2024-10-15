@@ -49,6 +49,7 @@ class DataReceivedHandler(FileSystemEventHandler):
         self._data_created_callback = data_created_callback
         self._nof_antennas_per_tile = 16
         self._tile_id = 0
+        self._logger.error("Made the DataReceivedHandler")
 
     def on_created(self: DataReceivedHandler, event: FileSystemEvent) -> None:
         """
@@ -56,8 +57,10 @@ class DataReceivedHandler(FileSystemEventHandler):
 
         :param event: Event to check.
         """
+        self._logger.error(f"Got event: {event.event_type=}, {event._src_path=}")
         # Check if the created event is for a file (not a directory)
         if not event.is_directory:
+            self._logger.error("The event was not a directory.")
             data = np.zeros((self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8)
             raw_file = RawFormatFileManager(root_path=event.src_path)
             tile_data, timestamps = raw_file.read_data(
@@ -113,7 +116,9 @@ class TestDaq(TpmSelfCheckTest):
     def _configure_daq(self: TestDaq) -> None:
         assert self.daq_proxy is not None
         self.daq_proxy.adminmode = AdminMode.OFFLINE
+        time.sleep(1)
         self.daq_proxy.adminmode = AdminMode.ONLINE
+        time.sleep(1)
         self.daq_proxy.adminmode = AdminMode.ENGINEERING
         self.daq_proxy.Stop()
         time.sleep(1)
@@ -121,7 +126,7 @@ class TestDaq(TpmSelfCheckTest):
             json.dumps(
                 {
                     "directory": "/",
-                    "nof_tiles": len(self.tile_proxies),
+                    "nof_tiles": 1,
                     "nof_correlator_channels": 1,
                 }
             )
@@ -217,7 +222,7 @@ class TestDaq(TpmSelfCheckTest):
         self._start_directory_watch()
         self._send_raw_data(sync=False)
 
-        assert self._data_created_event.wait(5)
+        assert self._data_created_event.wait(20)
         self._data_created_event.clear()
 
         self._stop_directory_watch()

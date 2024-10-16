@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import random
 import time
 from copy import copy
@@ -48,7 +49,7 @@ class DataReceivedHandler(FileSystemEventHandler):
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_antennas_per_tile = 16
-        self._tile_id = 0
+        self._tile_id = 1
         self._logger.error("Made the DataReceivedHandler")
 
     def on_created(self: DataReceivedHandler, event: FileSystemEvent) -> None:
@@ -60,9 +61,12 @@ class DataReceivedHandler(FileSystemEventHandler):
         self._logger.error(f"Got event: {event.event_type=}, {event._src_path=}")
         # Check if the created event is for a file (not a directory)
         if not event.is_directory:
+            base_path = os.path.split(event._src_path)[0]
+            self._logger.error(f"{base_path=}")
+            self._logger.error(f"{os.listdir(base_path)=}")
             self._logger.error("The event was not a directory.")
             data = np.zeros((self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8)
-            raw_file = RawFormatFileManager(root_path=event.src_path)
+            raw_file = RawFormatFileManager(root_path=base_path)
             tile_data, timestamps = raw_file.read_data(
                 antennas=range(self._nof_antennas_per_tile),
                 polarizations=[0, 1],

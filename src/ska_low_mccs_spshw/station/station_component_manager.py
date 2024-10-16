@@ -730,12 +730,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1238,6 +1238,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        # pylint: disable=too-many-branches
         message: str = ""
         self.logger.debug("Starting on sequence")
         if task_callback:

@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable
 import numpy as np
 from pydaq.persisters import AAVSFileManager, RawFormatFileManager  # type: ignore
 from ska_control_model import AdminMode
+from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
@@ -38,18 +39,24 @@ class DataReceivedHandler(FileSystemEventHandler):
     def __init__(
         self: DataReceivedHandler,
         logger: logging.Logger,
+        nof_tiles: int,
         data_created_callback: Callable,
     ):
         """
         Initialise a new instance.
 
         :param logger: logger for the handler
+        :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
         self._logger: logging.Logger = logger
         self._data_created_callback = data_created_callback
         self._nof_antennas_per_tile = 16
-        self._tile_id = 1
+        self._nof_tiles = nof_tiles
+        self._tile_id = 0
+        self.data = np.zeros(
+            (self._nof_tiles * self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8
+        )
         self._logger.error("Made the DataReceivedHandler")
 
     def on_created(self: DataReceivedHandler, event: FileSystemEvent) -> None:
@@ -58,39 +65,39 @@ class DataReceivedHandler(FileSystemEventHandler):
 
         :param event: Event to check.
         """
-        if event.src_path.endswith(".lock"):
+        if not event._src_path.endswith(".hdf5") or event.is_directory:
             return
         self._logger.error(f"Got event: {event.event_type=}, {event._src_path=}")
-        # Check if the created event is for a file (not a directory)
-        if not event.is_directory:
-            base_path = os.path.split(event._src_path)[0]
-            self._logger.error(f"{base_path=}")
-            self._logger.error(f"{os.listdir(base_path)=}")
-            self._logger.error("The event was not a directory.")
-            data = np.zeros((self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8)
-            try:
-                self._logger.error("Making file manager")
-                raw_file = RawFormatFileManager(root_path=base_path)
-                self._logger.error("Made file manager, reading data")
-                tile_data, timestamps = raw_file.read_data(
-                    antennas=range(self._nof_antennas_per_tile),
-                    polarizations=[0, 1],
-                    n_samples=32 * 1024,
-                    tile_id=self._tile_id,
-                )
-                # self._logger.error(f"Read data: {tile_data=}")
-                self._logger.error(f"Tile data shape: {tile_data.shape}")
-                start_idx = self._nof_antennas_per_tile * self._tile_id
-                end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
+        base_path = os.path.split(event._src_path)[0]
+        self._logger.error(f"{base_path=}")
+        self._logger.error(f"{os.listdir(base_path)=}")
+        self._logger.error("The event was not a directory.")
 
-                self._logger.error(f"Slicing data from {start_idx} to {end_idx}")
+        try:
+            self._logger.error("Making file manager")
+            raw_file = RawFormatFileManager(root_path=base_path)
+            self._logger.error("Made file manager, reading data")
+            tile_data, timestamps = raw_file.read_data(
+                antennas=range(self._nof_antennas_per_tile),
+                polarizations=[0, 1],
+                n_samples=32 * 1024,
+                tile_id=self._tile_id,
+            )
+            # self._logger.error(f"Read data: {tile_data=}")
+            self._logger.error(f"Tile data shape: {tile_data.shape}")
+            start_idx = self._nof_antennas_per_tile * self._tile_id
+            end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
 
-                data[0:16, :, :] = tile_data
+            self._logger.error(f"Slicing data from {start_idx} to {end_idx}")
 
-                # self._logger.error(f"Got {data=}")
-                self._data_created_callback(data=data)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                self._logger.error(f"Got error: {repr(e)}, {e}")
+            self.data[start_idx:end_idx, :, :] = tile_data
+
+            self._tile_id += 1
+
+            if self._tile_id == self._nof_tiles - 1:
+                self._data_created_callback(data=self.data)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self._logger.error(f"Got error: {repr(e)}, {e}")
 
 
 class TestDaq(TpmSelfCheckTest):
@@ -157,23 +164,25 @@ class TestDaq(TpmSelfCheckTest):
         }
         self.component_manager.set_lmc_download(**tpm_config)
 
-    def _configure_and_start_pattern_generator(self: TestDaq, i: int = 0) -> None:
+    def _configure_and_start_pattern_generator(
+        self: TestDaq, proxy: MccsDeviceProxy, i: int = 0
+    ) -> None:
         test_pattern = [
             n if i % 2 == 0 else random.randrange(0, 255) for n in range(1024)
         ]
         test_adders = list(range(32))
         self._pattern = test_pattern
         self._adders = test_adders
-        self.tile_proxies[0].StopPatternGenerator("jesd")
-        self.tile_proxies[0].ConfigurePatternGenerator(
+        proxy.StopPatternGenerator("jesd")
+        proxy.ConfigurePatternGenerator(
             json.dumps(
                 {"stage": "jesd", "pattern": test_pattern, "adders": test_adders}
             )
         )
-        self.tile_proxies[0].StartPatternGenerator("jesd")
+        proxy.StartPatternGenerator("jesd")
 
-    def _send_raw_data(self: TestDaq, sync: bool) -> None:
-        self.tile_proxies[0].SendDataSamples(
+    def _send_raw_data(self: TestDaq, proxy: MccsDeviceProxy, sync: bool) -> None:
+        proxy.SendDataSamples(
             json.dumps(
                 {
                     "data_type": "raw",
@@ -186,7 +195,7 @@ class TestDaq(TpmSelfCheckTest):
     def _start_directory_watch(self: TestDaq) -> None:
         self._observer = Observer()  # type: ignore
         data_handler = DataReceivedHandler(
-            self.test_logger, self._data_received_callback
+            self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
         self._observer.schedule(data_handler, "/product", recursive=True)
         self._observer.start()
@@ -232,12 +241,12 @@ class TestDaq(TpmSelfCheckTest):
     def test(self: TestDaq) -> None:
         """A basic test to show we can connect to proxies."""
         self._configure_daq()
-        self._configure_and_start_pattern_generator()
         self._start_directory_watch()
-        self._send_raw_data(sync=False)
-
-        assert self._data_created_event.wait(20)
-        self._data_created_event.clear()
+        for tile in self.tile_proxies:
+            self._configure_and_start_pattern_generator(tile)
+            self._send_raw_data(tile, sync=False)
+            assert self._data_created_event.wait(20)
+            self._data_created_event.clear()
 
         self._stop_directory_watch()
         self._check_raw()

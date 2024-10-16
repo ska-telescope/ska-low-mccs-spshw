@@ -510,17 +510,17 @@ def test_Abort_On(
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
     # Turn station to Standby state
-    ([result_code], [off_command_id]) = station_device.Standby()
+    ([result_code], [standby_command_id]) = station_device.Standby()
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "STAGING")
+        (standby_command_id, "STAGING")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "QUEUED")
+        (standby_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "IN_PROGRESS")
+        (standby_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -533,7 +533,7 @@ def test_Abort_On(
     assert station_device.state() == DevState.STANDBY
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED")
+        (standby_command_id, "COMPLETED")
     )
 
     # Turn a tile off, the on command won't be able to finish until it times out
@@ -544,13 +544,13 @@ def test_Abort_On(
     assert on_result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "STAGING")
+        (standby_command_id, "COMPLETED", on_command_id, "STAGING")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "QUEUED")
+        (standby_command_id, "COMPLETED", on_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
+        (standby_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
     )
 
     # Abort the command
@@ -559,7 +559,7 @@ def test_Abort_On(
     # Takes one second to get canceled
     time.sleep(1)
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "COMPLETED", on_command_id, "ABORTED")
+        (standby_command_id, "COMPLETED", on_command_id, "ABORTED")
     )
 
 

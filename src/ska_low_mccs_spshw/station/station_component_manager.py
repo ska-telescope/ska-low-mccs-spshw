@@ -1447,18 +1447,6 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code
         """
-
-        def _check_aborted() -> bool:
-            if task_abort_event and task_abort_event.is_set():
-                self.logger.info("_turn_on_tiles task has been aborted")
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.ABORTED,
-                        result=(ResultCode.ABORTED, "Task aborted"),
-                    )
-                return True
-            return False
-
         with self._power_state_lock:
             if not all(
                 power_state == PowerState.ON
@@ -1482,7 +1470,8 @@ class SpsStationComponentManager(
             desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
-            if _check_aborted():
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("_turn_on_tiles task has been aborted")
                 return ResultCode.ABORTED
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")

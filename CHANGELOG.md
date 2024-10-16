@@ -1,6 +1,6 @@
 # Version History
 
-## 0.17.6
+## 0.17.7
 
 * [SKB-596] MccsTile producing too many logs
 

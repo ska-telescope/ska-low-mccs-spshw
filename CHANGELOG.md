@@ -1,8 +1,14 @@
 # Version History
 
-## Unreleased
-
 * [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
+
+## 0.17.7
+
+* [SKB-596] MccsTile producing too many logs
+
+## 0.17.6
+
+* [SKB-507] Added `ppsDelaySpread` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelaySpread` is observed to be >4 samples and FAILED when >10. Added `ppsDelayDrift` attribute to `MccsTile` to track difference between current `ppsDelay` and its value at initialisation. Results in Tile HealthState.DEGRADED when >4 samples and FAILED when >10.
 
 ## 0.17.6
 
@@ -10,6 +16,7 @@
 
 ## 0.17.5
 
+* [MCCS-2295] Mark attributes as invalid when MccsTile is OFF
 * [SKB-520] Correct Tile attribute quality reporting bug.
 * [MCCS-2258] Add test_ral_low manual stage to pipeline.
 * [SKB-447] Subrack health board current fix

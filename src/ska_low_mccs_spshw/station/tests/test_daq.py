@@ -66,21 +66,28 @@ class DataReceivedHandler(FileSystemEventHandler):
             self._logger.error(f"{os.listdir(base_path)=}")
             self._logger.error("The event was not a directory.")
             data = np.zeros((self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8)
-            raw_file = RawFormatFileManager(root_path=base_path)
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(self._nof_antennas_per_tile),
-                polarizations=[0, 1],
-                n_samples=32 * 1024,
-                tile_id=self._tile_id,
-            )
-            data[
-                self._nof_antennas_per_tile
-                * self._tile_id : self._nof_antennas_per_tile
-                * (self._tile_id + 1),
-                :,
-                :,
-            ] = tile_data
-            self._data_created_callback(data=data)
+            try:
+                self._logger.error("Making file manager")
+                raw_file = RawFormatFileManager(root_path=base_path)
+                self._logger.error("Made file manager, reading data")
+                tile_data, timestamps = raw_file.read_data(
+                    antennas=range(self._nof_antennas_per_tile),
+                    polarizations=[0, 1],
+                    n_samples=32 * 1024,
+                    tile_id=self._tile_id,
+                )
+                self._logger.error(f"Read data: {tile_data=}")
+                data[
+                    self._nof_antennas_per_tile
+                    * self._tile_id : self._nof_antennas_per_tile
+                    * (self._tile_id + 1),
+                    :,
+                    :,
+                ] = tile_data
+                self._logger.error(f"Got {data=}")
+                self._data_created_callback(data=data)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                self._logger.error(f"Got error: {repr(e)}, {e}")
 
 
 class TestDaq(TpmSelfCheckTest):

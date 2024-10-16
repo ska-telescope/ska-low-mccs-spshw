@@ -76,15 +76,16 @@ class DataReceivedHandler(FileSystemEventHandler):
                     n_samples=32 * 1024,
                     tile_id=self._tile_id,
                 )
-                self._logger.error(f"Read data: {tile_data=}")
-                data[
-                    self._nof_antennas_per_tile
-                    * self._tile_id : self._nof_antennas_per_tile
-                    * (self._tile_id + 1),
-                    :,
-                    :,
-                ] = tile_data
-                self._logger.error(f"Got {data=}")
+                # self._logger.error(f"Read data: {tile_data=}")
+                self._logger.error(f"Tile data shape: {tile_data.shape}")
+                start_idx = self._nof_antennas_per_tile * self._tile_id
+                end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
+
+                self._logger.error(f"Slicing data from {start_idx} to {end_idx}")
+
+                data[start_idx:end_idx, :, :] = tile_data
+
+                # self._logger.error(f"Got {data=}")
                 self._data_created_callback(data=data)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 self._logger.error(f"Got error: {repr(e)}, {e}")

@@ -58,6 +58,8 @@ class DataReceivedHandler(FileSystemEventHandler):
 
         :param event: Event to check.
         """
+        if event.src_path.endswith(".lock"):
+            return
         self._logger.error(f"Got event: {event.event_type=}, {event._src_path=}")
         # Check if the created event is for a file (not a directory)
         if not event.is_directory:

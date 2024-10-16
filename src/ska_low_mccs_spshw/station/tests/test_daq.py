@@ -92,10 +92,10 @@ class DataReceivedHandler(FileSystemEventHandler):
 
             self.data[start_idx:end_idx, :, :] = tile_data
 
-            self._tile_id += 1
-
             if self._tile_id == self._nof_tiles - 1:
                 self._data_created_callback(data=self.data)
+            self._tile_id += 1
+
         except Exception as e:  # pylint: disable=broad-exception-caught
             self._logger.error(f"Got error: {repr(e)}, {e}")
 
@@ -240,9 +240,9 @@ class TestDaq(TpmSelfCheckTest):
 
     def test(self: TestDaq) -> None:
         """A basic test to show we can connect to proxies."""
-        self._configure_daq()
         self._start_directory_watch()
         for tile in self.tile_proxies:
+            self._configure_daq()
             self._configure_and_start_pattern_generator(tile)
             self._send_raw_data(tile, sync=False)
             assert self._data_created_event.wait(20)

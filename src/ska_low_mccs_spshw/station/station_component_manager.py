@@ -1192,7 +1192,8 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        self.logger.debug("Starting standby sequence")
+        self.logger.debug("Starting standby sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1272,7 +1273,8 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         message: str = ""
-        self.logger.debug("Starting on sequence")
+        self.logger.debug("Starting on sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK

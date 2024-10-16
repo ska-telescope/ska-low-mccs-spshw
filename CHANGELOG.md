@@ -1,6 +1,8 @@
 # Version History
 
-## Unreleased
+## 0.17.7
+
+* [SKB-596] MccsTile producing too many logs
 
 ## 0.17.6
 
@@ -8,6 +10,7 @@
 
 ## 0.17.5
 
+* [MCCS-2295] Mark attributes as invalid when MccsTile is OFF
 * [SKB-520] Correct Tile attribute quality reporting bug.
 * [MCCS-2258] Add test_ral_low manual stage to pipeline.
 * [SKB-447] Subrack health board current fix

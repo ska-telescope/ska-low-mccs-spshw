@@ -586,7 +586,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
             else:
                 try:
-                    self.logger.debug(f"Update attribute {attribute_name}")
                     tango_name = self.attr_map[attribute_name]
                     if mark_invalid:
                         self._attribute_state[tango_name].mark_stale()
@@ -684,10 +683,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             if attribute_value is None:
                 continue
             try:
-                self.logger.debug(
-                    f"Updating health attribute {attribute_name} "
-                    f"value to {attribute_value}"
-                )
                 self._attribute_state[attribute_name].update(attribute_value)
             except KeyError:
                 self.logger.warning(f"Attribute {attribute_name} not found.")
@@ -1525,7 +1520,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         station = self._attribute_state["stationId"].read()
         message = f"stationId: read value = {station}"
-        self.logger.debug(message)
+        self.logger.info(message)
         return station
 
     @stationId.write  # type: ignore[no-redef]
@@ -1536,7 +1531,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param value: the station id
         """
         message = f"stationId: write value = {value}"
-        self.logger.debug(message)
+        self.logger.info(message)
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
@@ -2593,7 +2588,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 raise ValueError("register name is a mandatory parameter")
             value = self._component_manager.read_register(name)
             message = f"Register {name} = {value}"
-            self.logger.debug(message)
+            self.logger.info(message)
             return value
 
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")

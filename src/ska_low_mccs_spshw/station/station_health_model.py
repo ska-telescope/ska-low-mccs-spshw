@@ -45,7 +45,8 @@ class SpsStationHealthModel(BaseHealthModel):
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
         self._health_rules = SpsStationHealthRules(thresholds)
-        super().__init__(health_changed_callback)
+        # State entries to create.
+        super().__init__(health_changed_callback, pps_delay_spread=0)
 
     def subrack_health_changed(
         self: SpsStationHealthModel,
@@ -107,7 +108,7 @@ class SpsStationHealthModel(BaseHealthModel):
             if health == station_health:
                 return station_health, station_report
             result, report = self._health_rules.rules[health](
-                self._subrack_health, self._tile_health
+                self._subrack_health, self._tile_health, self._state
             )
             if result:
                 return health, report

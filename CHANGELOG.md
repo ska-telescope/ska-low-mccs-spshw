@@ -4,6 +4,10 @@
 
 * [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
 
+## 0.17.6
+
+* [SKB-507] Added `ppsDelaySpread` attribute to `SpsStation` to track `ppsDelay` drifts. This has been incorporated into the HealthModel and will result in HealthState.DEGRADED when the `ppsDelaySpread` is observed to be >4 samples and FAILED when >10. Added `ppsDelayDrift` attribute to `MccsTile` to track difference between current `ppsDelay` and its value at initialisation. Results in Tile HealthState.DEGRADED when >4 samples and FAILED when >10.
+
 ## 0.17.5
 
 * [SKB-520] Correct Tile attribute quality reporting bug.
@@ -22,7 +26,7 @@
 ## 0.17.2
 
 * [MCCS-1979] Correct tile health monitoring for single 40g QSFP
-* [SKB-426] Remove ADA coltages from health rollup
+* [SKB-426] Remove ADA voltages from health rollup
 * [SKB-526] Fix channeliser rounding ordering
 * [SKB-431] Converted Daq.Stop to a LongRunningCommand to avoid CORBA timeouts.
 * [SKB-433] Update SpsStation to use ThreadPools

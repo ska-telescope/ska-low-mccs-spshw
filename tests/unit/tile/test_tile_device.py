@@ -98,6 +98,7 @@ def test_context_fixture(
     harness.add_tile_device(
         tile_id,
         device_class=patched_tile_device_class,
+        logging_level=2,
     )
     with harness as context:
         yield context
@@ -650,7 +651,6 @@ class TestMccsTile:
                 try:
                     assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
                 except AssertionError:
-                    print(f"{attr=} was not in quality ATTR_INVALID")
                     pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
         for attr in active_read_attributes:
             try:

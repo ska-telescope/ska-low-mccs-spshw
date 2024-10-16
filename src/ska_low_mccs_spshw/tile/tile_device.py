@@ -173,6 +173,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "channeliser_rounding": "channeliserRounding",
             "pll_locked": "pllLocked",
             "pps_delay": "ppsDelay",
+            "pps_drift": "ppsDrift",
             "pps_delay_correction": "ppsDelayCorrection",
             "phase_terminal_count": "phaseTerminalCount",
             "beamformer_running": "isBeamformerRunning",
@@ -251,7 +252,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
         self._attribute_state: dict[str, AttributeManager] = {}
 
-        # generic atributes
+        # generic attributes
         for attr_name in self.attr_map.values():
             converter = attribute_converters.get(attr_name)
             if converter is not None and not callable(converter):
@@ -1841,7 +1842,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the delay between PPS and 10 MHz clock.
 
-        :return: Return the PPS delay in nanoseconds
+        :return: Return the PPS delay in 1.25ns units.
         """
         if self._attribute_state["ppsDelay"].read() is None:
             power = self.component_manager.pps_delay
@@ -1849,11 +1850,20 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self._attribute_state["ppsDelay"].read()
 
     @attribute(dtype="DevLong")
+    def ppsDrift(self: MccsTile) -> int:
+        """
+        Return the observed drift in the ppsDelay of this Tile.
+
+        :return: Return the pps delay drift in 1.25ns units or `None` if not initialised
+        """
+        return self._attribute_state["ppsDrift"].read()
+
+    @attribute(dtype="DevLong")
     def ppsDelayCorrection(self: MccsTile) -> int | None:
         """
         Return the correction made to the pps delay.
 
-        :return: Return the PPS delay in nanoseconds
+        :return: Return the PPS delay in 1.25ns units.
         """
         return self._attribute_state["ppsDelayCorrection"].read()
 
@@ -4908,6 +4918,40 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         handler = self.get_command_object("SetFirmwareTemperatureThresholds")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
+        dtype_out="DevVarLongStringArray"
+    )
+    def Off(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Turn the device off.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self._health_model._ignore_power_state = True
+        return super().Off()
+
+    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
+        dtype_out="DevVarLongStringArray"
+    )
+    def On(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Turn device on.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self._health_model._ignore_power_state = False
+        return super().On()
 
 
 # ----------

@@ -345,3 +345,7 @@ tpm_monitoring_points:
       ddr_parity_error_count:
         FPGA0: 0
         FPGA1: 0
+  derived:
+    pps_drift:
+      soft: 4
+      hard: 10

@@ -63,6 +63,7 @@ _ATTRIBUTE_MAP: Final = {
     "STATION_ID": "station_id",
     "PHASE_TERMINAL_COUNT": "phase_terminal_count",
     "PPS_DELAY": "pps_delay",
+    "PPS_DRIFT": "pps_drift",
     "ADC_RMS": "adc_rms",
     "CHANNELISER_ROUNDING": "channeliser_rounding",
     "IS_PROGRAMMED": "is_programmed",
@@ -160,6 +161,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._pps_delay_correction: int = 0
         self._fpga_reference_time = 0
+        self._initial_pps_delay: int | None = None
         self._forty_gb_core_list: list = []
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
@@ -298,6 +300,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.get_pps_delay,
                     publish=True,
                 )
+            case "PPS_DRIFT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self._get_pps_drift,
+                    publish=True,
+                )
             case "ARP_TABLE":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -416,7 +424,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
-
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")
@@ -2821,11 +2828,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Return last measured ppsdelay correction.
 
-        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+        :return: PPS delay correction. Units: 1.25 ns
         """
         return self.tile.get_pps_delay(
             enable_correction=True
         ) - self.tile.get_pps_delay(enable_correction=False)
+
+    @check_hardware_lock_claimed
+    def _get_pps_drift(self: TileComponentManager) -> int:
+        if self._initial_pps_delay is None:
+            self._initial_pps_delay = self.tile.get_pps_delay()
+        return self.tile.get_pps_delay() - self._initial_pps_delay
 
     def set_preadu_levels(self: TileComponentManager, levels: list[float]) -> None:
         """

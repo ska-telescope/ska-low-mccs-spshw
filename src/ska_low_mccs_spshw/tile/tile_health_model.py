@@ -46,6 +46,9 @@ class TileHealthModel(BaseHealthModel):
         self.logger = None
         self._health_rules = TileHealthRules(thresholds)
         super().__init__(health_changed_callback)
+        # Add new section for non-hardware/derived health quantities.
+        additional_health = {"derived": {"pps_drift": 0}}
+        self.update_state(**additional_health)
 
     def set_logger(self, logger: Any) -> None:
         """
@@ -60,16 +63,12 @@ class TileHealthModel(BaseHealthModel):
         self: TileHealthModel,
     ) -> tuple[HealthState, str]:
         """
-        Compute overall health of the station.
+        Compute overall health of the tile.
 
         The overall health is based on the fault and communication
-        status of the station overall, together with the health of the
-        tiles that it manages.
+        status of the tile.
 
-        This implementation simply sets the health of the station to the
-        health of its least healthy component.
-
-        :return: an overall health of the station
+        :return: an overall health of the tile
         """
         tile_health, tile_report = super().evaluate_health()
         intermediate_healths = self.intermediate_healths
@@ -81,7 +80,9 @@ class TileHealthModel(BaseHealthModel):
         ]:
             if health == tile_health:
                 return tile_health, tile_report
-            result, report = self._health_rules.rules[health](intermediate_healths)
+            result, report = self._health_rules.rules[health](
+                intermediate_healths, self._state
+            )
             if result:
                 return health, report
         return HealthState.UNKNOWN, "No rules matched"
@@ -96,6 +97,7 @@ class TileHealthModel(BaseHealthModel):
         :return: the intermediate health roll-up states
         """
         monitoring_points: dict[str, Any] = self._state.get("tile_health_structure", {})
+        monitoring_points.update(derived=self._state.get("derived", {}))
         return {
             health_key: self._health_rules.compute_intermediate_state(
                 monitoring_points.get(health_key, {}),
@@ -124,3 +126,12 @@ class TileHealthModel(BaseHealthModel):
         self._health_rules._thresholds = self._merge_dicts(
             self._health_rules.default_thresholds, params
         )
+
+    def update_data(self: TileHealthModel, new_states: dict) -> None:
+        """
+        Update this health model with state relevant to evaluating health.
+
+        :param new_states: New states of the data points.
+        """
+        self._state.update(new_states)
+        self.update_health()

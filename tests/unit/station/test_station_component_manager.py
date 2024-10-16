@@ -29,6 +29,17 @@ from ska_low_mccs_spshw.station import (
 from tests.harness import SpsTangoTestHarness, get_subrack_name, get_tile_name
 
 
+@pytest.fixture(name="num_tiles_to_add")
+def num_tiles_to_add_fixture() -> int:
+    """
+    Return number of tiles to add to test.
+
+    :return: Number of tiles to add to harness.
+    """
+    return 4
+
+
+# pylint: disable = too-many-arguments
 @pytest.fixture(name="test_context")
 def fixture_test_context(
     subrack_id: int,
@@ -36,6 +47,7 @@ def fixture_test_context(
     tile_id: int,
     mock_tile_device_proxy: unittest.mock.Mock,
     daq_id: int,
+    num_tiles_to_add: int,
 ) -> Iterator[None]:
     """
     Yield into a context in which Tango is running, with mock devices.
@@ -45,7 +57,7 @@ def fixture_test_context(
     Tango devices are mocked out, but since the station component
     manager uses tango to talk to them, we still need some semblance of
     a tango subsystem in place. Here, we assume that the station has
-    only one subrack and one tile.
+    only one subrack and four tiles.
 
     :param subrack_id: ID of the subrack Tango device to be mocked
     :param mock_subrack_device_proxy: a mock subrack device proxy
@@ -54,6 +66,7 @@ def fixture_test_context(
     :param mock_tile_device_proxy: a mock tile device proxy
         that has been configured with the required subrack behaviours.
     :param daq_id: the ID number of the DAQ receiver.
+    :param num_tiles_to_add: Number of tiles to add.
 
     :yields: into a context in which Tango is running, with a mock
         subrack device.
@@ -61,10 +74,9 @@ def fixture_test_context(
     harness = SpsTangoTestHarness()
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
     harness.add_mock_subrack_device(subrack_id + 1, mock_subrack_device_proxy)
-    harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
-    harness.add_mock_tile_device(tile_id + 1, mock_tile_device_proxy)
-    harness.add_mock_tile_device(tile_id + 2, mock_tile_device_proxy)
-    harness.add_mock_tile_device(tile_id + 3, mock_tile_device_proxy)
+    # Add 4 tiles.
+    for i in range(0, num_tiles_to_add):
+        harness.add_mock_tile_device(tile_id + i, mock_tile_device_proxy)
     harness.set_daq_instance()
     harness.set_daq_device(daq_id=daq_id, address=None)
     with harness:
@@ -125,6 +137,7 @@ def station_component_manager_fixture(
     callbacks: MockCallableGroup,
     antenna_uri: list[str],
     station_self_check_manager: SpsStationSelfCheckManager,
+    num_tiles_to_add: int,
 ) -> SpsStationComponentManager:
     """
     Return a station component manager.
@@ -138,18 +151,14 @@ def station_component_manager_fixture(
     :param callbacks: callback group
     :param antenna_uri: Location of antenna configuration file.
     :param station_self_check_manager: SpsStationSelfCheckManager with basic tests.
+    :param num_tiles_to_add: Number of mock tiles to add.
 
     :return: a station component manager.
     """
     sps_station_component_manager = SpsStationComponentManager(
         1,
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
-        [
-            get_tile_name(tile_id),
-            get_tile_name(tile_id + 1),
-            get_tile_name(tile_id + 2),
-            get_tile_name(tile_id + 3),
-        ],
+        [get_tile_name(tile_id + i) for i in range(0, num_tiles_to_add)],
         daq_trl,
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
@@ -388,7 +397,7 @@ def test_get_static_delays(
     callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
 
-    # First we need an example mapping for our antennas, we only have 1 tile in tests,
+    # First we need an example mapping for our antennas, we have 4 tiles in tests,
     # but lets pretend we have a whole station
     channels = list(range(16))
 
@@ -407,16 +416,22 @@ def test_get_static_delays(
             antenna_no += 1
 
     static_delays = station_component_manager._update_static_delays()
-    expected_static_delays = [0 for _ in range(32)]
+    expected_static_delays = [
+        0 for _ in range(station_component_manager._number_of_tiles * 2 * len(channels))
+    ]
     for antenna, antenna_config in station_component_manager._antenna_mapping.items():
-        if int(antenna_config["tpm"]) == tile_id:
-            expected_static_delays[antenna_config["tpm_y_channel"]] = antenna_config[
-                "delay"
-            ]
-            expected_static_delays[antenna_config["tpm_x_channel"]] = antenna_config[
-                "delay"
-            ]
-    assert static_delays[0 : len(expected_static_delays)] == expected_static_delays
+        if int(antenna_config["tpm"]) in [
+            tile_id + i for i in range(0, station_component_manager._number_of_tiles)
+        ]:
+            expected_static_delays[
+                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                + antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
+            expected_static_delays[
+                ((antenna_config["tpm"] - 1) * 2 * len(channels))
+                + antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+    assert static_delays == expected_static_delays
 
 
 def test_self_check(
@@ -705,3 +720,57 @@ def test_power_state_transitions(
         tile_names[0], power=PowerState.UNKNOWN
     )
     assert station_component_manager._component_state["power"] == PowerState.UNKNOWN
+
+
+def test_pps_delay_spread(
+    station_component_manager: SpsStationComponentManager,
+    callbacks: MockCallableGroup,
+    mock_tile_proxy: MccsDeviceProxy,
+    num_tiles_to_add: int,
+) -> None:
+    """
+    Test the method to run commands async.
+
+    :param station_component_manager: the SPS station component manager
+        under test
+    :param callbacks: dictionary of driver callbacks.
+    :param mock_tile_proxy: mock tile which the component manager has been given.
+    :param num_tiles_to_add: Number of tiles in the test.
+    """
+    assert station_component_manager.communication_state == CommunicationStatus.DISABLED
+    assert station_component_manager._number_of_tiles >= 4  # Test assumes 4 tiles.
+    # takes the component out of DISABLED.
+    station_component_manager.start_communicating()
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+
+    assert station_component_manager._pps_delays == [0] * 16
+    assert station_component_manager._pps_delay_spread == 0
+
+    # Set 1 Tile's ppsDelay to 4 for a delta of 4.
+    station_component_manager._on_tile_attribute_change(
+        logical_tile_id=1,
+        attribute_name="ppsDelay",
+        attribute_value=4,
+        attribute_quality=tango.AttrQuality.ATTR_VALID,
+    )
+    assert station_component_manager._pps_delay_spread == 4
+
+    # Set all tiles to a delay of 4 for a delta of 0.
+    for tile_id in range(0, num_tiles_to_add):
+        station_component_manager._on_tile_attribute_change(
+            logical_tile_id=tile_id,
+            attribute_name="ppsDelay",
+            attribute_value=4,
+            attribute_quality=tango.AttrQuality.ATTR_VALID,
+        )
+    assert station_component_manager._pps_delay_spread == 0
+
+    # Set 1 Tile to ppsDelay of 16 for a delta of 12.
+    station_component_manager._on_tile_attribute_change(
+        logical_tile_id=3,
+        attribute_name="ppsDelay",
+        attribute_value=16,
+        attribute_quality=tango.AttrQuality.ATTR_VALID,
+    )
+    assert station_component_manager._pps_delay_spread == 12

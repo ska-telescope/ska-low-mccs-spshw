@@ -38,6 +38,14 @@ platform:
             version: tpm_v1_6
             subrack: sr1
             subrack_slot: 1
+          # tpm11:
+          #   id: 10
+          #   simulated: true
+          #   host: 10.0.10.202
+          #   port: 10000
+          #   version: tpm_v1_6
+          #   subrack: sr1
+          #   subrack_slot: 2
         antenna_config_uri:
           uri: "car:ska-low-aavs3?main"
           path: "instrument/mccs-configuration/aavs3.yaml"
@@ -65,9 +73,9 @@ platform:
 # For example,
 #
 # helm_values:
-#   # image:
-#   #   registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#   #   tag: 0.11.0-dev.cc21201e6
+#   image:
+#     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#     tag: 0.17.6-dirty
 
 #   ska-low-mccs-daq:
 #     image:

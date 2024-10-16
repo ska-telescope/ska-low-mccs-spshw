@@ -83,7 +83,7 @@ class DataReceivedHandler(FileSystemEventHandler):
 
                 self._logger.error(f"Slicing data from {start_idx} to {end_idx}")
 
-                data[start_idx:end_idx, :, :] = tile_data
+                data[0:16, :, :] = tile_data
 
                 # self._logger.error(f"Got {data=}")
                 self._data_created_callback(data=data)

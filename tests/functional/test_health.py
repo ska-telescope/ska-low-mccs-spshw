@@ -218,10 +218,10 @@ def device_verify_attribute(
             break
         time.sleep(1)
     if attribute == "HealthState":
-        assert (
-            device_value == enum_value
-        ), f"Expected health to be {enum_value} but got {device_value}, "
-        f"Reason: {device_proxy.healthReport}"
+        assert device_value == enum_value, (
+            f"Expected health to be {enum_value} but got {device_value}, "
+            f"Reason: {device_proxy.healthReport}"
+        )
     else:
         assert device_value == enum_value
 

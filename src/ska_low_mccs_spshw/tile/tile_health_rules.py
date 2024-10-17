@@ -16,6 +16,12 @@ from ska_low_mccs_common.health import HealthRules
 
 from .tile_data import TileData
 
+COUNTERS = [
+    "rd_cnt",
+    "wr_cnt",
+    "rd_dat_cnt",
+]
+
 
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
@@ -29,6 +35,9 @@ class TileHealthRules(HealthRules):
         """
         super().__init__(*args, **kwargs)
         self.logger = None
+        self.previous_counters: dict = {}
+        for counter in COUNTERS:
+            self.previous_counters[counter] = None
 
     def set_logger(self: TileHealthRules, logger: Any) -> None:
         """
@@ -130,6 +139,7 @@ class TileHealthRules(HealthRules):
         """
         return TileData.MIN_MAX_MONITORING_POINTS
 
+    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],
@@ -170,11 +180,25 @@ class TileHealthRules(HealthRules):
                     )
                     continue
             else:
+                last_path = path.split("/")[-1]
                 if p_state is None and min_max[p] is not None:
                     states[p] = (
                         HealthState.UNKNOWN,
                         f"Monitoring point {p} is None.",
                     )
+                elif last_path in COUNTERS:
+                    p_state_previous = self.previous_counters.get(p)
+                    states[p] = (
+                        (HealthState.OK, "")
+                        if not p_state_previous or p_state_previous <= p_state
+                        else (
+                            HealthState.FAILED,
+                            f'Monitoring point "{path}/{p}": should be strictly'
+                            "increasing but"
+                            f"current {p_state} < previous {p_state_previous}",
+                        )
+                    )
+                    self.previous_counters[p] = p_state
                 elif isinstance(min_max[p], dict):
                     # If limits are min/max
                     if "min" in min_max[p].keys():

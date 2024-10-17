@@ -66,8 +66,8 @@ platform:
 #
 # helm_values:
 #   image:
-#     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.17.1
+#     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+#     tag: 0.17.6-dirty
 
 #   ska-low-mccs-daq:
 #     image:

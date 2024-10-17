@@ -38,7 +38,7 @@ from ska_low_mccs_common.component import (
     MccsBaseComponentManager,
 )
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from ska_low_mccs_common.utils import threadsafe
+from ska_low_mccs_common.utils import lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
@@ -543,6 +543,10 @@ class SpsStationComponentManager(
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
 
+        self._power_command_in_progress = (
+            threading.Lock()
+        )  # Used to lock DevState during power command execution.
+
         super().__init__(
             logger,
             communication_state_changed_callback,
@@ -1002,38 +1006,52 @@ class SpsStationComponentManager(
     def _evaluate_power_state(
         self: SpsStationComponentManager,
     ) -> None:
+        # 1. Any Tile ON, result = ON. (Subrack must therefore be on.)
+        # 2. Any Subrack ON, All Tile OFF/NO_SUPP, result = STANDBY
+        # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
+        # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
+        # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
+        if self._power_command_in_progress.locked():
+            # Suppress power state evaluation whilst power command in progress.
+            # This is to prevent the Station changing to DevState.ON before all tiles
+            # have had a chance to turn on.
+            return
         with self._power_state_lock:
-            power_states = list(self._tile_power_states.values())
-            if all(power_state == PowerState.ON for power_state in power_states):
-                evaluated_power_state = PowerState.ON
-            elif all(
-                power_state == PowerState.NO_SUPPLY for power_state in power_states
-            ):
-                evaluated_power_state = PowerState.OFF
-            elif all(
-                power_state == PowerState.ON
-                for power_state in list(self._subrack_power_states.values())
+            tile_power_states = list(self._tile_power_states.values())
+            subrack_power_states = list(self._subrack_power_states.values())
+            # Assume that with any Tile ON the subrack must also be ON.
+            if any(power_state == PowerState.ON for power_state in tile_power_states):
+                evaluated_power_state = PowerState.ON  # 1
+            elif any(
+                power_state == PowerState.ON for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.STANDBY
+                evaluated_power_state = PowerState.STANDBY  # 2
             elif all(
-                power_state == PowerState.OFF
-                for power_state in list(self._subrack_power_states.values())
+                power_state == PowerState.NO_SUPPLY
+                for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state == PowerState.NO_SUPPLY for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.OFF
+                evaluated_power_state = PowerState.NO_SUPPLY  # 3
+            elif all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in subrack_power_states
+            ) and all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
+            ):
+                evaluated_power_state = PowerState.OFF  # 4
             else:
-                evaluated_power_state = PowerState.UNKNOWN
+                # We get here by:
+                # Any subrack UNKNOWN AND no subrack ON
+                # Any tile UNKNOWN AND no tile ON
+                self.logger.debug(f"tile powers: {tile_power_states}")
+                self.logger.debug(f"subrack powers: {subrack_power_states}")
+                evaluated_power_state = PowerState.UNKNOWN  # 5
 
-            if any(
-                power_state == PowerState.UNKNOWN
-                for power_state in self._daq_power_state.values()
-            ):
-                evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
@@ -1093,6 +1111,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _off(
         self: SpsStationComponentManager,
@@ -1158,6 +1177,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._standby, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _standby(
         self: SpsStationComponentManager,
@@ -1172,7 +1192,8 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        self.logger.debug("Starting standby sequence")
+        self.logger.debug("Starting standby sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1236,6 +1257,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _on(
         self: SpsStationComponentManager,
@@ -1251,7 +1273,8 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         message: str = ""
-        self.logger.debug("Starting on sequence")
+        self.logger.debug("Starting on sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
@@ -1290,6 +1313,7 @@ class SpsStationComponentManager(
             result_code = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
+            # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")

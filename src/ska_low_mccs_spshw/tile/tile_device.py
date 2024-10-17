@@ -4914,6 +4914,40 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
+    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
+        dtype_out="DevVarLongStringArray"
+    )
+    def Off(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Turn the device off.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self._health_model._ignore_power_state = True
+        return super().Off()
+
+    @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
+        dtype_out="DevVarLongStringArray"
+    )
+    def On(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Turn device on.
+
+        To modify behaviour for this command, modify the do() method of
+        the command class.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self._health_model._ignore_power_state = False
+        return super().On()
+
 
 # ----------
 # Run server

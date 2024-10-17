@@ -1,5 +1,7 @@
 # Version History
 
+* [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
+
 ## 0.17.7
 
 * [SKB-596] MccsTile producing too many logs

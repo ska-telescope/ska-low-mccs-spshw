@@ -49,7 +49,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=2.0,
+        timeout=5.0,
     )
 
 
@@ -345,13 +345,13 @@ def test_On(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "STAGING")
+        (on_command_id, "STAGING")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "QUEUED")
+        (on_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "IN_PROGRESS")
+        (on_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -368,14 +368,12 @@ def test_On(
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
     time.sleep(0.1)
-
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.ON
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "COMPLETED")
+        (on_command_id, "COMPLETED")
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1

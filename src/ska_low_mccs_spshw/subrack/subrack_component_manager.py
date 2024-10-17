@@ -93,7 +93,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             hardware_component_manager,
             power_supply_component_manager,
             logger,
-            1,
             communication_state_changed_callback,
             component_state_changed_callback,
             tpm_present=None,
@@ -101,6 +100,7 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             backplane_temperatures=None,
             board_temperatures=None,
             board_current=None,
+            cpld_pll_locked=None,
             power_supply_currents=None,
             power_supply_fan_speeds=None,
             power_supply_powers=None,
@@ -108,6 +108,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
+            subrack_pll_locked=None,
+            subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
@@ -239,13 +241,3 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return cast(
             SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)
-
-    def _hardware_communication_state_changed(
-        self: SubrackComponentManager,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        super()._hardware_communication_state_changed(communication_state)
-
-        # TODO: This should be upstreamed to ska-low-mccs-common
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            self._update_component_state(power=PowerState.ON)

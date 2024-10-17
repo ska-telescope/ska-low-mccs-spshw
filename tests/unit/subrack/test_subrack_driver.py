@@ -9,7 +9,7 @@
 from typing import Any
 
 import pytest
-from ska_control_model import CommunicationStatus
+from ska_control_model import CommunicationStatus, PowerState
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
@@ -42,7 +42,7 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_call(fault=False)
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
@@ -52,8 +52,10 @@ def test_attribute_reads(
     callbacks["communication_status"].assert_not_called()
 
     callbacks["component_state"].assert_call(
-        fault=None, **{name: None for name in subrack_simulator_attribute_values}
+        fault=None,
+        **{name: None for name in subrack_simulator_attribute_values},
     )
+    callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
     callbacks["component_state"].assert_not_called()
 
 
@@ -82,7 +84,7 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_call(fault=False)
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
@@ -172,6 +174,21 @@ def test_attribute_updates(  # pylint: disable=too-many-locals
         tpm_powers=expected_tpm_powers,
     )
 
+    subrack_simulator.simulate_attribute("cpld_pll_locked", False)
+    callbacks["component_state"].assert_call(
+        cpld_pll_locked=False,
+    )
+    subrack_simulator.simulate_attribute("subrack_pll_locked", False)
+    callbacks["component_state"].assert_call(
+        subrack_pll_locked=False,
+    )
+
+    new_timestamp = 1234567891
+    subrack_simulator.simulate_attribute("subrack_timestamp", new_timestamp)
+    callbacks["component_state"].assert_call(
+        subrack_timestamp=new_timestamp,
+    )
+
 
 def test_tpm_power_commands(
     subrack_simulator: SubrackSimulator,
@@ -198,7 +215,7 @@ def test_tpm_power_commands(
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_call(fault=False)
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 
@@ -255,7 +272,7 @@ def test_other_commands(
     callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
     callbacks["communication_status"].assert_not_called()
 
-    callbacks["component_state"].assert_call(fault=False)
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
     callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
     callbacks["component_state"].assert_not_called()
 

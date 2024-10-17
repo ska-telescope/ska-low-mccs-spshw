@@ -60,7 +60,6 @@ class TestNoSupply:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.NO_SUPPLY)
@@ -130,7 +129,6 @@ class TestUnknown:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         # no component state change will be pushed here,
@@ -203,7 +201,6 @@ class TestOff:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
         callbacks["component_state"].assert_call(power=PowerState.OFF)
@@ -219,8 +216,7 @@ class TestOff:
         )
         callbacks["task"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
 
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
@@ -309,8 +305,7 @@ class TestOn:
 
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
@@ -402,6 +397,21 @@ class TestOn:
             tpm_powers=expected_tpm_powers,
         )
 
+        subrack_simulator.simulate_attribute("cpld_pll_locked", False)
+        callbacks["component_state"].assert_call(
+            cpld_pll_locked=False,
+        )
+        subrack_simulator.simulate_attribute("subrack_pll_locked", False)
+        callbacks["component_state"].assert_call(
+            subrack_pll_locked=False,
+        )
+
+        new_timestamp = 1234567891
+        subrack_simulator.simulate_attribute("subrack_timestamp", new_timestamp)
+        callbacks["component_state"].assert_call(
+            subrack_timestamp=new_timestamp,
+        )
+
         subrack_component_manager.stop_communicating()
 
         callbacks["component_state"].assert_call(power=PowerState.UNKNOWN, lookahead=2)
@@ -443,8 +453,7 @@ class TestOn:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 
@@ -505,8 +514,7 @@ class TestOn:
         callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
         callbacks["communication_status"].assert_not_called()
 
-        callbacks["component_state"].assert_call(power=PowerState.ON)
-        callbacks["component_state"].assert_call(fault=False)
+        callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
         callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
         callbacks["component_state"].assert_not_called()
 

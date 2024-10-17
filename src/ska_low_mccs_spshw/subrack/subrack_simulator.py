@@ -9,14 +9,61 @@
 from __future__ import annotations
 
 import copy
+import functools
+import random
 import threading
-from typing import Any, Final, Optional, TypedDict, cast
+import time
+from typing import Any, Callable, Final, Optional, TypedDict, cast
 
 from .subrack_api import SubrackProtocol
 from .subrack_data import FanMode, SubrackData
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
+
+
+def apply_jitter(func: Callable[..., Any]) -> Callable[..., Any]:
+    """
+    Apply a simulated network jitter to the component.
+
+    This will apply a simulated jitter to the decorated method.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @apply_jitter
+        def get_attribute(self, name):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function.
+    """
+
+    @functools.wraps(func)
+    def inner(
+        subrack_simulator: SubrackSimulator,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Apply a jitter if defined before calling method.
+
+        :param subrack_simulator: the subrack simulator this is applied to
+        :param args: positional arguments to the wrapped function
+        :param kwargs: keyword arguments to the wrapped function
+
+        :return: whatever the wrapped function returns
+        """
+        if subrack_simulator._network_jitter_limits:
+            min_jitter, max_jitter = subrack_simulator._network_jitter_limits
+            if min_jitter and max_jitter:
+                sleep_time = random.randrange(min_jitter, max_jitter) / 1000
+                time.sleep(sleep_time)
+        return func(subrack_simulator, *args, **kwargs)
+
+    return inner
 
 
 class SubrackSimulator(SubrackProtocol):
@@ -55,6 +102,11 @@ class SubrackSimulator(SubrackProtocol):
             "default": 1.1,
             "writable": False,
         },
+        "cpld_pll_locked": {
+            "length": None,
+            "default": False,
+            "writable": False,
+        },
         "power_supply_fan_speeds": {
             "length": 2,
             "default": [93.0, 94.0],
@@ -78,6 +130,16 @@ class SubrackSimulator(SubrackProtocol):
         "subrack_fan_mode": {
             "length": 4,
             "default": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
+            "writable": False,
+        },
+        "subrack_pll_locked": {
+            "length": None,
+            "default": False,
+            "writable": False,
+        },
+        "subrack_timestamp": {
+            "length": None,
+            "default": 1234567890,
             "writable": False,
         },
         "tpm_currents": {
@@ -113,11 +175,13 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values: dict[str, JsonSerializable] = copy.deepcopy(kwargs)
         for attribute, metadata in self.ATTRIBUTE_METADATA.items():
             self._attribute_values.setdefault(attribute, metadata["default"])
+        self._network_jitter_limits: tuple[int, int] = (0, 0)  # ms
 
         self._aborted_event = threading.Event()
         self._command_is_running = False
         self._command_duration: Final = 0.05
 
+    @apply_jitter
     def set_attribute(
         self: SubrackSimulator, name: str, value: JsonSerializable
     ) -> JsonSerializable:
@@ -134,6 +198,38 @@ class SubrackSimulator(SubrackProtocol):
         if special_set_method is None:
             return self._set_attribute(name, value)
         return special_set_method(value)
+
+    @property
+    def network_jitter_limits(self: SubrackSimulator) -> tuple[int, int]:
+        """
+        Return the max network jitter in miliseconds.
+
+        :return: the maximum network jitter in milliseconds.
+        """
+        return self._network_jitter_limits
+
+    @network_jitter_limits.setter
+    def network_jitter_limits(self: SubrackSimulator, jitter: tuple[int, int]) -> None:
+        """
+        Return the max network jitter in milliseconds.
+
+        :param jitter: the new maximum simulated network jitter in
+            milliseconds.
+
+        :raises ValueError: If te limits are not in the correct format.
+        """
+        try:
+            min_jitter, max_jitter = jitter
+        except ValueError as e:
+            raise e
+        if (max_jitter or min_jitter) and max_jitter < min_jitter:
+            raise ValueError("First item must have value lower than the second")
+        if max_jitter < 0 or min_jitter < 0:
+            raise ValueError("Values must be positive.")
+        if max_jitter > 20_000 or min_jitter > 20_000:
+            raise ValueError("Value too large, must be less than 20,000 miliseconds")
+
+        self._network_jitter_limits = (min_jitter, max_jitter)
 
     def simulate_attribute(
         self: SubrackSimulator, name: str, values: JsonSerializable
@@ -169,6 +265,7 @@ class SubrackSimulator(SubrackProtocol):
         self._attribute_values[name] = values
         return values
 
+    @apply_jitter
     def get_attribute(self: SubrackSimulator, name: str) -> JsonSerializable:
         """
         Return the value of a simulator attribute.
@@ -189,6 +286,7 @@ class SubrackSimulator(SubrackProtocol):
             raise AttributeError(f"{name} not present")
         return self._attribute_values[name]
 
+    @apply_jitter
     def execute_command(
         self: SubrackSimulator, name: str, argument: Optional[JsonSerializable]
     ) -> JsonSerializable:

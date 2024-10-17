@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import gc
 import json
+import time
 from typing import Any, Iterator
 
 import pytest
@@ -54,6 +55,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "backplaneTemperatures",
         "boardTemperatures",
         "boardCurrent",
+        "cpldPllLocked",
         "powerSupplyCurrents",
         "powerSupplyFanSpeeds",
         "powerSupplyPowers",
@@ -61,11 +63,14 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "subrackFanSpeeds",
         "subrackFanSpeedsPercent",
         "subrackFanModes",
+        "subrackPllLocked",
+        "subrackTimestamp",
         "tpmCurrents",
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
-        timeout=2.0,
+        timeout=6.0,
+        assert_no_error=False,
     )
 
 
@@ -106,6 +111,108 @@ def subrack_device_fixture(
     :yield: the subrack Tango device under test.
     """
     yield test_context.get_subrack_device(subrack_id)
+
+
+def test_fast_adminMode_switch(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test our ability to deal with a quick succession of communication commands.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+    for i in range(3):
+        # run test using a variable network jitter.
+        max_jitter: int = (i * 100) % 600  # milliseconds
+        subrack_simulator.network_jitter_limits = (0, max_jitter)
+        subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        subrack_device.adminmode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+
+        subrack_device.adminmode = AdminMode.ONLINE
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+        number_of_communication_cycles: int = 4
+
+        for _ in range(number_of_communication_cycles):
+            subrack_device.adminmode = AdminMode.OFFLINE
+            subrack_device.adminmode = AdminMode.ONLINE
+
+        # When cycling adminmode ONLINE n times we expect up to n
+        # transitions to DevState.ON. The important point is that is end
+        # up in a steady ON state.
+        for _ in range(number_of_communication_cycles):
+            try:
+                # lookahead of 3 since we allow UNKNOWN and DISABLE as
+                # transient states.
+                change_event_callbacks["state"].assert_change_event(
+                    DevState.ON, lookahead=3, consume_nonmatches=True
+                )
+            except AssertionError:
+                print("Transition state ON allowed to not occur.")
+
+        change_event_callbacks["state"].assert_not_called()
+        assert subrack_device.adminMode == AdminMode.ONLINE
+        assert subrack_device.state() == DevState.ON
+
+        subrack_device.adminmode = AdminMode.OFFLINE
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        print(f"Iteration {i}")
+
+
+def test_failed_poll(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test our ability to handle a transient failure.
+
+    A poll can fail for a number of reasons, namely:
+      - A connection timeout
+      - An unhandled exception raised in firmware (TODO MCCS-1329)
+      - Other.. (TODO MCCS-1329)
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    # simulate a large network latency
+    min_jitter: int = 10_000  # milliseconds
+    max_jitter: int = 15_000  # milliseconds
+    subrack_simulator.network_jitter_limits = (min_jitter, max_jitter)
+    # sleep to allow timeout.
+    time.sleep(min_jitter / 1000)
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    subrack_simulator.network_jitter_limits = (0, 0)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
 
 
 def test_off_on(
@@ -183,6 +290,9 @@ def test_off_on(
     ([result_code], [off_command_id]) = subrack_device.Off()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
@@ -275,6 +385,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("backplaneTemperatures", []),
         ("boardTemperatures", []),
         ("boardCurrent", []),
+        ("cpldPllLocked", None),
         ("powerSupplyCurrents", []),
         ("powerSupplyFanSpeeds", []),
         ("powerSupplyPowers", []),
@@ -282,6 +393,8 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ("subrackFanSpeeds", []),
         ("subrackFanSpeedsPercent", []),
         ("subrackFanModes", []),
+        ("subrackPllLocked", None),
+        ("subrackTimestamp", None),
         ("tpmCurrents", []),
         ("tpmPowers", []),
         # ("tpmTemperatures", []),  # Not implemented on SMB
@@ -313,9 +426,15 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
             expected_power_state
         )
 
-    change_event_callbacks["boardCurrent"].assert_change_event(
-        subrack_device_attribute_values["boardCurrent"]
-    )
+    for attribute_name in [
+        "boardCurrent",
+        "cpldPllLocked",
+        "subrackPllLocked",
+        "subrackTimestamp",
+    ]:
+        change_event_callbacks[attribute_name].assert_change_event(
+            subrack_device_attribute_values[attribute_name]
+        )
 
     # TODO: Tango events provide array values as numpy arrays, and numpy
     # refuses to compare arrays using equality:
@@ -374,6 +493,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         ([result_code], [tpm_on_command_id]) = subrack_device.PowerOnTpm(tpm_to_power)
         assert result_code == ResultCode.QUEUED
 
+        change_event_callbacks["command_status"].assert_change_event(
+            (tpm_on_command_id, "STAGING")
+        )
         change_event_callbacks["command_status"].assert_change_event(
             (tpm_on_command_id, "QUEUED")
         )

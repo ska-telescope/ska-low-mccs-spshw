@@ -13,7 +13,13 @@ Defines the deployment for MccsSubrack Tango devices.
 
 */}}
 {{- $node_selector := dict}}
-{{- $subracks := dig "subracks" dict .Values.deviceServers}}
+
+{{- $subracks := dict}}
+{{- range $server_name, $this_server := (dig "subracks" dict .Values.deviceServers)}}
+{{- if $this_server}}
+{{- $_ := set $subracks $server_name $this_server}}
+{{- end}}
+{{- end}}
 {{- if $subracks}}
 name: "subrack-{{.Release.Name}}"
 function: ska-low-mccs-spshw-subrack
@@ -32,6 +38,7 @@ server:
       - name: "MccsSubrack"
         devices:
 {{- range $subrack_name, $this_subrack := $this_server}}
+{{- if $this_subrack}}
         - name: {{$subrack_name}}
           properties:
           - name: "SubrackIp"
@@ -49,6 +56,7 @@ server:
 so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_subrack.nodeSelector}}
 {{- $_ := mergeOverwrite $node_selector .}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- end}}

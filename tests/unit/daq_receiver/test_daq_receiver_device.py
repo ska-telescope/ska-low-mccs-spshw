@@ -23,10 +23,11 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango.server import Device, command
 
 from ska_low_mccs_spshw import MccsDaqReceiver
-from ska_low_mccs_spshw.daq_receiver.daq_simulator import (
-    DaqModes,
-    DaqSimulator,
-    convert_daq_modes,
+from ska_low_mccs_spshw.daq_receiver.daq_simulator import DaqModes, convert_daq_modes
+from tests.functional.conftest import (
+    poll_until_command_result,
+    poll_until_consumers_running,
+    poll_until_consumers_stopped,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
@@ -181,16 +182,18 @@ class TestMccsDaqReceiver:
         assert result_code == ResultCode.QUEUED
         assert "Start" in response
 
-        # --- TODO: Refactor this block into a test helper method that
-        #  queries DaqStatus until some condition is satisfied.
+        # Convert to DaqModes and extract consumer name as a string.
+        modes_to_check = []
+        for daq_mode in convert_daq_modes(daq_modes):
+            modes_to_check.append(str(daq_mode).rsplit(".", maxsplit=1)[-1])
+
+        poll_until_consumers_running(
+            device_under_test,
+            modes_to_check,
+        )
         running_consumers = json.loads(device_under_test.DaqStatus()).get(
             "Running Consumers"
         )
-        while running_consumers == []:
-            sleep(0.2)
-            running_consumers = json.loads(device_under_test.DaqStatus()).get(
-                "Running Consumers"
-            )
         # ---
         # Convert the expected DaqModes.
         expected_converted_daq_modes = convert_daq_modes(daq_modes)
@@ -205,9 +208,11 @@ class TestMccsDaqReceiver:
             # Match DaqMode.value
             assert consumer in actual_converted_daq_modes
 
-        [result_code], [response] = device_under_test.Stop()
-        assert result_code == ResultCode.OK
-        assert response == "Daq stopped"
+        [result_code], [cmd_id] = device_under_test.Stop()
+        assert result_code == ResultCode.QUEUED
+        assert "Stop" == cmd_id.split("_")[-1]
+        poll_until_command_result(device_under_test, cmd_id, "COMPLETED")
+        poll_until_consumers_stopped(device_under_test)
 
 
 class TestPatchedDaq:
@@ -248,6 +253,8 @@ class TestPatchedDaq:
             ResultCode.OK,
             "Mock bandpass monitor stopping.",
         )
+        mock_component_manager.max_queued_tasks = 0
+        mock_component_manager.max_executing_tasks = 1
         # configuration = {
         #     "start_daq.return_value": ,
         #     "stop_daq.return_value": ,
@@ -315,7 +322,7 @@ class TestPatchedDaq:
         :yields: a test harness context.
         """
         test_harness = SpsTangoTestHarness()
-        test_harness.set_daq_instance(DaqSimulator())
+        test_harness.set_daq_instance()
         test_harness.set_daq_device(
             daq_id, address=None, device_class=device_class_under_test
         )  # dynamically get DAQ address

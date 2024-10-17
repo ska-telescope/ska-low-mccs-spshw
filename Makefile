@@ -42,6 +42,16 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
+FIRMWARE_VERSION = 6.0.0
+DESIRED_FIRMWARE_FILE_NAME = itpm_v1_6.bit
+
+install-firmware:
+	mkdir temp_firmware
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska_low_sps_tpmfirmware-$(FIRMWARE_VERSION).tar.gz
+	gzip -d temp_firmware/firmware_files.tar.gz
+	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
+	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
+	rm -rf temp_firmware
 
 ########################################################################
 # HELM
@@ -64,7 +74,7 @@ K8S_HELMFILE = helmfile.d/helmfile.yaml
 ifdef CI_COMMIT_SHORT_SHA
 K8S_HELMFILE_ENV ?= stfc-ci
 else
-K8S_HELMFILE_ENV ?= minikube
+K8S_HELMFILE_ENV ?= minikube-ci
 endif
 
 include .make/k8s.mk
@@ -160,25 +170,33 @@ k8s-do-test:
 	echo $$EXIT_CODE > build/status
 	exit $$EXIT_CODE
 
+telmodel-deps:
+	pip install --extra-index-url https://artefact.skao.int/repository/pypi-internal/simple ska-telmodel check-jsonschema
+
+k8s-pre-install-chart: telmodel-deps
+k8s-pre-uninstall-chart: telmodel-deps
+
 .PHONY: k8s-do-test
 
 
 ########################################################################
 # HELMFILE
 ########################################################################
-helmfile-lint:
-	for environment in aa0.5-production aavs3-production arcetri gmrt low-itf oxford psi-low stfc-ral ; do \
+helmfile-lint: telmodel-deps
+	SKIPDEPS=""
+	for environment in minikube-ci stfc-ci aa0.5-production arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-software ral-software-minikube ; do \
         echo "Linting helmfile against environment '$$environment'" ; \
-		helmfile -e $$environment lint ; \
+		helmfile -e $$environment lint $$SKIPDEPS; \
 		EXIT_CODE=$$? ; \
 		if [ $$EXIT_CODE -gt 0 ]; then \
 		echo "Linting of helmfile against environment '$$environment' FAILED." ; \
 		break ; \
 		fi ; \
+		SKIPDEPS="--skip-deps" ; \
 	done ; \
 	exit $$EXIT_CODE
 
-.PHONY: helmfile-lint
+.PHONY: helmfile-lint telmodel-deps
 
 
 

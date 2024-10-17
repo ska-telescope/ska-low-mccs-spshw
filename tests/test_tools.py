@@ -80,6 +80,9 @@ def execute_lrc_to_completion(
     assert task_status == ResultCode.QUEUED
     assert command_name in command_id.split("_")[-1]
     change_event_callbacks["track_lrc_command"].assert_change_event(
+        (command_id, "STAGING")
+    )
+    change_event_callbacks["track_lrc_command"].assert_change_event(
         (command_id, "QUEUED")
     )
     change_event_callbacks["track_lrc_command"].assert_change_event(
@@ -95,7 +98,7 @@ def retry_communication(device_proxy: tango.Deviceproxy, timeout: int = 30) -> N
     """
     Retry communication with the backend.
 
-    NOTE: This is to be used for devices that do not know if the backend is avaliable
+    NOTE: This is to be used for devices that do not know if the backend is available
     at the time of the call. For example the daq_handler backend gRPC server
     may not be ready when we try to start communicating.
     In this case we will retry connection.

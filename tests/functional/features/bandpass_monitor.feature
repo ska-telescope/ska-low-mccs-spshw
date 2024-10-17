@@ -9,7 +9,6 @@ Feature: Test bandpass monitor
     Scenario: Not listening for integrated channel data
         Given the DAQ is available
         And no consumers are running
-        And the bandpass monitor is not running
         And the DAQ is configured
         When the DAQ is commanded to start monitoring for bandpasses with `auto_handle_daq` set to `False`
         Then the DAQ rejects the command and reports that the integrated channel data consumer must be running to monitor for bandpasses

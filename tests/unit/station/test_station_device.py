@@ -21,6 +21,7 @@ from typing import Any, Callable, Iterator
 import numpy as np
 import pytest
 from ska_control_model import AdminMode, ResultCode
+from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
@@ -48,7 +49,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=2.0,
+        timeout=5.0,
     )
 
 
@@ -202,7 +203,9 @@ def test_Off(
 
     ([result_code], [off_command_id]) = station_device.Off()
     assert result_code == ResultCode.QUEUED
-
+    change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
@@ -318,6 +321,9 @@ def test_On(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
+        (off_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
         (off_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
@@ -339,10 +345,13 @@ def test_On(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "QUEUED")
+        (on_command_id, "STAGING")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "IN_PROGRESS")
+        (on_command_id, "QUEUED")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (on_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -352,13 +361,19 @@ def test_On(
     station_device.MockSubracksOn()
     station_device.MockTilesOn()
 
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    # Some commands require tile programming state to be Initialised or Synchronised
+    for mock_tile_proxy in mock_tile_device_proxies:
+        mock_tile_proxy.tileProgrammingState = "Initialised"
+
+    # The mock takes a non-negligible amount of time to write attributes
+    # Brief sleep needed to allow it to write the tileProgrammingState
+    time.sleep(0.1)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.ON
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "COMPLETED")
+        (on_command_id, "COMPLETED")
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
@@ -420,34 +435,35 @@ def test_On(
             "is_first": (i == 0),
             "is_last": (last_tile),
         }
-        assert len(tile.SetLmcDownload.mock_calls) == 2
-        assert json.loads(tile.SetLmcDownload.mock_calls[0].args[0]) == {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 61648,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
-        assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 61648,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
-        assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
-        assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
-            "mode": "10G",
-            "destination_ip": "0.0.0.0",
-            "beam_payload_length": 8192,
-            "channel_payload_length": 8192,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
+        tile.SetLmcDownload.assert_last_call(
+            json.dumps(
+                {
+                    "mode": "10G",
+                    "payload_length": 8192,
+                    "destination_ip": "0.0.0.0",
+                    "destination_port": 4660,
+                    "source_port": 61648,
+                    "netmask_40g": int(
+                        ipaddress.ip_interface(sdn_first_interface).netmask
+                    ),
+                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                }
+            )
+        )
+        tile.SetLmcIntegratedDownload.assert_next_call(
+            json.dumps(
+                {
+                    "mode": "10G",
+                    "destination_ip": "0.0.0.0",
+                    "channel_payload_length": 8192,
+                    "beam_payload_length": 8192,
+                    "netmask_40g": int(
+                        ipaddress.ip_interface(sdn_first_interface).netmask
+                    ),
+                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                }
+            )
+        )
 
 
 def test_Initialise(
@@ -533,6 +549,9 @@ def test_Initialise(
     ([result_code], [command_id]) = station_device.Initialise()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "IN_PROGRESS")
@@ -605,34 +624,35 @@ def test_Initialise(
             "is_first": (i == 0),
             "is_last": (last_tile),
         }
-        assert len(tile.SetLmcDownload.mock_calls) == 2
-        assert json.loads(tile.SetLmcDownload.mock_calls[0].args[0]) == {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 61648,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
-        assert json.loads(tile.SetLmcDownload.mock_calls[1].args[0]) == {
-            "mode": "10G",
-            "payload_length": 8192,
-            "destination_ip": "0.0.0.0",
-            "destination_port": 4660,
-            "source_port": 61648,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
-        assert len(tile.SetLmcIntegratedDownload.mock_calls) == 1
-        assert json.loads(tile.SetLmcIntegratedDownload.mock_calls[0].args[0]) == {
-            "mode": "10G",
-            "destination_ip": "0.0.0.0",
-            "beam_payload_length": 8192,
-            "channel_payload_length": 8192,
-            "netmask_40g": int(ipaddress.ip_interface(sdn_first_interface).netmask),
-            "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
-        }
+        tile.SetLmcDownload.assert_last_call(
+            json.dumps(
+                {
+                    "mode": "10G",
+                    "payload_length": 8192,
+                    "destination_ip": "0.0.0.0",
+                    "destination_port": 4660,
+                    "source_port": 61648,
+                    "netmask_40g": int(
+                        ipaddress.ip_interface(sdn_first_interface).netmask
+                    ),
+                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                }
+            )
+        )
+        tile.SetLmcIntegratedDownload.assert_next_call(
+            json.dumps(
+                {
+                    "mode": "10G",
+                    "destination_ip": "0.0.0.0",
+                    "channel_payload_length": 8192,
+                    "beam_payload_length": 8192,
+                    "netmask_40g": int(
+                        ipaddress.ip_interface(sdn_first_interface).netmask
+                    ),
+                    "gateway_40g": int(ipaddress.ip_address(sdn_gateway)),
+                }
+            )
+        )
 
 
 def test_Standby(
@@ -675,6 +695,9 @@ def test_Standby(
     ([result_code], [command_id]) = station_device.Standby()
     assert result_code == ResultCode.QUEUED
 
+    change_event_callbacks["command_status"].assert_change_event(
+        (command_id, "STAGING")
+    )
     change_event_callbacks["command_status"].assert_change_event((command_id, "QUEUED"))
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "IN_PROGRESS")
@@ -700,7 +723,6 @@ def test_Standby(
         "command_args",
         "tile_command",
         "tile_command_args",
-        "tile_command_args_json_dict",
     ),
     [
         pytest.param(
@@ -708,21 +730,18 @@ def test_Standby(
             json.dumps({"start_time": "20230101T12:34:55.000Z", "delay": 0}),
             "StartAcquisition",
             json.dumps({"start_time": "20230101T12:34:55.000Z", "delay": 0}),
-            True,
         ),
         pytest.param(
             "ConfigureTestGenerator",
             json.dumps({"tone_frequency": 1000, "tone_amplitude": 1}),
             "ConfigureTestGenerator",
             json.dumps({"tone_frequency": 1000, "tone_amplitude": 1}),
-            False,
         ),
         pytest.param(
             "StopDataTransmission",
             None,
             "StopDataTransmission",
             None,
-            False,
         ),
         pytest.param(
             "SendDataSamples",
@@ -737,14 +756,12 @@ def test_Standby(
                     "data_type": "raw",
                 }
             ),
-            True,
         ),
         pytest.param(
             "StopIntegratedData",
             None,
             "StopIntegratedData",
             None,
-            False,
         ),
         pytest.param(
             "ConfigureIntegratedBeamData",
@@ -753,7 +770,6 @@ def test_Standby(
             json.dumps(
                 {"integration_time": 0.5, "first_channel": 0, "last_channel": 191}
             ),
-            False,
         ),
         pytest.param(
             "ConfigureIntegratedChannelData",
@@ -762,14 +778,12 @@ def test_Standby(
             json.dumps(
                 {"integration_time": 0.5, "first_channel": 0, "last_channel": 511}
             ),
-            True,
         ),
         pytest.param(
             "StopBeamformer",
             None,
             "StopBeamformer",
             None,
-            False,
         ),
         pytest.param(
             "StartBeamformer",
@@ -783,21 +797,18 @@ def test_Standby(
                     "scan_id": 0,
                 }
             ),
-            True,
         ),
         pytest.param(
             "ApplyPointingDelays",
             "20230101T12:34:55.000Z",
             "ApplyPointingDelays",
             "20230101T12:34:55.000Z",
-            False,
         ),
         pytest.param(
             "ApplyCalibration",
             "20230101T12:34:55.000Z",
             "ApplyCalibration",
             "20230101T12:34:55.000Z",
-            False,
         ),
         pytest.param(
             "SetBeamformerRegions",
@@ -868,15 +879,15 @@ def test_Standby(
                 4,
                 2,
                 102,
-            ],
-            False,
+            ]
+            + [0, 8, 0, 0, 0, 0, 0, 0] * 40,
         ),
         pytest.param(
             "SetBeamFormerTable",
             [4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102],
             "SetBeamformerRegions",
-            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102],
-            False,
+            [4, 8, 0, 0, 0, 3, 1, 101, 26, 8, 1, 0, 24, 4, 2, 102]
+            + [0, 8, 0, 0, 0, 0, 0, 0] * 46,
         ),
         pytest.param(
             "SetLmcIntegratedDownload",
@@ -894,7 +905,6 @@ def test_Standby(
                     "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
-            True,
         ),
         pytest.param(
             "SetLmcDownload",
@@ -902,8 +912,8 @@ def test_Standby(
             "SetLmcDownload",
             json.dumps(
                 {
-                    "mode": "40G",
-                    "payload_length": 1024,
+                    "mode": "10G",
+                    "payload_length": 8192,
                     "destination_ip": "127.0.0.1",
                     "destination_port": 4660,
                     "source_port": 0xF0D0,
@@ -911,14 +921,12 @@ def test_Standby(
                     "gateway_40g": 167772414,  # 10.0.0.254
                 }
             ),
-            True,
         ),
         pytest.param(
             "LoadCalibrationCoefficients",
-            [2, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4],
+            [2.0, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4],
             "LoadCalibrationCoefficients",
-            np.array([2, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4]),
-            False,
+            [2.0, 3.4, 1.2, 2.3, 4.1, 4.6, 8.2, 6.8, 2.4],
         ),
     ],
 )
@@ -929,7 +937,6 @@ def test_station_tile_commands(
     mock_tile_device_proxies: DeviceProxy,
     tile_command: str,
     tile_command_args: Any,
-    tile_command_args_json_dict: bool,
 ) -> None:
     """
     Tests of station commands calling the corresponding command on Tile.
@@ -940,50 +947,28 @@ def test_station_tile_commands(
     :param mock_tile_device_proxies: The mock for the tiles to verify
         commands being called
     :param tile_command: The expected command to be called on the tile
-    :param tile_command_args: The expected arguments for the command on the tile
-    :param tile_command_args_json_dict:
-        True if the arguments for the tile command are a JSON dictionary.
-        This prompts the test to load the dictionary as a python dictionary
-        so it can be safely compared with the input,
-        as the two JSON strings cannot be directly compared,
-        since Python dictionaries are not ordered.
-        The expected arguments parameter should be a json dictionary.
+    :param tile_command_args: The expected arguments for the command on the tile.
     """
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
 
     # Some commands require tile programming state to be Initialised or Synchronised
-    mock_tile_device_proxies[0].tileProgrammingState = "Synchronised"
+    for mock_tile_proxy in mock_tile_device_proxies:
+        mock_tile_proxy.tileProgrammingState = "Synchronised"
 
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
-    time.sleep(0.1)
+    time.sleep(0.2)
 
     if command_args is None:
         getattr(station_device, command)()
     else:
         getattr(station_device, command)(command_args)
-    tile_command_mock = getattr(mock_tile_device_proxies[0], tile_command)
+    tile_command_mock: MockCallable = getattr(mock_tile_device_proxies[0], tile_command)
 
-    # Wait for LRCs to execute
-    timeout = 15
-    time_waited = 0
-    while not tile_command_mock.called:
-        time.sleep(1)
-        time_waited += 1
-        if time_waited >= timeout:
-            assert False, f"Command {tile_command} not called on tile"
-
-    tile_command_mock.assert_called_once()
     if tile_command_args is None:
-        assert len(tile_command_mock.call_args[0]) == 0
-    elif tile_command_args_json_dict:
-        assert json.loads(tile_command_args) == json.loads(
-            tile_command_mock.call_args[0][0]
-        )
-    elif isinstance(tile_command_args, np.ndarray):
-        assert np.all(tile_command_args == tile_command_mock.call_args[0][0])
+        tile_command_mock.assert_next_call()
     else:
-        assert tile_command_args == tile_command_mock.call_args[0][0]
+        tile_command_mock.assert_next_call(tile_command_args)
 
 
 def test_SetCspIngest(
@@ -1071,12 +1056,16 @@ def test_SetCspIngest(
                 "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 4,
+                "pps_delta_failed": 9,
             },
             {
                 "subrack_degraded": 0.1,
                 "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 6,
+                "pps_delta_failed": 10,
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",
@@ -1241,7 +1230,7 @@ def test_beamformerTable(
     time.sleep(0.1)
     station_device.SetBeamFormerTable([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
     assert np.all(
-        station_device.beamformerTable
+        station_device.beamformerTable[0:14]
         == np.array([4, 0, 0, 0, 3, 1, 101, 26, 1, 0, 24, 4, 2, 102])
     )
 
@@ -1461,8 +1450,11 @@ def test_AcquireDataForCalibration(
     for tile in mock_tile_device_proxies:
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
-    station_device.AcquireDataForCalibration(channel)
-    tile_command_mock = getattr(mock_tile_device_proxies[0], "SendDataSamples")
+
+    [_], [command_id] = station_device.AcquireDataForCalibration(channel)
+    tile_command_mock: MockCallable = getattr(
+        mock_tile_device_proxies[0], "SendDataSamples"
+    )
 
     # This sleep is needed because AcquireDataForCalibration will
     # Check Running Consumers is None before starting DAQ.
@@ -1482,22 +1474,29 @@ def test_AcquireDataForCalibration(
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable)
 
-    # Wait for LRCs to execute
-    timeout = 20
-    time_waited = 0
-    while not tile_command_mock.called:
-        time.sleep(1)
-        time_waited += 1
-        if time_waited >= timeout:
-            assert False, "Command SendDataSamples not called on tile"
-
-    tile_command_mock.assert_called_once()
-    assert json.loads(tile_command_mock.call_args[0][0]) == {
-        "data_type": "channel",
-        "first_channel": channel,
-        "last_channel": channel,
-    }
+    tile_command_mock.assert_next_call(
+        json.dumps(
+            {
+                "data_type": "channel",
+                "first_channel": channel,
+                "last_channel": channel,
+            }
+        )
+    )
     assert (
         json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
         == "CORRELATOR_DATA"
     )
+
+    timeout = 20
+    current_time = 0
+    while current_time < timeout:
+        try:
+            assert (
+                station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"
+            )
+            break
+        except AssertionError:
+            time.sleep(1)
+            current_time += 1
+    assert station_device.CheckLongRunningCommandStatus(command_id) == "COMPLETED"

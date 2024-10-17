@@ -15,6 +15,8 @@ import ipaddress
 import itertools
 import json
 import sys
+import time
+from datetime import datetime, timezone
 from functools import wraps
 from typing import Any, Callable, Optional, cast
 
@@ -85,6 +87,7 @@ class SpsStation(SKAObsDevice):
     SdnFirstInterface = device_property(dtype=str)
     SdnGateway = device_property(dtype=str, default_value="")
     CspIngestIp = device_property(dtype=str, default_value="")
+    ChanneliserRounding = device_property(dtype=(int,), default_value=[])
 
     DaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
@@ -125,7 +128,6 @@ class SpsStation(SKAObsDevice):
         """
         util = tango.Util.instance()
         util.set_serial_model(tango.SerialModel.NO_SYNC)
-        self._max_workers = 1
         super().init_device()
 
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
@@ -141,6 +143,7 @@ class SpsStation(SKAObsDevice):
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
             f"\tCspIngestIp: {self.CspIngestIp}\n"
+            f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
         )
         self.logger.info(
@@ -181,9 +184,9 @@ class SpsStation(SKAObsDevice):
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
+            self.ChanneliserRounding,
             self.AntennaConfigURI,
             self.logger,
-            self._max_workers,
             self._communication_state_changed,
             self._component_state_changed,
             self._health_model.tile_health_changed,
@@ -282,6 +285,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_change_event("xPolBandpass", True, False)
             self._device.set_change_event("yPolBandpass", True, False)
             self._device.set_change_event("antennaInfo", True, False)
+            self._device.set_change_event("ppsDelaySpread", True, False)
 
             self._device.set_archive_event("xPolBandpass", True, False)
             self._device.set_archive_event("yPolBandpass", True, False)
@@ -291,6 +295,7 @@ class SpsStation(SKAObsDevice):
             self._device.set_archive_event("adcPower", True, False)
             self._device.set_change_event("dataReceivedResult", True, False)
             self._device.set_archive_event("dataReceivedResult", True, False)
+            self._device.set_archive_event("ppsDelaySpread", True, False)
 
             super().do()
 
@@ -347,7 +352,7 @@ class SpsStation(SKAObsDevice):
         )
 
     # TODO: Upstream this interface change to SKABaseDevice
-    # pylint: disable-next=arguments-differ, too-many-branches
+    # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
     def _component_state_changed(  # type: ignore[override]
         self: SpsStation,
         *,
@@ -458,6 +463,11 @@ class SpsStation(SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
+        if "ppsDelaySpread" in state_change:
+            pps_delay_spread = state_change.get("ppsDelaySpread")
+            self.push_change_event("ppsDelaySpread", pps_delay_spread)
+            self.push_archive_event("ppsDelaySpread", pps_delay_spread)
+            self._health_model.update_state(pps_delay_spread=pps_delay_spread)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -591,7 +601,7 @@ class SpsStation(SKAObsDevice):
         Get static time delay correction.
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in samples (positive = increase the signal delay) to correct for
+        Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)
@@ -603,7 +613,7 @@ class SpsStation(SKAObsDevice):
         """
         Set static time delay.
 
-        :param delays: Delay in samples (positive = increase the signal delay)
+        :param delays: Delay in nanoseconds (positive = increase the signal delay)
              to correct for static delay mismathces, e.g. cable length.
              2 values per antenna (pol. X and Y), 32 values per tile, 512 total.
         """
@@ -711,6 +721,18 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.pps_delay_corrections = delays
 
+    @attribute(dtype="DevLong")
+    def ppsDelaySpread(self: SpsStation) -> int:
+        """
+        Get difference between maximum and minimum delays.
+
+        Returns the difference between max and min delays used for this station.
+        This can be used to detect "drifting" delays.
+
+        :return: Difference between maximum and minimum delays.
+        """
+        return self.component_manager.pps_delay_spread
+
     @attribute(dtype=("DevLong",), max_dim_x=336)
     def beamformerTable(self: SpsStation) -> list[int]:
         """
@@ -774,6 +796,46 @@ class SpsStation(SKAObsDevice):
         :return: UDP port for the CSP source port
         """
         return self.component_manager.csp_source_port
+
+    @attribute(dtype="DevString")
+    def globalReferenceTime(self: SpsStation) -> str:
+        """
+        Return the global FPGA synchronization time.
+
+        :return: the global synchronization time, in UTC format
+        """
+        return self.component_manager.global_reference_time
+
+    @globalReferenceTime.write  # type: ignore[no-redef]
+    def globalReferenceTime(self: SpsStation, reference_time: str) -> None:
+        """
+        Set the global global synchronization timestamp.
+
+        :param reference_time: the synchronization time, in ISO9660 format, or ""
+        :raises ValueError: if specified time not in ISO format or < TAI2000
+        """
+        #   tai_2000_epoch = int(AstropyTime('2000-01-01 00:00:00',
+        #                        scale='tai').unix) - extra_leap_seconds
+        tai_2000_epoch = 946684763
+        # check syntax and positive time.
+        # TODO Convert to astropy Time
+        rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+        try:
+            # time_ref = Time(reference_time, format="isot").unix
+            dt = datetime.strptime(reference_time, rfc_format)
+            time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
+        except ValueError as error:
+            self.logger.error(f"Invalid ISO time: {error}")
+            raise ValueError(error) from error
+        time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
+        if time_ref < int(time.time()) - 864000:
+            raise ValueError("Reference time too old: more than 10 days")
+        self.component_manager.global_reference_time = (
+            # Time(time_ref, format="unix").isot + "Z"
+            datetime.strftime(
+                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
+            )
+        )
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: SpsStation) -> bool:
@@ -960,6 +1022,71 @@ class SpsStation(SKAObsDevice):
         :return: the list of self-check tests available.
         """
         return self.component_manager.test_list
+
+    @attribute(dtype="DevString")
+    def cspSpeadFormat(self: SpsStation) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self.component_manager.csp_spead_format
+
+    @cspSpeadFormat.write  # type: ignore[no-redef]
+    def cspSpeadFormat(self: SpsStation, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self.component_manager.csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+
+    @attribute(dtype=("DevFloat",), max_dim_x=513)
+    def lastPointingDelays(self: SpsStation) -> list:
+        """
+        Return last pointing delays applied to the tiles.
+
+        Values are initialised to 0.0 if they haven't been set.
+        These values are in antenna EEP order.
+
+        :returns: last pointing delays applied to the tiles.
+        """
+        return self.component_manager.last_pointing_delays
+
+    @attribute(dtype="DevBoolean")
+    def executeAsync(self: SpsStation) -> bool:
+        """
+        Return whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :returns: whether to execute MccsTile methods asynchronously.
+        """
+        return self.component_manager.excecute_async
+
+    @executeAsync.write  # type: ignore[no-redef]
+    def executeAsync(self: SpsStation, execute_async: bool) -> None:
+        """
+        Set whether to execute MccsTile methods asynchronously.
+
+        We can either execute MccsTile methods in serial or sequence,
+        this attribute dictates which.
+
+        :param execute_async: whether to execute MccsTile methods asynchronously.
+        """
+        self.component_manager.excecute_async = execute_async
 
     # -------------
     # Slow Commands
@@ -1194,9 +1321,9 @@ class SpsStation(SKAObsDevice):
         >> dp.command_inout("SetLmcDownload", jstr)
         """
         params = json.loads(argin)
-        mode = params.get("mode", "40G")
+        mode = params.get("mode", "10G")
 
-        if mode.upper == "40G":
+        if mode.upper() == "40G":
             mode = "10G"
         payload_length = params.get("payload_length", None)
         if payload_length is None:
@@ -1208,10 +1335,9 @@ class SpsStation(SKAObsDevice):
         src_port = params.get("source_port", 0xF0D0)
         dst_port = params.get("destination_port", 4660)
 
-        self.component_manager.set_lmc_download(
+        return self.component_manager.set_lmc_download(
             mode, payload_length, dst_ip, src_port, dst_port
         )
-        return ([ResultCode.OK], ["SetLmcDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1256,7 +1382,7 @@ class SpsStation(SKAObsDevice):
         src_port = params.get("source_port", 0xF0D0)
         dst_port = params.get("destination_port", 4660)
 
-        self.component_manager.set_lmc_integrated_download(
+        return self.component_manager.set_lmc_integrated_download(
             mode,
             channel_payload_length,
             beam_payload_length,
@@ -1264,7 +1390,6 @@ class SpsStation(SKAObsDevice):
             src_port,
             dst_port,
         )
-        return ([ResultCode.OK], ["SetLmcIntegratedDownload command completed OK"])
 
     @command(
         dtype_in="DevString",
@@ -1365,9 +1490,7 @@ class SpsStation(SKAObsDevice):
                 self.logger.error("Beam_index is out side of range 0-47")
                 raise ValueError("Beam_index is out side of range 0-47")
             beamformer_table.append(group)
-        self.component_manager.set_beamformer_table(beamformer_table)
-
-        return ([ResultCode.OK], ["SetBeamFormerTable command completed OK"])
+        return self.component_manager.set_beamformer_table(beamformer_table)
 
     @command(
         dtype_in="DevVarLongArray",
@@ -1443,10 +1566,7 @@ class SpsStation(SKAObsDevice):
                 entry[3] = subarray_logical_channel
                 subarray_logical_channel = subarray_logical_channel + 8
                 beamformer_table.append(entry)
-        self.component_manager.set_beamformer_table(beamformer_table)
-        # handler = self.get_command_object("SetBeamformerRegions")
-        # (return_code, message) = handler(argin)
-        return ([ResultCode.OK], ["SetBeamFormerRegions command completed OK"])
+        return self.component_manager.set_beamformer_table(beamformer_table)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -1535,11 +1655,7 @@ class SpsStation(SKAObsDevice):
         """
         switch_time = argin
 
-        self.component_manager.apply_calibration(switch_time)
-        return ([ResultCode.OK], ["ApplyCalibration command completed OK"])
-        # handler = self.get_command_object("ApplyCalibration")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
+        return self.component_manager.apply_calibration(switch_time)
 
     @command(
         dtype_in="DevVarDoubleArray",
@@ -1553,7 +1669,7 @@ class SpsStation(SKAObsDevice):
 
         :param argin: an array containing a beam index followed by
             pairs of antenna delays + delay rates, delay in seconds
-            and the delay rate in seconds/second
+            and the delay rate in seconds/second. In order of antenna EEP.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1607,11 +1723,7 @@ class SpsStation(SKAObsDevice):
         >>> time_string = switch time as ISO formatted time
         >>> dp.command_inout("ApplyPointingDelays", time_string)
         """
-        self.component_manager.apply_pointing_delays(argin)
-        return ([ResultCode.OK], ["LoadPointingDelays command completed OK"])
-        # handler = self.get_command_object("ApplyPointingDelays")
-        # (return_code, message) = handler(argin)
-        # return ([return_code], [message])
+        return self.component_manager.apply_pointing_delays(argin)
 
     @command(
         dtype_in="DevString",
@@ -1647,10 +1759,9 @@ class SpsStation(SKAObsDevice):
         duration = params.get("duration", -1)
         subarray_beam_id = params.get("subarray_beam_id", -1)
         scan_id = params.get("scan_id", 0)
-        self.component_manager.start_beamformer(
+        return self.component_manager.start_beamformer(
             start_time, duration, subarray_beam_id, scan_id
         )
-        return ([ResultCode.OK], ["StartBeamformer command completed OK"])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1668,8 +1779,7 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopBeamformer")
         """
-        self.component_manager.stop_beamformer()
-        return ([ResultCode.OK], ["StopBeamformer command completed OK"])
+        return self.component_manager.stop_beamformer()
 
     @command(
         dtype_in="DevString",
@@ -1706,12 +1816,8 @@ class SpsStation(SKAObsDevice):
         first_channel = params.get("first_channel", 0)
         last_channel = params.get("last_channel", 511)
 
-        self.component_manager.configure_integrated_channel_data(
+        return self.component_manager.configure_integrated_channel_data(
             integration_time, first_channel, last_channel
-        )
-        return (
-            [ResultCode.OK],
-            ["ConfigureIntegratedChannelData command completed OK"],
         )
 
     @command(
@@ -1749,10 +1855,9 @@ class SpsStation(SKAObsDevice):
         first_channel = params.get("first_channel", 0)
         last_channel = params.get("last_channel", 191)
 
-        self.component_manager.configure_integrated_beam_data(
+        return self.component_manager.configure_integrated_beam_data(
             integration_time, first_channel, last_channel
         )
-        return ([ResultCode.OK], ["ConfigureIntegratedBeamData command completed OK"])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1765,8 +1870,7 @@ class SpsStation(SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
         """
-        self.component_manager.stop_integrated_data()
-        return ([ResultCode.OK], ["StopIntegratedData command completed OK"])
+        return self.component_manager.stop_integrated_data()
 
     @command(
         dtype_in="DevString",
@@ -1782,6 +1886,7 @@ class SpsStation(SKAObsDevice):
                     "channel_continuous", "narrowband", "beam"
         * start_time - Time (UTC string) to start sending data. Default immediately
         * seconds - (float) Delay if timestamp is not specified. Default 0.2 seconds
+        * force - (bool) Whether or not to cancel ongoing data requests.
 
         Depending on the data type:
         raw:
@@ -1819,7 +1924,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("SendDataSamples", jstr)
         """
-        params = json.loads(argin)
+        params: dict = json.loads(argin)
 
         # Check for mandatory parameters and syntax.
         # argin is left as is and forwarded to tiles
@@ -1860,8 +1965,9 @@ class SpsStation(SKAObsDevice):
                     "frequency must be between 1 and 390 MHz"
                 )
                 raise ValueError("frequency must be between 1 and 390 MHz")
-        self.component_manager.send_data_samples(argin)
-        return ([ResultCode.OK], ["SendDataSamples command completed OK"])
+        force = params.pop("force", False)
+        argin = json.dumps(params)
+        return self.component_manager.send_data_samples(argin, force=force)
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -1879,8 +1985,7 @@ class SpsStation(SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopDataTransmission")
         """
-        self.component_manager.stop_data_transmission()
-        return ([ResultCode.OK], ["StopDataTransmission command completed OK"])
+        return self.component_manager.stop_data_transmission()
 
     @command(
         dtype_in="DevString",
@@ -1915,8 +2020,8 @@ class SpsStation(SKAObsDevice):
         * set_time: time at which the generator is set, for synchronization
             among different TPMs. In UTC ISO format (string)
         * adc_channels: list of adc channels which will be substituted with
-            the generated signal. It is a 32 integer, with each bit representing
-            an input channel. Default: all if at least q source is specified,
+            the generated signal. 32 bit integer, with each bit representing
+            an input channel. Default: all if at least 1 source is specified,
             none otherwises.
 
         :return: A tuple containing a return code and a string
@@ -1932,8 +2037,7 @@ class SpsStation(SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
-        self.component_manager.configure_test_generator(argin)
-        return ([ResultCode.OK], ["ConfigureTestGenerator command completed OK"])
+        return self.component_manager.configure_test_generator(argin)
 
 
 # ----------

@@ -18,14 +18,15 @@ import json
 import logging
 import threading
 import time
-from concurrent import futures
+from concurrent.futures import Future, ThreadPoolExecutor, wait
 from statistics import mean
-from typing import Any, Callable, Generator, Optional, Sequence, Union, cast
+from typing import Any, Callable, Optional, Sequence, Union, cast
 
 import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
 from ska_control_model import (
+    AdminMode,
     CommunicationStatus,
     HealthState,
     PowerState,
@@ -36,16 +37,62 @@ from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
 )
-from ska_low_mccs_common.utils import threadsafe
+from ska_low_mccs_common.device_proxy import MccsDeviceProxy
+from ska_low_mccs_common.utils import lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
+
+from ska_low_mccs_spshw.tile.tpm_status import TpmStatus
 
 from ..tile.tile_data import TileData
 from .station_self_check_manager import SpsStationSelfCheckManager
 from .tests.base_tpm_test import TestResult
 
 __all__ = ["SpsStationComponentManager"]
+
+
+def retry_command_on_exception(
+    device_proxy: tango.Deviceproxy,
+    command_name: str,
+    command_arguments: Any = None,
+    timeout: int = 30,
+) -> Any:
+    """
+    Retry command when DevFailed exception raised.
+
+    NOTE: By default this command will retry the command up to 30 seconds
+
+    :param device_proxy: A 'tango.DeviceProxy' to the backend device.
+    :param command_name: A string containing the command name.
+    :param command_arguments: The arguments to pass to command.
+        defaults to None
+    :param timeout: A max time in seconds before we give up trying
+
+    :returns: The response from the command.
+
+    :raises TimeoutError: if the command did not execute without exception in
+        timeout period.
+    """
+    assert (
+        device_proxy.adminMode == AdminMode.ONLINE
+    ), "Unable to execute command on a OFFLINE device."
+    tick = 2
+    terminate_time = time.time() + timeout
+    while time.time() < terminate_time:
+        try:
+            if command_arguments is None:
+                return getattr(device_proxy, command_name)()
+            return getattr(device_proxy, command_name)(command_arguments)
+        except tango.DevFailed as df:
+            print(
+                f"{device_proxy.dev_name()} failed to communicate with backend.\n"
+                f"{df}"
+            )
+            time.sleep(tick)
+    raise TimeoutError(
+        f"Unable to execute command {command_name} on {device_proxy.dev_name()}"
+    )
 
 
 class _SubrackProxy(DeviceComponentManager):
@@ -57,7 +104,6 @@ class _SubrackProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -68,8 +114,6 @@ class _SubrackProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -84,7 +128,6 @@ class _SubrackProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -127,7 +170,6 @@ class _TileProxy(DeviceComponentManager):
         station_id: int,
         logical_tile_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -139,8 +181,6 @@ class _TileProxy(DeviceComponentManager):
             is to be assigned
         :param logical_tile_id: the id of the tile within this station.
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -156,7 +196,6 @@ class _TileProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -228,7 +267,6 @@ class _DaqProxy(DeviceComponentManager):
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
     ) -> None:
@@ -239,8 +277,6 @@ class _DaqProxy(DeviceComponentManager):
         :param station_id: the id of the station to which this station
             is to be assigned
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param communication_state_changed_callback: callback to be
@@ -255,7 +291,6 @@ class _DaqProxy(DeviceComponentManager):
         super().__init__(
             fqdn,
             logger,
-            max_workers,
             communication_state_changed_callback,
             component_state_changed_callback,
         )
@@ -345,9 +380,9 @@ class SpsStationComponentManager(
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
+        channeliser_rounding: list[int] | None,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
-        max_workers: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
@@ -369,10 +404,9 @@ class SpsStationComponentManager(
         :param sdn_gateway: IP address of the SDN gateway,
             or None if the network has no gateway.
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
+        :param channeliser_rounding: The channeliser rounding to use for this station.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
-        :param max_workers: the maximum worker threads for the slow commands
-            associated with this component manager.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
             the component manager and its component changes
@@ -417,7 +451,6 @@ class SpsStationComponentManager(
                 station_id,
                 logical_tile_id,
                 logger,
-                max_workers,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
             )
@@ -430,7 +463,6 @@ class SpsStationComponentManager(
                 subrack_fqdn,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
@@ -444,7 +476,6 @@ class SpsStationComponentManager(
                 self._daq_trl,
                 station_id,
                 logger,
-                max_workers,
                 functools.partial(
                     self._device_communication_state_changed, self._daq_trl
                 ),
@@ -461,12 +492,15 @@ class SpsStationComponentManager(
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
         self._csp_ingest_port = 4660
         self._csp_source_port = 0xF0D0
+        self._csp_spead_format = "SKA"
+        self._global_reference_time = ""
 
         # TODO: this needs to be scaled,
         self.tile_attributes_to_subscribe = [
             "adcPower",
             "staticTimeDelays",
             "preaduLevels",
+            "ppsDelay",
         ]
 
         self._source_port = 0xF0D0
@@ -490,10 +524,12 @@ class SpsStationComponentManager(
         self._lmc_beam_payload_length = 8192
 
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
+        self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         self._pps_delays = [0] * 16
+        self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
-        self._channeliser_rounding = [3] * 512
+        self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [3] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
@@ -502,12 +538,19 @@ class SpsStationComponentManager(
 
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
+        self.last_pointing_delays = [0.0] * 513
+
+        # Flag for whether to execute MccsTile batch commands async or sync.
+        self.excecute_async = True
+
+        self._power_command_in_progress = (
+            threading.Lock()
+        )  # Used to lock DevState during power command execution.
 
         super().__init__(
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
-            max_workers=1,
             power=PowerState.UNKNOWN,
             fault=None,
             is_configured=None,
@@ -577,22 +620,28 @@ class SpsStationComponentManager(
 
         return ordered_data
 
-    def _find_by_key(
-        self: SpsStationComponentManager, data: dict, target: str
-    ) -> Generator:
+    @staticmethod
+    def _find_by_key(data: dict, target: str) -> Any:
         """
-        Traverse nested dictionary, yield next value for given target.
+        Search nested dict breadth-first for the first target key and return its value.
+
+        This method is used to find station and antenna config within Low platform spec
+        files, and should eventually be replaced by functions specifically designed to
+        parse these files, aware of schema versions, etc, probably within ska-telmodel.
 
         :param data: generic nested dictionary to traverse through.
-        :param target: key to find the next value of.
+        :param target: key to find the first value of.
 
-        :yields: the next value for given key.
+        :returns: the next value for given key.
         """
-        for key, value in data.items():
+        bfs_queue = list(data.items())
+        while bfs_queue:
+            key, value = bfs_queue.pop(0)
             if key == target:
-                yield value
-            elif isinstance(value, dict):
-                yield from self._find_by_key(value, target)
+                return value
+            if isinstance(value, dict):
+                bfs_queue.extend(value.items())
+        return None
 
     def _get_mappings(
         self: SpsStationComponentManager,
@@ -625,7 +674,7 @@ class SpsStationComponentManager(
             )
             return
 
-        stations = list(self._find_by_key(full_dict, "stations"))
+        stations = self._find_by_key(full_dict, "stations")
         if not stations:
             self.logger.error(
                 f"Couldn't find station {self._station_id} in imported TMData."
@@ -634,10 +683,10 @@ class SpsStationComponentManager(
 
         # Look through all the stations on this cluster, find antennas on this station.
         antennas = {}
-        for station in stations:
-            for _, station_config in station.items():
-                if station_config["id"] == self._station_id:
-                    antennas = next(self._find_by_key(station_config, "antennas"))
+        for station_config in stations.values():
+            if station_config["id"] == self._station_id:
+                antennas = self._find_by_key(station_config, "antennas")
+                break
 
         if not antennas:
             self.logger.error(f"Couldn't find antennas on station {self._station_id}.")
@@ -648,7 +697,7 @@ class SpsStationComponentManager(
                 antenna_number: int = int(antenna_config["eep"])  # 1 based numbering
                 tpm_number: int = int(antenna_config["tpm"].split("tpm")[-1])
                 self._antenna_mapping[antenna_number] = {
-                    "tpm": tpm_number,
+                    "tpm": tpm_number,  # 1 based numbering
                     "tpm_x_channel": antenna_config["tpm_x_channel"],
                     "tpm_y_channel": antenna_config["tpm_y_channel"],
                     "delay": antenna_config["delay"],
@@ -675,7 +724,9 @@ class SpsStationComponentManager(
 
         :returns: list of static delays in tile/channel order
         """
-        tile_delays = [[0] * TileData.ADC_CHANNELS] * len(self._tile_proxies)
+        tile_delays = [
+            [0] * TileData.ADC_CHANNELS for _ in range(len(self._tile_proxies))
+        ]
         for antenna_config in self._antenna_mapping.values():
             try:
                 tile_logical_id = self._tile_id_mapping[f"{antenna_config['tpm']:02}"]
@@ -729,7 +780,7 @@ class SpsStationComponentManager(
             delay_rate = antenna_order_delays[antenna_no * 2 + 1]
 
             # Fetch which tpm this antenna belongs to
-            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"]
+            tile_no = self._antenna_mapping[antenna_no + 1]["tpm"] - 1
             channel = (
                 self._antenna_mapping[antenna_no + 1]["tpm_y_channel"] // 2
             )  # y channel, even
@@ -865,6 +916,16 @@ class SpsStationComponentManager(
                 self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+            case "ppsdelay":
+                # Only calc for TPMs actually present.
+                self._pps_delays[logical_tile_id] = attribute_value
+                self._pps_delay_spread = max(
+                    self._pps_delays[0 : self._number_of_tiles]
+                ) - min(self._pps_delays[0 : self._number_of_tiles])
+                if self._component_state_callback:
+                    self._component_state_callback(
+                        ppsDelaySpread=self._pps_delay_spread
+                    )
             case _:
                 self.logger.error(
                     f"Unrecognised tile attribute changing {attribute_name}"
@@ -895,6 +956,7 @@ class SpsStationComponentManager(
         fqdn: str,
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
+        fault: Optional[bool] = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -944,38 +1006,52 @@ class SpsStationComponentManager(
     def _evaluate_power_state(
         self: SpsStationComponentManager,
     ) -> None:
+        # 1. Any Tile ON, result = ON. (Subrack must therefore be on.)
+        # 2. Any Subrack ON, All Tile OFF/NO_SUPP, result = STANDBY
+        # 3. All Subrack NO_SUPP, All Tile NO_SUPP, result = NO_SUPP
+        # 4. All Subracks OFF/NO_SUPP, All Tiles OFF/NO_SUPP, result = OFF
+        # 5. Any subrack UNKNOWN AND no subrack ON |OR| Any tile UNKNOWN AND no tile ON
+        if self._power_command_in_progress.locked():
+            # Suppress power state evaluation whilst power command in progress.
+            # This is to prevent the Station changing to DevState.ON before all tiles
+            # have had a chance to turn on.
+            return
         with self._power_state_lock:
-            power_states = list(self._tile_power_states.values())
-            if all(power_state == PowerState.ON for power_state in power_states):
-                evaluated_power_state = PowerState.ON
-            elif all(
-                power_state == PowerState.NO_SUPPLY for power_state in power_states
-            ):
-                evaluated_power_state = PowerState.OFF
-            elif all(
-                power_state == PowerState.ON
-                for power_state in list(self._subrack_power_states.values())
+            tile_power_states = list(self._tile_power_states.values())
+            subrack_power_states = list(self._subrack_power_states.values())
+            # Assume that with any Tile ON the subrack must also be ON.
+            if any(power_state == PowerState.ON for power_state in tile_power_states):
+                evaluated_power_state = PowerState.ON  # 1
+            elif any(
+                power_state == PowerState.ON for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.STANDBY
+                evaluated_power_state = PowerState.STANDBY  # 2
             elif all(
-                power_state == PowerState.OFF
-                for power_state in list(self._subrack_power_states.values())
+                power_state == PowerState.NO_SUPPLY
+                for power_state in subrack_power_states
             ) and all(
-                power_state == PowerState.OFF
-                for power_state in list(self._tile_power_states.values())
+                power_state == PowerState.NO_SUPPLY for power_state in tile_power_states
             ):
-                evaluated_power_state = PowerState.OFF
+                evaluated_power_state = PowerState.NO_SUPPLY  # 3
+            elif all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in subrack_power_states
+            ) and all(
+                power_state in [PowerState.OFF, PowerState.NO_SUPPLY]
+                for power_state in tile_power_states
+            ):
+                evaluated_power_state = PowerState.OFF  # 4
             else:
-                evaluated_power_state = PowerState.UNKNOWN
+                # We get here by:
+                # Any subrack UNKNOWN AND no subrack ON
+                # Any tile UNKNOWN AND no tile ON
+                self.logger.debug(f"tile powers: {tile_power_states}")
+                self.logger.debug(f"subrack powers: {subrack_power_states}")
+                evaluated_power_state = PowerState.UNKNOWN  # 5
 
-            if any(
-                power_state == PowerState.UNKNOWN
-                for power_state in self._daq_power_state.values()
-            ):
-                evaluated_power_state = PowerState.UNKNOWN
             self.logger.debug(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
@@ -1035,6 +1111,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._off, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _off(
         self: SpsStationComponentManager,
@@ -1100,6 +1177,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._standby, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _standby(
         self: SpsStationComponentManager,
@@ -1114,7 +1192,8 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        self.logger.debug("Starting standby sequence")
+        self.logger.debug("Starting standby sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -1131,7 +1210,7 @@ class SpsStationComponentManager(
             results = []
             for proxy in self._tile_proxies.values():
                 [task_status, task_id] = proxy.off()
-                time.sleep(2)  # stagger power on by 2 seconds per tile
+                time.sleep(0.25)  # stagger power off by 0.25 seconds per tile
                 results.append(task_status)
             if ResultCode.FAILED in results:
                 result_code = ResultCode.FAILED
@@ -1178,6 +1257,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(self._on, task_callback=task_callback)
 
+    @lock_power_state
     @check_communicating
     def _on(
         self: SpsStationComponentManager,
@@ -1193,18 +1273,21 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         """
         message: str = ""
-        self.logger.debug("Starting on sequence")
+        self.logger.debug("Starting on sequence.")
+        self.logger.debug("State transitions suppressed during power command.")
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         result_code = ResultCode.OK
 
+        # TODO MCCS-2212 Must revise the possible cases, avoiding potential deadlocks.
         if all(
             proxy._proxy is not None
             and proxy._proxy.tileProgrammingState in {"Initialised", "Synchronised"}
             for proxy in self._tile_proxies.values()
         ):
             self.logger.debug("Tiles already initialised")
-            result_code = ResultCode.FAILED
+            result_code = ResultCode.OK
+            return
 
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
@@ -1230,6 +1313,7 @@ class SpsStationComponentManager(
             result_code = self._initialise_tile_parameters(
                 task_callback, task_abort_event
             )
+            # End of the actual power on sequence.
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising station")
@@ -1404,7 +1488,7 @@ class SpsStationComponentManager(
                     assert proxy._proxy is not None
                     self.logger.debug(f"Powering on tile {proxy._proxy.name()}")
                     result_code = proxy.on()
-                    time.sleep(4)  # stagger power on by 4 seconds per tile
+                    time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                     results.append(result_code)
                 if ResultCode.FAILED in results:
                     return ResultCode.FAILED
@@ -1412,11 +1496,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
 
         return ResultCode.FAILED
@@ -1500,7 +1587,7 @@ class SpsStationComponentManager(
                 assert proxy._proxy is not None
                 self.logger.debug(f"Re-initialising tile {proxy._proxy.name()}")
                 result_code = proxy._proxy.initialise()
-                time.sleep(2)  # stagger initialisation by 2 seconds per tile
+                time.sleep(0.25)  # stagger initialisation by 0.25 seconds per tile
                 results.append(result_code)
         if ResultCode.FAILED in results:
             return ResultCode.FAILED
@@ -1509,11 +1596,14 @@ class SpsStationComponentManager(
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
         tick = 2
         last_time = time.time() + timeout
+        desired_states = ["Synchronised"]
+        if self._global_reference_time == "":
+            desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
-            if all(state in ["Initialised", "Synchronised"] for state in states):
+            if all(state in desired_states for state in states):
                 return ResultCode.OK
         self.logger.error("Timed out waiting for tiles to come up")
         return ResultCode.FAILED
@@ -1548,6 +1638,8 @@ class SpsStationComponentManager(
             tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
+            tile.cspSpeadFormat = self._csp_spead_format
+            tile.globalReferenceTime = self._global_reference_time
             tile.ppsDelayCorrection = self._pps_delay_corrections[tile_no]
             tile.SetLmcDownload(json.dumps(self._lmc_param))
             tile.ConfigureStationBeamformer(
@@ -1843,6 +1935,19 @@ class SpsStationComponentManager(
         return copy.deepcopy(self._pps_delays)
 
     @property
+    def pps_delay_spread(self: SpsStationComponentManager) -> int:
+        """
+        Get PPS delay delta.
+
+        Returns the difference between the maximum and minimum delays so
+        that users can track an observed pps drift.
+        Returns a result in samples, each sample is 1.25ns.
+
+        :return: Maximum delay difference between tiles in samples.
+        """
+        return self._pps_delay_spread
+
+    @property
     def pps_delay_corrections(self: SpsStationComponentManager) -> list[int]:
         """
         Get the PPS delay correction.
@@ -1878,7 +1983,7 @@ class SpsStationComponentManager(
         Get static time delay correction.
 
         Array of one value per antenna/polarization (32 per tile), in range +/-124.
-        Delay in samples (positive = increase the signal delay) to correct for
+        Delay in nanoseconds (positive = increase the signal delay) to correct for
         static delay mismathces, e.g. cable length.
 
         :return: Array of one value per antenna/polarization (32 per tile)
@@ -1960,6 +2065,31 @@ class SpsStationComponentManager(
                 f"Writing csp rounding  {truncation[0]} in {proxy._proxy.name()}"
             )
             proxy._proxy.cspRounding = truncation
+
+    @property
+    def global_reference_time(self: SpsStationComponentManager) -> str:
+        """
+        Return the UTC time used as global synchronization time.
+
+        :return: UTC time in ISOT format used as global synchronization time
+        """
+        return self._global_reference_time
+
+    @global_reference_time.setter  # type: ignore[no-redef]
+    def global_reference_time(
+        self: SpsStationComponentManager, reference_time: str
+    ) -> None:
+        """
+        Set the Unix time used as global synchronization time.
+
+        Time will be used by all tiles as a common start time for timestamps.
+        If specified, StartAcquisition is also performed in Station.On()
+        :param reference_time: Reference time in ISOT format, or null string
+        """
+        self._global_reference_time = reference_time
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.globalReferenceTime = reference_time
 
     @property
     def preadu_levels(self: SpsStationComponentManager) -> list[float]:
@@ -2248,7 +2378,7 @@ class SpsStationComponentManager(
         dst_ip: str,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of LMC channel.
 
@@ -2257,6 +2387,10 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         self._lmc_param["mode"] = mode
         self._lmc_param["payload_length"] = payload_length
@@ -2266,10 +2400,9 @@ class SpsStationComponentManager(
         self._lmc_param["netmask_40g"] = self._sdn_netmask
         self._lmc_param["gateway_40g"] = self._sdn_gateway
         json_param = json.dumps(self._lmc_param)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.SetLmcDownload(json_param)
+        return self._execute_async_on_tiles(
+            "SetLmcDownload", json_param, require_initialised=True
+        )
 
     def set_lmc_integrated_download(
         self: SpsStationComponentManager,
@@ -2279,7 +2412,7 @@ class SpsStationComponentManager(
         dst_ip: str = "",
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure link and size of integrated LMC channel.
 
@@ -2291,6 +2424,10 @@ class SpsStationComponentManager(
         :param dst_ip: Destination IP, defaults to None
         :param src_port: source port, defaults to 0xF0D0
         :param dst_port: destination port, defaults to 4660
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         self._lmc_integrated_mode = mode
         self._lmc_channel_payload_length = channel_payload_length
@@ -2309,10 +2446,9 @@ class SpsStationComponentManager(
                 "gateway_40g": self._sdn_gateway,
             }
         )
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                tile._proxy.SetLmcIntegratedDownload(json_param)
+        return self._execute_async_on_tiles(
+            "SetLmcIntegratedDownload", json_param, require_initialised=True
+        )
 
     def set_csp_ingest(
         self: SpsStationComponentManager,
@@ -2402,7 +2538,7 @@ class SpsStationComponentManager(
 
     def set_beamformer_table(
         self: SpsStationComponentManager, beamformer_table: list[list[int]]
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Set the frequency regions to be beamformed into a single beam.
 
@@ -2410,24 +2546,40 @@ class SpsStationComponentManager(
             region containing a start channel, the size of the region
             (which must be a multiple of 8), and a beam index (between 0 and 7)
             and a substation ID (not used)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        self._beamformer_table = copy.deepcopy(beamformer_table)
-        self._set_beamformer_table()
+        number_entries = len(beamformer_table)
+        for i in range(number_entries):
+            self._beamformer_table[i] = beamformer_table[i]
+        for i in range(number_entries, 48):
+            self._beamformer_table[i] = [0, 0, 0, 0, 0, 0, 0]
+        return self._set_beamformer_table()
 
     def _set_beamformer_table(
         self: SpsStationComponentManager,
-    ) -> None:
-        """Set the frequency regions to be beamformed into a single beam."""
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Set the frequency regions to be beamformed into a single beam.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        # At least one entry in the beamformer table must be not null
+        # Entries with start channel = 0 are ignored in MccsTile
+        if all(entry[0] == 0 for entry in self._beamformer_table):
+            self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
         beamformer_regions = []
         for entry in self._beamformer_table:
             beamformer_regions.append(list([entry[0], 8]) + list(entry[1:7]))
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if tile._proxy.tileProgrammingState in ["Initialised", "Synchronised"]:
-                self.logger.debug(f"Set beamformer table on tile {tile._proxy.name()}")
-                tile._proxy.SetBeamformerRegions(
-                    list(itertools.chain.from_iterable(beamformer_regions))
-                )
+        return self._execute_async_on_tiles(
+            "SetBeamformerRegions",
+            list(itertools.chain.from_iterable(beamformer_regions)),
+            require_initialised=True,
+        )
 
     def load_calibration_coefficients(
         self: SpsStationComponentManager, calibration_coefficients: list[float]
@@ -2449,9 +2601,11 @@ class SpsStationComponentManager(
         assert proxy is not None  # for the type checker
         coefs = copy.deepcopy(calibration_coefficients)
         coefs[0] = float(tile_antenna)
-        proxy.LoadCalibrationCoefficients(coefs)
+        proxy.LoadCalibrationCoefficients(list(coefs))
 
-    def apply_calibration(self: SpsStationComponentManager, switch_time: str) -> None:
+    def apply_calibration(
+        self: SpsStationComponentManager, switch_time: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Switch the calibration bank.
 
@@ -2460,10 +2614,12 @@ class SpsStationComponentManager(
 
         :param switch_time: an optional time at which to perform the
             switch
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyCalibration(switch_time)
+        return self._execute_async_on_tiles("ApplyCalibration", switch_time)
 
     def load_pointing_delays(
         self: SpsStationComponentManager, delay_list: list[float]
@@ -2479,24 +2635,30 @@ class SpsStationComponentManager(
         """
         tile_delays = self._calculate_delays_per_tile(delay_list)
 
+        self.last_pointing_delays = delay_list
+
         for tile_proxy in self._tile_proxies.values():
             assert tile_proxy._proxy is not None
 
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be depending on assumptions about TRL structure
             tile_no = int(tile_proxy._proxy.dev_name().split("-")[-1][3:])
-            delays_for_tile = tile_delays[tile_no]
+            delays_for_tile = tile_delays[tile_no - 1]
             tile_proxy._proxy.LoadPointingDelays(delays_for_tile)
 
-    def apply_pointing_delays(self: SpsStationComponentManager, load_time: str) -> None:
+    def apply_pointing_delays(
+        self: SpsStationComponentManager, load_time: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Load the pointing delay at a specified time.
 
         :param load_time: time at which to load the pointing delay
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ApplyPointingDelays(load_time)
+        return self._execute_async_on_tiles("ApplyPointingDelays", load_time)
 
     def start_beamformer(
         self: SpsStationComponentManager,
@@ -2504,7 +2666,7 @@ class SpsStationComponentManager(
         duration: float,
         subarray_beam_id: int,
         scan_id: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Start the beamformer at the specified time.
 
@@ -2514,6 +2676,10 @@ class SpsStationComponentManager(
             defaults to -1 (run forever)
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "start_time": start_time,
@@ -2522,22 +2688,26 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StartBeamformer(json_argument)
+        return self._execute_async_on_tiles("StartBeamformer", json_argument)
 
-    def stop_beamformer(self: SpsStationComponentManager) -> None:
-        """Stop the beamformer."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopBeamformer()
+    def stop_beamformer(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop the beamformer.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopBeamformer")
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2548,6 +2718,10 @@ class SpsStationComponentManager(
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "integration_time": integration_time,
@@ -2555,16 +2729,16 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureIntegratedChannelData(json_argument)
+        return self._execute_async_on_tiles(
+            "ConfigureIntegratedChannelData", json_argument
+        )
 
     def configure_integrated_beam_data(
         self: SpsStationComponentManager,
         integration_time: float,
         first_channel: int,
         last_channel: int,
-    ) -> None:
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Configure and start the transmission of integrated channel data.
 
@@ -2575,6 +2749,10 @@ class SpsStationComponentManager(
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
         parameter_list = {
             "integration_time": integration_time,
@@ -2582,56 +2760,79 @@ class SpsStationComponentManager(
             "last_channel": last_channel,
         }
         json_argument = json.dumps(parameter_list)
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureIntegratedBeamData(json_argument)
+        return self._execute_async_on_tiles(
+            "ConfigureIntegratedBeamData", json_argument
+        )
 
-    def stop_integrated_data(self: SpsStationComponentManager) -> None:
-        """Stop the integrated data."""
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.StopIntegratedData()
+    def stop_integrated_data(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop the integrated data.
 
-    def send_data_samples(self: SpsStationComponentManager, argin: str) -> None:
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopIntegratedData")
+
+    def send_data_samples(
+        self: SpsStationComponentManager, argin: str, force: bool = False
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Front end for send_xxx_data methods.
 
         :param argin: Json encoded parameter List
-        """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.SendDataSamples(argin)
+        :param force: whether to cancel ongoing requests first.
 
-    def stop_data_transmission(self: SpsStationComponentManager) -> None:
-        """Stop data transmission for send_channelised_data_continuous."""
-        future_results = [
-            dev._proxy.command_inout(
-                "StopDataTransmission",
-                green_mode=tango.GreenMode.Futures,
-                wait=False,
-            )
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        pending_requests = [
+            dev._proxy.pendingDataRequests
             for dev in self._tile_proxies.values()
             if dev._proxy is not None
         ]
-        futures.wait(future_results)
-        if len(future_results) != len(self._tile_proxies):
-            self.logger.warning(
-                "StopDataTransmission how not been called on all Tiles."
-            )
-        self.logger.debug(
-            "Tiles response from StopDataTransmission: "
-            f" {[f.result() for f in future_results]}"
+        if any(pending_requests):
+            if not force:
+                return [ResultCode.REJECTED], [
+                    f"Current pending data requests: {pending_requests}."
+                    " Call with 'force: True' to abort current send operations."
+                ]
+            result_code, message = self.stop_data_transmission()
+
+            if result_code[0] != ResultCode.OK:
+                return result_code, [f"Couldn't stop data transmission: {message[0]}"]
+        return self._execute_async_on_tiles(
+            "SendDataSamples", argin, require_synchronised=True
         )
 
-    def configure_test_generator(self: SpsStationComponentManager, argin: str) -> None:
+    def stop_data_transmission(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop data transmission for send_channelised_data_continuous.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopDataTransmission")
+
+    def configure_test_generator(
+        self: SpsStationComponentManager, argin: str
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Distribute to tiles command configure_test_generator.
 
         :param argin: Json encoded parameter List
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
         """
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            tile._proxy.ConfigureTestGenerator(argin)
+        return self._execute_async_on_tiles("ConfigureTestGenerator", argin)
 
     def start_acquisition(
         self: SpsStationComponentManager,
@@ -2743,23 +2944,32 @@ class SpsStationComponentManager(
         # Get DAQ running with correlator
         assert self._daq_proxy is not None
         assert self._daq_proxy._proxy is not None
-        daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+
+        daq_status = json.loads(
+            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+        )
 
         # TODO: We have to stop all consumers before sending again
         # https://jira.skatelescope.org/browse/MCCS-2183
         if len(daq_status["Running Consumers"]) > 0:
             self.logger.info("Stopping all consumers...")
-            rc, _ = self._daq_proxy._proxy.Stop()
+            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
             if rc != ResultCode.OK:
                 self.logger.warning("Unable to stop daq consumers.")
             for _ in range(max_tries):
-                daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+                daq_status = json.loads(
+                    retry_command_on_exception(
+                        self._daq_proxy._proxy, "DaqStatus", None
+                    )
+                )
                 if len(daq_status["Running Consumers"]) == 0:
                     continue
                 time.sleep(tick)
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
-        self._daq_proxy._proxy.configure(
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "configure",
             json.dumps(
                 {
                     "nof_tiles": self._number_of_tiles,
@@ -2768,12 +2978,16 @@ class SpsStationComponentManager(
                     "nof_correlator_samples": nof_correlator_samples,
                     "receiver_frame_size": receiver_frame_size,
                 }
-            )
+            ),
         )
-        self._daq_proxy._proxy.Start(json.dumps({"modes_to_start": daq_mode}))
+        retry_command_on_exception(
+            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
+        )
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         for _ in range(max_tries):
-            daq_status = json.loads(self._daq_proxy._proxy.DaqStatus())
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            )
             if any(
                 status_list[0] == daq_mode
                 for status_list in daq_status["Running Consumers"]
@@ -2793,6 +3007,39 @@ class SpsStationComponentManager(
             dst_port=daq_status["Receiver Ports"][0],
         )
 
+    @property
+    def csp_spead_format(self: SpsStationComponentManager) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.setter  # type: ignore[no-redef]
+    def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self._csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+            return
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.cspSpeadFormat = spead_format
+
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -2807,27 +3054,42 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        data_send_mode: str = "channel"
+        states = self.tile_programming_state()
+        self.logger.debug(f"tileProgrammingState: {states}")
+        if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
+            if task_callback:
+                task_callback(
+                    status=TaskStatus.REJECTED,
+                    result=(
+                        ResultCode.REJECTED,
+                        "AcquireDataForCalibration failed. Tiles not synchronised.",
+                    ),
+                )
+            return
 
-        # Verify all tiles are acquiring data
-        for tile in self._tile_proxies.values():
-            assert tile._proxy is not None  # for the type checker
-            if not tile._proxy.tileProgrammingState == "Synchronised":
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        def _check_aborted() -> bool:
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("AcquireDataForCalibration task has been aborted")
                 if task_callback:
                     task_callback(
-                        status=TaskStatus.FAILED,
-                        result=(
-                            ResultCode.FAILED,
-                            "AcquireDataForCalibration failed. Tiles not synchronised.",
-                        ),
+                        status=TaskStatus.ABORTED,
+                        result=(ResultCode.ABORTED, "Task aborted"),
                     )
-                return
+                return True
+            return False
+
+        data_send_mode: str = "channel"
 
         try:
             self.logger.info(
                 "AcquireDataForCalibration configuring tiles and daq for calibration"
             )
             self._configure_station_for_calibration()
+            if _check_aborted():
+                return
         except AssertionError as e:
             self.logger.error(f"Unable to configure station {repr(e)}")
             if task_callback:
@@ -2852,6 +3114,11 @@ class SpsStationComponentManager(
             )
         )
         self.logger.debug(f"Raw channel spigot sent for {channel=}")
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+            )
 
     @check_communicating
     def set_channeliser_rounding(
@@ -2890,6 +3157,8 @@ class SpsStationComponentManager(
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
+
+        self._channeliser_rounding = list(channeliser_rounding)
 
         result_code = ResultCode.OK
         message = ""
@@ -2998,3 +3267,130 @@ class SpsStationComponentManager(
         if docs is None:
             return f"{test_name} appears to have no description."
         return docs
+
+    # pylint: disable=broad-exception-caught
+    def _execute_async_on_tiles(
+        self: SpsStationComponentManager,
+        command_name: str,
+        command_args: Optional[Any] = None,
+        timeout: int = 20,
+        require_initialised: bool = False,
+        require_synchronised: bool = False,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Execute a given command on all tile proxies in separate threads.
+
+        This is for commands which return a DevVarLongStringArrayType.
+
+        :param command_name: command to execute.
+        :param command_args: args to execute commands with.
+        :param timeout: timeout in which to expect command completion.
+        :param require_initialised: if this command can only execute on an initialised
+            tile.
+        :param require_synchronised: if this command can only execute on a synchronised
+            tile.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self.logger.debug(f"calling {command_name} with {command_args=}")
+        command_args = [command_args] if command_args is not None else []
+
+        # Ideally we wouldn't handle the exceptions, and let them hit the user.
+        # However we need to do more work in MccsTile before that. I'd like to get
+        # to a situation where MccsTile returns ResultCode.FAILED if we're OK with
+        # the failure (e.g failed to acquire lock), but raises an exception to us if
+        # something really janky happened, which should be sent straight to the user.
+        def _run_while_handling_errors(
+            proxy: MccsDeviceProxy,
+        ) -> tuple[list[ResultCode], list[Optional[str]]]:
+            try:
+                return proxy.command_inout(
+                    command_name,
+                    *command_args,
+                )
+            except Exception as e:
+                self.logger.error(
+                    f"Error running {command_name} on {proxy.dev_name()}: {e}"
+                )
+                return [ResultCode.FAILED], [
+                    f"Command raised {str(type(e))}, check logs."
+                ]
+
+        commands_to_execute = [
+            (_run_while_handling_errors, dev._proxy)
+            for dev in self._tile_proxies.values()
+            if dev._proxy is not None
+            and (
+                not require_initialised
+                or dev._proxy.tileProgrammingState in ["Initialised", "Synchronised"]
+            )
+            and (
+                not require_synchronised
+                or dev._proxy.tileProgrammingState in ["Synchronised"]
+            )
+        ]
+
+        def _build_msg(
+            command_name: str,
+            base_msg: str,
+            require_initialised: bool,
+            require_synchronised: bool,
+        ) -> str:
+            if require_initialised:
+                base_msg += f" {command_name} requires Initialised MccsTiles."
+            if require_synchronised:
+                base_msg += f" {command_name} requires Synchronised MccsTiles."
+            return base_msg
+
+        if not commands_to_execute:
+            msg = _build_msg(
+                command_name,
+                f"{command_name} wouldn't be called on any MccsTiles."
+                " Check MccsTile adminMode.",
+                require_initialised,
+                require_synchronised,
+            )
+            self.logger.error(msg)
+            return [ResultCode.REJECTED], [msg]
+
+        if len(commands_to_execute) != len(self._tile_proxies):
+            msg = _build_msg(
+                command_name,
+                f"{command_name} won't be called on all tiles. Will be called on: "
+                f"{[proxy.dev_name() for _, proxy in commands_to_execute]}."
+                " Check MccsTile adminMode.",
+                require_initialised,
+                require_synchronised,
+            )
+            self.logger.warning(msg)
+
+        if not self.excecute_async:
+            self.logger.debug(f"Calling {command_name} synchronously.")
+            results = [command(proxy) for command, proxy in commands_to_execute]
+        else:
+            # We'd really prefer to use GreenMode.Asyncio or similar here. This appears
+            # to be buggy/unsupported with a tango.DeviceProxy. We'd have to move to a
+            # tango.asyncio.DeviceProxy to use that functionality, which would involve a
+            # general refactor of SpsStation. So for now we just spin up some threads,
+            # and execute each synchronous call in it's own thread manually.
+            with ThreadPoolExecutor(max_workers=len(self._tile_proxies)) as executor:
+                futures: list[Future] = [
+                    executor.submit(command, proxy)
+                    for command, proxy in commands_to_execute
+                ]
+                complete, incomplete = wait(futures, timeout=timeout)
+                if incomplete:
+                    msg = f"{len(incomplete)} commands failed to complete in time."
+                    self.logger.warning(msg)
+                    return [ResultCode.FAILED], [msg]
+                results = [future.result() for future in complete]
+
+        result_codes, _ = zip(*results)
+        self.logger.debug(f"Tiles response from {command_name}: {str(results)}")
+        if all(result[0] == ResultCode.OK for result in result_codes):
+            return [ResultCode.OK], [f"{command_name} finished OK."]
+        return [ResultCode.FAILED], [
+            f"{command_name} didn't finish OK. Results: {str(results)}"
+        ]

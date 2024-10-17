@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, List, Optional, TypeVar, Union, cast
+from typing import Any, Callable, Final, List, TypeVar, Union, cast
 
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
@@ -278,6 +278,7 @@ class MockTpm:
     # Register map.
     # Requires only registers which are directly accessed from
     # the TpmDriver.
+    PLL_LOCKED_REGISTER: Final = 0xE7
     _register_map: dict[Union[int, str], Any] = {
         "0x30000000": [0x21033009],
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
@@ -667,7 +668,7 @@ class MockTpm:
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Optional[Any]:
+    ) -> Any:
         """
         Get register value.
 
@@ -678,12 +679,13 @@ class MockTpm:
         :return: Values
         """
         if register == ("pll", 0x508):
-            return 0xE7
+            return self.PLL_LOCKED_REGISTER
         if isinstance(register, int):
             register = hex(register)
+
         return self._register_map.get(register)
 
-    def read_address(self: MockTpm, address: int, n: int = 1) -> Optional[Any]:
+    def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """
         Get address value.
 
@@ -708,7 +710,7 @@ class MockTpm:
             key = str(address + i)
             self._address_map.update({key: value})
 
-    def __getitem__(self: MockTpm, key: int | str) -> Optional[Any]:
+    def __getitem__(self: MockTpm, key: Any) -> Any:
         """
         Check if the specified key is a memory address or register name.
 
@@ -721,6 +723,8 @@ class MockTpm:
             key = hex(key)
         if key == "" or key == "unknown":
             raise LibraryError(f"Unknown register: {key}")
+        if key == ("pll", 1288):
+            return self.PLL_LOCKED_REGISTER
         return self._register_map.get(key)
 
     def __setitem__(self: MockTpm, key: int | str, value: Any) -> None:
@@ -818,12 +822,12 @@ class TileSimulator:
     PPS_DELAY = 12
     PHASE_TERMINAL_COUNT = 2
     TPM_TEMPERATURE_THRESHOLDS = {
-        "board_warning_threshold": (-273, 90),
-        "board_alarm_threshold": (-273, 90),
-        "fpga1_warning_threshold": (-273, 90),
-        "fpga1_alarm_threshold": (-273, 90),
-        "fpga2_warning_threshold": (-273, 90),
-        "fpga2_alarm_threshold": (-273, 90),
+        "board_warning_threshold": (-273.0, 90.0),
+        "board_alarm_threshold": (-273.0, 90.0),
+        "fpga1_warning_threshold": (-273.0, 90.0),
+        "fpga1_alarm_threshold": (-273.0, 90.0),
+        "fpga2_warning_threshold": (-273.0, 90.0),
+        "fpga2_alarm_threshold": (-273.0, 90.0),
     }
 
     FIRMWARE_NAME = "itpm_v1_6.bit"
@@ -833,7 +837,8 @@ class TileSimulator:
         {"design": "tpm_test", "major": 1, "minor": 2, "build": 0, "time": ""},
     ]
     STATION_ID = 1
-    TILE_ID = 0
+    TILE_ID = 1
+    CSP_SPEAD_FORMAT = "SKA"
 
     def __init__(
         self: TileSimulator,
@@ -856,6 +861,7 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
         self._start_polling_event = threading.Event()
@@ -873,6 +879,7 @@ class TileSimulator:
         self.dst_port: int | None = None
         self.is_csp_write_successful: bool = True
         self.sync_time = 0
+        self.csp_spead_format = self.CSP_SPEAD_FORMAT
         self._is_arp_table_healthy: bool = True
         self._is_set_first_last_tile_write_successful: bool = True
         self._is_spead_header_write_successful: bool = True
@@ -883,6 +890,10 @@ class TileSimulator:
         self._active_40g_ports_setting: str = ""
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
+        self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
+        self._is_cpld_connectable = True
+        self._is_fpga1_connectable = True
+        self._is_fpga2_connectable = True
         self._global_status_alarms: dict[str, int] = {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
@@ -903,25 +914,6 @@ class TileSimulator:
             "current_channel": 0,
         }
         # return self._register_map.get(str(address), 0)
-
-    def check_communication(self: TileSimulator) -> dict[str, bool]:
-        """
-        Check status of connection to TPM CPLD and FPGAs.
-
-        Examples:
-            OK Status:
-            {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
-
-            TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
-            {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
-
-            TPM OFF or Network Issue:
-            {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
-
-        :Returns: dictionary of connection status
-        """
-        status = {"CPLD": True, "FPGA0": True, "FPGA1": True}
-        return status
 
     @check_mocked_overheating
     @connected
@@ -976,6 +968,15 @@ class TileSimulator:
         """
         return copy.deepcopy(self._global_status_alarms)
 
+    @connected
+    def get_temperature(self: TileSimulator) -> float:
+        """
+        Get the board temperature.
+
+        :return: a float with the board temperature.
+        """
+        return self._tile_health_structure["temperatures"]["board"]
+
     @check_mocked_overheating
     @connected
     def initialise_beamformer(
@@ -1008,8 +1009,26 @@ class TileSimulator:
         if bitfile is None:
             self.logger.error("Provided bitfile is None type")
             raise LibraryError("bitfile is None type")
-
+        # Every time we reprogram the temperature thresholds get reset.
+        self._tpm_temperature_thresholds = {
+            "board_warning_threshold": (-273.0, 90.0),
+            "board_alarm_threshold": (-273.0, 90.0),
+            "fpga1_warning_threshold": (-273.0, 90.0),
+            "fpga1_alarm_threshold": (-273.0, 90.0),
+            "fpga2_warning_threshold": (-273.0, 90.0),
+            "fpga2_alarm_threshold": (-273.0, 90.0),
+        }
+        self.evaluate_mcu_action()
         self.tpm._is_programmed = True  # type: ignore
+
+    @property
+    def spead_ska_format_supported(self) -> bool:
+        """
+        Check if new (SKA) format for CSP SPEAD header is supported.
+
+        :return: True if new (SKA) format for CSP SPEAD header is supported
+        """
+        return True
 
     @check_mocked_overheating
     @connected
@@ -1050,6 +1069,7 @@ class TileSimulator:
         qsfp_detection: str = "auto",
         adc_mono_channel_14_bit: bool = False,
         adc_mono_channel_sel: int = 0,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Initialise tile.
@@ -1096,6 +1116,8 @@ class TileSimulator:
             "none", force no cable not detected
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
+        :param global_start_time: TPM will act as if it is
+            started at this time (seconds)
         """
         # synchronise the time of both FPGAs UTC time
         # define if the tile is the first or last in the station_beamformer
@@ -1113,7 +1135,7 @@ class TileSimulator:
         self._station_id = station_id
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
-        time.sleep(random.randint(1, 2))
+        time.sleep(random.randint(1, 3))
         self.logger.debug("Initialise complete in Tpm.")
 
     @connected
@@ -1227,7 +1249,7 @@ class TileSimulator:
     @connected
     def get_tpm_temperature_thresholds(
         self: TileSimulator,
-    ) -> dict[str, tuple[int, int]]:
+    ) -> dict[str, tuple[float, float]]:
         """
         Return a dictionary of temperature thresholds.
 
@@ -1244,7 +1266,7 @@ class TileSimulator:
         :return: A dictionary containing the temperature thresholds.
         :rtype: dict
         """
-        return self.TPM_TEMPERATURE_THRESHOLDS
+        return self._tpm_temperature_thresholds
 
     @check_mocked_overheating
     @connected
@@ -1288,6 +1310,7 @@ class TileSimulator:
         return self._pps_delay
 
     @check_mocked_overheating
+    @connected
     def is_programmed(self: TileSimulator) -> bool:
         """
         Return whether the mock has been implemented.
@@ -1382,7 +1405,7 @@ class TileSimulator:
         self: TileSimulator,
         core_id: int = -1,
         arp_table_entry: int = 0,
-    ) -> dict | list[dict] | None:
+    ) -> dict[str, Any] | list[dict] | None:
         """
         Return a 40G configuration.
 
@@ -1435,8 +1458,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int | None = 0xF0D0,
         dst_port: int | None = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Specify where the control data will be transmitted.
@@ -1497,21 +1520,33 @@ class TileSimulator:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
 
-    def mock_off(self: TileSimulator) -> None:
+    def mock_off(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = False
+        if lock:
+            self.mock_connection_success = False
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = False
 
-    def mock_on(self: TileSimulator) -> None:
+    def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
         Fake a connection by constructing the TPM.
 
-        :NOTE: This method exists in the Simulator Only
+        :param lock: True if we want to lock this state.
         """
-        self.mock_connection_success = True
+        if lock:
+            self.mock_connection_success = True
+            self._power_locked = lock
+        elif self._power_locked:
+            self.logger.error("Failed to change mocked tile state")
+        else:
+            self.mock_connection_success = True
 
     @check_mocked_overheating
     @connected
@@ -1604,6 +1639,7 @@ class TileSimulator:
         nof_antennas: int,
         ref_epoch: int = -1,
         start_time: int | None = 0,
+        ska_spead_header_format: bool = False,
     ) -> bool:
         """
         Define the SPEAD header for the given parameters.
@@ -1613,6 +1649,8 @@ class TileSimulator:
         :param nof_antennas: Number of antennas in the station
         :param ref_epoch: Unix time of epoch. -1 uses value defined in set_epoch
         :param start_time: start time
+        :param ska_spead_header_format: True for new (SKA) CBF SPEAD header format
+
 
         :return: a bool representing if command executed without error.
         """
@@ -1654,7 +1692,7 @@ class TileSimulator:
     @check_mocked_overheating
     @connected
     def load_calibration_coefficients(
-        self: TileSimulator, antenna: int, calibration_coefficients: list[complex]
+        self: TileSimulator, antenna: int, calibration_coefficients: list[list[complex]]
     ) -> None:
         """
         Load calibration coefficients.
@@ -1752,7 +1790,7 @@ class TileSimulator:
         self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
-        last_channel: int = 512,
+        last_channel: int = 511,
     ) -> None:
         """
         Configure and start continuous integrated channel data.
@@ -1775,7 +1813,7 @@ class TileSimulator:
         self: TileSimulator,
         integration_time: float = 0.5,
         first_channel: int = 0,
-        last_channel: int = 192,
+        last_channel: int = 191,
     ) -> None:
         """
         Configure and start continuous integrated beam data.
@@ -1838,7 +1876,7 @@ class TileSimulator:
         first_channel: int = 0,
         last_channel: int = 511,
         timestamp: int | None = None,
-        seconds: float = 0.2,
+        seconds: float = 0.4,
     ) -> None:
         """
         Send channelised data from the TPM.
@@ -1859,9 +1897,13 @@ class TileSimulator:
             number_of_samples = new_value
         self.stop_data_transmission()
 
-        assert self.dst_ip
-        assert self.dst_port
-        self.spead_data_simulator.set_destination_ip(self.dst_ip, self.dst_port)
+        if not self.dst_ip:
+            _dst_ip: str = ""
+        if not self.dst_port:
+            _dst_port: int = 8080
+        _dst_ip = self.dst_ip or _dst_ip
+        _dst_port = self.dst_port or _dst_port
+        self.spead_data_simulator.set_destination_ip(_dst_ip, _dst_port)
         self.spead_data_simulator.send_channelised_data(
             1, number_of_samples, first_channel, last_channel
         )
@@ -1891,7 +1933,7 @@ class TileSimulator:
     @connected
     def send_channelised_data_narrowband(
         self: TileSimulator,
-        frequency: int,
+        frequency: float,
         round_bits: int,
         number_of_samples: int = 128,
         wait_seconds: int = 0,
@@ -1917,7 +1959,7 @@ class TileSimulator:
     def send_beam_data(
         self: TileSimulator,
         timeout: int = 0,
-        timestamp: int = 0,
+        timestamp: int | None = None,
         seconds: float = 0.2,
     ) -> None:
         """
@@ -1942,18 +1984,22 @@ class TileSimulator:
         self: TileSimulator,
         start_time: int | None = None,
         delay: int = 2,
-        tpm_start_time: int | None = None,
+        global_start_time: int | None = None,
     ) -> None:
         """
         Start data acquisition.
 
         :param start_time: Time for starting (frames)
         :param delay: delay after start_time (frames)
-        :param tpm_start_time: TPM will act as if it is
+        :param global_start_time: TPM will act as if it is
             started at this time (seconds)
         """
-        if start_time is None:
-            sync_time = time.time() + delay
+        # if global start time is set, either in parameter or in attribute,
+        # use it as sync time
+        if global_start_time:
+            sync_time = global_start_time
+        elif start_time is None:
+            sync_time = int(time.time()) + delay
         else:
             sync_time = start_time + delay
 
@@ -1970,8 +2016,8 @@ class TileSimulator:
         dst_ip: str | None = None,
         src_port: int = 0xF0D0,
         dst_port: int = 4660,
-        netmask_40g: str | None = None,
-        gateway_ip_40g: str | None = None,
+        netmask_40g: int | None = None,
+        gateway_ip_40g: int | None = None,
     ) -> None:
         """
         Configure link and size of control data for integrated LMC packets.
@@ -2135,6 +2181,127 @@ class TileSimulator:
             and self.tpm.beam2.is_running()  # type: ignore
         )
 
+    def set_tpm_temperature_thresholds(
+        self: TileSimulator,
+        board_alarm_threshold: tuple[float, float] | None = None,
+        fpga1_alarm_threshold: tuple[float, float] | None = None,
+        fpga2_alarm_threshold: tuple[float, float] | None = None,
+    ) -> None:
+        """
+        Set the temperature thresholds.
+
+        NOTE: Warning this method can configure the shutdown temperature of
+        components and must be used with care. This method is capped to a minimum
+        of 20 and maximum of 50 (unit: Degree Celsius). And is ONLY supported in tpm1_6.
+
+        :param board_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the board (unit: Degree Celsius)
+        :param fpga1_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga1 (unit: Degree Celsius)
+        :param fpga2_alarm_threshold: A tuple containing the minimum and
+            maximum alarm thresholds for the fpga2 (unit: Degree Celsius)
+
+        :raises ValueError: is the value set is not in the set range.
+        """
+
+        def _is_in_range_20_50(value: float) -> bool:
+            """
+            Return True if value is larger than 20 and less than 50.
+
+            :param value: value under test
+
+            :return: True when test value in range.
+            """
+            min_settable = 20
+            max_settable = 50
+            if min_settable <= value <= max_settable:
+                return True
+            return False
+
+        if board_alarm_threshold is not None:
+            if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
+                board_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "board_alarm_threshold"
+                ] = board_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga1_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga1_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga1_alarm_threshold"
+                ] = fpga1_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        if fpga2_alarm_threshold is not None:
+            if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
+                fpga2_alarm_threshold[1]
+            ):
+                self._tpm_temperature_thresholds[
+                    "fpga2_alarm_threshold"
+                ] = fpga2_alarm_threshold
+            else:
+                raise ValueError(
+                    f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"
+                )
+        self.evaluate_mcu_action()
+
+    def evaluate_mcu_action(self: TileSimulator) -> None:
+        """
+        Evaluate thresholds to temperatures.
+
+        In the case of overheating, we will mock the action of the
+        MCU (micro controller unit).
+        """
+        if (
+            self._tile_health_structure["temperatures"]["board"]
+            > self._tpm_temperature_thresholds["board_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA0"]
+            > self._tpm_temperature_thresholds["fpga1_alarm_threshold"][1]
+            or self._tile_health_structure["temperatures"]["FPGA1"]
+            > self._tpm_temperature_thresholds["fpga2_alarm_threshold"][1]
+        ):
+            self.logger.warning(
+                "We are overheating, CPLD is turning the overheating components OFF!"
+            )
+            self._global_status_alarms["temperature_alm"] = 2
+            self._is_fpga1_connectable = False
+            self._is_fpga2_connectable = False
+            self.tpm_mocked_overheating = True
+        else:
+            self._global_status_alarms["temperature_alm"] = 0
+            self.tpm_mocked_overheating = False
+            self._is_fpga1_connectable = True
+            self._is_fpga2_connectable = True
+
+    def check_communication(self: TileSimulator) -> dict[str, bool]:
+        """
+        Return status of connection to TPM CPLD and FPGAs.
+
+        :example:
+
+        >> OK Status:
+          {'CPLD': True, 'FPGA0': True, 'FPGA1': True}
+        >> TPM ON, FPGAs not programmed or TPM overtemperature self shutdown:
+          {'CPLD': True, 'FPGA0': False, 'FPGA1': False}
+        >> TPM OFF or Network Issue:
+          {'CPLD': False, 'FPGA0': False, 'FPGA1': False}
+
+        :return: a dictionary with the key communication information.
+        """
+        return {
+            "CPLD": self._is_cpld_connectable,
+            "FPGA0": self._is_fpga1_connectable,
+            "FPGA1": self._is_fpga2_connectable,
+        }
+
     @check_mocked_overheating
     @connected
     def get_phase_terminal_count(self: TileSimulator) -> int:
@@ -2186,9 +2353,29 @@ class TileSimulator:
             levels.append(attenuation)
         return levels
 
+    def set_spead_format(self, ska_spead_header_format: bool) -> None:
+        """
+        Set CSP SPEAD format.
+
+        :param ska_spead_header_format: True for new (SKA) format, False for old (AAVS)
+        """
+        spead_format = "AAVS"
+        if ska_spead_header_format:
+            spead_format = "SKA"
+        self.csp_spead_format = spead_format
+
+    @property
+    def ska_spead_header(self) -> bool:
+        """
+        Return format of the CSP Spead header.
+
+        :return: True for new new (SKA) format, False for old (AAVS)
+        """
+        return self.csp_spead_format == "SKA"
+
     @check_mocked_overheating
     @connected
-    def __getattr__(self: TileSimulator, name: str) -> object:
+    def __getattr__(self: TileSimulator, name: str) -> Any:
         """
         Get the attribute.
 
@@ -2199,7 +2386,6 @@ class TileSimulator:
             the named attribute.
 
         :return: the requested attribute
-        :rtype: object
         """
         if self.tpm:
             return getattr(self.tpm, name)

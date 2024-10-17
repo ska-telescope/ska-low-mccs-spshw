@@ -20,14 +20,34 @@ from .tile_data import TileData
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
 
+    def __init__(self, *args: Any, **kwargs: Any):
+        """
+        Initialise this device object.
+
+        :param args: positional args to the init
+        :param kwargs: keyword args to the init
+        """
+        super().__init__(*args, **kwargs)
+        self.logger = None
+
+    def set_logger(self: TileHealthRules, logger: Any) -> None:
+        """
+        Set logger for debugging.
+
+        :param logger: a logger.
+        """
+        self.logger = logger
+
     def unknown_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether UNKNOWN is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if UNKNOWN is a valid state, along with a text report.
         """
@@ -43,11 +63,13 @@ class TileHealthRules(HealthRules):
     def failed_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether FAILED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if FAILED is a valid state, along with a text report.
         """
@@ -63,11 +85,13 @@ class TileHealthRules(HealthRules):
     def degraded_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether DEGRADED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if DEGRADED is a valid state, along with a text report.
         """
@@ -83,11 +107,14 @@ class TileHealthRules(HealthRules):
     def healthy_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether OK is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
+
         :return: True if OK is a valid state, along with a text report.
         """
         if all(state == HealthState.OK for state, _ in intermediate_healths.values()):
@@ -126,11 +153,22 @@ class TileHealthRules(HealthRules):
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
+        if not monitoring_points and "hardware" in min_max:
+            return (HealthState.OK, "")
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
-                states[p] = self.compute_intermediate_state(
-                    p_state, min_max[p], path=f"{path}/{p}"
-                )
+                if p in min_max:
+                    states[p] = self.compute_intermediate_state(
+                        p_state, min_max[p], path=f"{path}/{p}"
+                    )
+                else:
+                    # TODO: MCCS-2196 - Updating the tile_health_attribute
+                    # in aavs-system can cause a key error to be raised.
+                    print(
+                        f"\nMonitoring point {p} is not being evaluated as part of the "
+                        "tiles health.\n"
+                    )
+                    continue
             else:
                 if p_state is None and min_max[p] is not None:
                     states[p] = (
@@ -138,28 +176,60 @@ class TileHealthRules(HealthRules):
                         f"Monitoring point {p} is None.",
                     )
                 elif isinstance(min_max[p], dict):
+                    # If limits are min/max
+                    if "min" in min_max[p].keys():
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            else (
+                                HealthState.FAILED,
+                                f'Monitoring point "{path}/{p}": {p_state} not in range'
+                                f" {min_max[p]['min']} - {min_max[p]['max']}",
+                            )
+                        )
+                    # If limits are soft/hard.
+                    # OK if <= soft limit
+                    # DEGRADED if <= hard limit
+                    # else FAILED
+                    if "soft" in min_max[p].keys():
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if p_state <= min_max[p]["soft"]
+                            else (
+                                (
+                                    HealthState.DEGRADED,
+                                    f'Monitoring point "{path}/{p}": {p_state} over '
+                                    f"soft limit: {min_max[p]['soft']}",
+                                )
+                                if p_state <= min_max[p]["hard"]
+                                else (
+                                    HealthState.FAILED,
+                                    f'Monitoring point "{path}/{p}": {p_state} over '
+                                    f"hard limit: {min_max[p]['hard']}",
+                                )
+                            )
+                        )
+                elif isinstance(min_max[p], list):
                     states[p] = (
                         (HealthState.OK, "")
-                        if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                        if list(p_state) == min_max[p]
                         else (
                             HealthState.FAILED,
-                            f'Monitoring point "{path}/{p}": {p_state} not in range '
-                            f"{min_max[p]['min']} - {min_max[p]['max']}",
+                            f'Monitoring point "{path}/{p}": '
+                            f"{list(p_state)} =/= {min_max[p]}",
                         )
                     )
                 else:
                     states[p] = (
                         (HealthState.OK, "")
                         if p_state == min_max[p]
-                        # TODO: MCCS-1979
-                        or "/udp_interface/status" == f"{path}/{p}"
-                        or "/udp_interface/bip_error_count/FPGA1/" in f"{path}/{p}"
                         else (
                             HealthState.FAILED,
                             f'Monitoring point "{path}/{p}": '
                             f"{p_state} =/= {min_max[p]}",
                         )
                     )
+
         return self._combine_states(*states.values())
 
     def _combine_states(
@@ -180,4 +250,8 @@ class TileHealthRules(HealthRules):
                 if state == HealthState.OK:
                     return state, ""
                 return state, " | ".join(filtered_results[state])
-        return HealthState.UNKNOWN, "No health state matches"
+
+        return (
+            HealthState.UNKNOWN,
+            f"No health state matches: args:{args} filtered results:{filtered_results}",
+        )

@@ -13,10 +13,13 @@
         },
         "speed_percent": {
             "description": "Fan speed in percent",
-            "type": "number",
-            "minimum": 0.0,
-            "maximum": 100.0
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100
         }
     },
-    "required": ["subrack_fan_id", "speed_percent"]
+    "required": [
+        "subrack_fan_id",
+        "speed_percent"
+    ]
 }

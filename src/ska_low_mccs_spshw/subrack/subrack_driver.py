@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This module provides for monitoring and control of a PSI-Low subrack."""
+"""This module provides for monitoring and control of an SPS subrack."""
 from __future__ import annotations
 
 import logging
@@ -25,7 +25,7 @@ from .subrack_data import FanMode, SubrackData
 class SubrackDriver(
     MccsBaseComponentManager, PollingComponentManager[HttpPollRequest, HttpPollResponse]
 ):
-    """A component manager for the PSI-Low subrack."""
+    """A component manager for an SPS subrack."""
 
     # pylint: disable-next=too-many-arguments
     def __init__(
@@ -92,6 +92,7 @@ class SubrackDriver(
             backplane_temperatures=None,
             board_temperatures=None,
             board_current=None,
+            cpld_pll_locked=None,
             power_supply_currents=None,
             power_supply_fan_speeds=None,
             power_supply_powers=None,
@@ -99,6 +100,8 @@ class SubrackDriver(
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
+            subrack_pll_locked=None,
+            subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
@@ -106,7 +109,7 @@ class SubrackDriver(
         )
 
         self.logger.debug(
-            f"Initialising PSI-Low subrack component manager: "
+            f"Initialising SPS subrack component manager: "
             f"Update rate is {update_rate}. "
             f"Poll rate is {self._poll_rate}. "
             f"Attributes will be updated roughly each {self._max_tick} polls."
@@ -468,6 +471,7 @@ class SubrackDriver(
                 "backplane_temperatures",
                 "board_temperatures",
                 "board_current",
+                "cpld_pll_locked",
                 "power_supply_currents",
                 "power_supply_fan_speeds",
                 "power_supply_powers",
@@ -475,6 +479,8 @@ class SubrackDriver(
                 "subrack_fan_speeds",
                 "subrack_fan_speeds_percent",
                 "subrack_fan_mode",
+                "subrack_pll_locked",
+                "subrack_timestamp",
                 "tpm_currents",
                 "tpm_powers",
                 # "tpm_temperatures",
@@ -612,7 +618,7 @@ class SubrackDriver(
         values = poll_response.query_responses
         self.logger.debug("Pushing updates.")
 
-        self._update_component_state(fault=fault, **values)
+        self._update_component_state(power=PowerState.ON, fault=fault, **values)
 
     def polling_stopped(self: SubrackDriver) -> None:
         """
@@ -633,6 +639,7 @@ class SubrackDriver(
             backplane_temperatures=None,
             board_temperatures=None,
             board_current=None,
+            cpld_pll_locked=None,
             power_supply_currents=None,
             power_supply_fan_speeds=None,
             power_supply_powers=None,
@@ -640,16 +647,15 @@ class SubrackDriver(
             subrack_fan_speeds=None,
             subrack_fan_speeds_percent=None,
             subrack_fan_mode=None,
+            subrack_pll_locked=None,
+            subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
 
-        # Not calling super().polling_stopped() here,
-        # because ska-tango-base inappropriately pushes power=UNKNOWN,
-        # but polling may have stopped because we learned that power is OFF.
-        self._update_communication_state(CommunicationStatus.DISABLED)
+        super().polling_stopped()
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:
         """
@@ -662,5 +668,6 @@ class SubrackDriver(
             attempt.
         """
         self.logger.exception(f"Poll failed: {exception}")
+        # TODO MCCS-1329: depending on the exception we may not be UNKNOWN.
         self._update_component_state(power=PowerState.UNKNOWN, fault=None)
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)

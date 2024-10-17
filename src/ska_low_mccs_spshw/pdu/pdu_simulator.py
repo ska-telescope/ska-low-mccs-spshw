@@ -45,7 +45,7 @@ class PduSimulatorServer:
         if "data_dir" in kwargs:
             self._data_dir = kwargs.pop("data_dir")
         else:
-            self._data_dir = "tests/unit/whiterabbit/snmpsim_data/switch"
+            self._data_dir = "tests/unit/pdu/snmpsim_data/"
 
         self._lock = threading.RLock()
         self._server_ready = False

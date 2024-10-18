@@ -24,10 +24,12 @@ __all__ = [
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
+    "MccsPdu",
     "version",
 ]
 
 from .daq_receiver import MccsDaqReceiver
+from .pdu import MccsPdu
 from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile

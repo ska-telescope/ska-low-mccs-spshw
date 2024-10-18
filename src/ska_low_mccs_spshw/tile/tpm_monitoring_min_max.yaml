@@ -303,6 +303,15 @@ tpm_monitoring_points:
       reset_counter:
         FPGA0: 0
         FPGA1: 0
+      rd_cnt:
+        FPGA0: 0
+        FPGA1: 0
+      wr_cnt:
+        FPGA0: 0
+        FPGA1: 0
+      rd_dat_cnt:
+        FPGA0: 0
+        FPGA1: 0
     f2f_interface:
       pll_status: !!python/tuple [True, 0]
       soft_error: 0

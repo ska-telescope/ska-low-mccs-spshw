@@ -618,6 +618,9 @@ class TestMccsTile:
             "tileProgrammingState",
             "isProgrammed",
             "coreCommunicationStatus",
+            "ddr_rd_cnt",
+            "ddr_wr_cnt",
+            "ddr_rd_dat_cnt",
         ]
 
         all_excluded_attribute = (

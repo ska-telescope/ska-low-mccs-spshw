@@ -92,8 +92,9 @@ class DataReceivedHandler(FileSystemEventHandler):
 
             self.data[start_idx:end_idx, :, :] = tile_data
 
-            if self._tile_id == self._nof_tiles - 1:
-                self._data_created_callback(data=self.data)
+            self._data_created_callback(
+                data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
+            )
             self._tile_id += 1
 
         except Exception as e:  # pylint: disable=broad-exception-caught
@@ -129,9 +130,11 @@ class TestDaq(TpmSelfCheckTest):
         self._data_created_event: Event = Event()
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
-    def _data_received_callback(self: TestDaq, data: Any) -> None:
+    def _data_received_callback(self: TestDaq, data: Any, last_tile: bool) -> None:
         self.test_logger.error(f"Called callback with {data=}")
-        self._data = data
+        self.test_logger.error(f"Called callback with {last_tile=}")
+        if last_tile:
+            self._data = data
         self._data_created_event.set()
 
     def _configure_daq(self: TestDaq) -> None:
@@ -240,9 +243,10 @@ class TestDaq(TpmSelfCheckTest):
 
     def test(self: TestDaq) -> None:
         """A basic test to show we can connect to proxies."""
+        self._configure_daq()
         self._start_directory_watch()
         for tile in self.tile_proxies:
-            self._configure_daq()
+            self.logger.error(f"Testing {tile.dev_name()}")
             self._configure_and_start_pattern_generator(tile)
             self._send_raw_data(tile, sync=False)
             assert self._data_created_event.wait(20)

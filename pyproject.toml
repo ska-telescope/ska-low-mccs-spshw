@@ -19,7 +19,7 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = ">=3.10,<3.11" 
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="a33209c2c9899bf8b565c99186abbaf7605ad6ee",  subdirectory = "python" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="208e99a3bf6f273173b483af0bbe371749670b9e",  subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
 fire = "^0.5.0"
 numpy = "^1.26.4"

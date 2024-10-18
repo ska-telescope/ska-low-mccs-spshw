@@ -57,7 +57,6 @@ class DataReceivedHandler(FileSystemEventHandler):
         self.data = np.zeros(
             (self._nof_tiles * self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8
         )
-        self._logger.error("Made the DataReceivedHandler")
 
     def on_created(self: DataReceivedHandler, event: FileSystemEvent) -> None:
         """
@@ -67,29 +66,17 @@ class DataReceivedHandler(FileSystemEventHandler):
         """
         if not event._src_path.endswith(".hdf5") or event.is_directory:
             return
-        self._logger.error(f"Got event: {event.event_type=}, {event._src_path=}")
         base_path = os.path.split(event._src_path)[0]
-        self._logger.error(f"{base_path=}")
-        self._logger.error(f"{os.listdir(base_path)=}")
-        self._logger.error("The event was not a directory.")
-
         try:
-            self._logger.error("Making file manager")
             raw_file = RawFormatFileManager(root_path=base_path)
-            self._logger.error("Made file manager, reading data")
             tile_data, timestamps = raw_file.read_data(
                 antennas=range(self._nof_antennas_per_tile),
                 polarizations=[0, 1],
                 n_samples=32 * 1024,
                 tile_id=self._tile_id,
             )
-            # self._logger.error(f"Read data: {tile_data=}")
-            self._logger.error(f"Tile data shape: {tile_data.shape}")
             start_idx = self._nof_antennas_per_tile * self._tile_id
             end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-
-            self._logger.error(f"Slicing data from {start_idx} to {end_idx}")
-
             self.data[start_idx:end_idx, :, :] = tile_data
 
             self._data_created_callback(
@@ -98,11 +85,33 @@ class DataReceivedHandler(FileSystemEventHandler):
             self._tile_id += 1
 
         except Exception as e:  # pylint: disable=broad-exception-caught
-            self._logger.error(f"Got error: {repr(e)}, {e}")
+            self._logger.error(f"Got error in callback: {repr(e)}, {e}")
 
 
 class TestDaq(TpmSelfCheckTest):
-    """A basic test to show we can connect to proxies."""
+    """
+    Test we can send raw data from the TPMs to DAQ correctly.
+
+    ##########
+    TEST STEPS
+    ##########
+
+    1. Configure DAQ to be ready to receive raw data from your TPMs.
+    2. Configure the pattern generator on each TPM to send a basic repeating pattern.
+    3. Send data from each of TPM in sequence, collating the data into a single data
+        structure.
+    4. Verify the data received matches the input repeating pattern.
+
+    #################
+    TEST REQUIREMENTS
+    #################
+
+    1. Every SPS device in your station must be in adminmode.ENGINEERING, this is
+        common for all tests.
+    2. Your station must have at least 1 TPM.
+    3. Your TPMs must be synchronised.
+    4. You must have a DAQ available.
+    """
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -131,14 +140,13 @@ class TestDaq(TpmSelfCheckTest):
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _data_received_callback(self: TestDaq, data: Any, last_tile: bool) -> None:
-        self.test_logger.error(f"Called callback with {data=}")
-        self.test_logger.error(f"Called callback with {last_tile=}")
         if last_tile:
             self._data = data
         self._data_created_event.set()
 
     def _configure_daq(self: TestDaq) -> None:
         assert self.daq_proxy is not None
+        self.test_logger.debug("Configuring DAQ")
         self.daq_proxy.adminmode = AdminMode.OFFLINE
         time.sleep(1)
         self.daq_proxy.adminmode = AdminMode.ONLINE
@@ -149,7 +157,7 @@ class TestDaq(TpmSelfCheckTest):
         self.daq_proxy.Configure(
             json.dumps(
                 {
-                    "directory": "/",
+                    "directory": "/test_daq_raw/",
                     "nof_tiles": len(self.tile_proxies),
                     "nof_correlator_channels": 1,
                 }
@@ -170,6 +178,7 @@ class TestDaq(TpmSelfCheckTest):
     def _configure_and_start_pattern_generator(
         self: TestDaq, proxy: MccsDeviceProxy, i: int = 0
     ) -> None:
+        self.test_logger.debug("Configuring and starting pattern generator")
         test_pattern = [
             n if i % 2 == 0 else random.randrange(0, 255) for n in range(1024)
         ]
@@ -196,6 +205,7 @@ class TestDaq(TpmSelfCheckTest):
         )
 
     def _start_directory_watch(self: TestDaq) -> None:
+        self.test_logger.debug("Starting directory watch")
         self._observer = Observer()  # type: ignore
         data_handler = DataReceivedHandler(
             self.test_logger, len(self.tile_proxies), self._data_received_callback
@@ -204,30 +214,34 @@ class TestDaq(TpmSelfCheckTest):
         self._observer.start()
 
     def _stop_directory_watch(self: TestDaq) -> None:
+        self.test_logger.debug("Stopping directory watch")
         self._observer.stop()
         self._observer.join()
 
     def _check_raw(self: TestDaq, raw_data_synchronised: bool = False) -> None:
+        self.test_logger.debug("Checking received data")
         data = copy(self._data)
         adders = copy(self._adders)
         pattern = copy(self._pattern)
         ant, pol, sam = data.shape
         if raw_data_synchronised == 1:
             sam = int(sam / 8)
-        for a in range(ant):
-            for p in range(pol):
-                for i in range(sam):
-                    if i % 864 == 0:
+        for antenna in range(ant):
+            for polarisation in range(pol):
+                for sample in range(sam):
+                    if sample % 864 == 0:  # Oversampling factor, 32 * 27
                         sample_idx = 0
-                    signal_idx = (a % 16) * 2 + p
+                    signal_idx = (antenna % 16) * 2 + polarisation
                     exp = pattern[sample_idx] + adders[signal_idx]
-                    if self._signed(exp) != data[a, p, i]:
+                    if self._signed(exp) != data[antenna, polarisation, sample]:
                         self.test_logger.error("Data Error!")
-                        self.test_logger.error(f"Antenna: {a}")
-                        self.test_logger.error(f"Polarization: {p}")
-                        self.test_logger.error(f"Sample index: {i}")
+                        self.test_logger.error(f"Antenna: {antenna}")
+                        self.test_logger.error(f"Polarization: {polarisation}")
+                        self.test_logger.error(f"Sample index: {sample}")
                         self.test_logger.error(f"Expected data: {self._signed(exp)}")
-                        self.test_logger.error(f"Received data: {data[a, p, i]}")
+                        self.test_logger.error(
+                            f"Received data: {data[antenna, polarisation, sample]}"
+                        )
                         raise AssertionError
                     sample_idx += 1
 
@@ -242,11 +256,11 @@ class TestDaq(TpmSelfCheckTest):
         return data
 
     def test(self: TestDaq) -> None:
-        """A basic test to show we can connect to proxies."""
+        """A test to show we can stream raw data from each available TPM to DAQ."""
         self._configure_daq()
         self._start_directory_watch()
         for tile in self.tile_proxies:
-            self.logger.error(f"Testing {tile.dev_name()}")
+            self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
             self._configure_and_start_pattern_generator(tile)
             self._send_raw_data(tile, sync=False)
             assert self._data_created_event.wait(20)
@@ -257,10 +271,17 @@ class TestDaq(TpmSelfCheckTest):
 
     def check_requirements(self: TestDaq) -> tuple[bool, str]:
         """
-        Check we have at least one TPM.
+        Check we have at least one TPM and a DAQ.
 
-        :returns: true if we have at least one TPM.
+        :returns: true if we have at least one TPM and a DAQ.
         """
+        if self.daq_proxy is None:
+            return (False, "This test requires a DAQ")
         if len(self.tile_trls) < 1:
             return (False, "This test requires at least one TPM")
+        if not all(
+            programming_state == "Synchronised"
+            for programming_state in self.component_manager.tile_programming_state()
+        ):
+            return (False, "All TPMs must be synchronised.")
         return super().check_requirements()

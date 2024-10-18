@@ -25,8 +25,8 @@ environments:
         - s8-1.yaml
         - s8-6.yaml
         - s9-2.yaml
-      config_files:
-      - values/values-aa0-5.yaml
+    - config_files:
+        - values/values-aa0-5.yaml
       datacentre: infra:au-aa-mccs-cloud01-k8s
   arcetri:
     values:
@@ -54,7 +54,7 @@ environments:
       - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?11adbe1eea09ef759f4097ee2fcd704303657ff8#tmdata
         datasets:
         - low-itf.yaml
-      config_files:
+    - config_files:
       - values/values-low-itf.yaml
       datacentre: infra:au-itf-k8s-master01-k8s
   low-itf-minikube:
@@ -97,7 +97,7 @@ environments:
       - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?8c60d4800ed5c34648bbc923565e2f28be969b68#tmdata
         datasets:
         - minikube.yaml
-      config_files:
+    - config_files:
       - values/values-psi-low.yaml
       datacentre: psi-low
   ral-software:
@@ -116,7 +116,7 @@ environments:
         datasets:
         - stfc-ral.yaml
         - minikube.yaml
-      config_files:
+    - config_files:
       - values/values-ral-software.yaml
       datacentre: stfc-ral
   ral-firmware:

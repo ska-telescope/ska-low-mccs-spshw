@@ -198,6 +198,7 @@ def device_standby(
     :param device_proxies: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
+    time.sleep(1)
     _, [command_id] = device_proxies[device].Standby()
     command_info[device + "Standby"] = command_id
 

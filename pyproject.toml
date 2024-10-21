@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.17.4"
+version = "0.17.7"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -29,7 +29,7 @@ requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^1.0.0"
 ska-control-model = "^1.0.0"
-ska-low-mccs-common = "^0.13.0"
+ska-low-mccs-common = "^0.14.1"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"
@@ -56,7 +56,8 @@ get_nic = "^0.0.3"
 pyqt5 = "^5.15.11"
 netifaces-binary = "^0.11.0"
 recommonmark = "^0.7.1"
-
+pysnmp = "^7.1.4"
+ska-ser-snmp = "^0.3.1"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -91,6 +92,8 @@ types-pyyaml = "^6.0.12.11"
 isort = "^5.12.0"
 httpx = "^0.24.1"
 ska-tango-testing = "^0.6.1"
+pysnmp = "^7.1.4"
+ska-ser-snmp = "^0.3.1"
 
 [tool.poetry.group.docs.dependencies]
 Sphinx = "^6.2.1"
@@ -106,12 +109,15 @@ typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 ska-low-mccs-daq-interface = "^0.4.0"
 ska-telmodel = "^1.4.1"
+pysnmp = "^7.1.4"
+ska-ser-snmp = "^0.3.1"
 
 [tool.poetry.scripts]
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
 MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
+MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
 Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
 MccsDaqReceiver = "ska_low_mccs_spshw.daq_receiver.daq_receiver_device:main"
 DaqSimulator = "ska_low_mccs_spshw.daq_receiver.daq_simulator:main"

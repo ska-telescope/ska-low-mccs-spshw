@@ -16,6 +16,12 @@ from ska_low_mccs_common.health import HealthRules
 
 from .tile_data import TileData
 
+COUNTERS = [
+    "rd_cnt",
+    "wr_cnt",
+    "rd_dat_cnt",
+]
+
 
 class TileHealthRules(HealthRules):
     """A class to handle transition rules for tile."""
@@ -29,6 +35,9 @@ class TileHealthRules(HealthRules):
         """
         super().__init__(*args, **kwargs)
         self.logger = None
+        self.previous_counters: dict = {}
+        for counter in COUNTERS:
+            self.previous_counters[counter] = None
 
     def set_logger(self: TileHealthRules, logger: Any) -> None:
         """
@@ -41,11 +50,13 @@ class TileHealthRules(HealthRules):
     def unknown_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether UNKNOWN is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if UNKNOWN is a valid state, along with a text report.
         """
@@ -61,11 +72,13 @@ class TileHealthRules(HealthRules):
     def failed_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether FAILED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if FAILED is a valid state, along with a text report.
         """
@@ -81,11 +94,13 @@ class TileHealthRules(HealthRules):
     def degraded_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether DEGRADED is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
 
         :return: True if DEGRADED is a valid state, along with a text report.
         """
@@ -101,11 +116,14 @@ class TileHealthRules(HealthRules):
     def healthy_rule(  # type: ignore[override]
         self: TileHealthRules,
         intermediate_healths: dict[str, tuple[HealthState, str]],
+        tile_state: dict[str, Any],
     ) -> tuple[bool, str]:
         """
         Test whether OK is valid for the tile.
 
         :param intermediate_healths: dictionary of intermediate healths
+        :param tile_state: State information for the tile.
+
         :return: True if OK is a valid state, along with a text report.
         """
         if all(state == HealthState.OK for state, _ in intermediate_healths.values()):
@@ -121,6 +139,7 @@ class TileHealthRules(HealthRules):
         """
         return TileData.MIN_MAX_MONITORING_POINTS
 
+    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],
@@ -144,10 +163,8 @@ class TileHealthRules(HealthRules):
         :return: the computed health state and health report
         """
         states: dict[str, tuple[HealthState, str]] = {}
-
         if not monitoring_points and "hardware" in min_max:
             return (HealthState.OK, "")
-
         for p, p_state in monitoring_points.items():
             if isinstance(p_state, dict):
                 if p in min_max:
@@ -163,21 +180,59 @@ class TileHealthRules(HealthRules):
                     )
                     continue
             else:
+                last_path = path.split("/")[-1]
                 if p_state is None and min_max[p] is not None:
                     states[p] = (
                         HealthState.UNKNOWN,
                         f"Monitoring point {p} is None.",
                     )
-                elif isinstance(min_max[p], dict):
+                elif last_path in COUNTERS:
+                    p_state_previous = self.previous_counters.get(p)
                     states[p] = (
                         (HealthState.OK, "")
-                        if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                        if not p_state_previous or p_state_previous <= p_state
                         else (
                             HealthState.FAILED,
-                            f'Monitoring point "{path}/{p}": {p_state} not in range '
-                            f"{min_max[p]['min']} - {min_max[p]['max']}",
+                            f'Monitoring point "{path}/{p}": should be strictly'
+                            "increasing but"
+                            f"current {p_state} < previous {p_state_previous}",
                         )
                     )
+                    self.previous_counters[p] = p_state
+                elif isinstance(min_max[p], dict):
+                    # If limits are min/max
+                    if "min" in min_max[p].keys():
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if min_max[p]["min"] <= p_state <= min_max[p]["max"]
+                            else (
+                                HealthState.FAILED,
+                                f'Monitoring point "{path}/{p}": {p_state} not in range'
+                                f" {min_max[p]['min']} - {min_max[p]['max']}",
+                            )
+                        )
+                    # If limits are soft/hard.
+                    # OK if <= soft limit
+                    # DEGRADED if <= hard limit
+                    # else FAILED
+                    if "soft" in min_max[p].keys():
+                        states[p] = (
+                            (HealthState.OK, "")
+                            if p_state <= min_max[p]["soft"]
+                            else (
+                                (
+                                    HealthState.DEGRADED,
+                                    f'Monitoring point "{path}/{p}": {p_state} over '
+                                    f"soft limit: {min_max[p]['soft']}",
+                                )
+                                if p_state <= min_max[p]["hard"]
+                                else (
+                                    HealthState.FAILED,
+                                    f'Monitoring point "{path}/{p}": {p_state} over '
+                                    f"hard limit: {min_max[p]['hard']}",
+                                )
+                            )
+                        )
                 elif isinstance(min_max[p], list):
                     states[p] = (
                         (HealthState.OK, "")

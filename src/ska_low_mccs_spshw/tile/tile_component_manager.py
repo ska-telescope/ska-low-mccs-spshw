@@ -13,7 +13,7 @@ import ipaddress
 import logging
 import threading
 import time
-from typing import Any, Callable, NoReturn, Optional, cast
+from typing import Any, Callable, Final, NoReturn, Optional, cast
 
 import numpy as np
 import tango
@@ -46,6 +46,35 @@ from .tpm_status import TpmStatus
 from .utils import abort_task_on_exception, acquire_timeout, check_hardware_lock_claimed
 
 __all__ = ["TileComponentManager"]
+
+# TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
+# TileComponentManager have different names for things? It seems clearer for them
+# all to use the name in pyaavs.Tile. Multiple maps like this increase the risk of a
+# mapping errors.
+_ATTRIBUTE_MAP: Final = {
+    "HEALTH_STATUS": "tile_health_structure",
+    "PREADU_LEVELS": "preadu_levels",
+    "PLL_LOCKED": "pll_locked",
+    "CHECK_BOARD_TEMPERATURE": "board_temperature",
+    "PPS_DELAY_CORRECTION": "pps_delay_correction",
+    "IS_BEAMFORMER_RUNNING": "beamformer_running",
+    "FPGA_REFERENCE_TIME": "fpga_reference_time",
+    "TILE_ID": "tile_id",
+    "STATION_ID": "station_id",
+    "PHASE_TERMINAL_COUNT": "phase_terminal_count",
+    "PPS_DELAY": "pps_delay",
+    "PPS_DRIFT": "pps_drift",
+    "ADC_RMS": "adc_rms",
+    "CHANNELISER_ROUNDING": "channeliser_rounding",
+    "IS_PROGRAMMED": "is_programmed",
+    "CSP_ROUNDING": "csp_rounding",
+    "STATIC_DELAYS": "static_delays",
+    "PENDING_DATA_REQUESTS": "pending_data_requests",
+    "BEAMFORMER_TABLE": "beamformer_table",
+    "CHECK_CPLD_COMMS": "global_status_alarms",
+    "ARP_TABLE": "arp_table",
+    "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
+}
 
 
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
@@ -125,13 +154,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
-        self.active_lrc_request: Optional[TileLRCRequest] = None
+        self.active_request: TileRequest | TileLRCRequest | None = None
         self._request_provider: Optional[TileRequestProvider] = None
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
         self._channeliser_truncation = self.CHANNELISER_TRUNCATION
         self._pps_delay_correction: int = 0
         self._fpga_reference_time = 0
+        self._initial_pps_delay: int | None = None
         self._forty_gb_core_list: list = []
         self._fpgas_time: list[int] = []
         self._pending_data_requests = False
@@ -192,15 +222,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        self.logger.debug(f"\n{'New Poll':-^{40}}\n")
         self._tpm_status = TpmStatus(self.tpm_status)
         self._update_attribute_callback(
             programming_state=self._tpm_status.pretty_name()
         )
 
-        self.logger.debug(f"Getting request for state ({self._tpm_status.name}) ...")
         request_spec = self._request_provider.get_request(self._tpm_status)
-
+        self._update_component_state(power=self.power_state, fault=self.fault_state)
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
             return request_spec
@@ -212,120 +240,138 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         match request_spec:
             case "CHECK_CPLD_COMMS":
                 request = TileRequest(
-                    "global_status_alarms",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
             case "CHECK_BOARD_TEMPERATURE":
                 request = TileRequest(
-                    "board_temperature",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_temperature,
                     publish=True,
                 )
             case "CONNECT":
-                error_flag = False
                 try:
                     self.ping()
-                    # pylint: disable=broad-except
-                except Exception as e:
-                    # polling attempt was unsuccessful
-                    self.logger.warning(f"Connection to tpm lost! : {e}")
-                    error_flag = True
-                if error_flag:
-                    self.tile.tpm = None
-                    request = TileRequest("connect", self.connect)
-                else:
                     request = TileRequest(
                         "global_status_alarms",
                         self.tile.check_global_status_alarms,
                         publish=True,
                     )
+                    # pylint: disable=broad-except
+                except Exception as e:
+                    # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    self.tile.tpm = None
+                    request = TileRequest("connect", self.connect)
             case "IS_PROGRAMMED":
                 request = TileRequest(
-                    "is_programmed", self.tile.is_programmed, publish=True
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.is_programmed,
+                    publish=True,
                 )
             case "HEALTH_STATUS":
                 request = TileRequest(
-                    "tile_health_structure",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_health_status,
                     publish=True,
                 )
             case "ADC_RMS":
-                request = TileRequest("adc_rms", self.tile.get_adc_rms, publish=True)
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec], self.tile.get_adc_rms, publish=True
+                )
             case "PLL_LOCKED":
                 request = TileRequest(
-                    "pll_locked", self.tile.check_pll_locked, publish=True
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.check_pll_locked,
+                    publish=True,
                 )
             case "PENDING_DATA_REQUESTS":
                 request = TileRequest(
-                    "pending_data_requests",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.check_pending_data_requests,
                     publish=False,
                 )
             case "PPS_DELAY":
                 request = TileRequest(
-                    "pps_delay",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_pps_delay,
+                    publish=True,
+                )
+            case "PPS_DRIFT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self._get_pps_drift,
                     publish=True,
                 )
             case "ARP_TABLE":
                 request = TileRequest(
-                    "arp_table",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_arp_table,
                     publish=True,
                 )
             case "PPS_DELAY_CORRECTION":
                 request = TileRequest(
-                    "pps_delay_correction",
+                    _ATTRIBUTE_MAP[request_spec],
                     command_object=self._get_pps_delay_correction,
                     publish=True,
                 )
             case "IS_BEAMFORMER_RUNNING":
                 request = TileRequest(
-                    "beamformer_running",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.beamformer_is_running,
                     publish=True,
                 )
             case "PHASE_TERMINAL_COUNT":
                 request = TileRequest(
-                    "phase_terminal_count",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.get_phase_terminal_count,
                     publish=True,
                 )
             case "PREADU_LEVELS":
                 request = TileRequest(
-                    "preadu_levels", self.tile.get_preadu_levels, publish=True
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_preadu_levels,
+                    publish=True,
                 )
             case "STATIC_DELAYS":
                 request = TileRequest(
-                    "static_delays", self.get_static_delays, publish=True
+                    _ATTRIBUTE_MAP[request_spec], self.get_static_delays, publish=True
                 )
             case "STATION_ID":
                 request = TileRequest(
-                    "station_id", self.tile.get_station_id, publish=True
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_station_id,
+                    publish=True,
                 )
             case "TILE_ID":
-                request = TileRequest("tile_id", self.tile.get_tile_id, publish=True)
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec], self.tile.get_tile_id, publish=True
+                )
             case "CSP_ROUNDING":
-                request = TileRequest("csp_rounding", self.csp_rounding, publish=True)
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec], self.csp_rounding, publish=True
+                )
             case "CHANNELISER_ROUNDING":
                 request = TileRequest(
-                    "channeliser_rounding",
+                    _ATTRIBUTE_MAP[request_spec],
                     self._channeliser_truncation,
                     publish=True,
                 )
             case "BEAMFORMER_TABLE":
                 request = TileRequest(
-                    "beamformer_table", self.tile.get_beamformer_table, publish=True
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_beamformer_table,
+                    publish=True,
                 )
             case "FPGA_REFERENCE_TIME":
                 request = TileRequest(
-                    "fpga_reference_time",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.formatted_fpga_reference_time,
                 )
             case "TILE_BEAMFORMER_FRAME":
                 request = TileRequest(
-                    "tile_beamformer_frame",
+                    _ATTRIBUTE_MAP[request_spec],
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
                 )
@@ -350,11 +396,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
-        self.active_lrc_request = None
-        if isinstance(poll_request, TileLRCRequest):
+        self.active_request = poll_request
+        if isinstance(self.active_request, TileLRCRequest):
             self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
-            self.active_lrc_request = poll_request
-            self.active_lrc_request.notify_in_progress()
+            self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
@@ -377,14 +422,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
-
         # Update command tracker if defined in request.
-        if self.active_lrc_request:
-            self.active_lrc_request.notify_failed(f"Exception: {repr(exception)}")
-            self.active_lrc_request = None
+        if isinstance(self.active_request, TileLRCRequest):
+            self.active_request.notify_failed(f"Exception: {repr(exception)}")
+            self.active_request = None
+        elif isinstance(self.active_request, TileRequest):
+            if self.active_request.publish:
+                self._update_attribute_callback(
+                    mark_invalid=True, **{self.active_request.name: None}
+                )
 
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+        self.update_fault_state(poll_success=False)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
@@ -453,10 +502,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
-        if self.active_lrc_request:
-            self.logger.error("LRC completed")
-            self.active_lrc_request.notify_completed()
-            self.active_lrc_request = None
+        if isinstance(self.active_request, TileLRCRequest):
+            self.active_request.notify_completed()
+            self.active_request = None
 
         self.update_fault_state(poll_success=True)
 
@@ -470,11 +518,31 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 **{poll_response.command: poll_response.data},
             )
         super().poll_succeeded(poll_response)
-        self._update_component_state(power=PowerState.ON, fault=self.fault_state)
+
+    def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
+        """
+        Trigger the callback when attributes are no longer provided for polling.
+
+        :param names: a set containing the attributes that will no longer
+            be provided for polling.
+        """
+        while len(names) != 0:
+            val = names.pop()
+            if _ATTRIBUTE_MAP.get(val) is not None:
+                mapped_val = _ATTRIBUTE_MAP[val]
+                try:
+                    self._update_attribute_callback(
+                        mark_invalid=True, **{mapped_val: None}
+                    )
+                except Exception as e:  # pylint: disable=broad-except
+                    self.logger.warning(
+                        f"Issue marking attribute {mapped_val} INVALID. {e}"
+                    )
+                    continue
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
-        self._request_provider = TileRequestProvider()
+        self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack()
 
@@ -615,9 +683,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
-                    and self.active_lrc_request is None
-                    or self.active_lrc_request
-                    and self.active_lrc_request.name.lower() != "initialise"
+                    and not isinstance(self.active_request, TileLRCRequest)
+                    or isinstance(self.active_request, TileLRCRequest)
+                    and self.active_request.name.lower() != "initialise"
                 ):
                     request = TileLRCRequest(
                         name="initialise",
@@ -661,7 +729,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Unix time used as global synchronization time
         """
-        self.logger.debug(f"Global reference time read {self._global_reference_time}")
+        self.logger.info(f"Global reference time read {self._global_reference_time}")
         if self._global_reference_time:
             return self._tile_time.format_time_from_timestamp(
                 self._global_reference_time
@@ -683,7 +751,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         start_time = global_reference_time
 
-        self.logger.debug(f"Global reference time set to {start_time}")
+        self.logger.info(f"Global reference time set to {start_time}")
         if start_time is None or start_time <= 0:
             self._global_reference_time = None
         else:
@@ -869,9 +937,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.info("TileComponentManager: initialisation completed")
 
             if self._global_reference_time:
-                self.logger.debug(
-                    "Global reference time specifed, starting acquisition"
-                )
+                self.logger.info("Global reference time specifed, starting acquisition")
                 self._start_acquisition()
 
     @abort_task_on_exception
@@ -1473,7 +1539,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._csp_spead_format = spead_format
         hw_spead_format = spead_format == "SKA"
         if not self.is_programmed:
-            self.logger.debug("speadFormat not set in hardware, tile not connected")
+            self.logger.warning("speadFormat not set in hardware, tile not connected")
             return
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2165,8 +2231,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: if the tpm is value None.
         """
-        self.logger.debug(
-            "initialise_beamformer for chans {start_channel}:{nof_channels}"
+        self.logger.info(
+            f"initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2364,7 +2430,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: static delay, in nanoseconds one per TPM input
         """
-        self.logger.debug("TileComponentManager: static_delays")
         delays = []
         try:
             for i in range(16):
@@ -2757,11 +2822,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Return last measured ppsdelay correction.
 
-        :return: PPS delay correction in nanoseconds. Rounded to 1.25 ns units
+        :return: PPS delay correction. Units: 1.25 ns
         """
         return self.tile.get_pps_delay(
             enable_correction=True
         ) - self.tile.get_pps_delay(enable_correction=False)
+
+    @check_hardware_lock_claimed
+    def _get_pps_drift(self: TileComponentManager) -> int:
+        if self._initial_pps_delay is None:
+            self._initial_pps_delay = self.tile.get_pps_delay()
+        return self.tile.get_pps_delay() - self._initial_pps_delay
 
     def set_preadu_levels(self: TileComponentManager, levels: list[float]) -> None:
         """

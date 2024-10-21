@@ -9,6 +9,8 @@
 """A file to store health transition rules for station."""
 from __future__ import annotations
 
+from typing import Any
+
 from ska_control_model import HealthState
 from ska_low_mccs_common.health import HealthRules
 
@@ -22,12 +24,14 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
         Test whether UNKNOWN is valid for the station.
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param station_state: dictionary of station state attributes.
 
         :return: True if UNKNOWN is a valid state, along with a text report.
         """
@@ -58,12 +62,14 @@ class SpsStationHealthRules(HealthRules):
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
         Test whether FAILED is valid for the station.
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param station_state: dictionary of station state attributes.
 
         :return: True if FAILED is a valid state, along with a text report.
         """
@@ -90,18 +96,36 @@ class SpsStationHealthRules(HealthRules):
             )
         else:
             report = ""
+
+        # Check ppsDelaySpread for drifting delays.
+        if station_state["pps_delay_spread"] is not None:
+            if station_state["pps_delay_spread"] > self._thresholds["pps_delta_failed"]:
+                result = True
+                msg = (
+                    "Difference in ppsDelay between Tiles has exceeded "
+                    f"{self._thresholds['pps_delta_failed']} samples. "
+                    f"ppsDelaySpread: {station_state['pps_delay_spread']}"
+                )
+                # Add to report or create new one.
+                if report == "":
+                    report = msg
+                else:
+                    report += " - " + msg
+
         return result, report
 
     def degraded_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
         Test whether DEGRADED is valid for the station.
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param station_state: dictionary of station state attributes.
 
         :return: True if DEGRADED is a valid state, along with a text report.
         """
@@ -128,18 +152,38 @@ class SpsStationHealthRules(HealthRules):
             )
         else:
             report = ""
+
+        # Check ppsDelaySpread for drifting delays.
+        if station_state["pps_delay_spread"] is not None:
+            if (
+                station_state["pps_delay_spread"]
+                > self._thresholds["pps_delta_degraded"]
+            ):
+                result = True
+                msg = (
+                    "Difference in ppsDelay between Tiles has exceeded "
+                    f"{self._thresholds['pps_delta_degraded']} samples. "
+                    f"ppsDelaySpread: {station_state['pps_delay_spread']}"
+                )
+                # Add to report or create new one.
+                if report == "":
+                    report = msg
+                else:
+                    report += " - " + msg
         return result, report
 
     def healthy_rule(  # type: ignore[override]
         self: SpsStationHealthRules,
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
+        station_state: dict[str, Any | None],
     ) -> tuple[bool, str]:
         """
         Test whether OK is valid for the station.
 
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
+        :param station_state: dictionary of station state attributes.
 
         :return: True if OK is a valid state, along with a text report.
         """
@@ -180,4 +224,6 @@ class SpsStationHealthRules(HealthRules):
             "subrack_failed": 0.2,
             "tile_degraded": 0.05,
             "tile_failed": 0.2,
+            "pps_delta_degraded": 4,
+            "pps_delta_failed": 9,
         }

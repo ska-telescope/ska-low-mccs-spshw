@@ -4925,7 +4925,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         >>> config = {"stage": "jesd", "pattern": test_pattern, "adders":
                       test_adders, "start": True}
         >>> jstr = json.dumps(config)
-        >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
+        >>> values = dp.command_inout("ConfigurePatternGenerator", jstr)
         """
         handler = self.get_command_object("ConfigurePatternGenerator")
         (return_code, message) = handler(argin)

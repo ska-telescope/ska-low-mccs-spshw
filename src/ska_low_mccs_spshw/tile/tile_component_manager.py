@@ -3280,8 +3280,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param zero: An integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. The same mask is applied to both FPGAs,
             supporting up to 8 antennas and 2 polarizations. The default value is 0.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+            else:
+                raise TimeoutError("Failed to acquire lock")
 
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
@@ -3290,8 +3296,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
             or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.tile.stop_pattern(stage)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.stop_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")
 
     def start_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
@@ -3300,5 +3312,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
             or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.tile.start_pattern(stage)
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.start_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")

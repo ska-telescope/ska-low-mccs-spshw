@@ -11,21 +11,14 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any
+from typing import Any, Callable
 
 import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, scenarios, then, when
 from ska_control_model import AdminMode, HealthState
-from ska_tango_testing.mock.placeholders import Anything, OneOf
-from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import (
-    get_daq_name,
-    get_sps_station_name,
-    get_subrack_name,
-    get_tile_name,
-)
+from tests.harness import get_sps_station_name
 
 scenarios("./features/health.feature")
 
@@ -35,7 +28,7 @@ scenarios("./features/health.feature")
     "Failed when tile monitoring point is out of bounds",
 )
 def test_failed_when_tile_monitoring_point_is_out_of_bounds(
-    device_proxies: dict[str, tango.DeviceProxy]
+    station_devices: dict[str, tango.DeviceProxy]
 ) -> None:
     """
     Reset Tile health parameters.
@@ -43,9 +36,10 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     Any code in this scenario method is run at the *end* of the
     scenario.
 
-    :param device_proxies: dictionary of proxies with device name as a key.
+    :param station_devices: dictionary of proxies with device name as a key.
     """
-    device_proxies["Tile"].healthModelParams = "{}"
+    for tile in station_devices["Tiles"]:
+        tile.healthModelParams = "{}"
 
 
 @scenario(
@@ -53,7 +47,7 @@ def test_failed_when_tile_monitoring_point_is_out_of_bounds(
     "Failed when subrack monitoring point is out of bounds",
 )
 def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
-    device_proxies: dict[str, tango.DeviceProxy]
+    station_devices: dict[str, tango.DeviceProxy]
 ) -> None:
     """
     Reset Subrack health parameters.
@@ -61,11 +55,22 @@ def test_failed_when_subrack_monitoring_point_is_out_of_bounds(
     Any code in this scenario method is run at the *end* of the
     scenario.
 
-    :param device_proxies: dictionary of proxies with device name as a key.
+    :param station_devices: dictionary of proxies with device name as a key.
     """
-    device_proxies["Subrack"].healthModelParams = json.dumps(
-        {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
-    )
+    for subrack in station_devices["Subracks"]:
+        subrack.healthModelParams = json.dumps(
+            {"failed_fan_speed_diff": 100000, "degraded_fan_speed_diff": 100000}
+        )
+
+
+@pytest.fixture(name="command_info")
+def command_info_fixture() -> dict[str, Any]:
+    """
+    Fixture to store command ID.
+
+    :returns: Empty dictionary.
+    """
+    return {}
 
 
 @pytest.fixture(name="station_name")
@@ -82,262 +87,210 @@ def station_name_fixture(true_context: bool) -> str:
     return os.getenv("STATION_LABEL", "real-daq-1")
 
 
-@pytest.fixture(name="tile_id")
-def tile_id_fixture() -> int:
-    """
-    Get the tile id to use in the test.
-
-    :return: tile id.
-    """
-    return 10
-
-
-@pytest.fixture(name="device_proxies")
-def device_proxies_fixture(
-    subrack_id: int, tile_id: int, station_name: str
-) -> dict[str, tango.DeviceProxy]:
+@pytest.fixture(name="station_devices")
+def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProxy]]:
     """
     Get the dictionary of device proxies.
 
     The device name is used as a key.
 
-    :param subrack_id: the subrack id to use for the test.
-    :param tile_id: the tile id to use for the test.
     :param station_name: the station name to use for the test.
     :return: dictionary of device proxies.
     """
+    station_proxy = tango.DeviceProxy(get_sps_station_name(station_name))
+    tiles_fqdns = list(station_proxy.get_property("TileFQDNs")["TileFQDNs"])
+    subracks_fqdns = list(station_proxy.get_property("SubrackFQDNs")["SubrackFQDNs"])
+    daqs_fqdns = list(station_proxy.get_property("DaqTRL")["DaqTRL"])
     return {
-        "Tile": tango.DeviceProxy(get_tile_name(tile_id, station_name)),
-        "Subrack": tango.DeviceProxy(get_subrack_name(subrack_id, station_name)),
-        "Station": tango.DeviceProxy(get_sps_station_name(station_name)),
-        "DAQ": tango.DeviceProxy(get_daq_name(station_name)),
+        "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],
+        "Subracks": [
+            tango.DeviceProxy(subrack_fqdn) for subrack_fqdn in subracks_fqdns
+        ],
+        "Station": [station_proxy],
+        "DAQs": [tango.DeviceProxy(daq_fqdn) for daq_fqdn in daqs_fqdns],
     }
 
 
-@given("running against a real station with 1 tile.")
-def station_has_one_tile(
+@given("the Station is online")
+def station_online(
     station_name: str,
     true_context: bool,
 ) -> None:
     """
-    Test requires a single Tile belonging to it.
+    Put a station ONLINE.
 
-    :param station_name: the name of the station this is being tested against.
-    :param true_context: whether to test against an existing Tango deployment
+    :param station_name: the name of the station under test.
+    :param true_context: a bool to represent if we are running in a
     """
     if true_context:
-        db = tango.Database()
-        devices_exported = list(
-            db.get_device_exported(f"low-mccs/tile/{station_name}-*")
-        )
-        if len(devices_exported) > 1:
-            pytest.skip(
-                "This test does not yet support stations with more than 1 Tile. "
-                "State of Station is wrapped up to UNKNOWN when more than one Tile"
-            )
-        return
-    pytest.skip("This test must be running in a true context.")
+        station = tango.DeviceProxy(get_sps_station_name(station_name))
+        station.adminMode = AdminMode.ONLINE
+        tiles_fqdns = list(station.get_property("TileFQDNs")["TileFQDNs"])
+        subracks_fqdns = list(station.get_property("SubrackFQDNs")["SubrackFQDNs"])
+        daqs_fqdns = list(station.get_property("DaqTRL")["DaqTRL"])
+        for fqdn in tiles_fqdns + subracks_fqdns + daqs_fqdns:
+            device = tango.DeviceProxy(fqdn)
+            if device.adminMode != AdminMode.ONLINE:
+                device.adminMode = AdminMode.ONLINE
 
 
-@given(parsers.cfparse("a {device} that is online"))
-def device_online(
-    device: str,
-    device_proxies: dict[str, tango.DeviceProxy],
-    change_event_callbacks: MockTangoEventCallbackGroup,
+@given("the Station has been commanded to turn On")
+@when("the Station has been commanded to turn On")
+def station_on(
+    station_devices: dict[str, tango.DeviceProxy], command_info: dict[str, Any]
 ) -> None:
     """
-    Put a given device online if it isn't already.
+    Command the station to turn on.
 
-    :param device: device to put online.
-    :param device_proxies: dictionary of device proxies.
-    :param change_event_callbacks: a dictionary of callables to be used as
-        tango change event callbacks.
-    """
-    print(f"Turning {device} online")
-    device_proxy = device_proxies[device]
-    device_proxy.subscribe_event(
-        "state",
-        tango.EventType.CHANGE_EVENT,
-        change_event_callbacks["device_state"],
-    )
-    if device_proxy.adminMode == AdminMode.OFFLINE:
-        change_event_callbacks.assert_change_event(
-            "device_state", tango.DevState.DISABLE
-        )
-
-        device_proxy.adminMode = AdminMode.ONLINE
-        change_event_callbacks.assert_change_event(
-            "device_state", tango.DevState.UNKNOWN
-        )
-    if device == "Tile":
-        # Tile can experience a transient FAULT on startup when the polling of the TPM
-        # was successful before the subrack calls back.
-        # This is FAULT due to inconsistency in state, this is a race condition
-        # that will dissapear when/if the subrack calls back with the power.
-        try:
-            change_event_callbacks.assert_change_event(
-                "device_state",
-                tango.DevState.FAULT,
-                lookahead=2,
-                consume_nonmatches=True,
-            )
-            change_event_callbacks.assert_change_event(
-                "device_state",
-                OneOf(tango.DevState.ON, tango.DevState.OFF),
-            )
-        except AssertionError:
-            if device_proxy.state() not in [tango.DevState.ON, tango.DevState.OFF]:
-                pytest.fail("Tile device did not reach expected ON or OFF states")
-    else:
-        change_event_callbacks.assert_change_event("device_state", Anything)
-
-
-@pytest.fixture(name="command_info")
-def command_info_fixture() -> dict[str, Any]:
-    """
-    Fixture to store command ID.
-
-    :returns: Empty dictionary.
-    """
-    return {}
-
-
-@given(parsers.cfparse("the {device} has been commanded to turn On"))
-@when(parsers.cfparse("the {device} has been commanded to turn On"))
-def device_on(
-    device: str,
-    device_proxies: dict[str, tango.DeviceProxy],
-    command_info: dict[str, Any],
-) -> None:
-    """
-    Command the device to turn on.
-
-    :param device: device to turn on.
-    :param device_proxies: dictionary of device proxies.
+    :param station_devices: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
-    _, [command_id] = device_proxies[device].On()
-    command_info[device + "On"] = command_id
+    _, [command_id] = station_devices["Station"][0].On()
+    command_info[station_devices["Station"][0].dev_name() + "On"] = command_id
 
 
-@given(parsers.cfparse("the {device} has been commanded to turn to Standby"))
-@when(parsers.cfparse("the {device} has been commanded to turn to Standby"))
-def device_standby(
-    device: str,
-    device_proxies: dict[str, tango.DeviceProxy],
-    command_info: dict[str, Any],
+@when("the Tiles are commanded to turn On")
+def tiles_on(
+    station_devices: dict[str, tango.DeviceProxy], command_info: dict[str, Any]
 ) -> None:
     """
-    Command the device to turn on.
+    Command the station to turn on.
 
-    :param device: device to turn on.
-    :param device_proxies: dictionary of device proxies.
+    :param station_devices: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
-    time.sleep(1)
-    _, [command_id] = device_proxies[device].Standby()
-    command_info[device + "Standby"] = command_id
+    for tile in station_devices["Tiles"]:
+        tile.On()
 
 
-@then(parsers.cfparse("the {device} {command} command finishes"))
+@given("the Station has been commanded to turn to Standby")
+def station_standby(station_devices: dict[str, tango.DeviceProxy]) -> None:
+    """
+    Command the station to turn to standby.
+
+    :param station_devices: dictionary of device proxies.
+    """
+    station_devices["Station"][0].Standby()
+
+
+@then(parsers.cfparse("the Station {command} command finishes"))
 def device_command_finishes(
-    device_proxies: dict[str, tango.DeviceProxy],
-    device: str,
+    station_devices: dict[str, tango.DeviceProxy],
     command: str,
     command_info: dict[str, Any],
+    wait_for_command_completion: Callable,
 ) -> None:
     """
     Wait for a command to complete.
 
-    :param device_proxies: dictionary of device proxies.
-    :param device: device under test.
+    :param wait_for_command_completion: a fixture that waits on
+        the completion of a command.
+    :param station_devices: dictionary of device proxies.
     :param command: command to wait for
     :param command_info: dictionary to store command ID.
     """
-    command_id = command_info[device + command]
-    count = 0
-    while (
-        device_proxies[device].CheckLongRunningCommandStatus(command_id) != "COMPLETED"
-    ):
-        time.sleep(1)
-        count += 1
-        if count > 10:
-            pytest.fail(
-                f"{device}.{command} did not complete: "
-                f"{device_proxies[device].CheckLongRunningCommandStatus(command_id)}"
-            )
+    device = "Station"
+    station_device = station_devices[device][0]
+    wait_for_command_completion(station_device, command, command_info)
 
 
-@given(parsers.cfparse("the {device} reports that its {attribute} is {value}"))
-@then(parsers.cfparse("the {device} reports that its {attribute} is {value}"))
+@pytest.fixture(name="wait_for_command_completion", scope="module")
+def wait_for_command_completion_fixture() -> Callable:
+    """
+    Wait for the completion of the command.
+
+    :return: a callable to call with device and command.
+    """
+
+    def _wait_for_command_completion(
+        device: tango.DeviceProxy, command: str, command_info: dict[str, Any]
+    ) -> None:
+        command_id = command_info[device.dev_name() + command]
+        count = 0
+        while device.CheckLongRunningCommandStatus(command_id) != "COMPLETED":
+            time.sleep(1)
+            count += 1
+            if count > 10:
+                pytest.fail(
+                    f"{device.dev_name()}.{command} did not complete: "
+                    f"{device.CheckLongRunningCommandStatus(command_id)}"
+                )
+
+    return _wait_for_command_completion
+
+
+@given(parsers.cfparse("the {device_group} reports that its {attribute} is {value}"))
+@then(parsers.cfparse("the {device_group} reports that its {attribute} is {value}"))
 def device_verify_attribute(
-    device_proxies: dict[str, tango.DeviceProxy],
-    device: str,
+    station_devices: dict[str, tango.DeviceProxy],
+    device_group: str,
     attribute: str,
     value: str,
 ) -> None:
     """
     Verify that a device is in the desired state.
 
-    :param device_proxies: dictionary of device proxies.
-    :param device: the device to test.
+    :param station_devices: dictionary of device proxies.
+    :param device_group: the device group to test.
     :param attribute: the attribute to verify the value of.
     :param value: the value to verify.
     """
-    device_proxy = device_proxies[device]
-    enum_value = None
-    if attribute == "state":
-        enum_value = {
-            "ON": tango.DevState.ON,
-            "OFF": tango.DevState.OFF,
-            "STANDBY": tango.DevState.STANDBY,
-        }[value.upper()]
-    elif attribute == "HealthState":
-        enum_value = {
-            "OK": HealthState.OK,
-            "DEGRADED": HealthState.DEGRADED,
-            "FAILED": HealthState.FAILED,
-            "UNKNOWN": HealthState.UNKNOWN,
-        }[value]
-    timeout = 30
-    device_value = None
-    for _ in range(timeout):
+    device_proxys = station_devices[device_group]
+    for device_proxy in device_proxys:
+        enum_value = None
         if attribute == "state":
-            device_value = device_proxy.state()
+            enum_value = {
+                "ON": tango.DevState.ON,
+                "OFF": tango.DevState.OFF,
+                "STANDBY": tango.DevState.STANDBY,
+            }[value.upper()]
         elif attribute == "HealthState":
-            device_value = device_proxy.healthState
-        if device_value == enum_value:
-            break
-        time.sleep(1)
-    if attribute == "HealthState":
-        assert device_value == enum_value, (
-            f"Expected health to be {enum_value} but got {device_value}, "
-            f"Reason: {device_proxy.healthReport}"
-        )
-    else:
-        assert device_value == enum_value
+            enum_value = {
+                "OK": HealthState.OK,
+                "DEGRADED": HealthState.DEGRADED,
+                "FAILED": HealthState.FAILED,
+                "UNKNOWN": HealthState.UNKNOWN,
+            }[value]
+        timeout = 30
+        device_value = None
+        for _ in range(timeout):
+            if attribute == "state":
+                device_value = device_proxy.state()
+            elif attribute == "HealthState":
+                device_value = device_proxy.healthState
+            if device_value == enum_value:
+                break
+            time.sleep(1)
+        if attribute == "HealthState":
+            assert device_value == enum_value, (
+                f"Expected health to be {enum_value} but got {device_value}, "
+                f"Reason: {device_proxy.healthReport}"
+            )
+        else:
+            assert device_value == enum_value
 
 
-@when("the Tile board temperature thresholds are adjusted")
-def set_tile_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@when("the Tiles board temperature thresholds are adjusted")
+def set_tile_health_params(station_devices: dict[str, tango.DeviceProxy]) -> None:
     """
     Set the board temperature thresholds of the Tile.
 
-    :param device_proxies: dictionary of device proxies.
+    :param station_devices: dictionary of device proxies.
     """
     new_board_params = {
         "temperatures": {"board": {"min": 100, "max": 170}},
     }
-    tile_device = device_proxies["Tile"]
-    tile_device.healthModelParams = json.dumps(new_board_params)
+    tile_devices = station_devices["Tiles"]
+    for tile_device in tile_devices:
+        tile_device.healthModelParams = json.dumps(new_board_params)
 
 
-@when("the Subrack board temperature thresholds are adjusted")
-def set_subrack_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> None:
+@when("the Subracks board temperature thresholds are adjusted")
+def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> None:
     """
     Set the board temperature thresholds of the Subrack.
 
-    :param device_proxies: dictionary of device proxies.
+    :param station_devices: dictionary of device proxies.
     """
     new_board_params = {
         "failed_max_board_temp": 170.0,
@@ -345,28 +298,33 @@ def set_subrack_health_params(device_proxies: dict[str, tango.DeviceProxy]) -> N
         "failed_min_board_temp": 110.0,
         "degraded_min_board_temp": 120.0,
     }
-    subrack_device = device_proxies["Subrack"]
-    subrack_device.healthModelParams = json.dumps(new_board_params)
+    for subrack in station_devices["Subracks"]:
+        subrack.healthModelParams = json.dumps(new_board_params)
 
 
-@then(parsers.cfparse("the {device} reports that it is {programming_state}"))
+@then(parsers.cfparse("the {device_group} reports that it is {programming_state}"))
 def check_device_programming_state(
-    device_proxies: dict[str, tango.DeviceProxy], device: str, programming_state: str
+    station_devices: dict[str, tango.DeviceProxy],
+    device_group: str,
+    programming_state: str,
 ) -> None:
     """
     Check the tileProgrammingState of a device.
 
-    :param device_proxies: dictionary of device proxies.
-    :param device: The device to check. Must be Station or Tile.
+    :param station_devices: A fixture containing the
+        station devices.
+    :param device_group: The device group to check.
+        Must be Station or Tile.
     :param programming_state: The programming state to check for.
     """
-    # List from Station, str from Tile.
-    device_programming_state = device_proxies[device].tileProgrammingState
-    if isinstance(device_programming_state, list):
-        # Assert all Tiles in the Station are in the specified state.
-        assert all(
-            tile_programming_state == programming_state
-            for tile_programming_state in device_programming_state
-        )
-    elif isinstance(device_programming_state, str):
-        assert device_programming_state == programming_state
+    for device in station_devices[device_group]:
+        # List from Station, str from Tile.
+        device_programming_state = device.tileProgrammingState
+        if isinstance(device_programming_state, list):
+            # Assert all Tiles in the Station are in the specified state.
+            assert all(
+                tile_programming_state == programming_state
+                for tile_programming_state in device_programming_state
+            )
+        elif isinstance(device_programming_state, str):
+            assert device_programming_state == programming_state

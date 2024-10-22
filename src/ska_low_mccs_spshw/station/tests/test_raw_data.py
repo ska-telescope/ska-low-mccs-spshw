@@ -24,6 +24,7 @@ from .base_daq_test import BaseDaqTest
 __all__ = ["TestRaw"]
 
 
+# pylint: disable=too-many-instance-attributes
 class RawDataReceivedHandler(FileSystemEventHandler):
     """Detect files created in the data directory."""
 
@@ -45,8 +46,15 @@ class RawDataReceivedHandler(FileSystemEventHandler):
         self._nof_antennas_per_tile = 16
         self._nof_tiles = nof_tiles
         self._tile_id = 0
+        self._polarisations_per_antenna = 2
+        self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
         self.data = np.zeros(
-            (self._nof_tiles * self._nof_antennas_per_tile, 2, 32 * 1024), dtype=np.int8
+            (
+                self._nof_tiles * self._nof_antennas_per_tile,
+                self._polarisations_per_antenna,
+                self._nof_samples,
+            ),
+            dtype=np.int8,
         )
 
     def on_created(self: RawDataReceivedHandler, event: FileSystemEvent) -> None:
@@ -63,7 +71,7 @@ class RawDataReceivedHandler(FileSystemEventHandler):
             tile_data, timestamps = raw_file.read_data(
                 antennas=range(self._nof_antennas_per_tile),
                 polarizations=[0, 1],
-                n_samples=32 * 1024,
+                n_samples=self._nof_samples,
                 tile_id=self._tile_id,
             )
             start_idx = self._nof_antennas_per_tile * self._tile_id

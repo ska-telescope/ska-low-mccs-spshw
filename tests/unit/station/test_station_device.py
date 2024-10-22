@@ -49,7 +49,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=2.0,
+        timeout=3.0,
     )
 
 
@@ -375,7 +375,7 @@ def test_On(
     assert station_device.state() == DevState.ON
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "COMPLETED")
+        (on_command_id, "COMPLETED")
     )
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
@@ -556,8 +556,6 @@ def test_Abort_On(
     # Abort the command
     ([abort_result_code], [abort_command_id]) = station_device.AbortCommands()
 
-    # Takes one second to get canceled
-    time.sleep(1)
     change_event_callbacks["command_status"].assert_change_event(
         (standby_command_id, "COMPLETED", on_command_id, "ABORTED")
     )

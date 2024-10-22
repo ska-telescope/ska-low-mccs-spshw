@@ -70,7 +70,7 @@ def available_stations_fixture(true_context: bool) -> list[str]:
             str(station).rsplit("low-mccs/spsstation/", maxsplit=1)[-1]
             for station in stations
         ]
-    return list(DEFAULT_STATION_LABEL)
+    return [DEFAULT_STATION_LABEL]
 
 
 @pytest.fixture(name="functional_test_context_generator", scope="module")

@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING, Optional
 
 from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
+from .tests.test_channel_data import TestChannel
 from .tests.test_raw_data import TestRaw
 from .tests.test_station_initialise import InitialiseStation
 from .tests.test_tango import BasicTangoTest
@@ -67,6 +68,15 @@ class SpsStationSelfCheckManager:
             tpm_tests.append(test_instance)
         tpm_tests.append(
             TestRaw(
+                component_manager=self._component_manager,
+                logger=self.logger,
+                tile_trls=list(self._tile_trls),
+                subrack_trls=list(self._subrack_trls),
+                daq_trl=self._daq_trl,
+            )
+        )
+        tpm_tests.append(
+            TestChannel(
                 component_manager=self._component_manager,
                 logger=self.logger,
                 tile_trls=list(self._tile_trls),

@@ -100,7 +100,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.daq_proxy.Configure(
             json.dumps(
                 {
-                    "directory": "/test_daq_raw/",
+                    "directory": "/",
                     "nof_tiles": len(self.tile_proxies),
                 }
             )

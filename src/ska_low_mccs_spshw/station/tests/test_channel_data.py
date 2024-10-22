@@ -17,15 +17,15 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.events import FileSystemEvent
 
-from .base_daq_test import BaseDaqTest
+from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestChannel"]
 
 
 # pylint: disable=too-many-instance-attributes
-class ChannelDataReceivedHandler(FileSystemEventHandler):
+class ChannelDataReceivedHandler(BaseDataReceivedHandler):
     """Detect files created in the data directory."""
 
     def __init__(
@@ -91,6 +91,20 @@ class ChannelDataReceivedHandler(FileSystemEventHandler):
         except Exception as e:  # pylint: disable=broad-exception-caught
             self._logger.error(f"Got error in callback: {repr(e)}, {e}")
 
+    def reset(self: ChannelDataReceivedHandler) -> None:
+        """Reset instance variables for re-use."""
+        self._tile_id = 0
+        self.data = np.zeros(
+            (
+                self._nof_channels,
+                self._nof_tiles * self._nof_antennas_per_tile,
+                self._polarisations_per_antenna,
+                self._nof_samples,
+                2,  # Real/Imag
+            ),
+            dtype=np.int8,
+        )
+
 
 class TestChannel(BaseDaqTest):
     """
@@ -130,6 +144,9 @@ class TestChannel(BaseDaqTest):
     # pylint: disable=too-many-locals
     def _check_channel(self: TestChannel) -> None:
         self.test_logger.debug("Checking received data")
+        assert self._data is not None
+        assert self._pattern is not None
+        assert self._adders is not None
         data = copy(self._data)
         adders = copy(self._adders)
         pattern = copy(self._pattern)
@@ -166,15 +183,15 @@ class TestChannel(BaseDaqTest):
         )
         self._configure_daq("CHANNEL_DATA")
         self.test_logger.debug("Testing channelised data.")
-        self._start_directory_watch()
-        for tile in self.tile_proxies:
-            self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-            self._configure_and_start_pattern_generator(tile, "channel")
-            self._send_channel_data(tile)
-            assert self._data_created_event.wait(20)
-            self._data_created_event.clear()
-            self._stop_pattern_generator(tile, "channel")
+        with self.reset_context():
+            self._start_directory_watch()
+            for tile in self.tile_proxies:
+                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
+                self._configure_and_start_pattern_generator(tile, "channel")
+                self._send_channel_data(tile)
+                assert self._data_created_event.wait(20)
+                self._data_created_event.clear()
+                self._stop_pattern_generator(tile, "channel")
 
-        self._check_channel()
-        self._data = None
+            self._check_channel()
         self.test_logger.info("Test passed for channelised data!")

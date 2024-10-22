@@ -8,13 +8,16 @@
 """An implementation of a basic test for a station."""
 from __future__ import annotations
 
+import abc
 import json
 import logging
 import random
 import time
+from contextlib import contextmanager
 from threading import Event
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Iterator
 
+import numpy as np
 from pydaq.persisters import AAVSFileManager  # type: ignore
 from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
@@ -28,6 +31,14 @@ if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 
 __all__ = ["BaseDaqTest"]
+
+
+class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
+    """Base class for the data received handler."""
+
+    @abc.abstractmethod
+    def reset(self: BaseDataReceivedHandler) -> None:
+        """Reset method for subclasses to implement."""
 
 
 class BaseDaqTest(TpmSelfCheckTest):
@@ -73,12 +84,12 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param daq_trl: trl of the daq the station has.
         :param component_manager: SpsStation component manager under test.
         """
-        self._data: Any
+        self._data: np.ndarray | None
         self._file_manager: AAVSFileManager
         self._observer: InotifyObserver
-        self._data_handler: FileSystemEventHandler
-        self._pattern: list
-        self._adders: list
+        self._data_handler: BaseDataReceivedHandler
+        self._pattern: list | None = None
+        self._adders: list | None = None
         self._data_created_event: Event = Event()
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
@@ -165,6 +176,25 @@ class BaseDaqTest(TpmSelfCheckTest):
             if data == -(2 ** (bits - 1)):
                 data = -(2 ** (ext_bits - 1))
         return data
+
+    def _reset(self: BaseDaqTest) -> None:
+        self._data = None
+        self._data_created_event.clear()
+        self._adders = None
+        self._pattern = None
+
+    @contextmanager
+    def reset_context(self: BaseDaqTest) -> Iterator[None]:
+        """
+        Context manager to ensure reset is called after the test block.
+
+        :yields: control to the block of code inside the `with` statement.
+        """
+        try:
+            yield
+        finally:
+            self._reset()
+            self._data_handler.reset()
 
     def check_requirements(self: BaseDaqTest) -> tuple[bool, str]:
         """

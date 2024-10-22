@@ -17,15 +17,15 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import RawFormatFileManager  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.events import FileSystemEvent
 
-from .base_daq_test import BaseDaqTest
+from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestRaw"]
 
 
 # pylint: disable=too-many-instance-attributes
-class RawDataReceivedHandler(FileSystemEventHandler):
+class RawDataReceivedHandler(BaseDataReceivedHandler):
     """Detect files created in the data directory."""
 
     def __init__(
@@ -86,6 +86,18 @@ class RawDataReceivedHandler(FileSystemEventHandler):
         except Exception as e:  # pylint: disable=broad-exception-caught
             self._logger.error(f"Got error in callback: {repr(e)}, {e}")
 
+    def reset(self: RawDataReceivedHandler) -> None:
+        """Reset instance variables for re-use."""
+        self._tile_id = 0
+        self.data = np.zeros(
+            (
+                self._nof_tiles * self._nof_antennas_per_tile,
+                self._polarisations_per_antenna,
+                self._nof_samples,
+            ),
+            dtype=np.int8,
+        )
+
 
 class TestRaw(BaseDaqTest):
     """
@@ -125,6 +137,9 @@ class TestRaw(BaseDaqTest):
 
     def _check_raw(self: TestRaw, raw_data_synchronised: bool = False) -> None:
         self.test_logger.debug("Checking received data")
+        assert self._data is not None
+        assert self._pattern is not None
+        assert self._adders is not None
         data = copy(self._data)
         adders = copy(self._adders)
         pattern = copy(self._pattern)
@@ -156,30 +171,31 @@ class TestRaw(BaseDaqTest):
             self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
         self._configure_daq("RAW_DATA")
-        self.test_logger.debug("Testing unsynchronised raw data.")
-        self._start_directory_watch()
-        for tile in self.tile_proxies:
-            self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-            self._configure_and_start_pattern_generator(tile, "jesd")
-            self._send_raw_data(tile, sync=False)
-            assert self._data_created_event.wait(20)
-            self._data_created_event.clear()
-            self._stop_pattern_generator(tile, "jesd")
 
-        self._check_raw(raw_data_synchronised=False)
-        self._data = None
+        with self.reset_context():
+            self.test_logger.debug("Testing unsynchronised raw data.")
+            self._start_directory_watch()
+            for tile in self.tile_proxies:
+                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
+                self._configure_and_start_pattern_generator(tile, "jesd")
+                self._send_raw_data(tile, sync=False)
+                assert self._data_created_event.wait(20)
+                self._data_created_event.clear()
+                self._stop_pattern_generator(tile, "jesd")
+
+            self._check_raw(raw_data_synchronised=False)
         self.test_logger.info("Test passed for unsynchronised data!")
 
         self.test_logger.debug("Testing synchronised raw data.")
-        for tile in self.tile_proxies:
-            self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-            self._configure_and_start_pattern_generator(tile, "jesd")
-            self._send_raw_data(tile, sync=True)
-            assert self._data_created_event.wait(20)
-            self._data_created_event.clear()
-            self._stop_pattern_generator(tile, "jesd")
+        with self.reset_context():
+            for tile in self.tile_proxies:
+                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
+                self._configure_and_start_pattern_generator(tile, "jesd")
+                self._send_raw_data(tile, sync=True)
+                assert self._data_created_event.wait(20)
+                self._data_created_event.clear()
+                self._stop_pattern_generator(tile, "jesd")
 
-        self._stop_directory_watch()
-        self._check_raw(raw_data_synchronised=True)
-        self._data = None
+            self._stop_directory_watch()
+            self._check_raw(raw_data_synchronised=True)
         self.test_logger.info("Test passed for synchronised data!")

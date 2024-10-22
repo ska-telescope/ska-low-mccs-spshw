@@ -295,6 +295,11 @@ class _DaqProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
+    def _configure_station_id(self: _DaqProxy) -> None:
+        assert self._proxy is not None
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
+
     def start_communicating(self: _DaqProxy) -> None:
         self._connecting = True
         super().start_communicating()
@@ -330,6 +335,9 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.add_change_event_callback(
                 "dataReceivedResult", self._daq_data_callback
             )
+            # Also configure DAQ with the station ID at this time.
+            # This adds a config entry to daq for `station_id`
+            self._configure_station_id()
         super()._update_communication_state(communication_state)
 
     def _daq_data_callback(

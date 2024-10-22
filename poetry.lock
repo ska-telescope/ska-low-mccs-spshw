@@ -1616,13 +1616,13 @@ reference = "PyPI-public"
 
 [[package]]
 name = "mako"
-version = "1.3.5"
+version = "1.3.6"
 description = "A super-fast templating language that borrows the best ideas from the existing templating languages."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "Mako-1.3.5-py3-none-any.whl", hash = "sha256:260f1dbc3a519453a9c856dedfe4beb4e50bd5a26d96386cb6c80856556bb91a"},
-    {file = "Mako-1.3.5.tar.gz", hash = "sha256:48dbc20568c1d276a2698b36d968fa76161bf127194907ea6fc594fa81f943bc"},
+    {file = "Mako-1.3.6-py3-none-any.whl", hash = "sha256:a91198468092a2f1a0de86ca92690fb0cfc43ca90ee17e15d93662b4c04b241a"},
+    {file = "mako-1.3.6.tar.gz", hash = "sha256:9ec3a1583713479fae654f83ed9fa8c9a4c16b7bb0daba0e6bbebff50c0d983d"},
 ]
 
 [package.dependencies]
@@ -2066,6 +2066,28 @@ identify = ">=1.0.0"
 nodeenv = ">=0.11.1"
 pyyaml = ">=5.1"
 virtualenv = ">=20.10.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
+name = "prettytable"
+version = "3.11.0"
+description = "A simple Python library for easily displaying tabular data in a visually appealing ASCII table format"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "prettytable-3.11.0-py3-none-any.whl", hash = "sha256:aa17083feb6c71da11a68b2c213b04675c4af4ce9c541762632ca3f2cb3546dd"},
+    {file = "prettytable-3.11.0.tar.gz", hash = "sha256:7e23ca1e68bbfd06ba8de98bf553bf3493264c96d5e8a615c0471025deeba722"},
+]
+
+[package.dependencies]
+wcwidth = "*"
+
+[package.extras]
+tests = ["pytest", "pytest-cov", "pytest-lazy-fixtures"]
 
 [package.source]
 type = "legacy"
@@ -3355,21 +3377,20 @@ name = "ska-low-mccs-daq-interface"
 version = "0.4.0"
 description = "SKA Low MCCS DAQ Interface repository specifies the client-server interface between the DAQ and its monitoring and control component."
 optional = false
-python-versions = ">=3.10,<4.0"
-files = [
-    {file = "ska_low_mccs_daq_interface-0.4.0-py3-none-any.whl", hash = "sha256:bb4f422b3b7b440b72c1956d531e7a1585ba6c2c9017e25aec30c1afa03aee11"},
-    {file = "ska_low_mccs_daq_interface-0.4.0.tar.gz", hash = "sha256:e184a9147aee20187df140f7c5ec0be808946730227860e605c13c32bb5a0a0f"},
-]
+python-versions = "^3.10"
+files = []
+develop = false
 
 [package.dependencies]
-grpcio = ">=1.54.2,<2.0.0"
-grpcio-tools = ">=1.54.2,<2.0.0"
-ska-control-model = ">=1.0.0,<2.0.0"
+grpcio = "^1.54.2"
+grpcio-tools = "^1.54.2"
+ska-control-model = "^1.0.0"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = "skao"
+type = "git"
+url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface.git"
+reference = "skb-610-station-id"
+resolved_reference = "f53a4dc6655040178cc723a245f4f0e0f65168f7"
 
 [[package]]
 name = "ska-ser-logging"
@@ -3453,20 +3474,20 @@ reference = "skao"
 
 [[package]]
 name = "ska-tango-base"
-version = "1.1.0"
+version = "1.2.0"
 description = "SKA Tango base classes"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "ska_tango_base-1.1.0-py3-none-any.whl", hash = "sha256:a6ed82824caaa978894e3df0f375d175068b4599848744e2a7c80cd04f27d779"},
-    {file = "ska_tango_base-1.1.0.tar.gz", hash = "sha256:1076ed4d537f2eb444f1e97cccb3938c58e49e37adc9e9f298f118f342ba16c4"},
+    {file = "ska_tango_base-1.2.0-py3-none-any.whl", hash = "sha256:4e2e9721e3df890406ce129b5fdb4329e7a08cc8d491baa5f748a7b164f6b9b1"},
+    {file = "ska_tango_base-1.2.0.tar.gz", hash = "sha256:f9b46ee7d2632444e9ecd6000d653dd448e06974ed8270cf9ad726367df9fd26"},
 ]
 
 [package.dependencies]
 debugpy = ">=1.6.2,<2.0.0"
 jsonschema = ">=4.17.3,<5.0.0"
 numpy = {version = ">=1.21.6", markers = "python_version == \"3.10\""}
-pytango = ">=9.4.2,<10.0.0"
+pytango = ">=9.4.2,<11.0.0"
 ska-control-model = ">=1.0.0,<2.0.0"
 ska-ser-logging = ">=0.4.3,<0.5.0"
 transitions = ">=0.9.0,<0.10.0"
@@ -3498,13 +3519,13 @@ reference = "skao"
 
 [[package]]
 name = "ska-telmodel"
-version = "1.19.4"
+version = "1.19.5"
 description = "SKA telescope model library"
 optional = false
 python-versions = ">=3.10.0,<4.0.0"
 files = [
-    {file = "ska_telmodel-1.19.4-py3-none-any.whl", hash = "sha256:ad26e1b51516226cf7ca97f07692bebf2a8c18ce5ee9ae02cc21574f07951c58"},
-    {file = "ska_telmodel-1.19.4.tar.gz", hash = "sha256:0fb9a0c6b913f8b1f6cf8b8ccdad0ad368b1f31bcd2cdeb60da49a99781c199c"},
+    {file = "ska_telmodel-1.19.5-py3-none-any.whl", hash = "sha256:1fd097c361b5e7ba54d364be4a6b1b3cd7b8619b89b2369ea6fb8254c28ee260"},
+    {file = "ska_telmodel-1.19.5.tar.gz", hash = "sha256:a87f4237758e73bfed1ca3f5950c7614f7d3e42458e94f4ff386b9440471c231"},
 ]
 
 [package.dependencies]
@@ -3512,6 +3533,7 @@ appdirs = ">=1.4.4,<2.0.0"
 filelock = ">=3.15.4,<4.0.0"
 gitpython = ">=3.1.41,<4.0.0"
 overrides = ">=7.7.0"
+prettytable = ">=3.11.0,<4.0.0"
 python-gitlab = ">=3.8.0,<4.0.0"
 pyyaml = ">=6.0,<7.0"
 schema = ">=0.7.5,<0.8.0"
@@ -4254,6 +4276,22 @@ url = "https://pypi.org/simple"
 reference = "PyPI-public"
 
 [[package]]
+name = "wcwidth"
+version = "0.2.13"
+description = "Measures the displayed width of unicode strings in a terminal"
+optional = false
+python-versions = "*"
+files = [
+    {file = "wcwidth-0.2.13-py2.py3-none-any.whl", hash = "sha256:3da69048e4540d84af32131829ff948f1e022c1c6bdb8d6102117aac784f6859"},
+    {file = "wcwidth-0.2.13.tar.gz", hash = "sha256:72ea0c06399eb286d978fdedb6923a9eb47e1c486ce63e9b4e64fc18303972b5"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
 name = "websockets"
 version = "13.1"
 description = "An implementation of the WebSocket Protocol (RFC 6455 & 7692)"
@@ -4459,4 +4497,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "2a321a39cdba9e2b731f55a6fc2d9d6642b1cdcd749bcdb80fb18a13f68d21ef"
+content-hash = "ef61f2f68d6fea6ba9c3e1ccb5a7c28163dcf7ed1a920808f7f2635759fa1c3e"

@@ -102,7 +102,6 @@ class BaseDaqTest(TpmSelfCheckTest):
                 {
                     "directory": "/test_daq_raw/",
                     "nof_tiles": len(self.tile_proxies),
-                    "nof_correlator_channels": 1,
                 }
             )
         )

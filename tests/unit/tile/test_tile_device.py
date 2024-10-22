@@ -1991,6 +1991,69 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="8 is greater than the maximum of 7"):
             tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))
 
+    @pytest.mark.parametrize(
+        "incorrect_param",
+        [
+            ({"stage": "invalid_stage"}),
+            ({"pattern": []}),
+            ({"pattern": list(range(1025))}),
+            ({"adders": list(range(31))}),
+            ({"adders": list(range(33))}),
+            ({"shift": -1}),
+            ({"zero": 70000}),
+        ],
+    )
+    def test_configure_pattern_generator(
+        self: TestMccsTileCommands,
+        tile_device: MccsDeviceProxy,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        incorrect_param: dict,
+    ) -> None:
+        """
+        Test for various incorrect args to the pattern generator.
+
+        :param tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param incorrect_param: A dictionary with the incorrect parameter.
+        """
+        tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+        assert tile_device.adminMode == AdminMode.OFFLINE
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+
+        tile_device.adminMode = AdminMode.ENGINEERING
+        assert tile_device.adminMode == AdminMode.ENGINEERING
+        change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+        change_event_callbacks["state"].assert_change_event(DevState.OFF)
+        tile_device.MockTpmOn()
+        change_event_callbacks["state"].assert_change_event(DevState.ON)
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Initialised", lookahead=5, consume_nonmatches=True
+        )
+        default_parameters = {
+            "stage": "jesd",
+            "pattern": list(range(1024)),
+            "adders": list(range(32)),
+            "start": True,
+            "shift": 0,
+            "zero": 0,
+        }
+        default_parameters.update(incorrect_param)
+
+        with pytest.raises(DevFailed, match="jsonschema.exceptions.ValidationError"):
+            tile_device.ConfigurePatternGenerator(json.dumps(default_parameters))
+
     def test_get_arp_table(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,

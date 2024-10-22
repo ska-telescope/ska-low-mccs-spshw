@@ -434,6 +434,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             ("SendDataSamples", self.SendDataSamplesCommand),
             ("StopDataTransmission", self.StopDataTransmissionCommand),
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
+            ("ConfigurePatternGenerator", self.ConfigurePatternGeneratorCommand),
+            ("StartPatternGenerator", self.StartPatternGeneratorCommand),
+            ("StopPatternGenerator", self.StopPatternGeneratorCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -4821,6 +4824,243 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class ConfigurePatternGeneratorCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigurePatternGenerator() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigurePatternGenerator.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigurePatternGenerator.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.ConfigurePatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new ConfigurePatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("ConfigurePatternGenerator", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        SUCCEEDED_MESSAGE = "ConfigurePatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.ConfigurePatternGeneratorCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.ConfigurePatternGenerator` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            """
+            self._component_manager.configure_pattern_generator(**kwargs)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ConfigurePatternGenerator(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the test pattern generator using the provided configuration.
+
+        :param argin: JSON dictionary with the following keywords:
+
+        * stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of the
+            channelizer), or 'beamf' (output of the tile beamformer).
+        * pattern: The data pattern in time order. Must be an array of length 1
+            to 1024. Represents values in time order, not for antennas or
+            polarizations.
+        * adders: A list of 32 integers that expands the pattern to cover 16
+            antennas and 2 polarizations. The adders map the pattern to hardware
+            signals.
+        * start: Boolean flag to indicate whether to start the pattern
+            immediately. If False, the pattern can be started manually later.
+        * shift: Optional bit shift (divides by 2^shift). Must not be used in
+            'beamf' stage, where it is always overridden to 4.
+            * zero: Integer (0-65535) used as a mask to disable the pattern on
+            specific antennas and polarizations. Applied to both FPGAs, supports
+            up to 8 antennas and 2 polarizations.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> test_pattern = list(range(1024))
+        >>> for n in range(1024):
+                if n % 2 == 0:
+                    test_pattern[n] = n
+                else:
+                    test_pattern[n] = random.randrange(0, 255, 1)
+        >>> test_adders = list(range(32))
+        >>> config = {"stage": "jesd", "pattern": test_pattern, "adders":
+                      test_adders, "start": True}
+        >>> jstr = json.dumps(config)
+        >>> values = dp.command_inout("ConfigurePatternGenerator", jstr)
+        """
+        handler = self.get_command_object("ConfigurePatternGenerator")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class StopPatternGeneratorCommand(FastCommand):
+        """
+        Class for handling the StopPatternGenerator(argin) command.
+
+        This command takes as input a positional argument specifying the stage in the
+        signal chain where the pattern was injected.
+        """
+
+        def __init__(
+            self: MccsTile.StopPatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StopPatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopPatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.StopPatternGeneratorCommand,
+            stage: str,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopPatternGenerator` commands.
+
+            :param stage: The stage in the signal chain where the pattern was injected.
+                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+                or 'beamf' (output of tile beamformer), or 'all' for all stages.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.stop_pattern_generator(stage)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StopPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+        """
+        Stop the pattern generator at the specified stage.
+
+        The stage can be the output of the JESD, the channelizer, or the beamformer.
+
+        :param stage: A positional string argument specifying the stage in the signal
+            chain where the pattern was injected. Options are: 'jesd' (output of ADCs),
+            'channel' (output of channelizer), 'beamf' (output of tile beamformer),
+            or 'all' for all stages.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopPatternGenerator", "jesd")
+        """
+        handler = self.get_command_object("StopPatternGenerator")
+        (return_code, message) = handler(stage)
+        return ([return_code], [message])
+
+    class StartPatternGeneratorCommand(FastCommand):
+        """
+        Class for handling the StartPatternGenerator(argin) command.
+
+        This command takes as input a positional argument specifying the stage in the
+        signal chain where the pattern should be injected.
+        """
+
+        def __init__(
+            self: MccsTile.StartPatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StartPatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StartPatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.StartPatternGeneratorCommand,
+            stage: str,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StartPatternGenerator` commands.
+
+            :param stage: The stage in the signal chain where the pattern was injected.
+                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+                or 'beamf' (output of tile beamformer), or 'all' for all stages.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.start_pattern_generator(stage)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+        """
+        Start the pattern generator at the specified stage.
+
+        The stage can be the output of the JESD, the channelizer, or the beamformer.
+
+        :param stage: A positional string argument specifying the stage in the signal
+            chain where the pattern was injected. Options are: 'jesd' (output of ADCs),
+            'channel' (output of channelizer), 'beamf' (output of tile beamformer),
+            or 'all' for all stages.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StartPatternGenerator", "channel")
+        """
+        handler = self.get_command_object("StartPatternGenerator")
+        (return_code, message) = handler(stage)
         return ([return_code], [message])
 
     def __str__(self: MccsTile) -> str:

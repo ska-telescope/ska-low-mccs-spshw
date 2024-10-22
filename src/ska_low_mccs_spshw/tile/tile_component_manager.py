@@ -3250,3 +3250,73 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
+
+    def configure_pattern_generator(
+        self: TileComponentManager,
+        stage: str,
+        pattern: list[int],
+        adders: list[int],
+        start: bool = False,
+        shift: int = 0,
+        zero: int = 0,
+    ) -> None:
+        """
+        Configure the TPM pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+        :param pattern: The data pattern in time order. This must be a list of integers
+            with a length between 1 and 1024. The pattern represents values
+            in time order (not antennas or polarizations).
+        :param adders: A list of 32 integers that expands the pattern to cover 16
+            antennas and 2 polarizations in hardware. This list maps the pattern to the
+            corresponding signals for the antennas and polarizations.
+        :param start: Boolean flag indicating whether to start the pattern immediately.
+            If False, the pattern will need to be started manually later.
+        :param shift: Optional bit shift (divides the pattern by 2^shift). This must not
+            be used in the 'beamf' stage, where it is always overridden to 4.
+            The default value is 0.
+        :param zero: An integer (0-65535) used as a mask to disable the pattern on
+            specific antennas and polarizations. The same mask is applied to both FPGAs,
+            supporting up to 8 antennas and 2 polarizations. The default value is 0.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
+        """
+        Stop the pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern was injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.stop_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def start_pattern_generator(self: TileComponentManager, stage: str) -> None:
+        """
+        Start the pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern was injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.start_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")

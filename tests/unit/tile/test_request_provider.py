@@ -32,8 +32,8 @@ def request_iterator_fixture() -> RequestIterator:
     return RequestIterator()
 
 
-@pytest.fixture(name="stale_attribue_callback", scope="module")
-def stale_attribue_callback_fixture() -> unittest.mock.Mock:
+@pytest.fixture(name="stale_attribute_callback", scope="module")
+def stale_attribute_callback_fixture() -> unittest.mock.Mock:
     """
     Fixture that provides a mock to call for value change handling.
 
@@ -45,18 +45,18 @@ def stale_attribue_callback_fixture() -> unittest.mock.Mock:
 @pytest.fixture(name="tile_request_provider")
 def tile_request_provider_fixture(
     request_iterator: RequestIterator,
-    stale_attribue_callback: unittest.mock.Mock,
+    stale_attribute_callback: unittest.mock.Mock,
 ) -> TileRequestProvider:
     """
     Fixture returning a TileRequestProvider instance.
 
     :param request_iterator: a `RequestIterator` instance.
-    :param stale_attribue_callback: a fixture containing
+    :param stale_attribute_callback: a fixture containing
         a mock to be called when attribute is no longer polled.
 
     :return: a TileRequestProvider instance.
     """
-    return TileRequestProvider(stale_attribue_callback, request_iterator)
+    return TileRequestProvider(stale_attribute_callback, request_iterator)
 
 
 class TestRequestProvider:
@@ -101,7 +101,7 @@ class TestRequestProvider:
     def test_stale_attributes(
         self: TestRequestProvider,
         tile_request_provider: TileRequestProvider,
-        stale_attribue_callback: unittest.mock.Mock,
+        stale_attribute_callback: unittest.mock.Mock,
         request_iterator: RequestIterator,
         starting_tpm_status: TpmStatus,
         new_tpm_status: TpmStatus,
@@ -110,7 +110,7 @@ class TestRequestProvider:
         Test that when attributes go stale we notify callback.
 
         :param tile_request_provider: a `TileRequestProvider` instance.
-        :param stale_attribue_callback: a fixture containing
+        :param stale_attribute_callback: a fixture containing
             a mock to be called when attribute is no longer polled.
         :param request_iterator: a `RequestIterator` instance.
         :param starting_tpm_status: a fixture containing
@@ -128,6 +128,6 @@ class TestRequestProvider:
         )
         # Check that callback is called when any attribute are stale.
         if expected_stale_attribute:
-            stale_attribue_callback.assert_called_once_with(expected_stale_attribute)
+            stale_attribute_callback.assert_called_once_with(expected_stale_attribute)
         else:
-            stale_attribue_callback.assert_not_called()
+            stale_attribute_callback.assert_not_called()

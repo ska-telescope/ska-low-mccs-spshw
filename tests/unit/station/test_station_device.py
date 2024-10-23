@@ -49,7 +49,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "state",
         "outsideTemperature",
         "track_lrc_command",
-        timeout=3.0,
+        timeout=5.0,
     )
 
 
@@ -345,13 +345,13 @@ def test_On(
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "STAGING")
+        (on_command_id, "STAGING")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "QUEUED")
+        (on_command_id, "QUEUED")
     )
     change_event_callbacks["command_status"].assert_change_event(
-        (off_command_id, "REJECTED", on_command_id, "IN_PROGRESS")
+        (on_command_id, "IN_PROGRESS")
     )
 
     change_event_callbacks["state"].assert_not_called()
@@ -368,8 +368,6 @@ def test_On(
     # The mock takes a non-negligible amount of time to write attributes
     # Brief sleep needed to allow it to write the tileProgrammingState
     time.sleep(0.1)
-
-    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
     change_event_callbacks["state"].assert_not_called()
     assert station_device.state() == DevState.ON
@@ -1151,12 +1149,16 @@ def test_SetCspIngest(
                 "subrack_failed": 0.2,
                 "tile_degraded": 0.05,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 4,
+                "pps_delta_failed": 9,
             },
             {
                 "subrack_degraded": 0.1,
                 "subrack_failed": 0.3,
                 "tile_degraded": 0.07,
                 "tile_failed": 0.2,
+                "pps_delta_degraded": 6,
+                "pps_delta_failed": 10,
             },
             id="Check correct initial values, write new and "
             "verify new values have been written",

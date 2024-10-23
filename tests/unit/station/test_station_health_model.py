@@ -28,7 +28,9 @@ class TestSpsStationHealthModel:
         :return: Health model to be used.
         """
         health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
-        health_model.update_state(communicating=True, power=PowerState.ON)
+        health_model.update_state(
+            communicating=True, power=PowerState.ON, pps_delay_spread=0
+        )
 
         return health_model
 
@@ -96,9 +98,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -115,9 +117,9 @@ class TestSpsStationHealthModel:
                         for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        if i != 0
-                        else HealthState.FAILED
+                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                            HealthState.OK if i != 0 else HealthState.FAILED
+                        )
                         for i in range(16)
                     },
                 },
@@ -316,6 +318,56 @@ class TestSpsStationHealthModel:
                 id="One tile unhealthy, expect DEGRADED, then tile becomes OK, "
                 "expect OK",
             ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.DEGRADED
+                        for subrack_id in range(1)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                HealthState.DEGRADED,
+                "Too many subdevices are in a bad state: Tiles: [] "
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED']",
+                id="All devices healthy, expect OK, then 1 subrack DEGRADED,"
+                "expect DEGRADED",
+            ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.DEGRADED
+                        for subrack_id in range(3)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                HealthState.FAILED,
+                "Too many subdevices are in a bad state: Tiles: [] "
+                "Subracks: ['low-mccs/subrack/ci-1-sr0 - DEGRADED', "
+                "'low-mccs/subrack/ci-1-sr1 - DEGRADED', "
+                "'low-mccs/subrack/ci-1-sr2 - DEGRADED']",
+                id="All devices healthy, expect OK, then 3 subracks DEGRADED,"
+                "expect FAILED",
+            ),
         ],
     )
     def test_station_evaluate_changed_health(
@@ -347,7 +399,6 @@ class TestSpsStationHealthModel:
         """
         health_model._subrack_health = sub_devices["subrack"]
         health_model._tile_health = sub_devices["tile"]
-
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,
@@ -480,6 +531,7 @@ class TestSpsStationHealthModel:
         health_model._tile_health = sub_devices["tile"]
 
         health_model.health_params = init_thresholds
+
         assert health_model.evaluate_health() == (
             expected_init_health,
             expected_init_report,
@@ -489,4 +541,99 @@ class TestSpsStationHealthModel:
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,
+        )
+
+    @pytest.mark.parametrize(
+        (
+            "sub_devices",
+            "expected_init_health",
+            "expected_init_report",
+            "pps_drift_value",
+            "expected_final_health",
+            "expected_final_report",
+        ),
+        [
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                6,
+                HealthState.DEGRADED,
+                "Difference in ppsDelay between Tiles has exceeded 4 samples. "
+                "ppsDelaySpread: 6",
+                id="All devices healthy, expect OK, then pps drifts" "expect DEGRADED",
+            ),
+            pytest.param(
+                {
+                    "subrack": {
+                        get_subrack_name(subrack_id): HealthState.OK
+                        for subrack_id in range(10)
+                    },
+                    "tile": {
+                        get_tile_name(tile_id): HealthState.OK for tile_id in range(16)
+                    },
+                },
+                HealthState.OK,
+                "Health is OK.",
+                10,
+                HealthState.FAILED,
+                "Difference in ppsDelay between Tiles has exceeded 9 samples. "
+                "ppsDelaySpread: 10",
+                id="All devices healthy, expect OK, then pps drifts" "expect FAILED",
+            ),
+        ],
+    )
+    def test_station_health_with_pps_drift(
+        self: TestSpsStationHealthModel,
+        health_model: SpsStationHealthModel,
+        sub_devices: dict,
+        expected_init_health: HealthState,
+        expected_init_report: str,
+        pps_drift_value: int,
+        expected_final_health: HealthState,
+        expected_final_report: str,
+    ) -> None:
+        """
+        Tests of the station health model for a changed health.
+
+        The properties of the health model are set and checked, then the health states
+        of subservient devices are updated and the health is checked against the new
+        expected value.
+
+        :param health_model: The station health model to use
+        :param sub_devices: the devices for which the station cares about health,
+            and their healths
+        :param expected_init_health: the expected initial health
+        :param expected_init_report: the expected initial health report
+        :param pps_drift_value: The value to update the pps drift to.
+        :param expected_final_health: the expected final health
+        :param expected_final_report: the expected final health report
+        """
+        health_model._subrack_health = sub_devices["subrack"]
+        health_model._tile_health = sub_devices["tile"]
+        assert health_model.evaluate_health() == (
+            expected_init_health,
+            expected_init_report,
+        )
+
+        # Set pps above drift threshold.
+        health_model.update_state(pps_delay_spread=pps_drift_value)
+        assert health_model.evaluate_health() == (
+            expected_final_health,
+            expected_final_report,
+        )
+
+        # Set pps below drift threshold.
+        health_model.update_state(pps_delay_spread=3)
+        assert health_model.evaluate_health() == (
+            expected_init_health,
+            expected_init_report,
         )

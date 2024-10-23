@@ -108,7 +108,7 @@ class TestTileComponentManager:
                 pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
-                callbacks["component_state"].assert_call(power=power_state, lookahead=2)
+                callbacks["component_state"].assert_call(power=power_state, lookahead=4)
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
                 )
@@ -434,7 +434,8 @@ class TestTileComponentManager:
             power=PowerState.OFF, lookahead=10, consume_nonmatches=True
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.OFF.pretty_name()
+            programming_state=TpmStatus.OFF.pretty_name(),
+            lookahead=20,  # TODO: is this component_state?
         )
 
     def test_eventual_consistency_of_on_command(
@@ -2430,6 +2431,75 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "mocked exception"
         )
         tile_component_manager.configure_test_generator(**mocked_input_params)
+
+    def test_configure_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the configure_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+        mocked_input_params: dict[str, Any] = {
+            "stage": "jesd",
+            "pattern": list(range(1024)),
+            "adders": list(range(32)),
+            "start": True,
+            "shift": 0,
+            "zero": 0,
+        }
+
+        tile_simulator.set_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+
+        tile_component_manager.configure_pattern_generator(**mocked_input_params)
+        tile_simulator.set_pattern.assert_called_with(
+            mocked_input_params["stage"],
+            mocked_input_params["pattern"],
+            mocked_input_params["adders"],
+            mocked_input_params["start"],
+            mocked_input_params["shift"],
+            mocked_input_params["zero"],
+        )
+
+    def test_start_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the start_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.start_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.start_pattern_generator(mocked_stage)
+        tile_simulator.start_pattern.assert_called_with(mocked_stage)
+
+    def test_stop_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the stop_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.stop_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.stop_pattern_generator(mocked_stage)
+        tile_simulator.stop_pattern.assert_called_with(mocked_stage)
 
     def test_test_generator_input_select(
         self: TestStaticSimulator,

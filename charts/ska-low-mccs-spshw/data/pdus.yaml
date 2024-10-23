@@ -1,0 +1,100 @@
+{{- /*
+Define the deployment for PDU devices.
+
+  deviceServers:
+    pdus:  # Tango device server type
+      ci-1:  # Tango device server instance name
+        low-mccs/pdu/ci-1:  # Tango device instance TRL
+          auth_key: blah
+          device_definition: /app/src/ska_low_mccs/pdu/pdu/pdu.yaml
+          host: localhost
+          max_snmp_objects: null
+          port: 8080
+          priv_key: foo
+          update_rate: null
+          user_name: ska
+
+*/}}
+{{- $pdus := dict}}
+{{- range $server_name, $this_server := (dig "pdus" dict .Values.deviceServers)}}
+{{- if $this_server}}
+{{- $_ := set $pdus $server_name $this_server}}
+{{- end}}
+{{- end}}
+{{- if $pdus}}
+name: "pdu-{{.Release.Name}}"
+function: ska-low-mccs-pdu
+domain: ska-low-mccs-pdu
+instances:
+  {{- toYaml (keys $pdus) | nindent 2}}
+command: MccsPdu
+server:
+  name: MccsPdu
+  instances:
+{{- range $server_name, $this_server := $pdus}}
+    - name: {{$server_name}}
+      classes:
+        - name: MccsPdu
+          devices:
+{{- range $pdu_trl, $this_pdu := $this_server}}
+{{- if $this_pdu}}
+            - name: {{$pdu_trl}}
+              properties:
+                - name: DeviceDefinition
+                  values:
+                    - {{$this_pdu.device_definition}}
+                - name: Host
+                  values:
+                    - {{quote $this_pdu.host}}
+{{- with $this_pdu.port}}
+                - name: Port
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.community}}
+                - name: V2Community
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.user_name}}
+                - name: V3UserName
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.auth_key}}
+                - name: V3AuthKey
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.priv_key}}
+                - name: V3PrivKey
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.max_snmp_objects}}
+                - name: MaxObjectsPerSNMPCmd
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.update_rate}}
+                - name: UpdateRate
+                  values:
+                    - {{quote .}}
+{{- end}}
+{{- end}}
+{{- end}}
+{{- end}}
+depends_on:
+  - device: sys/database/2
+image:
+{{- with $.Values.image}}
+  registry: {{.registry | quote}}
+  image: {{.name | quote}}
+  tag: {{.tag | default $.Chart.AppVersion | quote}}
+  pullPolicy: {{.pullPolicy | quote}}
+{{- end}}
+livenessProbe:
+{{ toYaml $.Values.livenessProbe | indent 2 }}
+readinessProbe:
+{{ toYaml $.Values.readinessProbe | indent 2 }}
+{{- end}}

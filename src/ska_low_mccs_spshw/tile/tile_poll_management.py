@@ -191,6 +191,7 @@ class RequestIterator:
         "PLL_LOCKED",
         "PENDING_DATA_REQUESTS",
         "PPS_DELAY",
+        "PPS_DRIFT",
         "PPS_DELAY_CORRECTION",
         "IS_BEAMFORMER_RUNNING",
         "FPGA_REFERENCE_TIME",
@@ -215,6 +216,7 @@ class RequestIterator:
         "PLL_LOCKED",
         "PENDING_DATA_REQUESTS",
         "PPS_DELAY",
+        "PPS_DRIFT",
         "PPS_DELAY_CORRECTION",
         "IS_BEAMFORMER_RUNNING",
         "FPGA_REFERENCE_TIME",
@@ -242,7 +244,7 @@ class RequestIterator:
         }
 
     def calculate_stale_attributes(
-        self: RequestIterator, new_status: TpmStatus
+        self: RequestIterator, new_status: TpmStatus | None
     ) -> set[Any]:
         """
         Return a set of attribute that will no longer be polled.
@@ -251,6 +253,8 @@ class RequestIterator:
 
         :return: a set of attribute that will no longer be polled.
         """
+        if new_status is None:
+            return set(self.allowed_attributes[self.state])
         return set(self.allowed_attributes[self.state]) - set(
             self.allowed_attributes[new_status]
         )
@@ -426,6 +430,14 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                             self.start_acquisition_request.notify_removed_from_queue()
                             self.start_acquisition_request = None
 
+    def __del__(self) -> None:
+        """Clean up and notify callbacks."""
+        stale_attributes = self.request_iterator.calculate_stale_attributes(None)
+        self.request_iterator.state = TpmStatus.UNKNOWN
+        if stale_attributes:
+            if self._stale_attribute_callback is not None:
+                self._stale_attribute_callback(stale_attributes)
+
     def get_request(  # pylint: disable=too-many-return-statements
         self, tpm_status: TpmStatus
     ) -> str | TileRequest | None:
@@ -437,7 +449,13 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         :return: the next request to execute on the Tile.
         """
         self._wipe_old_long_running_commands()
-
+        # Calculate attributes no longer being polled, and call a callback with them
+        # If a callback is available.
+        stale_attributes = self.request_iterator.calculate_stale_attributes(tpm_status)
+        self.request_iterator.state = tpm_status
+        if stale_attributes:
+            if self._stale_attribute_callback is not None:
+                self._stale_attribute_callback(stale_attributes)
         # Key connection commands come first
         if self._desire_connection:
             self._desire_connection = False
@@ -470,14 +488,6 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
                     request = self.start_acquisition_request
                     self.start_acquisition_request = None
                     return request
-
-        # Calculate attributes no longer being polled, and call a callback with them
-        # If a callback is available.
-        stale_attributes = self.request_iterator.calculate_stale_attributes(tpm_status)
-        self.request_iterator.state = tpm_status
-        if stale_attributes:
-            if self._stale_attribute_callback is not None:
-                self._stale_attribute_callback(stale_attributes)
 
         # return next item to poll
         return next(self.request_iterator)

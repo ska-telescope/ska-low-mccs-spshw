@@ -12,7 +12,7 @@ The Monitoring Control and Calibration (MCCS) subsystem is responsible
 for, amongst other things, monitoring and control of LFAA.
 """
 
-__version__ = "0.17.4"
+__version__ = "0.17.7"
 __version_info__ = (
     "ska-low-mccs-spshw",
     __version__,
@@ -24,10 +24,12 @@ __all__ = [
     "MccsSubrack",
     "MccsTile",
     "SpsStation",
+    "MccsPdu",
     "version",
 ]
 
 from .daq_receiver import MccsDaqReceiver
+from .pdu import MccsPdu
 from .station import SpsStation
 from .subrack import MccsSubrack
 from .tile import MccsTile

@@ -15,21 +15,21 @@ from copy import copy
 from typing import Callable
 
 import numpy as np
-from pydaq.persisters import ChannelFormatFileManager  # type: ignore
+from pydaq.persisters import ChannelFormatFileManager, FileDAQModes  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.events import FileSystemEvent
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
-__all__ = ["TestChannel"]
+__all__ = ["TestIntegratedChannel"]
 
 
 # pylint: disable=too-many-instance-attributes
-class ChannelDataReceivedHandler(BaseDataReceivedHandler):
+class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
     """Detect files created in the data directory."""
 
     def __init__(
-        self: ChannelDataReceivedHandler,
+        self: IntegratedChannelDataReceivedHandler,
         logger: logging.Logger,
         nof_tiles: int,
         data_created_callback: Callable,
@@ -47,7 +47,7 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
         self._nof_tiles = nof_tiles
         self._tile_id = 0
         self._polarisations_per_antenna = 2
-        self._nof_samples = 128
+        self._nof_samples = 1
         self._nof_channels = 512
         self.data = np.zeros(
             (
@@ -55,12 +55,13 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
                 self._nof_tiles * self._nof_antennas_per_tile,
                 self._polarisations_per_antenna,
                 self._nof_samples,
-                2,  # Real/Imag
             ),
-            dtype=np.int8,
+            dtype=np.uint32,
         )
 
-    def on_created(self: ChannelDataReceivedHandler, event: FileSystemEvent) -> None:
+    def on_created(
+        self: IntegratedChannelDataReceivedHandler, event: FileSystemEvent
+    ) -> None:
         """
         Check every event for newly created files to process.
 
@@ -70,9 +71,10 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
             return
         base_path = os.path.split(event._src_path)[0]
         try:
-            raw_file = ChannelFormatFileManager(root_path=base_path)
+            raw_file = ChannelFormatFileManager(
+                root_path=base_path, daq_mode=FileDAQModes.Integrated
+            )
             tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
                 antennas=range(self._nof_antennas_per_tile),
                 polarizations=[0, 1],
                 n_samples=self._nof_samples,
@@ -80,8 +82,7 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
             )
             start_idx = self._nof_antennas_per_tile * self._tile_id
             end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-            self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
-            self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
+            self.data[:, start_idx:end_idx, :, :] = tile_data
 
             self._data_created_callback(
                 data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
@@ -91,7 +92,7 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
         except Exception as e:  # pylint: disable=broad-exception-caught
             self._logger.error(f"Got error in callback: {repr(e)}, {e}")
 
-    def reset(self: ChannelDataReceivedHandler) -> None:
+    def reset(self: IntegratedChannelDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
         self._tile_id = 0
         self.data = np.zeros(
@@ -100,13 +101,12 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
                 self._nof_tiles * self._nof_antennas_per_tile,
                 self._polarisations_per_antenna,
                 self._nof_samples,
-                2,  # Real/Imag
             ),
-            dtype=np.int8,
+            dtype=np.uint32,
         )
 
 
-class TestChannel(BaseDaqTest):
+class TestIntegratedChannel(BaseDaqTest):
     """
     Test we can send channel data from the TPMs to DAQ correctly.
 
@@ -131,75 +131,100 @@ class TestChannel(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _send_channel_data(self: TestChannel, proxy: MccsDeviceProxy) -> None:
-        proxy.SendDataSamples(
+    def _start_integrated_channel_data(
+        self: TestIntegratedChannel, proxy: MccsDeviceProxy
+    ) -> None:
+        proxy.ConfigureIntegratedChannelData(
             json.dumps(
                 {
-                    "data_type": "channel",
-                    "n_samples": 1024,
+                    "integration_time": 1,
                 }
             )
         )
 
+    def _stop_integrated_channel_data(
+        self: TestIntegratedChannel, proxy: MccsDeviceProxy
+    ) -> None:
+        proxy.StopIntegratedData()
+
     # pylint: disable=too-many-locals
-    def _check_channel(self: TestChannel) -> None:
+    def _check_integrated_channel(
+        self: TestIntegratedChannel,
+        integration_length: float,
+        accumulator_width: int,
+        round_bits: int,
+    ) -> None:
         self.test_logger.debug("Checking received data")
         assert self._data is not None
         assert self._pattern is not None
         assert self._adders is not None
         data = copy(self._data)
-        adders = copy(self._adders)
         pattern = copy(self._pattern)
-        channels, antennas, polarisations, samples, _ = data.shape
+        adders = copy(self._adders)
+
+        channels, antennas, polarizations, samples = data.shape
         for channel in range(channels):
             for antenna in range(antennas):
-                for polarisation in range(polarisations):
-                    sample_idx = 2 * channel
-                    signal_idx = (antenna % 16) * 2 + polarisation
-                    exp_re = pattern[sample_idx] + adders[signal_idx]
-                    exp_im = pattern[sample_idx + 1] + adders[signal_idx]
-                    exp = (self._signed(exp_re), self._signed(exp_im))
-                    for i in range(samples):
-                        if (
-                            exp[0] != data[channel, antenna, polarisation, i, 0]
-                            or exp[1] != data[channel, antenna, polarisation, i, 1]
-                        ):
-                            self.test_logger.error("Data Error!")
-                            self.test_logger.error(f"Frequency Channel: {channel}")
-                            self.test_logger.error(f"Antenna: {antenna}")
-                            self.test_logger.error(f"Polarization: {polarisation}")
-                            self.test_logger.error(f"Sample index: {i}")
-                            self.test_logger.error(f"Expected data: {exp}")
-                            self.test_logger.error(
-                                "Received data: "
-                                f"{data[channel, antenna, polarisation, i, :]}"
-                            )
-                            raise AssertionError
+                for polarization in range(polarizations):
+                    sample_index = 2 * channel
+                    signal_index = (antenna % 16) * 2 + polarization
+                    expected_re = pattern[sample_index] + adders[signal_index]
+                    expected_im = pattern[sample_index + 1] + adders[signal_index]
+                    expected = self._integrated_sample_calc(
+                        self._signed(expected_re),
+                        self._signed(expected_im),
+                        integration_length,
+                        round_bits,
+                        accumulator_width,
+                    )
 
-    def test(self: TestChannel) -> None:
+                    for sample in range(samples):
+                        if expected != data[channel, antenna, polarization, sample]:
+                            error_message = (
+                                f"Data Error!\n"
+                                f"Frequency Channel: {channel}\n"
+                                f"Antenna: {antenna}\n"
+                                f"Polarization: {polarization}\n"
+                                f"Sample index: {sample}\n"
+                                f"Expected data: {expected}\n"
+                                f"Expected data re: {self._signed(expected_re)}\n"
+                                f"Expected data im: {self._signed(expected_im)}\n"
+                                "Received data: "
+                                f"{data[channel, antenna, polarization, sample]}"
+                            )
+                        self.test_logger.error(error_message)
+                        raise AssertionError("Data mismatch detected!")
+
+    def test(self: TestIntegratedChannel) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
-        self._data_handler = ChannelDataReceivedHandler(
+        self._data_handler = IntegratedChannelDataReceivedHandler(
             self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
-        self._configure_daq("CHANNEL_DATA")
-        self.test_logger.debug("Testing channelised data.")
+        self._configure_daq("INTEGRATED_CHANNEL_DATA")
+        self.test_logger.debug("Testing integrated channelised data.")
         with self.reset_context():
             self._start_directory_watch()
             for tile in self.tile_proxies:
                 self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(tile, "channel")
-                self._send_channel_data(tile)
+                self._configure_and_start_pattern_generator(
+                    tile, "channel", adders=list(range(16)) + list(range(2, 16 + 2))
+                )
+                self._start_integrated_channel_data(tile)
                 assert self._data_created_event.wait(20)
+                integration_length = self.tile_proxies[0].readregister(
+                    "fpga1.lmc_integrated_gen.channel_integration_length"
+                )
+                accumulator_width = self.tile_proxies[0].readregister(
+                    "fpga1.lmc_integrated_gen.channel_accumulator_width"
+                )
+                round_bits = self.tile_proxies[0].readregister(
+                    "fpga1.lmc_integrated_gen.channel_scaling_factor"
+                )
                 self._data_created_event.clear()
+                self._stop_integrated_channel_data(tile)
                 self._stop_pattern_generator(tile, "channel")
 
-            self._check_channel()
-        self.test_logger.info("Test passed for channelised data!")
-
-    def check_requirements(self: TestChannel) -> tuple[bool, str]:
-        """
-        Skip test for the moment.
-
-        :returns: False
-        """
-        return False, "Test currently skipped"
+            self._check_integrated_channel(
+                integration_length, accumulator_width, round_bits
+            )
+        self.test_logger.info("Test passed for integrated channelised data!")

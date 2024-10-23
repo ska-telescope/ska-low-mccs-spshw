@@ -177,6 +177,32 @@ class BaseDaqTest(TpmSelfCheckTest):
                 data = -(2 ** (ext_bits - 1))
         return data
 
+    @classmethod
+    def _integrated_sample_calc(
+        cls,
+        data_re: np.ndarray,
+        data_im: np.ndarray,
+        integration_length: float,
+        round_bits: int,
+        max_width: int,
+    ) -> np.ndarray:
+        power = data_re**2 + data_im**2
+        accumulator = power * integration_length
+        return cls._s_round(accumulator, round_bits, max_width)
+
+    @classmethod
+    def _s_round(cls, data: np.ndarray, bits: int, max_width: int = 32) -> np.ndarray:
+        if bits == 0:
+            return data
+        if data == -(2 ** (max_width - 1)):
+            return data
+        c_half = 2 ** (bits - 1)
+        if data >= 0:
+            data = (data + c_half + 0) >> bits
+        else:
+            data = (data + c_half - 1) >> bits
+        return data
+
     def _reset(self: BaseDaqTest) -> None:
         self._data = None
         self._data_created_event.clear()

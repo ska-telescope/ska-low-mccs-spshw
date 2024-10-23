@@ -736,12 +736,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -2367,6 +2367,24 @@ class SpsStationComponentManager(
         :return: list of self-check tests available.
         """
         return self.self_check_manager._tpm_test_names
+
+    @property
+    def keep_test_data(self: "SpsStationComponentManager") -> bool:
+        """
+        Get whether test data will be kept from the self_check_manager.
+
+        :return: whether the test data will be kept.
+        """
+        return self.self_check_manager.keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self: "SpsStationComponentManager", value: bool) -> None:
+        """
+        Set whether test data will be kept from the self_check_manager.
+
+        :param value: whether or not to keep test data.
+        """
+        self.self_check_manager.keep_test_data = value
 
     # ------------
     # commands

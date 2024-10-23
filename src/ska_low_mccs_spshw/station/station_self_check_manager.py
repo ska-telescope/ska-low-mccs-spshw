@@ -13,6 +13,7 @@ import time
 from typing import TYPE_CHECKING, Any, Optional
 
 from .tests import (
+    BaseDaqTest,
     BasicTangoTest,
     InitialiseStation,
     TestBeam,
@@ -59,6 +60,7 @@ class SpsStationSelfCheckManager:
         self._subrack_trls = subrack_trls
         self._daq_trl = daq_trl
         self._component_manager = component_manager
+        self._keep_test_data = True
 
         # Jank to get around https://github.com/python/mypy/issues/3115 and
         # https://github.com/python/mypy/issues/16509
@@ -182,3 +184,24 @@ class SpsStationSelfCheckManager:
         self: SpsStationSelfCheckManager, test_result: TestResult, test_name: str
     ) -> None:
         self._test_report += f"Test: {test_name}," f" Result: {test_result.name}\n"
+
+    @property
+    def keep_test_data(self) -> bool:
+        """
+        Return whether or not to keep any test data.
+
+        :return: whether or not to keep any test data.
+        """
+        return self._keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self, value: bool) -> None:
+        """
+        Set whether or not to keep any test data.
+
+        :param value: whether or not to keep any test data.
+        """
+        self._keep_test_data = value
+        for test in self._tpm_tests:
+            if isinstance(test, BaseDaqTest):
+                test.keep_data = value

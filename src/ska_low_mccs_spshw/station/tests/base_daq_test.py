@@ -13,6 +13,8 @@ import json
 import logging
 import os
 import random
+import shutil
+import string
 import time
 import traceback
 from contextlib import contextmanager
@@ -92,30 +94,9 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
         self.initialise_data()
 
 
+# pylint: disable=too-many-instance-attributes
 class BaseDaqTest(TpmSelfCheckTest):
-    """
-    Test we can send raw data from the TPMs to DAQ correctly.
-
-    ##########
-    TEST STEPS
-    ##########
-
-    1. Configure DAQ to be ready to receive raw data from your TPMs.
-    2. Configure the pattern generator on each TPM to send a basic repeating pattern.
-    3. Send data from each of TPM in sequence, collating the data into a single data
-        structure.
-    4. Verify the data received matches the input repeating pattern.
-
-    #################
-    TEST REQUIREMENTS
-    #################
-
-    1. Every SPS device in your station must be in adminmode.ENGINEERING, this is
-        common for all tests.
-    2. Your station must have at least 1 TPM.
-    3. Your TPMs must be synchronised.
-    4. You must have a DAQ available.
-    """
+    """Base class for a generic DAQ test."""
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -142,6 +123,11 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._pattern: list | None = None
         self._adders: list | None = None
         self._data_created_event: Event = Event()
+        random_id = "".join(
+            random.choice(string.ascii_letters + string.digits) for _ in range(24)
+        )
+        self._test_folder = f"/product/{self.__class__.__name__}_{random_id}/"
+        self.keep_data = False
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _data_received_callback(self: BaseDaqTest, data: Any, last_tile: bool) -> None:
@@ -162,7 +148,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.daq_proxy.Configure(
             json.dumps(
                 {
-                    "directory": "/",
+                    "directory": self._test_folder,
                     "nof_tiles": len(self.tile_proxies),
                 }
             )
@@ -218,6 +204,11 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._observer.stop()
         self._observer.join()
 
+    def _delete_data(self: BaseDaqTest) -> None:
+        if not self.keep_data:
+            self.logger.info(f"Deleting data in {self._test_folder}")
+            shutil.rmtree(self._test_folder)
+
     @classmethod
     def _signed(cls, data: Any, bits: int = 8, ext_bits: int = 8) -> Any:
         data = data % 2**bits
@@ -259,6 +250,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._data_created_event.clear()
         self._adders = None
         self._pattern = None
+        self._stop_directory_watch()
+        self._delete_data()
 
     @contextmanager
     def reset_context(self: BaseDaqTest) -> Iterator[None]:

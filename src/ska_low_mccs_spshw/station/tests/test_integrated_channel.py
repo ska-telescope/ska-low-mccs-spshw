@@ -188,9 +188,6 @@ class TestIntegratedChannel(BaseDaqTest):
                 round_bits = tile.readregister(
                     "fpga1.lmc_integrated_gen.channel_scaling_factor"
                 )
-                self.test_logger.error(
-                    f"{integration_length=}, {accumulator_width=}, {round_bits=}"
-                )
                 self._data_created_event.clear()
                 self._stop_integrated_channel_data(tile)
                 self._stop_pattern_generator(tile, "channel")

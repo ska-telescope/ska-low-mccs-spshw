@@ -139,32 +139,21 @@ class TestRaw(BaseDaqTest):
         self._data_handler = RawDataReceivedHandler(
             self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
-        self._configure_daq("RAW_DATA")
+        self._test_raw_data(sync=False, description="unsynchronised")
+        self._test_raw_data(sync=True, description="synchronised")
 
+    def _test_raw_data(self: TestRaw, sync: bool, description: str) -> None:
+        self.test_logger.debug(f"Testing {description} raw data.")
+
+        self._configure_daq("RAW_DATA")
         with self.reset_context():
-            self.test_logger.debug("Testing unsynchronised raw data.")
             self._start_directory_watch()
             for tile in self.tile_proxies:
                 self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
                 self._configure_and_start_pattern_generator(tile, "jesd")
-                self._send_raw_data(tile, sync=False)
+                self._send_raw_data(tile, sync=sync)
                 assert self._data_created_event.wait(20)
                 self._data_created_event.clear()
                 self._stop_pattern_generator(tile, "jesd")
-
-            self._check_raw(raw_data_synchronised=False)
-        self.test_logger.info("Test passed for unsynchronised data!")
-
-        self.test_logger.debug("Testing synchronised raw data.")
-        with self.reset_context():
-            for tile in self.tile_proxies:
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(tile, "jesd")
-                self._send_raw_data(tile, sync=True)
-                assert self._data_created_event.wait(20)
-                self._data_created_event.clear()
-                self._stop_pattern_generator(tile, "jesd")
-
-            self._stop_directory_watch()
-            self._check_raw(raw_data_synchronised=True)
-        self.test_logger.info("Test passed for synchronised data!")
+            self._check_raw(raw_data_synchronised=sync)
+        self.test_logger.info(f"Test passed for {description} data!")

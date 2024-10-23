@@ -10,14 +10,19 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
-from .tests.test_beam_data import TestBeam
-from .tests.test_channel_data import TestChannel
-from .tests.test_raw_data import TestRaw
-from .tests.test_station_initialise import InitialiseStation
-from .tests.test_tango import BasicTangoTest
+from .tests import (
+    BasicTangoTest,
+    InitialiseStation,
+    TestBeam,
+    TestChannel,
+    TestIntegratedBeam,
+    TestIntegratedChannel,
+    TestRaw,
+    TestResult,
+    TpmSelfCheckTest,
+)
 
 __all__ = ["SpsStationSelfCheckManager"]
 
@@ -57,43 +62,27 @@ class SpsStationSelfCheckManager:
 
         # Jank to get around https://github.com/python/mypy/issues/3115 and
         # https://github.com/python/mypy/issues/16509
-        tpm_tests = []
-        for tpm_test in [BasicTangoTest, InitialiseStation]:
-            test_instance = tpm_test(
+        def _instantiate_test(test: Any) -> TpmSelfCheckTest:
+            return test(
                 component_manager=self._component_manager,
                 logger=self.logger,
                 tile_trls=list(self._tile_trls),
                 subrack_trls=list(self._subrack_trls),
                 daq_trl=self._daq_trl,
             )
-            tpm_tests.append(test_instance)
-        tpm_tests.append(
-            TestRaw(
-                component_manager=self._component_manager,
-                logger=self.logger,
-                tile_trls=list(self._tile_trls),
-                subrack_trls=list(self._subrack_trls),
-                daq_trl=self._daq_trl,
-            )
-        )
-        tpm_tests.append(
-            TestChannel(
-                component_manager=self._component_manager,
-                logger=self.logger,
-                tile_trls=list(self._tile_trls),
-                subrack_trls=list(self._subrack_trls),
-                daq_trl=self._daq_trl,
-            )
-        )
-        tpm_tests.append(
-            TestBeam(
-                component_manager=self._component_manager,
-                logger=self.logger,
-                tile_trls=list(self._tile_trls),
-                subrack_trls=list(self._subrack_trls),
-                daq_trl=self._daq_trl,
-            )
-        )
+
+        tpm_tests = [
+            _instantiate_test(tpm_test)
+            for tpm_test in [
+                BasicTangoTest,
+                InitialiseStation,
+                TestRaw,
+                TestChannel,
+                TestBeam,
+                TestIntegratedBeam,
+                TestIntegratedChannel,
+            ]
+        ]
 
         self._tpm_test_names = [tpm_test.__class__.__name__ for tpm_test in tpm_tests]
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {

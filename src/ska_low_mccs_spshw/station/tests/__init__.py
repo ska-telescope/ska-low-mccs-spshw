@@ -11,8 +11,20 @@ __all__ = [
     "TpmSelfCheckTest",
     "BasicTangoTest",
     "TestResult",
+    "TestBeam",
+    "TestRaw",
+    "TestChannel",
+    "TestIntegratedBeam",
+    "TestIntegratedChannel",
+    "InitialiseStation",
 ]
 
 
 from .base_tpm_test import TestResult, TpmSelfCheckTest
+from .test_beam_data import TestBeam
+from .test_channel_data import TestChannel
+from .test_integrated_beam import TestIntegratedBeam
+from .test_integrated_channel import TestIntegratedChannel
+from .test_raw_data import TestRaw
+from .test_station_initialise import InitialiseStation
 from .test_tango import BasicTangoTest

@@ -160,6 +160,7 @@ class TestChannel(BaseDaqTest):
                 assert self._data_created_event.wait(20)
                 self._data_created_event.clear()
                 self._stop_pattern_generator(tile, "channel")
+            self._stop_directory_watch()
 
             self._check_channel()
         self.test_logger.info("Test passed for channelised data!")

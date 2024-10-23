@@ -171,6 +171,7 @@ class TestBeam(BaseDaqTest):
                 assert self._data_created_event.wait(20)
                 self._data_created_event.clear()
                 self._stop_pattern_generator(tile, "beamf")
+            self._stop_directory_watch()
 
             self._check_beam()
         self.test_logger.info("Test passed for beamformed data!")

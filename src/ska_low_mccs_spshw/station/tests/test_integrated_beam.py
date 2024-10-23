@@ -198,6 +198,7 @@ class TestIntegratedBeam(BaseDaqTest):
                 self._data_created_event.clear()
                 self._stop_integrated_beam_data(tile)
                 self._stop_pattern_generator(tile, "beamf")
+            self._stop_directory_watch()
 
             self._check_integrated_beam(
                 integration_length, accumulator_width, round_bits

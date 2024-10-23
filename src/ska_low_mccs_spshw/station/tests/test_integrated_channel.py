@@ -176,23 +176,25 @@ class TestIntegratedChannel(BaseDaqTest):
             self._start_directory_watch()
             for tile in self.tile_proxies:
                 self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(
-                    tile, "channel", adders=list(range(16)) + list(range(2, 16 + 2))
-                )
+                self._configure_and_start_pattern_generator(tile, "channel")
                 self._start_integrated_channel_data(tile)
                 assert self._data_created_event.wait(20)
-                integration_length = self.tile_proxies[0].readregister(
+                integration_length = tile.readregister(
                     "fpga1.lmc_integrated_gen.channel_integration_length"
                 )
-                accumulator_width = self.tile_proxies[0].readregister(
+                accumulator_width = tile.readregister(
                     "fpga1.lmc_integrated_gen.channel_accumulator_width"
                 )
-                round_bits = self.tile_proxies[0].readregister(
+                round_bits = tile.readregister(
                     "fpga1.lmc_integrated_gen.channel_scaling_factor"
+                )
+                self.test_logger.error(
+                    f"{integration_length=}, {accumulator_width=}, {round_bits=}"
                 )
                 self._data_created_event.clear()
                 self._stop_integrated_channel_data(tile)
                 self._stop_pattern_generator(tile, "channel")
+            self._stop_directory_watch()
 
             self._check_integrated_channel(
                 integration_length, accumulator_width, round_bits

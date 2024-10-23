@@ -11,17 +11,19 @@ from __future__ import annotations
 import abc
 import json
 import logging
+import os
 import random
 import time
+import traceback
 from contextlib import contextmanager
 from threading import Event
-from typing import TYPE_CHECKING, Any, Iterator
+from typing import TYPE_CHECKING, Any, Callable, Iterator
 
 import numpy as np
 from pydaq.persisters import AAVSFileManager  # type: ignore
 from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEventHandler
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
 
@@ -36,9 +38,58 @@ __all__ = ["BaseDaqTest"]
 class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
     """Base class for the data received handler."""
 
+    def __init__(
+        self: BaseDataReceivedHandler,
+        logger: logging.Logger,
+        nof_tiles: int,
+        data_created_callback: Callable,
+    ):
+        """
+        Initialise a new instance.
+
+        :param logger: logger for the handler
+        :param nof_tiles: number of tiles to expect data from
+        :param data_created_callback: callback to call when data received
+        """
+        self._logger: logging.Logger = logger
+        self._data_created_callback = data_created_callback
+        self._nof_tiles = nof_tiles
+        self._base_path = ""
+        self._tile_id = 0
+        self.data: np.ndarray
+        self.initialise_data()
+
     @abc.abstractmethod
+    def initialise_data(self: BaseDataReceivedHandler) -> None:
+        """Initialise empty data structure for file type.."""
+
+    @abc.abstractmethod
+    def handle_data(self: BaseDataReceivedHandler) -> None:
+        """Handle reading the data from received HDF5."""
+
+    def on_created(self: BaseDataReceivedHandler, event: FileSystemEvent) -> None:
+        """
+        Check every event for newly created files to process.
+
+        :param event: Event to check.
+        """
+        if not event._src_path.endswith(".hdf5") or event.is_directory:
+            return
+        self._base_path = os.path.split(event._src_path)[0]
+        try:
+            self.handle_data()
+            self._data_created_callback(
+                data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
+            )
+            self._tile_id += 1
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            self._logger.error(f"Got error in callback: {repr(e)}, {e}")
+            self._logger.error(traceback.format_exc())
+
     def reset(self: BaseDataReceivedHandler) -> None:
-        """Reset method for subclasses to implement."""
+        """Reset instance variables for re-use."""
+        self._tile_id = 0
+        self.initialise_data()
 
 
 class BaseDaqTest(TpmSelfCheckTest):

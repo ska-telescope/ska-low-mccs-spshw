@@ -10,21 +10,18 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from copy import copy
 from typing import Callable
 
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager, FileDAQModes  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEvent
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestIntegratedChannel"]
 
 
-# pylint: disable=too-many-instance-attributes
 class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
     """Detect files created in the data directory."""
 
@@ -41,60 +38,29 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._logger: logging.Logger = logger
-        self._data_created_callback = data_created_callback
         self._nof_antennas_per_tile = 16
-        self._nof_tiles = nof_tiles
-        self._tile_id = 0
         self._polarisations_per_antenna = 2
         self._nof_samples = 1
         self._nof_channels = 512
-        self.data = np.zeros(
-            (
-                self._nof_channels,
-                self._nof_tiles * self._nof_antennas_per_tile,
-                self._polarisations_per_antenna,
-                self._nof_samples,
-            ),
-            dtype=np.uint32,
+        super().__init__(logger, nof_tiles, data_created_callback)
+
+    def handle_data(self: IntegratedChannelDataReceivedHandler) -> None:
+        """Handle the reading of integrated channel data."""
+        raw_file = ChannelFormatFileManager(
+            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
         )
+        tile_data, timestamps = raw_file.read_data(
+            antennas=range(self._nof_antennas_per_tile),
+            polarizations=[0, 1],
+            n_samples=self._nof_samples,
+            tile_id=self._tile_id,
+        )
+        start_idx = self._nof_antennas_per_tile * self._tile_id
+        end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
+        self.data[:, start_idx:end_idx, :, :] = tile_data
 
-    def on_created(
-        self: IntegratedChannelDataReceivedHandler, event: FileSystemEvent
-    ) -> None:
-        """
-        Check every event for newly created files to process.
-
-        :param event: Event to check.
-        """
-        if not event._src_path.endswith(".hdf5") or event.is_directory:
-            return
-        base_path = os.path.split(event._src_path)[0]
-        try:
-            raw_file = ChannelFormatFileManager(
-                root_path=base_path, daq_mode=FileDAQModes.Integrated
-            )
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(self._nof_antennas_per_tile),
-                polarizations=[0, 1],
-                n_samples=self._nof_samples,
-                tile_id=self._tile_id,
-            )
-            start_idx = self._nof_antennas_per_tile * self._tile_id
-            end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-            self.data[:, start_idx:end_idx, :, :] = tile_data
-
-            self._data_created_callback(
-                data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
-            )
-            self._tile_id += 1
-
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            self._logger.error(f"Got error in callback: {repr(e)}, {e}")
-
-    def reset(self: IntegratedChannelDataReceivedHandler) -> None:
-        """Reset instance variables for re-use."""
-        self._tile_id = 0
+    def initialise_data(self: IntegratedChannelDataReceivedHandler) -> None:
+        """Initialise empty integrated channel data struct."""
         self.data = np.zeros(
             (
                 self._nof_channels,
@@ -192,8 +158,12 @@ class TestIntegratedChannel(BaseDaqTest):
                                 "Received data: "
                                 f"{data[channel, antenna, polarization, sample]}"
                             )
-                        self.test_logger.error(error_message)
-                        raise AssertionError("Data mismatch detected!")
+                            self.test_logger.error(error_message)
+                            raise AssertionError("Data mismatch detected!")
+
+    def _reset(self: TestIntegratedChannel) -> None:
+        self.component_manager.stop_integrated_data()
+        super()._reset()
 
     def test(self: TestIntegratedChannel) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""

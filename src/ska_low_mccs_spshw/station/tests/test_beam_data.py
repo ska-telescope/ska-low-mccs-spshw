@@ -10,21 +10,18 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 from copy import copy
 from typing import Callable
 
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEvent
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestBeam"]
 
 
-# pylint: disable=too-many-instance-attributes
 class BeamDataReceivedHandler(BaseDataReceivedHandler):
     """Detect files created in the data directory."""
 
@@ -41,56 +38,26 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._logger: logging.Logger = logger
-        self._data_created_callback = data_created_callback
         self._nof_antennas_per_tile = 16
-        self._nof_tiles = nof_tiles
-        self._tile_id = 0
         self._polarisations_per_antenna = 2
         self._nof_samples = 32
         self._nof_channels = 384
-        self.data = np.zeros(
-            (
-                self._nof_tiles,
-                self._polarisations_per_antenna,
-                self._nof_channels,
-                self._nof_samples,
-                2,  # Real/Imag
-            ),
-            dtype=np.int16,
+        super().__init__(logger, nof_tiles, data_created_callback)
+
+    def handle_data(self: BeamDataReceivedHandler) -> None:
+        """Handle the reading of beam data."""
+        raw_file = BeamFormatFileManager(root_path=self._base_path)
+        tile_data, timestamps = raw_file.read_data(
+            channels=range(self._nof_channels),
+            polarizations=[0, 1],
+            n_samples=self._nof_samples,
+            tile_id=self._tile_id,
         )
+        self.data[self._tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
+        self.data[self._tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
 
-    def on_created(self: BeamDataReceivedHandler, event: FileSystemEvent) -> None:
-        """
-        Check every event for newly created files to process.
-
-        :param event: Event to check.
-        """
-        if not event._src_path.endswith(".hdf5") or event.is_directory:
-            return
-        base_path = os.path.split(event._src_path)[0]
-        try:
-            raw_file = BeamFormatFileManager(root_path=base_path)
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=[0, 1],
-                n_samples=self._nof_samples,
-                tile_id=self._tile_id,
-            )
-            self.data[self._tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-            self.data[self._tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
-
-            self._data_created_callback(
-                data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
-            )
-            self._tile_id += 1
-
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            self._logger.error(f"Got error in callback: {repr(e)}, {e}")
-
-    def reset(self: BeamDataReceivedHandler) -> None:
-        """Reset instance variables for re-use."""
-        self._tile_id = 0
+    def initialise_data(self: BeamDataReceivedHandler) -> None:
+        """Initialise empty beam data struct."""
         self.data = np.zeros(
             (
                 self._nof_tiles,

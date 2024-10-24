@@ -1453,6 +1453,32 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "'SimulationConfig' property set as desired. "
         )
 
+    @attribute(dtype="DevBoolean")
+    def useInvalidAttribute(self: MccsTile) -> bool:
+        """
+        Report True if the invalid attribute feature is in use.
+
+        :return: Return True if the invalid
+            attribute feature is in use
+        """
+        return self.component_manager.use_invalid_attribute
+
+    @useInvalidAttribute.write  # type: ignore[no-redef]
+    def useInvalidAttribute(  # pylint: disable=arguments-differ
+        self: MccsTile, value: bool
+    ) -> None:
+        """
+        Toggle the use of the INVALID attribute feature.
+
+        :param value: True to use the invalid attribute feature.
+        """
+        self.logger.info(
+            "Invalid attribute feature enabled"
+            if value
+            else "Invalid attribute feature disabled"
+        )
+        self.component_manager.use_invalid_attribute = value
+
     @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
     def testMode(self: MccsTile) -> int:
         """

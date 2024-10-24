@@ -152,6 +152,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
+        self.use_invalid_attribute: bool = True
         self._hardware_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
         self.active_request: TileRequest | TileLRCRequest | None = None
@@ -428,9 +429,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.active_request = None
         elif isinstance(self.active_request, TileRequest):
             if self.active_request.publish:
-                self._update_attribute_callback(
-                    mark_invalid=True, **{self.active_request.name: None}
-                )
+                if self.use_invalid_attribute:
+                    self._update_attribute_callback(
+                        mark_invalid=True, **{self.active_request.name: None}
+                    )
 
         self.power_state = self._subrack_says_tpm_power
         self.update_fault_state(poll_success=False)
@@ -531,9 +533,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if _ATTRIBUTE_MAP.get(val) is not None:
                 mapped_val = _ATTRIBUTE_MAP[val]
                 try:
-                    self._update_attribute_callback(
-                        mark_invalid=True, **{mapped_val: None}
-                    )
+                    if self.use_invalid_attribute:
+                        self._update_attribute_callback(
+                            mark_invalid=True, **{mapped_val: None}
+                        )
                 except Exception as e:  # pylint: disable=broad-except
                     self.logger.warning(
                         f"Issue marking attribute {mapped_val} INVALID. {e}"

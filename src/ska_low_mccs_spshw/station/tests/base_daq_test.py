@@ -154,6 +154,7 @@ class BaseDaqTest(TpmSelfCheckTest):
                 {
                     "directory": "/",
                     "nof_tiles": len(self.tile_proxies),
+                    "append_integrated": False,
                 }
             )
         )
@@ -265,7 +266,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._adders = None
         self._pattern = None
         self._stop_directory_watch()
-        self._delete_data()
+        # self._delete_data()
 
     @contextmanager
     def reset_context(self: BaseDaqTest) -> Iterator[None]:

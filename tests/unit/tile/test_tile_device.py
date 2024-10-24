@@ -808,7 +808,7 @@ class TestMccsTile:
         t1 = on_tile_device.read_attribute(attribute_name).time.totime()
         time.sleep(random_sleep)
         t2 = on_tile_device.read_attribute(attribute_name).time.totime()
-        assert t2 - t1 == pytest.approx(random_sleep, 0.1)
+        assert t2 - t1 == pytest.approx(random_sleep, abs=0.04)
 
     def test_tile_info(
         self: TestMccsTile,

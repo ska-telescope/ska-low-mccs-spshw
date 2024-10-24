@@ -8,14 +8,13 @@
 """An implementation of a basic test for a station."""
 from __future__ import annotations
 
-import json
 import logging
+import time
 from copy import copy
 from typing import Callable
 
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager, FileDAQModes  # type: ignore
-from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
@@ -49,13 +48,14 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
         raw_file = BeamFormatFileManager(
             root_path=self._base_path, daq_mode=FileDAQModes.Integrated
         )
-        tile_data, timestamps = raw_file.read_data(
-            channels=range(self._nof_channels),
-            polarizations=[0, 1],
-            n_samples=self._nof_samples,
-            tile_id=self._tile_id,
-        )
-        self.data[:, :, self._tile_id, :] = tile_data[:, :, 0, :]
+        for tile_id in range(self._nof_tiles):
+            tile_data, timestamps = raw_file.read_data(
+                channels=range(self._nof_channels),
+                polarizations=[0, 1],
+                n_samples=self._nof_samples,
+                tile_id=tile_id,
+            )
+            self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
 
     def initialise_data(self: IntegratedBeamDataReceivedHandler) -> None:
         """Initialise empty integrated beam data struct."""
@@ -95,21 +95,13 @@ class TestIntegratedBeam(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _start_integrated_beam_data(
-        self: TestIntegratedBeam, proxy: MccsDeviceProxy
-    ) -> None:
-        proxy.ConfigureIntegratedBeamData(
-            json.dumps(
-                {
-                    "integration_time": 1,
-                }
-            )
+    def _start_integrated_beam_data(self: TestIntegratedBeam) -> None:
+        self.component_manager.configure_integrated_beam_data(
+            integration_time=1, first_channel=0, last_channel=511
         )
 
-    def _stop_integrated_beam_data(
-        self: TestIntegratedBeam, proxy: MccsDeviceProxy
-    ) -> None:
-        proxy.StopIntegratedData()
+    def _stop_integrated_data(self: TestIntegratedBeam) -> None:
+        self.component_manager.stop_integrated_data()
 
     # pylint: disable=too-many-locals
     def _check_integrated_beam(
@@ -178,26 +170,26 @@ class TestIntegratedBeam(BaseDaqTest):
         self._configure_daq("INTEGRATED_BEAM_DATA")
         self.test_logger.debug("Testing integrated beam data.")
         with self.reset_context():
+            self._start_integrated_beam_data()
+            time.sleep(5)
+            self._configure_and_start_pattern_generator(
+                "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
+            )
+            time.sleep(1.5)
             self._start_directory_watch()
-            for tile in self.tile_proxies:
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(
-                    tile, "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
-                )
-                self._start_integrated_beam_data(tile)
-                assert self._data_created_event.wait(20)
-                integration_length = self.tile_proxies[0].readregister(
-                    "fpga1.lmc_integrated_gen.beamf_integration_length"
-                )
-                accumulator_width = self.tile_proxies[0].readregister(
-                    "fpga1.lmc_integrated_gen.beamf_accumulator_width"
-                )
-                round_bits = self.tile_proxies[0].readregister(
-                    "fpga1.lmc_integrated_gen.beamf_scaling_factor"
-                )
-                self._data_created_event.clear()
-                self._stop_integrated_beam_data(tile)
-                self._stop_pattern_generator(tile, "beamf")
+            assert self._data_created_event.wait(20)
+            integration_length = self.tile_proxies[0].readregister(
+                "fpga1.lmc_integrated_gen.beamf_integration_length"
+            )
+            accumulator_width = self.tile_proxies[0].readregister(
+                "fpga1.lmc_integrated_gen.beamf_accumulator_width"
+            )
+            round_bits = self.tile_proxies[0].readregister(
+                "fpga1.lmc_integrated_gen.beamf_scaling_factor"
+            )
+            self._data_created_event.clear()
+            self._stop_integrated_data()
+            self._stop_pattern_generator("beamf")
             self._stop_directory_watch()
 
             self._check_integrated_beam(

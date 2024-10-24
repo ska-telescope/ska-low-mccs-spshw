@@ -8,7 +8,6 @@
 """An implementation of a basic test for a station."""
 from __future__ import annotations
 
-import json
 import logging
 import time
 from copy import copy
@@ -16,7 +15,6 @@ from typing import Callable
 
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager, FileDAQModes  # type: ignore
-from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
@@ -50,15 +48,16 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
         raw_file = ChannelFormatFileManager(
             root_path=self._base_path, daq_mode=FileDAQModes.Integrated
         )
-        tile_data, timestamps = raw_file.read_data(
-            antennas=range(self._nof_antennas_per_tile),
-            polarizations=[0, 1],
-            n_samples=self._nof_samples,
-            tile_id=self._tile_id,
-        )
-        start_idx = self._nof_antennas_per_tile * self._tile_id
-        end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-        self.data[:, start_idx:end_idx, :, :] = tile_data
+        for tile_id in range(self._nof_tiles):
+            tile_data, timestamps = raw_file.read_data(
+                antennas=range(self._nof_antennas_per_tile),
+                polarizations=[0, 1],
+                n_samples=self._nof_samples,
+                tile_id=tile_id,
+            )
+            start_idx = self._nof_antennas_per_tile * tile_id
+            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            self.data[:, start_idx:end_idx, :, :] = tile_data
 
     def initialise_data(self: IntegratedChannelDataReceivedHandler) -> None:
         """Initialise empty integrated channel data struct."""
@@ -98,21 +97,13 @@ class TestIntegratedChannel(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _start_integrated_channel_data(
-        self: TestIntegratedChannel, proxy: MccsDeviceProxy
-    ) -> None:
-        proxy.ConfigureIntegratedChannelData(
-            json.dumps(
-                {
-                    "integration_time": 1,
-                }
-            )
+    def _start_integrated_channel_data(self: TestIntegratedChannel) -> None:
+        self.component_manager.configure_integrated_channel_data(
+            integration_time=1, first_channel=0, last_channel=511
         )
 
-    def _stop_integrated_channel_data(
-        self: TestIntegratedChannel, proxy: MccsDeviceProxy
-    ) -> None:
-        proxy.StopIntegratedData()
+    def _stop_integrated_channel_data(self: TestIntegratedChannel) -> None:
+        self.component_manager.stop_integrated_data()
 
     # pylint: disable=too-many-locals
     def _check_integrated_channel(
@@ -174,30 +165,29 @@ class TestIntegratedChannel(BaseDaqTest):
         self._configure_daq("INTEGRATED_CHANNEL_DATA")
         self.test_logger.debug("Testing integrated channelised data.")
         with self.reset_context():
-            for tile in self.tile_proxies:
-                self._start_integrated_channel_data(tile)
-                time.sleep(5)
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(tile, "channel")
-                self.logger.debug(
-                    f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
-                )
-                time.sleep(1 + 0.5)
-                self._start_directory_watch()
-                assert self._data_created_event.wait(20)
-                integration_length = tile.readregister(
-                    "fpga1.lmc_integrated_gen.channel_integration_length"
-                )
-                accumulator_width = tile.readregister(
-                    "fpga1.lmc_integrated_gen.channel_accumulator_width"
-                )
-                round_bits = tile.readregister(
-                    "fpga1.lmc_integrated_gen.channel_scaling_factor"
-                )
-                self._data_created_event.clear()
-                self._stop_integrated_channel_data(tile)
-                self._stop_pattern_generator(tile, "channel")
-                self._stop_directory_watch()
+            tile = self.tile_proxies[0]
+            self._start_integrated_channel_data()
+            time.sleep(5)
+            self._configure_and_start_pattern_generator("channel")
+            self.test_logger.debug(
+                f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
+            )
+            time.sleep(1 + 0.5)
+            self._start_directory_watch()
+            assert self._data_created_event.wait(20)
+            integration_length = tile.readregister(
+                "fpga1.lmc_integrated_gen.channel_integration_length"
+            )
+            accumulator_width = tile.readregister(
+                "fpga1.lmc_integrated_gen.channel_accumulator_width"
+            )
+            round_bits = tile.readregister(
+                "fpga1.lmc_integrated_gen.channel_scaling_factor"
+            )
+            self._data_created_event.clear()
+            self._stop_integrated_channel_data()
+            self._stop_pattern_generator("channel")
+            self._stop_directory_watch()
 
             self._check_integrated_channel(
                 integration_length, accumulator_width, round_bits

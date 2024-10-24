@@ -15,7 +15,6 @@ from typing import Callable
 
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager  # type: ignore
-from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
@@ -48,17 +47,18 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
     def handle_data(self: ChannelDataReceivedHandler) -> None:
         """Handle the reading of channel data."""
         raw_file = ChannelFormatFileManager(root_path=self._base_path)
-        tile_data, timestamps = raw_file.read_data(
-            channels=range(self._nof_channels),
-            antennas=range(self._nof_antennas_per_tile),
-            polarizations=[0, 1],
-            n_samples=self._nof_samples,
-            tile_id=self._tile_id,
-        )
-        start_idx = self._nof_antennas_per_tile * self._tile_id
-        end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-        self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
-        self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
+        for tile_id in range(self._nof_tiles):
+            tile_data, timestamps = raw_file.read_data(
+                channels=range(self._nof_channels),
+                antennas=range(self._nof_antennas_per_tile),
+                polarizations=[0, 1],
+                n_samples=self._nof_samples,
+                tile_id=tile_id,
+            )
+            start_idx = self._nof_antennas_per_tile * tile_id
+            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
+            self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
 
     def initialise_data(self: ChannelDataReceivedHandler) -> None:
         """Initialise empty channel data struct."""
@@ -99,8 +99,8 @@ class TestChannel(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _send_channel_data(self: TestChannel, proxy: MccsDeviceProxy) -> None:
-        proxy.SendDataSamples(
+    def _send_channel_data(self: TestChannel) -> None:
+        self.component_manager.send_data_samples(
             json.dumps(
                 {
                     "data_type": "channel",
@@ -153,13 +153,12 @@ class TestChannel(BaseDaqTest):
         self.test_logger.debug("Testing channelised data.")
         with self.reset_context():
             self._start_directory_watch()
-            for tile in self.tile_proxies:
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(tile, "channel")
-                self._send_channel_data(tile)
-                assert self._data_created_event.wait(20)
-                self._data_created_event.clear()
-                self._stop_pattern_generator(tile, "channel")
+            self.test_logger.debug("Sending channel data")
+            self._configure_and_start_pattern_generator("channel")
+            self._send_channel_data()
+            assert self._data_created_event.wait(20)
+            self._data_created_event.clear()
+            self._stop_pattern_generator("channel")
             self._stop_directory_watch()
 
             self._check_channel()

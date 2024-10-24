@@ -15,7 +15,6 @@ from typing import Callable
 
 import numpy as np
 from pydaq.persisters import RawFormatFileManager  # type: ignore
-from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
@@ -46,15 +45,16 @@ class RawDataReceivedHandler(BaseDataReceivedHandler):
     def handle_data(self: RawDataReceivedHandler) -> None:
         """Handle the reading of raw data."""
         raw_file = RawFormatFileManager(root_path=self._base_path)
-        tile_data, timestamps = raw_file.read_data(
-            antennas=range(self._nof_antennas_per_tile),
-            polarizations=[0, 1],
-            n_samples=self._nof_samples,
-            tile_id=self._tile_id,
-        )
-        start_idx = self._nof_antennas_per_tile * self._tile_id
-        end_idx = self._nof_antennas_per_tile * (self._tile_id + 1)
-        self.data[start_idx:end_idx, :, :] = tile_data
+        for tile_id in range(self._nof_tiles):
+            tile_data, timestamps = raw_file.read_data(
+                antennas=range(self._nof_antennas_per_tile),
+                polarizations=[0, 1],
+                n_samples=self._nof_samples,
+                tile_id=tile_id,
+            )
+            start_idx = self._nof_antennas_per_tile * tile_id
+            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            self.data[start_idx:end_idx, :, :] = tile_data
 
     def initialise_data(self: RawDataReceivedHandler) -> None:
         """Initialise empty raw data struct."""
@@ -93,8 +93,8 @@ class TestRaw(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _send_raw_data(self: TestRaw, proxy: MccsDeviceProxy, sync: bool) -> None:
-        proxy.SendDataSamples(
+    def _send_raw_data(self: TestRaw, sync: bool) -> None:
+        self.component_manager.send_data_samples(
             json.dumps(
                 {
                     "data_type": "raw",
@@ -148,12 +148,11 @@ class TestRaw(BaseDaqTest):
         self._configure_daq("RAW_DATA")
         with self.reset_context():
             self._start_directory_watch()
-            for tile in self.tile_proxies:
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(tile, "jesd")
-                self._send_raw_data(tile, sync=sync)
-                assert self._data_created_event.wait(20)
-                self._data_created_event.clear()
-                self._stop_pattern_generator(tile, "jesd")
+            self.test_logger.debug("Sending raw data")
+            self._configure_and_start_pattern_generator("jesd")
+            self._send_raw_data(sync=sync)
+            assert self._data_created_event.wait(20)
+            self._data_created_event.clear()
+            self._stop_pattern_generator("jesd")
             self._check_raw(raw_data_synchronised=sync)
         self.test_logger.info(f"Test passed for {description} data!")

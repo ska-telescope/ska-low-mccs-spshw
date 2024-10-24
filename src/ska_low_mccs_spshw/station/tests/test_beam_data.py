@@ -15,7 +15,6 @@ from typing import Callable
 
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager  # type: ignore
-from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
@@ -47,14 +46,15 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
     def handle_data(self: BeamDataReceivedHandler) -> None:
         """Handle the reading of beam data."""
         raw_file = BeamFormatFileManager(root_path=self._base_path)
-        tile_data, timestamps = raw_file.read_data(
-            channels=range(self._nof_channels),
-            polarizations=[0, 1],
-            n_samples=self._nof_samples,
-            tile_id=self._tile_id,
-        )
-        self.data[self._tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-        self.data[self._tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
+        for tile_id in range(self._nof_tiles):
+            tile_data, timestamps = raw_file.read_data(
+                channels=range(self._nof_channels),
+                polarizations=[0, 1],
+                n_samples=self._nof_samples,
+                tile_id=tile_id,
+            )
+            self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
+            self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
 
     def initialise_data(self: BeamDataReceivedHandler) -> None:
         """Initialise empty beam data struct."""
@@ -95,8 +95,8 @@ class TestBeam(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _send_beam_data(self: TestBeam, proxy: MccsDeviceProxy) -> None:
-        proxy.SendDataSamples(
+    def _send_beam_data(self: TestBeam) -> None:
+        self.component_manager.send_data_samples(
             json.dumps(
                 {
                     "data_type": "beam",
@@ -162,15 +162,14 @@ class TestBeam(BaseDaqTest):
         self.test_logger.debug("Testing beamformed data.")
         with self.reset_context():
             self._start_directory_watch()
-            for tile in self.tile_proxies:
-                self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
-                self._configure_and_start_pattern_generator(
-                    tile, "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
-                )
-                self._send_beam_data(tile)
-                assert self._data_created_event.wait(20)
-                self._data_created_event.clear()
-                self._stop_pattern_generator(tile, "beamf")
+            self.test_logger.debug("Sending beam data")
+            self._configure_and_start_pattern_generator(
+                "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
+            )
+            self._send_beam_data()
+            assert self._data_created_event.wait(20)
+            self._data_created_event.clear()
+            self._stop_pattern_generator("beamf")
             self._stop_directory_watch()
 
             self._check_beam()

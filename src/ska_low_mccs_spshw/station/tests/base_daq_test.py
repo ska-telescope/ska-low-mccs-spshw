@@ -15,6 +15,7 @@ import os
 import random
 import shutil
 import string
+import threading
 import time
 import traceback
 from contextlib import contextmanager
@@ -59,6 +60,7 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
         self._base_path = ""
         self._tile_id = 0
         self.data: np.ndarray
+        self._callback_lock = threading.Lock()
         self.initialise_data()
 
     @abc.abstractmethod
@@ -75,18 +77,21 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
 
         :param event: Event to check.
         """
-        if not event._src_path.endswith(".hdf5") or event.is_directory:
-            return
-        self._base_path = os.path.split(event._src_path)[0]
-        try:
-            self.handle_data()
-            self._data_created_callback(
-                data=self.data, last_tile=self._tile_id == self._nof_tiles - 1
-            )
+        with self._callback_lock:
+            if not event._src_path.endswith(".hdf5") or event.is_directory:
+                return
             self._tile_id += 1
-        except Exception as e:  # pylint: disable=broad-exception-caught
-            self._logger.error(f"Got error in callback: {repr(e)}, {e}")
-            self._logger.error(traceback.format_exc())
+            if self._tile_id < self._nof_tiles - 1:
+                self._logger.debug(f"Got {self._tile_id + 1} files so far.")
+                return
+            self._logger.debug("Got data for all tiles, gathering data.")
+            self._base_path = os.path.split(event._src_path)[0]
+            try:
+                self.handle_data()
+                self._data_created_callback(data=self.data)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                self._logger.error(f"Got error in callback: {repr(e)}, {e}")
+                self._logger.error(traceback.format_exc())
 
     def reset(self: BaseDataReceivedHandler) -> None:
         """Reset instance variables for re-use."""
@@ -130,9 +135,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.keep_data = False
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
-    def _data_received_callback(self: BaseDaqTest, data: Any, last_tile: bool) -> None:
-        if last_tile:
-            self._data = data
+    def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
+        self._data = data
         self._data_created_event.set()
 
     def _configure_daq(self: BaseDaqTest, daq_mode: str) -> None:
@@ -148,7 +152,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.daq_proxy.Configure(
             json.dumps(
                 {
-                    "directory": self._test_folder,
+                    "directory": "/",
                     "nof_tiles": len(self.tile_proxies),
                 }
             )
@@ -167,8 +171,8 @@ class BaseDaqTest(TpmSelfCheckTest):
 
     def _configure_and_start_pattern_generator(
         self: BaseDaqTest,
-        proxy: MccsDeviceProxy,
         stage: str,
+        proxy: MccsDeviceProxy | None = None,
         i: int = 0,
         pattern: list | None = None,
         adders: list | None = None,
@@ -182,16 +186,26 @@ class BaseDaqTest(TpmSelfCheckTest):
             adders = list(range(32))
         self._pattern = pattern
         self._adders = adders
-        proxy.StopPatternGenerator(stage)
-        proxy.ConfigurePatternGenerator(
-            json.dumps({"stage": stage, "pattern": pattern, "adders": adders})
-        )
-        proxy.StartPatternGenerator(stage)
+        if proxy is None:
+            tiles = self.tile_proxies
+        else:
+            tiles = [proxy]
+        for tile in tiles:
+            tile.StopPatternGenerator(stage)
+            tile.ConfigurePatternGenerator(
+                json.dumps({"stage": stage, "pattern": pattern, "adders": adders})
+            )
+            tile.StartPatternGenerator(stage)
 
     def _stop_pattern_generator(
-        self: BaseDaqTest, proxy: MccsDeviceProxy, stage: str
+        self: BaseDaqTest, stage: str, proxy: MccsDeviceProxy | None = None
     ) -> None:
-        proxy.StopPatternGenerator(stage)
+        if proxy is None:
+            tiles = self.tile_proxies
+        else:
+            tiles = [proxy]
+        for tile in tiles:
+            tile.StopPatternGenerator(stage)
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")

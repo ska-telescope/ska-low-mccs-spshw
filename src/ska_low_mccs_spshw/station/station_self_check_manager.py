@@ -90,6 +90,9 @@ class SpsStationSelfCheckManager:
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {
             tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
         }
+        for test in self._tpm_tests:
+            if isinstance(test, BaseDaqTest):
+                test.keep_data = self._keep_test_data
 
     def _clear_logs_and_report(self: SpsStationSelfCheckManager) -> None:
         self._test_report = "Test report:\n\n"

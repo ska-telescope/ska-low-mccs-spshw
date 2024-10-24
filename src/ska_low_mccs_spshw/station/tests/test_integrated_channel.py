@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from copy import copy
 from typing import Callable
 
@@ -173,11 +174,16 @@ class TestIntegratedChannel(BaseDaqTest):
         self._configure_daq("INTEGRATED_CHANNEL_DATA")
         self.test_logger.debug("Testing integrated channelised data.")
         with self.reset_context():
-            self._start_directory_watch()
             for tile in self.tile_proxies:
+                self._start_integrated_channel_data(tile)
+                time.sleep(5)
                 self.test_logger.debug(f"Sending data for tile {tile.dev_name()}")
                 self._configure_and_start_pattern_generator(tile, "channel")
-                self._start_integrated_channel_data(tile)
+                self.logger.debug(
+                    f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
+                )
+                time.sleep(1 + 0.5)
+                self._start_directory_watch()
                 assert self._data_created_event.wait(20)
                 integration_length = tile.readregister(
                     "fpga1.lmc_integrated_gen.channel_integration_length"
@@ -191,7 +197,7 @@ class TestIntegratedChannel(BaseDaqTest):
                 self._data_created_event.clear()
                 self._stop_integrated_channel_data(tile)
                 self._stop_pattern_generator(tile, "channel")
-            self._stop_directory_watch()
+                self._stop_directory_watch()
 
             self._check_integrated_channel(
                 integration_length, accumulator_width, round_bits

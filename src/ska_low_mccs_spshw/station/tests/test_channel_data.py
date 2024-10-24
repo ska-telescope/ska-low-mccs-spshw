@@ -164,10 +164,10 @@ class TestChannel(BaseDaqTest):
             self._check_channel()
         self.test_logger.info("Test passed for channelised data!")
 
-    def check_requirements(self: TestChannel) -> tuple[bool, str]:
-        """
-        Skip test for the moment.
+    # def check_requirements(self: TestChannel) -> tuple[bool, str]:
+    #     """
+    #     Skip test for the moment.
 
-        :returns: False
-        """
-        return False, "Test currently skipped"
+    #     :returns: False
+    #     """
+    #     return False, "Test currently skipped"

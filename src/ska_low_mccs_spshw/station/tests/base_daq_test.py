@@ -81,8 +81,8 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
             if not event._src_path.endswith(".hdf5") or event.is_directory:
                 return
             self._tile_id += 1
-            if self._tile_id < self._nof_tiles - 1:
-                self._logger.debug(f"Got {self._tile_id + 1} files so far.")
+            if self._tile_id < self._nof_tiles:
+                self._logger.debug(f"Got {self._tile_id} files so far.")
                 return
             self._logger.debug("Got data for all tiles, gathering data.")
             self._base_path = os.path.split(event._src_path)[0]

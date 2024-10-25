@@ -146,6 +146,9 @@ class TestIntegratedChannel(BaseDaqTest):
                             f"Expected data: {expected}\n"
                             f"Expected data re: {self._signed(expected_re)}\n"
                             f"Expected data im: {self._signed(expected_im)}\n"
+                            f"Integration length: {integration_length}\n"
+                            f"Accumulator width: {accumulator_width}\n"
+                            f"Round bits: {round_bits}\n"
                             "Received data: "
                             f"{data[channel, antenna, polarization, sample]}"
                         )

@@ -205,6 +205,6 @@ class SpsStationSelfCheckManager:
         :param value: whether or not to keep any test data.
         """
         self._keep_test_data = value
-        for test in self._tpm_tests:
+        for test in self._tpm_tests.values():
             if isinstance(test, BaseDaqTest):
                 test.keep_data = value

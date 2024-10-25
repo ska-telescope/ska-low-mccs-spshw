@@ -59,6 +59,7 @@ autodoc_mock_imports = [
     "ska_ser_logging",
     "astropy",
     "pydaq",
+    "watchdog",
 ]
 
 

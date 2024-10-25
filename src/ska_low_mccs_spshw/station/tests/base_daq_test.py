@@ -154,7 +154,9 @@ class BaseDaqTest(TpmSelfCheckTest):
                 {
                     "directory": "/",
                     "nof_tiles": len(self.tile_proxies),
-                    "append_integrated": False,
+                    "nof_beam_channels": 384,
+                    "nof_beam_samples": 1,
+                    "receiver_frame_size": 9000,
                 }
             )
         )

@@ -137,23 +137,23 @@ class TestIntegratedChannel(BaseDaqTest):
                     )
 
                     for sample in range(samples):
-                        error_message = (
-                            f"Data Error!\n"
-                            f"Frequency Channel: {channel}\n"
-                            f"Antenna: {antenna}\n"
-                            f"Polarization: {polarization}\n"
-                            f"Sample index: {sample}\n"
-                            f"Expected data: {expected}\n"
-                            f"Expected data re: {self._signed(expected_re)}\n"
-                            f"Expected data im: {self._signed(expected_im)}\n"
-                            f"Integration length: {integration_length}\n"
-                            f"Accumulator width: {accumulator_width}\n"
-                            f"Round bits: {round_bits}\n"
-                            "Received data: "
-                            f"{data[channel, antenna, polarization, sample]}"
-                        )
-                        self.test_logger.error(error_message)
                         if expected != data[channel, antenna, polarization, sample]:
+                            error_message = (
+                                f"Data Error!\n"
+                                f"Frequency Channel: {channel}\n"
+                                f"Antenna: {antenna}\n"
+                                f"Polarization: {polarization}\n"
+                                f"Sample index: {sample}\n"
+                                f"Expected data: {expected}\n"
+                                f"Expected data re: {self._signed(expected_re)}\n"
+                                f"Expected data im: {self._signed(expected_im)}\n"
+                                f"Integration length: {integration_length}\n"
+                                f"Accumulator width: {accumulator_width}\n"
+                                f"Round bits: {round_bits}\n"
+                                "Received data: "
+                                f"{data[channel, antenna, polarization, sample]}"
+                            )
+                            self.test_logger.error(error_message)
                             raise AssertionError("Data mismatch detected!")
 
     def _reset(self: TestIntegratedChannel) -> None:

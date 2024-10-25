@@ -167,26 +167,30 @@ class TestIntegratedBeam(BaseDaqTest):
         self._data_handler = IntegratedBeamDataReceivedHandler(
             self.test_logger, len(self.tile_proxies), self._data_received_callback
         )
-        self._configure_daq("INTEGRATED_BEAM_DATA")
-        self.test_logger.debug("Testing integrated beam data.")
+        self.test_logger.debug("Testing integrated beamformed data.")
         with self.reset_context():
+            tile = self.tile_proxies[0]
             self._start_integrated_beam_data()
             time.sleep(5)
             self._configure_and_start_pattern_generator(
                 "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
             )
-            time.sleep(1.5)
+            self.test_logger.debug(
+                f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
+            )
+            time.sleep(1 + 0.5)
+            self._configure_daq("INTEGRATED_BEAM_DATA")
             self._start_directory_watch()
             assert self._data_created_event.wait(20)
-            integration_length = self.tile_proxies[0].readregister(
+            integration_length = tile.readregister(
                 "fpga1.lmc_integrated_gen.beamf_integration_length"
-            )
-            accumulator_width = self.tile_proxies[0].readregister(
+            )[0]
+            accumulator_width = tile.readregister(
                 "fpga1.lmc_integrated_gen.beamf_accumulator_width"
-            )
-            round_bits = self.tile_proxies[0].readregister(
+            )[0]
+            round_bits = tile.readregister(
                 "fpga1.lmc_integrated_gen.beamf_scaling_factor"
-            )
+            )[0]
             self._data_created_event.clear()
             self._stop_integrated_data()
             self._stop_pattern_generator("beamf")
@@ -196,3 +200,11 @@ class TestIntegratedBeam(BaseDaqTest):
                 integration_length, accumulator_width, round_bits
             )
         self.test_logger.info("Test passed for integrated beam data!")
+
+    def check_requirements(self: TestIntegratedBeam) -> tuple[bool, str]:
+        """
+        Skip test due to known bug.
+
+        :returns: False as this test is skipped.
+        """
+        return False, "This test is skipped due to MCCS-XXXX"

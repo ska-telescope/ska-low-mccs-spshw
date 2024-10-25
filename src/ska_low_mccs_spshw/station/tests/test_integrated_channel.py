@@ -169,24 +169,24 @@ class TestIntegratedChannel(BaseDaqTest):
         with self.reset_context():
             tile = self.tile_proxies[0]
             self._start_integrated_channel_data()
-            time.sleep(30)
+            time.sleep(5)
             self._configure_and_start_pattern_generator("channel")
             self.test_logger.debug(
                 f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
             )
-            time.sleep(3 + 0.5)
+            time.sleep(1 + 0.5)
             self._configure_daq("INTEGRATED_CHANNEL_DATA")
             self._start_directory_watch()
             assert self._data_created_event.wait(20)
             integration_length = tile.readregister(
                 "fpga1.lmc_integrated_gen.channel_integration_length"
-            )
+            )[0]
             accumulator_width = tile.readregister(
                 "fpga1.lmc_integrated_gen.channel_accumulator_width"
-            )
+            )[0]
             round_bits = tile.readregister(
                 "fpga1.lmc_integrated_gen.channel_scaling_factor"
-            )
+            )[0]
             self._data_created_event.clear()
             self._stop_integrated_channel_data()
             self._stop_pattern_generator("channel")

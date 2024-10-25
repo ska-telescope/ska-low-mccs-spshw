@@ -168,6 +168,9 @@ class TestIntegratedChannel(BaseDaqTest):
             self._start_integrated_channel_data()
             time.sleep(30)
             self._configure_and_start_pattern_generator("channel")
+            self._configure_and_start_pattern_generator(
+                "beamf", adders=list(range(16)) + list(range(2, 16 + 2))
+            )
             self.test_logger.debug(
                 f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
             )

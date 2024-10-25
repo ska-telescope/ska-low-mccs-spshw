@@ -119,7 +119,7 @@ class TestIntegratedChannel(BaseDaqTest):
         data = copy(self._data)
         pattern = copy(self._pattern)
         adders = copy(self._adders)
-        errored = False
+
         channels, antennas, polarizations, samples = data.shape
         for channel in range(channels):
             for antenna in range(antennas):
@@ -138,7 +138,6 @@ class TestIntegratedChannel(BaseDaqTest):
 
                     for sample in range(samples):
                         if expected != data[channel, antenna, polarization, sample]:
-                            errored = True
                             error_message = (
                                 f"Data Error!\n"
                                 f"Frequency Channel: {channel}\n"
@@ -152,8 +151,7 @@ class TestIntegratedChannel(BaseDaqTest):
                                 f"{data[channel, antenna, polarization, sample]}"
                             )
                             self.test_logger.error(error_message)
-        if errored:
-            raise AssertionError("Data mismatch detected!")
+                            raise AssertionError("Data mismatch detected!")
 
     def _reset(self: TestIntegratedChannel) -> None:
         self.component_manager.stop_integrated_data()
@@ -168,12 +166,12 @@ class TestIntegratedChannel(BaseDaqTest):
         with self.reset_context():
             tile = self.tile_proxies[0]
             self._start_integrated_channel_data()
-            time.sleep(5)
+            time.sleep(30)
             self._configure_and_start_pattern_generator("channel")
             self.test_logger.debug(
                 f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
             )
-            time.sleep(1 + 0.5)
+            time.sleep(3 + 0.5)
             self._configure_daq("INTEGRATED_CHANNEL_DATA")
             self._start_directory_watch()
             assert self._data_created_event.wait(20)

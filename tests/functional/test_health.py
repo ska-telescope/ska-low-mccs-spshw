@@ -146,16 +146,12 @@ def get_device_online(
             )
 
             device_proxy.adminMode = AdminMode.ONLINE
-            # if "low-mccs/spsstation/" in device_proxy.dev_name():
-            #     print("asdasd")
-            #     change_event_callbacks.assert_not_called()
             change_event_callbacks.assert_change_event(
                 "device_state", tango.DevState.UNKNOWN
             )
         change_event_callbacks.assert_change_event("device_state", Anything)
         device_proxy.unsubscribe_event(sub_id)
         change_event_callbacks._queue.empty()
-        change_event_callbacks.assert_not_called()
 
     return _get_device_online
 

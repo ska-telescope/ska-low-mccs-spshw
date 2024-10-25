@@ -17,6 +17,8 @@ import pytest
 import tango
 from pytest_bdd import given, parsers, scenario, scenarios, then, when
 from ska_control_model import AdminMode, HealthState
+from ska_tango_testing.mock.placeholders import Anything
+from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
 
@@ -111,27 +113,72 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
     }
 
 
+@pytest.fixture(name="get_device_online")
+def get_device_online(
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> Callable:
+    """
+    Put a given device online if it isn't already.
+
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+
+    :returns: a callable to call when we want a device ONLINE.
+    """
+
+    def _get_device_online(device_proxy: tango.DeviceProxy) -> None:
+        """
+        Move a device to ONLINE.
+
+        :param device_proxy: the tango DeviceProxy we want
+            to bring ONLINE.
+        """
+        print(f"Turning {device_proxy.dev_name()} online")
+
+        sub_id = device_proxy.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["device_state"],
+        )
+        if device_proxy.adminMode == AdminMode.OFFLINE:
+            change_event_callbacks.assert_change_event(
+                "device_state", tango.DevState.DISABLE
+            )
+
+            device_proxy.adminMode = AdminMode.ONLINE
+            # if "low-mccs/spsstation/" in device_proxy.dev_name():
+            #     print("asdasd")
+            #     change_event_callbacks.assert_not_called()
+            change_event_callbacks.assert_change_event(
+                "device_state", tango.DevState.UNKNOWN
+            )
+        change_event_callbacks.assert_change_event("device_state", Anything)
+        device_proxy.unsubscribe_event(sub_id)
+        change_event_callbacks._queue.empty()
+        change_event_callbacks.assert_not_called()
+
+    return _get_device_online
+
+
 @given("the Station is online")
 def station_online(
-    station_name: str,
-    true_context: bool,
+    station_devices: dict[str, list[tango.DeviceProxy]],
+    get_device_online: Callable,
 ) -> None:
     """
     Put a station ONLINE.
 
-    :param station_name: the name of the station under test.
-    :param true_context: a bool to represent if we are running in a
+    :param station_devices: A fixture with the station devices.
+    :param get_device_online: a fixture to call to bring a device ONLINE
     """
-    if true_context:
-        station = tango.DeviceProxy(get_sps_station_name(station_name))
-        station.adminMode = AdminMode.ONLINE
-        tiles_fqdns = list(station.get_property("TileFQDNs")["TileFQDNs"])
-        subracks_fqdns = list(station.get_property("SubrackFQDNs")["SubrackFQDNs"])
-        daqs_fqdns = list(station.get_property("DaqTRL")["DaqTRL"])
-        for fqdn in tiles_fqdns + subracks_fqdns + daqs_fqdns:
-            device = tango.DeviceProxy(fqdn)
-            if device.adminMode != AdminMode.ONLINE:
-                device.adminMode = AdminMode.ONLINE
+    for subrack in station_devices["Subracks"]:
+        get_device_online(subrack)
+    for tile in station_devices["Tiles"]:
+        get_device_online(tile)
+    for daq in station_devices["DAQs"]:
+        get_device_online(daq)
+    for station in station_devices["Station"]:
+        get_device_online(station)
 
 
 @given("the Station has been commanded to turn On")

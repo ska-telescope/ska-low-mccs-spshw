@@ -28,7 +28,8 @@ include .make/python.mk
 
 PYTHON_LINE_LENGTH = 88
 PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and linted
-PYTHON_VARS_AFTER_PYTEST = --forked -n auto # Runs tests in parallel using available cores
+PYTHON_VARS_AFTER_PYTEST += -n auto  # Removes `--forked`
+# Runs tests in parallel using available cores
 PYTHON_TEST_FILE = tests
 
 python-post-lint:

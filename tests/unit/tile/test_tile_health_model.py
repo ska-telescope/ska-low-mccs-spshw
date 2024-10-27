@@ -148,17 +148,17 @@ class TestTileHealthModel:
         :param final_health_report: the initial final health report
         """
         # TODO: Fixed in ska-low-mccs-common > 0.7.2
-        health_model._state[
-            "tile_health_structure"
-        ] = health_model._merge_dicts(  # type: ignore[assignment]
-            TileData.get_tile_defaults(), init_monitoring_points
+        health_model._state["tile_health_structure"] = (
+            health_model._merge_dicts(  # type: ignore[assignment]
+                TileData.get_tile_defaults(), init_monitoring_points
+            )
         )
         assert (init_health_state, init_health_report) == health_model.evaluate_health()
-        health_model._state[
-            "tile_health_structure"
-        ] = health_model._merge_dicts(  # type: ignore[assignment]
-            health_model._state["tile_health_structure"],  # type: ignore[arg-type]
-            final_monitoring_points,
+        health_model._state["tile_health_structure"] = (
+            health_model._merge_dicts(  # type: ignore[assignment]
+                health_model._state["tile_health_structure"],  # type: ignore[arg-type]
+                final_monitoring_points,
+            )
         )
         assert (
             final_health_state,

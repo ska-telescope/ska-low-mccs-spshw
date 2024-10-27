@@ -178,12 +178,12 @@ class SpeadDataSimulator:
             for fpga in range(self._nof_fpgas):
                 for antenna in range(self._nof_ants_per_fpga):
                     for channel in range(self._nof_channel_packets):
-                        self._raw_packet_data[tpm][fpga][antenna][
-                            channel
-                        ] = self._generate_raw_data(tpm, fpga, antenna, channel)
-                        self._channelised_packet_data[tpm][fpga][antenna][
-                            channel
-                        ] = self._generate_channelised_data(tpm, fpga, antenna, channel)
+                        self._raw_packet_data[tpm][fpga][antenna][channel] = (
+                            self._generate_raw_data(tpm, fpga, antenna, channel)
+                        )
+                        self._channelised_packet_data[tpm][fpga][antenna][channel] = (
+                            self._generate_channelised_data(tpm, fpga, antenna, channel)
+                        )
 
         # Create socket
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

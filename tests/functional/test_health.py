@@ -149,9 +149,19 @@ def get_device_online(
             change_event_callbacks.assert_change_event(
                 "device_state", tango.DevState.UNKNOWN
             )
+            if "low-mccs/tile/" in device_proxy.dev_name():
+                # Tile may enter a transient FAULT when put ONLINE.
+                # The TPM can be polled but the Subrack is not yet
+                # reporting the TPM as ON.
+                change_event_callbacks.assert_change_event(
+                    "device_state",
+                    tango.DevState.FAULT,
+                    lookahead=2,
+                    consume_nonmatches=True,
+                )
+
         change_event_callbacks.assert_change_event("device_state", Anything)
         device_proxy.unsubscribe_event(sub_id)
-        change_event_callbacks._queue.empty()
 
     return _get_device_online
 

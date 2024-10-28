@@ -24,6 +24,8 @@ Defines the deployment for SpsStation Tango devices.
           - "low-mccs/tile/s8-1-tpm10"
           - "low-mccs/tile/s8-1-tpm13"
           logging_level_default: 5
+          floating_properties: # Arbitrary properties.
+            foo: bar
 
 */}}
 {{- $spsstations := dict}}

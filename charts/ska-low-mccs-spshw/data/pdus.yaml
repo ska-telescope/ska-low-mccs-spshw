@@ -13,6 +13,8 @@ Define the deployment for PDU devices.
           priv_key: foo
           update_rate: null
           user_name: ska
+          floating_properties: # Arbitrary properties.
+            foo: bar
 
 */}}
 {{- $pdus := dict}}

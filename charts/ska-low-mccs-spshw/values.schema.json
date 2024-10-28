@@ -111,6 +111,9 @@
                                 "type": "string"
                               }
                             },
+                            "floating_properties": {
+                              "type": "object"
+                            },
                             "subracks": {
                               "type": "array",
                               "items": {
@@ -138,9 +141,7 @@
                             "subracks",
                             "tpms"
                           ],
-                          "additionalProperties": {
-                            "type": "object"
-                          }
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -230,9 +231,7 @@
                             "host",
                             "port"
                           ],
-                          "additionalProperties": {
-                            "type": "object"
-                          }
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -280,6 +279,9 @@
                               "type": "integer",
                               "minimum": 1
                             },
+                            "floating_properties": {
+                              "type": "object"
+                            },
                             "logging_level_default": {
                               "type": "integer",
                               "minimum": 0,
@@ -293,9 +295,7 @@
                             "srmb_host",
                             "srmb_port"
                           ],
-                          "additionalProperties": {
-                            "type": "object"
-                          }
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -398,9 +398,7 @@
                             "subrack",
                             "subrack_slot"
                           ],
-                          "additionalProperties": {
-                            "type": "object"
-                          }
+                          "additionalProperties": false
                         }
                       ]
                     }
@@ -480,9 +478,7 @@
                             "device_definition",
                             "host"
                           ],
-                          "additionalProperties": {
-                            "type": "object"
-                          }
+                          "additionalProperties": false
                         }
                       ]
                     }

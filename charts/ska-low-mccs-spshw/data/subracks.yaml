@@ -10,6 +10,8 @@ Defines the deployment for MccsSubrack Tango devices.
           nodeSelector:
             kubernetes.io/hostname: psi-node3
           logging_level_default: 5
+          floating_properties: # Arbitrary properties.
+            foo: bar
 
 */}}
 {{- $node_selector := dict}}

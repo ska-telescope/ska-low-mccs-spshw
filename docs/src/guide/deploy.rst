@@ -251,8 +251,14 @@ For example:
          logging_level_default: 5
          nodeSelector:
            kubernetes.io/hostname: psi-node3
+         floating_properties: # Arbitrary properties.
+           PollRate: 0.1
    simulators:
      subracks:
        "s8-1-1":
          srmb_host: subrack-simulator-s8-1
          srmb_port: 8081
+
+
+The floating_properties key may be used to configure arbitrary properties
+on the device.

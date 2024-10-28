@@ -175,7 +175,7 @@ class TestIntegratedChannel(BaseDaqTest):
                 f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
             )
             time.sleep(1 + 0.5)
-            self._configure_daq("INTEGRATED_CHANNEL_DATA")
+            self._configure_daq("INTEGRATED_CHANNEL_DATA", integrated=True)
             self._start_directory_watch()
             assert self._data_created_event.wait(20)
             integration_length = tile.readregister(

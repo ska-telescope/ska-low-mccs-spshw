@@ -139,7 +139,12 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._data = data
         self._data_created_event.set()
 
-    def _configure_daq(self: BaseDaqTest, daq_mode: str) -> None:
+    def _configure_daq(
+        self: BaseDaqTest,
+        daq_mode: str,
+        integrated: bool = False,
+        **daq_config: Any,
+    ) -> None:
         assert self.daq_proxy is not None
         self.test_logger.debug("Configuring DAQ")
         self.daq_proxy.adminmode = AdminMode.OFFLINE
@@ -149,25 +154,29 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.daq_proxy.adminmode = AdminMode.ENGINEERING
         self.daq_proxy.Stop()
         time.sleep(1)
-        self.daq_proxy.Configure(
-            json.dumps(
-                {
-                    "directory": "/",
-                    "nof_tiles": len(self.tile_proxies),
-                }
-            )
-        )
+        daq_config.update({"directory": "/", "nof_tiles": len(self.tile_proxies)})
+        self.daq_proxy.Configure(json.dumps(daq_config))
         time.sleep(1)
         self.daq_proxy.Start(json.dumps({"modes_to_start": daq_mode}))
         time.sleep(1)
         daq_status = json.loads(self.daq_proxy.DaqStatus())
-        tpm_config = {
-            "mode": "10G",
-            "dst_ip": daq_status["Receiver IP"][0],
-            "dst_port": daq_status["Receiver Ports"][0],
-            "payload_length": 8192,
-        }
-        self.component_manager.set_lmc_download(**tpm_config)
+        if integrated:
+            tpm_config = {
+                "mode": "10G",
+                "dst_ip": daq_status["Receiver IP"][0],
+                "dst_port": daq_status["Receiver Ports"][0],
+                "channel_payload_length": 1024,
+                "beam_payload_length": 1024,
+            }
+            self.component_manager.set_lmc_integrated_download(**tpm_config)
+        else:
+            tpm_config = {
+                "mode": "10G",
+                "dst_ip": daq_status["Receiver IP"][0],
+                "dst_port": daq_status["Receiver Ports"][0],
+                "payload_length": 8192,
+            }
+            self.component_manager.set_lmc_download(**tpm_config)
 
     def _configure_and_start_pattern_generator(
         self: BaseDaqTest,

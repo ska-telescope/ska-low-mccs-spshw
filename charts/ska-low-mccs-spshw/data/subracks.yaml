@@ -52,6 +52,16 @@ server:
             values: 
             - {{quote .}}
 {{- end}}
+{{- range $property_name, $property_value := ($this_subrack | dig "floating_properties" dict)}}
+{{- if not (kindIs "slice" $property_value)}}
+{{- $property_value = list $property_value}}
+{{- end}}
+          - name: {{$property_name | quote}}
+            values:
+{{- range $value := $property_value}}
+            - {{quote $value}}
+{{- end}}
+{{- end}}
 {{- /* TODO: ska-tango-utils does not let us set nodeSelector per device server,
 so for now we have to merge all our nodeSelector values into one.*/}}
 {{- with $this_subrack.nodeSelector}}

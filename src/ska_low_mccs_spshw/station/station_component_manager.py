@@ -825,6 +825,12 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        if self._communication_states.get(fqdn) is None:
+            self.logger.info(
+                f"The communication state for {fqdn} is not rolled up. "
+                f"But is reporting {communication_state}"
+            )
+            return
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out

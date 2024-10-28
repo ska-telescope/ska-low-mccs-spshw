@@ -180,7 +180,10 @@ class TestIntegratedBeam(BaseDaqTest):
             )
             time.sleep(1 + 0.5)
             self._configure_daq(
-                "INTEGRATED_BEAM_DATA", integrated=True, nof_beam_samples=1
+                "INTEGRATED_BEAM_DATA",
+                integrated=True,
+                nof_beam_samples=1,
+                receiver_frame_size=9000,
             )
             self._start_directory_watch()
             assert self._data_created_event.wait(20)

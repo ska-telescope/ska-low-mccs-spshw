@@ -203,10 +203,10 @@ class TestIntegratedBeam(BaseDaqTest):
             )
         self.test_logger.info("Test passed for integrated beam data!")
 
-    def check_requirements(self: TestIntegratedBeam) -> tuple[bool, str]:
-        """
-        Skip test due to known bug.
+    # def check_requirements(self: TestIntegratedBeam) -> tuple[bool, str]:
+    #     """
+    #     Skip test due to known bug.
 
-        :returns: False as this test is skipped.
-        """
-        return False, "This test is skipped due to MCCS-XXXX"
+    #     :returns: False as this test is skipped.
+    #     """
+    #     return False, "This test is skipped due to MCCS-XXXX"

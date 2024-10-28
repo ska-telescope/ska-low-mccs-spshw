@@ -186,3 +186,7 @@ helmfile-lint:
     - ska-default
   script:
     - make helmfile-lint
+
+# TODO: Remove this, tests shouldn't take this long.
+python-test:
+  timeout: 2h

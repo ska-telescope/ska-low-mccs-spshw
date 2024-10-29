@@ -229,7 +229,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
 
         request_spec = self._request_provider.get_request(self._tpm_status)
-        self._update_component_state(power=self.power_state, fault=self.fault_state)
+
+        if self.use_invalid_attribute:
+            self._update_component_state(power=self.power_state, fault=self.fault_state)
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
             return request_spec
@@ -435,7 +437,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
 
         self.power_state = self._subrack_says_tpm_power
-        self.update_fault_state(poll_success=False)
+        if self.use_invalid_attribute:
+            self.update_fault_state(poll_success=False)
+        else:
+            self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
@@ -520,6 +525,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 **{poll_response.command: poll_response.data},
             )
         super().poll_succeeded(poll_response)
+        if self.use_invalid_attribute:
+            return
+        self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
     def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
         """

@@ -1464,9 +1464,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.use_invalid_attribute
 
     @useInvalidAttribute.write  # type: ignore[no-redef]
-    def useInvalidAttribute(  # pylint: disable=arguments-differ
-        self: MccsTile, value: bool
-    ) -> None:
+    def useInvalidAttribute(self: MccsTile, value: bool) -> None:
         """
         Toggle the use of the INVALID attribute feature.
 

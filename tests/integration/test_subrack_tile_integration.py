@@ -24,7 +24,10 @@ from ska_control_model import AdminMode, PowerState, ResultCode
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
-from tests.test_tools import execute_lrc_to_completion
+from tests.test_tools import (
+    execute_lrc_to_completion,
+    wait_for_completed_command_to_clear_from_queue,
+)
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -426,6 +429,8 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_command_status"].assert_change_event(
             (on_command_id, "COMPLETED")
         )
+        wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(subrack_device)
 
     def test_start_acquisition(
         self: TestMccsTileTpmDriver,

@@ -16,6 +16,7 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager, FileDAQModes  # type: ignore
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestIntegratedBeam"]
@@ -37,10 +38,7 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_antennas_per_tile = 16
-        self._polarisations_per_antenna = 2
         self._nof_samples = 1
-        self._nof_channels = 384
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: IntegratedBeamDataReceivedHandler) -> None:
@@ -50,8 +48,8 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
         )
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=[0, 1],
+                channels=range(TileData.NUM_BEAMFORMER_CHANNELS),
+                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
@@ -61,8 +59,8 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
         """Initialise empty integrated beam data struct."""
         self.data = np.zeros(
             (
-                self._polarisations_per_antenna,
-                self._nof_channels,
+                TileData.POLS_PER_ANTENNA,
+                TileData.NUM_BEAMFORMER_CHANNELS,
                 self._nof_tiles,
                 self._nof_samples,
             ),

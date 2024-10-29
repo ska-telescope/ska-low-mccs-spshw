@@ -16,6 +16,7 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import RawFormatFileManager  # type: ignore
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestRaw"]
@@ -37,8 +38,6 @@ class RawDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_antennas_per_tile = 16
-        self._polarisations_per_antenna = 2
         self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
         super().__init__(logger, nof_tiles, data_created_callback)
 
@@ -47,21 +46,21 @@ class RawDataReceivedHandler(BaseDataReceivedHandler):
         raw_file = RawFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
-                antennas=range(self._nof_antennas_per_tile),
+                antennas=range(TileData.ANTENNA_COUNT),
                 polarizations=[0, 1],
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
-            start_idx = self._nof_antennas_per_tile * tile_id
-            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            start_idx = TileData.ANTENNA_COUNT * tile_id
+            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
 
     def initialise_data(self: RawDataReceivedHandler) -> None:
         """Initialise empty raw data struct."""
         self.data = np.zeros(
             (
-                self._nof_tiles * self._nof_antennas_per_tile,
-                self._polarisations_per_antenna,
+                self._nof_tiles * TileData.ANTENNA_COUNT,
+                TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
             ),
             dtype=np.int8,
@@ -118,9 +117,12 @@ class TestRaw(BaseDaqTest):
         for antenna in range(ant):
             for polarisation in range(pol):
                 for sample in range(sam):
-                    if sample % 864 == 0:  # Oversampling factor, 32 * 27
+                    # The pattern should repeat on this cadence
+                    if sample % TileData.ADC_FRAME_LENGTH == 0:
                         sample_idx = 0
-                    signal_idx = (antenna % 16) * 2 + polarisation
+                    signal_idx = (
+                        antenna % TileData.ANTENNA_COUNT
+                    ) * TileData.POLS_PER_ANTENNA + polarisation
                     exp = pattern[sample_idx] + adders[signal_idx]
                     if self._signed(exp) != data[antenna, polarisation, sample]:
                         self.test_logger.error("Data Error!")

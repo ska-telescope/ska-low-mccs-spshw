@@ -16,6 +16,7 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager, FileDAQModes  # type: ignore
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestIntegratedChannel"]
@@ -37,10 +38,7 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_antennas_per_tile = 16
-        self._polarisations_per_antenna = 2
         self._nof_samples = 1
-        self._nof_channels = 512
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: IntegratedChannelDataReceivedHandler) -> None:
@@ -50,22 +48,22 @@ class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
         )
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
-                antennas=range(self._nof_antennas_per_tile),
-                polarizations=[0, 1],
+                antennas=range(TileData.ANTENNA_COUNT),
+                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
-            start_idx = self._nof_antennas_per_tile * tile_id
-            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            start_idx = TileData.ANTENNA_COUNT * tile_id
+            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[:, start_idx:end_idx, :, :] = tile_data
 
     def initialise_data(self: IntegratedChannelDataReceivedHandler) -> None:
         """Initialise empty integrated channel data struct."""
         self.data = np.zeros(
             (
-                self._nof_channels,
-                self._nof_tiles * self._nof_antennas_per_tile,
-                self._polarisations_per_antenna,
+                TileData.NUM_FREQUENCY_CHANNELS,
+                self._nof_tiles * TileData.ANTENNA_COUNT,
+                TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
             ),
             dtype=np.uint32,
@@ -124,8 +122,10 @@ class TestIntegratedChannel(BaseDaqTest):
         for channel in range(channels):
             for antenna in range(antennas):
                 for polarization in range(polarizations):
-                    sample_index = 2 * channel
-                    signal_index = (antenna % 16) * 2 + polarization
+                    sample_index = TileData.POLS_PER_ANTENNA * channel
+                    signal_index = (
+                        antenna % TileData.ANTENNA_COUNT
+                    ) * TileData.POLS_PER_ANTENNA + polarization
                     expected_re = pattern[sample_index] + adders[signal_index]
                     expected_im = pattern[sample_index + 1] + adders[signal_index]
                     expected = self._integrated_sample_calc(

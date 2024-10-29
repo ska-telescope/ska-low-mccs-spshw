@@ -30,6 +30,7 @@ from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
 
+from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
 
 if TYPE_CHECKING:
@@ -132,7 +133,7 @@ class BaseDaqTest(TpmSelfCheckTest):
             random.choice(string.ascii_letters + string.digits) for _ in range(24)
         )
         self._test_folder = f"/product/{self.__class__.__name__}_{random_id}/"
-        self.keep_data = False
+        self.keep_data = True
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _data_received_callback(self: BaseDaqTest, data: Any) -> None:
@@ -182,17 +183,14 @@ class BaseDaqTest(TpmSelfCheckTest):
         self: BaseDaqTest,
         stage: str,
         proxy: MccsDeviceProxy | None = None,
-        i: int = 0,
         pattern: list | None = None,
         adders: list | None = None,
     ) -> None:
         self.test_logger.debug("Configuring and starting pattern generator")
         if pattern is None:
-            pattern = [
-                n if i % 2 == 0 else random.randrange(0, 255) for n in range(1024)
-            ]
+            pattern = [random.randrange(0, 255) for _ in range(int(1024))]
         if adders is None:
-            adders = list(range(32))
+            adders = list(range(TileData.ANTENNA_COUNT * TileData.POLS_PER_ANTENNA))
         self._pattern = pattern
         self._adders = adders
         if proxy is None:

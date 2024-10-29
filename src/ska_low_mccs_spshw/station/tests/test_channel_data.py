@@ -16,6 +16,7 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import ChannelFormatFileManager  # type: ignore
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestChannel"]
@@ -37,11 +38,7 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_antennas_per_tile = 16
-        self._nof_tiles = nof_tiles
-        self._polarisations_per_antenna = 2
         self._nof_samples = 128
-        self._nof_channels = 512
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: ChannelDataReceivedHandler) -> None:
@@ -49,14 +46,14 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
         raw_file = ChannelFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                antennas=range(self._nof_antennas_per_tile),
-                polarizations=[0, 1],
+                channels=range(TileData.NUM_FREQUENCY_CHANNELS),
+                antennas=range(TileData.ANTENNA_COUNT),
+                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
-            start_idx = self._nof_antennas_per_tile * tile_id
-            end_idx = self._nof_antennas_per_tile * (tile_id + 1)
+            start_idx = TileData.ANTENNA_COUNT * tile_id
+            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[:, start_idx:end_idx, :, :, 0] = tile_data["real"]
             self.data[:, start_idx:end_idx, :, :, 1] = tile_data["imag"]
 
@@ -64,9 +61,9 @@ class ChannelDataReceivedHandler(BaseDataReceivedHandler):
         """Initialise empty channel data struct."""
         self.data = np.zeros(
             (
-                self._nof_channels,
-                self._nof_tiles * self._nof_antennas_per_tile,
-                self._polarisations_per_antenna,
+                TileData.NUM_FREQUENCY_CHANNELS,
+                self._nof_tiles * TileData.ANTENNA_COUNT,
+                TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
                 2,  # Real/Imag
             ),
@@ -122,8 +119,10 @@ class TestChannel(BaseDaqTest):
         for channel in range(channels):
             for antenna in range(antennas):
                 for polarisation in range(polarisations):
-                    sample_idx = 2 * channel
-                    signal_idx = (antenna % 16) * 2 + polarisation
+                    sample_idx = TileData.POLS_PER_ANTENNA * channel
+                    signal_idx = (
+                        antenna % TileData.ANTENNA_COUNT
+                    ) * TileData.POLS_PER_ANTENNA + polarisation
                     exp_re = pattern[sample_idx] + adders[signal_idx]
                     exp_im = pattern[sample_idx + 1] + adders[signal_idx]
                     exp = (self._signed(exp_re), self._signed(exp_im))

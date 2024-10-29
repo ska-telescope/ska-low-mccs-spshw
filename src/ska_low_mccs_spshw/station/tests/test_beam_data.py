@@ -16,6 +16,7 @@ from typing import Callable
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager  # type: ignore
 
+from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 __all__ = ["TestBeam"]
@@ -37,10 +38,7 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_antennas_per_tile = 16
-        self._polarisations_per_antenna = 2
         self._nof_samples = 32
-        self._nof_channels = 384
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: BeamDataReceivedHandler) -> None:
@@ -48,8 +46,8 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         raw_file = BeamFormatFileManager(root_path=self._base_path)
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=[0, 1],
+                channels=range(TileData.NUM_BEAMFORMER_CHANNELS),
+                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
@@ -61,8 +59,8 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         self.data = np.zeros(
             (
                 self._nof_tiles,
-                self._polarisations_per_antenna,
-                self._nof_channels,
+                TileData.POLS_PER_ANTENNA,
+                TileData.NUM_BEAMFORMER_CHANNELS,
                 self._nof_samples,
                 2,  # Real/Imag
             ),
@@ -122,11 +120,8 @@ class TestBeam(BaseDaqTest):
                     signal_idx = 16 * (channel % 2)
                     exp_re = (pattern[sample_idx] + adders[signal_idx]) * 16
                     exp_im = (pattern[sample_idx + 1] + adders[signal_idx]) * 16
-                    expected_data = (
-                        self._signed(exp_re, 12, 16),
-                        self._signed(exp_im, 12, 16),
-                    )
-
+                    expected_data_real = self._signed(exp_re, 12, 16)
+                    expected_data_imag = self._signed(exp_im, 12, 16)
                     for sample in range(samples):
                         received_data_real = data[
                             tile, polarisation, channel, sample, 0
@@ -136,8 +131,8 @@ class TestBeam(BaseDaqTest):
                         ]
 
                         if (
-                            expected_data[0] != received_data_real
-                            or expected_data[1] != received_data_imag
+                            expected_data_real != received_data_real
+                            or expected_data_imag != received_data_imag
                         ):
                             error_message = (
                                 f"Data Error!\n"
@@ -145,9 +140,9 @@ class TestBeam(BaseDaqTest):
                                 f"Frequency Channel: {channel}\n"
                                 f"Polarization: {polarisation}\n"
                                 f"Sample index: {sample}\n"
-                                f"Expected data real: {expected_data[0]}\n"
+                                f"Expected data real: {expected_data_real}\n"
                                 f"Received data real: {received_data_real}\n"
-                                f"Expected data imag: {expected_data[1]}\n"
+                                f"Expected data imag: {expected_data_imag}\n"
                                 f"Received data imag: {received_data_imag}"
                             )
                             self.test_logger.error(error_message)

@@ -112,11 +112,9 @@ def check_spsstation_state(
             tango.EventType.CHANGE_EVENT,
             state_callback["state"],
         )
-        change_event_callbacks.assert_change_event(
-            "state", Anything, consume_nonmatches=True
-        )
+        state_callback.assert_change_event("state", Anything, consume_nonmatches=True)
         station.on()
-        change_event_callbacks.assert_change_event(
+        state_callback.assert_change_event(
             "state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
         )
 

@@ -106,17 +106,18 @@ def check_spsstation_state(
     )
 
     if station.state() != tango.DevState.ON:
+        state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(
             "state",
             tango.EventType.CHANGE_EVENT,
-            change_event_callbacks["device_state"],
+            state_callback["state"],
         )
         change_event_callbacks.assert_change_event(
-            "device_state", Anything, consume_nonmatches=True
+            "state", Anything, consume_nonmatches=True
         )
         station.on()
         change_event_callbacks.assert_change_event(
-            "device_state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
+            "state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
         )
 
     tile_devices = [

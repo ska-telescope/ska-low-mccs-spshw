@@ -199,8 +199,9 @@ def on_tile_device_fixture(
     tile_device.on()
     tile_device.MockTpmOn()
 
+    # lookahead of 2 due to the potential for a transition to UNKNOWN.
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed"
+        "NotProgrammed", lookahead=2, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")

@@ -14,6 +14,7 @@ This test just checks that anything which can run passes.
 from __future__ import annotations
 
 import json
+import time
 from typing import Any
 
 import pytest
@@ -117,6 +118,18 @@ def check_spsstation_state(
         change_event_callbacks.assert_change_event(
             "device_state", tango.DevState.ON, consume_nonmatches=True, lookahead=3
         )
+
+    tile_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
+    ]
+
+    iters = 0
+    while any(tile.state() != tango.DevState.ON for tile in tile_devices):
+        if iters >= 20:
+            pytest.fail("Not all tiles came ON.")
+        time.sleep(1)
+        iters += 1
 
     assert station.state() == tango.DevState.ON
 

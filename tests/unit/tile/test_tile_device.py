@@ -356,7 +356,6 @@ class TestMccsTile:
             "channeliserRounding",  # There is no read, therefore this is all software
             "testGeneratorActive",
             "firmwareName",
-            "useInvalidAttribute",
             "globalReferenceTime",
             "cspDestinationIp",
             "cspDestinationMac",

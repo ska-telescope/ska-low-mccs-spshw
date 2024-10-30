@@ -95,7 +95,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     SimulationConfig = device_property(dtype=int, default_value=SimulationMode.FALSE)
     TestConfig = device_property(dtype=int, default_value=TestMode.NONE)
     PollRate = device_property(dtype=float, default_value=0.4)
-
+    UseInvalidAttribute = device_property(dtype=bool, default_value=True)
     AntennasPerTile = device_property(dtype=int, default_value=16)
 
     SubrackFQDN = device_property(dtype=str)
@@ -157,6 +157,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
+            f"\tuseInvalidAttribute: {self.UseInvalidAttribute}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -387,6 +388,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._communication_state_changed,
             self._component_state_changed,
             self._update_attribute_callback,
+            use_invalid_attribute=self.UseInvalidAttribute,
             # self._tile_device_state_callback,
         )
 
@@ -1452,30 +1454,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "To change the simulation mode, relaunch the device with the"
             "'SimulationConfig' property set as desired. "
         )
-
-    @attribute(dtype="DevBoolean")
-    def useInvalidAttribute(self: MccsTile) -> bool:
-        """
-        Report True if the invalid attribute feature is in use.
-
-        :return: Return True if the invalid
-            attribute feature is in use
-        """
-        return self.component_manager.use_invalid_attribute
-
-    @useInvalidAttribute.write  # type: ignore[no-redef]
-    def useInvalidAttribute(self: MccsTile, value: bool) -> None:
-        """
-        Toggle the use of the INVALID attribute feature.
-
-        :param value: True to use the invalid attribute feature.
-        """
-        self.logger.info(
-            "Invalid attribute feature enabled"
-            if value
-            else "Invalid attribute feature disabled"
-        )
-        self.component_manager.use_invalid_attribute = value
 
     @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
     def testMode(self: MccsTile) -> int:

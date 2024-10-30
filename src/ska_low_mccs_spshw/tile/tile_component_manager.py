@@ -85,7 +85,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -103,6 +103,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
         _tile: Optional[TileSimulator] = None,
+        use_invalid_attribute: bool = True,
     ) -> None:
         """
         Initialise a new instance.
@@ -141,6 +142,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param component_state_changed_callback: callback to be
             called when the component state changes
         :param _tile: Optional tile to inject.
+        :param use_invalid_attribute: a feature flag to toggle the use
+            of the invalid attribute changes.
         """
         self._subrack_fqdn = subrack_fqdn
         self._subrack_says_tpm_power: PowerState = PowerState.UNKNOWN
@@ -152,7 +155,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._subrack_proxy: Optional[MccsDeviceProxy] = None
 
         self._simulation_mode = simulation_mode
-        self.use_invalid_attribute: bool = True
+        self.use_invalid_attribute: bool = use_invalid_attribute
         self._hardware_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
         self.active_request: TileRequest | TileLRCRequest | None = None

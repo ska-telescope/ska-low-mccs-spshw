@@ -70,8 +70,8 @@ def check_against_hardware(hw_context: bool) -> None:
 
     :param hw_context: whether or not the current context is against real HW.
     """
-    # if not hw_context:
-    #     pytest.skip("This test requires real HW.")
+    if not hw_context:
+        pytest.skip("This test requires real HW.")
 
 
 @given("the SpsStation is ON and in ENGINEERING mode")

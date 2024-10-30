@@ -20,7 +20,11 @@ import pytest
 import tango
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.harness import (
+    DEFAULT_STATION_LABEL,
+    SpsTangoTestHarness,
+    SpsTangoTestHarnessContext,
+)
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -48,6 +52,34 @@ def pytest_addoption(
             "need to spin up a Tango test context"
         ),
     )
+    parser.addoption(
+        "--hw-deployment",
+        action="store",
+        default=False,
+        help=(
+            "Tell pytest that you have a true Tango context against HW and can "
+            "run HW only tests"
+        ),
+    )
+
+
+@pytest.fixture(name="available_stations")
+def available_stations_fixture(true_context: bool) -> list[str]:
+    """
+    Return the name of the station under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: the name of the station under test
+    """
+    if true_context:
+        db = tango.Database()
+        stations = db.get_device_exported("low-mccs/spsstation/*")
+        return [
+            str(station).rsplit("low-mccs/spsstation/", maxsplit=1)[-1]
+            for station in stations
+        ]
+    return [DEFAULT_STATION_LABEL]
 
 
 @pytest.fixture(name="functional_test_context_generator", scope="module")
@@ -114,6 +146,19 @@ def true_context_fixture(request: pytest.FixtureRequest) -> bool:
     if os.getenv("TRUE_TANGO_CONTEXT", None):
         return True
     return False
+
+
+@pytest.fixture(name="hw_context", scope="session")
+def hw_context_fixture(request: pytest.FixtureRequest) -> bool:
+    """
+    Return whether to test against an real HW only.
+
+    :param request: A pytest object giving access to the requesting test
+        context.
+
+    :return: whether to to test against an real HW only.
+    """
+    return request.config.getoption("--hw-deployment").lower() == "true"
 
 
 @pytest.fixture(name="subrack_address", scope="module")
@@ -207,6 +252,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "data_received_callback",
         "tile_adminMode",
         "device_state",
+        "device_adminmode",
         timeout=30.0,
     )
 

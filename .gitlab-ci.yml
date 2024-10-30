@@ -149,6 +149,7 @@ ral-low-k8s-test:
     JUNITXML_REPORT_PATH: build/reports/ral-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
     JSON_REPORT_PATH: build/reports/ral-low-report.json
+    HW_DEPLOYMENT: true
   before_script:
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
     - make k8s-install-chart

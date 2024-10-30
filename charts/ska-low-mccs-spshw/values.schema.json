@@ -111,7 +111,7 @@
                                 "type": "string"
                               }
                             },
-                            "floating_properties": {
+                            "device_properties": {
                               "type": "object"
                             },
                             "subracks": {
@@ -190,7 +190,7 @@
                               "type": "string",
                               "format": "hostname"
                             },
-                            "floating_properties": {
+                            "device_properties": {
                               "type": "object"
                             },
                             "port": {
@@ -279,7 +279,7 @@
                               "type": "integer",
                               "minimum": 1
                             },
-                            "floating_properties": {
+                            "device_properties": {
                               "type": "object"
                             },
                             "logging_level_default": {
@@ -345,7 +345,7 @@
                               "minimum": 1,
                               "maximum": 512
                             },
-                            "floating_properties": {
+                            "device_properties": {
                               "type": "object"
                             },
                             "host": {
@@ -470,7 +470,7 @@
                               "minimum": 0,
                               "maximum": 5
                             },
-                            "floating_properties": {
+                            "device_properties": {
                               "type": "object"
                             }
                           },

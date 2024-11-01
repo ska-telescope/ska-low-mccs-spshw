@@ -1,5 +1,11 @@
 # Version History
 
+## 0.18.0
+
+* [SKB-609] Revert changes made in SKB-520.
+* [MCCS-2265] Fix abortCommand() when turning station on.
+* [MCCS-2309] Add property "device_property" for setting arbitrary properties.
+* [MCCS-2182] Deploy PDU device with MCCS
 * [MCCS-2300] Add support for starting/stopping/configuring the pattern generator in MccsTile.
 * [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
 

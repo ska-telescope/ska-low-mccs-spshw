@@ -125,18 +125,26 @@ class TestChannel(BaseDaqTest):
                     ) * TileData.POLS_PER_ANTENNA + polarisation
                     exp_re = pattern[sample_idx] + adders[signal_idx]
                     exp_im = pattern[sample_idx + 1] + adders[signal_idx]
-                    exp = (self._signed(exp_re), self._signed(exp_im))
+                    expected_data_real = self._signed(exp_re, "CHANNEL")
+                    expected_data_imag = self._signed(exp_im, "CHANNEL")
                     for i in range(samples):
                         if (
-                            exp[0] != data[channel, antenna, polarisation, i, 0]
-                            or exp[1] != data[channel, antenna, polarisation, i, 1]
+                            expected_data_real
+                            != data[channel, antenna, polarisation, i, 0]
+                            or expected_data_imag
+                            != data[channel, antenna, polarisation, i, 1]
                         ):
                             self.test_logger.error("Data Error!")
                             self.test_logger.error(f"Frequency Channel: {channel}")
                             self.test_logger.error(f"Antenna: {antenna}")
                             self.test_logger.error(f"Polarization: {polarisation}")
                             self.test_logger.error(f"Sample index: {i}")
-                            self.test_logger.error(f"Expected data: {exp}")
+                            self.test_logger.error(
+                                f"Expected data real: {expected_data_real}"
+                            )
+                            self.test_logger.error(
+                                f"Expected data imag: {expected_data_real}"
+                            )
                             self.test_logger.error(
                                 "Received data: "
                                 f"{data[channel, antenna, polarisation, i, :]}"

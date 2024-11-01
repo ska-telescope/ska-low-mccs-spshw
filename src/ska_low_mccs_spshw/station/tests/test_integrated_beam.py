@@ -106,7 +106,7 @@ class TestIntegratedBeam(BaseDaqTest):
     # pylint: disable=too-many-locals
     def _check_integrated_beam(
         self: TestIntegratedBeam,
-        integration_length: float,
+        integration_length: int,
         accumulator_width: int,
         round_bits: int,
     ) -> None:
@@ -127,8 +127,8 @@ class TestIntegratedBeam(BaseDaqTest):
                     expected_im = (
                         pattern[sample_index + 1] + adders[signal_index]
                     ) * 16
-                    expected_re_sign = self._signed(expected_re, 12, 12)
-                    expected_im_sign = self._signed(expected_im, 12, 12)
+                    expected_re_sign = self._signed(expected_re, "INT_BEAM")
+                    expected_im_sign = self._signed(expected_im, "INT_BEAM")
                     expected = self._integrated_sample_calc(
                         expected_re_sign,
                         expected_im_sign,

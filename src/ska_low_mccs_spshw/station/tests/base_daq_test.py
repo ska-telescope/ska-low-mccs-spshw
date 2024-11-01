@@ -23,7 +23,6 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Callable, Iterator
 
 import numpy as np
-from pydaq.persisters import AAVSFileManager  # type: ignore
 from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -37,6 +36,14 @@ if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 
 __all__ = ["BaseDaqTest"]
+
+DATA_TYPE_TO_BITWIDTH = {
+    "RAW": (8, 8),
+    "BEAM": (12, 16),
+    "CHANNEL": (8, 8),
+    "INT_BEAM": (12, 12),
+    "INT_CHANNEL": (8, 8),
+}
 
 
 class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
@@ -123,7 +130,6 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param component_manager: SpsStation component manager under test.
         """
         self._data: np.ndarray | None
-        self._file_manager: AAVSFileManager
         self._observer: InotifyObserver
         self._data_handler: BaseDataReceivedHandler
         self._pattern: list | None = None
@@ -231,7 +237,22 @@ class BaseDaqTest(TpmSelfCheckTest):
             shutil.rmtree(self._test_folder)
 
     @classmethod
-    def _signed(cls, data: Any, bits: int = 8, ext_bits: int = 8) -> Any:
+    def _signed(cls, data: int, data_type: str) -> int:
+        """
+        Truncate the input data to a specified number of "bits".
+
+        The reserved value (negative most value) is preserved by sign extending
+        to "ext_bits" number of bits.
+
+        TODO: Why doesn't this method sign extend all values to "ext_bits"
+        currently only sign extension of the reserved value is handled.
+
+        :param data: the data to truncate.
+        :param data_type: the type of the data, this is used to get bitwidth.
+
+        :returns: the truncated data.
+        """
+        bits, ext_bits = DATA_TYPE_TO_BITWIDTH[data_type]
         data = data % 2**bits
         if data >= 2 ** (bits - 1):
             data -= 2**bits
@@ -243,18 +264,39 @@ class BaseDaqTest(TpmSelfCheckTest):
     @classmethod
     def _integrated_sample_calc(
         cls,
-        data_re: float,
-        data_im: float,
-        integration_length: float,
+        data_re: int,
+        data_im: int,
+        integration_length: int,
         round_bits: int,
         max_width: int,
-    ) -> float:
-        power = data_re**2 + data_im**2
-        accumulator = power * integration_length
-        return cls._s_round(accumulator, round_bits, max_width)
+    ) -> int:
+        """
+        Calculate the average power of the signal.
+
+        :param data_re: real component of data.
+        :param data_im: imag component of data.
+        :param integration_length: the integration length, in units of 1.08e-6 seconds.
+        :param round_bits: the size of available data, scales with integration length.
+        :param max_width: the maximum size the data can be.
+
+        :returns: the average power of the signal, independent of integration length.
+        """
+        sample_power = data_re**2 + data_im**2
+        total_power = sample_power * integration_length
+        average_power = cls._shift_round(total_power, round_bits, max_width)
+        return average_power
 
     @classmethod
-    def _s_round(cls, data: float, bits: int, max_width: int = 32) -> float:
+    def _shift_round(cls, data: int, bits: int, max_width: int = 32) -> int:
+        """
+        Shift given input by 2^bits, then round away from 0.
+
+        :param data: data to shift.
+        :param bits: number of bits to shift by.
+        :param max_width: the maximum size the data can be.
+
+        :returns: the shifted and rounded data.
+        """
         if bits == 0:
             return data
         if data == -(2 ** (max_width - 1)):

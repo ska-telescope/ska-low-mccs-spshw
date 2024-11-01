@@ -116,12 +116,26 @@ class TestBeam(BaseDaqTest):
         for tile in range(tiles):
             for channel in range(channels):
                 for polarisation in range(polarisations):
-                    sample_idx = int(channel / 2) * 4 + 2 * polarisation
-                    signal_idx = 16 * (channel % 2)
-                    exp_re = (pattern[sample_idx] + adders[signal_idx]) * 16
-                    exp_im = (pattern[sample_idx + 1] + adders[signal_idx]) * 16
-                    expected_data_real = self._signed(exp_re, 12, 16)
-                    expected_data_imag = self._signed(exp_im, 12, 16)
+                    # Determine indexes for pattern generator based on knowledge
+                    # of how data stream is packaged within FPGA
+                    sample_idx = (
+                        (channel // TileData.POLS_PER_ANTENNA)
+                        * TileData.NUM_FPGA
+                        * TileData.POLS_PER_ANTENNA
+                        + TileData.POLS_PER_ANTENNA * polarisation
+                    )
+                    signal_idx = TileData.ANTENNA_COUNT * (
+                        channel % TileData.POLS_PER_ANTENNA
+                    )
+                    # Calculate expected data
+                    exp_re = (
+                        pattern[sample_idx] + adders[signal_idx]
+                    ) * 2**TileData.BEAMF_BIT_SHIFT
+                    exp_im = (
+                        pattern[sample_idx + 1] + adders[signal_idx]
+                    ) * 2**TileData.BEAMF_BIT_SHIFT
+                    expected_data_real = self._signed(exp_re, "BEAM")
+                    expected_data_imag = self._signed(exp_im, "BEAM")
                     for sample in range(samples):
                         received_data_real = data[
                             tile, polarisation, channel, sample, 0

@@ -124,12 +124,14 @@ class TestRaw(BaseDaqTest):
                         antenna % TileData.ANTENNA_COUNT
                     ) * TileData.POLS_PER_ANTENNA + polarisation
                     exp = pattern[sample_idx] + adders[signal_idx]
-                    if self._signed(exp) != data[antenna, polarisation, sample]:
+                    if self._signed(exp, "RAW") != data[antenna, polarisation, sample]:
                         self.test_logger.error("Data Error!")
                         self.test_logger.error(f"Antenna: {antenna}")
                         self.test_logger.error(f"Polarization: {polarisation}")
                         self.test_logger.error(f"Sample index: {sample}")
-                        self.test_logger.error(f"Expected data: {self._signed(exp)}")
+                        self.test_logger.error(
+                            f"Expected data: {self._signed(exp, 'RAW')}"
+                        )
                         self.test_logger.error(
                             f"Received data: {data[antenna, polarisation, sample]}"
                         )

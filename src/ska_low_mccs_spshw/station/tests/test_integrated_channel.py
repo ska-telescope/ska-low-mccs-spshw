@@ -108,7 +108,7 @@ class TestIntegratedChannel(BaseDaqTest):
     # pylint: disable=too-many-locals
     def _check_integrated_channel(
         self: TestIntegratedChannel,
-        integration_length: float,
+        integration_length: int,
         accumulator_width: int,
         round_bits: int,
     ) -> None:
@@ -131,8 +131,8 @@ class TestIntegratedChannel(BaseDaqTest):
                     expected_re = pattern[sample_index] + adders[signal_index]
                     expected_im = pattern[sample_index + 1] + adders[signal_index]
                     expected = self._integrated_sample_calc(
-                        self._signed(expected_re),
-                        self._signed(expected_im),
+                        self._signed(expected_re, "INT_CHANNEL"),
+                        self._signed(expected_im, "INT_CHANNEL"),
                         integration_length,
                         round_bits,
                         accumulator_width,
@@ -147,8 +147,10 @@ class TestIntegratedChannel(BaseDaqTest):
                                 f"Polarization: {polarization}\n"
                                 f"Sample index: {sample}\n"
                                 f"Expected data: {expected}\n"
-                                f"Expected data re: {self._signed(expected_re)}\n"
-                                f"Expected data im: {self._signed(expected_im)}\n"
+                                "Expected data re: "
+                                f"{self._signed(expected_re, 'INT_CHANNEL')}\n"
+                                "Expected data im: "
+                                f"{self._signed(expected_im, 'INT_CHANNEL')}\n"
                                 f"Integration length: {integration_length}\n"
                                 f"Accumulator width: {accumulator_width}\n"
                                 f"Round bits: {round_bits}\n"

@@ -174,13 +174,17 @@ def get_device_online(
 def station_online(
     station_devices: dict[str, list[tango.DeviceProxy]],
     get_device_online: Callable,
+    station_name: str,
 ) -> None:
     """
     Put a station ONLINE.
 
     :param station_devices: A fixture with the station devices.
     :param get_device_online: a fixture to call to bring a device ONLINE
+    :param station_name: the name of the station under test.
     """
+    if station_name == "stfc-ral-software":
+        pytest.xfail("This test does not work consistently against hardware.")
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:

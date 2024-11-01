@@ -95,9 +95,11 @@ class TestIntegratedChannel(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
-    def _start_integrated_channel_data(self: TestIntegratedChannel) -> None:
+    def _start_integrated_channel_data(
+        self: TestIntegratedChannel, integration_time: int
+    ) -> None:
         self.component_manager.configure_integrated_channel_data(
-            integration_time=1, first_channel=0, last_channel=511
+            integration_time=integration_time, first_channel=0, last_channel=511
         )
 
     def _stop_integrated_channel_data(self: TestIntegratedChannel) -> None:
@@ -167,14 +169,15 @@ class TestIntegratedChannel(BaseDaqTest):
         )
         self.test_logger.debug("Testing integrated channelised data.")
         with self.reset_context():
+            integration_time = 1  # second
             tile = self.tile_proxies[0]
-            self._start_integrated_channel_data()
+            self._start_integrated_channel_data(integration_time)
             time.sleep(5)
             self._configure_and_start_pattern_generator("channel")
             self.test_logger.debug(
-                f"Sleeping for {1 + 0.5} (integration length + 0.5s) seconds"
+                f"Sleeping for {integration_time + 0.5} (integration length + 0.5s) sec"
             )
-            time.sleep(1 + 0.5)
+            time.sleep(integration_time + 0.5)
             self._configure_daq("INTEGRATED_CHANNEL_DATA", integrated=True)
             self._start_directory_watch()
             assert self._data_created_event.wait(20)

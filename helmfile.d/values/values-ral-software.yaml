@@ -1,5 +1,5 @@
 defaults:
-  logging_level_default: 5
+  logging_level_default: 4
 
 subarrays:  # 2 subarrays, no defaults overridden
   "1": {}

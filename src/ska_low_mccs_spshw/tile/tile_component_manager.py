@@ -11,6 +11,7 @@ from __future__ import annotations
 import copy
 import ipaddress
 import logging
+import sys
 import threading
 import time
 from typing import Any, Callable, Final, NoReturn, Optional, cast
@@ -206,6 +207,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             component_state_changed_callback,
             poll_rate=poll_rate,
         )
+
+        def _trace_lines(frame: Any, event: Any, arg: Any) -> Any:
+            if event == "line":
+                # Get current file, line number, and code line
+                filename = frame.f_globals["__file__"]
+                lineno = frame.f_lineno
+                code = frame.f_code
+                self.logger.error(
+                    f"Executing {filename} at line {lineno}: "
+                    f"{code.co_name} - {code.co_filename}:{lineno}"
+                )
+            return _trace_lines
+
+        # Set the trace
+        sys.settrace(_trace_lines)
 
     def get_request(  # type: ignore[override]
         self: TileComponentManager,

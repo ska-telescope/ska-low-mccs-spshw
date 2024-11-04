@@ -55,7 +55,7 @@ def pytest_addoption(
     parser.addoption(
         "--hw-deployment",
         action="store",
-        default="false",
+        default=False,
         help=(
             "Tell pytest that you have a true Tango context against HW and can "
             "run HW only tests"
@@ -158,7 +158,7 @@ def hw_context_fixture(request: pytest.FixtureRequest) -> bool:
 
     :return: whether to to test against an real HW only.
     """
-    return request.config.getoption("--hw-deployment").lower() == "true"
+    return request.config.getoption("--hw-deployment")
 
 
 @pytest.fixture(name="subrack_address", scope="module")

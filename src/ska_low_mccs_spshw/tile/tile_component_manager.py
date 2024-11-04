@@ -404,7 +404,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     filename = frame.f_globals["__file__"]
                     lineno = frame.f_lineno
                     code = frame.f_code
-                    print(
+                    self.logger.error(
                         f"Executing {filename} at line {lineno}: "
                         f"{code.co_name} - {code.co_filename}:{lineno}"
                     )

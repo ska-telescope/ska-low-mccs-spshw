@@ -35,9 +35,9 @@ class TileHealthRules(HealthRules):
         """
         super().__init__(*args, **kwargs)
         self.logger = None
-        self.previous_counters: dict = {}
-        for counter in COUNTERS:
-            self.previous_counters[counter] = None
+        # self.previous_counters: dict = {}
+        # for counter in COUNTERS:
+        #     self.previous_counters[counter] = None
 
     def set_logger(self: TileHealthRules, logger: Any) -> None:
         """
@@ -139,7 +139,6 @@ class TileHealthRules(HealthRules):
         """
         return TileData.MIN_MAX_MONITORING_POINTS
 
-    # pylint: disable = too-many-branches
     def compute_intermediate_state(
         self: TileHealthRules,
         monitoring_points: dict[str, Any],
@@ -180,7 +179,7 @@ class TileHealthRules(HealthRules):
                     )
                     continue
             else:
-                last_path = path.split("/")[-1]
+                # last_path = path.split("/")[-1]
                 if p_state is None and min_max[p] is not None:
                     states[p] = (
                         HealthState.UNKNOWN,

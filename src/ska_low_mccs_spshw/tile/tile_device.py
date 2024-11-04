@@ -727,7 +727,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         with self._post_change_event_lock:
             if isinstance(attr_value, dict):
                 attr_value = json.dumps(attr_value)
-            self.logger.debug(f"Pushing the new value {name} = {attr_value}")
+            # self.logger.debug(f"Pushing the new value {name} = {attr_value}")
             self.push_archive_event(name, attr_value, attr_time, attr_quality)
             self.push_change_event(name, attr_value, attr_time, attr_quality)
 

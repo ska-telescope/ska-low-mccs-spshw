@@ -42,9 +42,16 @@ server:
 {{- if $this_pdu}}
             - name: {{$pdu_trl}}
               properties:
+{{- with $this_pdu.device_definition}}
                 - name: DeviceDefinition
                   values:
-                    - {{$this_pdu.device_definition}}
+                    - {{quote .}}
+{{- end}}
+{{- with $this_pdu.repo}}
+                - name: Repo
+                  values:
+                    - {{quote .}}
+{{- end}}
                 - name: Host
                   values:
                     - {{quote $this_pdu.host}}

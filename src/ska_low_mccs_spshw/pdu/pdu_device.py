@@ -25,6 +25,7 @@ class MccsPdu(AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
     DeviceDefinition = device_property(dtype=str, mandatory=True)
+    Repo = device_property(dtype=str, default_value="")
     Host = device_property(dtype=str, mandatory=True)
     Port = device_property(dtype=int, default_value=161)
     V2Community = device_property(dtype=str)
@@ -102,7 +103,7 @@ class MccsPdu(AttributePollingDevice):
         # This goes here because you don't have access to properties
         # until tango.server.BaseDevice.init_device() has been called
         dynamic_attrs = self.parse_device_definition(
-            self.load_device_definition(self.DeviceDefinition)
+            self.load_device_definition(self.DeviceDefinition, self.Repo)
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 

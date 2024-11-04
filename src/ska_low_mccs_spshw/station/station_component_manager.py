@@ -2376,6 +2376,24 @@ class SpsStationComponentManager(
         """
         return self.self_check_manager._tpm_test_names
 
+    @property
+    def keep_test_data(self: "SpsStationComponentManager") -> bool:
+        """
+        Get whether test data will be kept from the self_check_manager.
+
+        :return: whether the test data will be kept.
+        """
+        return self.self_check_manager.keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self: "SpsStationComponentManager", value: bool) -> None:
+        """
+        Set whether test data will be kept from the self_check_manager.
+
+        :param value: whether or not to keep test data.
+        """
+        self.self_check_manager.keep_test_data = value
+
     # ------------
     # commands
     # ------------

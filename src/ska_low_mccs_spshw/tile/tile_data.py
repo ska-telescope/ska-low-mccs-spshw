@@ -35,6 +35,12 @@ class TileData:
     ADC_CHANNELS = 32
     NUM_FREQUENCY_CHANNELS = 512
     NUM_BEAMFORMER_CHANNELS = 384
+    NUM_FPGA = 2
+    CHANNELISER_OUTPUT_FRAME_LENGTH = 1024
+    CHANNELISER_OVERSAMPLING_FACTOR = 32 / 27
+    ADC_FRAME_LENGTH = CHANNELISER_OUTPUT_FRAME_LENGTH / CHANNELISER_OVERSAMPLING_FACTOR
+    POLS_PER_ANTENNA = 2
+    BEAMF_BIT_SHIFT = 4  # Hardcoded into the pattern generator, can only shift by 4.
 
     min_max_string = importlib.resources.read_text(
         __package__, "tpm_monitoring_min_max.yaml"

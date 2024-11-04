@@ -402,6 +402,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
+
+        # Get all currently running threads
+        threads = threading.enumerate()
+
+        # Print information about each thread
+        for thread in threads:
+            msg = (
+                f"Thread Name: {thread.name}, Thread ID: "
+                f"{thread.ident}, Is Alive: {thread.is_alive()}"
+            )
+            self.logger.error(msg)
+
         return TileResponse(
             poll_request.name,
             result,

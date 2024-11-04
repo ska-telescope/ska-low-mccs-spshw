@@ -1562,10 +1562,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the id of the station to which this tile is assigned
         """
-        station = self._attribute_state["stationId"].read()[0]
+        # station = self._attribute_state["stationId"].read()[0]
         # message = f"stationId: read value = {station}"
         # self.logger.info(message)
-        return station
+        return 1
 
     @stationId.write  # type: ignore[no-redef]
     def stationId(self: MccsTile, value: int) -> None:

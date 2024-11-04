@@ -397,6 +397,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if not self.trace_set:
             self.trace_set = True
+            self.logger.error("Setting trace")
 
             def _trace_lines(frame: Any, event: Any, arg: Any) -> Any:
                 if event == "line":

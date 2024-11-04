@@ -207,9 +207,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "resync_count": "resync_count",
             "ddr_initialisation": "ddr_initialisation",
             "ddr_reset_counter": "ddr_reset_counter",
-            "ddr_rd_cnt": "ddr_rd_cnt",
-            "ddr_wr_cnt": "ddr_wr_cnt",
-            "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
+            # "ddr_rd_cnt": "ddr_rd_cnt",
+            # "ddr_wr_cnt": "ddr_wr_cnt",
+            # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
             "arp": "arp",
             "udp_status": "udp_status",
             "crc_error_count": "crc_error_count",
@@ -311,9 +311,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "clocks": ["timing", "clocks"],
             "clock_managers": ["timing", "clock_managers"],
-            "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
-            "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
-            "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
+            # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
+            # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
+            # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
             "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
             "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
@@ -1118,63 +1118,63 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return json.dumps(self._attribute_state["clock_managers"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_cnt",
-    )
-    def ddr_rd_cnt(self: MccsTile) -> str:
-        """
-        Return the read counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_cnt",
+    # )
+    # def ddr_rd_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been read.
+    #     Expected: `integer` number of times ddr interface has been read.
 
-        :example:
-            >>> tile.ddr_rd_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been read.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
+    #     :return: number of times ddr interface has been read.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_wr_cnt",
-    )
-    def ddr_wr_cnt(self: MccsTile) -> str:
-        """
-        Return the write counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_wr_cnt",
+    # )
+    # def ddr_wr_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the write counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been written to.
+    #     Expected: `integer` number of times ddr interface has been written to.
 
-        :example:
-            >>> tile.ddr_wr_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_wr_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been written to.
-        """
-        return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
+    #     :return: number of times ddr interface has been written to.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_dat_cnt",
-    )
-    def ddr_rd_dat_cnt(self: MccsTile) -> str:
-        """
-        Return the read valid counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_dat_cnt",
+    # )
+    # def ddr_rd_dat_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has responded to a read
-        with valid data.
+    #     Expected: `integer` number of times ddr interface has responded to a read
+    #     with valid data.
 
-        :example:
-            >>> tile.ddr_rd_dat_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_dat_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has responded to a read with valid data.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
+    #     :return: number of times ddr interface has responded to a read with valid data.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
 
     @attribute(
         dtype="DevString",

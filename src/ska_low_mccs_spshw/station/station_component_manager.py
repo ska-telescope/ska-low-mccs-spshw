@@ -259,7 +259,7 @@ class _TileProxy(DeviceComponentManager):
 
 
 class _DaqProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
+    """A proxy to a DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -274,7 +274,7 @@ class _DaqProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
+        :param station_id: the id of the station to which this daq
             is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
@@ -335,9 +335,6 @@ class _DaqProxy(DeviceComponentManager):
             self._proxy.add_change_event_callback(
                 "dataReceivedResult", self._daq_data_callback
             )
-            # Also configure DAQ with the station ID at this time.
-            # This adds a config entry to daq for `station_id`
-            self._configure_station_id()
         super()._update_communication_state(communication_state)
 
     def _daq_data_callback(
@@ -852,6 +849,9 @@ class SpsStationComponentManager(
                 self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
+                # Set StationID in DAQ.
+                assert self._daq_proxy is not None
+                self._daq_proxy._configure_station_id()
 
     def subscribe_to_attributes(
         self: SpsStationComponentManager,

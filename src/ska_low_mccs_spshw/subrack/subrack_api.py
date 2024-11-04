@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import Any, Optional, Protocol
 
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from ska_low_mccs_common.component import StatusCode
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
@@ -67,22 +68,23 @@ def _handle_getattribute(
 ) -> dict[str, JsonSerializable]:
     if name is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Messages of type 'getattribute' require a 'param' field.",
         )
+
     try:
         value = subrack.get_attribute(name)
     except Exception as exception:  # pylint: disable=broad-except
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": "ERROR",
+            "status": StatusCode.ERROR.name,
             "info": str(exception),
             "attribute": name,
             "value": "",
         }
     return {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -94,12 +96,12 @@ def _handle_setattribute(
 ) -> dict[str, JsonSerializable]:
     if name is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Messages of type 'setattribute' require a 'param' field.",
         )
     if value is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Messages of type 'setattribute' require a 'value' field.",
         )
 
@@ -109,13 +111,13 @@ def _handle_setattribute(
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": "ERROR",
+            "status": StatusCode.ERROR.name,
             "info": str(exception),
             "attribute": name,
             "value": "",
         }
     return {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "attribute": name,
         "value": set_value,
@@ -127,12 +129,12 @@ def _handle_command(
 ) -> dict[str, JsonSerializable]:
     if name is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Messages of type 'command' require a 'param' field.",
         )
     if argument is None:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Messages of type 'command' require a 'value' field.",
         )
 
@@ -142,13 +144,13 @@ def _handle_command(
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": "ERROR",
+            "status": StatusCode.ERROR.name,
             "info": str(exception),
             "command": name,
             "retvalue": "",
         }
     return {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "command": name,
         "retvalue": return_value,
@@ -178,7 +180,7 @@ async def get_json(
     if type_parameter is None:
         return {
             "info": "Missing keyword: type",
-            "status": "ERROR",
+            "status": StatusCode.HTTP_ERROR.name,
         }
     if type_parameter == "getattribute":
         return _handle_getattribute(subrack, param)
@@ -189,7 +191,7 @@ async def get_json(
 
     return {
         "info": f"Invalid type: {type_parameter}",
-        "status": "ERROR",
+        "status": StatusCode.HTTP_ERROR.name,
     }
 
 
@@ -206,4 +208,6 @@ async def get_bad_path(path: str) -> None:
 
     :raises HTTPException: because this path is not valid.
     """
-    raise HTTPException(status_code=404, detail=f"Path '{path}' not found")
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND, detail=f"Path '{path}' not found"
+    )

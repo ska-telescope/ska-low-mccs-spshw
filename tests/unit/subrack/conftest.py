@@ -8,11 +8,13 @@
 """This module defined a pytest harness for testing the MCCS subrack module."""
 from __future__ import annotations
 
+import copy
 import logging
 from typing import Any, Iterator
 
 import pytest
 from ska_control_model import PowerState
+from ska_low_mccs_common.component import WebHardwareClient
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
@@ -65,15 +67,15 @@ def subrack_address_fixture(
 def subrack_driver_fixture(
     subrack_address: tuple[str, int],
     logger: logging.Logger,
+    subrack_client: Any,
     callbacks: MockCallableGroup,
 ) -> SubrackDriver:
     """
     Return a subrack driver, configured to talk to a running subrack server.
 
-    (This is a pytest fixture.)
-
     :param subrack_address: the host and port of the subrack
     :param logger: the logger to be used by this object.
+    :param subrack_client: a subrack client.
     :param callbacks: dictionary of driver callbacks
 
     :return: a subrack driver.
@@ -86,6 +88,7 @@ def subrack_driver_fixture(
         callbacks["communication_status"],
         callbacks["component_state"],
         update_rate=1.0,
+        _subrack_client=subrack_client,
     )
 
 
@@ -138,3 +141,38 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         timeout=2.0,
     )
+
+
+@pytest.fixture(name="subrack_client")
+def subrack_client_fixture(
+    subrack_address: tuple[str, int],
+) -> WebHardwareClient:
+    """
+    Return a subrack client.
+
+    :param subrack_address: the host and port of the subrack
+
+    :return: a subrack client.
+    """
+    subrack_ip, subrack_port = subrack_address
+
+    return WebHardwareClient(subrack_ip, subrack_port)
+
+
+@pytest.fixture(name="failed_subrack_simulator_attribute_values", scope="session")
+def failed_subrack_simulator_attribute_values_fixture(
+    subrack_simulator_attribute_values: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Return attribute values that the subrack simulator is expected to report.
+
+    :param subrack_simulator_attribute_values: a key-value dictionary of
+        attribute values that the subrack simulator is expected to report.
+
+    :return: a key-value dictionary of attribute values that the subrack
+        simulator is expected to report on a failed poll.
+    """
+    failed_attribute_dict = copy.deepcopy(subrack_simulator_attribute_values)
+    for attr_name in failed_attribute_dict.keys():
+        failed_attribute_dict[attr_name] = None
+    return failed_attribute_dict

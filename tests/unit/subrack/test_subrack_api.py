@@ -10,7 +10,9 @@ import unittest
 
 import fastapi
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
+from ska_low_mccs_common.component import StatusCode
 
 from ska_low_mccs_spshw.subrack.subrack_api import SubrackProtocol, router
 
@@ -47,7 +49,7 @@ def test_bad_path(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "Path '/' not found"}
 
 
@@ -58,10 +60,10 @@ def test_missing_type(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "info": "Missing keyword: type",
-        "status": "ERROR",
+        "status": StatusCode.HTTP_ERROR.name,
     }
 
 
@@ -75,10 +77,10 @@ def test_invalid_type(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=foo")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "info": "Invalid type: foo",
-        "status": "ERROR",
+        "status": StatusCode.HTTP_ERROR.name,
     }
 
 
@@ -89,7 +91,7 @@ def test_getattribute_with_no_name(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=getattribute")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Messages of type 'getattribute' require a 'param' field."
     }
@@ -111,9 +113,9 @@ def test_getattribute_with_bad_name(
     backend.get_attribute.side_effect = AttributeError(f"{bad_name} not present")
 
     response = client.get(f"/get/json.htm?type=getattribute&param={bad_name}")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "ERROR",
+        "status": StatusCode.ERROR.name,
         "info": f"{bad_name} not present",
         "attribute": bad_name,
         "value": "",
@@ -134,9 +136,9 @@ def test_good_getattribute(client: TestClient, backend: unittest.mock.Mock) -> N
     backend.get_attribute.return_value = value
 
     response = client.get(f"/get/json.htm?type=getattribute&param={name}")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -150,7 +152,7 @@ def test_setattribute_with_no_name(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=setattribute")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Messages of type 'setattribute' require a 'param' field."
     }
@@ -163,7 +165,7 @@ def test_setattribute_with_no_value(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=setattribute&param=foo")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Messages of type 'setattribute' require a 'value' field."
     }
@@ -185,9 +187,9 @@ def test_setattribute_with_bad_name(
     backend.set_attribute.side_effect = AttributeError(f"{bad_name} not present")
 
     response = client.get(f"/get/json.htm?type=setattribute&param={bad_name}&value=0")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "ERROR",
+        "status": StatusCode.ERROR.name,
         "info": f"{bad_name} not present",
         "attribute": bad_name,
         "value": "",
@@ -212,9 +214,9 @@ def test_setattribute_on_readonly_attribute(
     )
 
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value=0")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "ERROR",
+        "status": StatusCode.ERROR.name,
         "info": f"Attempt to write read-only attribute {name}",
         "attribute": name,
         "value": "",
@@ -239,9 +241,9 @@ def test_setattribute_with_wrong_length(
     )
 
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value=0")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "ERROR",
+        "status": StatusCode.ERROR.name,
         "info": f"Wrong number of values for attribute {name}",
         "attribute": name,
         "value": "",
@@ -262,9 +264,9 @@ def test_good_setattribute(client: TestClient, backend: unittest.mock.Mock) -> N
     backend.set_attribute.return_value = value
 
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value={value}")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -278,7 +280,7 @@ def test_command_with_no_name(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=command")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Messages of type 'command' require a 'param' field."
     }
@@ -291,7 +293,7 @@ def test_command_with_no_value(client: TestClient) -> None:
     :param client: a test client to test the API with.
     """
     response = client.get("/get/json.htm?type=command&param=foo")
-    assert response.status_code == 404
+    assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {
         "detail": "Messages of type 'command' require a 'value' field."
     }
@@ -311,9 +313,9 @@ def test_command_with_bad_name(client: TestClient, backend: unittest.mock.Mock) 
     backend.execute_command.side_effect = AttributeError(f"{bad_name} not present")
 
     response = client.get(f"/get/json.htm?type=command&param={bad_name}&value=0")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "ERROR",
+        "status": StatusCode.ERROR.name,
         "info": f"{bad_name} not present",
         "command": bad_name,
         "retvalue": "",
@@ -334,9 +336,9 @@ def test_good_command(client: TestClient, backend: unittest.mock.Mock) -> None:
     backend.execute_command.return_value = return_value
 
     response = client.get(f"/get/json.htm?type=command&param={name}&value=bah")
-    assert response.status_code == 200
+    assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": "OK",
+        "status": StatusCode.OK.name,
         "info": "",
         "command": name,
         "retvalue": return_value,

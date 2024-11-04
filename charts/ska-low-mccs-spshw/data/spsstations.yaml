@@ -124,3 +124,10 @@ livenessProbe:
 readinessProbe:
 {{ toYaml .Values.readinessProbe | indent 2 }}
 {{- end}}
+extraVolumes:
+- name: daq-data
+  persistentVolumeClaim: 
+    claimName:  {{$.Values.daqDataRepository}}
+extraVolumeMounts:
+  - name: daq-data
+    mountPath: /product

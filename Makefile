@@ -100,7 +100,7 @@ K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
 	--json-report --json-report-file=$(JSON_REPORT_PATH)
 
 ifdef HW_DEPLOYMENT
-K8S_TEST_RUNNER_PYTEST_OPTION += --hw-deployment
+K8S_TEST_RUNNER_PYTEST_OPTIONS += --hw-deployment
 endif
 
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional

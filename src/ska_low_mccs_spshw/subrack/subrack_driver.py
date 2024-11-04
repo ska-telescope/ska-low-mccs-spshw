@@ -622,9 +622,9 @@ class SubrackDriver(
                     )
                     poll_response.add_query_response(attribute, None)
                 case StatusCode.REQUEST_EXCEPTION.name:
-                    raise RequestError(f"{attribute_response['status']}")
+                    raise RequestError(f"{attribute_response['info']}")
                 case StatusCode.HTTP_ERROR.name:
-                    raise HttpError(f"{attribute_response['status']}")
+                    raise HttpError(f"{attribute_response['info']}")
                 case _:
                     raise ValueError(
                         f"UNKNOWN status code {attribute_response['status']} "

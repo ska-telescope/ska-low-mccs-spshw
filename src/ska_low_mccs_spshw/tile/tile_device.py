@@ -568,7 +568,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.update_tile_health_attributes()
             else:
                 try:
-                    self.logger.info(f"Update attribute {attribute_name}")
                     tango_name = self.attr_map[attribute_name]
                     self._attribute_state[tango_name].update(attribute_value)
 

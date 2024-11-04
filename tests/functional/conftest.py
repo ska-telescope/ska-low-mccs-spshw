@@ -54,7 +54,7 @@ def pytest_addoption(
     )
     parser.addoption(
         "--hw-deployment",
-        action="store",
+        action="store_true",
         default=False,
         help=(
             "Tell pytest that you have a true Tango context against HW and can "

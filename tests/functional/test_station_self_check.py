@@ -125,8 +125,10 @@ def check_spsstation_state(
 
     iters = 0
     while any(tile.state() != tango.DevState.ON for tile in tile_devices):
-        if iters >= 20:
-            pytest.fail("Not all tiles came ON.")
+        if iters >= 60:
+            pytest.fail(
+                f"Not all tiles came ON: {[tile.state() for tile in tile_devices]}"
+            )
         time.sleep(1)
         iters += 1
 

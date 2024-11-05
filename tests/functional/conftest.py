@@ -82,25 +82,6 @@ def available_stations_fixture(true_context: bool) -> list[str]:
     return [DEFAULT_STATION_LABEL]
 
 
-@pytest.fixture(name="available_stations")
-def available_stations_fixture(true_context: bool) -> list[str]:
-    """
-    Return the name of the station under test.
-
-    :param true_context: whether to test against an existing Tango deployment
-
-    :return: the name of the station under test
-    """
-    if true_context:
-        db = tango.Database()
-        stations = db.get_device_exported("low-mccs/spsstation/*")
-        return [
-            str(station).rsplit("low-mccs/spsstation/", maxsplit=1)[-1]
-            for station in stations
-        ]
-    return [DEFAULT_STATION_LABEL]
-
-
 @pytest.fixture(name="functional_test_context_generator", scope="module")
 def functional_test_context_generator_fixture(
     true_context: bool,

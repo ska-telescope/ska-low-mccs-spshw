@@ -251,9 +251,9 @@ class TileData:
             "ddr_interface": {
                 "initialisation": None,
                 "reset_counter": {"FPGA0": None, "FPGA1": None},
-                "rd_cnt": {"FPGA0": None, "FPGA1": None},
-                "wr_cnt": {"FPGA0": None, "FPGA1": None},
-                "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
+                # "rd_cnt": {"FPGA0": None, "FPGA1": None},
+                # "wr_cnt": {"FPGA0": None, "FPGA1": None},
+                # "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
             },
             "f2f_interface": {
                 "pll_status": None,

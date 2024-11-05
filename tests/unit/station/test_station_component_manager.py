@@ -18,7 +18,13 @@ from typing import Iterator
 import numpy as np
 import pytest
 import tango
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -645,16 +651,21 @@ def test_power_state_transitions(
     for subrack in station_component_manager._subrack_proxies.values():
         assert subrack._proxy is not None
         assert subrack._proxy.state() == tango.DevState.ON
+        callbacks["subrack_health"].assert_call(
+            subrack._name, HealthState.OK, lookahead=2
+        )
+
     for tile in station_component_manager._tile_proxies.values():
         assert tile._proxy is not None
         assert tile._proxy.state() == tango.DevState.ON
-
-    callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["tile_health"].assert_call(tile._name, HealthState.OK, lookahead=4)
+    callbacks["tile_health"].assert_not_called()
+    callbacks["subrack_health"].assert_not_called()
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=4)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())
     subrack_names = list(station_component_manager._subrack_proxies.keys())
-
     # Start with all ON.
     # Any Tiles ON, Station should be ON
     station_component_manager._tile_state_changed(tile_names[0], power=PowerState.OFF)

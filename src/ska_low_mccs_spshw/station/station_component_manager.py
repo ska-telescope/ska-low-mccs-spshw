@@ -830,6 +830,12 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        if self._communication_states.get(fqdn) is None:
+            self.logger.info(
+                f"The communication state for {fqdn} is not rolled up. "
+                f"But is reporting {communication_state}"
+            )
+            return
         # Many callback threads could be hitting this method at the same time, so it's
         # possible (likely) that the GIL will suspend a thread between checking if it
         # need to update, and actually updating. This leads to callbacks appearing out
@@ -1280,6 +1286,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        # pylint: disable=too-many-branches
         message: str = ""
         self.logger.debug("Starting on sequence.")
         self.logger.debug("State transitions suppressed during power command.")
@@ -1341,6 +1348,10 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
+        elif result_code is ResultCode.ABORTED:
+            self.logger.error("Initialisation aborted")
+            task_status = TaskStatus.ABORTED
+            message = "On Command aborted"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
@@ -1498,7 +1509,7 @@ class SpsStationComponentManager(
                     result_code = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                     results.append(result_code)
-                if ResultCode.FAILED in results:
+                if TaskStatus.FAILED in results:
                     return ResultCode.FAILED
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
@@ -1509,6 +1520,9 @@ class SpsStationComponentManager(
             desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("_turn_on_tiles task has been aborted")
+                return ResultCode.ABORTED
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
@@ -2375,6 +2389,24 @@ class SpsStationComponentManager(
         :return: list of self-check tests available.
         """
         return self.self_check_manager._tpm_test_names
+
+    @property
+    def keep_test_data(self: "SpsStationComponentManager") -> bool:
+        """
+        Get whether test data will be kept from the self_check_manager.
+
+        :return: whether the test data will be kept.
+        """
+        return self.self_check_manager.keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self: "SpsStationComponentManager", value: bool) -> None:
+        """
+        Set whether test data will be kept from the self_check_manager.
+
+        :param value: whether or not to keep test data.
+        """
+        self.self_check_manager.keep_test_data = value
 
     # ------------
     # commands

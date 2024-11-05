@@ -1088,6 +1088,28 @@ class SpsStation(SKAObsDevice):
         """
         self.component_manager.excecute_async = execute_async
 
+    @attribute(dtype="DevBoolean")
+    def keepTestData(self: SpsStation) -> bool:
+        """
+        Return whether to keep test data.
+
+        We can either keep or discard test data after tests are run.
+
+        :returns: whether to keep test data.
+        """
+        return self.component_manager.keep_test_data
+
+    @keepTestData.write  # type: ignore[no-redef]
+    def keepTestData(self: SpsStation, keep_test_data: bool) -> None:
+        """
+        Set whether to keep test data.
+
+        We can either keep or discard test data after tests are run.
+
+        :param keep_test_data: whether to keep test data.
+        """
+        self.component_manager.keep_test_data = keep_test_data
+
     # -------------
     # Slow Commands
     # -------------

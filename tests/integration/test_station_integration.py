@@ -364,8 +364,6 @@ class TestStationTileIntegration:
         final_corrections = sps_station_device.ppsDelayCorrections
 
         assert np.array_equal(final_corrections, desired_pps_corrections)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_adc_power_change(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -430,8 +428,6 @@ class TestStationTileIntegration:
             unittest.mock.Mock(return_value="ADC_RMS")
         )
         change_event_callbacks["sps_adc_power"].assert_change_event(final_adc_powers)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_static_delay(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -505,8 +501,6 @@ class TestStationTileIntegration:
         time.sleep(0.1)
 
         assert np.array_equal(sps_station_device.staticTimeDelays, final_static_delays)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_sps_preadu_levels_coherent_with_tile_simulator(
@@ -594,8 +588,6 @@ class TestStationTileIntegration:
         # Check the station updates its own map.
         time.sleep(0.1)
         assert np.array_equal(sps_station_device.preaduLevels, desired_preadu_levels)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     # pylint: disable-next=too-many-arguments
     def test_csp_rounding(
@@ -673,8 +665,6 @@ class TestStationTileIntegration:
         )
 
         assert np.array_equal(sps_station_device.cspRounding, value_to_write)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)
 
     def test_channeliser_rounding(  # pylint: disable=too-many-arguments
         self: TestStationTileIntegration,
@@ -752,5 +742,3 @@ class TestStationTileIntegration:
         assert np.array_equal(
             sps_station_device.channeliserRounding, channeliser_rounding_to_check
         )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
-        wait_for_completed_command_to_clear_from_queue(sps_station_device)

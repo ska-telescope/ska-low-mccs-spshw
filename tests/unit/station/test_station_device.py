@@ -466,6 +466,99 @@ def test_On(
         )
 
 
+def test_Abort_On(
+    station_device: SpsStation,
+    mock_tile_device_proxies: list[DeviceProxy],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test the process of Aborting a turn on command.
+
+    :param station_device: the SPS station Tango device under test.
+    :param mock_tile_device_proxies: mock tile proxies that have been configured with
+        the required tile behaviours.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    change_event_callbacks["state"].assert_not_called()
+
+    # Turn station on, make sure it works
+    station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_not_called()
+
+    station_device.subscribe_event(
+        "longRunningCommandStatus",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_status"],
+    )
+    change_event_callbacks["command_status"].assert_change_event(())
+    station_device.subscribe_event(
+        "longRunningCommandResult",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["command_result"],
+    )
+    change_event_callbacks["command_result"].assert_change_event(("", ""))
+
+    # Turn station to Standby state
+    ([result_code], [standby_command_id]) = station_device.Standby()
+    assert result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "QUEUED")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "IN_PROGRESS")
+    )
+
+    change_event_callbacks["state"].assert_not_called()
+
+    station_device.MockTilesOff()
+
+    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    change_event_callbacks["state"].assert_not_called()
+
+    assert station_device.state() == DevState.STANDBY
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "COMPLETED")
+    )
+
+    # Turn a tile off, the on command won't be able to finish until it times out
+    mock_tile_device_proxies[0].adminMode = AdminMode.OFFLINE
+
+    ([on_result_code], [on_command_id]) = station_device.On()
+
+    assert on_result_code == ResultCode.QUEUED
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "COMPLETED", on_command_id, "STAGING")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "COMPLETED", on_command_id, "QUEUED")
+    )
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "COMPLETED", on_command_id, "IN_PROGRESS")
+    )
+
+    # Abort the command
+    ([abort_result_code], [abort_command_id]) = station_device.AbortCommands()
+
+    change_event_callbacks["command_status"].assert_change_event(
+        (standby_command_id, "COMPLETED", on_command_id, "ABORTED")
+    )
+
+
 def test_Initialise(
     station_device: SpsStation,
     mock_tile_device_proxies: list[DeviceProxy],

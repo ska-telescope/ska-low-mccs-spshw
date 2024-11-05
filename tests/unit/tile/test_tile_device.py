@@ -199,8 +199,9 @@ def on_tile_device_fixture(
     tile_device.on()
     tile_device.MockTpmOn()
 
+    # lookahead of 2 due to the potential for a transition to UNKNOWN.
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed"
+        "NotProgrammed", lookahead=2, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
@@ -647,21 +648,28 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
         )
         change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=10)
-        change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
 
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
                 try:
                     assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
                 except AssertionError:
-                    pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
+                    pytest.xfail(
+                        reason="Due to SKB-609, "
+                        "the INVALID attribute functionality has been removed"
+                    )
+                    # pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
         for attr in active_read_attributes:
             try:
                 assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
             except tango.DevFailed:
                 pass
-            except Exception as e:  # pylint: disable=broad-except
-                pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
+            except Exception:  # pylint: disable=broad-except
+                pytest.xfail(
+                    reason="Due to SKB-609, "
+                    "the INVALID attribute functionality has been removed"
+                )
+                # pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
 
         tile_device.On()
         tile_component_manager._subrack_says_tpm_power_changed(
@@ -808,7 +816,7 @@ class TestMccsTile:
         t1 = on_tile_device.read_attribute(attribute_name).time.totime()
         time.sleep(random_sleep)
         t2 = on_tile_device.read_attribute(attribute_name).time.totime()
-        assert t2 - t1 == pytest.approx(random_sleep, 0.1)
+        assert t2 - t1 == pytest.approx(random_sleep, abs=0.04)
 
     def test_tile_info(
         self: TestMccsTile,

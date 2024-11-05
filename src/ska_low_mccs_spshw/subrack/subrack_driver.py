@@ -536,7 +536,11 @@ class SubrackDriver(
                 command, " ".join(str(arg) for arg in args)
             )
             self.logger.debug(f"Response: {command_response}")
-            if command_response["status"] != StatusCode.OK.name:
+            if command_response["status"] not in [
+                StatusCode.OK.name,
+                StatusCode.STARTED.name,
+                StatusCode.BUSY.name,
+            ]:
                 if self._active_callback is not None:
                     self._active_callback(status=TaskStatus.FAILED)
                     self._active_callback = None
@@ -577,7 +581,11 @@ class SubrackDriver(
 
         for name, value in poll_request.setattributes:
             attribute_response = self._client.set_attribute(name, value)
-            if attribute_response["status"] != StatusCode.OK.name:
+            if attribute_response["status"] not in [
+                StatusCode.OK.name,
+                StatusCode.STARTED.name,
+                StatusCode.BUSY.name,
+            ]:
                 match attribute_response["status"]:
                     case StatusCode.ERROR.name:
                         self.logger.error(
@@ -595,6 +603,8 @@ class SubrackDriver(
                             f"Setting {name=}, {value=}.  "
                             f"Error_info={attribute_response['info']}"
                         )
+                    case StatusCode.BUSY.name | StatusCode.STARTED.name:
+                        pass
                     case _:
                         raise ValueError(
                             f"UNKNOWN status code {attribute_response['status']} "
@@ -625,6 +635,8 @@ class SubrackDriver(
                     raise RequestError(f"{attribute_response['info']}")
                 case StatusCode.HTTP_ERROR.name:
                     raise HttpError(f"{attribute_response['info']}")
+                case StatusCode.BUSY.name | StatusCode.STARTED.name:
+                    pass
                 case _:
                     raise ValueError(
                         f"UNKNOWN status code {attribute_response['status']} "

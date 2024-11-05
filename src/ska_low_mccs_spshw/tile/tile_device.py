@@ -252,6 +252,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "ppsPresent": BoolAttributeManager(
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
+                    initial_value=True,
                 ),
                 "stationId": AttributeManager(
                     functools.partial(self.post_change_event, "stationId"),
@@ -1966,10 +1967,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         automatic_state_analysis: tango.DevState = super().dev_state()
         force_alarm: bool = False
-        if (
-            self._attribute_state["ppsPresent"].read() is not None
-            and self._attribute_state["ppsPresent"].read()[0] is False
-        ):
+        if self._attribute_state["ppsPresent"].read()[0] is False:
             self.logger.warning("no PPS signal present, raising ALARM")
             force_alarm = True
         if force_alarm:

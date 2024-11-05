@@ -154,7 +154,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
-        self.active_request: TileRequest | TileLRCRequest | None = None
+        self.active_lrc_request: Optional[TileLRCRequest] = None
         self._request_provider: Optional[TileRequestProvider] = None
         self.src_ip_40g_fpga1: str | None = None
         self.src_ip_40g_fpga2: str | None = None
@@ -395,10 +395,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
-        self.active_request = poll_request
-        if isinstance(self.active_request, TileLRCRequest):
-            self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
-            self.active_request.notify_in_progress()
+        self.active_lrc_request = None
+        if isinstance(poll_request, TileLRCRequest):
+            self.active_lrc_request = poll_request
+            self.active_lrc_request.notify_in_progress()
+
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
@@ -422,9 +423,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self.logger.error(f"Failed poll with exception : {exception}")
         # Update command tracker if defined in request.
-        if isinstance(self.active_request, TileLRCRequest):
-            self.active_request.notify_failed(f"Exception: {repr(exception)}")
-            self.active_request = None
+        if self.active_lrc_request:
+            self.active_lrc_request.notify_failed(f"Exception: {repr(exception)}")
+            self.active_lrc_request = None
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
@@ -496,9 +497,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
-        if isinstance(self.active_request, TileLRCRequest):
-            self.active_request.notify_completed()
-            self.active_request = None
+        if self.active_lrc_request:
+            self.active_lrc_request.notify_completed()
+            self.active_lrc_request = None
 
         self.update_fault_state(poll_success=True)
 
@@ -537,7 +538,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
-        self._request_provider = TileRequestProvider(self._on_arrested_attribute)
+        self._request_provider = TileRequestProvider()
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack()
 
@@ -678,9 +679,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
-                    and not isinstance(self.active_request, TileLRCRequest)
-                    or isinstance(self.active_request, TileLRCRequest)
-                    and self.active_request.name.lower() != "initialise"
+                    and self.active_lrc_request is None
+                    or self.active_lrc_request
+                    and self.active_lrc_request.name.lower() != "initialise"
                 ):
                     request = TileLRCRequest(
                         name="initialise",

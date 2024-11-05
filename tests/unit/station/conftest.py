@@ -13,7 +13,7 @@ import unittest.mock
 
 import pytest
 import tango
-from ska_control_model import PowerState, ResultCode
+from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
@@ -32,6 +32,8 @@ def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
     builder.add_result_command("Off", ResultCode.STARTED)
     builder.add_result_command("On", ResultCode.STARTED)
     return builder()
@@ -50,6 +52,8 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     logical_tile_id = tile_id - 1
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
     builder.add_attribute("cspRounding", [2] * 384)
     builder.add_attribute("pendingDataRequests", False)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)

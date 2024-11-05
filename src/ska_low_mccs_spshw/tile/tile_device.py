@@ -16,7 +16,6 @@ import json
 import logging
 import os.path
 import sys
-import threading
 from dataclasses import dataclass
 from ipaddress import IPv4Address
 from typing import Any, Callable, Final, NoReturn
@@ -141,7 +140,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
-        self._post_change_event_lock = threading.Lock()
         self._build_state = sys.modules["ska_low_mccs_spshw"].__version_info__
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
         device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
@@ -724,24 +722,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :param attr_quality: A paramter specifying the
             quality factor of the attribute.
         """
-        with self._post_change_event_lock:
-            if isinstance(attr_value, dict):
-                attr_value = json.dumps(attr_value)
-            # self.logger.debug(f"Pushing the new value {name} = {attr_value}")
-            self.push_archive_event(name, attr_value, attr_time, attr_quality)
-            self.push_change_event(name, attr_value, attr_time, attr_quality)
+        if isinstance(attr_value, dict):
+            attr_value = json.dumps(attr_value)
+        self.logger.debug(f"Pushing the new value {name} = {attr_value}")
+        self.push_archive_event(name, attr_value, attr_time, attr_quality)
+        self.push_change_event(name, attr_value, attr_time, attr_quality)
 
-            # https://gitlab.com/tango-controls/pytango/-/issues/615
-            # set_value must be called after push_change_event.
-            # it seems that fire_change_event will consume the
-            # value set meaning a check_alarm has a nullptr.
-            self._multi_attr.get_attr_by_name(name).set_value(attr_value)
-            try:
-                # Update the attribute ALARM status.
-                self._multi_attr.check_alarm(name)
-            except tango.DevFailed:
-                # no alarm defined
-                pass
+        # https://gitlab.com/tango-controls/pytango/-/issues/615
+        # set_value must be called after push_change_event.
+        # it seems that fire_change_event will consume the
+        # value set meaning a check_alarm has a nullptr.
+        self._multi_attr.get_attr_by_name(name).set_value(attr_value)
+        try:
+            # Update the attribute ALARM status.
+            self._multi_attr.check_alarm(name)
+        except tango.DevFailed:
+            # no alarm defined
+            pass
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1562,10 +1559,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: the id of the station to which this tile is assigned
         """
-        # station = self._attribute_state["stationId"].read()[0]
-        # message = f"stationId: read value = {station}"
-        # self.logger.info(message)
-        return 1
+        station = self._attribute_state["stationId"].read()[0]
+        message = f"stationId: read value = {station}"
+        self.logger.info(message)
+        return station
 
     @stationId.write  # type: ignore[no-redef]
     def stationId(self: MccsTile, value: int) -> None:

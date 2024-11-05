@@ -11,7 +11,6 @@ from __future__ import annotations
 import copy
 import ipaddress
 import logging
-import sys
 import threading
 import time
 from typing import Any, Callable, Final, NoReturn, Optional, cast
@@ -86,7 +85,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments, too-many-locals
+    # pylint: disable=too-many-arguments
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -187,7 +186,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
-        self.trace_set = False
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or TileSimulator(logger)
@@ -395,24 +393,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: responses to queries in this poll
         """
-        if not self.trace_set:
-            self.trace_set = True
-            self.logger.error("Setting trace")
-
-            def _trace_lines(frame: Any, event: Any, arg: Any) -> Any:
-                if event == "line":
-                    # Get current file, line number, and code line
-                    filename = frame.f_globals["__file__"]
-                    lineno = frame.f_lineno
-                    code = frame.f_code
-                    self.logger.error(
-                        f"Executing {filename} at line {lineno}: "
-                        f"{code.co_name} - {code.co_filename}:{lineno}"
-                    )
-                return _trace_lines
-
-            # Set the trace
-            sys.settrace(_trace_lines)
         self.logger.debug(f"Executing request {poll_request.name} ...")
         # A callback hook to be updated after command executed.
         self.active_request = poll_request
@@ -422,18 +402,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
-
-        # Get all currently running threads
-        threads = threading.enumerate()
-
-        # Print information about each thread
-        for thread in threads:
-            msg = (
-                f"Thread Name: {thread.name}, Thread ID: "
-                f"{thread.ident}, Is Alive: {thread.is_alive()}"
-            )
-            self.logger.error(msg)
-
         return TileResponse(
             poll_request.name,
             result,

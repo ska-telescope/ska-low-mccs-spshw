@@ -441,6 +441,9 @@
                             "device_definition": {
                               "type": "string"
                             },
+                            "repo": {
+                              "type": "string"
+                            },
                             "priv_key": {
                               "type": "string"
                             },

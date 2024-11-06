@@ -52,6 +52,15 @@ def pytest_addoption(
             "need to spin up a Tango test context"
         ),
     )
+    parser.addoption(
+        "--hw-deployment",
+        action="store_true",
+        default=False,
+        help=(
+            "Tell pytest that you have a true Tango context against HW and can "
+            "run HW only tests"
+        ),
+    )
 
 
 @pytest.fixture(name="available_stations")
@@ -133,6 +142,19 @@ def true_context_fixture(request: pytest.FixtureRequest) -> bool:
     if os.getenv("TRUE_TANGO_CONTEXT", None):
         return True
     return False
+
+
+@pytest.fixture(name="hw_context", scope="session")
+def hw_context_fixture(request: pytest.FixtureRequest) -> bool:
+    """
+    Return whether to test against an real HW only.
+
+    :param request: A pytest object giving access to the requesting test
+        context.
+
+    :return: whether to to test against an real HW only.
+    """
+    return request.config.getoption("--hw-deployment")
 
 
 @pytest.fixture(name="subrack_address", scope="module")
@@ -226,6 +248,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "data_received_callback",
         "tile_adminMode",
         "device_state",
+        "device_adminmode",
         timeout=30.0,
     )
 

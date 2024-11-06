@@ -863,9 +863,6 @@ class SpsStationComponentManager(
                 self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
-                # # Set StationID in DAQ.
-                # assert self._daq_proxy is not None
-                # self._daq_proxy._configure_station_id()
 
     def subscribe_to_attributes(
         self: SpsStationComponentManager,

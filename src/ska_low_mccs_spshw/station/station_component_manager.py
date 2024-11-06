@@ -210,7 +210,6 @@ class _TileProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        print(f"{locals()=}")
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             if self._proxy.stationId != self._station_id:

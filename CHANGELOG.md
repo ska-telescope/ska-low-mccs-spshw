@@ -1,5 +1,11 @@
 # Version History
 
+## unreleased
+
+## 0.18.1
+
+* [SKB-610] Add StationID to Daq config and propagate to HDF5 metadata.
+
 ## 0.18.0
 
 * [SKB-609] Revert changes made in SKB-520.

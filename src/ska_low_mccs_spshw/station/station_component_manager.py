@@ -259,7 +259,7 @@ class _TileProxy(DeviceComponentManager):
 
 
 class _DaqProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
+    """A proxy to a DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -274,7 +274,7 @@ class _DaqProxy(DeviceComponentManager):
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
+        :param station_id: the id of the station to which this daq
             is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
@@ -294,6 +294,11 @@ class _DaqProxy(DeviceComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
+
+    def _configure_station_id(self: _DaqProxy) -> None:
+        assert self._proxy is not None
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
 
     def start_communicating(self: _DaqProxy) -> None:
         self._connecting = True
@@ -825,6 +830,13 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        if (
+            fqdn == self._daq_trl
+            and communication_state == CommunicationStatus.ESTABLISHED
+        ):
+            # Set StationID in DAQ.
+            assert self._daq_proxy is not None
+            self._daq_proxy._configure_station_id()
         if self._communication_states.get(fqdn) is None:
             self.logger.info(
                 f"The communication state for {fqdn} is not rolled up. "

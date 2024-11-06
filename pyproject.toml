@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.18.0"
+version = "0.18.1"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -19,7 +19,7 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", tag = "1.2.5", subdirectory = "python" }
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", tag = "1.4.1", subdirectory = "python" }
 pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", tag = "1.3.3" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
@@ -41,7 +41,7 @@ astropy="5.3.4"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
-ska-low-mccs-daq-interface = "^0.4.0"
+ska-low-mccs-daq-interface = "^0.4.1"
 watchdog = "^3.0.0"
 h5py = "^3.12.1"
 lockfile = "^0.12.2"
@@ -107,7 +107,7 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-ska-low-mccs-daq-interface = "^0.4.0"
+ska-low-mccs-daq-interface = "^0.4.1"
 ska-telmodel = "^1.4.1"
 pysnmp = "^7.1.4"
 ska-ser-snmp = "^0.4.1"

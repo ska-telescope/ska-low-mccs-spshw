@@ -210,6 +210,7 @@ class _TileProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
+        print(f"{locals()=}")
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             if self._proxy.stationId != self._station_id:
@@ -830,6 +831,13 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
+        if (
+            fqdn == self._daq_trl
+            and communication_state == CommunicationStatus.ESTABLISHED
+        ):
+            # Set StationID in DAQ.
+            assert self._daq_proxy is not None
+            self._daq_proxy._configure_station_id()
         if self._communication_states.get(fqdn) is None:
             self.logger.info(
                 f"The communication state for {fqdn} is not rolled up. "
@@ -855,9 +863,9 @@ class SpsStationComponentManager(
                 self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
-                # Set StationID in DAQ.
-                assert self._daq_proxy is not None
-                self._daq_proxy._configure_station_id()
+                # # Set StationID in DAQ.
+                # assert self._daq_proxy is not None
+                # self._daq_proxy._configure_station_id()
 
     def subscribe_to_attributes(
         self: SpsStationComponentManager,

@@ -209,8 +209,8 @@ def station_online(
     :param get_device_online: a fixture to call to bring a device ONLINE
     :param station_name: the name of the station under test.
     """
-    if station_name == "stfc-ral-software":
-        pytest.xfail("This test does not work consistently against hardware.")
+    # if station_name == "stfc-ral-software":
+    #     pytest.xfail("This test does not work consistently against hardware.")
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:

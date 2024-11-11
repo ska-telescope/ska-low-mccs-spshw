@@ -226,6 +226,20 @@ class BaseDaqTest(TpmSelfCheckTest):
         for tile in tiles:
             tile.StopPatternGenerator(stage)
 
+    def _configure_test_generator(
+        self: BaseDaqTest,
+        frequency: float,
+        amplitude: float,
+        adc_channels: list | None = None,
+    ) -> None:
+        json_arg: dict[str, float | list] = {
+            "tone_frequency": frequency,
+            "tone_amplitude": amplitude,
+        }
+        if adc_channels is not None:
+            json_arg.update({"adc_channels": adc_channels})
+        self.component_manager.configure_test_generator(json.dumps(json_arg))
+
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
         self._observer = Observer()  # type: ignore

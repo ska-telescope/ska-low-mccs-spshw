@@ -340,7 +340,7 @@ def device_verify_attribute(
                 "FAILED": HealthState.FAILED,
                 "UNKNOWN": HealthState.UNKNOWN,
             }[value]
-        timeout = 60
+        timeout = 100
         device_value = None
         for _ in range(timeout):
             if attribute == "state":

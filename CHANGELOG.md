@@ -2,6 +2,8 @@
 
 ## unreleased
 
+* [MCCS-2299] Add functional test for reading attributes on hardware.
+
 ## 0.18.1
 
 * [SKB-610] Add StationID to Daq config and propagate to HDF5 metadata.

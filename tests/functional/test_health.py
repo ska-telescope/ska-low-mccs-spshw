@@ -93,11 +93,9 @@ def excluded_tile_attributes_fixture() -> list[str]:
     :returns: Attribute list.
     """
     return [
-        "buildState",
-        "fortyGbDestinationIps",
-        "fortyGbDestinationPorts",
-        "clockPresent",
-        "sysrefPresent",
+        "buildState",  # Mismatch between cpp and tango args.
+        "clockPresent",  # Not yet implemented in aavs-system.
+        "sysrefPresent",  # Not yet implemented in aavs-system.
     ]
 
 
@@ -433,12 +431,12 @@ def check_attribute_read_success(attribute_read_info: dict[str, Any]) -> None:
     """
     Assert that all attribute reads were successful.
 
-    :param attribute_read_info: A dcit of values returned by an attribute read.
+    :param attribute_read_info: A dict of values returned by an attribute read.
     """
-    # Chose not to do `if any()` so we have the attr name also if there's a failure.
-    for attr_name, attr_value in attribute_read_info.items():
-        if attr_value is None:
-            pytest.fail(f"Error reading attribute: {attr_name}")
+    failed_attrs = [
+        attr for attr, attr_value in attribute_read_info.items() if attr_value is None
+    ]
+    assert not failed_attrs, f"Error reading attribute(s): {failed_attrs}"
 
 
 @then(parsers.cfparse("the {device_group} reports that it is {programming_state}"))

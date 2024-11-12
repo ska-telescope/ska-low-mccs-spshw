@@ -274,7 +274,6 @@ class TestBeamformer(BaseDaqTest):
         ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
         with self.reset_context():
             for channel in test_channels:
-
                 # Reset all TPM calibration with expected initial gain
                 self._reset_tpm_calibration()
 

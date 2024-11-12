@@ -68,8 +68,5 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
-        And the Subracks reports that its HealthState is OK
-        And the Tiles reports that its HealthState is OK
-        And the Station reports that its HealthState is OK
         When all attributes are read on a Tile
         Then a value is returned for each

@@ -468,14 +468,14 @@ class MockTpm:
         }
         return self._40g_configuration
 
-    def _get_src_mac(self: MockTpm) -> str:
-        return "e1:13:9a:7d:18:7d"
+    def _get_src_mac(self: MockTpm) -> int:
+        return 107752315813889
 
-    def _get_src_ip(self: MockTpm) -> str:
-        return "123.123.123.111"
+    def _get_src_ip(self: MockTpm) -> int:
+        return 167774722
 
-    def _get_dst_ip(self: MockTpm) -> str:
-        return "123.123.123.112"
+    def _get_dst_ip(self: MockTpm) -> int:
+        return 167774723
 
     def _get_src_port(self: MockTpm) -> int:
         return 1234
@@ -486,8 +486,8 @@ class MockTpm:
     def _get_netmask(self: MockTpm) -> int:
         return 4294967040
 
-    def _get_gateway_ip(self: MockTpm) -> str:
-        return "123.123.123.113"
+    def _get_gateway_ip(self: MockTpm) -> int:
+        return 167774721
 
     def find_register(
         self: MockTpm,

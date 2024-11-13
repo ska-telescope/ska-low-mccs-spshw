@@ -12,7 +12,7 @@ import itertools
 import json
 import logging
 import random
-from typing import Callable
+from typing import TYPE_CHECKING, Callable
 
 import numpy as np
 from pydaq.persisters import BeamFormatFileManager  # type: ignore
@@ -21,6 +21,8 @@ from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
+if TYPE_CHECKING:
+    from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestBeamformer"]
 
 
@@ -98,6 +100,31 @@ class TestBeamformer(BaseDaqTest):
     4. You must have a DAQ available.
     """
 
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: TestBeamformer,
+        component_manager: SpsStationComponentManager,
+        logger: logging.Logger,
+        tile_trls: list[str],
+        subrack_trls: list[str],
+        daq_trl: str,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param logger: a logger for this model to use.
+        :param tile_trls: trls of tiles the station has.
+        :param subrack_trls: trls of subracks the station has.
+        :param daq_trl: trl of the daq the station has.
+        :param component_manager: SpsStation component manager under test.
+        """
+        # Random set of delays to apply to the test generator, we make it here to we can
+        # use the same random delays each time.
+        self._delays = [
+            random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
+        ]
+        super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
+
     def _send_beam_data(self: TestBeamformer) -> None:
         self.component_manager.send_data_samples(
             json.dumps(
@@ -164,7 +191,10 @@ class TestBeamformer(BaseDaqTest):
                 TileData.FIRST_FREQUENCY_CHANNEL + channel
             ) * TileData.CHANNEL_WIDTH
             self._configure_test_generator(
-                frequency, 0.5, [antenna_no * 2, antenna_no * 2 + 1]
+                frequency,
+                0.5,
+                adc_channels=[antenna_no * 2, antenna_no * 2 + 1],
+                delays=self._delays,
             )
             self._send_beam_data()
             assert self._data_created_event.wait(20)
@@ -185,7 +215,11 @@ class TestBeamformer(BaseDaqTest):
         frequency = (
             TileData.FIRST_FREQUENCY_CHANNEL + channel
         ) * TileData.CHANNEL_WIDTH
-        self._configure_test_generator(frequency, 0.5)
+        self._configure_test_generator(
+            frequency,
+            0.5,
+            delays=self._delays,
+        )
         self._send_beam_data()
         assert self._data_created_event.wait(20)
         self._data_created_event.clear()
@@ -257,11 +291,17 @@ class TestBeamformer(BaseDaqTest):
                     self.test_logger.error(rcv_val)
                     raise AssertionError
 
+    def _reset(self: TestBeamformer) -> None:
+        self.component_manager.start_adcs()
+        self._reset_tpm_calibration()
+        super()._reset()
+
     def test(self: TestBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self._configure_daq("BEAM_DATA")
         self.test_logger.debug("Testing beamformed data.")
         self.component_manager._set_channeliser_rounding(np.full(512, 5))
+        self.component_manager.stop_adcs()
         test_channels = range(7 + 1)
         self._data_handler = BeamDataReceivedHandler(
             self.test_logger,

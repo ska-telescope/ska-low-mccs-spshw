@@ -3299,6 +3299,30 @@ class SpsStationComponentManager(
                 result=(ResultCode.OK, "ADC equalisation complete."),
             )
 
+    def start_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Start ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StartADCs", require_synchronised=True)
+
+    def stop_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopADCs", require_synchronised=True)
+
     def describe_test(self, test_name: str) -> str:
         """
         Return the doc string of a given self-check test.

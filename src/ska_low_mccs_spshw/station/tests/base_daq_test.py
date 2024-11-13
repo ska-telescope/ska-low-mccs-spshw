@@ -230,6 +230,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self: BaseDaqTest,
         frequency: float,
         amplitude: float,
+        delays: list[int] | None = None,
         adc_channels: list | None = None,
     ) -> None:
         json_arg: dict[str, float | list] = {
@@ -238,6 +239,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         }
         if adc_channels is not None:
             json_arg.update({"adc_channels": adc_channels})
+        if delays is not None:
+            json_arg.update({"delays": delays})
         self.component_manager.configure_test_generator(json.dumps(json_arg))
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
@@ -334,6 +337,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._adders = None
         self._pattern = None
         self._stop_directory_watch()
+        if self.daq_proxy is not None:
+            self.daq_proxy.Stop()
         # self._delete_data()
 
     @contextmanager

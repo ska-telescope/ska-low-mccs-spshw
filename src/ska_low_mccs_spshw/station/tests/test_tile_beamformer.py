@@ -268,7 +268,7 @@ class TestBeamformer(BaseDaqTest):
                         self.test_logger.error("Reference Antenna:")
                         self.test_logger.error(ref_values[tile_no])
                         self.test_logger.error("Received values:")
-                        self.test_logger.error(single_input_data)
+                        self.test_logger.error(rcv_val)
                         raise AssertionError
 
     def _check_all_antenna_data(

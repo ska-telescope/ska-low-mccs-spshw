@@ -97,6 +97,7 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
             try:
                 self.handle_data()
                 self._data_created_callback(data=self.data)
+                self.reset()
             except Exception as e:  # pylint: disable=broad-exception-caught
                 self._logger.error(f"Got error in callback: {repr(e)}, {e}")
                 self._logger.error(traceback.format_exc())

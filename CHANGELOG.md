@@ -2,12 +2,16 @@
 
 ## unreleased
 
+* [MCCS-2319] ddr_interface points failing health when running a scan
+* [MCCS-2328] Add enable/disable ADCs, add delays to test generator
+
 ## 0.18.1
 
 * [SKB-610] Add StationID to Daq config and propagate to HDF5 metadata.
 
 ## 0.18.0
 
+* [MCCS-2273] Add DAQ tests so SpsStation.SelfCheck()
 * [SKB-609] Revert changes made in SKB-520.
 * [MCCS-2265] Fix abortCommand() when turning station on.
 * [MCCS-2309] Add property "device_property" for setting arbitrary properties.

@@ -1429,7 +1429,6 @@ class TileSimulator:
                 "netmask": self.tpm._get_netmask(),
                 "gateway_ip": self.tpm._get_gateway_ip(),
             }
-            return self._40g_configuration
         if core_id == -1:
             return self._forty_gb_core_list
         for item in self._forty_gb_core_list:
@@ -2289,9 +2288,9 @@ class TileSimulator:
             if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
                 board_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
@@ -2300,9 +2299,9 @@ class TileSimulator:
             if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
                 fpga1_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
@@ -2311,9 +2310,9 @@ class TileSimulator:
             if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
                 fpga2_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"

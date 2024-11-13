@@ -8,9 +8,10 @@
 """An implementation of a health model for a station."""
 from __future__ import annotations
 
+import itertools
 from typing import Optional, Sequence
 
-from ska_control_model import HealthState
+from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 from .station_health_rules import SpsStationHealthRules
@@ -44,9 +45,27 @@ class SpsStationHealthModel(BaseHealthModel):
         self._subrack_health: dict[str, Optional[HealthState]] = {
             subrack_fqdn: HealthState.UNKNOWN for subrack_fqdn in subrack_fqdns
         }
+        self._device_admin_modes: dict[str, AdminMode] = {
+            fqdn: AdminMode.OFFLINE
+            for fqdn in itertools.chain(tile_fqdns, subrack_fqdns)
+        }
         self._health_rules = SpsStationHealthRules(thresholds)
         # State entries to create.
         super().__init__(health_changed_callback, pps_delay_spread=0)
+
+    def subdevice_admin_mode_changed(
+        self: SpsStationHealthModel,
+        device_trl: str,
+        device_admin_mode: AdminMode,
+    ) -> None:
+        """
+        Handle a change in subdevice adminMode.
+
+        :param device_trl: The TRL of the device whose adminMode is changing.
+        :param device_admin_mode: The new adminMode of the device.
+        """
+        if self._device_admin_modes[device_trl] != device_admin_mode:
+            self._device_admin_modes[device_trl] = device_admin_mode
 
     def subrack_health_changed(
         self: SpsStationHealthModel,
@@ -108,7 +127,10 @@ class SpsStationHealthModel(BaseHealthModel):
             if health == station_health:
                 return station_health, station_report
             result, report = self._health_rules.rules[health](
-                self._subrack_health, self._tile_health, self._state
+                self._subrack_health,
+                self._tile_health,
+                self._state,
+                self._device_admin_modes,
             )
             if result:
                 return health, report

@@ -147,6 +147,24 @@ class _SubrackProxy(DeviceComponentManager):
             self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
+    def _device_admin_mode_changed(
+        self: _SubrackProxy,
+        event_name: str,
+        event_value: AdminMode,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle a change event on device admin mode.
+
+        :param event_name: name of the event; will always be
+            "adminMode" for this callback
+        :param event_value: the new admin mode
+        :param event_quality: the quality of the change event
+        """
+        if self._component_state_callback is not None:
+            self._component_state_callback(admin_mode=event_value)
+        super()._device_admin_mode_changed(event_name, event_value, event_quality)
+
     def _update_communication_state(
         self: _SubrackProxy,
         communication_state: CommunicationStatus,
@@ -226,6 +244,24 @@ class _TileProxy(DeviceComponentManager):
             if self._connecting:
                 self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
+
+    def _device_admin_mode_changed(
+        self: _TileProxy,
+        event_name: str,
+        event_value: AdminMode,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        """
+        Handle a change event on device admin mode.
+
+        :param event_name: name of the event; will always be
+            "adminMode" for this callback
+        :param event_value: the new admin mode
+        :param event_quality: the quality of the change event
+        """
+        if self._component_state_callback is not None:
+            self._component_state_callback(admin_mode=event_value)
+        super()._device_admin_mode_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
         self: _TileProxy,
@@ -392,6 +428,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        subdevice_admin_mode_changed_callback: Callable[[str, AdminMode], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -421,6 +458,8 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param subdevice_admin_mode_changed_callback: callback to be called
+            when a subdevice changes adminMode.
         """
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
@@ -492,6 +531,9 @@ class SpsStationComponentManager(
         }
         self._tile_health_changed_callback = tile_health_changed_callback
         self._subrack_health_changed_callback = subrack_health_changed_callback
+        self._subdevice_admin_mode_changed_callback = (
+            subdevice_admin_mode_changed_callback
+        )
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
@@ -741,12 +783,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -975,6 +1017,7 @@ class SpsStationComponentManager(
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
         fault: Optional[bool] = None,
+        admin_mode: Optional[AdminMode] = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -982,6 +1025,8 @@ class SpsStationComponentManager(
                 self._evaluate_power_state()
         if health is not None:
             self._tile_health_changed_callback(fqdn, HealthState(health))
+        if admin_mode is not None:
+            self._subdevice_admin_mode_changed_callback(fqdn, admin_mode)
 
     @threadsafe
     def _subrack_state_changed(
@@ -989,6 +1034,7 @@ class SpsStationComponentManager(
         fqdn: str,
         power: Optional[PowerState] = None,
         health: Optional[HealthState] = None,
+        admin_mode: Optional[AdminMode] = None,
     ) -> None:
         if power is not None:
             with self._power_state_lock:
@@ -996,6 +1042,8 @@ class SpsStationComponentManager(
                 self._evaluate_power_state()
         if health is not None:
             self._subrack_health_changed_callback(fqdn, HealthState(health))
+        if admin_mode is not None:
+            self._subdevice_admin_mode_changed_callback(fqdn, admin_mode)
 
     @threadsafe
     def _daq_state_changed(

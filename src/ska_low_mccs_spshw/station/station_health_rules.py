@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from ska_control_model import HealthState
+from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common.health import HealthRules
 
 DEGRADED_STATES = frozenset({HealthState.DEGRADED, HealthState.FAILED, None})
@@ -25,6 +25,7 @@ class SpsStationHealthRules(HealthRules):
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
+        device_admin_modes: dict[str, AdminMode],
     ) -> tuple[bool, str]:
         """
         Test whether UNKNOWN is valid for the station.
@@ -32,30 +33,33 @@ class SpsStationHealthRules(HealthRules):
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
         :param station_state: dictionary of station state attributes.
+        :param device_admin_modes: dictionary of all subdevice adminModes.
 
         :return: True if UNKNOWN is a valid state, along with a text report.
         """
-        result = (
-            HealthState.UNKNOWN in subrack_healths.values()
-            or HealthState.UNKNOWN in tile_healths.values()
-        )
-        if result:
-            tile_states = [
-                trl
-                for trl, health in tile_healths.items()
-                if health is None or health == HealthState.UNKNOWN
-            ]
-            subrack_states = [
-                trl
-                for trl, health in subrack_healths.items()
-                if health is None or health == HealthState.UNKNOWN
-            ]
-            report = (
-                "Some devices are unknown: "
-                f"Tiles: {tile_states} Subracks: {subrack_states}"
-            )
-        else:
-            report = ""
+        result = False
+        report = ""
+        # result = (
+        #     HealthState.UNKNOWN in subrack_healths.values()
+        #     or HealthState.UNKNOWN in tile_healths.values()
+        # )
+        # if result:
+        #     tile_states = [
+        #         trl
+        #         for trl, health in tile_healths.items()
+        #         if health is None or health == HealthState.UNKNOWN
+        #     ]
+        #     subrack_states = [
+        #         trl
+        #         for trl, health in subrack_healths.items()
+        #         if health is None or health == HealthState.UNKNOWN
+        #     ]
+        #     report = (
+        #         "Some devices are unknown: "
+        #         f"Tiles: {tile_states} Subracks: {subrack_states}"
+        #     )
+        # else:
+        #     report = ""
         return result, report
 
     def failed_rule(  # type: ignore[override]
@@ -63,6 +67,7 @@ class SpsStationHealthRules(HealthRules):
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
+        device_admin_modes: dict[str, AdminMode],
     ) -> tuple[bool, str]:
         """
         Test whether FAILED is valid for the station.
@@ -70,13 +75,18 @@ class SpsStationHealthRules(HealthRules):
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
         :param station_state: dictionary of station state attributes.
+        :param device_admin_modes: dictionary of all subdevice adminModes.
 
         :return: True if FAILED is a valid state, along with a text report.
         """
         result = (
-            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            self.get_fraction_in_states(
+                tile_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             >= self._thresholds["tile_failed"]
-            or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            or self.get_fraction_in_states(
+                subrack_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             >= self._thresholds["subrack_failed"]
         )
         if result:
@@ -119,6 +129,7 @@ class SpsStationHealthRules(HealthRules):
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
+        device_admin_modes: dict[str, AdminMode],
     ) -> tuple[bool, str]:
         """
         Test whether DEGRADED is valid for the station.
@@ -126,13 +137,18 @@ class SpsStationHealthRules(HealthRules):
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
         :param station_state: dictionary of station state attributes.
+        :param device_admin_modes: dictionary of all subdevice adminModes.
 
         :return: True if DEGRADED is a valid state, along with a text report.
         """
         result = (
-            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            self.get_fraction_in_states(
+                tile_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             >= self._thresholds["tile_degraded"]
-            or self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            or self.get_fraction_in_states(
+                subrack_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             >= self._thresholds["subrack_degraded"]
         )
         if result:
@@ -177,6 +193,7 @@ class SpsStationHealthRules(HealthRules):
         subrack_healths: dict[str, HealthState | None],
         tile_healths: dict[str, HealthState | None],
         station_state: dict[str, Any | None],
+        device_admin_modes: dict[str, AdminMode],
     ) -> tuple[bool, str]:
         """
         Test whether OK is valid for the station.
@@ -184,13 +201,18 @@ class SpsStationHealthRules(HealthRules):
         :param subrack_healths: dictionary of subrack healths
         :param tile_healths: dictionary of tile healths
         :param station_state: dictionary of station state attributes.
+        :param device_admin_modes: dictionary of all subdevice adminModes.
 
         :return: True if OK is a valid state, along with a text report.
         """
         result = (
-            self.get_fraction_in_states(tile_healths, DEGRADED_STATES, default=0)
+            self.get_fraction_in_states(
+                tile_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             < self._thresholds["tile_degraded"]
-            and self.get_fraction_in_states(subrack_healths, DEGRADED_STATES, default=0)
+            and self.get_fraction_in_states(
+                subrack_healths, DEGRADED_STATES, device_admin_modes, default=0
+            )
             < self._thresholds["subrack_degraded"]
         )
         if not result:

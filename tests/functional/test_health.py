@@ -98,7 +98,7 @@ def excluded_tile_attributes_fixture() -> list[str]:
         "sysrefPresent",  # Not yet implemented in aavs-system.
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
-        "_lrcevent",  # Requires more setup than the test performs.
+        "_lrcEvent",  # Requires more setup than the test performs.
     ]
 
 

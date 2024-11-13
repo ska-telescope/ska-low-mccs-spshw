@@ -39,6 +39,15 @@
             "description": "pulse peak amplitude, normalized to 127.5 ADC units, resolution 0.5 ADU",
             "type": "number"
         },
+        "delays": {
+            "description": "delays to apply to the ADC streams. Positive values add to the delay.",
+            "type": "array",
+            "items": {
+                "type": "number"
+            },
+            "minItems": 32,
+            "maxItems": 32
+        },
         "adc_channels": {
             "description": "ADC channels",
             "type": "array",

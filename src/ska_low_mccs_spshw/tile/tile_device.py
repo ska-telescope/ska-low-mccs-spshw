@@ -5094,7 +5094,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         def do(self: MccsTile.StartAdcsCommand) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.StartAdcs` command.
+            Implement :py:meth:`.MccsTile.StartADCs` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for
@@ -5142,7 +5142,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         def do(self: MccsTile.StopAdcsCommand) -> tuple[ResultCode, str]:
             """
-            Implement :py:meth:`.MccsTile.StopAdcs` command.
+            Implement :py:meth:`.MccsTile.StopADCs` command.
 
             :return: A tuple containing a return code and a string
                 message indicating status. The message is for

@@ -213,24 +213,6 @@ class TestBeamformer(BaseDaqTest):
                     )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
-    def _reset_calibration_coefficients(
-        self: TestBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
-    ) -> None:
-        complex_coefficients = [
-            [complex(gain), complex(0.0), complex(0.0), complex(gain)]
-        ] * TileData.NUM_BEAMFORMER_CHANNELS
-        for antenna in range(TileData.ANTENNA_COUNT):
-            inp = list(itertools.chain.from_iterable(complex_coefficients))
-            out = [[v.real, v.imag] for v in inp]
-            coefficients = list(itertools.chain.from_iterable(out))
-            coefficients.insert(0, float(antenna))
-            tile.LoadCalibrationCoefficients(coefficients)
-            tile.ApplyCalibration("")
-
-    def _reset_tpm_calibration(self: TestBeamformer) -> None:
-        for tile in self.tile_proxies:
-            self._reset_calibration_coefficients(tile)
-
     def _load_calibration_coefficients(
         self: TestBeamformer, tile: MccsDeviceProxy, channel: int, coeffs: np.ndarray
     ) -> None:
@@ -250,6 +232,24 @@ class TestBeamformer(BaseDaqTest):
             coefficients.insert(0, float(antenna))
             tile.LoadCalibrationCoefficients(coefficients)
             tile.ApplyCalibration("")
+
+    def _reset_calibration_coefficients(
+        self: TestBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
+    ) -> None:
+        complex_coefficients = [
+            [complex(gain), complex(0.0), complex(0.0), complex(gain)]
+        ] * TileData.NUM_BEAMFORMER_CHANNELS
+        for antenna in range(TileData.ANTENNA_COUNT):
+            inp = list(itertools.chain.from_iterable(complex_coefficients))
+            out = [[v.real, v.imag] for v in inp]
+            coefficients = list(itertools.chain.from_iterable(out))
+            coefficients.insert(0, float(antenna))
+            tile.LoadCalibrationCoefficients(coefficients)
+            tile.ApplyCalibration("")
+
+    def _reset_tpm_calibration(self: TestBeamformer) -> None:
+        for tile in self.tile_proxies:
+            self._reset_calibration_coefficients(tile)
 
     def _check_single_antenna_data(
         self: TestBeamformer,
@@ -324,6 +324,8 @@ class TestBeamformer(BaseDaqTest):
                 # The first dataset we get should be uncalibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
 
+                np.save("before_calibration.npy", single_input_data)
+
                 # Grab the reference data for each antenna/pol on each tile
                 ref_values = single_input_data[:, ref_pol, ref_antenna]
 
@@ -333,6 +335,8 @@ class TestBeamformer(BaseDaqTest):
 
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
+
+                np.save("after_calibration.npy", single_input_data)
 
                 # Check the data against the reference values
                 self._check_single_antenna_data(ref_values, single_input_data)

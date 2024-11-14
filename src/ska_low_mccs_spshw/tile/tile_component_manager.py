@@ -3125,6 +3125,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         amplitude_noise: float,
         pulse_code: int,
         amplitude_pulse: float,
+        delays: list[float] | None = None,
         load_time: Optional[str] = None,
     ) -> None:
         """
@@ -3142,6 +3143,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :param amplitude_pulse: pulse peak amplitude, normalized
             to 127.5 ADC units, resolution 0.5 ADU
+        :param delays: delays to load into the test generator, list of 32 floats.
         :param load_time: Time to start the generator. in UTC ISO formatted string.
 
         :raises ValueError: invalid time specified
@@ -3195,6 +3197,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_frame)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+                    if delays is not None:
+                        self.tile.test_generator_set_delay(delays)
                     self.tile["fpga1.test_generator.control.load_dds0"] = 1
                     self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
@@ -3315,3 +3319,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.start_pattern(stage)
             else:
                 raise TimeoutError("Failed to acquire lock")
+
+    def start_adcs(self: TileComponentManager) -> None:
+        """Start the ADCs."""
+        self.tile.enable_all_adcs()
+
+    def stop_adcs(self: TileComponentManager) -> None:
+        """Stop the ADCs."""
+        self.tile.disable_all_adcs()

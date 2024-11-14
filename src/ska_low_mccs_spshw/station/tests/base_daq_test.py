@@ -130,7 +130,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param daq_trl: trl of the daq the station has.
         :param component_manager: SpsStation component manager under test.
         """
-        self._data: np.ndarray | None
+        self._data: np.ndarray | None = None
         self._observer: InotifyObserver
         self._data_handler: BaseDataReceivedHandler
         self._pattern: list | None = None

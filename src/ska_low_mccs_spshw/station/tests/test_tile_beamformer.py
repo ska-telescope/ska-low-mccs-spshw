@@ -163,6 +163,8 @@ class TestBeamformer(BaseDaqTest):
                 delays=self._delays,
             )
             self._send_beam_data()
+            if self._data is not None:
+                np.save(f"whole_data_antenna_{antenna_no}.npy", self._data)
             assert self._data_created_event.wait(20)
             for tile_no in range(len(self.tile_proxies)):
                 single_input_data[tile_no][0][antenna_no] = self._get_beam_value(

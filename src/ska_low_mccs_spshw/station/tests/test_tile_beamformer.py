@@ -12,6 +12,7 @@ import itertools
 import json
 import logging
 import random
+import time
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
@@ -328,6 +329,8 @@ class TestBeamformer(BaseDaqTest):
                 # Reset all TPM calibration with expected initial gain
                 self._reset_tpm_calibration()
 
+                time.sleep(5)
+
                 # The first dataset we get should be uncalibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
 
@@ -339,6 +342,8 @@ class TestBeamformer(BaseDaqTest):
                 # Calculate the calibration coefficients to phase all antennas to
                 # the reference antenna for each TPM
                 self._calibrate_tpms(channel, ref_values, single_input_data)
+
+                time.sleep(5)
 
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)

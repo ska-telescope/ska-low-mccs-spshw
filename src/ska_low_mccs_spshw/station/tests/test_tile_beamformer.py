@@ -123,6 +123,7 @@ class TestBeamformer(BaseDaqTest):
         self._delays = [
             random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
         ]
+        self._first = True
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _send_beam_data(self: TestBeamformer) -> None:
@@ -165,7 +166,10 @@ class TestBeamformer(BaseDaqTest):
             self._send_beam_data()
             assert self._data_created_event.wait(20)
             if self._data is not None:
-                np.save(f"whole_data_antenna_{antenna_no}.npy", self._data)
+                if self._first:
+                    np.save(f"whole_data_antenna_before_{antenna_no}.npy", self._data)
+                else:
+                    np.save(f"whole_data_antenna_after_{antenna_no}.npy", self._data)
             for tile_no in range(len(self.tile_proxies)):
                 single_input_data[tile_no][0][antenna_no] = self._get_beam_value(
                     tile_no, 0, channel
@@ -175,6 +179,7 @@ class TestBeamformer(BaseDaqTest):
                 )
             self._data_created_event.clear()
             self._stop_directory_watch()
+        self._first = False
         return single_input_data
 
     def _get_all_antenna_data_set(self: TestBeamformer, channel: int) -> None:

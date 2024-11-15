@@ -239,6 +239,7 @@ class TestBeamformer(BaseDaqTest):
             coefficients = list(itertools.chain.from_iterable(out))
             coefficients.insert(0, float(antenna))
             tile.LoadCalibrationCoefficients(coefficients)
+            time.sleep(1)
             tile.ApplyCalibration("")
 
     def _reset_calibration_coefficients(

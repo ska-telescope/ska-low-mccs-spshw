@@ -4447,20 +4447,20 @@ reference = "skao"
 
 [[package]]
 name = "ska-tango-base"
-version = "1.1.0"
+version = "1.2.1"
 description = "SKA Tango base classes"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "ska_tango_base-1.1.0-py3-none-any.whl", hash = "sha256:a6ed82824caaa978894e3df0f375d175068b4599848744e2a7c80cd04f27d779"},
-    {file = "ska_tango_base-1.1.0.tar.gz", hash = "sha256:1076ed4d537f2eb444f1e97cccb3938c58e49e37adc9e9f298f118f342ba16c4"},
+    {file = "ska_tango_base-1.2.1-py3-none-any.whl", hash = "sha256:b8638f145b546718260e1c7860dbe6b05fde5bcb7d1fd73f1fd73a4895a280a9"},
+    {file = "ska_tango_base-1.2.1.tar.gz", hash = "sha256:1e837cc86d36203e71eb82aed6e53b2cd90dacb06a0aca601794bd6b977defd8"},
 ]
 
 [package.dependencies]
 debugpy = ">=1.6.2,<2.0.0"
 jsonschema = ">=4.17.3,<5.0.0"
 numpy = {version = ">=1.21.6", markers = "python_version == \"3.10\""}
-pytango = ">=9.4.2,<10.0.0"
+pytango = ">=9.4.2,<11.0.0"
 ska-control-model = ">=1.0.0,<2.0.0"
 ska-ser-logging = ">=0.4.3,<0.5.0"
 transitions = ">=0.9.0,<0.10.0"
@@ -5535,4 +5535,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "366c989c74bb02205f637371d94aa8ff354d52ff37baa403fe02ac638d42a4a1"
+content-hash = "65eef1e50261ba151f2e753b0f79a9bd4ae99b8ae071da0d5e4c465b813b9a18"

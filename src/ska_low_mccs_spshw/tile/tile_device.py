@@ -369,7 +369,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._communication_state_changed,
             self._component_state_changed,
             self._update_attribute_callback,
-            # self._tile_device_state_callback,
         )
 
     def init_command_objects(self: MccsTile) -> None:

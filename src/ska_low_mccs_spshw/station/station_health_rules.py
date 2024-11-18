@@ -14,7 +14,9 @@ from typing import Any
 from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common.health import HealthRules
 
-DEGRADED_STATES = frozenset({HealthState.DEGRADED, HealthState.FAILED, None})
+DEGRADED_STATES = frozenset(
+    {HealthState.DEGRADED, HealthState.FAILED, HealthState.UNKNOWN, None}
+)
 
 
 class SpsStationHealthRules(HealthRules):
@@ -93,12 +95,16 @@ class SpsStationHealthRules(HealthRules):
             tile_states = [
                 f"{trl} - {health.name}"
                 for trl, health in tile_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             subrack_states = [
                 f"{trl} - {health.name}"
                 for trl, health in subrack_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             report = (
                 "Too many subdevices are in a bad state: "
@@ -155,12 +161,16 @@ class SpsStationHealthRules(HealthRules):
             tile_states = [
                 f"{trl} - {health.name}"
                 for trl, health in tile_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             subrack_states = [
                 f"{trl} - {health.name}"
                 for trl, health in subrack_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             report = (
                 "Too many subdevices are in a bad state: "
@@ -219,12 +229,16 @@ class SpsStationHealthRules(HealthRules):
             tile_states = [
                 f"{trl} - {health.name}"
                 for trl, health in tile_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             subrack_states = [
                 f"{trl} - {health.name}"
                 for trl, health in subrack_healths.items()
-                if health is not None and health in DEGRADED_STATES
+                if health is not None
+                and health in DEGRADED_STATES
+                and device_admin_modes[trl] is not AdminMode.OFFLINE.value
             ]
             report = (
                 "Too many subdevices are in a bad state: "

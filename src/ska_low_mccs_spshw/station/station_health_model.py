@@ -66,6 +66,7 @@ class SpsStationHealthModel(BaseHealthModel):
         """
         if self._device_admin_modes[device_trl] != device_admin_mode:
             self._device_admin_modes[device_trl] = device_admin_mode
+            self.update_health()
 
     def subrack_health_changed(
         self: SpsStationHealthModel,

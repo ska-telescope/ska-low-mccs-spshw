@@ -40,7 +40,7 @@ from .tile_poll_management import (
     TileRequestProvider,
     TileResponse,
 )
-from .tile_simulator import TileSimulator
+from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import abort_task_on_exception, acquire_timeout, check_hardware_lock_claimed
@@ -74,6 +74,7 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
+    "RFI_COUNT": "rfi_count",
 }
 
 
@@ -188,7 +189,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
         if simulation_mode == SimulationMode.TRUE:
-            self.tile = _tile or TileSimulator(logger)
+            self.tile = _tile or DynamicTileSimulator(logger)
         else:
             self.tile = cast(
                 Tile12,
@@ -372,6 +373,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
                     self.tile.current_tile_beamformer_frame,
+                    publish=True,
+                )
+            case "RFI_COUNT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.read_broadband_rfi,
                     publish=True,
                 )
             case _:

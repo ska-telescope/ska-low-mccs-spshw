@@ -10,7 +10,7 @@ from typing import Any
 
 import pytest
 from ska_control_model import CommunicationStatus, PowerState
-from ska_low_mccs_common.component import StatusCode
+from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
@@ -341,8 +341,8 @@ def test_failed_poll(
         as None (i.e UNKNOWN)
     - When the client raises RequestException
         the driver goes into UNKNOWN.
-    - When client report StatusCode OK, we will return back to a ON state #
-        and faults are wiped.
+    - When client report HardwareClientResponseStatusCodes OK,
+        we will return back to a ON state and faults are wiped.
 
     :param subrack_client: A fixture with the server interface to
         allow mocking of exception codes easily.
@@ -367,7 +367,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_not_called()
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.HTTP_ERROR.name,
+        "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
         "info": "Exception: " + str("mocked exception"),
         "attribute": attr_name,
         "value": None,
@@ -375,7 +375,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(fault=True)
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
         "value": subrack_simulator_attribute_values.get(attr_name),
@@ -383,7 +383,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(fault=False)
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.REQUEST_EXCEPTION.name,
+        "status": HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
         "info": "Exception: " + str("mocked exception"),
         "attribute": attr_name,
         "value": None,
@@ -392,7 +392,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
         "value": subrack_simulator_attribute_values.get(attr_name),
@@ -408,7 +408,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(fault=True)
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": attr_name,
         "value": subrack_simulator_attribute_values.get(attr_name),
@@ -416,7 +416,7 @@ def test_failed_poll(
     callbacks["component_state"].assert_call(fault=False)
 
     subrack_client.get_attribute = lambda attr_name: {
-        "status": StatusCode.JSON_DECODE_ERROR.name,
+        "status": HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
         "info": "Exception: " + str("mocked exception"),
         "attribute": attr_name,
         "value": None,

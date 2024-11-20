@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any, Optional, Protocol
 
 from fastapi import APIRouter, HTTPException, Query, Request, status
-from ska_low_mccs_common.component import StatusCode
+from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
 # https://github.com/python/typing/issues/182
 JsonSerializable = Any
@@ -78,13 +78,13 @@ def _handle_getattribute(
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": StatusCode.ERROR.name,
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
             "info": str(exception),
             "attribute": name,
             "value": "",
         }
     return {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -111,13 +111,13 @@ def _handle_setattribute(
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": StatusCode.ERROR.name,
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
             "info": str(exception),
             "attribute": name,
             "value": "",
         }
     return {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": name,
         "value": set_value,
@@ -144,13 +144,13 @@ def _handle_command(
         # We want to catch all exceptions here, so that the server
         # always lets us know when something went wrong
         return {
-            "status": StatusCode.ERROR.name,
+            "status": HardwareClientResponseStatusCodes.ERROR.name,
             "info": str(exception),
             "command": name,
             "retvalue": "",
         }
     return {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "command": name,
         "retvalue": return_value,
@@ -180,7 +180,7 @@ async def get_json(
     if type_parameter is None:
         return {
             "info": "Missing keyword: type",
-            "status": StatusCode.HTTP_ERROR.name,
+            "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
         }
     if type_parameter == "getattribute":
         return _handle_getattribute(subrack, param)
@@ -191,7 +191,7 @@ async def get_json(
 
     return {
         "info": f"Invalid type: {type_parameter}",
-        "status": StatusCode.HTTP_ERROR.name,
+        "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
     }
 
 

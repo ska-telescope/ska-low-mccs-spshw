@@ -12,7 +12,7 @@ import fastapi
 import pytest
 from fastapi import status
 from fastapi.testclient import TestClient
-from ska_low_mccs_common.component import StatusCode
+from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 
 from ska_low_mccs_spshw.subrack.subrack_api import SubrackProtocol, router
 
@@ -63,7 +63,7 @@ def test_missing_type(client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "info": "Missing keyword: type",
-        "status": StatusCode.HTTP_ERROR.name,
+        "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
     }
 
 
@@ -80,7 +80,7 @@ def test_invalid_type(client: TestClient) -> None:
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
         "info": "Invalid type: foo",
-        "status": StatusCode.HTTP_ERROR.name,
+        "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
     }
 
 
@@ -115,7 +115,7 @@ def test_getattribute_with_bad_name(
     response = client.get(f"/get/json.htm?type=getattribute&param={bad_name}")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.ERROR.name,
+        "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"{bad_name} not present",
         "attribute": bad_name,
         "value": "",
@@ -138,7 +138,7 @@ def test_good_getattribute(client: TestClient, backend: unittest.mock.Mock) -> N
     response = client.get(f"/get/json.htm?type=getattribute&param={name}")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -189,7 +189,7 @@ def test_setattribute_with_bad_name(
     response = client.get(f"/get/json.htm?type=setattribute&param={bad_name}&value=0")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.ERROR.name,
+        "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"{bad_name} not present",
         "attribute": bad_name,
         "value": "",
@@ -216,7 +216,7 @@ def test_setattribute_on_readonly_attribute(
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value=0")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.ERROR.name,
+        "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"Attempt to write read-only attribute {name}",
         "attribute": name,
         "value": "",
@@ -243,7 +243,7 @@ def test_setattribute_with_wrong_length(
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value=0")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.ERROR.name,
+        "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"Wrong number of values for attribute {name}",
         "attribute": name,
         "value": "",
@@ -266,7 +266,7 @@ def test_good_setattribute(client: TestClient, backend: unittest.mock.Mock) -> N
     response = client.get(f"/get/json.htm?type=setattribute&param={name}&value={value}")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "attribute": name,
         "value": value,
@@ -315,7 +315,7 @@ def test_command_with_bad_name(client: TestClient, backend: unittest.mock.Mock) 
     response = client.get(f"/get/json.htm?type=command&param={bad_name}&value=0")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.ERROR.name,
+        "status": HardwareClientResponseStatusCodes.ERROR.name,
         "info": f"{bad_name} not present",
         "command": bad_name,
         "retvalue": "",
@@ -338,7 +338,7 @@ def test_good_command(client: TestClient, backend: unittest.mock.Mock) -> None:
     response = client.get(f"/get/json.htm?type=command&param={name}&value=bah")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {
-        "status": StatusCode.OK.name,
+        "status": HardwareClientResponseStatusCodes.OK.name,
         "info": "",
         "command": name,
         "retvalue": return_value,

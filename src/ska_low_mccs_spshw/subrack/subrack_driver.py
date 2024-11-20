@@ -16,8 +16,8 @@ from typing import Any, Callable, Final, Optional
 from fastapi import HTTPException
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.component import (
+    HardwareClientResponseStatusCodes,
     MccsBaseComponentManager,
-    StatusCode,
     WebHardwareClient,
 )
 from ska_tango_base.poller import PollingComponentManager
@@ -515,11 +515,11 @@ class SubrackDriver(
             performed in this poll.
 
         :raises RequestError: When the client returns
-            StatusCode.REQUEST_EXCEPTION
+            HardwareClientResponseStatusCodes.REQUEST_EXCEPTION
         :raises HttpError: When the client returns
-            StatusCode.HTTP_ERROR
+            HardwareClientResponseStatusCodes.HTTP_ERROR
         :raises ValueError: When the client returns
-            an unknown StatusCode.
+            an unknown HardwareClientResponseStatusCodes.
 
         :return: responses to queries in this poll
         """
@@ -537,25 +537,25 @@ class SubrackDriver(
             )
             self.logger.debug(f"Response: {command_response}")
             if command_response["status"] not in [
-                StatusCode.OK.name,
-                StatusCode.STARTED.name,
-                StatusCode.BUSY.name,
+                HardwareClientResponseStatusCodes.OK.name,
+                HardwareClientResponseStatusCodes.STARTED.name,
+                HardwareClientResponseStatusCodes.BUSY.name,
             ]:
                 if self._active_callback is not None:
                     self._active_callback(status=TaskStatus.FAILED)
                     self._active_callback = None
                 match command_response["status"]:
-                    case StatusCode.ERROR.name:
+                    case HardwareClientResponseStatusCodes.ERROR.name:
                         self.logger.error(
                             "An error was reported when attempting to execute_command "
                             f"with {command=}, {args=}."
                             f"error_info={command_response['info']}"
                         )
-                    case StatusCode.REQUEST_EXCEPTION.name:
+                    case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
                         raise RequestError(f"{command_response['info']}")
-                    case StatusCode.HTTP_ERROR.name:
+                    case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                         raise HttpError(f"{command_response['info']}")
-                    case StatusCode.JSON_DECODE_ERROR.name:
+                    case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
                         self.logger.error(
                             "Error decoding return from "
                             f"{command=} with {args=}. "
@@ -567,9 +567,14 @@ class SubrackDriver(
                             "returned from command (check client)."
                         )
 
-            if command_response["status"] == StatusCode.STARTED.name:
+            if (
+                command_response["status"]
+                == HardwareClientResponseStatusCodes.STARTED.name
+            ):
                 self._board_is_busy = True
-            elif command_response["status"] == StatusCode.OK.name:
+            elif (
+                command_response["status"] == HardwareClientResponseStatusCodes.OK.name
+            ):
                 # command has been completed,
                 poll_response.add_command_response(
                     command, command_response["retvalue"]
@@ -582,28 +587,31 @@ class SubrackDriver(
         for name, value in poll_request.setattributes:
             attribute_response = self._client.set_attribute(name, value)
             if attribute_response["status"] not in [
-                StatusCode.OK.name,
-                StatusCode.STARTED.name,
-                StatusCode.BUSY.name,
+                HardwareClientResponseStatusCodes.OK.name,
+                HardwareClientResponseStatusCodes.STARTED.name,
+                HardwareClientResponseStatusCodes.BUSY.name,
             ]:
                 match attribute_response["status"]:
-                    case StatusCode.ERROR.name:
+                    case HardwareClientResponseStatusCodes.ERROR.name:
                         self.logger.error(
                             "An error was reported when attempting to set_attribute "
                             f"using params {name=}, {value=}."
                             f"error_info={attribute_response['info']}"
                         )
-                    case StatusCode.REQUEST_EXCEPTION.name:
+                    case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
                         raise RequestError(f"{attribute_response['info']}")
-                    case StatusCode.HTTP_ERROR.name:
+                    case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                         raise HttpError(f"{attribute_response['info']}")
-                    case StatusCode.JSON_DECODE_ERROR.name:
+                    case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
                         self.logger.error(
                             "Error decoding return from set_attribute, "
                             f"Setting {name=}, {value=}.  "
                             f"Error_info={attribute_response['info']}"
                         )
-                    case StatusCode.BUSY.name | StatusCode.STARTED.name:
+                    case (
+                        HardwareClientResponseStatusCodes.BUSY.name
+                        | HardwareClientResponseStatusCodes.STARTED.name
+                    ):
                         pass
                     case _:
                         raise ValueError(
@@ -613,29 +621,32 @@ class SubrackDriver(
         for attribute in poll_request.getattributes:
             attribute_response = self._client.get_attribute(attribute)
             match attribute_response["status"]:
-                case StatusCode.OK.name:
+                case HardwareClientResponseStatusCodes.OK.name:
                     poll_response.add_query_response(
                         attribute, attribute_response["value"]
                     )
-                case StatusCode.ERROR.name:
+                case HardwareClientResponseStatusCodes.ERROR.name:
                     self.logger.error(
                         "An error was reported when attempting to get_attribute "
                         f"of name {attribute}."
                         f"error_info={attribute_response['info']}"
                     )
                     poll_response.add_query_response(attribute, None)
-                case StatusCode.JSON_DECODE_ERROR.name:
+                case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
                     self.logger.warning(
                         "Error decoding message returned from get_attribute "
                         f"{attribute=}, error_info={attribute_response['info']} ."
                         "Setting attribute value to None (i.e UNKNOWN.)"
                     )
                     poll_response.add_query_response(attribute, None)
-                case StatusCode.REQUEST_EXCEPTION.name:
+                case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
                     raise RequestError(f"{attribute_response['info']}")
-                case StatusCode.HTTP_ERROR.name:
+                case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                     raise HttpError(f"{attribute_response['info']}")
-                case StatusCode.BUSY.name | StatusCode.STARTED.name:
+                case (
+                    HardwareClientResponseStatusCodes.BUSY.name
+                    | HardwareClientResponseStatusCodes.STARTED.name
+                ):
                     pass
                 case _:
                     raise ValueError(

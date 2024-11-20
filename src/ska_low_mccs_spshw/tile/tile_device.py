@@ -1206,7 +1206,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     #         '{"FPGA0": 0,
     #         "FPGA1": 0}'
 
-    #     :return: number of times ddr interface has responded to a read with valid data.
+    #     :return: number of times ddr interface
+    #       has responded to a read with valid data.
     #     """
     #     return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
 

@@ -4355,8 +4355,8 @@ transitions = "^0.9.0"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git"
-reference = "a86ec120b7390cf40c87ba56ba7d94140dea6c80"
-resolved_reference = "a86ec120b7390cf40c87ba56ba7d94140dea6c80"
+reference = "aea5b1ae2ec3a064c6d03c1d4a5108135907fb26"
+resolved_reference = "aea5b1ae2ec3a064c6d03c1d4a5108135907fb26"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -5552,4 +5552,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "aa5be8dbc82df66ff4d360e05b36e4574c2cd404ab055f7a637c19453c0723ec"
+content-hash = "d7c269032234f9c47a00971fc39ccfe1c22b53c382d36343dfbde364a893d383"

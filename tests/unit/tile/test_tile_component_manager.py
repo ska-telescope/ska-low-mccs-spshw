@@ -1387,9 +1387,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.tpm._is_programmed = True
         assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
-        tile_simulator.tpm._register_map[
-            "fpga1.pps_manager.sync_time_val"
-        ] = mocked_sync_time
+        tile_simulator.tpm._register_map["fpga1.pps_manager.sync_time_val"] = (
+            mocked_sync_time
+        )
 
         # Assert values have been updated.
         assert tile_component_manager.pps_delay == tile_simulator._pps_delay
@@ -3050,3 +3050,18 @@ class TestDynamicSimulator:
         """
         time.sleep(0.1)
         assert getattr(tile_component_manager, attribute_name) == expected_value
+
+    def test_rfi_count(
+        self: TestDynamicSimulator, tile_component_manager: TileComponentManager
+    ) -> None:
+        """
+        Tests that rfi_count increments.
+
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        """
+        initial_rfi = tile_component_manager.tile.read_broadband_rfi()
+        time.sleep(1.5)
+        final_rfi = tile_component_manager.tile.read_broadband_rfi()
+        difference_mask = initial_rfi != final_rfi  # True where values differ
+        assert np.all(final_rfi[difference_mask] > initial_rfi[difference_mask])

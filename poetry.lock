@@ -91,6 +91,21 @@ url = "https://pypi.org/simple"
 reference = "PyPI-public"
 
 [[package]]
+name = "assertpy"
+version = "1.1"
+description = "Simple assertion library for unit testing in python with a fluent API"
+optional = false
+python-versions = "*"
+files = [
+    {file = "assertpy-1.1.tar.gz", hash = "sha256:acc64329934ad71a3221de185517a43af33e373bb44dc05b5a9b174394ef4833"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
 name = "astroid"
 version = "2.15.8"
 description = "An abstract syntax tree for Python with inference support."
@@ -2946,62 +2961,23 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pydantic"
-version = "1.10.19"
-description = "Data validation and settings management using python type hints"
+version = "2.10.0"
+description = "Data validation using Python type hints"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.8"
 files = [
-    {file = "pydantic-1.10.19-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:a415b9e95fa602b10808113967f72b2da8722061265d6af69268c111c254832d"},
-    {file = "pydantic-1.10.19-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:11965f421f7eb026439d4eb7464e9182fe6d69c3d4d416e464a4485d1ba61ab6"},
-    {file = "pydantic-1.10.19-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:f5bb81fcfc6d5bff62cd786cbd87480a11d23f16d5376ad2e057c02b3b44df96"},
-    {file = "pydantic-1.10.19-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:83ee8c9916689f8e6e7d90161e6663ac876be2efd32f61fdcfa3a15e87d4e413"},
-    {file = "pydantic-1.10.19-cp310-cp310-musllinux_1_1_i686.whl", hash = "sha256:0399094464ae7f28482de22383e667625e38e1516d6b213176df1acdd0c477ea"},
-    {file = "pydantic-1.10.19-cp310-cp310-musllinux_1_1_x86_64.whl", hash = "sha256:8b2cf5e26da84f2d2dee3f60a3f1782adedcee785567a19b68d0af7e1534bd1f"},
-    {file = "pydantic-1.10.19-cp310-cp310-win_amd64.whl", hash = "sha256:1fc8cc264afaf47ae6a9bcbd36c018d0c6b89293835d7fb0e5e1a95898062d59"},
-    {file = "pydantic-1.10.19-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:d7a8a1dd68bac29f08f0a3147de1885f4dccec35d4ea926e6e637fac03cdb4b3"},
-    {file = "pydantic-1.10.19-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:07d00ca5ef0de65dd274005433ce2bb623730271d495a7d190a91c19c5679d34"},
-    {file = "pydantic-1.10.19-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ad57004e5d73aee36f1e25e4e73a4bc853b473a1c30f652dc8d86b0a987ffce3"},
-    {file = "pydantic-1.10.19-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:dce355fe7ae53e3090f7f5fa242423c3a7b53260747aa398b4b3aaf8b25f41c3"},
-    {file = "pydantic-1.10.19-cp311-cp311-musllinux_1_1_i686.whl", hash = "sha256:0d32227ea9a3bf537a2273fd2fdb6d64ab4d9b83acd9e4e09310a777baaabb98"},
-    {file = "pydantic-1.10.19-cp311-cp311-musllinux_1_1_x86_64.whl", hash = "sha256:e351df83d1c9cffa53d4e779009a093be70f1d5c6bb7068584086f6a19042526"},
-    {file = "pydantic-1.10.19-cp311-cp311-win_amd64.whl", hash = "sha256:d8d72553d2f3f57ce547de4fa7dc8e3859927784ab2c88343f1fc1360ff17a08"},
-    {file = "pydantic-1.10.19-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:d5b5b7c6bafaef90cbb7dafcb225b763edd71d9e22489647ee7df49d6d341890"},
-    {file = "pydantic-1.10.19-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:570ad0aeaf98b5e33ff41af75aba2ef6604ee25ce0431ecd734a28e74a208555"},
-    {file = "pydantic-1.10.19-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0890fbd7fec9e151c7512941243d830b2d6076d5df159a2030952d480ab80a4e"},
-    {file = "pydantic-1.10.19-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:ec5c44e6e9eac5128a9bfd21610df3b8c6b17343285cc185105686888dc81206"},
-    {file = "pydantic-1.10.19-cp312-cp312-musllinux_1_1_i686.whl", hash = "sha256:6eb56074b11a696e0b66c7181da682e88c00e5cebe6570af8013fcae5e63e186"},
-    {file = "pydantic-1.10.19-cp312-cp312-musllinux_1_1_x86_64.whl", hash = "sha256:9d7d48fbc5289efd23982a0d68e973a1f37d49064ccd36d86de4543aff21e086"},
-    {file = "pydantic-1.10.19-cp312-cp312-win_amd64.whl", hash = "sha256:fd34012691fbd4e67bdf4accb1f0682342101015b78327eaae3543583fcd451e"},
-    {file = "pydantic-1.10.19-cp37-cp37m-macosx_10_9_x86_64.whl", hash = "sha256:4a5d5b877c7d3d9e17399571a8ab042081d22fe6904416a8b20f8af5909e6c8f"},
-    {file = "pydantic-1.10.19-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:9c46f58ef2df958ed2ea7437a8be0897d5efe9ee480818405338c7da88186fb3"},
-    {file = "pydantic-1.10.19-cp37-cp37m-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:6d8a38a44bb6a15810084316ed69c854a7c06e0c99c5429f1d664ad52cec353c"},
-    {file = "pydantic-1.10.19-cp37-cp37m-musllinux_1_1_i686.whl", hash = "sha256:a82746c6d6e91ca17e75f7f333ed41d70fce93af520a8437821dec3ee52dfb10"},
-    {file = "pydantic-1.10.19-cp37-cp37m-musllinux_1_1_x86_64.whl", hash = "sha256:566bebdbe6bc0ac593fa0f67d62febbad9f8be5433f686dc56401ba4aab034e3"},
-    {file = "pydantic-1.10.19-cp37-cp37m-win_amd64.whl", hash = "sha256:22a1794e01591884741be56c6fba157c4e99dcc9244beb5a87bd4aa54b84ea8b"},
-    {file = "pydantic-1.10.19-cp38-cp38-macosx_10_9_x86_64.whl", hash = "sha256:076c49e24b73d346c45f9282d00dbfc16eef7ae27c970583d499f11110d9e5b0"},
-    {file = "pydantic-1.10.19-cp38-cp38-macosx_11_0_arm64.whl", hash = "sha256:5d4320510682d5a6c88766b2a286d03b87bd3562bf8d78c73d63bab04b21e7b4"},
-    {file = "pydantic-1.10.19-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:7e66aa0fa7f8aa9d0a620361834f6eb60d01d3e9cea23ca1a92cda99e6f61dac"},
-    {file = "pydantic-1.10.19-cp38-cp38-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:d216f8d0484d88ab72ab45d699ac669fe031275e3fa6553e3804e69485449fa0"},
-    {file = "pydantic-1.10.19-cp38-cp38-musllinux_1_1_i686.whl", hash = "sha256:9f28a81978e936136c44e6a70c65bde7548d87f3807260f73aeffbf76fb94c2f"},
-    {file = "pydantic-1.10.19-cp38-cp38-musllinux_1_1_x86_64.whl", hash = "sha256:d3449633c207ec3d2d672eedb3edbe753e29bd4e22d2e42a37a2c1406564c20f"},
-    {file = "pydantic-1.10.19-cp38-cp38-win_amd64.whl", hash = "sha256:7ea24e8614f541d69ea72759ff635df0e612b7dc9d264d43f51364df310081a3"},
-    {file = "pydantic-1.10.19-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:573254d844f3e64093f72fcd922561d9c5696821ff0900a0db989d8c06ab0c25"},
-    {file = "pydantic-1.10.19-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:ff09600cebe957ecbb4a27496fe34c1d449e7957ed20a202d5029a71a8af2e35"},
-    {file = "pydantic-1.10.19-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:4739c206bfb6bb2bdc78dcd40bfcebb2361add4ceac6d170e741bb914e9eff0f"},
-    {file = "pydantic-1.10.19-cp39-cp39-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0bfb5b378b78229119d66ced6adac2e933c67a0aa1d0a7adffbe432f3ec14ce4"},
-    {file = "pydantic-1.10.19-cp39-cp39-musllinux_1_1_i686.whl", hash = "sha256:7f31742c95e3f9443b8c6fa07c119623e61d76603be9c0d390bcf7e888acabcb"},
-    {file = "pydantic-1.10.19-cp39-cp39-musllinux_1_1_x86_64.whl", hash = "sha256:c6444368b651a14c2ce2fb22145e1496f7ab23cbdb978590d47c8d34a7bc0289"},
-    {file = "pydantic-1.10.19-cp39-cp39-win_amd64.whl", hash = "sha256:945407f4d08cd12485757a281fca0e5b41408606228612f421aa4ea1b63a095d"},
-    {file = "pydantic-1.10.19-py3-none-any.whl", hash = "sha256:2206a1752d9fac011e95ca83926a269fb0ef5536f7e053966d058316e24d929f"},
-    {file = "pydantic-1.10.19.tar.gz", hash = "sha256:fea36c2065b7a1d28c6819cc2e93387b43dd5d3cf5a1e82d8132ee23f36d1f10"},
+    {file = "pydantic-2.10.0-py3-none-any.whl", hash = "sha256:5e7807ba9201bdf61b1b58aa6eb690916c40a47acfb114b1b4fef3e7fd5b30fc"},
+    {file = "pydantic-2.10.0.tar.gz", hash = "sha256:0aca0f045ff6e2f097f1fe89521115335f15049eeb8a7bef3dafe4b19a74e289"},
 ]
 
 [package.dependencies]
-typing-extensions = ">=4.2.0"
+annotated-types = ">=0.6.0"
+pydantic-core = "2.27.0"
+typing-extensions = ">=4.12.2"
 
 [package.extras]
-dotenv = ["python-dotenv (>=0.10.4)"]
-email = ["email-validator (>=1.0.3)"]
+email = ["email-validator (>=2.0.0)"]
+timezone = ["tzdata"]
 
 [package.source]
 type = "legacy"
@@ -3547,49 +3523,50 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pytango"
-version = "9.5.1"
+version = "10.0.0"
 description = "Python bindings for the cppTango library; part of the Tango Distributed Control System toolkit"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "pytango-9.5.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:069500a08312f653742bb4406fa87b20f185c986622be797792f57629a6cd706"},
-    {file = "pytango-9.5.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:985b95beafbbe1a327a17d8a4124b23fb71d22575c46a13b0b279436f060a26b"},
-    {file = "pytango-9.5.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ca4e86ef8a671b1708dfaf8dc04c2c4bdd7bc45035ac000be698bd881f21165a"},
-    {file = "pytango-9.5.1-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:2fa1ab72c313f5326bb6deec32b82e9452fd3dac9d4b1eb317314b5de970c67b"},
-    {file = "pytango-9.5.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:55e081fe04eae392628f840f909eb119f1c59a41dd19c81b3e2c498f7214ad41"},
-    {file = "pytango-9.5.1-cp310-cp310-win32.whl", hash = "sha256:9967cf7f568ce8d29bff0036ea747d69e67aba005337ec27bbe1bce1750178bd"},
-    {file = "pytango-9.5.1-cp310-cp310-win_amd64.whl", hash = "sha256:baca3c0b37e34ebbc05a7c13a16d8da81026759cf7b278fd441006d1e6cd0f09"},
-    {file = "pytango-9.5.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:0e284385cb44971c28e3316be57c0152ff3582da3a78570755c388e8b91f4562"},
-    {file = "pytango-9.5.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:c0a419546c18d454d9cd722893c54589370245a977e8fc7410fb7d9935ea5cd1"},
-    {file = "pytango-9.5.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:43d5a2f91fc05c9175beda1df4c228ae22ed369c0ed8d285bc441518f1a5bf45"},
-    {file = "pytango-9.5.1-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0222fbfda81cab407f8a525f1615466da12b6c040a2c2f0a2f3c5e9fc75675e5"},
-    {file = "pytango-9.5.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:6cdda9f80da12898568a0953875f983416e45993e09383380f8d87b37b8d2ee9"},
-    {file = "pytango-9.5.1-cp311-cp311-win32.whl", hash = "sha256:00014df2fbcbbf7175723b04e6cb11f78c08a32cfcf56821d5228779bdf830a4"},
-    {file = "pytango-9.5.1-cp311-cp311-win_amd64.whl", hash = "sha256:0ce513b9970fb58c1eaff59d9e39b893366daf533773ec0fed98858cbee71f66"},
-    {file = "pytango-9.5.1-cp312-cp312-macosx_10_9_x86_64.whl", hash = "sha256:a8e9f44c12c606f9cfd2b74c4a7f4ba9b9cc0d44c68253a78b1775d69adcd1ba"},
-    {file = "pytango-9.5.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:b43e869a1979282e8a26e28462b7180c330f1d93b2a7d3190fed377a8f2bb1bb"},
-    {file = "pytango-9.5.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:9355996b2cd7e7966031f08b6415d95bfd42c8173f9cf1950c558c9698e6c270"},
-    {file = "pytango-9.5.1-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:cbe658368e03ea26086a16178533e1e939ada54c0171ce8bc893b5a2ee77a83c"},
-    {file = "pytango-9.5.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:df5323944c0aaafa48959283b2f1450dc3f112acc6429a523323d45d3865661b"},
-    {file = "pytango-9.5.1-cp312-cp312-win32.whl", hash = "sha256:9b0b5c7aac62b99b17d6fd695442d13bcb022ccd66d2ed2fafcbd9ba79efd1a4"},
-    {file = "pytango-9.5.1-cp312-cp312-win_amd64.whl", hash = "sha256:57458a9c6881e9d3f8f4f606415f3eb463cc70f29b0d95a0781edc9666f8ece1"},
-    {file = "pytango-9.5.1-cp39-cp39-macosx_10_9_x86_64.whl", hash = "sha256:c322fe04ab9b88cf26d77ba7b9eae342a16d9503c6aa4b66745d163ebcb0adc7"},
-    {file = "pytango-9.5.1-cp39-cp39-macosx_11_0_arm64.whl", hash = "sha256:ad00eb0a49c701f3d081429039c321b5b44f7d7ce2e33bfe48ce7c9d1fe41c30"},
-    {file = "pytango-9.5.1-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:cb72eae8709a2973d5e748510aee612d2cc09921ad5be8fff4c20094fde0a298"},
-    {file = "pytango-9.5.1-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:7b2a0459f75659385fef8e1d51e7d2bd9012e28bba0a0a3f60621a68377a6df4"},
-    {file = "pytango-9.5.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:664e1ec6b8124f16e697e2aa73bf8f2e33b9112dbc80fa577d043b1f8ede82d8"},
-    {file = "pytango-9.5.1-cp39-cp39-win32.whl", hash = "sha256:8ee9a6aeb8d18b49a873d78a069b4a2f474c19fe409b2e8bec5dfeca769a756c"},
-    {file = "pytango-9.5.1-cp39-cp39-win_amd64.whl", hash = "sha256:9ee0fed5185fc133c652df9657b992ae2cb9bf2848204e3906c33fdc0c40b334"},
-    {file = "pytango-9.5.1.tar.gz", hash = "sha256:a75113a4ff15232c938fbf40240fbdffea0140e1af7b24366ecec0e2921bc634"},
+    {file = "pytango-10.0.0-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:d1eba7f79f2af9d38de7fa6ee27adb383399f95753f878b0a906208cf7e070be"},
+    {file = "pytango-10.0.0-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:db4667ced54604002e7c83bb261621c17834fe326b9594d2216da64ded78dcae"},
+    {file = "pytango-10.0.0-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:80cab887d67febf71f16c30d940c444d052b349a6fde6819b5f84dc9f22b47ce"},
+    {file = "pytango-10.0.0-cp310-cp310-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0b10d5fa9ffbe7069907556b42996cabbc12544d3f3c0243da7ca892173dd310"},
+    {file = "pytango-10.0.0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fc4f4d4b88221662fa71219de961cf8542995b64cb4b47a03a9a51fcb3952e3e"},
+    {file = "pytango-10.0.0-cp310-cp310-win32.whl", hash = "sha256:d0c2bd4965069dfd51270bba8cf64870fb7f029a0aaf9b5cec6f5b9eeb9cad20"},
+    {file = "pytango-10.0.0-cp310-cp310-win_amd64.whl", hash = "sha256:d07d6c69a68911fc165e614ab7d3dc839b50e0cb581650746e3a63b778270ab3"},
+    {file = "pytango-10.0.0-cp311-cp311-macosx_12_0_arm64.whl", hash = "sha256:850648a203aa6f486a49d719d13ceb4ae46b5ce30301eb780082d77bfa1d1983"},
+    {file = "pytango-10.0.0-cp311-cp311-macosx_12_0_x86_64.whl", hash = "sha256:3385978c6a36a68afb0915ee14d53daa54e34a7190da9279078d55317965d977"},
+    {file = "pytango-10.0.0-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7be435b1aaa8e4fd1c94df3a2b4c4fe68e87ae19a607847b84732185a7f5b274"},
+    {file = "pytango-10.0.0-cp311-cp311-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:1036a632a1c9ab7fe9430ec3750736562d805d9e0200ff6c6f757541910952bb"},
+    {file = "pytango-10.0.0-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:ff544de72322f905175622db56f546779035c62525c2767607285d7c8af7e2b2"},
+    {file = "pytango-10.0.0-cp311-cp311-win32.whl", hash = "sha256:e7af2001389860d151187b87f60e1eb8e9fc22affd439821ea62b195252af1bb"},
+    {file = "pytango-10.0.0-cp311-cp311-win_amd64.whl", hash = "sha256:fe6fec33000c3f2a38b893461b022df8e7b91fa3de7534e229f6932d079ed199"},
+    {file = "pytango-10.0.0-cp312-cp312-macosx_12_0_arm64.whl", hash = "sha256:abee8059c980e8fb4bd0f038c5278de63998aca3ebda351cbca523ffedd4d1c7"},
+    {file = "pytango-10.0.0-cp312-cp312-macosx_12_0_x86_64.whl", hash = "sha256:2f45faa036dd769ad63e711d6c97f86dfcf0d6fc00f452151e8e69c4e53f3ac9"},
+    {file = "pytango-10.0.0-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fd71b9e8c568eab08ff6314725a933b3581605e9829ab5e4f3e6e22588575af6"},
+    {file = "pytango-10.0.0-cp312-cp312-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:0f0f68c57172e7fefa7ae66e044ac1b59e8f8a64b9d265e012e7912d4371a1ff"},
+    {file = "pytango-10.0.0-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:af0c31e8b5e43a114b6dd20e3f75ee92fa68cbd3161a0a43cc1771d422182b73"},
+    {file = "pytango-10.0.0-cp312-cp312-win32.whl", hash = "sha256:757bc401f9ffcf837a4258589205bc97d3800cf6b5d529a62df8384f53b1bcf9"},
+    {file = "pytango-10.0.0-cp312-cp312-win_amd64.whl", hash = "sha256:5a0d3f8b59dfe15ad790a7ece09871acd2110c3b93a82dd27853db546f5d4920"},
+    {file = "pytango-10.0.0-cp39-cp39-macosx_12_0_arm64.whl", hash = "sha256:c5815662823c59d38ac419e245333db3947c7e804286b9c258875aa944cad69d"},
+    {file = "pytango-10.0.0-cp39-cp39-macosx_12_0_x86_64.whl", hash = "sha256:c229a9d551f3b06ecc76b060596e215a8932c1b1fc7cc47a0585d26cd5204c0b"},
+    {file = "pytango-10.0.0-cp39-cp39-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:79890f83aaa7ab65c870ee6e28f84459445e612b9ac111f49d5b508b9a48ff33"},
+    {file = "pytango-10.0.0-cp39-cp39-manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:409783508f29b7336f3c4c3e752fdfb7dbe64e37ee24e585f4dc6d45de1b82b4"},
+    {file = "pytango-10.0.0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:c9da1b201115f4e2b744acf24a7197db368767625d30c511d5f1d85c35e22a0d"},
+    {file = "pytango-10.0.0-cp39-cp39-win32.whl", hash = "sha256:09e3461776bce15e2e80d71458be62eb1f1dd2bf13093370ab652a4e7489d4e6"},
+    {file = "pytango-10.0.0-cp39-cp39-win_amd64.whl", hash = "sha256:7a33950760bf0bb9d448dbc7d529a00f777ef4a2c754dedf4b2f858b3a0cdf4b"},
+    {file = "pytango-10.0.0.tar.gz", hash = "sha256:a83318d51d8339fa121e308d9e70dea0046c5cd558670a1906ddade0e9d914d2"},
 ]
 
 [package.dependencies]
-numpy = ">=1.13.3,<2"
+numpy = ">=1.19.3,<3"
 packaging = "*"
-psutil = "*"
+psutil = ">=5.3.0"
 
 [package.extras]
-tests = ["gevent (>=20.0)", "pytest", "pytest-asyncio", "pytest-cov", "pytest-forked"]
+telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-otlp-proto-http", "opentelemetry-sdk"]
+tests = ["gevent (>=20.0)", "pytest", "pytest-asyncio (>=0.24)", "pytest-cov", "pytest-forked"]
 
 [package.source]
 type = "legacy"
@@ -4237,23 +4214,23 @@ reference = "PyPI-public"
 
 [[package]]
 name = "setuptools"
-version = "75.5.0"
+version = "75.6.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
 files = [
-    {file = "setuptools-75.5.0-py3-none-any.whl", hash = "sha256:87cb777c3b96d638ca02031192d40390e0ad97737e27b6b4fa831bea86f2f829"},
-    {file = "setuptools-75.5.0.tar.gz", hash = "sha256:5c4ccb41111392671f02bb5f8436dfc5a9a7185e80500531b133f5775c4163ef"},
+    {file = "setuptools-75.6.0-py3-none-any.whl", hash = "sha256:ce74b49e8f7110f9bf04883b730f4765b774ef3ef28f722cce7c273d253aaf7d"},
+    {file = "setuptools-75.6.0.tar.gz", hash = "sha256:8199222558df7c86216af4f84c30e9b34a61d8ba19366cc914424cdbd28252f6"},
 ]
 
 [package.extras]
 check = ["pytest-checkdocs (>=2.4)", "pytest-ruff (>=0.2.1)", "ruff (>=0.7.0)"]
-core = ["importlib-metadata (>=6)", "jaraco.collections", "jaraco.functools (>=4)", "jaraco.text (>=3.7)", "more-itertools", "more-itertools (>=8.8)", "packaging", "packaging (>=24.2)", "platformdirs (>=4.2.2)", "tomli (>=2.0.1)", "wheel (>=0.43.0)"]
+core = ["importlib_metadata (>=6)", "jaraco.collections", "jaraco.functools (>=4)", "jaraco.text (>=3.7)", "more_itertools", "more_itertools (>=8.8)", "packaging", "packaging (>=24.2)", "platformdirs (>=4.2.2)", "tomli (>=2.0.1)", "wheel (>=0.43.0)"]
 cover = ["pytest-cov"]
 doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "pygments-github-lexers (==0.0.5)", "pyproject-hooks (!=1.1)", "rst.linker (>=1.9)", "sphinx (>=3.5)", "sphinx-favicon", "sphinx-inline-tabs", "sphinx-lint", "sphinx-notfound-page (>=1,<2)", "sphinx-reredirects", "sphinxcontrib-towncrier", "towncrier (<24.7)"]
 enabler = ["pytest-enabler (>=2.2)"]
 test = ["build[virtualenv] (>=1.0.3)", "filelock (>=3.4.0)", "ini2toml[lite] (>=0.14)", "jaraco.develop (>=7.21)", "jaraco.envs (>=2.2)", "jaraco.path (>=3.2.0)", "jaraco.test (>=5.5)", "packaging (>=24.2)", "pip (>=19.1)", "pyproject-hooks (!=1.1)", "pytest (>=6,!=8.1.*)", "pytest-home (>=0.5)", "pytest-perf", "pytest-subprocess", "pytest-timeout", "pytest-xdist (>=3)", "tomli-w (>=1.0.0)", "virtualenv (>=13.0.0)", "wheel (>=0.44.0)"]
-type = ["importlib-metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (>=1.12,<1.14)", "pytest-mypy"]
+type = ["importlib_metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (>=1.12,<1.14)", "pytest-mypy"]
 
 [package.source]
 type = "legacy"
@@ -4316,32 +4293,31 @@ name = "ska-low-mccs-common"
 version = "0.15.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
-python-versions = ">=3.10,<4.0"
-files = [
-    {file = "ska_low_mccs_common-0.15.0-py3-none-any.whl", hash = "sha256:f0bfcbee3c4e3ca647d66d415ade286a4e22e3ad6732613652d800270018b480"},
-    {file = "ska_low_mccs_common-0.15.0.tar.gz", hash = "sha256:909e4513b1f607df0fd0a453da9b9814f56f08151cf530bf0481f79d2c9831fa"},
-]
+python-versions = "^3.10"
+files = []
+develop = false
 
 [package.dependencies]
-attrs = ">=23.2.0,<23.3.0"
-backoff = ">=2.2.1,<3.0.0"
-jsonschema = ">=4.21.1,<5.0.0"
-jsonschema-specifications = ">=2023.03.6,<2023.4.0"
-numpy = ">=1.26.4,<2.0.0"
-pytango = ">=9.5.1,<10.0.0"
-PyYAML = ">=6.0.1,<7.0.0"
-referencing = ">=0.28.4,<0.29.0"
-requests = ">=2.31.0,<3.0.0"
-ska-control-model = ">=1.0.0,<2.0.0"
-ska-ser-logging = ">=0.4.2,<0.5.0"
-ska-tango-base = ">=1.0.0,<2.0.0"
-ska-tango-testing = ">=0,<1"
-transitions = ">=0.9.0,<0.10.0"
+attrs = "~23.2.0"
+backoff = "^2.2.1"
+jsonschema = "^4.21.1"
+jsonschema-specifications = "~2023.03.6"
+numpy = "^1.26.4"
+pytango = "^10.0.0"
+PyYAML = "^6.0.1"
+referencing = "~0.28.4"
+requests = "^2.31.0"
+ska-control-model = "^1.0.0"
+ska-ser-logging = "^0.4.2"
+ska-tango-base = "^1.0.0"
+ska-tango-testing = "^0"
+transitions = "^0.9.0"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = "skao"
+type = "git"
+url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git"
+reference = "mccs-2330"
+resolved_reference = "d8660e7e4190f1ca248e4e8e5b924b086b2bf78c"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -4405,27 +4381,26 @@ name = "ska-ser-snmp"
 version = "0.4.1"
 description = "Python package for snmp tango devices"
 optional = false
-python-versions = ">=3.10,<3.11"
-files = [
-    {file = "ska_ser_snmp-0.4.1-py3-none-any.whl", hash = "sha256:56fbac91c23fbaf7950c32cde851f9ddad6065b12e6e7d31029d44d919723ff3"},
-    {file = "ska_ser_snmp-0.4.1.tar.gz", hash = "sha256:34e64d8b4616ae04b46ed024832cab7060069c63cef888ba133c0cd0bfe360f1"},
-]
+python-versions = "~3.10"
+files = []
+develop = false
 
 [package.dependencies]
-more-itertools = ">=10.2.0,<11.0.0"
+more-itertools = "^10.2.0"
 pysnmp-lextudio = "5.0.27"
-pytango = ">=9.5.0,<10.0.0"
-PyYAML = ">=6.0.1,<7.0.0"
-ska-control-model = ">=1.0.0,<2.0.0"
-ska-tango-base = ">=1.0.0,<2.0.0"
-ska-telmodel = ">=1.19.5,<2.0.0"
-snmpsim-lextudio = ">=1.0.6,<2.0.0"
-typing-extensions = ">=4.12.2,<5.0.0"
+pytango = "^10.0.0"
+PyYAML = "^6.0.1"
+ska-control-model = "^1.0.0"
+ska-tango-base = "^1.0.0"
+ska-telmodel = "^1.19.5"
+snmpsim-lextudio = "^1.0.6"
+typing-extensions = "^4.12.2"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = "skao"
+type = "git"
+url = "https://gitlab.com/ska-telescope/ska-ser-snmp.git"
+reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
+resolved_reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
 
 [[package]]
 name = "ska-ser-sphinx-theme"
@@ -4474,18 +4449,19 @@ reference = "skao"
 
 [[package]]
 name = "ska-tango-testing"
-version = "0.6.2"
+version = "0.7.3"
 description = "Test harness for testing SKA Tango devices"
 optional = false
 python-versions = ">=3.10,<4.0"
 files = [
-    {file = "ska_tango_testing-0.6.2-py3-none-any.whl", hash = "sha256:d8d41fccb774dbc82378a15938ba363e8d830f941af1faf1a0a152f4388ef217"},
-    {file = "ska_tango_testing-0.6.2.tar.gz", hash = "sha256:4b525430b7aaad16a8b0caba0600d64066a4535ef362ac71b55926cb6ca05315"},
+    {file = "ska_tango_testing-0.7.3-py3-none-any.whl", hash = "sha256:666516b90281b8cfda8e692b237c4c6703f966754fc12f4f0b2c98a31b831e57"},
+    {file = "ska_tango_testing-0.7.3.tar.gz", hash = "sha256:7547be05bf700c985ca0ae549b034c85556cc40079a67b91e37922964b86c3a4"},
 ]
 
 [package.dependencies]
+assertpy = ">=1.1,<2.0"
 numpy = ">=1.23.2,<2.0.0"
-pytango = ">=9.4.2,<10.0.0"
+pytango = ">=9.4.2,<11.0.0"
 
 [package.source]
 type = "legacy"
@@ -5537,4 +5513,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "c77049c68cd0375a4c5df0e08ca233e2932e7f0cbf2553fd6020e8601c2ace15"
+content-hash = "e63c931a69408ac9aaae8d1f257343003caa5b2ca30aa48d847a9dea7f3d59ef"

@@ -635,10 +635,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerState",
-            self._subrack_says_tpm_power_changed,
-        )
+            self._subrack_proxy.add_change_event_callback(
+                f"tpm{self._subrack_tpm_id}PowerState",
+                self._subrack_says_tpm_power_changed,
+            )
 
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,

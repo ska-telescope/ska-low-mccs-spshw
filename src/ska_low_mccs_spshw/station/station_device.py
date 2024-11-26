@@ -485,6 +485,10 @@ class SpsStation(SKAObsDevice):
             self._health_state = health
             self.push_change_event("healthState", health)
 
+    def _update_admin_mode(self: SpsStation, admin_mode: AdminMode) -> None:
+        super()._update_admin_mode(admin_mode)
+        self._health_model.update_state(adminMode=self._admin_mode)
+
     # ----------
     # Attributes
     # ----------

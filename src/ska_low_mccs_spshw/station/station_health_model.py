@@ -112,12 +112,12 @@ class SpsStationHealthModel(BaseHealthModel):
         status of the station overall, together with the health of the
         tiles that it manages.
 
-        This implementation simply sets the health of the station to the
-        health of its least healthy component.
-
         :return: an overall health of the station
         """
         station_health, station_report = super().evaluate_health()
+        # If AdminMode.OFFLINE then we need process no further.
+        if self._state["adminMode"] == AdminMode.OFFLINE:
+            return station_health, station_report
 
         for health in [
             HealthState.FAILED,

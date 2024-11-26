@@ -1512,7 +1512,9 @@ class TileSimulator:
         :param adc_mono_channel_14_bit: Enable ADC mono channel 14bit mode
         :param adc_mono_channel_sel: Select channel in mono channel mode (0=A, 1=B)
         """
-        self.logger.info("Connect called on the simulator")
+        self.logger.info(
+            f"Connect called on the simulator with {self.mock_connection_success=}"
+        )
         if self.mock_connection_success:
             if self.tpm is None:
                 self.tpm = MockTpm(self.logger)

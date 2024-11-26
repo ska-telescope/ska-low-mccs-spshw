@@ -102,6 +102,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
+        "subdevice_admin_mode",
         timeout=5.0,
     )
 
@@ -176,6 +177,7 @@ def station_component_manager_fixture(
         callbacks["component_state"],
         callbacks["tile_health"],
         callbacks["subrack_health"],
+        callbacks["subdevice_admin_mode"],
     )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager

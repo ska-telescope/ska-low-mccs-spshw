@@ -189,7 +189,7 @@ class SubrackHealthRules(HealthRules):
         Check the difference in current across all devices in the subrack.
 
         This makes sure that all the currents are adding up to give
-        rougly the same value and we're not losing power somewhere.
+        roughly the same value and we're not losing power somewhere.
 
         :param board_currents: The currents of the boards.
         :param power_supply_currents: The currents of the power supplies.

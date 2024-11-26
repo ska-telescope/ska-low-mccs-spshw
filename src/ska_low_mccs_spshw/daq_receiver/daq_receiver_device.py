@@ -14,7 +14,7 @@ import logging
 from typing import Any, Optional, Union
 
 import numpy as np
-from ska_control_model import CommunicationStatus, HealthState, ResultCode
+from ska_control_model import AdminMode, CommunicationStatus, HealthState, ResultCode
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
@@ -476,6 +476,10 @@ class MccsDaqReceiver(SKABaseDevice):
             self._rms_plot = rms_plot
             self.push_change_event("rmsPlot", rms_plot)
             self.push_archive_event("rmsPlot", rms_plot)
+
+    def _update_admin_mode(self: MccsDaqReceiver, admin_mode: AdminMode) -> None:
+        super()._update_admin_mode(admin_mode)
+        self._health_model._state.update(adminMode=self._admin_mode)
 
     def _received_data_callback(
         self: MccsDaqReceiver,

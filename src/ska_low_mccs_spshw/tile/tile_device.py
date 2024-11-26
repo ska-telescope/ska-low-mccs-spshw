@@ -600,6 +600,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         else:
             self._health_model.update_state(fault=fault)
 
+    def _update_admin_mode(self: MccsTile, admin_mode: AdminMode) -> None:
+        super()._update_admin_mode(admin_mode)
+        self._health_model._state.update(adminMode=self._admin_mode)
+
     def unpack_monitoring_point(
         self: MccsTile,
         health_structure: dict[str, Any],
@@ -3316,7 +3320,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             super().__init__(logger)
 
-        # pylint: disable=too-many-locals
         def do(  # type: ignore[override]
             self: MccsTile.SetAttributeThresholdsCommand,
             multi_attr: tango.MultiAttribute,
@@ -3338,7 +3341,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             :return: A tuple containing ResultCode and a message.
             """
             attribute_threshold = json.loads(argin)
-            message = ""
             for attribute_name, thresholds in attribute_threshold.items():
                 try:
                     attr = multi_attr.get_attr_by_name(attribute_name)
@@ -3366,9 +3368,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         f"Failed to update thresholds for {attribute_name} "
                         f"{repr(e)}"
                     )
-                    message += f"Attribute {attribute_name} failed to update {e}"
+                    information_message = (
+                        f"Attribute {attribute_name} failed to update {e}"
+                    )
 
-            return (ResultCode.OK, message)
+            return (ResultCode.OK, information_message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def SetAttributeThresholds(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

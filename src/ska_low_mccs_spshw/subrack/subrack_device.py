@@ -15,7 +15,7 @@ import logging
 import sys
 from typing import Any, Callable, Final, Optional
 
-from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_control_model import AdminMode, CommunicationStatus, HealthState, PowerState
 from ska_tango_base.base import BaseComponentManager, SKABaseDevice
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
@@ -1221,6 +1221,10 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
             "tpm_present": self._tpm_present,
         }
         self._health_model.update_data(data)
+
+    def _update_admin_mode(self: MccsSubrack, admin_mode: AdminMode) -> None:
+        super()._update_admin_mode(admin_mode)
+        self._health_model._state.update(adminMode=self._admin_mode)
 
     @attribute(dtype="DevString")
     def healthReport(self: MccsSubrack) -> str:

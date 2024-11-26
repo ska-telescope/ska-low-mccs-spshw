@@ -12,7 +12,7 @@ from __future__ import annotations  # allow forward references in type hints
 
 from typing import Any, Optional
 
-from ska_control_model import HealthState
+from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 from .tile_health_rules import TileHealthRules
@@ -49,6 +49,7 @@ class TileHealthModel(BaseHealthModel):
         # Add new section for non-hardware/derived health quantities.
         additional_health = {"derived": {"pps_drift": 0}}
         self.update_state(**additional_health)
+        self.update_health()
 
     def set_logger(self, logger: Any) -> None:
         """
@@ -71,6 +72,9 @@ class TileHealthModel(BaseHealthModel):
         :return: an overall health of the tile
         """
         tile_health, tile_report = super().evaluate_health()
+        # If AdminMode.OFFLINE then we need process no further.
+        if self._state["adminMode"] == AdminMode.OFFLINE:
+            return tile_health, tile_report
         intermediate_healths = self.intermediate_healths
         for health in [
             HealthState.FAILED,

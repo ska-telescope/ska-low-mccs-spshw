@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 import pytest
-from ska_control_model import HealthState, PowerState
+from ska_control_model import AdminMode, HealthState, PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
@@ -23,17 +23,49 @@ NUMBER_OF_SUBRACK_STATE_MONITOR_POINTS = 12
 class TestSubrackHealthModel:
     """A class for tests of the station health model."""
 
-    @pytest.fixture
-    def health_model(self: TestSubrackHealthModel) -> SubrackHealthModel:
+    @pytest.fixture(name="health_model")
+    def health_model_fixture(self: TestSubrackHealthModel) -> SubrackHealthModel:
         """
         Fixture to return the station health model.
 
         :return: Health model to be used.
         """
         health_model = SubrackHealthModel(MockCallable())
-        health_model.update_state(communicating=True, power=PowerState.ON)
+        health_model.update_state(
+            communicating=True, power=PowerState.ON, adminMode=AdminMode.ONLINE
+        )
 
         return health_model
+
+    @pytest.fixture(name="tpm_data")
+    def tpm_data_fixture(
+        self: TestSubrackHealthModel, tpm_count: int = 8
+    ) -> dict[str, Any]:
+        """
+        Produce subrack data for 1-8 TPMs.
+
+        :param tpm_count: Number of TPMs to generate data for. Default 8.
+
+        :returns: A dictionary of TPM data.
+        """
+        tpm_count = min(tpm_count, 8)
+        tpm_count = max(tpm_count, 1)
+        data = {
+            "board_temps": [50.0, 50.0],
+            "backplane_temps": [50.0, 50.0],
+            "subrack_fan_speeds": [60.0, 60.0],
+            "board_currents": [8.0, 8.0, 8.0, 8.0, 8.0],
+            "power_supply_currents": [8.0, 8.0, 8.0, 8.0],
+            "power_supply_voltages": [5.0, 5.0, 5.0, 5.0],
+            "tpm_currents": [4.0] * tpm_count + [0.0] * (8 - tpm_count),
+            "tpm_voltages": [5.0] * tpm_count + [0.0] * (8 - tpm_count),
+            "tpm_power_states": [PowerState.UNKNOWN] * tpm_count,
+            "tpm_present": [True] * tpm_count + [False] * (8 - tpm_count),
+            "desired_fan_speeds": [60.0, 60.0, 60.0, 60.0],
+            "clock_reqs": ["10MHz", "1PPS", "10_MHz_PLL_lock"],
+        }
+
+        return data
 
     @pytest.mark.parametrize(
         ("data", "expected_final_health", "expected_final_report"),
@@ -139,8 +171,6 @@ class TestSubrackHealthModel:
 
         health_model.update_data(data)
 
-        print(f"actual == {health_model.evaluate_health()}")
-        print(f"expected == {expected_final_health}, {expected_final_report}")
         assert health_model.evaluate_health() == (
             expected_final_health,
             expected_final_report,
@@ -572,16 +602,11 @@ class TestSubrackHealthModel:
             HealthState.UNKNOWN,
             "Failed to read subrack state",
         )
-        print(f"health 1: {health_model._state}")
         health_model.update_data(first_data)
-        print(f"health 2: {health_model._state}")
         first_report = health_model.evaluate_health()
-        print(f"{first_report=}")
         assert first_report == expected_first_health_report
 
         health_model.update_data(second_data)
-        print(f"health 3: {health_model._state}")
-
         assert health_model.evaluate_health() == expected_final_health_report
 
     @pytest.mark.parametrize(

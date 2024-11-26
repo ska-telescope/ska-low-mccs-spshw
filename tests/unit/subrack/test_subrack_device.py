@@ -173,7 +173,6 @@ def test_fast_adminMode_switch(
 
         subrack_device.adminmode = AdminMode.OFFLINE
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-        print(f"Iteration {i}")
 
 
 def test_failed_poll(

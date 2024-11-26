@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 import pytest
-from ska_control_model import HealthState, PowerState
+from ska_control_model import AdminMode, HealthState, PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.station.station_health_model import SpsStationHealthModel
@@ -21,16 +21,30 @@ class TestSpsStationHealthModel:
     """A class for tests of the station health model."""
 
     @pytest.fixture
-    def health_model(self: TestSpsStationHealthModel) -> SpsStationHealthModel:
+    def health_model(
+        self: TestSpsStationHealthModel,
+    ) -> SpsStationHealthModel:
         """
         Fixture to return the station health model.
 
         :return: Health model to be used.
         """
-        health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
-        health_model.update_state(
-            communicating=True, power=PowerState.ON, pps_delay_spread=0
+        health_model = SpsStationHealthModel(
+            [
+                get_subrack_name(subrack_id, station_label="ci-1")
+                for subrack_id in range(10)
+            ],
+            [get_tile_name(tile_id, station_label="ci-1") for tile_id in range(16)],
+            MockCallable(),
         )
+        health_model.update_state(
+            communicating=True,
+            power=PowerState.ON,
+            pps_delay_spread=0,
+            adminMode=AdminMode.ONLINE,
+        )
+        for device_trl in health_model._device_admin_modes.keys():
+            health_model._device_admin_modes[device_trl] = AdminMode.ONLINE
 
         return health_model
 
@@ -40,13 +54,9 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        f"{get_subrack_name(i)}": HealthState.OK for i in range(10)
                     },
-                    "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
-                    },
+                    "tile": {f"{get_tile_name(i)}": HealthState.OK for i in range(16)},
                 },
                 None,
                 HealthState.OK,
@@ -56,49 +66,42 @@ class TestSpsStationHealthModel:
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
+                        f"{get_subrack_name(i)}": (
                             HealthState.OK if i > 0 else HealthState.FAILED
                         )
                         for i in range(10)
                     },
-                    "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
-                    },
+                    "tile": {f"{get_tile_name(i)}": HealthState.OK for i in range(16)},
                 },
                 None,
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED']",
                 id="One subrack unhealthy, expect DEGRADED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
+                        f"{get_subrack_name(i)}": (
                             HealthState.OK if i > 0 else HealthState.FAILED
                         )
                         for i in range(10)
                     },
-                    "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
-                    },
+                    "tile": {f"{get_tile_name(i)}": HealthState.OK for i in range(16)},
                 },
                 {"subrack_degraded": 0.00001, "subrack_failed": 0.02},
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: [] Subracks: ['low-mccs/subrack/00 - FAILED']",
+                "Tiles: [] Subracks: ['low-mccs/subrack/ci-1-sr0 - FAILED']",
                 id="One subrack unhealthy, lowered thresholds, expect FAILED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        f"{get_subrack_name(i)}": HealthState.OK for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                        f"{get_tile_name(i)}": (
                             HealthState.OK if i != 0 else HealthState.FAILED
                         )
                         for i in range(16)
@@ -107,17 +110,16 @@ class TestSpsStationHealthModel:
                 None,
                 HealthState.DEGRADED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: []",
                 id="One tile unhealthy, expect DEGRADED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        f"{get_subrack_name(i)}": HealthState.OK for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                        f"{get_tile_name(i)}": (
                             HealthState.OK if i != 0 else HealthState.FAILED
                         )
                         for i in range(16)
@@ -126,37 +128,33 @@ class TestSpsStationHealthModel:
                 {"tile_degraded": 0.00001, "tile_failed": 0.02},
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                "Tiles: ['low-mccs/tile/0000 - FAILED'] Subracks: []",
+                "Tiles: ['low-mccs/tile/ci-1-tpm00 - FAILED'] Subracks: []",
                 id="One tile unhealthy, lowered thresholds, expect FAILED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
+                        f"{get_subrack_name(i)}": (
                             HealthState.OK if i > 3 else HealthState.FAILED
                         )
                         for i in range(10)
                     },
-                    "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
-                    },
+                    "tile": {f"{get_tile_name(i)}": HealthState.OK for i in range(16)},
                 },
                 None,
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
                 "Tiles: [] "
-                f"Subracks: {[f'low-mccs/subrack/0{i} - FAILED' for i in range(4)]}",
+                f"Subracks: {[f'{get_subrack_name(i)} - FAILED' for i in range(4)]}",
                 id="Many subracks unhealthy, expect FAILED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
+                        f"{get_subrack_name(i)}": HealthState.OK for i in range(10)
                     },
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                        f"{get_tile_name(i)}": (
                             HealthState.OK if i > 4 else HealthState.FAILED
                         )
                         for i in range(16)
@@ -165,47 +163,42 @@ class TestSpsStationHealthModel:
                 None,
                 HealthState.FAILED,
                 "Too many subdevices are in a bad state: "
-                f"Tiles: {[f'low-mccs/tile/000{i} - FAILED' for i in range(5)]} "
+                f"Tiles: {[f'{get_tile_name(i)} - FAILED' for i in range(5)]} "
                 "Subracks: []",
                 id="Five tiles unhealthy, expect FAILED",
             ),
             pytest.param(
                 {
                     "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": (
+                        f"{get_subrack_name(i)}": (
                             HealthState.OK if i > 1 else HealthState.UNKNOWN
                         )
                         for i in range(10)
                     },
-                    "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": HealthState.OK
-                        for i in range(16)
-                    },
+                    "tile": {f"{get_tile_name(i)}": HealthState.OK for i in range(16)},
                 },
                 None,
-                HealthState.UNKNOWN,
-                "Some devices are unknown: "
+                HealthState.FAILED,
+                "Too many subdevices are in a bad state: "
                 "Tiles: [] "
-                f"Subracks: {[f'low-mccs/subrack/0{i}' for i in range(2)]}",
-                id="Some subracks UNKNOWN, expect UNKNOWN",
+                f"Subracks: {[f'{get_subrack_name(i)} - UNKNOWN' for i in range(2)]}",
+                id="Some subracks UNKNOWN, expect FAILED",
             ),
             pytest.param(
                 {
-                    "subrack": {
-                        f"low-mccs/subrack/{str(i).zfill(2)}": HealthState.OK
-                        for i in range(10)
-                    },
+                    "subrack": {get_subrack_name(i): HealthState.OK for i in range(10)},
                     "tile": {
-                        f"low-mccs/tile/{str(i).zfill(4)}": (
+                        get_tile_name(i): (
                             HealthState.OK if i != 0 else HealthState.UNKNOWN
                         )
                         for i in range(16)
                     },
                 },
                 None,
-                HealthState.UNKNOWN,
-                "Some devices are unknown: Tiles: ['low-mccs/tile/0000'] Subracks: []",
-                id="One tile UNKNOWN, expect UNKNOWN",
+                HealthState.DEGRADED,
+                "Too many subdevices are in a bad state: Tiles: "
+                "['low-mccs/tile/ci-1-tpm00 - UNKNOWN'] Subracks: []",
+                id="One tile UNKNOWN, expect DEGRADED",
             ),
         ],
     )

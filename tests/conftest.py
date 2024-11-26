@@ -85,9 +85,9 @@ def subrack_simulator_config_fixture() -> dict[str, Any]:
         "subrack_fan_mode": [FanMode.AUTO, FanMode.AUTO, FanMode.AUTO, FanMode.AUTO],
         "subrack_pll_locked": True,
         "subrack_timestamp": 1234567890,
-        "tpm_currents": [0.4] * 8,
+        "tpm_currents": [0.4] + [0.0] * 7,
         # "tpm_temperatures": [40.0] * 8,  # Not implemented on SMB
-        "tpm_voltages": [12.0] * 8,
+        "tpm_voltages": [12.0] + [0.0] * 7,
     }
 
 

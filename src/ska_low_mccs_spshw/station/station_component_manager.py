@@ -349,6 +349,7 @@ class _DaqProxy(DeviceComponentManager):
         if self._connecting and event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             self._connecting = False
+            self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
@@ -783,12 +784,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
-                antenna_config["delay"]
-            )
-            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
-                antenna_config["delay"]
-            )
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -872,13 +873,6 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
-        if (
-            fqdn == self._daq_trl
-            and communication_state == CommunicationStatus.ESTABLISHED
-        ):
-            # Set StationID in DAQ.
-            assert self._daq_proxy is not None
-            self._daq_proxy._configure_station_id()
         if self._communication_states.get(fqdn) is None:
             self.logger.info(
                 f"The communication state for {fqdn} is not rolled up. "
@@ -1112,8 +1106,9 @@ class SpsStationComponentManager(
                 evaluated_power_state = PowerState.OFF  # 4
             else:
                 # We get here by:
-                # Any subrack UNKNOWN AND no subrack ON
-                # Any tile UNKNOWN AND no tile ON
+                # either 1) Any subrack UNKNOWN AND no subrack ON
+                # or 2) Any tile UNKNOWN AND no tile ON
+                # Should we pick a PowerState for these scenarios?
                 self.logger.debug(f"tile powers: {tile_power_states}")
                 self.logger.debug(f"subrack powers: {subrack_power_states}")
                 evaluated_power_state = PowerState.UNKNOWN  # 5

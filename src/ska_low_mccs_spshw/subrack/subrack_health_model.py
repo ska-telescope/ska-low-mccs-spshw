@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from ska_control_model import HealthState
+from ska_control_model import AdminMode, HealthState
 from ska_low_mccs_common.health import BaseHealthModel, HealthChangedCallbackProtocol
 
 from .subrack_health_rules import SubrackHealthRules
@@ -82,6 +82,8 @@ class SubrackHealthModel(BaseHealthModel):
         self._state["subrack_state_points"] = (
             self._state["subrack_state_points"] | new_states
         )
+        if "adminMode" in new_states:
+            self._state["adminMode"] = new_states["adminMode"]
         self.update_health()
 
     def evaluate_health(
@@ -100,6 +102,9 @@ class SubrackHealthModel(BaseHealthModel):
         :return: an overall health of the subrack
         """
         subrack_health, subrack_report = super().evaluate_health()
+        # If AdminMode.OFFLINE then we need process no further.
+        if self._state["adminMode"] == AdminMode.OFFLINE:
+            return subrack_health, subrack_report
 
         for health in [
             HealthState.FAILED,

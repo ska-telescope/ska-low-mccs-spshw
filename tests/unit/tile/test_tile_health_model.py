@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-from ska_control_model import HealthState, PowerState
+from ska_control_model import AdminMode, HealthState, PowerState
 from ska_low_mccs_common.testing.mock import MockCallable
 
 from ska_low_mccs_spshw.tile import TileData, TileHealthModel
@@ -28,7 +28,9 @@ class TestTileHealthModel:
         :return: Health model to be used.
         """
         health_model = TileHealthModel(MockCallable())
-        health_model.update_state(communicating=True, power=PowerState.ON)
+        health_model.update_state(
+            communicating=True, power=PowerState.ON, adminMode=AdminMode.ONLINE
+        )
 
         return health_model
 

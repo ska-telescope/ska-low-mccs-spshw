@@ -9,17 +9,19 @@
 from __future__ import annotations
 
 import gc
+import json
 import time
 import unittest
 
 import numpy as np
 import pytest
 import tango
-from ska_control_model import AdminMode
+from ska_control_model import AdminMode, HealthState
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from ska_low_mccs_spshw.tile import TileComponentManager, TileSimulator
+from tests.functional.conftest import poll_until_state_change
 from tests.test_tools import (
     execute_lrc_to_completion,
     wait_for_completed_command_to_clear_from_queue,
@@ -39,8 +41,11 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
     """
     return MockTangoEventCallbackGroup(
         "station_state",
+        "station_health",
         "subrack_state",
+        "subrack_health",
         "tile_state",
+        "tile_health",
         "tile_programming_state",
         "sps_station_command_status",
         "sps_adc_power",
@@ -110,7 +115,9 @@ def test_initialise_can_execute(
     tile_device.adminMode = AdminMode.ONLINE
 
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.UNKNOWN)
-    change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
+    change_event_callbacks["tile_state"].assert_change_event(
+        tango.DevState.OFF, lookahead=2
+    )
     change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
     tile_device.On()
@@ -741,4 +748,209 @@ class TestStationTileIntegration:
         # Check that the station agrees on the lase value pushed by tile.
         assert np.array_equal(
             sps_station_device.channeliserRounding, channeliser_rounding_to_check
+        )
+
+
+# pylint: disable=too-few-public-methods
+class TestStationHealth:
+    """Test the integration between the Station, Subrack and Tile."""
+
+    # pylint: disable=too-many-statements, too-many-arguments
+    def test_health_rollup(
+        self: TestStationHealth,
+        sps_station_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_device: tango.DeviceProxy,
+        daq_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test that Station correctly rolls health up from subdevices.
+
+        :param sps_station_device: the station Tango device under test.
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param daq_device: the daq Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        daq_device.adminMode = 0
+        devices = [tile_device, subrack_device, sps_station_device]
+        # Check initial device states.
+        for device in devices:
+            assert device.healthState == HealthState.UNKNOWN
+            assert device.healthReport == "Device's adminMode is offline."
+        # Station setup.
+        sps_station_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["station_state"],
+        )
+        change_event_callbacks["station_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+        sps_station_device.subscribe_event(
+            "healthState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["station_health"],
+        )
+        change_event_callbacks["station_health"].assert_change_event(
+            HealthState.UNKNOWN
+        )
+        sps_station_device.adminMode = AdminMode.ONLINE
+        assert sps_station_device.healthState == HealthState.UNKNOWN
+        assert sps_station_device.healthReport == "Device is in unknown power state."
+        change_event_callbacks["station_state"].assert_change_event(
+            tango.DevState.UNKNOWN
+        )
+
+        # Subrack setup.
+        subrack_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_state"],
+        )
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.DISABLE
+        )
+        subrack_device.subscribe_event(
+            "healthState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_health"],
+        )
+        change_event_callbacks["subrack_health"].assert_change_event(
+            HealthState.UNKNOWN
+        )
+        subrack_device.adminMode = AdminMode.ONLINE
+
+        change_event_callbacks["subrack_state"].assert_change_event(
+            tango.DevState.ON, lookahead=2
+        )
+        assert subrack_device.state() == tango.DevState.ON
+        change_event_callbacks["subrack_health"].assert_change_event(HealthState.OK)
+        assert subrack_device.healthReport == "Health is OK."
+        assert subrack_device.healthState == HealthState.OK
+
+        # Tile 1 setup.
+        assert tile_device.adminMode == AdminMode.OFFLINE
+        tile_device.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_state"],
+        )
+        change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+        tile_device.subscribe_event(
+            "healthState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_health"],
+        )
+        change_event_callbacks["tile_health"].assert_change_event(HealthState.UNKNOWN)
+
+        tile_device.adminmode = AdminMode.ONLINE
+        tile_device.on()
+
+        poll_until_state_change(tile_device, tango.DevState.ON)
+        assert tile_device.state() == tango.DevState.ON
+
+        change_event_callbacks["station_state"].assert_change_event(tango.DevState.ON)
+        poll_until_state_change(sps_station_device, tango.DevState.ON)
+        assert sps_station_device.state() == tango.DevState.ON
+
+        change_event_callbacks["tile_health"].assert_change_event(
+            HealthState.OK, lookahead=5, consume_nonmatches=True
+        )
+        change_event_callbacks["station_health"].assert_change_event(
+            HealthState.OK, lookahead=5, consume_nonmatches=True
+        )
+
+        for device in devices:
+            assert device.healthState == HealthState.OK
+            assert device.healthReport == "Health is OK."
+
+        # Mock a health issue on Tile by changing thresholds.
+        # Expect Tile FAILED and Station UNKNOWN.
+        # Tile Simulator VM_AGP4 is 0.915 by default.
+        new_tile_params = json.dumps(
+            {"voltages": {"VM_AGP4": {"min": 0.84, "max": 0.89}}}
+        )
+        tile_device.healthModelParams = new_tile_params
+        change_event_callbacks["tile_health"].assert_change_event(HealthState.FAILED)
+        change_event_callbacks["station_health"].assert_change_event(HealthState.FAILED)
+        assert (
+            tile_device.healthReport
+            == "Intermediate health voltages is in FAILED HealthState. Cause: "
+            'Monitoring point "/VM_AGP4": 0.915 not in range 0.84 - 0.89'
+        )
+        assert (
+            sps_station_device.healthReport
+            == "Too many subdevices are in a bad state: Tiles: "
+            "['low-mccs/tile/ci-1-tpm01 - FAILED'] Subracks: []"
+        )
+        # Set Tile to AdminMode.OFFLINE.
+        # Expect Station UNKNOWN as its PowerState should be UNKNOWN.
+        tile_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_health"].assert_change_event(HealthState.UNKNOWN)
+        assert tile_device.healthState == HealthState.UNKNOWN
+        assert tile_device.healthReport == "Device's adminMode is offline."
+
+        change_event_callbacks["station_health"].assert_change_event(
+            HealthState.UNKNOWN, lookahead=3, consume_nonmatches=True
+        )
+        assert sps_station_device.healthState == HealthState.UNKNOWN
+        assert sps_station_device.healthReport == "Device is in unknown power state."
+
+        # Reset thresholds. Expect all devices OK.
+        tile_device.adminMode = AdminMode.ONLINE
+        new_tile_params = json.dumps(
+            {"voltages": {"VM_AGP4": {"min": 0.84, "max": 0.99}}}
+        )
+        tile_device.healthModelParams = new_tile_params
+        change_event_callbacks["tile_health"].assert_change_event(
+            HealthState.OK, lookahead=3, consume_nonmatches=True
+        )
+        for device in devices:
+            assert device.healthState == HealthState.OK
+            assert device.healthReport == "Health is OK."
+
+        # Mock a health issue on Subrack. Expect Station FAILED and Subrack DEGRADED.
+        new_subrack_params = json.dumps(
+            {"degraded_max_backplane_temp": 35, "failed_max_backplane_temp": 40}
+        )
+        subrack_device.healthModelParams = new_subrack_params
+        change_event_callbacks["subrack_health"].assert_change_event(
+            HealthState.DEGRADED
+        )
+        assert subrack_device.healthState == HealthState.DEGRADED
+        assert (
+            subrack_device.healthReport
+            == "Sensor 0 temp 39.0 greater than degraded_max_backplane_temp 35. "
+            "Sensor 1 temp 40.0 greater than degraded_max_backplane_temp 35. "
+        )
+
+        change_event_callbacks["station_health"].assert_change_event(HealthState.FAILED)
+        assert sps_station_device.healthState == HealthState.FAILED
+        assert (
+            sps_station_device.healthReport
+            == "Too many subdevices are in a bad state: Tiles: "
+            "[] Subracks: ['low-mccs/subrack/ci-1-sr1 - DEGRADED']"
+        )
+
+        # Set Subrack to AdminMode.OFFLINE.
+        # Expect Tile FAILED (fault) and Station FAILED.
+        subrack_device.adminMode = AdminMode.OFFLINE
+        change_event_callbacks["tile_health"].assert_change_event(HealthState.FAILED)
+        assert tile_device.healthState == HealthState.FAILED
+        assert tile_device.healthReport == "Device is in fault state."
+
+        assert subrack_device.healthState == HealthState.UNKNOWN
+        assert subrack_device.healthReport == "Device's adminMode is offline."
+
+        assert sps_station_device.healthState == HealthState.FAILED
+        assert (
+            sps_station_device.healthReport
+            == "Too many subdevices are in a bad state: "
+            "Tiles: ['low-mccs/tile/ci-1-tpm01 - FAILED'] Subracks: []"
         )

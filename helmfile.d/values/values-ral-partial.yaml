@@ -20,13 +20,6 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
 # Disable non-partial stations.
 platform:
   array:
-    cabinetbanks:
-      stfc-ral-software:
-        enabled: false
-      stfc-ral-firmware:
-        enabled: false
-      stfc-ral-partial:
-        enabled: false
     stations:
     - stfc-ral-software:
     - stfc-ral-firmware:

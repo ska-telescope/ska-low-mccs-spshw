@@ -74,7 +74,7 @@ def attribute_manager_with_converter_fixture(
     def _serialise_value(val: dict[str, Any] | tuple[str, str]) -> str:
         return json.dumps(val)
 
-    return AttributeManager(post_change_event_callback, converter=_serialise_value)
+    return AttributeManager(post_change_event_callback)
 
 
 @pytest.fixture(name="alarm_attribute_manager")

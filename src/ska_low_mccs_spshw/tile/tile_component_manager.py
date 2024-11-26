@@ -13,7 +13,7 @@ import ipaddress
 import logging
 import threading
 import time
-from typing import Any, Callable, Final, NoReturn, Optional, cast
+from typing import Any, Callable, NoReturn, Optional, cast
 
 import numpy as np
 import tango
@@ -46,35 +46,6 @@ from .tpm_status import TpmStatus
 from .utils import abort_task_on_exception, acquire_timeout, check_hardware_lock_claimed
 
 __all__ = ["TileComponentManager"]
-
-# TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
-# TileComponentManager have different names for things? It seems clearer for them
-# all to use the name in pyaavs.Tile. Multiple maps like this increase the risk of a
-# mapping errors.
-_ATTRIBUTE_MAP: Final = {
-    "HEALTH_STATUS": "tile_health_structure",
-    "PREADU_LEVELS": "preadu_levels",
-    "PLL_LOCKED": "pll_locked",
-    "CHECK_BOARD_TEMPERATURE": "board_temperature",
-    "PPS_DELAY_CORRECTION": "pps_delay_correction",
-    "IS_BEAMFORMER_RUNNING": "beamformer_running",
-    "FPGA_REFERENCE_TIME": "fpga_reference_time",
-    "TILE_ID": "tile_id",
-    "STATION_ID": "station_id",
-    "PHASE_TERMINAL_COUNT": "phase_terminal_count",
-    "PPS_DELAY": "pps_delay",
-    "PPS_DRIFT": "pps_drift",
-    "ADC_RMS": "adc_rms",
-    "CHANNELISER_ROUNDING": "channeliser_rounding",
-    "IS_PROGRAMMED": "is_programmed",
-    "CSP_ROUNDING": "csp_rounding",
-    "STATIC_DELAYS": "static_delays",
-    "PENDING_DATA_REQUESTS": "pending_data_requests",
-    "BEAMFORMER_TABLE": "beamformer_table",
-    "CHECK_CPLD_COMMS": "global_status_alarms",
-    "ARP_TABLE": "arp_table",
-    "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
-}
 
 
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
@@ -239,138 +210,136 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         match request_spec:
             case "CHECK_CPLD_COMMS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "global_status_alarms",
                     self.tile.check_global_status_alarms,
                     publish=True,
                 )
             case "CHECK_BOARD_TEMPERATURE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "board_temperature",
                     self.tile.get_temperature,
                     publish=True,
                 )
             case "CONNECT":
+                error_flag = False
                 try:
                     self.ping()
+                    # pylint: disable=broad-except
+                except Exception as e:
+                    # polling attempt was unsuccessful
+                    self.logger.warning(f"Connection to tpm lost! : {e}")
+                    error_flag = True
+                if error_flag:
+                    self.tile.tpm = None
+                    request = TileRequest("connect", self.connect)
+                else:
                     request = TileRequest(
                         "global_status_alarms",
                         self.tile.check_global_status_alarms,
                         publish=True,
                     )
-                    # pylint: disable=broad-except
-                except Exception as e:
-                    # polling attempt was unsuccessful
-                    self.logger.warning(f"Connection to tpm lost! : {e}")
-                    self.tile.tpm = None
-                    request = TileRequest("connect", self.connect)
             case "IS_PROGRAMMED":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "is_programmed",
                     self.tile.is_programmed,
                     publish=True,
                 )
             case "HEALTH_STATUS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "tile_health_structure",
                     self.tile.get_health_status,
                     publish=True,
                 )
             case "ADC_RMS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.tile.get_adc_rms, publish=True
-                )
+                request = TileRequest("adc_rms", self.tile.get_adc_rms, publish=True)
             case "PLL_LOCKED":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "pll_locked",
                     self.tile.check_pll_locked,
                     publish=True,
                 )
             case "PENDING_DATA_REQUESTS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "pending_data_requests",
                     self.tile.check_pending_data_requests,
                     publish=False,
                 )
             case "PPS_DELAY":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "pps_delay",
                     self.tile.get_pps_delay,
                     publish=True,
                 )
             case "PPS_DRIFT":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "pps_drift",
                     self._get_pps_drift,
                     publish=True,
                 )
             case "ARP_TABLE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "arp_table",
                     self.tile.get_arp_table,
                     publish=True,
                 )
             case "PPS_DELAY_CORRECTION":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "pps_delay_correction",
                     command_object=self._get_pps_delay_correction,
                     publish=True,
                 )
             case "IS_BEAMFORMER_RUNNING":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "beamformer_running",
                     self.tile.beamformer_is_running,
                     publish=True,
                 )
             case "PHASE_TERMINAL_COUNT":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "phase_terminal_count",
                     self.tile.get_phase_terminal_count,
                     publish=True,
                 )
             case "PREADU_LEVELS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "preadu_levels",
                     self.tile.get_preadu_levels,
                     publish=True,
                 )
             case "STATIC_DELAYS":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.get_static_delays, publish=True
+                    "static_delays", self.get_static_delays, publish=True
                 )
             case "STATION_ID":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "station_id",
                     self.tile.get_station_id,
                     publish=True,
                 )
             case "TILE_ID":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.tile.get_tile_id, publish=True
-                )
+                request = TileRequest("tile_id", self.tile.get_tile_id, publish=True)
             case "CSP_ROUNDING":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec], self.csp_rounding, publish=True
-                )
+                request = TileRequest("csp_rounding", self.csp_rounding, publish=True)
             case "CHANNELISER_ROUNDING":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "channeliser_rounding",
                     self._channeliser_truncation,
                     publish=True,
                 )
             case "BEAMFORMER_TABLE":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "beamformer_table",
                     self.tile.get_beamformer_table,
                     publish=True,
                 )
             case "FPGA_REFERENCE_TIME":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "fpga_reference_time",
                     self.formatted_fpga_reference_time,
                 )
             case "TILE_BEAMFORMER_FRAME":
                 request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
+                    "tile_beamformer_frame",
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
                 )
@@ -397,6 +366,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # A callback hook to be updated after command executed.
         self.active_lrc_request = None
         if isinstance(poll_request, TileLRCRequest):
+            self.logger.info(f"Command {poll_request.name} IN_PROGRESS")
             self.active_lrc_request = poll_request
             self.active_lrc_request.notify_in_progress()
 
@@ -498,6 +468,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             read.
         """
         if self.active_lrc_request:
+            self.logger.error("LRC completed")
             self.active_lrc_request.notify_completed()
             self.active_lrc_request = None
 
@@ -514,27 +485,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         super().poll_succeeded(poll_response)
         self._update_component_state(power=PowerState.ON, fault=self.fault_state)
-
-    def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
-        """
-        Trigger the callback when attributes are no longer provided for polling.
-
-        :param names: a set containing the attributes that will no longer
-            be provided for polling.
-        """
-        # while len(names) != 0:
-        #     val = names.pop()
-        #     if _ATTRIBUTE_MAP.get(val) is not None:
-        #         mapped_val = _ATTRIBUTE_MAP[val]
-        #         try:
-        #             self._update_attribute_callback(
-        #                 mark_invalid=True, **{mapped_val: None}
-        #             )
-        #         except Exception as e:
-        #             self.logger.warning(
-        #                 f"Issue marking attribute {mapped_val} INVALID. {e}"
-        #             )
-        #             continue
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""

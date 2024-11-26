@@ -63,28 +63,6 @@ class TileAttribute:
     timestamp: float
 
 
-def _flatten_list(val: list[list[Any]]) -> list[Any]:
-    """
-    Flatten list to 1 dimensional.
-
-    :param val: the 2 dimensional list.
-
-    :return: a 1 dimensional list.
-    """
-    return list(itertools.chain.from_iterable(val))
-
-
-def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
-    """
-    Serialise to a json string.
-
-    :param val: A dictionary or tuple to serialise.
-
-    :return: a json serialised string.
-    """
-    return json.dumps(val)
-
-
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(SKABaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
@@ -131,12 +109,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self._info: dict[str, Any] = {}
 
     def init_device(self: MccsTile) -> None:
-        """
-        Initialise the device.
-
-        :raises TypeError: when attributes have a converter
-            that is not callable.
-        """
+        """Initialise the device."""
         self._multi_attr = self.get_device_attr()
         super().init_device()
 
@@ -224,21 +197,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "board_temperature": "boardTemperature",
         }
 
-        # NOTE: This has been removed to eliminate SKB-609 segfault.
-        # The root cause is UNKNOWN still.
-        attribute_converters: dict[str, Any] = {}
-
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
         self._attribute_state: dict[str, AttributeManager] = {}
 
         # generic attributes
         for attr_name in self.attr_map.values():
-            converter = attribute_converters.get(attr_name)
-            if converter is not None and not callable(converter):
-                raise TypeError(f"The converter for '{attr_name}' is not callable.")
             self._attribute_state[attr_name] = AttributeManager(
                 functools.partial(self.post_change_event, attr_name),
-                converter=converter,
             )
 
         # Specialised attributes.
@@ -638,24 +603,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 break
         return None
 
-    def update_tile_health_attributes(
-        self: MccsTile, mark_invalid: bool = False
-    ) -> None:
-        """
-        Update TANGO attributes from the tile health structure dictionary.
-
-        :param mark_invalid: True when values being reported are not valid.
-        """
+    def update_tile_health_attributes(self: MccsTile) -> None:
+        """Update TANGO attributes from the tile health structure dictionary."""
         for (
             attribute_name,
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
-            if mark_invalid:
-                try:
-                    self._attribute_state[attribute_name].mark_stale()
-                except KeyError:
-                    self.logger.warning(f"Attribute {attribute_name} not found.")
-                continue
             attribute_value = self.unpack_monitoring_point(
                 copy.deepcopy(self.tile_health_structure),
                 dictionary_path,
@@ -738,8 +691,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             # Update the attribute ALARM status.
             self._multi_attr.check_alarm(name)
         except tango.DevFailed:
-            # no alarm defined
-            pass
+            self.logger.debug("no alarm defined")
 
     def _convert_ip_to_str(self: MccsTile, nested_dict: dict[str, Any]) -> None:
         """
@@ -1546,7 +1498,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         self.component_manager.tile_id = value
 
     @attribute(dtype="DevString")
-    def tileProgrammingState(self: MccsTile) -> str | None:
+    def tileProgrammingState(self: MccsTile) -> str:
         """
         Get the tile programming state.
 

@@ -17,6 +17,7 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
+from functools import wraps
 from ipaddress import IPv4Address
 from typing import Any, Callable, Final, NoReturn
 
@@ -52,6 +53,31 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
+
+def engineering_mode_required(func: Callable) -> Callable:
+    """
+    Return a decorator for engineering only commands.
+
+    :param func: the command which is engineering mode only.
+
+    :returns: decorator to check for engineering mode before running command.
+    """
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
+        device: SKABaseDevice = args[0]
+        if device._admin_mode != AdminMode.ENGINEERING:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"Device in adminmode {device._admin_mode.name}, "
+                    "this command requires engineering."
+                ],
+            )
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 @dataclass
@@ -207,9 +233,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "resync_count": "resync_count",
             "ddr_initialisation": "ddr_initialisation",
             "ddr_reset_counter": "ddr_reset_counter",
-            "ddr_rd_cnt": "ddr_rd_cnt",
-            "ddr_wr_cnt": "ddr_wr_cnt",
-            "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
+            # "ddr_rd_cnt": "ddr_rd_cnt",
+            # "ddr_wr_cnt": "ddr_wr_cnt",
+            # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
             "arp": "arp",
             "udp_status": "udp_status",
             "crc_error_count": "crc_error_count",
@@ -311,9 +337,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "clocks": ["timing", "clocks"],
             "clock_managers": ["timing", "clock_managers"],
-            "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
-            "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
-            "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
+            # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
+            # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
+            # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
             "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
             "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
@@ -412,6 +438,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             ("ConfigurePatternGenerator", self.ConfigurePatternGeneratorCommand),
             ("StartPatternGenerator", self.StartPatternGeneratorCommand),
             ("StopPatternGenerator", self.StopPatternGeneratorCommand),
+            ("StartADCs", self.StartAdcsCommand),
+            ("StopADCs", self.StopAdcsCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -1121,63 +1149,64 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return json.dumps(self._attribute_state["clock_managers"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_cnt",
-    )
-    def ddr_rd_cnt(self: MccsTile) -> str:
-        """
-        Return the read counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_cnt",
+    # )
+    # def ddr_rd_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been read.
+    #     Expected: `integer` number of times ddr interface has been read.
 
-        :example:
-            >>> tile.ddr_rd_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been read.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
+    #     :return: number of times ddr interface has been read.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_wr_cnt",
-    )
-    def ddr_wr_cnt(self: MccsTile) -> str:
-        """
-        Return the write counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_wr_cnt",
+    # )
+    # def ddr_wr_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the write counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been written to.
+    #     Expected: `integer` number of times ddr interface has been written to.
 
-        :example:
-            >>> tile.ddr_wr_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_wr_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been written to.
-        """
-        return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
+    #     :return: number of times ddr interface has been written to.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_dat_cnt",
-    )
-    def ddr_rd_dat_cnt(self: MccsTile) -> str:
-        """
-        Return the read valid counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_dat_cnt",
+    # )
+    # def ddr_rd_dat_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has responded to a read
-        with valid data.
+    #     Expected: `integer` number of times ddr interface has responded to a read
+    #     with valid data.
 
-        :example:
-            >>> tile.ddr_rd_dat_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_dat_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has responded to a read with valid data.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
+    #     :return: number of times ddr interface
+    #       has responded to a read with valid data.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -4732,6 +4761,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 amplitude_noise,
                 pulse_code,
                 amplitude_pulse,
+                kwargs.get("delays"),
                 set_time,
             )
 
@@ -4757,6 +4787,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.admin_mode_model.admin_mode == AdminMode.ENGINEERING
 
+    @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -4862,6 +4893,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager.configure_pattern_generator(**kwargs)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
+    @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigurePatternGenerator(
         self: MccsTile, argin: str
@@ -4953,6 +4985,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager.stop_pattern_generator(stage)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
+    @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StopPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
         """
@@ -5019,6 +5052,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager.start_pattern_generator(stage)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
+    @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
         """
@@ -5041,6 +5075,102 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         handler = self.get_command_object("StartPatternGenerator")
         (return_code, message) = handler(stage)
+        return ([return_code], [message])
+
+    class StartAdcsCommand(FastCommand):
+        """Class for handling the StartAdcs command."""
+
+        def __init__(
+            self: MccsTile.StartAdcsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StartAdcsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StartAdcs command completed OK"
+
+        def do(self: MccsTile.StartAdcsCommand) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StartADCs` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.start_adcs()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_out="DevVarLongStringArray")
+    def StartADCs(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Start the ADCs.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StartADCs")
+        """
+        handler = self.get_command_object("StartADCs")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class StopAdcsCommand(FastCommand):
+        """Class for handling the StopAdcs command."""
+
+        def __init__(
+            self: MccsTile.StopAdcsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StopAdcsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopAdcs command completed OK"
+
+        def do(self: MccsTile.StopAdcsCommand) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopADCs` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.stop_adcs()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_out="DevVarLongStringArray")
+    def StopADCs(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Stop the ADCs.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopADCs")
+        """
+        handler = self.get_command_object("StopADCs")
+        (return_code, message) = handler()
         return ([return_code], [message])
 
     def __str__(self: MccsTile) -> str:

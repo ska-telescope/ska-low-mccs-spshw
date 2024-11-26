@@ -635,10 +635,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerState",
-            self._subrack_says_tpm_power_changed,
-        )
+            self._subrack_proxy.add_change_event_callback(
+                f"tpm{self._subrack_tpm_id}PowerState",
+                self._subrack_says_tpm_power_changed,
+            )
 
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
@@ -778,8 +778,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             self.logger.warning(
                                 "Unable to connect with at least 1 FPGA"
                             )
-                    _is_programmed = self.tile.is_programmed()
-                    if _is_programmed is False:
+                    if not any(core_communication.values()):
+                        self.logger.error(
+                            "Unconnected. Unable to connect to the CPLD, FPGA1 or FPGA2"
+                        )
+                        status = TpmStatus.UNCONNECTED
+                    elif self.tile.is_programmed() is False:
                         status = TpmStatus.UNPROGRAMMED
                     elif self._check_initialised() is False:
                         status = TpmStatus.PROGRAMMED
@@ -3125,6 +3129,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         amplitude_noise: float,
         pulse_code: int,
         amplitude_pulse: float,
+        delays: list[float] | None = None,
         load_time: Optional[str] = None,
     ) -> None:
         """
@@ -3142,6 +3147,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :param amplitude_pulse: pulse peak amplitude, normalized
             to 127.5 ADC units, resolution 0.5 ADU
+        :param delays: delays to load into the test generator, list of 32 floats.
         :param load_time: Time to start the generator. in UTC ISO formatted string.
 
         :raises ValueError: invalid time specified
@@ -3195,6 +3201,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_frame)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+                    if delays is not None:
+                        self.tile.test_generator_set_delay(delays)
                     self.tile["fpga1.test_generator.control.load_dds0"] = 1
                     self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
@@ -3315,3 +3323,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.start_pattern(stage)
             else:
                 raise TimeoutError("Failed to acquire lock")
+
+    def start_adcs(self: TileComponentManager) -> None:
+        """Start the ADCs."""
+        self.tile.enable_all_adcs()
+
+    def stop_adcs(self: TileComponentManager) -> None:
+        """Stop the ADCs."""
+        self.tile.disable_all_adcs()

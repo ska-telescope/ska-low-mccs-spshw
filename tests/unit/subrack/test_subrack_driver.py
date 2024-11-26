@@ -10,6 +10,7 @@ from typing import Any
 
 import pytest
 from ska_control_model import CommunicationStatus, PowerState
+from ska_low_mccs_common.component import HardwareClientResponseStatusCodes
 from ska_tango_testing.mock import MockCallableGroup
 
 from ska_low_mccs_spshw.subrack import (
@@ -320,3 +321,109 @@ def test_other_commands(
     callbacks["component_state"].assert_call(
         power_supply_fan_speeds=[pytest.approx(s) for s in power_supply_fan_speeds],
     )
+
+
+def test_failed_poll(
+    subrack_driver: SubrackDriver,
+    subrack_client: Any,
+    subrack_simulator_attribute_values: dict[str, Any],
+    failed_subrack_simulator_attribute_values: dict[str, Any],
+    callbacks: MockCallableGroup,
+) -> None:
+    """
+    Test that the subrack driver updates correctly with a failed poll.
+
+    - When the client raises a HTTP_ERROR
+        the driver is UNKNOWN since no attempt was made to contact it,
+        The device is faulty since the request was not valid,
+        (unsure if we are able to break this down further).
+    - When a get_attribute response is not parsable, mark the attribute of interest
+        as None (i.e UNKNOWN)
+    - When the client raises RequestException
+        the driver goes into UNKNOWN.
+    - When client report HardwareClientResponseStatusCodes OK,
+        we will return back to a ON state and faults are wiped.
+
+    :param subrack_client: A fixture with the server interface to
+        allow mocking of exception codes easily.
+    :param subrack_driver: the subrack driver under test
+    :param subrack_simulator_attribute_values: key-value dictionary of
+        the expected subrack simulator attribute values
+    :param failed_subrack_simulator_attribute_values: key-value dictionary of
+        the expected subrack simulator attribute values from a failed poll.
+    :param callbacks: dictionary of driver callbacks.
+    """
+    callbacks["communication_status"].assert_not_called()
+    callbacks["component_state"].assert_not_called()
+
+    subrack_driver.start_communicating()
+
+    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
+    callbacks["communication_status"].assert_call(CommunicationStatus.ESTABLISHED)
+    callbacks["communication_status"].assert_not_called()
+
+    callbacks["component_state"].assert_call(power=PowerState.ON, fault=False)
+    callbacks["component_state"].assert_call(**subrack_simulator_attribute_values)
+    callbacks["component_state"].assert_not_called()
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.HTTP_ERROR.name,
+        "info": "Exception: " + str("mocked exception"),
+        "attribute": attr_name,
+        "value": None,
+    }
+    callbacks["component_state"].assert_call(fault=True)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "",
+        "attribute": attr_name,
+        "value": subrack_simulator_attribute_values.get(attr_name),
+    }
+    callbacks["component_state"].assert_call(fault=False)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name,
+        "info": "Exception: " + str("mocked exception"),
+        "attribute": attr_name,
+        "value": None,
+    }
+
+    callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "",
+        "attribute": attr_name,
+        "value": subrack_simulator_attribute_values.get(attr_name),
+    }
+    callbacks["component_state"].assert_call(power=PowerState.ON)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": "invalid_response code",
+        "info": "",
+        "attribute": attr_name,
+        "value": subrack_simulator_attribute_values.get(attr_name),
+    }
+    callbacks["component_state"].assert_call(fault=True)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.OK.name,
+        "info": "",
+        "attribute": attr_name,
+        "value": subrack_simulator_attribute_values.get(attr_name),
+    }
+    callbacks["component_state"].assert_call(fault=False)
+
+    subrack_client.get_attribute = lambda attr_name: {
+        "status": HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name,
+        "info": "Exception: " + str("mocked exception"),
+        "attribute": attr_name,
+        "value": None,
+    }
+
+    callbacks["component_state"].assert_call(
+        **failed_subrack_simulator_attribute_values,
+    )
+
+    callbacks["component_state"].assert_not_called()

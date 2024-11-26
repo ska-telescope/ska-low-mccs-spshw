@@ -62,3 +62,11 @@ Feature: Test health
         And the Station On command finishes
         And the Station reports that its state is ON
         And the Station reports that it is SYNCHRONISED
+
+    Scenario: Test read attributes
+        Given the Station is online
+        And the Station has been commanded to turn On
+        And the Station reports that its state is ON
+        And the Tiles reports that its state is ON
+        When all attributes are read on a Tile
+        Then a value is returned for each

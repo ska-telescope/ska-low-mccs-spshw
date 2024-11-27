@@ -8,7 +8,7 @@ USER root
 
 RUN make install-firmware
 
-RUN apt-get update && apt-get install -y git
+RUN apt-get update && apt-get install -y git && apt-get --yes install gdb python3-dbg
 
 RUN pip install -e .
 

@@ -125,3 +125,10 @@ nodeSelector:
 {{toYaml . | indent 2}}
 {{- end}}
 {{- end}}
+extraVolumes:
+- name: pproc
+  hostPath:
+    path: /proc
+extraVolumeMounts:
+  - name: pproc
+    mountPath: /hostproc

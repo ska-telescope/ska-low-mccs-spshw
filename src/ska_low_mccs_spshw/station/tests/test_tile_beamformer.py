@@ -13,6 +13,7 @@ import json
 import logging
 import random
 import time
+from datetime import datetime
 from typing import TYPE_CHECKING, Callable
 
 import numpy as np
@@ -25,6 +26,8 @@ from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestBeamformer"]
+
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class BeamDataReceivedHandler(BaseDataReceivedHandler):
@@ -239,8 +242,7 @@ class TestBeamformer(BaseDaqTest):
             coefficients = list(itertools.chain.from_iterable(out))
             coefficients.insert(0, float(antenna))
             tile.LoadCalibrationCoefficients(coefficients)
-            time.sleep(1)
-            tile.ApplyCalibration("")
+        tile.ApplyCalibration("")
 
     def _reset_calibration_coefficients(
         self: TestBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
@@ -317,6 +319,12 @@ class TestBeamformer(BaseDaqTest):
         self.component_manager.stop_adcs()
         self._configure_beamformer(
             TileData.FIRST_BEAMFORMER_CHANNEL, len(test_channels)
+        )
+        start_time = datetime.strftime(
+            datetime.fromtimestamp(int(time.time())), RFC_FORMAT
+        )
+        self.component_manager.start_beamformer(
+            start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
         )
         self._configure_daq("BEAM_DATA")
         self._data_handler = BeamDataReceivedHandler(

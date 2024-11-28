@@ -156,7 +156,7 @@ class TestBeamformer(BaseDaqTest):
             self._start_directory_watch()
             self.test_logger.debug(f"Sending beam data for {antenna_no=}")
             frequency = (
-                TileData.FIRST_FREQUENCY_CHANNEL + channel
+                TileData.FIRST_BEAMFORMER_CHANNEL + channel
             ) * TileData.CHANNEL_WIDTH
             self._configure_test_generator(
                 frequency,
@@ -187,7 +187,7 @@ class TestBeamformer(BaseDaqTest):
         self._start_directory_watch()
         self.test_logger.debug("Sending beam data for all antennas")
         frequency = (
-            TileData.FIRST_FREQUENCY_CHANNEL + channel
+            TileData.FIRST_BEAMFORMER_CHANNEL + channel
         ) * TileData.CHANNEL_WIDTH
         self._configure_test_generator(
             frequency,
@@ -212,13 +212,13 @@ class TestBeamformer(BaseDaqTest):
             dtype="complex",
         )
         for tile_no, tile in enumerate(self.tile_proxies):
-            # for pol in range(TileData.POLS_PER_ANTENNA):
-            #     for antenna in range(TileData.ANTENNA_COUNT):
-            #         coeffs[tile_no][pol][antenna] = (
-            #             gain
-            #             * ref_values[tile_no]
-            #             / single_input_data[tile_no][pol][antenna]
-            #         )
+            for pol in range(TileData.POLS_PER_ANTENNA):
+                for antenna in range(TileData.ANTENNA_COUNT):
+                    coeffs[tile_no][pol][antenna] = (
+                        gain
+                        * ref_values[tile_no]
+                        / single_input_data[tile_no][pol][antenna]
+                    )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(
@@ -312,10 +312,13 @@ class TestBeamformer(BaseDaqTest):
     def test(self: TestBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
+        test_channels = range(7 + 1)
         self.component_manager._set_channeliser_rounding(np.full(512, 5))
         self.component_manager.stop_adcs()
+        self._configure_beamformer(
+            TileData.FIRST_BEAMFORMER_CHANNEL, len(test_channels)
+        )
         self._configure_daq("BEAM_DATA")
-        test_channels = range(7 + 1)
         self._data_handler = BeamDataReceivedHandler(
             self.test_logger,
             len(self.tile_proxies),

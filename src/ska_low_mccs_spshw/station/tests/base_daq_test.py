@@ -244,6 +244,19 @@ class BaseDaqTest(TpmSelfCheckTest):
             json_arg.update({"delays": delays})
         self.component_manager.configure_test_generator(json.dumps(json_arg))
 
+    def _configure_beamformer(
+        self: BaseDaqTest,
+        first_channel: int,
+        channel_bandwidth: int,
+    ) -> None:
+        region = [first_channel, channel_bandwidth, 0, 1, 0, 1, 1, 101]
+        subarray_logical_channel = region[4]
+        for channel_0 in range(first_channel, first_channel + channel_bandwidth, 8):
+            entry = [channel_0] + region[2:8]
+            entry[3] = subarray_logical_channel
+            subarray_logical_channel = subarray_logical_channel + 8
+        self.component_manager.set_beamformer_table([entry])
+
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
         self._observer = Observer()  # type: ignore

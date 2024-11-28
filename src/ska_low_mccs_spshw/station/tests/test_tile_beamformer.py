@@ -212,13 +212,13 @@ class TestBeamformer(BaseDaqTest):
             dtype="complex",
         )
         for tile_no, tile in enumerate(self.tile_proxies):
-            for pol in range(TileData.POLS_PER_ANTENNA):
-                for antenna in range(TileData.ANTENNA_COUNT):
-                    coeffs[tile_no][pol][antenna] = (
-                        gain
-                        * ref_values[tile_no]
-                        / single_input_data[tile_no][pol][antenna]
-                    )
+            # for pol in range(TileData.POLS_PER_ANTENNA):
+            #     for antenna in range(TileData.ANTENNA_COUNT):
+            #         coeffs[tile_no][pol][antenna] = (
+            #             gain
+            #             * ref_values[tile_no]
+            #             / single_input_data[tile_no][pol][antenna]
+            #         )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(

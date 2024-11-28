@@ -321,11 +321,12 @@ class TestBeamformer(BaseDaqTest):
             TileData.FIRST_BEAMFORMER_CHANNEL, len(test_channels)
         )
         start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time())), RFC_FORMAT
+            datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
         )
         self.component_manager.start_beamformer(
             start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
         )
+        time.sleep(2)
         self._configure_daq("BEAM_DATA")
         self._data_handler = BeamDataReceivedHandler(
             self.test_logger,

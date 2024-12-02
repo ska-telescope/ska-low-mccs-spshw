@@ -113,6 +113,7 @@ pysnmp = "^7.1.4"
 ska-ser-snmp = "^0.4.1"
 
 [tool.poetry.scripts]
+spshw_device_server = "ska_low_mccs_spshw:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"

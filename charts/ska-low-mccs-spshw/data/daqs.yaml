@@ -31,9 +31,9 @@ instances:
 {{- range $server_key := keys $daqs}}
   - {{printf "daq-%s" $server_key}}
 {{- end}}
-command: "MccsDaqReceiver"
+command: spshw_device_server
 server:
-  name: "MccsDaqReceiver"
+  name: spshw_device_server
   instances:
 {{- range $server_key, $this_server := $daqs}}
     - name: {{printf "daq-%s" $server_key}}

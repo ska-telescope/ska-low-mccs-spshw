@@ -42,9 +42,9 @@ instances:
 {{- range $server_key := keys $spsstations}}
   - {{printf "spsstation-%s" $server_key}}
 {{- end}}
-command: SpsStation
+command: spshw_device_server
 server:
-  name: "SpsStation"
+  name: spshw_device_server
   instances:
 {{- range $server_key, $this_server := $spsstations}}
     - name: {{printf "spsstation-%s" $server_key}}

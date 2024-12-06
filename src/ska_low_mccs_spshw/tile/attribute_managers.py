@@ -10,6 +10,7 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
+import numpy as np
 import tango
 
 __all__ = [
@@ -55,6 +56,16 @@ class AttributeManager:
         self._last_update = time.time()
         self._value_time_quality_callback = value_time_quality_callback
 
+    def value_changed(self: AttributeManager, value: Any) -> bool:
+        """
+        Check if value has changed since last poll.
+
+        :param value: the value we want to update attribute with.
+
+        :returns: whether or not the value has changed.
+        """
+        return value != self._value
+
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
         """
         Update attribute manager with a new value.
@@ -64,7 +75,7 @@ class AttributeManager:
         """
         # new_value: Any = self._converter(value) if self._converter else value
         # value_changed = new_value != self._value
-        value_changed = value != self._value
+        value_changed = self.value_changed(value)
         self._value = value
         self._last_update = time.time()
         if self._value is None:
@@ -77,7 +88,7 @@ class AttributeManager:
     def mark_stale(self: AttributeManager) -> None:
         """Mark attribute as stale."""
         if (
-            self._initial_value == self._value
+            self.value_changed(self._initial_value)
             or self._quality == tango.AttrQuality.ATTR_INVALID
         ):
             return
@@ -212,3 +223,17 @@ class AlarmAttributeManager(AttributeManager):
             self._quality = tango.AttrQuality.ATTR_WARNING
         else:
             self._quality = tango.AttrQuality.ATTR_VALID
+
+
+class NpArrayAttributeManager(AttributeManager):
+    """An AttributeManager for a np.ndarray attribute."""
+
+    def value_changed(self: AttributeManager, value: np.ndarray) -> bool:
+        """
+        Check if value has changed since last poll.
+
+        :param value: the value we want to update attribute with.
+
+        :returns: whether or not the value has changed.
+        """
+        return np.array_equal(value, self._value)

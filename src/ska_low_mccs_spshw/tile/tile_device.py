@@ -45,6 +45,7 @@ from .attribute_managers import (
     AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
+    NpArrayAttributeManager,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -248,6 +249,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "core_communication": "coreCommunicationStatus",
             "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
+            "rfi_count": "rfiCount",
         }
 
         # NOTE: This has been removed to eliminate SKB-609 segfault.
@@ -272,6 +274,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
         # - alarms: alarms raised by firmware are collected in a dictionary.
+        # - rfiCount: np.ndarray needs a different truth comparison.
         # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
@@ -311,6 +314,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 ),
                 "alarms": AlarmAttributeManager(
                     functools.partial(self.post_change_event, "alarms"),
+                ),
+                "rfiCount": NpArrayAttributeManager(
+                    functools.partial(self.post_change_event, "rfiCount")
                 ),
             }
         )
@@ -2410,6 +2416,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :returns: last pointing delays applied to the tile.
         """
         return self.component_manager.last_pointing_delays
+
+    @attribute(
+        dtype=(("DevLong",),),
+        max_dim_x=2,  # pol
+        max_dim_y=16,  # antenna
+    )
+    def rfiCount(self: MccsTile) -> list[list]:
+        """
+        Return the RFI count per antenna/pol.
+
+        :returns: the RFI count per antenna/pol.
+        """
+        return self._attribute_state["rfiCount"].read()[0]
 
     @attribute(
         dtype="DevDouble",

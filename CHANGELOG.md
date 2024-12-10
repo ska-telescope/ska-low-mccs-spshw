@@ -1,7 +1,8 @@
 # Version History
 
-## unreleased
+## 0.19.0
 
+* [LOW-1131] Expose SPS Station as a LoadBalancer
 * [MCCS-2299] Add functional test for reading attributes on hardware.
 * [MCCS-2319] ddr_interface points failing health when running a scan
 * [MCCS-2328] Add enable/disable ADCs, add delays to test generator

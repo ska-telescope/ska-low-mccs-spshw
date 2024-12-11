@@ -1213,3 +1213,60 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
+
+    def test_tpm_discovery(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test tile can be turned OFFLINE and ONLINE and rediscover state.
+
+        This test was created to capture SKB-687. It will check:
+        - Whether MccsTile can discover the correct TileProgrammingState
+        - The subrack callback does not drive state when Synchronised.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        # We are mocking the TPM in a prexisting state to test discovery
+        tile_simulator.mock_on(lock=True)
+        tile_simulator.program_fpgas("itpm_v1_6.bit")
+        tile_simulator.initialise()
+        tile_simulator.start_acquisition(delay=0)
+        subrack_device.subscribe_event(
+            "tpm1PowerState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_tpm_power_state"],
+        )
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.UNKNOWN
+        )
+
+        subrack_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.OFF
+        )
+        subrack_device.PowerUpTpms()
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.ON
+        )
+
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised"
+        )
+        change_event_callbacks["tile_programming_state"].assert_not_called()

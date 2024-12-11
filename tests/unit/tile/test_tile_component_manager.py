@@ -102,7 +102,7 @@ class TestTileComponentManager:
                     lookahead=2,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=3
                 )
             case PowerState.UNKNOWN:
                 pass
@@ -171,7 +171,7 @@ class TestTileComponentManager:
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-                    lookahead=2,
+                    lookahead=4,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
@@ -576,7 +576,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
@@ -2972,7 +2972,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=3,
+            lookahead=5,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)

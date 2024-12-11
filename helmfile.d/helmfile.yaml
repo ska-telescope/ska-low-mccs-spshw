@@ -103,40 +103,44 @@ environments:
   ral-software:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
-        - stfc-ral.yaml
+        - platform.yaml
+        - stations/stations.yaml
     - config_files:
       - values/values-ral-software.yaml
       datacentre: stfc-ral
   ral-software-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
-        - stfc-ral.yaml
-        - minikube.yaml
+        - platform.yaml
+        - stations/stations.yaml
       config_files:
       - values/values-ral-software.yaml
       datacentre: stfc-ral
   ral-firmware:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
-        - stfc-ral.yaml
+        - platform.yaml
+        - stations/stations.yaml
     - config_files:
       - values/values-ral-firmware.yaml
       datacentre: stfc-ral
   ral-partial:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
-        - stfc-ral.yaml
+        - platform.yaml
+        - stations/stations.yaml
     - config_files:
       - values/values-ral-partial.yaml
       datacentre: stfc-ral
+
 
 ---
 

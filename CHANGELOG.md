@@ -1,8 +1,15 @@
 # Version History
 
+## 0.19.1
+
+* [THORN-37] Pull in downstream update for proxies to use DevSource.DEV
+* [THORN-40] Update RAL platform spec for new TPMs
+
 ## 0.19.0
 
 * [LOW-1131] Expose SPS Station as a LoadBalancer
+* [THORN-1] Multi-class device server endpoint
+* [MCCS-2026] Add RFI counters
 * [MCCS-2299] Add functional test for reading attributes on hardware.
 * [MCCS-2319] ddr_interface points failing health when running a scan
 * [MCCS-2328] Add enable/disable ADCs, add delays to test generator

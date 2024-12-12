@@ -1235,11 +1235,16 @@ class TestMccsTileTpmDriver:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        # We are mocking the TPM in a prexisting state to test discovery
+        # We are mocking the TPM in a prexisting SYNCHRONISED state.
+        # To check we do not re-initialise.
         tile_simulator.mock_on(lock=True)
         tile_simulator.program_fpgas("itpm_v1_6.bit")
         tile_simulator.initialise()
         tile_simulator.start_acquisition(delay=0)
+        tile_simulator._mocked_tpm = tile_simulator.tpm
+        tile_simulator.tpm = None
+        tile_simulator._is_cpld_connectable = False
+
         subrack_device.subscribe_event(
             "tpm1PowerState",
             tango.EventType.CHANGE_EVENT,
@@ -1267,6 +1272,6 @@ class TestMccsTileTpmDriver:
 
         tile_device.adminMode = AdminMode.ONLINE
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Synchronised"
+            "Synchronised", lookahead=2, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_not_called()

@@ -113,7 +113,7 @@ def station_name_fixture(true_context: bool) -> str:
     """
     if not true_context:
         pytest.skip("This needs to be run in a true-context")
-    return os.getenv("STATION_LABEL", "real-daq-1")
+    return os.getenv("STATION_LABEL") or "real-daq-1"
 
 
 @pytest.fixture(name="station_devices")

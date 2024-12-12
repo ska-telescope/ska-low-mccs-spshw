@@ -19,8 +19,9 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, List, TypeVar, Union, cast
+from typing import Any, Callable, Final, Generator, List, TypeVar, Union, cast
 
+import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
@@ -913,7 +914,9 @@ class TileSimulator:
             "last_channel": 383,
             "current_channel": 0,
         }
-        # return self._register_map.get(str(address), 0)
+        self._rfi_count = np.zeros(
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
+        )
 
     @check_mocked_overheating
     @connected
@@ -2439,6 +2442,16 @@ class TileSimulator:
         """
         return self.csp_spead_format == "SKA"
 
+    def read_broadband_rfi(self, antennas: range = range(16)) -> np.ndarray:
+        """
+        Read out the broadband RFI counters.
+
+        :param antennas: list antennas of which rfi counters to read
+
+        :return: rfi counters
+        """
+        return self._rfi_count[np.array(antennas)]
+
     @check_mocked_overheating
     @connected
     def __getattr__(self: TileSimulator, name: str) -> Any:
@@ -2556,6 +2569,7 @@ class DynamicTileSimulator(TileSimulator):
             DynamicValuesGenerator(16.0, 47.0),
             self._fpga2_temperature_changed,
         )
+        self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)
         self._updater.start()
 
     def __del__(self: DynamicTileSimulator) -> None:
@@ -2683,3 +2697,26 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._fpga2_temperature = fpga2_temperature
         self._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temperature
+
+    def _rfi_changed(
+        self: DynamicTileSimulator, antenna_incremented: tuple[int, int]
+    ) -> None:
+        """
+        Call this method when the RFI count increments.
+
+        :param antenna_incremented: which antenna/pol got RFI.
+        """
+        self._rfi_count[antenna_incremented[0]][antenna_incremented[1]] += 1
+
+    @classmethod
+    def random_antenna_generator(cls) -> Generator[tuple[int, int]]:
+        """
+        Generate a random antenna/pol number.
+
+        :yields: a random antenna/pol number.
+        """
+        while True:
+            yield (
+                random.randint(0, TileData.ANTENNA_COUNT - 1),
+                random.randint(0, TileData.POLS_PER_ANTENNA - 1),
+            )

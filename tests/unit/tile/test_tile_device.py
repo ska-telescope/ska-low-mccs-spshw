@@ -392,6 +392,7 @@ class TestMccsTile:
             "currentFrame",
             "pendingDataRequests",
             "isBeamformerRunning",
+            "rfiCount",
         ]
 
     def test_state_with_adminmode(

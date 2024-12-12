@@ -29,9 +29,9 @@ function: ska-low-mccs-pdu
 domain: ska-low-mccs-pdu
 instances:
   {{- toYaml (keys $pdus) | nindent 2}}
-command: MccsPdu
+command: spshw_device_server
 server:
-  name: MccsPdu
+  name: spshw_device_server
   instances:
 {{- range $server_name, $this_server := $pdus}}
     - name: {{$server_name}}

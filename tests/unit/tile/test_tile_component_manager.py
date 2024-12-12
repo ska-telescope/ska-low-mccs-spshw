@@ -3050,3 +3050,18 @@ class TestDynamicSimulator:
         """
         time.sleep(0.1)
         assert getattr(tile_component_manager, attribute_name) == expected_value
+
+    def test_rfi_count(
+        self: TestDynamicSimulator, tile_component_manager: TileComponentManager
+    ) -> None:
+        """
+        Tests that rfi_count increments.
+
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        """
+        initial_rfi = tile_component_manager.tile.read_broadband_rfi()
+        time.sleep(1.5)
+        final_rfi = tile_component_manager.tile.read_broadband_rfi()
+        difference_mask = initial_rfi != final_rfi  # True where values differ
+        assert np.all(final_rfi[difference_mask] > initial_rfi[difference_mask])

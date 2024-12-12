@@ -653,6 +653,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._subrack_says_tpm_power_changed,
             )
 
+    @check_hardware_lock_claimed
+    def _is_connected(self) -> bool:
+        core_communication = self.tile.check_communication()
+        self._update_attribute_callback(core_communication=core_communication)
+        if core_communication["CPLD"]:
+            if not core_communication["FPGA0"] or not core_communication["FPGA1"]:
+                self.logger.warning("Unable to connect with at least 1 FPGA")
+        if not any(core_communication.values()):
+            self.logger.error(
+                "Unconnected. Unable to connect to the CPLD, FPGA1 or FPGA2"
+            )
+            return False
+        return True
+
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
         event_name: str,
@@ -688,6 +702,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.power_state = PowerState.ON
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
+            with self._hardware_lock:
+                if not self._is_connected():
+                    self.logger.error("Connecting .........")
+                    self.connect()
+            self.logger.error(f"{self.tpm_status=}")
             if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
                 if (
                     self._request_provider

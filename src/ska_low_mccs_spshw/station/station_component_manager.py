@@ -156,7 +156,6 @@ class _SubrackProxy(DeviceComponentManager):
         # This might be better done for all of these proxy devices in the common repo.
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
 
 
@@ -236,7 +235,6 @@ class _TileProxy(DeviceComponentManager):
         # This might be better done for all of these proxy devices in the common repo.
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
         super()._update_communication_state(communication_state)
 
     def preadu_levels(self: _TileProxy) -> list[float]:
@@ -324,7 +322,6 @@ class _DaqProxy(DeviceComponentManager):
         # This might be better done for all of these proxy devices in the common repo.
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
 
             self._proxy.add_change_event_callback(
                 "xPolBandpass", self._daq_data_callback

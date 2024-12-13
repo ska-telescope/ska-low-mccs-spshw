@@ -91,7 +91,7 @@ class TestTileComponentManager:
         )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNKNOWN.pretty_name(),
-            lookahead=6,
+            lookahead=1,
             consume_nonmatches=True,
         )
         # For each power_state the subrack claims,
@@ -101,10 +101,11 @@ class TestTileComponentManager:
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=2,
+                    lookahead=3,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=5
+                    programming_state=TpmStatus.UNCONNECTED.pretty_name(),
+                    lookahead=3,
                 )
             case PowerState.UNKNOWN:
                 pass
@@ -578,7 +579,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=7
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=4
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
@@ -2974,7 +2975,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=7,
+            lookahead=4,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)

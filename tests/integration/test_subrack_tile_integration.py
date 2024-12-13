@@ -1222,7 +1222,7 @@ class TestMccsTileTpmDriver:
         change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
-        Test tile can be turned OFFLINE and ONLINE and rediscover state.
+        Test discovery of TPM state.
 
         This test was created to capture SKB-687. It will check:
         - Whether MccsTile can discover the correct TileProgrammingState

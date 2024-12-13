@@ -1972,7 +1972,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=6, consume_nonmatches=True
+            "Initialised", lookahead=5, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_not_called()
         args = [
@@ -2050,7 +2050,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=6, consume_nonmatches=True
+            "Initialised", lookahead=5, consume_nonmatches=True
         )
         default_parameters = {
             "stage": "jesd",

@@ -226,7 +226,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        self._tpm_status = TpmStatus(self.tpm_status)
         self._update_attribute_callback(
             programming_state=self._tpm_status.pretty_name()
         )
@@ -455,6 +454,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             case _:
                 self.logger.error(f"Unexpected error found: {repr(exception)}")
 
+        # Update TpmStatus
+        self._tpm_status = self.tpm_status
+
     def update_fault_state(
         self: TileComponentManager,
         poll_success: bool,
@@ -526,6 +528,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.warning(f"Exception raised in attribute callback {e}")
         super().poll_succeeded(poll_response)
         self._update_component_state(power=PowerState.ON, fault=self.fault_state)
+        # Update TpmStatus
+        self._tpm_status = self.tpm_status
 
     def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
         """

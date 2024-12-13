@@ -2552,21 +2552,21 @@ class DynamicTileSimulator(TileSimulator):
 
         self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
-            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+            DynamicValuesGenerator(4.9, 5.1), self._voltage_changed
         )
         self._updater.add_target(
             DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._board_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga2_temperature_changed,
         )
         self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)

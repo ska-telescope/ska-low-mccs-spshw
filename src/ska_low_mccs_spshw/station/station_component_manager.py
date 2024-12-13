@@ -160,6 +160,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -176,11 +177,13 @@ class _TileProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
         self._connecting = False
-
+        self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
             logger,
@@ -191,6 +194,18 @@ class _TileProxy(DeviceComponentManager):
     def start_communicating(self: _TileProxy) -> None:
         self._connecting = True
         super().start_communicating()
+
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "adcPower": self._on_attribute_change,
+            "staticTimeDelays": self._on_attribute_change,
+            "preaduLevels": self._on_attribute_change,
+            "ppsDelay": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._logical_tile_id, *args, **kwargs)
 
     def _device_state_changed(
         self: _TileProxy,
@@ -433,6 +448,7 @@ class SpsStationComponentManager(
                 logger,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
+                self._on_tile_attribute_change,
             )
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
@@ -838,54 +854,6 @@ class SpsStationComponentManager(
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
-    def subscribe_to_attributes(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Subscribe to attributes of interest.
-
-        This will form subscriptions to attributes on subdevices
-        `MccsTile` and `MccsSubrack` if attribute not already subscribed.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Abort the task
-        """
-        # Subscribe to Subrack attributes
-        for fqdn in self._subrack_proxies.keys():
-            self.logger.warning(
-                f"Subscriptions for subrack attributes not yet implemented {fqdn}"
-            )
-
-        # Subscribe to Tile attributes
-        for fqdn, proxy_object in self._tile_proxies.items():
-            try:
-                if proxy_object._proxy is None:
-                    raise ValueError(f"proxy for {fqdn} is None " "Unable to subscribe")
-                for tile_attribute in self.tile_attributes_to_subscribe:
-                    if (
-                        tile_attribute
-                        not in proxy_object._proxy._change_event_callbacks.keys()
-                    ):
-                        proxy_object._proxy.add_change_event_callback(
-                            tile_attribute,
-                            functools.partial(
-                                self._on_tile_attribute_change,
-                                proxy_object._logical_tile_id,
-                            ),
-                            stateless=True,
-                        )
-            except ValueError as e:
-                self.logger.warning(
-                    f"unable to form subscription for {fqdn} : {repr(e)}"
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                self.logger.error(
-                    "Exception raised when attempting to subscribe "
-                    f"to attribute on device{fqdn} :{repr(e)}"
-                )
-
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -940,7 +908,6 @@ class SpsStationComponentManager(
         """
         super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe

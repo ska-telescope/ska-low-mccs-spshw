@@ -12,8 +12,10 @@ Defines the deployment for SpsStation Tango devices.
           channeliser_rounding:
           - 3
           - 3
+...
           - 2
           - 2
+          csp_rounding: 4
           antenna_config_uri:
           - "car:ska-low-aavs3?main"
           - "instrument/mccs-configuration/aavs3.yaml"
@@ -67,6 +69,11 @@ server:
 {{- range $value := .}}
                   - {{quote .}}
 {{- end}}
+{{- end}}
+{{- with $this_spsstation.csp_rounding}}
+                - name: CspRounding
+                  values:
+                  - {{quote .}}
 {{- end}}
                 - name: "SdnFirstInterface"
                   values:

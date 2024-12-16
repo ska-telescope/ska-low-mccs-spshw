@@ -123,7 +123,6 @@ class _SubrackProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._connecting = False
 
         super().__init__(
             fqdn,
@@ -132,20 +131,17 @@ class _SubrackProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
-    def start_communicating(self: _SubrackProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
+    def _update_communication_state(
         self: _SubrackProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
+        communication_state: CommunicationStatus,
     ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
+        # If communication is established with this Tango device,
+        # configure it to use the device as the source, not the Tango attribute cache.
+        # This might be better done for all of these proxy devices in the common repo.
+        if communication_state == CommunicationStatus.ESTABLISHED:
+            assert self._proxy is not None
+            self._proxy.set_source(tango.DevSource.DEV)
+        super()._update_communication_state(communication_state)
 
 
 class _TileProxy(DeviceComponentManager):
@@ -182,7 +178,6 @@ class _TileProxy(DeviceComponentManager):
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
-        self._connecting = False
         self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
@@ -190,10 +185,6 @@ class _TileProxy(DeviceComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-
-    def start_communicating(self: _TileProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
 
     def get_change_event_callbacks(self) -> dict[str, Callable]:
         return {
@@ -226,8 +217,6 @@ class _TileProxy(DeviceComponentManager):
                     f"{self._logical_tile_id}, tile has logicalTileID "
                     f"{self._proxy.logicalTileId}"
                 )
-            if self._connecting:
-                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def preadu_levels(self: _TileProxy) -> list[float]:
@@ -277,8 +266,6 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._connecting = False
-
         super().__init__(
             fqdn,
             logger,
@@ -290,21 +277,6 @@ class _DaqProxy(DeviceComponentManager):
         assert self._proxy is not None
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
-
-    def start_communicating(self: _DaqProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _DaqProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
         self: _DaqProxy,
@@ -740,12 +712,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

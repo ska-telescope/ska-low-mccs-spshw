@@ -2,7 +2,7 @@ environments:
   minikube-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - minikube/platform.yaml
         - minikube/stations/stations.yaml
@@ -12,7 +12,7 @@ environments:
   stfc-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - stfc-cloud/platform.yaml
         - stfc-cloud/stations/stations.yaml
@@ -33,7 +33,7 @@ environments:
   arcetri:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - arcetri/platform.yaml
         - arcetri/stations/stations.yaml
@@ -43,7 +43,7 @@ environments:
   gmrt:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - gmrt/platform.yaml
         - gmrt/stations/stations.yaml
@@ -67,7 +67,7 @@ environments:
         datasets:
         - stations/itf2.yaml
         - low-itf.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - minikube/platform.yaml
         - minikube/stations/stations.yaml
@@ -77,7 +77,7 @@ environments:
   oxford:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - oxford/platform.yaml
         - oxford/stations/stations.yaml
@@ -101,7 +101,7 @@ environments:
         datasets:
         - psi-low.yaml
         - stations/stations.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - minikube/platform.yaml
         - minikube/stations/stations.yaml
@@ -111,7 +111,7 @@ environments:
   ral-software:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - stfc-ral/platform.yaml
         - stfc-ral/stations/stations.yaml
@@ -121,7 +121,7 @@ environments:
   ral-software-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - stfc-ral/platform.yaml
         - stfc-ral/stations/stations.yaml
@@ -131,7 +131,7 @@ environments:
   ral-firmware:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - stfc-ral/platform.yaml
         - stfc-ral/stations/stations.yaml
@@ -141,7 +141,7 @@ environments:
   ral-partial:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?eb29395013de32bed28159308d778078804951b7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?79fd3385500c076c74c0a64cb46fe03b4caee6be#tmdata
         datasets:
         - stfc-ral/platform.yaml
         - stfc-ral/stations/stations.yaml

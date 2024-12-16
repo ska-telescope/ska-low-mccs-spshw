@@ -1,5 +1,9 @@
 # Version History
 
+## 0.20.0
+
+* [THORN-47] Add CspRounding property to SpsStation
+
 ## 0.19.0
 
 * [LOW-1131] Expose SPS Station as a LoadBalancer

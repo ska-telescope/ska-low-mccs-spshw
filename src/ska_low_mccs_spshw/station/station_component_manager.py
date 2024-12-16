@@ -386,6 +386,7 @@ class SpsStationComponentManager(
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
         channeliser_rounding: list[int] | None,
+        csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -410,6 +411,13 @@ class SpsStationComponentManager(
             or None if the network has no gateway.
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param channeliser_rounding: The channeliser rounding to use for this station.
+        :param csp_rounding: The CSP rounding to use for this station.
+            An integer value between 0 and 7.
+            Currently the underlying library accepts a list of 384 values
+            (one for each coarse channel sent to CSP)
+            but it actually only uses the first one of these.
+            Until it is updated to support a full list,
+            we restrict this interface to one integer.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
@@ -535,7 +543,7 @@ class SpsStationComponentManager(
         self._pps_delay_corrections = [0] * 16
         self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
-        self._csp_rounding = [3] * 384
+        self._csp_rounding = [csp_rounding] * 384
         self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 

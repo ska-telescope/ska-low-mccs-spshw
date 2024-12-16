@@ -1,9 +1,13 @@
 # Version History
 
-## 0.19.1
+## 0.20.1
 
 * [THORN-37] Pull in downstream update for proxies to use DevSource.DEV
 * [THORN-40] Update RAL platform spec for new TPMs
+
+## 0.20.0
+
+* [THORN-47] Add CspRounding property to SpsStation
 
 ## 0.19.0
 

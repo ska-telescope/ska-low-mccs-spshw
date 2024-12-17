@@ -2,88 +2,122 @@ environments:
   minikube-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: ../../../../local_telmodel/minikube
         datasets:
         - minikube.yaml
+        - stations/ci-1.yaml
+        - stations/real-daq-1.yaml
     - config_files:
       - values/values-ci.yaml
       datacentre: minikube
   stfc-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: ../../../../local_telmodel/stfc-cloud
         datasets:
         - stfc-cloud.yaml
+        - stations/ci-1.yaml
+        - stations/real-daq-1.yaml
     - config_files:
       - values/values-ci.yaml
   aa0.5-production:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?92aa9124e2fcad478f8ed5317a240a76bf2c994a#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?472b05c11be5cbecc863d3b5bee9ff020e657339#tmdata
         datasets:
         - aa0.5.yaml
-        - s8-1.yaml
-        - s8-6.yaml
-        - s9-2.yaml
+        - stations/s8-1.yaml
+        - stations/s8-6.yaml
+        - stations/s9-1.yaml
+        - stations/s9-2.yaml
+        - stations/s10-3.yaml
+        - channeliser_rounding.yaml
       config_files:
-      - values/values-aa0-5.yaml
-      datacentre: infra:au-aa-mccs-cloud01-k8s
+      - config/config-aa0.5.yaml
+      releases:
+        south:
+          kubeContext: infra:au-aa-k8s-master01-k8s
+          namespace: ska-low
+        north:
+          kubeContext: infra:au-aa-mccs-cloud01-k8s
+          namespace: ska-low
   arcetri:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/arcetri
         datasets:
-        - arcetri.yaml
-        - minikube.yaml
+        - stations/stations.yaml # needs to be first see LOW-988 
+        - platform.yaml
     - config_files:
       - values/values-arcetri.yaml
       datacentre: minikube
   gmrt:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/gmrt
         datasets:
-        - gmrt.yaml
-        - minikube.yaml
+        - stations/stations.yaml # needs to be first see LOW-988 
+        - platform.yaml
     - config_files:
       - values/values-gmrt.yaml
       datacentre: minikube
   low-itf:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?11adbe1eea09ef759f4097ee2fcd704303657ff8#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?d41a7564e68753fb156d2732775c27662efa600e#tmdata
         datasets:
         - low-itf.yaml
+        - stations/itf1.yaml
+        - stations/itf2.yaml
       config_files:
-      - values/values-low-itf.yaml
-      datacentre: infra:au-itf-k8s-master01-k8s
+        - config/config-low-itf.yaml
+      releases:
+        south:
+          kubeContext: infra:au-itf-k8s-master01-k8s
+          namespace: sut
+          skaffoldReleaseName: sut
+        north:
+          kubeContext: infra:au-itf-k8s-master01-k8s
+          namespace: sut-mccs
+          skaffoldReleaseName: skaffold
   low-itf-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?11adbe1eea09ef759f4097ee2fcd704303657ff8#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?d41a7564e68753fb156d2732775c27662efa600e#tmdata
         datasets:
         - low-itf.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+        - stations/itf1.yaml
+        - stations/itf2.yaml
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/minikube
         datasets:
-        - minikube.yaml
-    - config_files:
-      - values/values-low-itf.yaml
-      datacentre: infra:au-itf-k8s-master01-k8s
+        - platform.yaml
+      config_files:
+        - config/config-low-itf.yaml
+      releases:
+        south:
+          kubeContext: infra:au-itf-k8s-master01-k8s
+          namespace: sut
+          skaffoldReleaseName: sut
+        north:
+          kubeContext: infra:au-itf-k8s-master01-k8s
+          namespace: sut-mccs
+          skaffoldReleaseName: skaffold
   oxford:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/oxford
         datasets:
-        - oxford.yaml
-        - minikube.yaml
+        - stations/stations.yaml # needs to be first see LOW-988 
+        - platform.yaml
     - config_files:
       - values/values-oxford.yaml
       datacentre: minikube
   psi-low:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?d374605d0a0d0d22b834e01514ff1e6c966ebd4a#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?9e1b87ee0e9ad77323938b7eb3de7f6f011c8d08#tmdata
         datasets:
+        - stations/stations.yaml # needs to be first see LOW-988 
         - psi-low.yaml
     - config_files:
       - values/values-psi-low.yaml
@@ -91,12 +125,13 @@ environments:
   psi-low-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?d374605d0a0d0d22b834e01514ff1e6c966ebd4a#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?9e1b87ee0e9ad77323938b7eb3de7f6f011c8d08#tmdata
         datasets:
+        - stations/stations.yaml # needs to be first see LOW-988 
         - psi-low.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?0329e3e11d96dfd3b0a39bc60ba1c360b538a333#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/minikube
         datasets:
-        - minikube.yaml
+        - platform.yaml
       config_files:
       - values/values-psi-low.yaml
       datacentre: psi-low
@@ -105,8 +140,8 @@ environments:
     - telmodel:
       - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
-        - platform.yaml
         - stations/stations.yaml
+        - platform.yaml
     - config_files:
       - values/values-ral-software.yaml
       datacentre: stfc-ral
@@ -115,8 +150,8 @@ environments:
     - telmodel:
       - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
+        - stations/stations.yaml # needs to be first see LOW-988 
         - platform.yaml
-        - stations/stations.yaml
       config_files:
       - values/values-ral-software.yaml
       datacentre: stfc-ral
@@ -125,8 +160,8 @@ environments:
     - telmodel:
       - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
+        - stations/stations.yaml # needs to be first see LOW-988 
         - platform.yaml
-        - stations/stations.yaml
     - config_files:
       - values/values-ral-firmware.yaml
       datacentre: stfc-ral
@@ -135,8 +170,8 @@ environments:
     - telmodel:
       - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?a9f6d062a201ca46d875cd9685f06db7f81a5981#tmdata/stfc-ral
         datasets:
+        - stations/stations.yaml # needs to be first see LOW-988 
         - platform.yaml
-        - stations/stations.yaml
     - config_files:
       - values/values-ral-partial.yaml
       datacentre: stfc-ral

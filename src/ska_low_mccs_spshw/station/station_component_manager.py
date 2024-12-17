@@ -16,6 +16,7 @@ import ipaddress
 import itertools
 import json
 import logging
+import os
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
@@ -582,6 +583,10 @@ class SpsStationComponentManager(
             antenna_mapping_uri,
             antenna_mapping_filepath,
         ) = antenna_config_uri
+
+        if os.path.exists("/app/" + antenna_mapping_uri.split("/")[-1]):
+            self.logger.info("Using a local TmData store for antenna locations.")
+            antenna_mapping_uri = "/app/" + antenna_mapping_uri.split("/")[-1]
 
         try:
             tmdata = TMData([antenna_mapping_uri])

@@ -54,6 +54,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     builder.set_state(tango.DevState.ON)
     builder.add_attribute("adminMode", AdminMode.ONLINE)
     builder.add_attribute("healthState", HealthState.OK)
+    builder.add_attribute("ppsDelay", 0)
     builder.add_attribute("cspRounding", [2] * 384)
     builder.add_attribute("pendingDataRequests", False)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)

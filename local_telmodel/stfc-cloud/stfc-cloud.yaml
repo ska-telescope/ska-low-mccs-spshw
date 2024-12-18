@@ -14,7 +14,7 @@ platform:
       and describe their telescope hardward in a separate telmodel source.
   cluster:
     minikube: true
-    domain: cluster.local
+    domain: techops.internal.skao.int
     networks: ~
     services:
       jupyterhub: false  # Not a platform service

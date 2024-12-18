@@ -1,9 +1,0 @@
-defaults:
-  logging_level_default: 4
-  number_of_beams: 6
-
-subarrays:  # 4 subarrays, no defaults overridden
-  "1": {}
-  "2": {}
-  "3": {}
-  "4": {}

@@ -287,6 +287,7 @@ class SpsStationComponentManager(
 ):
     """A component manager for a station."""
 
+    LOCAL_TM_STORE = "/app/local_telmodel/"
     RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
     # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
@@ -584,9 +585,11 @@ class SpsStationComponentManager(
             antenna_mapping_filepath,
         ) = antenna_config_uri
 
-        if os.path.exists("/app/" + antenna_mapping_uri.split("/")[-1]):
+        if os.path.exists(self.LOCAL_TM_STORE + antenna_mapping_uri.split("/")[-1]):
             self.logger.info("Using a local TmData store for antenna locations.")
-            antenna_mapping_uri = "/app/" + antenna_mapping_uri.split("/")[-1]
+            antenna_mapping_uri = (
+                self.LOCAL_TM_STORE + antenna_mapping_uri.split("/")[-1]
+            )
 
         try:
             tmdata = TMData([antenna_mapping_uri])

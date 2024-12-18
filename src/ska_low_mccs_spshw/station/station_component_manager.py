@@ -95,55 +95,6 @@ def retry_command_on_exception(
     )
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
-
-    # pylint: disable=too-many-arguments
-    def __init__(
-        self: _SubrackProxy,
-        fqdn: str,
-        station_id: int,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
-            is to be assigned
-        :param logger: the logger to be used by this object.
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        self._station_id = station_id
-
-        super().__init__(
-            fqdn,
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-    def _update_communication_state(
-        self: _SubrackProxy,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
-        super()._update_communication_state(communication_state)
-
-
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -435,9 +386,8 @@ class SpsStationComponentManager(
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: _SubrackProxy(
+            subrack_fqdn: DeviceComponentManager(
                 subrack_fqdn,
-                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
@@ -712,12 +662,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
-                antenna_config["delay"]
-            )
-            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
-                antenna_config["delay"]
-            )
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

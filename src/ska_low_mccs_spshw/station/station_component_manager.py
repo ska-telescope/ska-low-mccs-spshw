@@ -95,59 +95,6 @@ def retry_command_on_exception(
     )
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
-
-    # pylint: disable=too-many-arguments
-    def __init__(
-        self: _SubrackProxy,
-        fqdn: str,
-        station_id: int,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
-            is to be assigned
-        :param logger: the logger to be used by this object.
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        self._station_id = station_id
-        self._connecting = False
-
-        super().__init__(
-            fqdn,
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-    def start_communicating(self: _SubrackProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _SubrackProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
-
-
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -182,7 +129,6 @@ class _TileProxy(DeviceComponentManager):
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
-        self._connecting = False
         self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
@@ -190,10 +136,6 @@ class _TileProxy(DeviceComponentManager):
             communication_state_changed_callback,
             component_state_changed_callback,
         )
-
-    def start_communicating(self: _TileProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
 
     def get_change_event_callbacks(self) -> dict[str, Callable]:
         return {
@@ -226,8 +168,6 @@ class _TileProxy(DeviceComponentManager):
                     f"{self._logical_tile_id}, tile has logicalTileID "
                     f"{self._proxy.logicalTileId}"
                 )
-            if self._connecting:
-                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def preadu_levels(self: _TileProxy) -> list[float]:
@@ -277,8 +217,6 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._connecting = False
-
         super().__init__(
             fqdn,
             logger,
@@ -290,21 +228,6 @@ class _DaqProxy(DeviceComponentManager):
         assert self._proxy is not None
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
-
-    def start_communicating(self: _DaqProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _DaqProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
         self: _DaqProxy,
@@ -463,9 +386,8 @@ class SpsStationComponentManager(
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: _SubrackProxy(
+            subrack_fqdn: DeviceComponentManager(
                 subrack_fqdn,
-                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn

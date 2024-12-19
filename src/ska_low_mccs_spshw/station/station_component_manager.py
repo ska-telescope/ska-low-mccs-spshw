@@ -1679,7 +1679,6 @@ class SpsStationComponentManager(
         tile0 = tiles[0]._proxy
         assert tile0 is not None
 
-        sync_successful = False
         for i in range(5):
             time0 = (tile0.fpgasUnixTime)[0]
             timeout = 15
@@ -1699,10 +1698,7 @@ class SpsStationComponentManager(
                 self.logger.error("FPGA time counters not synced, try again")
                 time.sleep(1)
             else:
-                sync_successful = True
-                break
-        if sync_successful:
-            return ResultCode.OK
+                return ResultCode.OK
 
         self.logger.error("FPGA time counters not synced after 5 retries")
         return ResultCode.FAILED

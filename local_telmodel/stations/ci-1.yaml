@@ -1,0 +1,32 @@
+
+platform:
+  stations:
+    ci-1:
+      id: 1
+      sps:
+        sdn_first_interface: 10.0.0.152/25
+        daq:
+          calibration:
+            simulated: true
+          bandpass:
+            simulated: true
+        pdus:
+          pdur1:
+            host: 10.0.10.210
+            device_definition: definitions/pdu.yaml
+            repo: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw?df25b54c80de39c1ebc2063b74d3968b8c0c1783#tmdata
+            v2_community: private
+        subracks:
+          sr1:
+            simulated: true
+            srmb_host: srmb-1
+            srmb_port: 8081
+        tpms:
+          tpm10:
+            id: 9
+            simulated: true
+            host: 10.0.10.201
+            port: 10000
+            version: tpm_v1_6
+            subrack: sr1
+            subrack_slot: 1

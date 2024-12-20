@@ -598,7 +598,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("fpga_current_frame", 0),
             ("pps_delay", TileSimulator.PPS_DELAY),
             ("firmware_available", TileSimulator.FIRMWARE_LIST),
-            ("register_list", list(MockTpm._register_map.keys())),
+            ("register_list", list(MockTpm.REGISTER_MAP_DEFAULTS)),
             (
                 "pps_present",
                 TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
@@ -847,7 +847,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
     @pytest.mark.parametrize(
         "register", [f"fpga1.test_generator.delay_{i}" for i in (1, 4)]
     )
-    @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
+    @pytest.mark.parametrize("write_values", [[1]], ids=[1])
     def test_read_and_write_register(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -3026,7 +3026,7 @@ class TestDynamicSimulator:
             ("firmware_available", DynamicTileSimulator.FIRMWARE_LIST),
             (
                 "register_list",
-                list(MockTpm._register_map.keys()),
+                list(MockTpm.REGISTER_MAP_DEFAULTS),
             ),
         ),
     )

@@ -1591,7 +1591,7 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert on_tile_device.GetRegisterList() == list(MockTpm._register_map.keys())
+        assert on_tile_device.GetRegisterList() == list(MockTpm.REGISTER_MAP_DEFAULTS)
 
     def test_ReadRegister(
         self: TestMccsTileCommands,
@@ -1607,7 +1607,7 @@ class TestMccsTileCommands:
         """
         register_name: str = "fpga1.test_generator.delay_0"
         values = on_tile_device.ReadRegister(register_name)
-        assert list(values) == [MockTpm._register_map[register_name]]
+        assert list(values) == [MockTpm.REGISTER_MAP_DEFAULTS[register_name]]
 
     def test_WriteRegister(
         self: TestMccsTileCommands,

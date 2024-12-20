@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from typing import Callable, Iterator
+from typing import Callable, Final, Iterator
 
 import pytest
 import tango
@@ -186,6 +186,19 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
+PREADU_ATTENUATION: Final = [20.0] * 32
+
+
+@pytest.fixture(name="preadu_attenuation")
+def preadu_attenuation_fixture() -> list[float]:
+    """
+    Return the preADU attenuation to set on the tile under test.
+
+    :return: the preADU attenuation to set on the tile under test.
+    """
+    return PREADU_ATTENUATION
+
+
 @pytest.fixture(name="tile_simulator")
 def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     """
@@ -209,6 +222,7 @@ def tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
+    preadu_attenuation: list[float],
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
@@ -226,6 +240,7 @@ def tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param preadu_attenuation: the preADU attenuation to set on the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param poll_rate: the polling rate
@@ -244,6 +259,7 @@ def tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
+        preadu_attenuation,
         get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],
@@ -275,6 +291,7 @@ def dynamic_tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
+    preadu_attenuation: list[float],
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
@@ -291,6 +308,7 @@ def dynamic_tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param preadu_attenuation: the preADU attenuation to set on the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param poll_rate: the polling rate
@@ -309,6 +327,7 @@ def dynamic_tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
+        preadu_attenuation,
         get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],

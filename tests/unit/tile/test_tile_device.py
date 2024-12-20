@@ -47,6 +47,8 @@ from tests.test_tools import (
     wait_for_completed_command_to_clear_from_queue,
 )
 
+from .conftest import PREADU_ATTENUATION
+
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
 
@@ -1053,7 +1055,7 @@ class TestMccsTile:
                 TileSimulator.ADC_RMS,
                 None,
             ),
-            ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
+            ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
             ("staticTimeDelays", TileSimulator.STATIC_DELAYS, [12.5] * 32),
             ("pllLocked", True, None),
             ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),

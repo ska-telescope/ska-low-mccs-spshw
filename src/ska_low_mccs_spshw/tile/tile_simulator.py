@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Generator, List, TypeVar, Union, cast
+from typing import Any, Callable, Final, Generator, List, TypeVar, cast
 
 import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
@@ -280,8 +280,8 @@ class MockTpm:
     # Requires only registers which are directly accessed from
     # the TpmDriver.
     PLL_LOCKED_REGISTER: Final = 0xE7
-    _register_map: dict[Union[int, str], Any] = {
-        "0x30000000": [0x21033009],
+    REGISTER_MAP_DEFAULTS: dict[str, int] = {
+        "0x30000000": 0x21033009,
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga1.test_generator.delay_0": 0,
@@ -339,6 +339,8 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+
+        self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -647,7 +649,7 @@ class MockTpm:
     def write_register(
         self: MockTpm,
         register: int | str,
-        values: int,
+        values: list[int],
         offset: int = 0,
         retry: bool = True,
     ) -> None:
@@ -659,17 +661,24 @@ class MockTpm:
         :param offset: Memory address offset to write to
         :param retry: retry
 
-        :raises LibraryError:Attempting to set a register not in the memory address.
+        :raises LibraryError: Attempting to set a register not in the memory address.
+        :raises NotImplementedError: if trying to write more than one value
+
         """
+        if len(values) != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only write one value to a register at a time."
+            )
+
         if isinstance(register, int):
             register = hex(register)
         if register == "" or register == "unknown":
             raise LibraryError(f"Unknown register: {register}")
-        self._register_map[register] = values
+        self._register_map[register] = values[0]
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Any:
+    ) -> list[int]:
         """
         Get register value.
 
@@ -677,14 +686,21 @@ class MockTpm:
         :param n: Number of words to read
         :param offset: Memory address offset to read from
 
+        :raises NotImplementedError: if trying to read more than one value
+
         :return: Values
         """
+        if n != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only read one value from a register at a time."
+            )
+
         if register == ("pll", 0x508):
-            return self.PLL_LOCKED_REGISTER
+            return [self.PLL_LOCKED_REGISTER]
         if isinstance(register, int):
             register = hex(register)
 
-        return self._register_map.get(register)
+        return [self._register_map[register]]
 
     def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """

@@ -2,7 +2,7 @@ environments:
   minikube-ci:
     values:
     - telmodel:
-      - source: ../../../../local_telmodel/stations
+      - source: ../../../../local_telmodel
         datasets:
         - ci-1.yaml
         - real-daq-1.yaml
@@ -15,7 +15,7 @@ environments:
   stfc-ci:
     values:
     - telmodel:
-      - source: ../../../../local_telmodel/stations
+      - source: ../../../../local_telmodel
         datasets:
         - ci-1.yaml
         - real-daq-1.yaml

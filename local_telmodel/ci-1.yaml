@@ -4,6 +4,9 @@ platform:
     ci-1:
       id: 1
       sps:
+        antenna_config_uri:
+          - file://local_telmodel
+          - ci-1.yaml
         sdn_first_interface: 10.0.0.152/25
         daq:
           calibration:
@@ -30,3 +33,20 @@ platform:
             version: tpm_v1_6
             subrack: sr1
             subrack_slot: 1
+      antennas:
+        sb01-01:
+          position:
+            latitude: -26.880859037
+            longitude: 116.748169278
+          location_offset:
+            east: -18.786
+            north: 5.169
+            up: -0.038
+          eep: 244
+          smartbox: sb01
+          smartbox_port: 1
+          tpm: tpm10
+          tpm_fibre_input: 1
+          tpm_x_channel: 16
+          tpm_y_channel: 17
+          delay: 63

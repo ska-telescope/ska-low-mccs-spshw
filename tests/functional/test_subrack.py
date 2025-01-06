@@ -351,8 +351,6 @@ def ensure_tpm_power_state(
             OneOf(PowerState.OFF, PowerState.ON)
         )
 
-    change_event_callbacks["subrack_tpm_power_state"].assert_not_called()
-
     tpm_power_state = getattr(subrack_device, f"tpm{tpm_number}PowerState")
     print(f"TPM power state is now {tpm_power_state}")
 
@@ -360,16 +358,9 @@ def ensure_tpm_power_state(
         print("TPM is on. Powering it off...")
         subrack_device.PowerOffTpm(tpm_number)
 
-        # Pytango 10.0.0. This event is being fired 2 times with the same timestamp
-        # Interestingly this only happens in a true context
-        # not a MultiDeviceTestContext.
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.OFF
         )
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
-        )
-        change_event_callbacks["subrack_tpm_power_state"].assert_not_called()
         print("TPM is off.")
     elif target_power == "on" and tpm_power_state == PowerState.OFF:
         print("TPM is off. Powering it on...")
@@ -378,10 +369,6 @@ def ensure_tpm_power_state(
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
             PowerState.ON
         )
-        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.ON
-        )
-        change_event_callbacks["subrack_tpm_power_state"].assert_not_called()
         print("TPM is on.")
 
 

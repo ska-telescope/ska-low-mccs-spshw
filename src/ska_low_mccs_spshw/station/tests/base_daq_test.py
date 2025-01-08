@@ -166,6 +166,7 @@ class BaseDaqTest(TpmSelfCheckTest):
                 "directory": "/",
                 "nof_tiles": len(self.tile_proxies),
                 "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                "description": "self-check data",
             }
         )
         self.daq_proxy.Configure(json.dumps(daq_config))

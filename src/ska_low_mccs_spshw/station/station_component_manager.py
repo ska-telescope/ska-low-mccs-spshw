@@ -217,6 +217,7 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
+        self._connect_in_progress: bool = False
         super().__init__(
             fqdn,
             logger,
@@ -228,6 +229,22 @@ class _DaqProxy(DeviceComponentManager):
         assert self._proxy is not None
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
+
+    def start_communicating(self: _DaqProxy) -> None:
+        self._connect_in_progress = True
+        super().start_communicating()
+
+    def _device_state_changed(
+        self: _DaqProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        if self._connect_in_progress and event_value == tango.DevState.ON:
+            assert self._proxy is not None  # for the type checker
+            self._connect_in_progress = False
+            self._configure_station_id()
+        super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
         self: _DaqProxy,
@@ -304,8 +321,6 @@ class SpsStationComponentManager(
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
-        tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
-        subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -338,10 +353,6 @@ class SpsStationComponentManager(
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
-        :param tile_health_changed_callback: callback to be
-            called when a tile's health changed
-        :param subrack_health_changed_callback: callback to be
-            called when a subrack's health changed
         """
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
@@ -411,8 +422,8 @@ class SpsStationComponentManager(
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
-        self._tile_health_changed_callback = tile_health_changed_callback
-        self._subrack_health_changed_callback = subrack_health_changed_callback
+        # self._tile_health_changed_callback = tile_health_changed_callback
+        # self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
@@ -751,13 +762,6 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
-        if (
-            fqdn == self._daq_trl
-            and communication_state == CommunicationStatus.ESTABLISHED
-        ):
-            # Set StationID in DAQ.
-            assert self._daq_proxy is not None
-            self._daq_proxy._configure_station_id()
         if self._communication_states.get(fqdn) is None:
             self.logger.info(
                 f"The communication state for {fqdn} is not rolled up. "
@@ -852,8 +856,8 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
                 self._evaluate_power_state()
-        if health is not None:
-            self._tile_health_changed_callback(fqdn, HealthState(health))
+        if self._component_state_callback is not None:
+            self._component_state_callback(device_name=fqdn, health=health, power=power)
 
     @threadsafe
     def _subrack_state_changed(
@@ -866,8 +870,11 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
-        if health is not None:
-            self._subrack_health_changed_callback(fqdn, HealthState(health))
+        if self._component_state_callback is not None and health is not None:
+            self._component_state_callback(
+                device_name=fqdn,
+                health=health,
+            )
 
     @threadsafe
     def _daq_state_changed(

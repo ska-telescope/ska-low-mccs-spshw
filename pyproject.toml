@@ -28,7 +28,7 @@ PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
 ska-tango-base = "^1.2.1"
-ska-control-model = "^1.0.0"
+ska-control-model = { version = "^1.2.0", extras = ["health_rollup"] }
 ska-low-mccs-common = "^0.15.6"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"

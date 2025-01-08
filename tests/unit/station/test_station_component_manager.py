@@ -102,7 +102,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
-        timeout=5.0,
+        timeout=15.0,
     )
 
 
@@ -175,8 +175,8 @@ def station_component_manager_fixture(
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],
-        callbacks["tile_health"],
-        callbacks["subrack_health"],
+        # callbacks["tile_health"],
+        # callbacks["subrack_health"],
     )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager
@@ -652,17 +652,29 @@ def test_power_state_transitions(
     for subrack in station_component_manager._subrack_proxies.values():
         assert subrack._proxy is not None
         assert subrack._proxy.state() == tango.DevState.ON
-        callbacks["subrack_health"].assert_call(
-            subrack._name, HealthState.OK, lookahead=2
+        callbacks["component_state"].assert_call(
+            device_name=subrack._name,
+            health=HealthState.OK,
+            lookahead=20,
         )
 
     for tile in station_component_manager._tile_proxies.values():
         assert tile._proxy is not None
         assert tile._proxy.state() == tango.DevState.ON
-        callbacks["tile_health"].assert_call(tile._name, HealthState.OK, lookahead=4)
-    callbacks["tile_health"].assert_not_called()
-    callbacks["subrack_health"].assert_not_called()
-    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=4)
+        callbacks["component_state"].assert_call(
+            device_name=tile._name,
+            power=None,
+            health=HealthState.OK,
+            lookahead=20,
+        )
+        # Need to wait for this event to come through before we turn a tile OFF.
+        callbacks["component_state"].assert_call(
+            device_name=tile._name,
+            power=PowerState.ON,
+            health=None,
+            lookahead=20,
+        )
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=10)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())

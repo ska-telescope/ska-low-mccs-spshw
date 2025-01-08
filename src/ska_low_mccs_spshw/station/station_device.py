@@ -30,6 +30,7 @@ from ska_control_model import (
     PowerState,
     ResultCode,
 )
+from ska_control_model.health_rollup import HealthRollup, HealthSummary
 from ska_tango_base import SKABaseDevice
 from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
@@ -37,7 +38,6 @@ from tango.server import attribute, command, device_property
 
 from ..version import version_info
 from .station_component_manager import SpsStationComponentManager
-from .station_health_model import SpsStationHealthModel
 from .station_obs_state_model import SpsStationObsStateModel
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
@@ -115,11 +115,30 @@ class SpsStation(SKAObsDevice):
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
-        self._health_model: SpsStationHealthModel
+        self._health_report = ""
+        # Here the "self" entry represets SpsStation specific health changes
+        # such as ppsSpread.
+        self._health_rollup = HealthRollup(
+            ["self", "subracks", "tiles"],
+            (1, 1, 1),
+            self._health_changed,
+            self._health_summary_changed,
+        )
+
+        # TODO: These thresholds could be configurable from charts.
+        # Subrack Thresholds: 2 failed = failed, 1 failed = deg, 1 deg = deg
+        self._health_rollup.define("subracks", self.SubrackFQDNs, (2, 1, 1))
+        # Tile Thresholds: 2 failed = failed, 1 failed = deg, 2 deg = deg
+        self._health_rollup.define("tiles", self.TileFQDNs, (2, 1, 2))
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
         self._data_received_result: Optional[tuple[str, str]] = ("", "")
+
+        self._health_thresholds = {
+            "pps_delta_degraded": 4,
+            "pps_delta_failed": 9,
+        }
 
     def init_device(self: SpsStation) -> None:
         """
@@ -158,11 +177,6 @@ class SpsStation(SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model = SpsStationHealthModel(
-            self.SubrackFQDNs,
-            self.TileFQDNs,
-            self._health_changed,
-        )
         self.set_change_event("healthState", True, False)
 
         # pylint: disable=attribute-defined-outside-init
@@ -192,8 +206,6 @@ class SpsStation(SKAObsDevice):
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
-            self._health_model.tile_health_changed,
-            self._health_model.subrack_health_changed,
         )
 
     def init_command_objects(self: SpsStation) -> None:
@@ -350,9 +362,13 @@ class SpsStation(SKAObsDevice):
             between the component manager and its component.
         """
         super()._communication_state_changed(communication_state)
-        self._health_model.update_state(
-            communicating=(communication_state == CommunicationStatus.ESTABLISHED)
-        )
+
+    def _update_admin_mode(self: SpsStation, admin_mode: AdminMode) -> None:
+        super()._update_admin_mode(admin_mode)
+        self._health_rollup.online = admin_mode in [
+            AdminMode.ENGINEERING,
+            AdminMode.ONLINE,
+        ]
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ, too-many-branches, too-many-statements
@@ -361,6 +377,7 @@ class SpsStation(SKAObsDevice):
         *,
         fault: Optional[bool] = None,
         power: Optional[PowerState] = None,
+        health: HealthState | int | None = None,
         **state_change: Any,
     ) -> None:
         """
@@ -371,14 +388,10 @@ class SpsStation(SKAObsDevice):
 
         :param fault: whether the component is in fault or not
         :param power: the power state of the component
+        :param health: the health state of a subordinate component.
         :param state_change: other state updates
         """
         bandpass_data_shape = (256, 512)
-        super()._component_state_changed(fault=fault, power=power)
-        if power is not None:
-            self._health_model.update_state(fault=fault, power=power)
-        else:
-            self._health_model.update_state(fault=fault)
 
         # Helper function to *expand* a numpy array to a shape and pad with zeros.
         def to_shape(a: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
@@ -394,6 +407,20 @@ class SpsStation(SKAObsDevice):
                 ),
                 mode="constant",
             )
+
+        if "device_name" in state_change:
+            device_name = state_change["device_name"]
+            health = None if health is None else HealthState(health)
+            self.logger.debug(
+                f"{device_name} changed state to "
+                f"power = {power}, "
+                f"fault = {fault}, "
+                f"health = {None if health is None else health.name} "
+            )
+            if health is not None:
+                self._health_rollup.health_changed(device_name, health)
+        else:
+            super()._component_state_changed(fault=fault, power=power)
 
         if "is_configured" in state_change:
             is_configured = cast(bool, state_change.get("is_configured"))
@@ -466,11 +493,21 @@ class SpsStation(SKAObsDevice):
                     Expected np.ndarray, got %s",
                     type(y_bandpass_data),
                 )
+
         if "ppsDelaySpread" in state_change:
             pps_delay_spread = state_change.get("ppsDelaySpread")
+            assert pps_delay_spread is not None
             self.push_change_event("ppsDelaySpread", pps_delay_spread)
             self.push_archive_event("ppsDelaySpread", pps_delay_spread)
-            self._health_model.update_state(pps_delay_spread=pps_delay_spread)
+            # Check if pps_delay_spread is beyond thresholds, update health.
+            if (
+                self._health_thresholds["pps_delta_degraded"]
+                <= pps_delay_spread
+                <= self._health_thresholds["pps_delta_failed"]
+            ):
+                self._health_rollup.health_changed("self", HealthState.DEGRADED)
+            elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
+                self._health_rollup.health_changed("self", HealthState.FAILED)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """
@@ -483,9 +520,23 @@ class SpsStation(SKAObsDevice):
 
         :param health: the new health value
         """
-        if self._health_state != health:
-            self._health_state = health
-            self.push_change_event("healthState", health)
+        self._health_state = health
+        self.push_change_event("healthState", health)
+
+    def _health_summary_changed(
+        self: SpsStation, health_summary: HealthSummary
+    ) -> None:
+        """
+        Handle change in this device's health summary.
+
+        This is a callback hook, called whenever this device's
+        evaluated health summary changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health_summary: the new health summary
+        """
+        self._health_report = json.dumps(health_summary)
 
     # ----------
     # Attributes
@@ -962,27 +1013,50 @@ class SpsStation(SKAObsDevice):
         """
         return self.component_manager.forty_gb_network_errors()
 
+    # @attribute(
+    #     dtype="DevString",
+    #     format="%s",
+    # )
+    # def healthModelParams(self: SpsStation) -> str:
+    #     """
+    #     Get the health params from the health model.
+
+    #     :return: the health params
+    #     """
+    #     return json.dumps(self._health_model.health_params)
+
+    # @healthModelParams.write  # type: ignore[no-redef]
+    # def healthModelParams(self: SpsStation, argin: str) -> None:
+    #     """
+    #     Set the params for health transition rules.
+
+    #     :param argin: JSON-string of dictionary of health states
+    #     """
+    #     self._health_model.health_params = json.loads(argin)
+    #     self._health_model.update_health()
+
     @attribute(
         dtype="DevString",
         format="%s",
     )
-    def healthModelParams(self: SpsStation) -> str:
+    def healthThresholds(self: SpsStation) -> str:
         """
         Get the health params from the health model.
 
         :return: the health params
         """
-        return json.dumps(self._health_model.health_params)
+        return json.dumps(self._health_thresholds)
 
-    @healthModelParams.write  # type: ignore[no-redef]
-    def healthModelParams(self: SpsStation, argin: str) -> None:
+    @healthThresholds.write  # type: ignore[no-redef]
+    def healthThresholds(self: SpsStation, argin: str) -> None:
         """
         Set the params for health transition rules.
 
-        :param argin: JSON-string of dictionary of health states
+        :param argin: JSON-string of dictionary of health thresholds
         """
-        self._health_model.health_params = json.loads(argin)
-        self._health_model.update_health()
+        thresholds = json.loads(argin)
+        for key, threshold in thresholds.items():
+            self._health_thresholds[key] = threshold
 
     @attribute(dtype="DevString")
     def healthReport(self: SpsStation) -> str:
@@ -991,7 +1065,7 @@ class SpsStation(SKAObsDevice):
 
         :return: the health report.
         """
-        return self._health_model.health_report
+        return self._health_report
 
     @attribute(
         dtype="DevString",

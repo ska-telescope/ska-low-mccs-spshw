@@ -4661,7 +4661,7 @@ develop = false
 [package.dependencies]
 more-itertools = "^10.2.0"
 pysnmp-lextudio = "5.0.27"
-pytango = "^10.0.0"
+pytango = ">=9.5.0,<11.0.0"
 PyYAML = "^6.0.1"
 ska-control-model = "^1.0.0"
 ska-tango-base = "^1.0.0"
@@ -4672,8 +4672,8 @@ typing-extensions = "^4.12.2"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-ser-snmp.git"
-reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
-resolved_reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
+reference = "d2ef8eb51f690847903e4fbe2fb83a9495a877f7"
+resolved_reference = "d2ef8eb51f690847903e4fbe2fb83a9495a877f7"
 
 [[package]]
 name = "ska-ser-sphinx-theme"
@@ -5884,4 +5884,4 @@ reference = "PyPI-public"
 lock-version = "2.1"
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "d4a8c80bc601d3c37a0da7cf8ddc8fa2369bea01aae9cba7642034f58f110e35"
+content-hash = "11bffc917b5789e7e0171716ddfb2acc91e09cc1524d8ba4bf414afe7ccf5df9"

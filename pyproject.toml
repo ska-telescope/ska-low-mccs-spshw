@@ -57,7 +57,7 @@ pyqt5 = "^5.15.11"
 netifaces-binary = "^0.11.0"
 recommonmark = "^0.7.1"
 pysnmp = "^7.1.4"
-ska-ser-snmp = { git = "https://gitlab.com/ska-telescope/ska-ser-snmp.git", rev = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366" }
+ska-ser-snmp = { git = "https://gitlab.com/ska-telescope/ska-ser-snmp.git", rev = "d2ef8eb51f690847903e4fbe2fb83a9495a877f7" }
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"

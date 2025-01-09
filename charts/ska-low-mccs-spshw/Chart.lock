@@ -1,9 +1,9 @@
 dependencies:
 - name: ska-low-mccs-daq
   repository: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
-  version: 0.9.1-dev.c23db2497
+  version: 0.9.1-dev.ce33fdfc0
 - name: ska-tango-util
   repository: https://artefact.skao.int/repository/helm-internal
   version: 0.4.15
-digest: sha256:8375d7490930943103651bdb457c814dc4b29e1b33dbc5f49babb0acb4fd4e15
-generated: "2025-01-08T16:11:45.0047472+08:00"
+digest: sha256:4b4445afc4f823bc5266e91f823fc18775a3d2d9379bee2ba17e0058e07313d4
+generated: "2025-01-09T12:39:59.05752187+08:00"

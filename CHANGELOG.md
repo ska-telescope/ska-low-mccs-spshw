@@ -2,6 +2,7 @@
 
 ## 0.21.1
 
+* [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW
 * [THORN-57] Fix python package build bug that prevented publication of python wheel for 0.21.0
 
 ## 0.21.0

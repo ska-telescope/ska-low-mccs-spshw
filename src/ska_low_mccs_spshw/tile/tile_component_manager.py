@@ -517,10 +517,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.power_state = PowerState.ON
 
         # Publish all responses to TANGO interface.
-        if poll_response.publish:
-            self._update_attribute_callback(  # type: ignore[misc]
-                **{poll_response.command: poll_response.data},
-            )
+        try:
+            if poll_response.publish:
+                self._update_attribute_callback(  # type: ignore[misc]
+                    **{poll_response.command: poll_response.data},
+                )
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.warning(f"Exception raised in attribute callback {e}")
         super().poll_succeeded(poll_response)
         self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
@@ -650,6 +653,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._subrack_says_tpm_power_changed,
             )
 
+    @property
+    @check_hardware_lock_claimed
+    def is_connected(self) -> bool:
+        """
+        Check the communication with CPLD.
+
+        :return: True if connected, else False.
+        """
+        return self.tile.check_communication()["CPLD"]
+
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
         event_name: str,
@@ -682,9 +695,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.mock_off()
 
         if event_value == PowerState.ON:
+            self.power_state = PowerState.ON
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
-            if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+            # Connect if not already.
+            with self._hardware_lock:
+                if not self.is_connected:
+                    self.connect()
+
+            if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None

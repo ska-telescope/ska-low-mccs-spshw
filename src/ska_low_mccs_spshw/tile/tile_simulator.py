@@ -878,6 +878,8 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        # An optional mocked TPM to use in testing.
+        self._mocked_tpm: MockTpm | None = None
         self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
@@ -1534,7 +1536,8 @@ class TileSimulator:
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
             if self.tpm is None:
-                self.tpm = MockTpm(self.logger)
+                # Use defined tpm if specified.
+                self.tpm = self._mocked_tpm or MockTpm(self.logger)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")

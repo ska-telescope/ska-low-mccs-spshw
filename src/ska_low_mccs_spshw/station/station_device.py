@@ -126,10 +126,10 @@ class SpsStation(SKAObsDevice):
         )
 
         # TODO: These thresholds could be configurable from charts.
-        # Subrack Thresholds: 2 failed = failed, 1 failed = deg, 1 deg = deg
-        self._health_rollup.define("subracks", self.SubrackFQDNs, (2, 1, 1))
-        # Tile Thresholds: 2 failed = failed, 1 failed = deg, 2 deg = deg
-        self._health_rollup.define("tiles", self.TileFQDNs, (2, 1, 2))
+        # Subrack Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
+        self._health_rollup.define("subracks", self.SubrackFQDNs, (1, 1, 1))
+        # Tile Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
+        self._health_rollup.define("tiles", self.TileFQDNs, (1, 1, 2))
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
@@ -494,6 +494,7 @@ class SpsStation(SKAObsDevice):
                     type(y_bandpass_data),
                 )
 
+        # TODO: Refactor this into an extensible health related method.
         if "ppsDelaySpread" in state_change:
             pps_delay_spread = state_change.get("ppsDelaySpread")
             assert pps_delay_spread is not None
@@ -508,6 +509,9 @@ class SpsStation(SKAObsDevice):
                 self._health_rollup.health_changed("self", HealthState.DEGRADED)
             elif pps_delay_spread > self._health_thresholds["pps_delta_failed"]:
                 self._health_rollup.health_changed("self", HealthState.FAILED)
+            else:
+                # This only works because we have no other health params
+                self._health_rollup.health_changed("self", HealthState.OK)
 
     def _health_changed(self: SpsStation, health: HealthState) -> None:
         """

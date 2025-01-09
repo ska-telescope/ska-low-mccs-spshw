@@ -1678,24 +1678,30 @@ class SpsStationComponentManager(
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
         assert tile0 is not None
-        time0 = (tile0.fpgasUnixTime)[0]
-        timeout = 15
-        while (tile0.fpgasUnixTime)[0] == time0:
-            if timeout == 0:
-                self.logger.error("Timeout waiting for FPGA time second tick")
-                return ResultCode.FAILED
-            time.sleep(0.1)
-            timeout = timeout - 1
-        result: list[int] = []
-        time.sleep(0.4)  # Wait till mid second
-        for proxy in tiles:
-            assert proxy._proxy is not None
-            result = result + list(proxy._proxy.fpgasUnixTime)
-        self.logger.debug(f"Current FPGA times:{result}")
-        if any(result[0] != time_n for time_n in result):
-            self.logger.error("FPGA time counters not synced")
-            return ResultCode.FAILED
-        return ResultCode.OK
+
+        for i in range(5):
+            time0 = (tile0.fpgasUnixTime)[0]
+            timeout = 15
+            while (tile0.fpgasUnixTime)[0] == time0:
+                if timeout == 0:
+                    self.logger.error("Timeout waiting for FPGA time second tick")
+                    return ResultCode.FAILED
+                time.sleep(0.1)
+                timeout = timeout - 1
+            result: list[int] = []
+            time.sleep(0.4)  # Wait till mid second
+            for proxy in tiles:
+                assert proxy._proxy is not None
+                result = result + list(proxy._proxy.fpgasUnixTime)
+            self.logger.debug(f"Current FPGA times:{result}")
+            if any(result[0] != time_n for time_n in result):
+                self.logger.error("FPGA time counters not synced, try again")
+                time.sleep(1)
+            else:
+                return ResultCode.OK
+
+        self.logger.error("FPGA time counters not synced after 5 retries")
+        return ResultCode.FAILED
 
     @property  # type:ignore[misc]
     @check_communicating

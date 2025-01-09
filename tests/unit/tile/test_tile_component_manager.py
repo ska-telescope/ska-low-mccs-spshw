@@ -1673,6 +1673,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tpm_version_to_test: str,
         expected_firmware_name: str,
+        preadu_attenuation: list[float],
         logger: logging.Logger,
         tile_id: int,
         station_id: int,
@@ -1684,6 +1685,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         :param tpm_version_to_test: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param expected_firmware_name: the expected value of firmware_name
+        :param preadu_attenuation: the preADU attenuation to set on the tile.
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :param tile_id: the unique ID for the tile
@@ -1701,6 +1703,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "tpm_ip",
             2,
             tpm_version_to_test,
+            preadu_attenuation,
             "dsd",
             2,
             callbacks["communication_status"],

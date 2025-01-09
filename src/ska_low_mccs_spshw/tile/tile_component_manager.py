@@ -86,7 +86,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -98,6 +98,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
+        preadu_levels: list[float] | None,
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -131,6 +132,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param preadu_levels: preADU gain attenuation settings to apply for this TPM.
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
@@ -184,6 +186,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
             tpm_version = ""
         self._tpm_version = tpm_version
+        self._preadu_levels = preadu_levels
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
@@ -939,6 +942,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
             # self.tile.post_synchronisation()
             self.tile.set_station_id(self._station_id, self._tile_id)
+
+            if self._preadu_levels:
+                self.logger.info("TileComponentManager: setting PreADU attenuation...")
+                self.tile.set_preadu_levels(self._preadu_levels)
+                if self.tile.get_preadu_levels() != self._preadu_levels:
+                    self.logger.warning(
+                        "TileComponentManager: set PreADU attenuation failed"
+                    )
 
             self.logger.info("TileComponentManager: initialisation completed")
 

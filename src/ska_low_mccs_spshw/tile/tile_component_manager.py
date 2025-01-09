@@ -653,8 +653,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self._subrack_says_tpm_power_changed,
             )
 
+    @property
     @check_hardware_lock_claimed
-    def _is_connected(self) -> bool:
+    def is_connected(self) -> bool:
         """
         Check the communication with CPLD.
 
@@ -699,7 +700,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
             # Connect if not already.
             with self._hardware_lock:
-                if not self._is_connected():
+                if not self.is_connected:
                     self.connect()
 
             if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:

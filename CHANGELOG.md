@@ -1,5 +1,15 @@
 # Version History
 
+## 0.21.0
+
+* [SKB-687] Do not automatically initialise TPM when initialised or synchronised.
+* [THORN-48] Update deploy submodule.
+* [THORN-50] Add PreaduAttenuation device property to MccsTile
+* [SKB-683] SpsStation initialise fails fpgatimes check
+* [SKB-703] Add a thread that establishes communication with the DAQ client
+* [THORN-49] Fix shared register map bug.
+* [THORN-39] Update ska-low-mccs-common to 0.15.6
+
 ## 0.20.1
 
 * [THORN-37] Pull in downstream update for proxies to use DevSource.DEV

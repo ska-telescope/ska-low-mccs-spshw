@@ -49,9 +49,10 @@
             ]
         }
     },
-    "postCreateCommand": "sudo poetry self update && sudo poetry config virtualenvs.create false && sudo poetry install",
-    "remoteUser": "tango",
+    "postCreateCommand": "poetry config virtualenvs.in-project true && poetry install",
+    "remoteUser": "vscoder",
     "remoteEnv": {
-        "PATH": "/home/tango/.local/bin:${containerEnv:PATH}",
+        "VIRTUAL_ENV": "/workspaces/ska-low-mccs-spshw/.venv",
+        "PATH": "/workspaces/ska-low-mccs-spshw/.venv/bin:/home/vscoder/.local/bin:${containerEnv:PATH}",
     }
 }

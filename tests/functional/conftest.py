@@ -278,7 +278,7 @@ def poll_until_consumer_running(
     """
     status = json.loads(daq.DaqStatus())
     for consumer in status["Running Consumers"]:
-        if wanted_consumer in consumer:
+        if wanted_consumer or int(wanted_consumer) in consumer:
             return
 
     if no_of_iters == 1:

@@ -61,9 +61,6 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
-  # Telescope model data job
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/tmdata.gitlab-ci.yml'
 
 psi-low-k8s-test:
   stage: test-psi-low

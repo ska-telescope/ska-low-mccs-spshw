@@ -6,7 +6,6 @@
 #
 PROJECT = ska-low-mccs-spshw
 include .make/base.mk
-include .make/tmdata.mk
 
 ########################################################################
 # DOCS

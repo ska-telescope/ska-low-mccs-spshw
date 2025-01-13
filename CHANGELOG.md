@@ -1,5 +1,9 @@
 # Version History
 
+## 0.21.1
+
+* [THORN-57] Fix python package build bug that prevented publication of python wheel for 0.21.0
+
 ## 0.21.0
 
 * [SKB-687] Do not automatically initialise TPM when initialised or synchronised.

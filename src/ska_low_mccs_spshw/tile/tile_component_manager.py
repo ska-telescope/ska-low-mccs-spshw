@@ -17,8 +17,7 @@ from typing import Any, Callable, Final, NoReturn, Optional, cast
 
 import numpy as np
 import tango
-from pyaavs.tile import Tile as Tile12
-from pyaavs.tile_wrapper import Tile as HwTile
+from pyaavs.tile import Tile
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 from ska_control_model import (
     CommunicationStatus,
@@ -194,14 +193,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or DynamicTileSimulator(logger)
         else:
-            self.tile = cast(
-                Tile12,
-                HwTile(
-                    ip=tpm_ip,
-                    port=tpm_cpld_port,
-                    logger=logger,
-                    tpm_version=tpm_version,
-                ),
+            self.tile = Tile(
+                ip=tpm_ip,
+                port=tpm_cpld_port,
+                logger=logger,
+                tpm_version=tpm_version,
             )
 
         super().__init__(

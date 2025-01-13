@@ -134,6 +134,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
+    PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+
     # ---------------
     # Initialisation
     # ---------------
@@ -184,6 +186,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
+            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -396,6 +399,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
+            self.PreaduAttenuation,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,

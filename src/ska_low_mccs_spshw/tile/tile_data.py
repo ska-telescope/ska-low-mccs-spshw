@@ -309,6 +309,10 @@ class TileData:
                     "FPGA0": 0,
                     "FPGA1": 0,
                 },
+                "discarded_or_flagged_packet_count": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
             },
         },
     }

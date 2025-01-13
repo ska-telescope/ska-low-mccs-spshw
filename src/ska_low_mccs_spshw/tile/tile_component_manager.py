@@ -2999,6 +2999,26 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def flagged_packets(self: TileComponentManager) -> int:
+        """
+        Return the total number of flagged packets by the TPM.
+
+        :return: the total number of flagged packets by the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                dropped_packets = self.tile.get_health_status()["dsp"]["station_beamf"][
+                    "discarded_or_flagged_packet_count"
+                ]
+                return sum(dropped_packets.values())
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
     def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.
@@ -3364,3 +3384,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def stop_adcs(self: TileComponentManager) -> None:
         """Stop the ADCs."""
         self.tile.disable_all_adcs()
+
+    def enable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Enable station beam flagging."""
+        self.tile.enable_station_beam_flagging()
+
+    def disable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Disable station beam flagging."""
+        self.tile.disable_station_beam_flagging()

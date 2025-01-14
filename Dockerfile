@@ -8,7 +8,16 @@ USER root
 
 RUN make install-firmware
 
-RUN apt-get update && apt-get install -y git
+ARG DEBIAN_FRONTEND=noninteractive
+
+RUN apt update && apt install -y \
+    software-properties-common \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt install -y python3.11 python3.11-venv git \
+    && python3.11 -m ensurepip \
+    && python3.11 -m pip install --upgrade pip poetry \
+    && poetry config virtualenvs.create false \
+    && apt clean
 
 RUN pip install -e .
 

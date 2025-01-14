@@ -49,7 +49,7 @@
             ]
         }
     },
-    "postCreateCommand": "sudo poetry self update && sudo poetry config virtualenvs.create false && sudo poetry install",
+    "postCreateCommand": "sudo python3.11 -m pip install --upgrade pip poetry && sudo poetry self update && sudo poetry config virtualenvs.create false && sudo poetry install",
     "remoteUser": "tango",
     "remoteEnv": {
         "PATH": "/home/tango/.local/bin:${containerEnv:PATH}",

@@ -69,6 +69,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "tpmPowers",
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
+        "adminMode",
         timeout=6.0,
         assert_no_error=False,
     )
@@ -132,6 +133,11 @@ def test_fast_adminMode_switch(
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.subscribe_event(
+        "adminMode",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["adminMode"],
+    )
 
     for i in range(3):
         # run test using a variable network jitter.
@@ -150,6 +156,11 @@ def test_fast_adminMode_switch(
 
         number_of_communication_cycles: int = 4
 
+        change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
+        change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
+        change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
+        change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
+
         for _ in range(number_of_communication_cycles):
             subrack_device.adminmode = AdminMode.OFFLINE
             subrack_device.adminmode = AdminMode.ONLINE
@@ -158,6 +169,8 @@ def test_fast_adminMode_switch(
         # transitions to DevState.ON. The important point is that is end
         # up in a steady ON state.
         for _ in range(number_of_communication_cycles):
+            change_event_callbacks["adminMode"].assert_change_event(AdminMode.OFFLINE)
+            change_event_callbacks["adminMode"].assert_change_event(AdminMode.ONLINE)
             try:
                 # lookahead of 3 since we allow UNKNOWN and DISABLE as
                 # transient states.

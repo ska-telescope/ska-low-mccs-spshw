@@ -89,28 +89,32 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNKNOWN.pretty_name(),
-            lookahead=1,
-            consume_nonmatches=True,
-        )
         # For each power_state the subrack claims,
         # check the tile arrives at correct state.
         match power_state:
             case PowerState.ON:
+                # Lookahead of 5 due to race condition.
+                # The polling and subrack state callbacks occur in different threads,
+                # It is possible to transition directly to UNCONNECTED or to
+                # pass a transient state UNKNOWN.
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=3,
+                    lookahead=5,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNCONNECTED.pretty_name(),
-                    lookahead=3,
+                    lookahead=5,
                 )
             case PowerState.UNKNOWN:
-                pass
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
+                )
             case _:
                 # OFF, NO_SUPPLY, STANDBY
+                callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
+                )
                 callbacks["component_state"].assert_call(power=power_state, lookahead=4)
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.OFF.pretty_name(), lookahead=3

@@ -116,20 +116,9 @@ class SpsStation(SKAObsDevice):
 
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_report = ""
-        # Here the "self" entry represets SpsStation specific health changes
-        # such as ppsSpread.
-        self._health_rollup = HealthRollup(
-            ["self", "subracks", "tiles"],
-            (1, 1, 1),
-            self._health_changed,
-            self._health_summary_changed,
-        )
+        # Need to dynamically define the health rollup members based on deployment.
+        self._health_rollup = self._setup_health_rollup()
 
-        # TODO: These thresholds could be configurable from charts.
-        # Subrack Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
-        self._health_rollup.define("subracks", self.SubrackFQDNs, (1, 1, 1))
-        # Tile Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
-        self._health_rollup.define("tiles", self.TileFQDNs, (1, 1, 2))
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
@@ -343,6 +332,51 @@ class SpsStation(SKAObsDevice):
             tango.DevState.UNKNOWN,
             tango.DevState.FAULT,
         ]
+
+    def _setup_health_rollup(
+        self: SpsStation,
+    ) -> HealthRollup:
+        #   Rollup is based on three configurable thresholds:
+        # * the number of FAILED (or UNKNOWN) sources that cause health
+        #   to roll up to overall FAILED;
+        # * the number of FAILED (or UNKNOWN) sources that cause health
+        #   to roll up to overall DEGRADED;
+        # * the number of DEGRADED sources that cause health to roll up to
+        #   overall DEGRADED.
+
+        # Here the "self" entry represets SpsStation specific health changes
+        # such as ppsSpread.
+        rollup_members = ["self"]
+        thresholds = {}
+        if len(self.SubrackFQDNs) > 0:
+            rollup_members.append("subracks")
+            thresholds["subracks"] = (
+                min(len(self.SubrackFQDNs), 1),
+                min(len(self.SubrackFQDNs), 1),
+                min(len(self.SubrackFQDNs), 1),
+            )
+        if len(self.TileFQDNs) > 0:
+            rollup_members.append("tiles")
+            thresholds["tiles"] = (
+                min(len(self.TileFQDNs), 1),
+                min(len(self.TileFQDNs), 1),
+                min(len(self.TileFQDNs), 2),
+            )
+
+        health_rollup = HealthRollup(
+            rollup_members,
+            (1, 1, 1),
+            self._health_changed,
+            self._health_summary_changed,
+        )
+
+        # TODO: These thresholds could be configurable from charts.
+        # Subrack Thresholds: 1 failed = failed, 1 failed = deg, 1 deg = deg
+        health_rollup.define("subracks", self.SubrackFQDNs, (1, 1, 1))
+        # Tile Thresholds: 1 failed = failed, 1 failed = deg, 2 deg = deg
+        health_rollup.define("tiles", self.TileFQDNs, (1, 1, 2))
+
+        return health_rollup
 
     # ----------
     # Callbacks

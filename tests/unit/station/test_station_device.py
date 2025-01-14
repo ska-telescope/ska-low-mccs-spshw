@@ -1138,50 +1138,6 @@ def test_SetCspIngest(
                 }
 
 
-# @pytest.mark.parametrize(
-#     ("expected_init_params", "new_params"),
-#     [
-#         pytest.param(
-#             {
-#                 "subrack_degraded": 0.05,
-#                 "subrack_failed": 0.2,
-#                 "tile_degraded": 0.05,
-#                 "tile_failed": 0.2,
-#                 "pps_delta_degraded": 4,
-#                 "pps_delta_failed": 9,
-#             },
-#             {
-#                 "subrack_degraded": 0.1,
-#                 "subrack_failed": 0.3,
-#                 "tile_degraded": 0.07,
-#                 "tile_failed": 0.2,
-#                 "pps_delta_degraded": 6,
-#                 "pps_delta_failed": 10,
-#             },
-#             id="Check correct initial values, write new and "
-#             "verify new values have been written",
-#         )
-#     ],
-# )
-# def test_healthParams(
-#     station_device: SpsStation,
-#     expected_init_params: dict[str, float],
-#     new_params: dict[str, float],
-# ) -> None:
-#     """
-#     Test for healthParams attributes.
-
-#     :param station_device: the SPS station Tango device under test.
-#     :param expected_init_params: the initial values which the health
-#         model is expected to have initially
-#     :param new_params: the new health rule params to pass to the health model
-#     """
-#     assert station_device.healthModelParams == json.dumps(expected_init_params)
-#     new_params_json = json.dumps(new_params)
-#     station_device.healthModelParams = new_params_json  # type: ignore[assignment]
-#     assert station_device.healthModelParams == new_params_json
-
-
 def test_isCalibrated(station_device: SpsStation) -> None:
     """
     Test of the isCalibrated attribute.

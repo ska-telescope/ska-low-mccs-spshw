@@ -175,8 +175,6 @@ def station_component_manager_fixture(
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],
-        # callbacks["tile_health"],
-        # callbacks["subrack_health"],
     )
     # Patching through our self check manager basic tests.
     sps_station_component_manager.self_check_manager = station_self_check_manager

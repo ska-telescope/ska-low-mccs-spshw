@@ -422,8 +422,6 @@ class SpsStationComponentManager(
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
-        # self._tile_health_changed_callback = tile_health_changed_callback
-        # self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"

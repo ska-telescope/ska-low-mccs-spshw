@@ -1,5 +1,9 @@
 # Version History
 
+## unreleased
+
+* [THORN-54] Update SpsStation to use new health model.
+
 ## 0.21.1
 
 * [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW

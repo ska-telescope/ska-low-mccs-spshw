@@ -246,6 +246,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": "bip_error_count",
             "decode_error_count": "decode_error_count",
             "linkup_loss_count": "linkup_loss_count",
+            "data_router_status": "data_router_status",
+            "data_router_discarded_packets": "data_router_discarded_packets",
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
             "station_beamformer_error_count": "station_beamformer_error_count",
@@ -362,6 +364,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": ["io", "udp_interface", "bip_error_count"],
             "decode_error_count": ["io", "udp_interface", "decode_error_count"],
             "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
+            "data_router_status": ["io", "datarouter", "status"],
+            "data_router_discarded_packets": ["io", "datarouter", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "station_beamformer_error_count": [
@@ -884,6 +888,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         Return the station beamformer error count per FPGA.
 
+        Note: When station beam flagging is enabled,
+        this returns a count of packets flagged,
+        but when station beam flagging is disabled,
+        this instead returns a count of packets discarded/dropped
+
         Expected: 0 if no parity errors detected.
 
         :example:
@@ -971,6 +980,44 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the linkup loss count per FPGA.
         """
         return json.dumps(self._attribute_state["linkup_loss_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_status",
+    )
+    def data_router_status(self: MccsTile) -> str:
+        """
+        Return the status of the data router.
+
+        Expected: 0 if no status OK.
+
+        :example:
+            >>> tile.data_router_status
+            '{"FPGA0": 0, "FPGA1": 0}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(self._attribute_state["data_router_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_discarded_packets",
+    )
+    def data_router_discarded_packets(self: MccsTile) -> str:
+        """
+        Return the number of discarded packets.
+
+        Expected: 0 if no packets are discarded.
+
+        :example:
+            >>> tile.data_router_discarded_packets
+            '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(
+            self._attribute_state["data_router_discarded_packets"].read()[0]
+        )
 
     @attribute(
         dtype="DevBoolean",

@@ -3019,6 +3019,53 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def data_router_status(self: TileComponentManager) -> str:
+        """
+        Return the data router values.
+
+        :return: The status of both FPGAs
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                result = self.tile.get_health_status()["io"]["data_router"]
+                status = result["status"]
+
+                if sum(status.values()) > 0:
+                    return f"""Router status ERROR. FPGA0:
+                    {status['FPGA0']}, FPGA1: {status['FPGA1']}"""
+                return "Router status OK"
+
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
+    def data_router_discarded_packets(self: TileComponentManager) -> int:
+        """
+        Return the data router values.
+
+        :return: The number of discarded packets
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                result = self.tile.get_health_status()["io"]["data_router"]
+                discarded_packets = result["discarded_packets"]
+                total_packets = 0
+                for value in discarded_packets.values():
+                    total_packets = total_packets + value.sum()
+
+                return total_packets
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
     def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.

@@ -347,6 +347,13 @@ tpm_monitoring_points:
       linkup_loss_count:
         FPGA0: 0
         FPGA1: 0
+    data_router:
+      status:
+        FPGA0: 0
+        FPGA1: 0
+      discarded_packets:
+        FPGA0: [0, 0]
+        FPGA1: [0, 0]
   dsp:
     tile_beamf: True
     station_beamf:

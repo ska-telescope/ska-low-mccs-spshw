@@ -49,13 +49,9 @@ Deploy the Tango devices. For example,
           kubernetes.io/hostname: psi-node3
 */}}
 {{ $localchart := . }}
-
-{{- range $key, $deviceserver := .Values.deviceServers }}
-
-{{- $filedeviceserver := tpl ($.Files.Get (printf "data/%s.yaml" $key)) $ | fromYaml }}
-{{- $name := $filedeviceserver.kubernetesName | default $key}}
-
-{{- $context := dict "name" $name "deviceserver" $filedeviceserver "image" $filedeviceserver.image "local" $localchart}}
+{{- if $.Values.deviceServers}}
+{{- $filedeviceserver := tpl .Values.deviceServerDefinition . | fromYaml }}
+{{- $context := dict "name" "mccs-spshw" "deviceserver" $filedeviceserver "image" $filedeviceserver.image "local" $localchart}}
 {{ template "ska-tango-util.multidevice-config.tpl" $context }}
 {{ template "ska-tango-util.multidevice-sacc-role.tpl" $context }}
 {{ template "ska-tango-util.multidevice-job.tpl" $context }}

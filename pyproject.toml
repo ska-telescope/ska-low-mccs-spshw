@@ -114,13 +114,13 @@ ska-ser-snmp = "^0.4.1"
 
 [tool.poetry.scripts]
 spshw_device_server = "ska_low_mccs_spshw:main"
-SpsStation = "ska_low_mccs_spshw.station.station_device:main"
-MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
+# SpsStation = "ska_low_mccs_spshw.station.station_device:main"
+# MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"
-MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
-MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
+# MccsTile = "ska_low_mccs_spshw.tile.tile_device:main"
+# MccsPdu = "ska_low_mccs_spshw.pdu.pdu_device:main"
 Mccs-tile = "ska_low_mccs_spshw.tile.tile_cli:main"
-MccsDaqReceiver = "ska_low_mccs_spshw.daq_receiver.daq_receiver_device:main"
+# MccsDaqReceiver = "ska_low_mccs_spshw.daq_receiver.daq_receiver_device:main"
 DaqSimulator = "ska_low_mccs_spshw.daq_receiver.daq_simulator:main"
 
 

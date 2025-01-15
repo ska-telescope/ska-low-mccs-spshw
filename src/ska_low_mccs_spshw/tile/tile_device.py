@@ -51,7 +51,7 @@ from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
 from .tpm_status import TpmStatus
 
-__all__ = ["MccsTile", "main"]
+__all__ = ["MccsTile"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
 
@@ -5381,22 +5381,3 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         self._health_model._ignore_power_state = False
         return super().On()
-
-
-# ----------
-# Run server
-# ----------
-def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
-    """
-    Entry point for module.
-
-    :param args: positional arguments
-    :param kwargs: named arguments
-
-    :return: exit code
-    """
-    return MccsTile.run_server(args=args or None, **kwargs)
-
-
-if __name__ == "__main__":
-    main()

@@ -1230,22 +1230,3 @@ class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
         :return: the health report.
         """
         return self._health_model.health_report
-
-
-# ----------
-# Run server
-# ----------
-def main(*args: str, **kwargs: str) -> int:
-    """
-    Launch an `MccsSubrack` Tango device server instance.
-
-    :param args: positional arguments, passed to the Tango device
-    :param kwargs: keyword arguments, passed to the sever
-
-    :return: the Tango server exit code
-    """
-    return MccsSubrack.run_server(args=args or None, **kwargs)
-
-
-if __name__ == "__main__":
-    main()

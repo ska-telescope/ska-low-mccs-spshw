@@ -28,7 +28,7 @@ from ..version import version_info
 from .daq_component_manager import DaqComponentManager
 from .daq_health_model import DaqHealthModel
 
-__all__ = ["MccsDaqReceiver", "main"]
+__all__ = ["MccsDaqReceiver"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
@@ -969,22 +969,3 @@ class MccsDaqReceiver(SKABaseDevice):
         :return: the health report.
         """
         return self._health_model.health_report
-
-
-# ----------
-# Run server
-# ----------
-def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
-    """
-    Entry point for module.
-
-    :param args: positional arguments
-    :param kwargs: named arguments
-
-    :return: exit code
-    """
-    return MccsDaqReceiver.run_server(args=args or None, **kwargs)
-
-
-if __name__ == "__main__":
-    main()

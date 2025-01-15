@@ -42,7 +42,7 @@ from .station_obs_state_model import SpsStationObsStateModel
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[Optional[str]]]
 
-__all__ = ["SpsStation", "main"]
+__all__ = ["SpsStation"]
 
 
 def engineering_mode_required(func: Callable) -> Callable:
@@ -2063,22 +2063,3 @@ class SpsStation(SKAObsDevice):
         >>> values = dp.command_inout("ConfigureTestGenerator", jstr)
         """
         return self.component_manager.configure_test_generator(argin)
-
-
-# ----------
-# Run server
-# ----------
-def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
-    """
-    Entry point for module.
-
-    :param args: positional arguments
-    :param kwargs: named arguments
-
-    :return: exit code
-    """
-    return SpsStation.run_server(args=args or None, **kwargs)
-
-
-if __name__ == "__main__":
-    main()

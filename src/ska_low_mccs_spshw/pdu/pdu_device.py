@@ -18,7 +18,7 @@ from tango.server import device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
-__all__ = ["MccsPdu", "main"]
+__all__ = ["MccsPdu"]
 
 
 class MccsPdu(AttributePollingDevice):
@@ -186,23 +186,3 @@ class MccsPdu(AttributePollingDevice):
         for attribute_name, value in kwargs.items():
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
-
-
-# ----------
-# Run server
-# ----------
-
-
-def main(*args: str, **kwargs: str) -> int:  # pragma: no cover
-    """
-    Entry point for module.
-
-    :param args: positional arguments
-    :param kwargs: named arguments
-    :return: exit code
-    """
-    return cast(int, MccsPdu.run_server(args=args or None, **kwargs))
-
-
-if __name__ == "__main__":
-    main()

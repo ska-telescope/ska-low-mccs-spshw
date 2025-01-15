@@ -299,15 +299,15 @@ class TileData:
                         "lane3": None,
                     },
                 },
-                "data_router": {
-                    "status": {
-                        "FPGA0": 0,
-                        "FPGA1": 0,
-                    },
-                    "discarded_packets": {
-                        "FPGA0": [0, 0],
-                        "FPGA1": [0, 0],
-                    },
+            },
+            "data_router": {
+                "status": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
+                "discarded_packets": {
+                    "FPGA0": [0, 0],
+                    "FPGA1": [0, 0],
                 },
             },
         },

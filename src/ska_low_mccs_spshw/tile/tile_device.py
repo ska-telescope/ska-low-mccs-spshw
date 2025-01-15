@@ -364,8 +364,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": ["io", "udp_interface", "bip_error_count"],
             "decode_error_count": ["io", "udp_interface", "decode_error_count"],
             "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
-            "data_router_status": ["io", "datarouter", "status"],
-            "data_router_discarded_packets": ["io", "datarouter", "discarded_packets"],
+            "data_router_status": ["io", "data_router", "status"],
+            "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "station_beamformer_error_count": [

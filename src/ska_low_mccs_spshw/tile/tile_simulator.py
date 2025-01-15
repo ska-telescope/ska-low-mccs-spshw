@@ -339,6 +339,7 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+        self._station_beam_flagging = False
 
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
@@ -1342,6 +1343,18 @@ class TileSimulator:
             return False
         return self.tpm._is_programmed
 
+    @check_mocked_overheating
+    @connected
+    def enable_station_beam_flagging(self: TileSimulator) -> None:
+        """Enable station beam flagging."""
+        self._station_beam_flagging = True
+
+    @check_mocked_overheating
+    @connected
+    def disable_station_beam_flagging(self: TileSimulator) -> None:
+        """Disable station beam flagging."""
+        self._station_beam_flagging = False
+
     @property
     def tile_info(self: TileSimulator) -> str:
         """
@@ -2310,9 +2323,9 @@ class TileSimulator:
             if _is_in_range_20_50(board_alarm_threshold[0]) and _is_in_range_20_50(
                 board_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "board_alarm_threshold"
-                ] = board_alarm_threshold
+                self._tpm_temperature_thresholds["board_alarm_threshold"] = (
+                    board_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{board_alarm_threshold=} not in capped range 20-50. Doing nothing"
@@ -2321,9 +2334,9 @@ class TileSimulator:
             if _is_in_range_20_50(fpga1_alarm_threshold[0]) and _is_in_range_20_50(
                 fpga1_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "fpga1_alarm_threshold"
-                ] = fpga1_alarm_threshold
+                self._tpm_temperature_thresholds["fpga1_alarm_threshold"] = (
+                    fpga1_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{fpga1_alarm_threshold=} not in capped range 20-50. Doing nothing"
@@ -2332,9 +2345,9 @@ class TileSimulator:
             if _is_in_range_20_50(fpga2_alarm_threshold[0]) and _is_in_range_20_50(
                 fpga2_alarm_threshold[1]
             ):
-                self._tpm_temperature_thresholds[
-                    "fpga2_alarm_threshold"
-                ] = fpga2_alarm_threshold
+                self._tpm_temperature_thresholds["fpga2_alarm_threshold"] = (
+                    fpga2_alarm_threshold
+                )
             else:
                 raise ValueError(
                     f"{fpga2_alarm_threshold=} not in capped range 20-50. Doing nothing"

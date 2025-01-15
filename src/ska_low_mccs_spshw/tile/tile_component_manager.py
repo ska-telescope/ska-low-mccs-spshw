@@ -3055,9 +3055,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if acquired:
                 result = self.tile.get_health_status()["io"]["data_router"]
                 discarded_packets = result["discarded_packets"]
-                total_packets = 0
-                for value in discarded_packets.values():
-                    total_packets = total_packets + value.sum()
+                total_packets = sum(value.sum() for value in discarded_packets.values())
 
                 return total_packets
         raise TimeoutError(

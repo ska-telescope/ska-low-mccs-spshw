@@ -115,16 +115,16 @@ class SpsStation(SKAObsDevice):
         super().__init__(*args, **kwargs)
 
         self._health_state: HealthState = HealthState.UNKNOWN
-        self._health_report = ""
+        self._health_report: str = ""
         # Need to dynamically define the health rollup members based on deployment.
-        self._health_rollup = self._setup_health_rollup()
+        self._health_rollup: HealthRollup = self._setup_health_rollup()
 
         self.component_manager: SpsStationComponentManager
         self._obs_state_model: SpsStationObsStateModel
         self._adc_power: Optional[list[float]] = None
         self._data_received_result: Optional[tuple[str, str]] = ("", "")
 
-        self._health_thresholds = {
+        self._health_thresholds: dict[str, Any] = {
             "pps_delta_degraded": 4,
             "pps_delta_failed": 9,
         }
@@ -347,6 +347,7 @@ class SpsStation(SKAObsDevice):
         # Here the "self" entry represets SpsStation specific health changes
         # such as ppsSpread.
         rollup_members = ["self"]
+        # TODO: Make these thresholds fully dynamic based on deployment.
         thresholds = {}
         if len(self.SubrackFQDNs) > 0:
             rollup_members.append("subracks")

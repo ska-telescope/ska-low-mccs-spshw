@@ -127,6 +127,7 @@ def test_fast_adminMode_switch(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
+    subrack_device.loggingLevel = 4  # type: ignore[assignment]
     subrack_device.subscribe_event(
         "state",
         EventType.CHANGE_EVENT,

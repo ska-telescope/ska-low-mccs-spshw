@@ -192,7 +192,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
-        self.logger.error("Testing joes change")
 
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
@@ -463,6 +462,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             ("StopPatternGenerator", self.StopPatternGeneratorCommand),
             ("StartADCs", self.StartAdcsCommand),
             ("StopADCs", self.StopAdcsCommand),
+            ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
+            ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)

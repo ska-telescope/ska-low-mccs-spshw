@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Generator, List, TypeVar, cast
+from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
 import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
@@ -1343,16 +1343,26 @@ class TileSimulator:
             return False
         return self.tpm._is_programmed
 
-    @check_mocked_overheating
     @connected
-    def enable_station_beam_flagging(self: TileSimulator) -> None:
-        """Enable station beam flagging."""
+    def enable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Enable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
         self._station_beam_flagging = True
 
-    @check_mocked_overheating
     @connected
-    def disable_station_beam_flagging(self: TileSimulator) -> None:
-        """Disable station beam flagging."""
+    def disable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Disable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
         self._station_beam_flagging = False
 
     @property

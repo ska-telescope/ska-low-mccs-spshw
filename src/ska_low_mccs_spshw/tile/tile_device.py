@@ -192,6 +192,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
+        self.logger.error("Testing joes change")
+
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {

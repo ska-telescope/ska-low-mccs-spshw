@@ -14,7 +14,7 @@ develop = false
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
 reference = "thorn-10-persisters-metadata"
-resolved_reference = "fd3e00b06010c347a5192e8bf25ec615f0d71ca7"
+resolved_reference = "f0ac2c58007dbbe2e83631f7f7fc14387dd5c00e"
 subdirectory = "python"
 
 [[package]]
@@ -3195,7 +3195,7 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pyfabil"
-version = "1.4.1"
+version = "2.1.0"
 description = "A general Python package for interfacing with FPGA boards"
 optional = false
 python-versions = "*"

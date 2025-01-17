@@ -45,9 +45,9 @@ resources:
     memory: 50Mi
 
 image:
-  registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+  registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: 0.21.1-dev.c00376b1b # defaults to chart's appVersion when empty
+  tag: ~ # defaults to chart's appVersion when empty
   pullPolicy: IfNotPresent
 
 daqDataRepository: daq-data

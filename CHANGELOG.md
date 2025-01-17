@@ -1,5 +1,8 @@
 # Version History
 
+# Unreleased
+* [MCCS-2330] Update pytango to 10.0.0
+
 ## 0.21.2
 
 * [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW

@@ -5308,6 +5308,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
 
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
+
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
@@ -5356,6 +5359,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         :return: A tuple containing a return code and a string message
             indicating status. The message is for information purposes only.
+
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
 
         :example:
 

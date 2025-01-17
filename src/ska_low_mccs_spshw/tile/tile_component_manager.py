@@ -70,7 +70,6 @@ _ATTRIBUTE_MAP: Final = {
     "STATIC_DELAYS": "static_delays",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
-    "CHECK_CPLD_COMMS": "global_status_alarms",
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
@@ -237,12 +236,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "CHECK_CPLD_COMMS":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.check_global_status_alarms,
-                    publish=True,
-                )
             case "CHECK_BOARD_TEMPERATURE":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -253,8 +246,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 try:
                     self.ping()
                     request = TileRequest(
-                        "global_status_alarms",
-                        self.tile.check_global_status_alarms,
+                        _ATTRIBUTE_MAP["HEALTH_STATUS"],
+                        self.tile.get_health_status,
                         publish=True,
                     )
                     # pylint: disable=broad-except

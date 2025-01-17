@@ -3106,7 +3106,7 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pyfabil"
-version = "1.4.1"
+version = "2.1.0"
 description = "A general Python package for interfacing with FPGA boards"
 optional = false
 python-versions = "*"
@@ -4351,29 +4351,30 @@ reference = "skao"
 
 [[package]]
 name = "ska-ser-snmp"
-version = "0.4.1"
+version = "0.4.2"
 description = "Python package for snmp tango devices"
 optional = false
-python-versions = "~3.10"
-files = []
-develop = false
+python-versions = ">=3.10,<3.11"
+files = [
+    {file = "ska_ser_snmp-0.4.2-py3-none-any.whl", hash = "sha256:b696d7e2046151cf10ce457fdcb96084b30a0f0f46c5a6efea0a8ea70f8e6a8a"},
+    {file = "ska_ser_snmp-0.4.2.tar.gz", hash = "sha256:4f272c2379e737b686a82d956c7ab5fe5abd8a0a4b309c2664d07efbc3fa37d6"},
+]
 
 [package.dependencies]
-more-itertools = "^10.2.0"
+more-itertools = ">=10.2.0,<11.0.0"
 pysnmp-lextudio = "5.0.27"
-pytango = "^10.0.0"
-PyYAML = "^6.0.1"
-ska-control-model = "^1.0.0"
-ska-tango-base = "^1.0.0"
-ska-telmodel = "^1.19.5"
-snmpsim-lextudio = "^1.0.6"
-typing-extensions = "^4.12.2"
+pytango = ">=9.5.0,<11.0.0"
+PyYAML = ">=6.0.1,<7.0.0"
+ska-control-model = ">=1.0.0,<2.0.0"
+ska-tango-base = ">=1.0.0,<2.0.0"
+ska-telmodel = ">=1.19.5,<2.0.0"
+snmpsim-lextudio = ">=1.0.6,<2.0.0"
+typing-extensions = ">=4.12.2,<5.0.0"
 
 [package.source]
-type = "git"
-url = "https://gitlab.com/ska-telescope/ska-ser-snmp.git"
-reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
-resolved_reference = "14d8d9cd4663f58f6f8cfbf5be9d5626a67cc366"
+type = "legacy"
+url = "https://artefact.skao.int/repository/pypi-internal/simple"
+reference = "skao"
 
 [[package]]
 name = "ska-ser-sphinx-theme"
@@ -5513,4 +5514,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "94c752aaad84178b43af5bc0526c2a8dbb8d724e68972b7e05c3f3f1e6b050d8"
+content-hash = "416d50aa43368a818b3a6524dbedecbe838be0fbb5b9951991fd10fb418cf5ac"

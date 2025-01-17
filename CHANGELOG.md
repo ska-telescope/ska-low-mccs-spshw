@@ -1,7 +1,9 @@
 # Version History
 
 # Unreleased
+
 * [MCCS-2330] Update pytango to 10.0.0
+* [THORN-10] Update self-check to mark test data
 
 ## 0.21.2
 

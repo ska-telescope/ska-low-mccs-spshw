@@ -19,8 +19,9 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, List, TypeVar, Union, cast
+from typing import Any, Callable, Final, Generator, List, TypeVar, cast
 
+import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
@@ -279,8 +280,8 @@ class MockTpm:
     # Requires only registers which are directly accessed from
     # the TpmDriver.
     PLL_LOCKED_REGISTER: Final = 0xE7
-    _register_map: dict[Union[int, str], Any] = {
-        "0x30000000": [0x21033009],
+    REGISTER_MAP_DEFAULTS: dict[str, int] = {
+        "0x30000000": 0x21033009,
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga1.test_generator.delay_0": 0,
@@ -338,6 +339,8 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+
+        self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -646,7 +649,7 @@ class MockTpm:
     def write_register(
         self: MockTpm,
         register: int | str,
-        values: int,
+        values: list[int],
         offset: int = 0,
         retry: bool = True,
     ) -> None:
@@ -658,17 +661,24 @@ class MockTpm:
         :param offset: Memory address offset to write to
         :param retry: retry
 
-        :raises LibraryError:Attempting to set a register not in the memory address.
+        :raises LibraryError: Attempting to set a register not in the memory address.
+        :raises NotImplementedError: if trying to write more than one value
+
         """
+        if len(values) != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only write one value to a register at a time."
+            )
+
         if isinstance(register, int):
             register = hex(register)
         if register == "" or register == "unknown":
             raise LibraryError(f"Unknown register: {register}")
-        self._register_map[register] = values
+        self._register_map[register] = values[0]
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Any:
+    ) -> list[int]:
         """
         Get register value.
 
@@ -676,14 +686,21 @@ class MockTpm:
         :param n: Number of words to read
         :param offset: Memory address offset to read from
 
+        :raises NotImplementedError: if trying to read more than one value
+
         :return: Values
         """
+        if n != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only read one value from a register at a time."
+            )
+
         if register == ("pll", 0x508):
-            return self.PLL_LOCKED_REGISTER
+            return [self.PLL_LOCKED_REGISTER]
         if isinstance(register, int):
             register = hex(register)
 
-        return self._register_map.get(register)
+        return [self._register_map[register]]
 
     def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """
@@ -861,6 +878,8 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        # An optional mocked TPM to use in testing.
+        self._mocked_tpm: MockTpm | None = None
         self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
@@ -913,7 +932,9 @@ class TileSimulator:
             "last_channel": 383,
             "current_channel": 0,
         }
-        # return self._register_map.get(str(address), 0)
+        self._rfi_count = np.zeros(
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
+        )
 
     @check_mocked_overheating
     @connected
@@ -1515,7 +1536,8 @@ class TileSimulator:
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
             if self.tpm is None:
-                self.tpm = MockTpm(self.logger)
+                # Use defined tpm if specified.
+                self.tpm = self._mocked_tpm or MockTpm(self.logger)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -2439,6 +2461,16 @@ class TileSimulator:
         """
         return self.csp_spead_format == "SKA"
 
+    def read_broadband_rfi(self, antennas: range = range(16)) -> np.ndarray:
+        """
+        Read out the broadband RFI counters.
+
+        :param antennas: list antennas of which rfi counters to read
+
+        :return: rfi counters
+        """
+        return self._rfi_count[np.array(antennas)]
+
     @check_mocked_overheating
     @connected
     def __getattr__(self: TileSimulator, name: str) -> Any:
@@ -2539,23 +2571,24 @@ class DynamicTileSimulator(TileSimulator):
 
         self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
-            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+            DynamicValuesGenerator(4.9, 5.1), self._voltage_changed
         )
         self._updater.add_target(
             DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._board_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga2_temperature_changed,
         )
+        self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)
         self._updater.start()
 
     def __del__(self: DynamicTileSimulator) -> None:
@@ -2683,3 +2716,26 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._fpga2_temperature = fpga2_temperature
         self._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temperature
+
+    def _rfi_changed(
+        self: DynamicTileSimulator, antenna_incremented: tuple[int, int]
+    ) -> None:
+        """
+        Call this method when the RFI count increments.
+
+        :param antenna_incremented: which antenna/pol got RFI.
+        """
+        self._rfi_count[antenna_incremented[0]][antenna_incremented[1]] += 1
+
+    @classmethod
+    def random_antenna_generator(cls) -> Generator[tuple[int, int]]:
+        """
+        Generate a random antenna/pol number.
+
+        :yields: a random antenna/pol number.
+        """
+        while True:
+            yield (
+                random.randint(0, TileData.ANTENNA_COUNT - 1),
+                random.randint(0, TileData.POLS_PER_ANTENNA - 1),
+            )

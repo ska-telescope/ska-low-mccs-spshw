@@ -45,6 +45,7 @@ from .attribute_managers import (
     AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
+    NpArrayAttributeManager,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -133,6 +134,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
+    PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+
     # ---------------
     # Initialisation
     # ---------------
@@ -183,6 +186,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
+            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -248,6 +252,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "core_communication": "coreCommunicationStatus",
             "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
+            "rfi_count": "rfiCount",
         }
 
         # NOTE: This has been removed to eliminate SKB-609 segfault.
@@ -272,6 +277,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
         # - alarms: alarms raised by firmware are collected in a dictionary.
+        # - rfiCount: np.ndarray needs a different truth comparison.
         # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
@@ -311,6 +317,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 ),
                 "alarms": AlarmAttributeManager(
                     functools.partial(self.post_change_event, "alarms"),
+                ),
+                "rfiCount": NpArrayAttributeManager(
+                    functools.partial(self.post_change_event, "rfiCount")
                 ),
             }
         )
@@ -390,6 +399,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
+            self.PreaduAttenuation,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,
@@ -2410,6 +2420,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :returns: last pointing delays applied to the tile.
         """
         return self.component_manager.last_pointing_delays
+
+    @attribute(
+        dtype=(("DevLong",),),
+        max_dim_x=2,  # pol
+        max_dim_y=16,  # antenna
+    )
+    def rfiCount(self: MccsTile) -> list[list]:
+        """
+        Return the RFI count per antenna/pol.
+
+        :returns: the RFI count per antenna/pol.
+        """
+        return self._attribute_state["rfiCount"].read()[0]
 
     @attribute(
         dtype="DevDouble",

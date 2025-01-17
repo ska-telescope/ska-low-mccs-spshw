@@ -37,9 +37,9 @@ instances:
 {{- range $server_key := keys $tiles}}
   - {{printf "tile-%s" $server_key}}
 {{- end}}
-command: MccsTile
+command: spshw_device_server
 server: 
-  name: MccsTile
+  name: spshw_device_server
   instances:
 {{- range $server_key, $this_server := $tiles}}
     - name: {{printf "tile-%s" $server_key}}

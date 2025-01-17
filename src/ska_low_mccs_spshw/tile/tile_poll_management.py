@@ -227,6 +227,7 @@ class RequestIterator:
         "TILE_ID",
         "BEAMFORMER_TABLE",
         "TILE_BEAMFORMER_FRAME",
+        "RFI_COUNT",
     ]
 
     def __init__(self: RequestIterator):

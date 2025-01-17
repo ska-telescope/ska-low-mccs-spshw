@@ -1,7 +1,43 @@
 # Version History
 
-## unreleased
+# Unreleased
+* [MCCS-2330] Update pytango to 10.0.0
 
+## 0.21.2
+
+* [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW
+* [THORN-59] Fix race condition (intermittent failure in unit test)
+* [THORN-48] Fix mock tile device builder by including attributes
+* [THORN-64] Fix rficount change events
+
+## 0.21.1
+
+* [THORN-57] Fix python package build bug that prevented publication of python wheel for 0.21.0
+
+## 0.21.0
+
+* [SKB-687] Do not automatically initialise TPM when initialised or synchronised.
+* [THORN-48] Update deploy submodule.
+* [THORN-50] Add PreaduAttenuation device property to MccsTile
+* [SKB-683] SpsStation initialise fails fpgatimes check
+* [SKB-703] Add a thread that establishes communication with the DAQ client
+* [THORN-49] Fix shared register map bug.
+* [THORN-39] Update ska-low-mccs-common to 0.15.6
+
+## 0.20.1
+
+* [THORN-37] Pull in downstream update for proxies to use DevSource.DEV
+* [THORN-40] Update RAL platform spec for new TPMs
+
+## 0.20.0
+
+* [THORN-47] Add CspRounding property to SpsStation
+
+## 0.19.0
+
+* [LOW-1131] Expose SPS Station as a LoadBalancer
+* [THORN-1] Multi-class device server endpoint
+* [MCCS-2026] Add RFI counters
 * [MCCS-2299] Add functional test for reading attributes on hardware.
 * [MCCS-2319] ddr_interface points failing health when running a scan
 * [MCCS-2328] Add enable/disable ADCs, add delays to test generator

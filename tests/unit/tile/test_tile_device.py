@@ -47,6 +47,8 @@ from tests.test_tools import (
     wait_for_completed_command_to_clear_from_queue,
 )
 
+from .conftest import PREADU_ATTENUATION
+
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
 
@@ -392,6 +394,7 @@ class TestMccsTile:
             "currentFrame",
             "pendingDataRequests",
             "isBeamformerRunning",
+            "rfiCount",
         ]
 
     def test_state_with_adminmode(
@@ -1052,7 +1055,7 @@ class TestMccsTile:
                 TileSimulator.ADC_RMS,
                 None,
             ),
-            ("preaduLevels", TileSimulator.PREADU_LEVELS, [5] * 32),
+            ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
             ("staticTimeDelays", TileSimulator.STATIC_DELAYS, [12.5] * 32),
             ("pllLocked", True, None),
             ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
@@ -1590,7 +1593,7 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        assert on_tile_device.GetRegisterList() == list(MockTpm._register_map.keys())
+        assert on_tile_device.GetRegisterList() == list(MockTpm.REGISTER_MAP_DEFAULTS)
 
     def test_ReadRegister(
         self: TestMccsTileCommands,
@@ -1606,7 +1609,7 @@ class TestMccsTileCommands:
         """
         register_name: str = "fpga1.test_generator.delay_0"
         values = on_tile_device.ReadRegister(register_name)
-        assert list(values) == [MockTpm._register_map[register_name]]
+        assert list(values) == [MockTpm.REGISTER_MAP_DEFAULTS[register_name]]
 
     def test_WriteRegister(
         self: TestMccsTileCommands,
@@ -1969,7 +1972,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=5, consume_nonmatches=True
+            "Initialised", lookahead=6, consume_nonmatches=True
         )
         change_event_callbacks["tile_programming_state"].assert_not_called()
         args = [
@@ -2047,7 +2050,7 @@ class TestMccsTileCommands:
         tile_device.MockTpmOn()
         change_event_callbacks["state"].assert_change_event(DevState.ON)
         change_event_callbacks["tile_programming_state"].assert_change_event(
-            "Initialised", lookahead=5, consume_nonmatches=True
+            "Initialised", lookahead=6, consume_nonmatches=True
         )
         default_parameters = {
             "stage": "jesd",

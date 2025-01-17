@@ -1,5 +1,8 @@
 # Version History
 
+## 0.21.3
+* [SKB-705] Allow graceful handling of DaqReceiver restart. Restart running tasks on DaqHandler
+
 ## 0.21.2
 
 * [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW

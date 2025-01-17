@@ -2999,7 +2999,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def flagged_packets(self: TileComponentManager) -> int:
+    def flagged_packets(self: TileComponentManager) -> dict:
         """
         Return the total number of flagged packets by the TPM.
 
@@ -3009,17 +3009,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                dropped_packets = self.tile.get_health_status()["dsp"]["station_beamf"][
+                return self.tile.get_health_status()["dsp"]["station_beamf"][
                     "discarded_or_flagged_packet_count"
                 ]
-                return sum(dropped_packets.values())
         raise TimeoutError(
             "Failed to check flagged_packets, lock not acquired in time."
         )
 
     @property
     @check_communicating
-    def data_router_status(self: TileComponentManager) -> str:
+    def data_router_status(self: TileComponentManager) -> dict:
         """
         Return the data router values.
 
@@ -3029,13 +3028,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                result = self.tile.get_health_status()["io"]["data_router"]
-                status = result["status"]
-
-                if sum(status.values()) > 0:
-                    return f"""Router status ERROR. FPGA0:
-                    {status['FPGA0']}, FPGA1: {status['FPGA1']}"""
-                return "Router status OK"
+                return self.tile.get_health_status()["io"]["data_router"]
 
         raise TimeoutError(
             "Failed to check flagged_packets, lock not acquired in time."
@@ -3043,7 +3036,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def data_router_discarded_packets(self: TileComponentManager) -> int:
+    def data_router_discarded_packets(self: TileComponentManager) -> dict:
         """
         Return the data router values.
 
@@ -3053,11 +3046,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
-                result = self.tile.get_health_status()["io"]["data_router"]
-                discarded_packets = result["discarded_packets"]
-                total_packets = sum(value.sum() for value in discarded_packets.values())
+                return self.tile.get_health_status()["io"]["data_router"]
 
-                return total_packets
         raise TimeoutError(
             "Failed to check flagged_packets, lock not acquired in time."
         )

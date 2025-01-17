@@ -1022,6 +1022,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         )
 
     @attribute(
+        dtype="DevString",
+        label="data_router_discarded_packets",
+    )
+    def data_router_discarded_packets_new(self: MccsTile) -> str:
+        """
+        Return the number of discarded packets.
+
+        Expected: 0 if no packets are discarded.
+
+        :example:
+            >>> tile.data_router_discarded_packets
+            '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(self.component_manager.flagged_packets)
+
+    @attribute(
         dtype="DevBoolean",
         label="arp",
     )

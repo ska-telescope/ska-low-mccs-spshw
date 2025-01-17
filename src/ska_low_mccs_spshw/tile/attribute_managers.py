@@ -236,4 +236,4 @@ class NpArrayAttributeManager(AttributeManager):
 
         :returns: whether or not the value has changed.
         """
-        return np.array_equal(value, self._value)
+        return not np.array_equal(value, self._value)

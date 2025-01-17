@@ -1,8 +1,14 @@
 # Version History
 
-## 0.21.1
+## 0.21.2
 
 * [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW
+* [THORN-59] Fix race condition (intermittent failure in unit test)
+* [THORN-48] Fix mock tile device builder by including attributes
+* [THORN-64] Fix rficount change events
+
+## 0.21.1
+
 * [THORN-57] Fix python package build bug that prevented publication of python wheel for 0.21.0
 
 ## 0.21.0

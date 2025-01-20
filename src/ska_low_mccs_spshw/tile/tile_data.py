@@ -300,12 +300,26 @@ class TileData:
                     },
                 },
             },
+            "data_router": {
+                "status": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
+                "discarded_packets": {
+                    "FPGA0": [0, 0],
+                    "FPGA1": [0, 0],
+                },
+            },
         },
         "dsp": {
             "tile_beamf": None,
             "station_beamf": {
                 "status": None,
                 "ddr_parity_error_count": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
+                "discarded_or_flagged_packet_count": {
                     "FPGA0": 0,
                     "FPGA1": 0,
                 },

@@ -17,22 +17,6 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
   "5": {}
   "6": {}
 
-# Disable non-partial stations.
-platform:
-  array:
-    stations:
-    - stfc-ral-software:
-    - stfc-ral-firmware:
-    - stfc-ral-partial:
-
-  stations:
-    stfc-ral-software:
-      enabled: false
-    stfc-ral-firmware:
-      enabled: false
-    stfc-ral-partial:
-      enabled: true
-
 
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.

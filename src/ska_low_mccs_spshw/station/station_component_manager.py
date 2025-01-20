@@ -95,71 +95,6 @@ def retry_command_on_exception(
     )
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
-
-    # pylint: disable=too-many-arguments
-    def __init__(
-        self: _SubrackProxy,
-        fqdn: str,
-        station_id: int,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
-            is to be assigned
-        :param logger: the logger to be used by this object.
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        self._station_id = station_id
-        self._connecting = False
-
-        super().__init__(
-            fqdn,
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-    def start_communicating(self: _SubrackProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _SubrackProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
-
-    def _update_communication_state(
-        self: _SubrackProxy,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
-        super()._update_communication_state(communication_state)
-
-
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -172,6 +107,7 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
     ) -> None:
         """
         Initialise a new instance.
@@ -188,11 +124,12 @@ class _TileProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
-        self._connecting = False
-
+        self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
             logger,
@@ -200,9 +137,17 @@ class _TileProxy(DeviceComponentManager):
             component_state_changed_callback,
         )
 
-    def start_communicating(self: _TileProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "adcPower": self._on_attribute_change,
+            "staticTimeDelays": self._on_attribute_change,
+            "preaduLevels": self._on_attribute_change,
+            "ppsDelay": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._logical_tile_id, *args, **kwargs)
 
     def _device_state_changed(
         self: _TileProxy,
@@ -223,21 +168,7 @@ class _TileProxy(DeviceComponentManager):
                     f"{self._logical_tile_id}, tile has logicalTileID "
                     f"{self._proxy.logicalTileId}"
                 )
-            if self._connecting:
-                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
-
-    def _update_communication_state(
-        self: _TileProxy,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
-        super()._update_communication_state(communication_state)
 
     def preadu_levels(self: _TileProxy) -> list[float]:
         """
@@ -286,8 +217,6 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._connecting = False
-
         super().__init__(
             fqdn,
             logger,
@@ -300,21 +229,6 @@ class _DaqProxy(DeviceComponentManager):
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
 
-    def start_communicating(self: _DaqProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _DaqProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
-
     def _update_communication_state(
         self: _DaqProxy,
         communication_state: CommunicationStatus,
@@ -324,7 +238,6 @@ class _DaqProxy(DeviceComponentManager):
         # This might be better done for all of these proxy devices in the common repo.
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
 
             self._proxy.add_change_event_callback(
                 "xPolBandpass", self._daq_data_callback
@@ -466,15 +379,15 @@ class SpsStationComponentManager(
                 logger,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
+                self._on_tile_attribute_change,
             )
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: _SubrackProxy(
+            subrack_fqdn: DeviceComponentManager(
                 subrack_fqdn,
-                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
@@ -871,54 +784,6 @@ class SpsStationComponentManager(
             else:
                 self._update_communication_state(CommunicationStatus.ESTABLISHED)
 
-    def subscribe_to_attributes(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Subscribe to attributes of interest.
-
-        This will form subscriptions to attributes on subdevices
-        `MccsTile` and `MccsSubrack` if attribute not already subscribed.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Abort the task
-        """
-        # Subscribe to Subrack attributes
-        for fqdn in self._subrack_proxies.keys():
-            self.logger.warning(
-                f"Subscriptions for subrack attributes not yet implemented {fqdn}"
-            )
-
-        # Subscribe to Tile attributes
-        for fqdn, proxy_object in self._tile_proxies.items():
-            try:
-                if proxy_object._proxy is None:
-                    raise ValueError(f"proxy for {fqdn} is None " "Unable to subscribe")
-                for tile_attribute in self.tile_attributes_to_subscribe:
-                    if (
-                        tile_attribute
-                        not in proxy_object._proxy._change_event_callbacks.keys()
-                    ):
-                        proxy_object._proxy.add_change_event_callback(
-                            tile_attribute,
-                            functools.partial(
-                                self._on_tile_attribute_change,
-                                proxy_object._logical_tile_id,
-                            ),
-                            stateless=True,
-                        )
-            except ValueError as e:
-                self.logger.warning(
-                    f"unable to form subscription for {fqdn} : {repr(e)}"
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                self.logger.error(
-                    "Exception raised when attempting to subscribe "
-                    f"to attribute on device{fqdn} :{repr(e)}"
-                )
-
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
         logical_tile_id: int,
@@ -973,7 +838,6 @@ class SpsStationComponentManager(
         """
         super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe
@@ -1814,24 +1678,30 @@ class SpsStationComponentManager(
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
         assert tile0 is not None
-        time0 = (tile0.fpgasUnixTime)[0]
-        timeout = 15
-        while (tile0.fpgasUnixTime)[0] == time0:
-            if timeout == 0:
-                self.logger.error("Timeout waiting for FPGA time second tick")
-                return ResultCode.FAILED
-            time.sleep(0.1)
-            timeout = timeout - 1
-        result: list[int] = []
-        time.sleep(0.4)  # Wait till mid second
-        for proxy in tiles:
-            assert proxy._proxy is not None
-            result = result + list(proxy._proxy.fpgasUnixTime)
-        self.logger.debug(f"Current FPGA times:{result}")
-        if any(result[0] != time_n for time_n in result):
-            self.logger.error("FPGA time counters not synced")
-            return ResultCode.FAILED
-        return ResultCode.OK
+
+        for i in range(5):
+            time0 = (tile0.fpgasUnixTime)[0]
+            timeout = 15
+            while (tile0.fpgasUnixTime)[0] == time0:
+                if timeout == 0:
+                    self.logger.error("Timeout waiting for FPGA time second tick")
+                    return ResultCode.FAILED
+                time.sleep(0.1)
+                timeout = timeout - 1
+            result: list[int] = []
+            time.sleep(0.4)  # Wait till mid second
+            for proxy in tiles:
+                assert proxy._proxy is not None
+                result = result + list(proxy._proxy.fpgasUnixTime)
+            self.logger.debug(f"Current FPGA times:{result}")
+            if any(result[0] != time_n for time_n in result):
+                self.logger.error("FPGA time counters not synced, try again")
+                time.sleep(1)
+            else:
+                return ResultCode.OK
+
+        self.logger.error("FPGA time counters not synced after 5 retries")
+        return ResultCode.FAILED
 
     @property  # type:ignore[misc]
     @check_communicating

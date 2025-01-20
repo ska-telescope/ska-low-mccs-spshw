@@ -93,10 +93,13 @@ JUNITXML_REPORT_PATH ?= build/reports/functional-tests.xml
 CUCUMBER_JSON_PATH ?= build/reports/cucumber.json
 JSON_REPORT_PATH ?= build/reports/report.json
 
+MARK ?= # Marker for running specific tests
+
 K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
 	--junitxml=$(JUNITXML_REPORT_PATH) \
 	--cucumberjson=$(CUCUMBER_JSON_PATH) \
-	--json-report --json-report-file=$(JSON_REPORT_PATH)
+	--json-report --json-report-file=$(JSON_REPORT_PATH) \
+	-m '$(MARK)'
 
 ifdef HW_DEPLOYMENT
 K8S_TEST_RUNNER_PYTEST_OPTIONS += --hw-deployment

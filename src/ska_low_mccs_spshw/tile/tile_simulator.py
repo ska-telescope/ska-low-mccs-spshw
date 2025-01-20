@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Generator, List, TypeVar, cast
+from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
 import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
@@ -339,6 +339,7 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+        self._station_beam_flagging = False
 
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
@@ -1341,6 +1342,28 @@ class TileSimulator:
         if self.tpm is None:
             return False
         return self.tpm._is_programmed
+
+    @connected
+    def enable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Enable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = True
+
+    @connected
+    def disable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Disable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = False
 
     @property
     def tile_info(self: TileSimulator) -> str:

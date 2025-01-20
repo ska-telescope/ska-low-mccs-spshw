@@ -246,9 +246,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": "bip_error_count",
             "decode_error_count": "decode_error_count",
             "linkup_loss_count": "linkup_loss_count",
+            "data_router_status": "data_router_status",
+            "data_router_discarded_packets": "data_router_discarded_packets",
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
             "station_beamformer_error_count": "station_beamformer_error_count",
+            "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
             "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
@@ -361,12 +364,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": ["io", "udp_interface", "bip_error_count"],
             "decode_error_count": ["io", "udp_interface", "decode_error_count"],
             "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
+            "data_router_status": ["io", "data_router", "status"],
+            "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "station_beamformer_error_count": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
+            ],
+            "station_beamformer_flagged_count": [
+                "dsp",
+                "station_beamf",
+                "discarded_or_flagged_packet_count",
             ],
         }
 
@@ -451,6 +461,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             ("StopPatternGenerator", self.StopPatternGeneratorCommand),
             ("StartADCs", self.StartAdcsCommand),
             ("StopADCs", self.StopAdcsCommand),
+            ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
+            ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -872,6 +884,31 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="station_beamformer_flagged_count",
+    )
+    def station_beamformer_flagged_count(self: MccsTile) -> str:
+        """
+        Return the station beamformer error count per FPGA.
+
+        Note: When station beam flagging is enabled,
+        this returns a count of packets flagged,
+        but when station beam flagging is disabled,
+        this instead returns a count of packets discarded/dropped
+
+        Expected: 0 if no parity errors detected.
+
+        :example:
+            >>> tile.station_beamformer_flagged_count
+            '{"FPGA0": 0, "FPGA1": 0}'
+
+        :return: the station beamformer error count per FPGA.
+        """
+        return json.dumps(
+            self._attribute_state["station_beamformer_flagged_count"].read()[0]
+        )
+
+    @attribute(
+        dtype="DevString",
         label="crc_error_count",
     )
     def crc_error_count(self: MccsTile) -> str:
@@ -945,6 +982,44 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the linkup loss count per FPGA.
         """
         return json.dumps(self._attribute_state["linkup_loss_count"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_status",
+    )
+    def data_router_status(self: MccsTile) -> str:
+        """
+        Return the status of the data router.
+
+        Expected: 0 if no status OK.
+
+        :example:
+            >>> tile.data_router_status
+            '{"FPGA0": 0, "FPGA1": 0}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(self._attribute_state["data_router_status"].read()[0])
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_discarded_packets",
+    )
+    def data_router_discarded_packets(self: MccsTile) -> str:
+        """
+        Return the number of discarded packets.
+
+        Expected: 0 if no packets are discarded.
+
+        :example:
+            >>> tile.data_router_discarded_packets
+            '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return json.dumps(
+            self._attribute_state["data_router_discarded_packets"].read()[0]
+        )
 
     @attribute(
         dtype="DevBoolean",
@@ -5190,6 +5265,110 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         >>> dp.command_inout("StopADCs")
         """
         handler = self.get_command_object("StopADCs")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class EnableStationBeamFlaggingCommand(FastCommand):
+        """Class for handling the EnableStationBeamFlagging command."""
+
+        def __init__(
+            self: MccsTile.EnableStationBeamFlaggingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EnableStationBeamFlaggingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "EnableStationBeamFlagging command completed OK"
+
+        def do(
+            self: MccsTile.EnableStationBeamFlaggingCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.EnableStationBeamFlagging` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.enable_station_beam_flagging()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Enable station beam flagging.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("EnableStationBeamFlagging")
+        """
+        handler = self.get_command_object("EnableStationBeamFlagging")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class DisableStationBeamFlaggingCommand(FastCommand):
+        """Class for handling the DisableStationBeamFlagging command."""
+
+        def __init__(
+            self: MccsTile.DisableStationBeamFlaggingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new DisableStationBeamFlaggingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "DisableStationBeamFlagging command completed OK"
+
+        def do(
+            self: MccsTile.DisableStationBeamFlaggingCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.DisableStationBeamFlagging` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.disable_station_beam_flagging()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Disable station beam flagging.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("DisableStationBeamFlagging")
+        """
+        handler = self.get_command_object("DisableStationBeamFlagging")
         (return_code, message) = handler()
         return ([return_code], [message])
 

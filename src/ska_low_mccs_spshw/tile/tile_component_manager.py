@@ -54,7 +54,6 @@ _ATTRIBUTE_MAP: Final = {
     "HEALTH_STATUS": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
-    "CHECK_BOARD_TEMPERATURE": "board_temperature",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
     "IS_BEAMFORMER_RUNNING": "beamformer_running",
     "FPGA_REFERENCE_TIME": "fpga_reference_time",
@@ -236,12 +235,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
-            case "CHECK_BOARD_TEMPERATURE":
-                request = TileRequest(
-                    _ATTRIBUTE_MAP[request_spec],
-                    self.tile.get_temperature,
-                    publish=True,
-                )
             case "CONNECT":
                 try:
                     self.ping()

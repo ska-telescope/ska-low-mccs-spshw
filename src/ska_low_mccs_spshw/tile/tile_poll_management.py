@@ -174,7 +174,6 @@ class RequestIterator:
         "CSP_ROUNDING",
         "CHANNELISER_ROUNDING",
         "IS_PROGRAMMED",
-        "CHECK_BOARD_TEMPERATURE",
         "PLL_LOCKED",
     ]
     INITIALISED_POLLED_ATTRIBUTES = [
@@ -183,7 +182,6 @@ class RequestIterator:
         "CHANNELISER_ROUNDING",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
-        "CHECK_BOARD_TEMPERATURE",
         "ADC_RMS",
         "PLL_LOCKED",
         "PENDING_DATA_REQUESTS",
@@ -206,7 +204,6 @@ class RequestIterator:
         "CHANNELISER_ROUNDING",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
-        "CHECK_BOARD_TEMPERATURE",
         "ADC_RMS",
         "PLL_LOCKED",
         "PENDING_DATA_REQUESTS",
@@ -302,7 +299,7 @@ class RequestIterator:
         return item
 
 
-class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
+class TileRequestProvider:
     """
     A class that manages requests for the Tile.
 

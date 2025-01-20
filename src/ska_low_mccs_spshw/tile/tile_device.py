@@ -723,6 +723,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             except KeyError:
                 self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
+            except Exception as e:  # pylint: disable=broad-except
+                # Note: attribute converters were removed in
+                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                # These converters added in skb-520 can be implemented
+                # now that skb-609 is fixed.
+                self.logger.error(
+                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """

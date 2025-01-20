@@ -1934,12 +1934,12 @@ class TileSimulator:
         """
         # Check if number of samples is a multiple of 32
 
-        if number_of_samples % 32 != 0:
-            new_value = (int(number_of_samples / 32) + 1) * 32
-            self.logger.warning(
-                f"{number_of_samples} is not a multiple of 32, using {new_value}"
-            )
-            number_of_samples = new_value
+        # if number_of_samples % 32 != 0:
+        #     new_value = (int(number_of_samples / 32) + 1) * 32
+        #     self.logger.warning(
+        #         f"{number_of_samples} is not a multiple of 32, using {new_value}"
+        #     )
+        #     number_of_samples = new_value
         self.stop_data_transmission()
 
         if not self.dst_ip:

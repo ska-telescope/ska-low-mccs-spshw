@@ -215,13 +215,14 @@ class TestBeamformer(BaseDaqTest):
             dtype="complex",
         )
         for tile_no, tile in enumerate(self.tile_proxies):
-            # for pol in range(TileData.POLS_PER_ANTENNA):
-            #     for antenna in range(TileData.ANTENNA_COUNT):
-            #         coeffs[tile_no][pol][antenna] = (
-            #             gain
-            #             * ref_values[tile_no]
-            #             / single_input_data[tile_no][pol][antenna]
-            #         )
+            for pol in range(TileData.POLS_PER_ANTENNA):
+                for antenna in range(TileData.ANTENNA_COUNT):
+                    coeffs[tile_no][pol][antenna] = (
+                        gain
+                        * ref_values[tile_no]
+                        / single_input_data[tile_no][pol][antenna]
+                    )
+                    self.test_logger.error(coeffs[tile_no][pol][antenna])
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(
@@ -309,6 +310,7 @@ class TestBeamformer(BaseDaqTest):
     def _reset(self: TestBeamformer) -> None:
         self.component_manager.start_adcs()
         self._reset_tpm_calibration()
+        self.component_manager.stop_beamformer()
         super()._reset()
 
     def test(self: TestBeamformer) -> None:
@@ -320,6 +322,7 @@ class TestBeamformer(BaseDaqTest):
         self._configure_beamformer(
             TileData.FIRST_BEAMFORMER_CHANNEL, len(test_channels)
         )
+        self._clear_pointing_delays()
         start_time = datetime.strftime(
             datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
         )

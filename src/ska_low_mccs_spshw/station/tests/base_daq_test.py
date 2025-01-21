@@ -252,6 +252,11 @@ class BaseDaqTest(TpmSelfCheckTest):
         region = [first_channel, channel_bandwidth, 0, 1, 0, 1, 1, 101]
         self.component_manager.set_beamformer_table([region])
 
+    def _clear_pointing_delays(self: BaseDaqTest) -> None:
+        for tile in self.tile_proxies:
+            tile.LoadPointingDelays([0.0] * (TileData.ANTENNA_COUNT * 2 + 1))
+            tile.ApplyPointingDelays("")
+
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
         self._observer = Observer()  # type: ignore

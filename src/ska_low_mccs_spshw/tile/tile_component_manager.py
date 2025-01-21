@@ -54,6 +54,7 @@ _ATTRIBUTE_MAP: Final = {
     "HEALTH_STATUS": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
     "PLL_LOCKED": "pll_locked",
+    "CHECK_BOARD_TEMPERATURE": "board_temperature",
     "PPS_DELAY_CORRECTION": "pps_delay_correction",
     "IS_BEAMFORMER_RUNNING": "beamformer_running",
     "FPGA_REFERENCE_TIME": "fpga_reference_time",
@@ -69,6 +70,7 @@ _ATTRIBUTE_MAP: Final = {
     "STATIC_DELAYS": "static_delays",
     "PENDING_DATA_REQUESTS": "pending_data_requests",
     "BEAMFORMER_TABLE": "beamformer_table",
+    "CHECK_CPLD_COMMS": "global_status_alarms",
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
@@ -235,12 +237,24 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return None
 
         match request_spec:
+            case "CHECK_CPLD_COMMS":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.check_global_status_alarms,
+                    publish=True,
+                )
+            case "CHECK_BOARD_TEMPERATURE":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.get_temperature,
+                    publish=True,
+                )
             case "CONNECT":
                 try:
                     self.ping()
                     request = TileRequest(
-                        _ATTRIBUTE_MAP["HEALTH_STATUS"],
-                        self.tile.get_health_status,
+                        "global_status_alarms",
+                        self.tile.check_global_status_alarms,
                         publish=True,
                     )
                     # pylint: disable=broad-except

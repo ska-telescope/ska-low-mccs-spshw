@@ -257,6 +257,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
+            "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
 
@@ -326,14 +327,16 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             }
         )
 
+        self.__alarm_attribute_map: dict[str, str] = {
+            "I2C_access_alm": "I2C_access_alm",
+            "temperature_alm": "temperature_alm",
+            "voltage_alm": "voltage_alm",
+            "SEM_wd": "SEM_wd",
+            "MCU_wd": "MCU_wd",
+        }
+
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
-            "I2C_access_alm": ["alarms", "I2C_access_alm"],
-            "temperature_alm": ["alarms", "temperature_alm"],
-            "voltage_alm": ["alarms", "voltage_alm"],
-            "SEM_wd": ["alarms", "SEM_wd"],
-            "MCU_wd": ["alarms", "MCU_wd"],
             "ppsPresent": ["timing", "pps", "status"],
-            "boardTemperature": ["temperatures", "board"],
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
             "io": ["io"],
@@ -621,6 +624,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.tile_health_structure = attribute_value
                 self._health_model.update_state(tile_health_structure=attribute_value)
                 self.update_tile_health_attributes()
+            elif attribute_name == "global_status_alarms":
+                self.unpack_alarms(attribute_value)
             else:
                 try:
                     tango_name = self.attr_map[attribute_name]
@@ -657,6 +662,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._health_model.update_state(fault=fault, power=power)
         else:
             self._health_model.update_state(fault=fault)
+
+    def unpack_alarms(
+        self: MccsTile,
+        alarms: dict[str, int],
+    ) -> None:
+        """
+        Unpack a dictionary of alarms.
+
+        :param alarms: The alarms we want to unpack.
+        """
+        for (
+            alarm_name,
+            alarm_path,
+        ) in self.__alarm_attribute_map.items():
+            alarm_value: int | None = alarms.get(alarm_path)
+            if alarm_value is None:
+                continue
+            self._attribute_state[alarm_name].update(alarm_value)
 
     def unpack_monitoring_point(
         self: MccsTile,

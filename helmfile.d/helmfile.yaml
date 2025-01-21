@@ -27,7 +27,7 @@ environments:
   aa0.5-production:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?e6ca885957e1cc99919759c1b8f36ef965c22695#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?c3d6b36ffd08ffb3a1c286f8968e077c0168b71d#tmdata
         datasets:
         - aa0.5.yaml
         - stations/s8-1.yaml
@@ -61,7 +61,7 @@ environments:
   low-itf:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?5d07bf3c775bc76a9712761493ab965cc8641fd7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?201bcf1edbadee4597f99931d4100d3665cd5c86#tmdata
         datasets:
         - stations/itf1.yaml
         - low-itf.yaml
@@ -72,7 +72,7 @@ environments:
   low-itf-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?5d07bf3c775bc76a9712761493ab965cc8641fd7#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/aiv/ska-low-itf?201bcf1edbadee4597f99931d4100d3665cd5c86#tmdata
         datasets:
         - stations/itf2.yaml
         - low-itf.yaml

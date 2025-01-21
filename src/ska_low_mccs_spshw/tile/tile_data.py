@@ -367,9 +367,21 @@ class TileData:
                 )
             else:
                 if isinstance(expected_values[p], dict):
-                    tile_structure[p] = round(
-                        (expected_values[p]["min"] + expected_values[p]["max"]) / 2, 3
-                    )
+                    if p == "voltage_alm":
+                        # The value being generated for
+                        # voltage_alm is 0.5 following mccs-1530 prompted by an
+                        # issue in bios tracked by SPRTS-141. The value of 0.5 is
+                        # not valid for this monitoring point. Here we are patching
+                        # a valid default of 0 (int). This is a bit smelly, but it
+                        # seemed better to pollute the `_generate_tile_defaults` used
+                        # by only the simulator than the tpm_monitoring_min_max.yaml
+                        # shared by both the health rules and the simulator.
+                        tile_structure[p] = 0
+                    else:
+                        tile_structure[p] = round(
+                            (expected_values[p]["min"] + expected_values[p]["max"]) / 2,
+                            3,
+                        )
                 else:
                     tile_structure[p] = expected_values[p]
         return tile_structure

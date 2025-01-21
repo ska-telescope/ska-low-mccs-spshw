@@ -1579,6 +1579,9 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = False
+            self._is_cpld_connectable = False
+            self._is_fpga1_connectable = False
+            self._is_fpga2_connectable = False
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
@@ -2414,9 +2417,15 @@ class TileSimulator:
         :return: a dictionary with the key communication information.
         """
         return {
-            "CPLD": self._is_cpld_connectable and self.tpm is not None,
-            "FPGA0": self._is_fpga1_connectable and self.tpm is not None,
-            "FPGA1": self._is_fpga2_connectable and self.tpm is not None,
+            "CPLD": self._is_cpld_connectable
+            and self.tpm is not None
+            and self.mock_connection_success,
+            "FPGA0": self._is_fpga1_connectable
+            and self.tpm is not None
+            and self.mock_connection_success,
+            "FPGA1": self._is_fpga2_connectable
+            and self.tpm is not None
+            and self.mock_connection_success,
         }
 
     @check_mocked_overheating

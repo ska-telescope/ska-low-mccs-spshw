@@ -911,9 +911,9 @@ class TileSimulator:
         self._pending_data_requests = False
         self._phase_terminal_count: int = self.PHASE_TERMINAL_COUNT
         self._tpm_temperature_thresholds = dict(self.TPM_TEMPERATURE_THRESHOLDS)
-        self._is_cpld_connectable = True
-        self._is_fpga1_connectable = True
-        self._is_fpga2_connectable = True
+        self._is_cpld_connectable = False
+        self._is_fpga1_connectable = False
+        self._is_fpga2_connectable = False
         self._global_status_alarms: dict[str, int] = {
             "I2C_access_alm": 0,
             "temperature_alm": 0,
@@ -1561,9 +1561,15 @@ class TileSimulator:
             if self.tpm is None:
                 # Use defined tpm if specified.
                 self.tpm = self._mocked_tpm or MockTpm(self.logger)
+            self._is_cpld_connectable = True
+            self._is_fpga1_connectable = True
+            self._is_fpga2_connectable = True
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
+            self._is_cpld_connectable = False
+            self._is_fpga1_connectable = False
+            self._is_fpga2_connectable = False
 
     def mock_off(self: TileSimulator, lock: bool = False) -> None:
         """
@@ -2408,9 +2414,9 @@ class TileSimulator:
         :return: a dictionary with the key communication information.
         """
         return {
-            "CPLD": self._is_cpld_connectable,
-            "FPGA0": self._is_fpga1_connectable,
-            "FPGA1": self._is_fpga2_connectable,
+            "CPLD": self._is_cpld_connectable and self.tpm is not None,
+            "FPGA0": self._is_fpga1_connectable and self.tpm is not None,
+            "FPGA1": self._is_fpga2_connectable and self.tpm is not None,
         }
 
     @check_mocked_overheating

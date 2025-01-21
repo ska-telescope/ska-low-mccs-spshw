@@ -99,7 +99,7 @@ class TestTileComponentManager:
                 # pass a transient state UNKNOWN.
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
+                    core_communication={"CPLD": False, "FPGA0": False, "FPGA1": False},
                     lookahead=5,
                 )
                 callbacks["attribute_state"].assert_call(
@@ -161,9 +161,6 @@ class TestTileComponentManager:
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
         )
         # takes the component out of DISABLED. Connects with subrack (NOT with TPM)
-
-        # Dynamically configure mock return
-        mock_subrack_device_proxy.configure_mock(tpm1PowerState=power_state)
 
         tile_component_manager.start_communicating()
         callbacks["communication_status"].assert_call(

@@ -250,19 +250,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     publish=True,
                 )
             case "CONNECT":
-                try:
-                    self.ping()
-                    request = TileRequest(
-                        "global_status_alarms",
-                        self.tile.check_global_status_alarms,
-                        publish=True,
-                    )
-                    # pylint: disable=broad-except
-                except Exception as e:
-                    # polling attempt was unsuccessful
-                    self.logger.warning(f"Connection to tpm lost! : {e}")
-                    self.tile.tpm = None
-                    request = TileRequest("connect", self.connect)
+                with self._hardware_lock:
+                    if not self.is_connected:
+                        self.logger.error("Options 1")
+                        request = TileRequest("connect", self.connect)
+                    else:
+                        self.logger.error("Options 2")
+                        request = TileRequest(
+                            "global_status_alarms",
+                            self.tile.check_global_status_alarms,
+                            publish=True,
+                        )
             case "IS_PROGRAMMED":
                 request = TileRequest(
                     _ATTRIBUTE_MAP[request_spec],
@@ -697,7 +695,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Connect if not already.
             with self._hardware_lock:
                 if not self.is_connected:
-                    self.connect()
+                    try:
+                        self.connect()
+                        self._update_communication_state(
+                            CommunicationStatus.ESTABLISHED
+                        )
+                        self._update_component_state(power=PowerState.ON)
+                    except Exception:  # pylint: disable=broad-except
+                        self.tile.tpm = None
 
             if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
                 if (

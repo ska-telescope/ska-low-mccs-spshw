@@ -120,9 +120,7 @@ def test_initialise_can_execute(
         lookahead=2,
         consume_nonmatches=True,
     )
-    change_event_callbacks["tile_programming_state"].assert_change_event(
-        "Programmed",
-    )
+    change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event("Initialised")
     change_event_callbacks["tile_state"].assert_change_event(tango.DevState.ON)
 

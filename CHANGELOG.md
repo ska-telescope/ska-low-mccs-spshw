@@ -1,5 +1,9 @@
 # Version History
 
+## 0.22.0
+
+* [MCCS-2330] Seperate alarms attribute into constituents.
+
 ## 0.21.3
 
 * [SKB-705] Allow graceful handling of DaqReceiver restart. Restart running tasks on DaqHandler

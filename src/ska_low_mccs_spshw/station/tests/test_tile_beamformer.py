@@ -183,6 +183,7 @@ class TestBeamformer(BaseDaqTest):
                 )
             self._data_created_event.clear()
             self._stop_directory_watch()
+            self._configure_daq("BEAM_DATA")
         self._first = False
         return single_input_data
 

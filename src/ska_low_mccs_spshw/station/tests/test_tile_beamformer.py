@@ -168,6 +168,7 @@ class TestBeamformer(BaseDaqTest):
                 adc_channels=[antenna_no * 2, antenna_no * 2 + 1],
                 delays=self._delays,
             )
+            time.sleep(1)
             self._send_beam_data()
             assert self._data_created_event.wait(20)
             if self._data is not None:
@@ -362,8 +363,6 @@ class TestBeamformer(BaseDaqTest):
                 self._calibrate_tpms(channel, ref_values, single_input_data)
 
                 time.sleep(5)
-
-                self._configure_daq("BEAM_DATA")
 
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)

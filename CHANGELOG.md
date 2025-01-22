@@ -1,5 +1,9 @@
 # Version History
 
+## 0.23.0
+
+* [MCCS-2256] Removed cabinetbanks.
+
 ## 0.22.0
 
 * [MCCS-2330] Seperate alarms attribute into constituents.

@@ -16,7 +16,6 @@ import tango
 __all__ = [
     "AttributeManager",
     "BoolAttributeManager",
-    "AlarmAttributeManager",
 ]
 
 
@@ -171,58 +170,6 @@ class BoolAttributeManager(AttributeManager):
             if self._alarm_on_true is self._value
             else tango.AttrQuality.ATTR_VALID
         )
-
-
-class AlarmAttributeManager(AttributeManager):
-    """
-    An AttributeManager for alarm attribute.
-
-    The quality of the alarm attribute is specific to custom
-    values. This manager will evaluate the attribute quality
-    against these values.
-    """
-
-    def __init__(
-        self: AlarmAttributeManager,
-        value_time_quality_callback: Callable,
-        initial_value: bool | None = None,
-        alarm_handler: None | Callable = None,
-    ) -> None:
-        """
-        Initialise a new AlarmAttributeManager.
-
-        :param initial_value: The initial value for this attribute.
-        :param value_time_quality_callback: A hook to call with the attribute
-            value, timestamp, and quality factor.
-        :param alarm_handler: A hook to call upon alarming.
-        """
-        super().__init__(
-            value_time_quality_callback,
-            initial_value=initial_value,
-            alarm_handler=alarm_handler,
-        )
-
-    def _is_valid(self: AlarmAttributeManager, value: dict[str, int]) -> bool:
-        """
-        Is the value a valid input.
-
-        :param value: the value to check if valid.
-
-        :returns: True is the value is valid.
-        """
-        return isinstance(value, dict)
-
-    def update_quality(self: AlarmAttributeManager) -> None:
-        """Update attribute quality."""
-        if not self._is_valid(self._value):
-            self._quality = tango.AttrQuality.ATTR_INVALID
-            return
-        if any(alarm_value == 2 for alarm_value in self._value.values()):
-            self._quality = tango.AttrQuality.ATTR_ALARM
-        elif any(alarm_value == 1 for alarm_value in self._value.values()):
-            self._quality = tango.AttrQuality.ATTR_WARNING
-        else:
-            self._quality = tango.AttrQuality.ATTR_VALID
 
 
 class NpArrayAttributeManager(AttributeManager):

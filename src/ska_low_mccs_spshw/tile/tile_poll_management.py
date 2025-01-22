@@ -307,7 +307,7 @@ class RequestIterator:
         return item
 
 
-class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
+class TileRequestProvider:
     """
     A class that manages requests for the Tile.
 
@@ -337,16 +337,11 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         self.download_firmware_request: Optional[TileLRCRequest] = None
         self.start_acquisition_request: Optional[TileLRCRequest] = None
         self._desire_connection = False
-        self._check_global_alarms = False
         self.command_wipe_time: dict[str, float] = {}
 
     def desire_connection(self) -> None:
         """Register a request to connect with the TPM."""
         self._desire_connection = True
-
-    def check_global_status_alarms(self) -> None:
-        """Register a request to check the TPM global alarm status."""
-        self._check_global_alarms = True
 
     def desire_initialise(
         self, request: TileLRCRequest, wipe_time: Optional[float] = None
@@ -461,9 +456,6 @@ class TileRequestProvider:  # pylint: disable=too-many-instance-attributes
         if self._desire_connection:
             self._desire_connection = False
             return "CONNECT"
-        if self._check_global_alarms:
-            self._check_global_alarms = False
-            return "CHECK_CPLD_COMMS"
 
         # Check for any commands.
         match tpm_status:

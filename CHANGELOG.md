@@ -1,7 +1,12 @@
 # Version History
 
-# Unreleased
+## 0.22.0
 
+* [MCCS-2330] Seperate alarms attribute into constituents.
+
+## 0.21.3
+
+* [SKB-705] Allow graceful handling of DaqReceiver restart. Restart running tasks on DaqHandler
 * [THORN-2] Extend Tile Control and Health Monitoring following Firmware Release 6.2.0
 * [MCCS-2330] Update pytango to 10.0.0
 * [THORN-10] Update self-check to mark test data

@@ -2114,8 +2114,9 @@ class TestMccsTileCommands:
                 )
             )
         on_tile_device.adminMode = AdminMode.ENGINEERING
+        time.sleep(1)
         on_tile_device.subscribe_event(
-            "alarms",
+            "temperature_alm",
             EventType.CHANGE_EVENT,
             change_event_callbacks["alarms"],
         )
@@ -2149,12 +2150,4 @@ class TestMccsTileCommands:
         # The simulated overheating event should raise an ALARM on
         # the device.
         change_event_callbacks["alarms"].assert_change_event(Anything)
-        if on_tile_device.state() != tango.DevState.ALARM:
-            pytest.xfail(
-                "Breaking change from update of pytango 9.5.1 -> 10.0.0 "
-                "Pushing an attribute with quality ATTR_ALARM "
-                "will no longer send the device into the ALARM state. "
-                "This was the expected behaviour in 9.5.1, but it is unclear "
-                "If this was a bug in 9.5.1 now fixed, or, if this is regression "
-                "in 10.0.0."
-            )
+        assert on_tile_device.state() == tango.DevState.ALARM

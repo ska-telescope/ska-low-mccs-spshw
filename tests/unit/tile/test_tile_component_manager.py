@@ -187,18 +187,6 @@ class TestTileComponentManager:
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
                 )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
-                    lookahead=5,
-                )
                 try:
                     callbacks["component_state"].assert_call(
                         power=PowerState.ON, lookahead=3
@@ -228,18 +216,6 @@ class TestTileComponentManager:
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
                     lookahead=4,
                 )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
-                    lookahead=4,
-                )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
@@ -252,18 +228,6 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
-                )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
                     lookahead=4,
                 )
                 callbacks["component_state"].assert_call(

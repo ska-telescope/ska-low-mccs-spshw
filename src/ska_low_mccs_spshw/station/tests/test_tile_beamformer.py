@@ -315,6 +315,7 @@ class TestBeamformer(BaseDaqTest):
 
     def test(self: TestBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
+        random.seed(0)
         self.test_logger.debug("Testing beamformed data.")
         test_channels = range(7 + 1)
         self.component_manager._set_channeliser_rounding(np.full(512, 5))

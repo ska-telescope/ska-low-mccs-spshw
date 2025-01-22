@@ -193,9 +193,8 @@ class TestBeamformer(BaseDaqTest):
         for antenna_no in range(TileData.ANTENNA_COUNT):
             self._start_directory_watch()
             self.test_logger.debug(f"Sending beam data for {antenna_no=}")
-            frequency = (
-                TileData.FIRST_BEAMFORMER_CHANNEL + channel
-            ) * TileData.CHANNEL_WIDTH
+            frequency = 156.25e6 + (channel * TileData.CHANNEL_WIDTH)
+            self.test_logger.error(f"{frequency=}")
             self._configure_test_generator(
                 frequency,
                 0.5,
@@ -217,6 +216,8 @@ class TestBeamformer(BaseDaqTest):
                 single_input_data[tile_no][1][antenna_no] = self._get_beam_value(
                     tile_no, 1, channel
                 )
+            self.test_logger.error(f"{single_input_data[tile_no][0][antenna_no]=}")
+            self.test_logger.error(f"{single_input_data[tile_no][1][antenna_no]=}")
             self._data_created_event.clear()
             self._stop_directory_watch()
             self._configure_daq("BEAM_DATA")

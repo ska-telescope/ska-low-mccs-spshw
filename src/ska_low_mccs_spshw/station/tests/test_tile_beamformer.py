@@ -361,6 +361,8 @@ class TestBeamformer(BaseDaqTest):
 
                 time.sleep(5)
 
+                self._configure_daq("BEAM_DATA")
+
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
 

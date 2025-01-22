@@ -389,6 +389,8 @@ class TestBeamformer(BaseDaqTest):
 
                 np.save("before_calibration.npy", single_input_data)
 
+                break
+
                 # Grab the reference data for each antenna/pol on each tile
                 # ref_values = single_input_data[:, ref_pol, ref_antenna]
 

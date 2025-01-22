@@ -937,7 +937,6 @@ class TileSimulator:
             (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
         )
 
-    @check_mocked_overheating
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
         """
@@ -948,6 +947,10 @@ class TileSimulator:
 
         :return: mocked fetch of health.
         """
+        if any([value == 2 for value in self._global_status_alarms.values()]):
+            # aavs-system return a subset of the health with mcu alarms
+            # when a hard shutoff has occured.
+            return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
 
     @check_mocked_overheating
@@ -2382,11 +2385,13 @@ class TileSimulator:
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"
             )
+            self._tile_health_structure["alarms"]["temperature_alm"] = 2
             self._global_status_alarms["temperature_alm"] = 2
             self._is_fpga1_connectable = False
             self._is_fpga2_connectable = False
             self.tpm_mocked_overheating = True
         else:
+            self._tile_health_structure["alarms"]["temperature_alm"] = 0
             self._global_status_alarms["temperature_alm"] = 0
             self.tpm_mocked_overheating = False
             self._is_fpga1_connectable = True

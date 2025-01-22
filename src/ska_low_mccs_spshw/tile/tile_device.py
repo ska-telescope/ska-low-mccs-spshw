@@ -42,7 +42,6 @@ from ska_tango_base.commands import (
 from tango.server import attribute, command, device_property
 
 from .attribute_managers import (
-    AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
     NpArrayAttributeManager,
@@ -195,6 +194,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
+            "I2C_access_alm": "I2C_access_alm",
+            "temperature_alm": "temperature_alm",
+            "voltage_alm": "voltage_alm",
+            "SEM_wd": "SEM_wd",
+            "MCU_wd": "MCU_wd",
             "programming_state": "tileProgrammingState",
             "adc_rms": "adcPower",
             "static_delays": "staticTimeDelays",
@@ -253,7 +257,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
-            "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
@@ -318,14 +321,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.shutdown_on_max_alarm, "fpga2Temperature"
                     ),
                 ),
-                "alarms": AlarmAttributeManager(
-                    functools.partial(self.post_change_event, "alarms"),
-                ),
                 "rfiCount": NpArrayAttributeManager(
                     functools.partial(self.post_change_event, "rfiCount")
                 ),
             }
         )
+
+        self.__alarm_attribute_map: dict[str, str] = {
+            "I2C_access_alm": "I2C_access_alm",
+            "temperature_alm": "temperature_alm",
+            "voltage_alm": "voltage_alm",
+            "SEM_wd": "SEM_wd",
+            "MCU_wd": "MCU_wd",
+        }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
             "ppsPresent": ["timing", "pps", "status"],
@@ -616,6 +624,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 self.tile_health_structure = attribute_value
                 self._health_model.update_state(tile_health_structure=attribute_value)
                 self.update_tile_health_attributes()
+            elif attribute_name == "global_status_alarms":
+                self.unpack_alarms(attribute_value)
             else:
                 try:
                     tango_name = self.attr_map[attribute_name]
@@ -624,7 +634,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 except KeyError as e:
                     self.logger.error(f"Key Error {repr(e)}")
                 except Exception as e:  # pylint: disable=broad-except
-                    self.logger.error(f"Caught unexpected exception: {repr(e)}")
+                    self.logger.error(
+                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    )
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ
@@ -650,6 +662,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._health_model.update_state(fault=fault, power=power)
         else:
             self._health_model.update_state(fault=fault)
+
+    def unpack_alarms(
+        self: MccsTile,
+        alarms: dict[str, int],
+    ) -> None:
+        """
+        Unpack a dictionary of alarms.
+
+        :param alarms: The alarms we want to unpack.
+        """
+        for (
+            alarm_name,
+            alarm_path,
+        ) in self.__alarm_attribute_map.items():
+            alarm_value: int | None = alarms.get(alarm_path)
+            if alarm_value is None:
+                continue
+            self._attribute_state[alarm_name].update(alarm_value)
 
     def unpack_monitoring_point(
         self: MccsTile,
@@ -716,6 +746,14 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             except KeyError:
                 self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
+            except Exception as e:  # pylint: disable=broad-except
+                # Note: attribute converters were removed in
+                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                # These converters added in skb-520 can be implemented
+                # now that skb-609 is fixed.
+                self.logger.error(
+                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -1529,20 +1567,99 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return json.dumps(self._attribute_state["adcs"].read()[0])
 
     @attribute(
-        dtype="DevString",
-        label="alarms",
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
     )
-    def alarms(self: MccsTile) -> tuple[str, float, tango.AttrQuality]:
+    def I2C_access_alm(
+        self: MccsTile,
+    ) -> int | None:
         """
-        Return the TPM's alarm status.
+        Return the I2C alarm reading.
 
-        :return: the TPM's alarm status
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for I2C.
         """
-        return (
-            json.dumps(self._attribute_state["alarms"].read()[0]),
-            self._attribute_state["alarms"].read()[1],
-            self._attribute_state["alarms"].read()[2],
-        )
+        return self._attribute_state["I2C_access_alm"].read()[0]
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def temperature_alm(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the Temperature alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for temperature.
+        """
+        return self._attribute_state["temperature_alm"].read()[0]
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def voltage_alm(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the Voltage alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for voltage.
+        """
+        return self._attribute_state["voltage_alm"].read()[0]
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def SEM_wd(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the SEMwd alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for SEMwd.
+        """
+        return self._attribute_state["SEM_wd"].read()[0]
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def MCU_wd(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the MCUwd alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for MCUwd.
+        """
+        return self._attribute_state["MCU_wd"].read()[0]
 
     @attribute(
         dtype="DevString",

@@ -124,6 +124,7 @@ class TestBeamformer(BaseDaqTest):
         """
         # Random set of delays to apply to the test generator, we make it here to we can
         # use the same random delays each time.
+        random.seed(0)
         self._delays = [
             random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
         ]
@@ -316,7 +317,6 @@ class TestBeamformer(BaseDaqTest):
 
     def test(self: TestBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
-        random.seed(0)
         self.test_logger.debug("Testing beamformed data.")
         test_channels = range(7 + 1)
         self.component_manager._set_channeliser_rounding(np.full(512, 5))

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import abc
+import itertools
 import json
 import logging
 import os
@@ -258,6 +259,35 @@ class BaseDaqTest(TpmSelfCheckTest):
         for tile in self.tile_proxies:
             tile.LoadPointingDelays([0.0] * (TileData.ANTENNA_COUNT * 2 + 1))
             tile.ApplyPointingDelays("")
+
+    def _reset_calibration_coefficients(
+        self: BaseDaqTest, tile: MccsDeviceProxy, gain: float = 2.0
+    ) -> None:
+        """
+        Reset the calibration coefficients for the TPMs to given gain.
+
+        :param tile: the tile to reset the calibration coefficients for.
+        :param gain: the gain to reset the calibration coefficients to.
+        """
+        complex_coefficients = [
+            [complex(gain), complex(0.0), complex(0.0), complex(gain)]
+        ] * TileData.NUM_BEAMFORMER_CHANNELS
+        for antenna in range(TileData.ANTENNA_COUNT):
+            inp = list(itertools.chain.from_iterable(complex_coefficients))
+            out = [[v.real, v.imag] for v in inp]
+            coefficients = list(itertools.chain.from_iterable(out))
+            coefficients.insert(0, float(antenna))
+            tile.LoadCalibrationCoefficients(coefficients)
+        tile.ApplyCalibration("")
+
+    def _reset_tpm_calibration(self: BaseDaqTest, gain: float = 1.0) -> None:
+        """
+        Reset the calibration coefficients for all TPMs.
+
+        :param gain: the gain to reset the calibration coefficients to.
+        """
+        for tile in self.tile_proxies:
+            self._reset_calibration_coefficients(tile, gain)
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")

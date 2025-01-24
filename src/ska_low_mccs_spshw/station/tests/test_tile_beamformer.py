@@ -201,7 +201,6 @@ class TestBeamformer(BaseDaqTest):
                 adc_channels=[antenna_no * 2, antenna_no * 2 + 1],
                 delays=self._delays,
             )
-            time.sleep(1)
             self._send_beam_data()
             assert self._data_created_event.wait(20)
             if self._data is not None:
@@ -216,20 +215,20 @@ class TestBeamformer(BaseDaqTest):
                 single_input_data[tile_no][1][antenna_no] = self._get_beam_value(
                     tile_no, 1, channel
                 )
-            self.test_logger.error(f"{single_input_data[tile_no][0][antenna_no]=}")
-            self.test_logger.error(f"{single_input_data[tile_no][1][antenna_no]=}")
+            self.test_logger.debug(
+                f"Tile {tile_no}, Antenna {antenna_no}: "
+                f"Pol 0 = {single_input_data[tile_no][0][antenna_no]}, "
+                f"Pol 1 = {single_input_data[tile_no][1][antenna_no]}"
+            )
             self._data_created_event.clear()
             self._stop_directory_watch()
-            self._configure_daq("BEAM_DATA")
         self._first = False
         return single_input_data
 
     def _get_all_antenna_data_set(self: TestBeamformer, channel: int) -> None:
         self._start_directory_watch()
         self.test_logger.debug("Sending beam data for all antennas")
-        frequency = (
-            TileData.FIRST_BEAMFORMER_CHANNEL + channel
-        ) * TileData.CHANNEL_WIDTH
+        frequency = 156.25e6 + (channel * TileData.CHANNEL_WIDTH)
         self._configure_test_generator(
             frequency,
             0.5,
@@ -344,6 +343,7 @@ class TestBeamformer(BaseDaqTest):
                     self.test_logger.error("Received values:")
                     self.test_logger.error(rcv_val)
                     raise AssertionError
+                self.test_logger.debug(f"Passed assertion: {tile_no=}, {pol=}")
 
     def _reset(self: TestBeamformer) -> None:
         self.component_manager.start_adcs()
@@ -412,7 +412,5 @@ class TestBeamformer(BaseDaqTest):
 
                 # This data should be 16 times stronger than for just 1 antenna
                 self._check_all_antenna_data(ref_values, channel)
-
-                break
 
         self.test_logger.info("Test passed for beamformed data!")

@@ -100,7 +100,6 @@ environments:
         datasets:
         - stations/stations.yaml # needs to be first see LOW-988 ska-telescope/ska-low-deployment@7c57c32a
         - psi-low.yaml
-        - stations/stations.yaml
     - config_files:
       - values/values-psi-low.yaml
       datacentre: psi-low

@@ -17,12 +17,12 @@ from .tests import (
     BasicTangoTest,
     InitialiseStation,
     TestBeam,
-    TestBeamformer,
     TestChannel,
     TestIntegratedBeam,
     TestIntegratedChannel,
     TestRaw,
     TestResult,
+    TestTileBeamformer,
     TpmSelfCheckTest,
 )
 
@@ -84,7 +84,7 @@ class SpsStationSelfCheckManager:
                 TestBeam,
                 TestIntegratedBeam,
                 TestIntegratedChannel,
-                TestBeamformer,
+                TestTileBeamformer,
             ]
         ]
 

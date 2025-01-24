@@ -25,7 +25,7 @@ from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
-__all__ = ["TestBeamformer"]
+__all__ = ["TestTileBeamformer"]
 
 RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
@@ -79,26 +79,32 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         )
 
 
-class TestBeamformer(BaseDaqTest):
+class TestTileBeamformer(BaseDaqTest):
     """
-    Test we can send beam data from the TPMs to DAQ correctly.
+    Test the tile beamformer on each TPM.
 
     ##########
     TEST STEPS
     ##########
 
     1. Configure DAQ to be ready to receive beam data from your TPMs.
-    2. Configure the pattern generator on each TPM to send a basic repeating pattern.
-    3. Send data from each of TPM in sequence, collating the data into a single data
-        structure.
-    4. Verify the data received matches the input repeating pattern.
+    2. Send beam data for each antenna in sequence.
+    3. Collate the data into a single data structure.
+    4. Choose a random reference antenna and polarisation.
+    5. Calibrate the TPMs to phase all antennas to the reference antenna.
+    6. Resend the beam data for each antenna in sequence.
+    7. Collate the data into a single data structure.
+    8. Verify the data is now aligned with the reference antenna.
+    9. Send beam data for all antennas at the same time.
+    10. Collate the data into a single data structure.
+    11. Verify the data is now 16 times stronger than for just 1 antenna.
 
     #################
     TEST REQUIREMENTS
     #################
 
     1. Every SPS device in your station must be in adminmode.ENGINEERING, this is
-        common for all tests.
+       common for all tests.
     2. Your station must have at least 1 TPM.
     3. Your TPMs must be synchronised.
     4. You must have a DAQ available.
@@ -106,7 +112,7 @@ class TestBeamformer(BaseDaqTest):
 
     # pylint: disable=too-many-arguments
     def __init__(
-        self: TestBeamformer,
+        self: TestTileBeamformer,
         component_manager: SpsStationComponentManager,
         logger: logging.Logger,
         tile_trls: list[str],
@@ -122,50 +128,22 @@ class TestBeamformer(BaseDaqTest):
         :param daq_trl: trl of the daq the station has.
         :param component_manager: SpsStation component manager under test.
         """
+        # Random seed for repeatability
+        random.seed(0)
         # Random set of delays to apply to the test generator, we make it here to we can
         # use the same random delays each time.
-        random.seed(0)
-        # self._delays = [
-        #     random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
-        # ]
         self._delays = [
-            21,
-            -27,
-            1,
-            30,
-            19,
-            6,
-            29,
-            13,
-            -5,
-            -15,
-            4,
-            -15,
-            -20,
-            0,
-            -14,
-            7,
-            -20,
-            -23,
-            10,
-            28,
-            -20,
-            13,
-            23,
-            8,
-            -6,
-            29,
-            24,
-            1,
-            -25,
-            -31,
-            -21,
-            19,
+            random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
         ]
-        self._first = True
+        # Choose a random antenna/polarisation to be the reference
+        self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
+        self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
+
+        self._start_freq = 156.25e6
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
-    def _send_beam_data(self: TestBeamformer) -> None:
+    def _send_beam_data(self: TestTileBeamformer) -> None:
+        """Send beam data to the DAQ."""
         self.component_manager.send_data_samples(
             json.dumps(
                 {
@@ -176,8 +154,17 @@ class TestBeamformer(BaseDaqTest):
         )
 
     def _get_beam_value(
-        self: TestBeamformer, tile_no: int, pol: int, channel: int
+        self: TestTileBeamformer, tile_no: int, pol: int, channel: int
     ) -> complex:
+        """
+        Get the beam value for a given tile, pol and channel.
+
+        :param tile_no: the tile number to get the beam value for.
+        :param pol: the polarisation to get the beam value for.
+        :param channel: the channel to get the beam value for.
+
+        :return: the beam value for the given tile, pol and channel.
+        """
         sample = 0
         assert self._data is not None
         return (
@@ -185,7 +172,16 @@ class TestBeamformer(BaseDaqTest):
             + self._data[tile_no, pol, channel, sample, 1] * 1j
         )
 
-    def _get_single_antenna_data_set(self: TestBeamformer, channel: int) -> np.ndarray:
+    def _get_single_antenna_data_set(
+        self: TestTileBeamformer, channel: int
+    ) -> np.ndarray:
+        """
+        Get the beam data for a single antenna on each TPM.
+
+        :param channel: the channel to get the beam data for.
+
+        :return: the beam data for a single antenna on each TPM.
+        """
         single_input_data = np.zeros(
             (len(self.tile_proxies), TileData.POLS_PER_ANTENNA, TileData.ANTENNA_COUNT),
             dtype="complex",
@@ -193,8 +189,7 @@ class TestBeamformer(BaseDaqTest):
         for antenna_no in range(TileData.ANTENNA_COUNT):
             self._start_directory_watch()
             self.test_logger.debug(f"Sending beam data for {antenna_no=}")
-            frequency = 156.25e6 + (channel * TileData.CHANNEL_WIDTH)
-            self.test_logger.error(f"{frequency=}")
+            frequency = self._start_freq + (channel * TileData.CHANNEL_WIDTH)
             self._configure_test_generator(
                 frequency,
                 0.5,
@@ -203,11 +198,6 @@ class TestBeamformer(BaseDaqTest):
             )
             self._send_beam_data()
             assert self._data_created_event.wait(20)
-            if self._data is not None:
-                if self._first:
-                    np.save(f"whole_data_antenna_before_{antenna_no}.npy", self._data)
-                else:
-                    np.save(f"whole_data_antenna_after_{antenna_no}.npy", self._data)
             for tile_no in range(len(self.tile_proxies)):
                 single_input_data[tile_no][0][antenna_no] = self._get_beam_value(
                     tile_no, 0, channel
@@ -215,20 +205,19 @@ class TestBeamformer(BaseDaqTest):
                 single_input_data[tile_no][1][antenna_no] = self._get_beam_value(
                     tile_no, 1, channel
                 )
-            self.test_logger.debug(
-                f"Tile {tile_no}, Antenna {antenna_no}: "
-                f"Pol 0 = {single_input_data[tile_no][0][antenna_no]}, "
-                f"Pol 1 = {single_input_data[tile_no][1][antenna_no]}"
-            )
             self._data_created_event.clear()
             self._stop_directory_watch()
-        self._first = False
         return single_input_data
 
-    def _get_all_antenna_data_set(self: TestBeamformer, channel: int) -> None:
+    def _get_all_antenna_data_set(self: TestTileBeamformer, channel: int) -> None:
+        """
+        Get the beam data for all antennas on each TPM.
+
+        :param channel: the channel to get the beam data for.
+        """
         self._start_directory_watch()
         self.test_logger.debug("Sending beam data for all antennas")
-        frequency = 156.25e6 + (channel * TileData.CHANNEL_WIDTH)
+        frequency = self._start_freq + (channel * TileData.CHANNEL_WIDTH)
         self._configure_test_generator(
             frequency,
             0.5,
@@ -240,12 +229,20 @@ class TestBeamformer(BaseDaqTest):
         self._stop_directory_watch()
 
     def _calibrate_tpms(
-        self: TestBeamformer,
+        self: TestTileBeamformer,
         channel: int,
         ref_values: np.ndarray,
         single_input_data: np.ndarray,
         gain: float = 2.0,
     ) -> None:
+        """
+        Calibrate the TPMs to phase all antennas to the reference antenna.
+
+        :param channel: the channel to calibrate the TPMs for.
+        :param ref_values: the reference values for each tile.
+        :param single_input_data: the input data for each tile.
+        :param gain: the gain to apply to the calibration coefficients.
+        """
         self.test_logger.debug("Calibrating TPMs")
         coeffs = np.zeros(
             (len(self.tile_proxies), TileData.POLS_PER_ANTENNA, TileData.ANTENNA_COUNT),
@@ -263,8 +260,18 @@ class TestBeamformer(BaseDaqTest):
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(
-        self: TestBeamformer, tile: MccsDeviceProxy, channel: int, coeffs: np.ndarray
+        self: TestTileBeamformer,
+        tile: MccsDeviceProxy,
+        channel: int,
+        coeffs: np.ndarray,
     ) -> None:
+        """
+        Load the calibration coefficients into the TPMs.
+
+        :param tile: the tile to load the calibration coefficients into.
+        :param channel: the channel to load the calibration coefficients for.
+        :param coeffs: the calibration coefficients to load.
+        """
         complex_coefficients = [
             [complex(0.0), complex(0.0), complex(0.0), complex(0.0)]
         ] * TileData.NUM_BEAMFORMER_CHANNELS
@@ -283,8 +290,14 @@ class TestBeamformer(BaseDaqTest):
         tile.ApplyCalibration("")
 
     def _reset_calibration_coefficients(
-        self: TestBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
+        self: TestTileBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
     ) -> None:
+        """
+        Reset the calibration coefficients for the TPMs to given gain.
+
+        :param tile: the tile to reset the calibration coefficients for.
+        :param gain: the gain to reset the calibration coefficients to.
+        """
         complex_coefficients = [
             [complex(gain), complex(0.0), complex(0.0), complex(gain)]
         ] * TileData.NUM_BEAMFORMER_CHANNELS
@@ -296,15 +309,25 @@ class TestBeamformer(BaseDaqTest):
             tile.LoadCalibrationCoefficients(coefficients)
         tile.ApplyCalibration("")
 
-    def _reset_tpm_calibration(self: TestBeamformer) -> None:
+    def _reset_tpm_calibration(self: TestTileBeamformer) -> None:
+        """Reset the calibration coefficients for all TPMs."""
         for tile in self.tile_proxies:
             self._reset_calibration_coefficients(tile)
 
     def _check_single_antenna_data(
-        self: TestBeamformer,
+        self: TestTileBeamformer,
         ref_values: np.ndarray,
         single_input_data: np.ndarray,
     ) -> None:
+        """
+        Compare the beamformed data against the reference values.
+
+        :param ref_values: the reference values for each tile.
+        :param single_input_data: the input data for each tile.
+
+        :raises AssertionError: if the beamformed data does not match the
+            reference values.
+        """
         for tile_no, _ in enumerate(self.tile_proxies):
             for pol in range(TileData.POLS_PER_ANTENNA):
                 for antenna in range(TileData.ANTENNA_COUNT):
@@ -325,10 +348,19 @@ class TestBeamformer(BaseDaqTest):
                     )
 
     def _check_all_antenna_data(
-        self: TestBeamformer,
+        self: TestTileBeamformer,
         ref_values: np.ndarray,
         channel: int,
     ) -> None:
+        """
+        Compare the beamformed data against the reference values.
+
+        :param ref_values: the reference values for each tile.
+        :param channel: the channel to check the beamformed data for.
+
+        :raises AssertionError: if the beamformed data does not match the
+            reference values.
+        """
         for tile_no, _ in enumerate(self.tile_proxies):
             for pol in range(TileData.POLS_PER_ANTENNA):
                 exp_val = ref_values[tile_no]
@@ -345,21 +377,20 @@ class TestBeamformer(BaseDaqTest):
                     raise AssertionError
                 self.test_logger.debug(f"Passed assertion: {tile_no=}, {pol=}")
 
-    def _reset(self: TestBeamformer) -> None:
+    def _reset(self: TestTileBeamformer) -> None:
         self.component_manager.start_adcs()
         self._reset_tpm_calibration()
         self.component_manager.stop_beamformer()
+        self._disable_test_generator()
         super()._reset()
 
-    def test(self: TestBeamformer) -> None:
+    def test(self: TestTileBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
         test_channels = range(7 + 1)
         self.component_manager._set_channeliser_rounding(np.full(512, 5))
         self.component_manager.stop_adcs()
-        self._configure_beamformer(
-            TileData.FIRST_BEAMFORMER_CHANNEL, len(test_channels)
-        )
+        self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
         start_time = datetime.strftime(
             datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
@@ -375,9 +406,6 @@ class TestBeamformer(BaseDaqTest):
             len(test_channels),
             self._data_received_callback,
         )
-        # Choose a random antenna/polarisation to be the reference
-        ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
-        ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
         with self.reset_context():
             for channel in test_channels:
                 # Reset all TPM calibration with expected initial gain
@@ -388,10 +416,8 @@ class TestBeamformer(BaseDaqTest):
                 # The first dataset we get should be uncalibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
 
-                np.save("before_calibration.npy", single_input_data)
-
                 # Grab the reference data for each antenna/pol on each tile
-                ref_values = single_input_data[:, ref_pol, ref_antenna]
+                ref_values = single_input_data[:, self._ref_pol, self._ref_antenna]
 
                 # Calculate the calibration coefficients to phase all antennas to
                 # the reference antenna for each TPM
@@ -401,8 +427,6 @@ class TestBeamformer(BaseDaqTest):
 
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
-
-                np.save("after_calibration.npy", single_input_data)
 
                 # Check the data against the reference values
                 self._check_single_antenna_data(ref_values, single_input_data)

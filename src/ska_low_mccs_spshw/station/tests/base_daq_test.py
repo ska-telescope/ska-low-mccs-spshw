@@ -244,12 +244,14 @@ class BaseDaqTest(TpmSelfCheckTest):
             json_arg.update({"delays": delays})
         self.component_manager.configure_test_generator(json.dumps(json_arg))
 
+    def _disable_test_generator(self: BaseDaqTest) -> None:
+        self.component_manager.configure_test_generator("{}")
+
     def _configure_beamformer(
         self: BaseDaqTest,
-        first_channel: int,
-        channel_bandwidth: int,
+        frequency: float,
     ) -> None:
-        region = [[200, 0, 1, 0, 0, 0, 256]]
+        region = [[int(frequency / TileData.CHANNEL_WIDTH), 0, 1, 0, 0, 0, 256]]
         self.component_manager.set_beamformer_table(region)
 
     def _clear_pointing_delays(self: BaseDaqTest) -> None:

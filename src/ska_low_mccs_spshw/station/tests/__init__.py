@@ -12,7 +12,7 @@ __all__ = [
     "TestResult",
     "TpmSelfCheckTest",
     "TestBeam",
-    "TestBeamformer",
+    "TestTileBeamformer",
     "TestChannel",
     "TestIntegratedBeam",
     "TestIntegratedChannel",
@@ -31,4 +31,4 @@ from .test_integrated_channel import TestIntegratedChannel
 from .test_raw_data import TestRaw
 from .test_station_initialise import InitialiseStation
 from .test_tango import BasicTangoTest
-from .test_tile_beamformer import TestBeamformer
+from .test_tile_beamformer import TestTileBeamformer

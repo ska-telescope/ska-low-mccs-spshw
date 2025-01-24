@@ -295,7 +295,7 @@ class TestBeamformer(BaseDaqTest):
             coefficients = list(itertools.chain.from_iterable(out))
             coefficients.insert(0, float(antenna))
             tile.LoadCalibrationCoefficients(coefficients)
-            tile.ApplyCalibration("")
+        tile.ApplyCalibration("")
 
     def _reset_tpm_calibration(self: TestBeamformer) -> None:
         for tile in self.tile_proxies:

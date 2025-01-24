@@ -376,8 +376,8 @@ class TestBeamformer(BaseDaqTest):
             self._data_received_callback,
         )
         # Choose a random antenna/polarisation to be the reference
-        # ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
-        # ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
+        ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
+        ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
         with self.reset_context():
             for channel in test_channels:
                 # Reset all TPM calibration with expected initial gain
@@ -390,29 +390,29 @@ class TestBeamformer(BaseDaqTest):
 
                 np.save("before_calibration.npy", single_input_data)
 
-                break
-
                 # Grab the reference data for each antenna/pol on each tile
-                # ref_values = single_input_data[:, ref_pol, ref_antenna]
+                ref_values = single_input_data[:, ref_pol, ref_antenna]
 
-                # # Calculate the calibration coefficients to phase all antennas to
-                # # the reference antenna for each TPM
-                # self._calibrate_tpms(channel, ref_values, single_input_data)
+                # Calculate the calibration coefficients to phase all antennas to
+                # the reference antenna for each TPM
+                self._calibrate_tpms(channel, ref_values, single_input_data)
 
-                # time.sleep(5)
+                time.sleep(5)
 
-                # # This dataset should now be calibrated
-                # single_input_data = self._get_single_antenna_data_set(channel)
+                # This dataset should now be calibrated
+                single_input_data = self._get_single_antenna_data_set(channel)
 
-                # np.save("after_calibration.npy", single_input_data)
+                np.save("after_calibration.npy", single_input_data)
 
-                # # Check the data against the reference values
-                # self._check_single_antenna_data(ref_values, single_input_data)
+                # Check the data against the reference values
+                self._check_single_antenna_data(ref_values, single_input_data)
 
-                # # Send data for all antennas at the same time
-                # self._get_all_antenna_data_set(channel)
+                # Send data for all antennas at the same time
+                self._get_all_antenna_data_set(channel)
 
-                # # This data should be 16 times stronger than for just 1 antenna
-                # self._check_all_antenna_data(ref_values, channel)
+                # This data should be 16 times stronger than for just 1 antenna
+                self._check_all_antenna_data(ref_values, channel)
+
+                break
 
         self.test_logger.info("Test passed for beamformed data!")

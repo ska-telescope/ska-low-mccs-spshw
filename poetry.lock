@@ -13,8 +13,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/aavs-system.git"
-reference = "2.1.1"
-resolved_reference = "2820497bc089beaa1256b2489d1e4a9b13241447"
+reference = "thorn-5-fix-bug"
+resolved_reference = "7fa9bed495d8b5ab24a8b0443f36c1ff296de40c"
 subdirectory = "python"
 
 [[package]]
@@ -1073,7 +1073,7 @@ name = "filelock"
 version = "3.17.0"
 description = "A platform independent file lock."
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main", "dev", "docs"]
 files = [
     {file = "filelock-3.17.0-py3-none-any.whl", hash = "sha256:533dc2f7ba78dc2f0f531fc6c4940addf7b70a481e269a5a3b93be94ffbe8338"},
@@ -3228,8 +3228,8 @@ wheel = "*"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/pyfabil.git"
-reference = "1.4.1"
-resolved_reference = "42a60c7b06027b64a1a0eb6e6d713365881f4e0a"
+reference = "2.1.0"
+resolved_reference = "ecc8830444ace50ed0937723f3a4044dd91fe833"
 
 [[package]]
 name = "pyflakes"
@@ -5702,4 +5702,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "3b209ae74aacd01445816c3ab863a972e6c7a697a0ecbec8886d3a1cffa27fae"
+content-hash = "fc96e371513d8995553fbd4b790a94f8e650a8060e62f45ee93fc50f747702e0"

@@ -293,6 +293,31 @@ class TestTileBeamformer(BaseDaqTest):
             tile.LoadCalibrationCoefficients(coefficients)
         tile.ApplyCalibration("")
 
+    def _reset_calibration_coefficients(
+        self: TestTileBeamformer, tile: MccsDeviceProxy, gain: float = 2.0
+    ) -> None:
+        """
+        Reset the calibration coefficients for the TPMs to given gain.
+
+        :param tile: the tile to reset the calibration coefficients for.
+        :param gain: the gain to reset the calibration coefficients to.
+        """
+        complex_coefficients = [
+            [complex(gain), complex(0.0), complex(0.0), complex(gain)]
+        ] * TileData.NUM_BEAMFORMER_CHANNELS
+        for antenna in range(TileData.ANTENNA_COUNT):
+            inp = list(itertools.chain.from_iterable(complex_coefficients))
+            out = [[v.real, v.imag] for v in inp]
+            coefficients = list(itertools.chain.from_iterable(out))
+            coefficients.insert(0, float(antenna))
+            tile.LoadCalibrationCoefficients(coefficients)
+        tile.ApplyCalibration("")
+
+    def _reset_tpm_calibration(self: TestTileBeamformer) -> None:
+        """Reset the calibration coefficients for all TPMs."""
+        for tile in self.tile_proxies:
+            self._reset_calibration_coefficients(tile)
+
     def _check_single_antenna_data(
         self: TestTileBeamformer,
         ref_values: np.ndarray,
@@ -390,7 +415,7 @@ class TestTileBeamformer(BaseDaqTest):
         with self.reset_context():
             for channel in test_channels:
                 # Reset all TPM calibration with expected initial gain
-                self._reset_tpm_calibration(gain=2.0)
+                self._reset_tpm_calibration()
 
                 time.sleep(5)
 
@@ -418,4 +443,4 @@ class TestTileBeamformer(BaseDaqTest):
                 # This data should be 16 times stronger than for just 1 antenna
                 self._check_all_antenna_data(ref_values, channel)
 
-        self.test_logger.info("Test tile beamformer passed!")
+        self.test_logger.info("Test passed for beamformed data!")

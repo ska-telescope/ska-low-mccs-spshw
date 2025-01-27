@@ -10,12 +10,12 @@ from __future__ import annotations
 import time
 from typing import Any, Callable
 
+import numpy as np
 import tango
 
 __all__ = [
     "AttributeManager",
     "BoolAttributeManager",
-    "AlarmAttributeManager",
 ]
 
 
@@ -55,6 +55,16 @@ class AttributeManager:
         self._last_update = time.time()
         self._value_time_quality_callback = value_time_quality_callback
 
+    def value_changed(self: AttributeManager, value: Any) -> bool:
+        """
+        Check if value has changed since last poll.
+
+        :param value: the value we want to update attribute with.
+
+        :returns: whether or not the value has changed.
+        """
+        return value != self._value
+
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
         """
         Update attribute manager with a new value.
@@ -64,7 +74,7 @@ class AttributeManager:
         """
         # new_value: Any = self._converter(value) if self._converter else value
         # value_changed = new_value != self._value
-        value_changed = value != self._value
+        value_changed = self.value_changed(value)
         self._value = value
         self._last_update = time.time()
         if self._value is None:
@@ -77,7 +87,7 @@ class AttributeManager:
     def mark_stale(self: AttributeManager) -> None:
         """Mark attribute as stale."""
         if (
-            self._initial_value == self._value
+            self.value_changed(self._initial_value)
             or self._quality == tango.AttrQuality.ATTR_INVALID
         ):
             return
@@ -162,53 +172,15 @@ class BoolAttributeManager(AttributeManager):
         )
 
 
-class AlarmAttributeManager(AttributeManager):
-    """
-    An AttributeManager for alarm attribute.
+class NpArrayAttributeManager(AttributeManager):
+    """An AttributeManager for a np.ndarray attribute."""
 
-    The quality of the alarm attribute is specific to custom
-    values. This manager will evaluate the attribute quality
-    against these values.
-    """
-
-    def __init__(
-        self: AlarmAttributeManager,
-        value_time_quality_callback: Callable,
-        initial_value: bool | None = None,
-        alarm_handler: None | Callable = None,
-    ) -> None:
+    def value_changed(self: AttributeManager, value: np.ndarray) -> bool:
         """
-        Initialise a new AlarmAttributeManager.
+        Check if value has changed since last poll.
 
-        :param initial_value: The initial value for this attribute.
-        :param value_time_quality_callback: A hook to call with the attribute
-            value, timestamp, and quality factor.
-        :param alarm_handler: A hook to call upon alarming.
+        :param value: the value we want to update attribute with.
+
+        :returns: whether or not the value has changed.
         """
-        super().__init__(
-            value_time_quality_callback,
-            initial_value=initial_value,
-            alarm_handler=alarm_handler,
-        )
-
-    def _is_valid(self: AlarmAttributeManager, value: dict[str, int]) -> bool:
-        """
-        Is the value a valid input.
-
-        :param value: the value to check if valid.
-
-        :returns: True is the value is valid.
-        """
-        return isinstance(value, dict)
-
-    def update_quality(self: AlarmAttributeManager) -> None:
-        """Update attribute quality."""
-        if not self._is_valid(self._value):
-            self._quality = tango.AttrQuality.ATTR_INVALID
-            return
-        if any(alarm_value == 2 for alarm_value in self._value.values()):
-            self._quality = tango.AttrQuality.ATTR_ALARM
-        elif any(alarm_value == 1 for alarm_value in self._value.values()):
-            self._quality = tango.AttrQuality.ATTR_WARNING
-        else:
-            self._quality = tango.AttrQuality.ATTR_VALID
+        return not np.array_equal(value, self._value)

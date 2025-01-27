@@ -168,8 +168,9 @@ def station_component_manager_fixture(
         daq_trl,
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
-        None,  # csp_ingest_ip,
-        None,  # channeliser_rounding,
+        None,  # csp_ingest_ip
+        None,  # channeliser_rounding
+        4,  # csp_rounding
         antenna_uri,
         logger,
         callbacks["communication_status"],

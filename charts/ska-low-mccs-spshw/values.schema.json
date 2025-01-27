@@ -105,6 +105,11 @@
                                 }
                               ]
                             },
+                            "csp_rounding": {
+                              "type": "integer",
+                              "minimumValue": 0,
+                              "maximumValue": 7
+                            },
                             "antenna_config_uri": {
                               "type": "array",
                               "items": {

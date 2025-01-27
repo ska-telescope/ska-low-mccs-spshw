@@ -75,6 +75,33 @@ def command_info_fixture() -> dict[str, Any]:
     return {}
 
 
+@pytest.fixture(name="attribute_read_info")
+def attribute_read_fixture() -> dict[str, Any]:
+    """
+    Fixture to store attribute values.
+
+    :returns: Empty list.
+    """
+    return {}
+
+
+@pytest.fixture(name="excluded_tile_attributes")
+def excluded_tile_attributes_fixture() -> list[str]:
+    """
+    Fixture to store attributes to exclude from Tile check.
+
+    :returns: Attribute list.
+    """
+    return [
+        "buildState",  # Mismatch between cpp and tango args.
+        "clockPresent",  # Not yet implemented in aavs-system.
+        "sysrefPresent",  # Not yet implemented in aavs-system.
+        "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
+        "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
+        "_lrcEvent",  # Requires more setup than the test performs.
+    ]
+
+
 @pytest.fixture(name="station_name")
 def station_name_fixture(true_context: bool) -> str:
     """
@@ -86,7 +113,7 @@ def station_name_fixture(true_context: bool) -> str:
     """
     if not true_context:
         pytest.skip("This needs to be run in a true-context")
-    return os.getenv("STATION_LABEL", "real-daq-1")
+    return os.getenv("STATION_LABEL") or "real-daq-1"
 
 
 @pytest.fixture(name="station_devices")
@@ -183,8 +210,8 @@ def station_online(
     :param get_device_online: a fixture to call to bring a device ONLINE
     :param station_name: the name of the station under test.
     """
-    if station_name == "stfc-ral-software":
-        pytest.xfail("This test does not work consistently against hardware.")
+    # if station_name == "stfc-ral-software":
+    #     pytest.xfail("This test does not work consistently against hardware.")
     for subrack in station_devices["Subracks"]:
         get_device_online(subrack)
     for tile in station_devices["Tiles"]:
@@ -314,7 +341,7 @@ def device_verify_attribute(
                 "FAILED": HealthState.FAILED,
                 "UNKNOWN": HealthState.UNKNOWN,
             }[value]
-        timeout = 60
+        timeout = 100
         device_value = None
         for _ in range(timeout):
             if attribute == "state":
@@ -375,6 +402,44 @@ def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
     }
     for subrack in station_devices["Subracks"]:
         subrack.healthModelParams = json.dumps(new_board_params)
+
+
+@when("all attributes are read on a Tile")
+def read_all_tile_attributes(
+    station_devices: dict[str, tango.DeviceProxy],
+    attribute_read_info: dict[str, Any],
+    excluded_tile_attributes: list[str],
+) -> None:
+    """
+    Read all attributes on a Tile, assert we got a value.
+
+    :param station_devices: A fixture containing the
+        station devices.
+    :param attribute_read_info: A dict of values returned by an attribute read.
+    :param excluded_tile_attributes: A list of attributes to not check.
+    """
+    tiles = station_devices["Tiles"]
+    for tile in tiles:
+        for attr in tile.get_attribute_list():
+            if attr in excluded_tile_attributes:
+                continue
+            try:
+                attribute_read_info[attr] = getattr(tile, attr, None)
+            except tango.DevFailed:
+                attribute_read_info[attr] = None
+
+
+@then("a value is returned for each")
+def check_attribute_read_success(attribute_read_info: dict[str, Any]) -> None:
+    """
+    Assert that all attribute reads were successful.
+
+    :param attribute_read_info: A dict of values returned by an attribute read.
+    """
+    failed_attrs = [
+        attr for attr, attr_value in attribute_read_info.items() if attr_value is None
+    ]
+    assert not failed_attrs, f"Error reading attribute(s): {failed_attrs}"
 
 
 @then(parsers.cfparse("the {device_group} reports that it is {programming_state}"))

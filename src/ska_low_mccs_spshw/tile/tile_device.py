@@ -45,6 +45,7 @@ from .attribute_managers import (
     AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
+    NpArrayAttributeManager,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -133,6 +134,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
+    PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+
     # ---------------
     # Initialisation
     # ---------------
@@ -183,6 +186,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
+            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -233,9 +237,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "resync_count": "resync_count",
             "ddr_initialisation": "ddr_initialisation",
             "ddr_reset_counter": "ddr_reset_counter",
-            "ddr_rd_cnt": "ddr_rd_cnt",
-            "ddr_wr_cnt": "ddr_wr_cnt",
-            "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
+            # "ddr_rd_cnt": "ddr_rd_cnt",
+            # "ddr_wr_cnt": "ddr_wr_cnt",
+            # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
             "arp": "arp",
             "udp_status": "udp_status",
             "crc_error_count": "crc_error_count",
@@ -248,6 +252,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "core_communication": "coreCommunicationStatus",
             "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
+            "rfi_count": "rfiCount",
         }
 
         # NOTE: This has been removed to eliminate SKB-609 segfault.
@@ -272,6 +277,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
         # - alarms: alarms raised by firmware are collected in a dictionary.
+        # - rfiCount: np.ndarray needs a different truth comparison.
         # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
@@ -312,6 +318,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 "alarms": AlarmAttributeManager(
                     functools.partial(self.post_change_event, "alarms"),
                 ),
+                "rfiCount": NpArrayAttributeManager(
+                    functools.partial(self.post_change_event, "rfiCount")
+                ),
             }
         )
 
@@ -337,9 +346,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "clocks": ["timing", "clocks"],
             "clock_managers": ["timing", "clock_managers"],
-            "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
-            "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
-            "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
+            # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
+            # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
+            # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
             "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
             "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
@@ -390,6 +399,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
+            self.PreaduAttenuation,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,
@@ -1146,63 +1156,64 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return json.dumps(self._attribute_state["clock_managers"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_cnt",
-    )
-    def ddr_rd_cnt(self: MccsTile) -> str:
-        """
-        Return the read counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_cnt",
+    # )
+    # def ddr_rd_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been read.
+    #     Expected: `integer` number of times ddr interface has been read.
 
-        :example:
-            >>> tile.ddr_rd_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been read.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
+    #     :return: number of times ddr interface has been read.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_wr_cnt",
-    )
-    def ddr_wr_cnt(self: MccsTile) -> str:
-        """
-        Return the write counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_wr_cnt",
+    # )
+    # def ddr_wr_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the write counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been written to.
+    #     Expected: `integer` number of times ddr interface has been written to.
 
-        :example:
-            >>> tile.ddr_wr_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_wr_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been written to.
-        """
-        return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
+    #     :return: number of times ddr interface has been written to.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_dat_cnt",
-    )
-    def ddr_rd_dat_cnt(self: MccsTile) -> str:
-        """
-        Return the read valid counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_dat_cnt",
+    # )
+    # def ddr_rd_dat_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has responded to a read
-        with valid data.
+    #     Expected: `integer` number of times ddr interface has responded to a read
+    #     with valid data.
 
-        :example:
-            >>> tile.ddr_rd_dat_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_dat_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has responded to a read with valid data.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
+    #     :return: number of times ddr interface
+    #       has responded to a read with valid data.
+    #     """
+    #     return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
 
     @attribute(
         dtype="DevString",
@@ -2409,6 +2420,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :returns: last pointing delays applied to the tile.
         """
         return self.component_manager.last_pointing_delays
+
+    @attribute(
+        dtype=(("DevLong",),),
+        max_dim_x=2,  # pol
+        max_dim_y=16,  # antenna
+    )
+    def rfiCount(self: MccsTile) -> list[list]:
+        """
+        Return the RFI count per antenna/pol.
+
+        :returns: the RFI count per antenna/pol.
+        """
+        return self._attribute_state["rfiCount"].read()[0]
 
     @attribute(
         dtype="DevDouble",

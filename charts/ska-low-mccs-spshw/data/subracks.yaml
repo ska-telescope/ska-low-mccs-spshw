@@ -30,9 +30,9 @@ instances:
 {{- range $server_key, $this_server := $subracks}}
   - {{printf "subrack-%s" $server_key}}
 {{- end}}
-command: MccsSubrack
+command: spshw_device_server
 server: 
-  name: "MccsSubrack"
+  name: spshw_device_server
   instances:
 {{- range $server_key, $this_server := $subracks}}
     - name: {{printf "subrack-%s" $server_key}}

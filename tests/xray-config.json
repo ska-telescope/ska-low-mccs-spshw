@@ -20,7 +20,7 @@
       "default": "charts/ska-low-mccs-spshw/Chart.yaml"
     }
   },
-  "test_report": "build/reports/psi-low-report.json",
+  "test_report": "build/reports/report.json",
   "jira_url": "https://jira.skatelescope.org",
   "project": {
     "id": "XTP",
@@ -38,6 +38,7 @@
       "env": "TEST_ENV",
       "maps_to": {
         "default": "STFC-CI",
+        "STFC-RAL": "STFC-RAL",
         "ITF-MID": "ITF-MID",
         "PSI-LOW": "PSI-LOW",
         "dev": "dev-testing",

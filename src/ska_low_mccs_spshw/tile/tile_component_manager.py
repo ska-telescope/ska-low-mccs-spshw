@@ -3321,9 +3321,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 raise TimeoutError("Failed to acquire lock")
 
     def start_adcs(self: TileComponentManager) -> None:
-        """Start the ADCs."""
-        self.tile.enable_all_adcs()
+        """
+        Start the ADCs.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.enable_all_adcs()
+            else:
+                raise TimeoutError("Failed to acquire lock")
 
     def stop_adcs(self: TileComponentManager) -> None:
-        """Stop the ADCs."""
-        self.tile.disable_all_adcs()
+        """
+        Stop the ADCs.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.disable_all_adcs()
+            else:
+                raise TimeoutError("Failed to acquire lock")

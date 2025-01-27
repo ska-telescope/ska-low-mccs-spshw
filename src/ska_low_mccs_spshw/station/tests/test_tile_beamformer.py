@@ -128,15 +128,15 @@ class TestTileBeamformer(BaseDaqTest):
         :param component_manager: SpsStation component manager under test.
         """
         # Random seed for repeatability
-        random.seed(0)
+        randomiser = random.Random(0)
         # Random set of delays to apply to the test generator, we make it here to we can
         # use the same random delays each time.
         self._delays = [
-            random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
+            randomiser.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
         ]
         # Choose a random antenna/polarisation to be the reference
-        self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
-        self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
+        self._ref_antenna = randomiser.randrange(0, TileData.ANTENNA_COUNT, 1)
+        self._ref_pol = randomiser.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
         self._start_freq = 156.25e6  # Hz
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
@@ -390,9 +390,7 @@ class TestTileBeamformer(BaseDaqTest):
         with self.reset_context():
             for channel in test_channels:
                 # Reset all TPM calibration with expected initial gain
-                self._reset_tpm_calibration()
-
-                time.sleep(5)
+                self._reset_tpm_calibration(gain=2.0)
 
                 # The first dataset we get should be uncalibrated
                 single_input_data = self._get_single_antenna_data_set(channel)
@@ -403,8 +401,6 @@ class TestTileBeamformer(BaseDaqTest):
                 # Calculate the calibration coefficients to phase all antennas to
                 # the reference antenna for each TPM
                 self._calibrate_tpms(channel, ref_values, single_input_data)
-
-                time.sleep(5)
 
                 # This dataset should now be calibrated
                 single_input_data = self._get_single_antenna_data_set(channel)

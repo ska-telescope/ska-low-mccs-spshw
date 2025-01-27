@@ -262,7 +262,7 @@ class BaseDaqTest(TpmSelfCheckTest):
             tile.ApplyPointingDelays("")
 
     def _reset_calibration_coefficients(
-        self: BaseDaqTest, tile: MccsDeviceProxy, gain: float = 2.0
+        self: BaseDaqTest, tile: MccsDeviceProxy, gain: float = 1.0
     ) -> None:
         """
         Reset the calibration coefficients for the TPMs to given gain.

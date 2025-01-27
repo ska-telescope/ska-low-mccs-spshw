@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a basic test for a station."""
+"""An implementation of a test for the tile pointing."""
 from __future__ import annotations
 
 import json
@@ -19,13 +19,12 @@ import numpy as np
 from pydaq.persisters import BeamFormatFileManager  # type: ignore
 
 from ...tile.tile_data import TileData
+from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestTilePointing"]
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class BeamDataReceivedHandler(BaseDataReceivedHandler):
@@ -46,7 +45,7 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_channels: number of channels used in the test
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32
+        self._nof_samples = TileData.ADC_CHANNELS
         self._nof_channels = nof_channels
         super().__init__(logger, nof_tiles, data_created_callback)
 
@@ -124,17 +123,14 @@ class TestTilePointing(BaseDaqTest):
         random.seed(0)
         # Random set of delays to apply to the test generator, we make it here to we can
         # use the same random delays each time. To offset via pointing, these delays
-        # must be the same for each polarisation.
+        # must be the same for each polarisation as pointing is applied per antenna.
         self._delays = []
         for _ in range(TileData.ADC_CHANNELS // TileData.POLS_PER_ANTENNA):
             random_val = random.randrange(-32, 32, 1)
             self._delays.append(random_val)
             self._delays.append(random_val)
-        # Choose a random antenna/polarisation to be the reference
-        self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
-        self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
-        self._start_freq = 156.25e6
+        self._start_freq = 156.25e6  # Hz
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _send_beam_data(self: TestTilePointing) -> None:
@@ -149,12 +145,11 @@ class TestTilePointing(BaseDaqTest):
         )
 
     def _get_beam_value(
-        self: TestTilePointing, tile_no: int, pol: int, channel: int
-    ) -> complex:
+        self: TestTilePointing, pol: int, channel: int
+    ) -> list[complex]:
         """
         Get the beam value for a given tile, pol and channel.
 
-        :param tile_no: the tile number to get the beam value for.
         :param pol: the polarisation to get the beam value for.
         :param channel: the channel to get the beam value for.
 
@@ -163,8 +158,8 @@ class TestTilePointing(BaseDaqTest):
         sample = 0
         assert self._data is not None
         return (
-            self._data[tile_no, pol, channel, sample, 0]
-            + self._data[tile_no, pol, channel, sample, 1] * 1j
+            self._data[:, pol, channel, sample, 0]
+            + self._data[:, pol, channel, sample, 1] * 1j
         )
 
     def _get_data_set(self: TestTilePointing, channel: int, zero_delays: bool) -> None:
@@ -175,7 +170,7 @@ class TestTilePointing(BaseDaqTest):
         :param zero_delays: whether to zero the delays in the test generator.
         """
         self._start_directory_watch()
-        self.test_logger.debug("Sending beam data for all antennas")
+        self.test_logger.debug("Sending beam data")
         frequency = self._start_freq + (channel * TileData.CHANNEL_WIDTH)
         if zero_delays:
             delays = [0] * TileData.ADC_CHANNELS
@@ -188,13 +183,14 @@ class TestTilePointing(BaseDaqTest):
         )
         self._send_beam_data()
         assert self._data_created_event.wait(20)
-        self._data_created_event.clear()
         self._stop_directory_watch()
+        self._data_created_event.clear()
 
     def _set_pointing_delays(self: TestTilePointing) -> None:
         """Set the pointing delays for the TPMs."""
         time_delays_hw = [0.0]
         for n in range(TileData.ANTENNA_COUNT):
+            # Converting delay in frames to delay in seconds
             time_delays_hw.append(float(self._delays[2 * n]) * 1.25 * 1e-9)
             time_delays_hw.append(0.0)
         for tile in self.tile_proxies:
@@ -207,7 +203,6 @@ class TestTilePointing(BaseDaqTest):
         ref_values_pol_1: list[complex],
         corrected_values_pol_0: list[complex],
         corrected_values_pol_1: list[complex],
-        channel: int,
     ) -> None:
         """
         Compare the beamformed data against the reference values.
@@ -216,7 +211,6 @@ class TestTilePointing(BaseDaqTest):
         :param ref_values_pol_1: the reference values for polarisation 1.
         :param corrected_values_pol_0: the corrected values for polarisation 0.
         :param corrected_values_pol_1: the corrected values for polarisation 1.
-        :param channel: the channel to check the beamformed data for.
 
         :raises AssertionError: if the beamformed data does not match the
             reference values.
@@ -259,7 +253,7 @@ class TestTilePointing(BaseDaqTest):
         self._reset_tpm_calibration(1.0)
         self._clear_pointing_delays()
         start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
+            datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
         )
         self.component_manager.start_beamformer(
             start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0
@@ -275,57 +269,35 @@ class TestTilePointing(BaseDaqTest):
         with self.reset_context():
             for channel in test_channels:
                 self._clear_pointing_delays()
-                time.sleep(1)
 
                 self._get_data_set(channel, zero_delays=True)
 
-                ref_values_pol_0 = [
-                    self._get_beam_value(tile_no, 0, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{ref_values_pol_0=}")
-                ref_values_pol_1 = [
-                    self._get_beam_value(tile_no, 1, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{ref_values_pol_1=}")
+                ref_values_pol_0 = self._get_beam_value(0, channel)
+                self.logger.debug(f"{ref_values_pol_0=}")
+                ref_values_pol_1 = self._get_beam_value(1, channel)
+                self.logger.debug(f"{ref_values_pol_1=}")
 
                 self._get_data_set(channel, zero_delays=False)
 
-                uncorrected_values_pol_0 = [
-                    self._get_beam_value(tile_no, 0, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{uncorrected_values_pol_0=}")
-                uncorrected_values_pol_1 = [
-                    self._get_beam_value(tile_no, 1, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{uncorrected_values_pol_1=}")
+                uncorrected_values_pol_0 = self._get_beam_value(0, channel)
+                self.logger.debug(f"{uncorrected_values_pol_0=}")
+                uncorrected_values_pol_1 = self._get_beam_value(1, channel)
+                self.logger.debug(f"{uncorrected_values_pol_1=}")
 
                 self._set_pointing_delays()
 
-                time.sleep(1)
-
                 self._get_data_set(channel, zero_delays=False)
 
-                corrected_values_pol_0 = [
-                    self._get_beam_value(tile_no, 0, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{corrected_values_pol_0=}")
-                corrected_values_pol_1 = [
-                    self._get_beam_value(tile_no, 1, channel)
-                    for tile_no in range(len(self.tile_proxies))
-                ]
-                self.logger.error(f"{corrected_values_pol_1=}")
+                corrected_values_pol_0 = self._get_beam_value(0, channel)
+                self.logger.debug(f"{corrected_values_pol_0=}")
+                corrected_values_pol_1 = self._get_beam_value(1, channel)
+                self.logger.debug(f"{corrected_values_pol_1=}")
 
                 self._check_data(
                     ref_values_pol_0,
                     ref_values_pol_1,
                     corrected_values_pol_0,
                     corrected_values_pol_1,
-                    channel,
                 )
 
-        self.test_logger.info("Test passed for beamformed data!")
+        self.test_logger.info("Test tile pointing passed!")

@@ -418,4 +418,4 @@ class TestTileBeamformer(BaseDaqTest):
                 # This data should be 16 times stronger than for just 1 antenna
                 self._check_all_antenna_data(ref_values, channel)
 
-        self.test_logger.info("Test passed for beamformed data!")
+        self.test_logger.info("Test tile beamformer passed!")

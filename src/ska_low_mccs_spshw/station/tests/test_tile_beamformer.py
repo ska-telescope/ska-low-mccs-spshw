@@ -48,7 +48,7 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_channels: number of channels used in the test
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32
+        self._nof_samples = TileData.ADC_CHANNELS
         self._nof_channels = nof_channels
         super().__init__(logger, nof_tiles, data_created_callback)
 
@@ -193,7 +193,10 @@ class TestTileBeamformer(BaseDaqTest):
             self._configure_test_generator(
                 frequency,
                 0.5,
-                adc_channels=[antenna_no * 2, antenna_no * 2 + 1],
+                adc_channels=[
+                    antenna_no * TileData.POLS_PER_ANTENNA,
+                    antenna_no * TileData.POLS_PER_ANTENNA + 1,
+                ],
                 delays=self._delays,
             )
             self._send_beam_data()
@@ -387,8 +390,10 @@ class TestTileBeamformer(BaseDaqTest):
     def test(self: TestTileBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
-        test_channels = range(7 + 1)
-        self.component_manager._set_channeliser_rounding(np.full(512, 5))
+        test_channels = range(8)  # Test 8 channels
+        self.component_manager._set_channeliser_rounding(
+            np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
+        )
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()

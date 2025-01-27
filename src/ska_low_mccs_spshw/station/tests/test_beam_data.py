@@ -38,7 +38,7 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32
+        self._nof_samples = TileData.ADC_CHANNELS
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: BeamDataReceivedHandler) -> None:

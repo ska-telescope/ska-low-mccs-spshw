@@ -2999,6 +2999,61 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def flagged_packets(self: TileComponentManager) -> dict:
+        """
+        Return the total number of flagged packets by the TPM.
+
+        :return: the total number of flagged packets by the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["dsp"]["station_beamf"][
+                    "discarded_or_flagged_packet_count"
+                ]
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
+    def data_router_status(self: TileComponentManager) -> dict:
+        """
+        Return the data router values.
+
+        :return: The status of both FPGAs
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["io"]["data_router"]
+
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
+    def data_router_discarded_packets(self: TileComponentManager) -> dict:
+        """
+        Return the data router values.
+
+        :return: The number of discarded packets
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["io"]["data_router"]
+
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
     def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.
@@ -3380,3 +3435,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.disable_all_adcs()
             else:
                 raise TimeoutError("Failed to acquire lock")
+
+    def enable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Enable station beam flagging."""
+        self.tile.enable_station_beam_flagging()
+
+    def disable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Disable station beam flagging."""
+        self.tile.disable_station_beam_flagging()

@@ -17,7 +17,6 @@ import pytest
 import tango
 
 from ska_low_mccs_spshw.tile.attribute_managers import (
-    AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
 )
@@ -77,21 +76,6 @@ def attribute_manager_with_converter_fixture(
     return AttributeManager(post_change_event_callback, converter=_serialise_value)
 
 
-@pytest.fixture(name="alarm_attribute_manager")
-def alarm_attribute_manager_fixture(
-    post_change_event_callback: unittest.mock.Mock,
-) -> AlarmAttributeManager:
-    """
-    Fixture returning a AlarmAttributeManager instance.
-
-    :param post_change_event_callback: a fixture containing
-        a mock to be called on change.
-
-    :return: a AlarmAttributeManager instance.
-    """
-    return AlarmAttributeManager(post_change_event_callback)
-
-
 @pytest.fixture(name="alarm_on_high_bool_attribute_manager")
 def alarm_on_high_bool_attribute_manager_fixture(
     post_change_event_callback: unittest.mock.Mock, alarm_handle: unittest.mock.Mock
@@ -149,130 +133,6 @@ class TestAttributeManager:
             post_change_event_callback.assert_not_called()
         except AssertionError:
             pytest.xfail("SKB-609: removed this functionality. Issue still UNKNOWN")
-
-
-class TestAlarmAttributeManager:
-    """
-    Test the custom AlarmAttributeManager.
-
-    Pytango does not allow more complex attribute quality evaluation.
-    This AttributeManager adds a specific rule for the alarm attribute.
-    """
-
-    def test_push_on_change(
-        self: TestAlarmAttributeManager,
-        alarm_attribute_manager: AlarmAttributeManager,
-        post_change_event_callback: unittest.mock.Mock,
-    ) -> None:  #
-        """
-        Test that we only push on value change.
-
-        :param alarm_attribute_manager: a `AlarmAttributeManager` instance.
-        :param post_change_event_callback: a fixture containing
-            a mock to be called on change.
-        """
-        invalid_value: int = 2
-        valid_argument = {
-            "I2C_access_alm": 0,
-            "temperature_alm": 0,
-            "voltage_alm": 0,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
-
-        # Test a invalid argument
-        alarm_attribute_manager.update(invalid_value)
-        post_change_event_callback.assert_called_once_with(
-            invalid_value, ANY, tango.AttrQuality.ATTR_INVALID
-        )
-        post_change_event_callback.reset_mock()
-        alarm_attribute_manager.update(invalid_value)
-        post_change_event_callback.assert_not_called()
-
-        post_change_event_callback.reset_mock()
-        # Test a valid argument
-        alarm_attribute_manager.update(valid_argument)
-        post_change_event_callback.assert_called_once_with(
-            valid_argument, ANY, tango.AttrQuality.ATTR_VALID
-        )
-        post_change_event_callback.reset_mock()
-        alarm_attribute_manager.update(valid_argument)
-        post_change_event_callback.assert_not_called()
-
-    def test_warning(
-        self: TestAlarmAttributeManager,
-        alarm_attribute_manager: AlarmAttributeManager,
-        post_change_event_callback: unittest.mock.Mock,
-    ) -> None:  #
-        """
-        Test that a value of 1 reduces ATTR_QUALITY to WARNING.
-
-        :param alarm_attribute_manager: a `AlarmAttributeManager` instance.
-        :param post_change_event_callback: a fixture containing
-            a mock to be called on change.
-        """
-        warning_value: dict[str, int] = {
-            "I2C_access_alm": 1,
-            "temperature_alm": 0,
-            "voltage_alm": 0,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
-        warning_value_2: dict[str, int] = {
-            "I2C_access_alm": 0,
-            "temperature_alm": 1,
-            "voltage_alm": 0,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
-        alarm_attribute_manager.update(warning_value)
-        post_change_event_callback.assert_called_once_with(
-            warning_value, ANY, tango.AttrQuality.ATTR_WARNING
-        )
-        post_change_event_callback.reset_mock()
-        # Test a different warning values
-        alarm_attribute_manager.update(warning_value_2)
-        post_change_event_callback.assert_called_once_with(
-            warning_value_2, ANY, tango.AttrQuality.ATTR_WARNING
-        )
-
-    def test_alarm(
-        self: TestAlarmAttributeManager,
-        alarm_attribute_manager: AlarmAttributeManager,
-        post_change_event_callback: unittest.mock.Mock,
-    ) -> None:  #
-        """
-        Test that a value of 2 reduces ATTR_QUALITY to ALARM.
-
-        :param alarm_attribute_manager: a `AlarmAttributeManager` instance.
-        :param post_change_event_callback: a fixture containing
-            a mock to be called on change.
-        """
-        alarm_value: dict[str, int] = {
-            "I2C_access_alm": 2,
-            "temperature_alm": 0,
-            "voltage_alm": 0,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
-        alarm_value_2: dict[str, int] = {
-            "I2C_access_alm": 0,
-            "temperature_alm": 1,
-            "voltage_alm": 2,
-            "SEM_wd": 0,
-            "MCU_wd": 0,
-        }
-
-        alarm_attribute_manager.update(alarm_value)
-        post_change_event_callback.assert_called_once_with(
-            alarm_value, ANY, tango.AttrQuality.ATTR_ALARM
-        )
-        post_change_event_callback.reset_mock()
-        # Test a different alarm value
-        alarm_attribute_manager.update(alarm_value_2)
-        post_change_event_callback.assert_called_once_with(
-            alarm_value_2, ANY, tango.AttrQuality.ATTR_ALARM
-        )
 
 
 class TestBoolAttributeManager:

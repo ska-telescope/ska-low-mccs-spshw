@@ -19,7 +19,7 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, Generator, List, TypeVar, cast
+from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
 import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
@@ -339,6 +339,7 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+        self._station_beam_flagging = False
 
         self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
@@ -936,7 +937,6 @@ class TileSimulator:
             (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
         )
 
-    @check_mocked_overheating
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
         """
@@ -947,6 +947,10 @@ class TileSimulator:
 
         :return: mocked fetch of health.
         """
+        if any([value == 2 for value in self._global_status_alarms.values()]):
+            # aavs-system return a subset of the health with mcu alarms
+            # when a hard shutoff has occured.
+            return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
 
     @check_mocked_overheating
@@ -1341,6 +1345,28 @@ class TileSimulator:
         if self.tpm is None:
             return False
         return self.tpm._is_programmed
+
+    @connected
+    def enable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Enable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = True
+
+    @connected
+    def disable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Disable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = False
 
     @property
     def tile_info(self: TileSimulator) -> str:
@@ -1911,12 +1937,12 @@ class TileSimulator:
         """
         # Check if number of samples is a multiple of 32
 
-        if number_of_samples % 32 != 0:
-            new_value = (int(number_of_samples / 32) + 1) * 32
-            self.logger.warning(
-                f"{number_of_samples} is not a multiple of 32, using {new_value}"
-            )
-            number_of_samples = new_value
+        # if number_of_samples % 32 != 0:
+        #     new_value = (int(number_of_samples / 32) + 1) * 32
+        #     self.logger.warning(
+        #         f"{number_of_samples} is not a multiple of 32, using {new_value}"
+        #     )
+        #     number_of_samples = new_value
         self.stop_data_transmission()
 
         if not self.dst_ip:
@@ -2359,11 +2385,13 @@ class TileSimulator:
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"
             )
+            self._tile_health_structure["alarms"]["temperature_alm"] = 2
             self._global_status_alarms["temperature_alm"] = 2
             self._is_fpga1_connectable = False
             self._is_fpga2_connectable = False
             self.tpm_mocked_overheating = True
         else:
+            self._tile_health_structure["alarms"]["temperature_alm"] = 0
             self._global_status_alarms["temperature_alm"] = 0
             self.tpm_mocked_overheating = False
             self._is_fpga1_connectable = True

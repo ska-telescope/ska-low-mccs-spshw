@@ -120,13 +120,13 @@ class TestTilePointing(BaseDaqTest):
         :param component_manager: SpsStation component manager under test.
         """
         # Random seed for repeatability
-        random.seed(0)
+        randomiser = random.Random(0)
         # Random set of delays to apply to the test generator, we make it here to we can
         # use the same random delays each time. To offset via pointing, these delays
         # must be the same for each polarisation as pointing is applied per antenna.
         self._delays = []
         for _ in range(TileData.ADC_CHANNELS // TileData.POLS_PER_ANTENNA):
-            random_val = random.randrange(-32, 32, 1)
+            random_val = randomiser.randrange(-32, 32, 1)
             self._delays.append(random_val)
             self._delays.append(random_val)
 
@@ -148,12 +148,12 @@ class TestTilePointing(BaseDaqTest):
         self: TestTilePointing, pol: int, channel: int
     ) -> list[complex]:
         """
-        Get the beam value for a given tile, pol and channel.
+        Get the beam value for a given pol and channel for all tiles.
 
         :param pol: the polarisation to get the beam value for.
         :param channel: the channel to get the beam value for.
 
-        :return: the beam value for the given tile, pol and channel.
+        :return: the beam value for a given pol and channel for all tiles.
         """
         sample = 0
         assert self._data is not None
@@ -244,10 +244,12 @@ class TestTilePointing(BaseDaqTest):
         super()._reset()
 
     def test(self: TestTilePointing) -> None:
-        """A test to show we can stream raw data from each available TPM to DAQ."""
-        self.test_logger.debug("Testing beamformed data.")
-        test_channels = range(7 + 1)
-        self.component_manager._set_channeliser_rounding(np.full(512, 5))
+        """Test to verify HW pointing offsets delays in the test generator."""
+        self.test_logger.debug("Testing tile pointing.")
+        test_channels = range(8)
+        self.component_manager._set_channeliser_rounding(
+            np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
+        )
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._reset_tpm_calibration(1.0)
@@ -268,8 +270,10 @@ class TestTilePointing(BaseDaqTest):
         )
         with self.reset_context():
             for channel in test_channels:
+                # Reset pointing delays in HW to 0.
                 self._clear_pointing_delays()
 
+                # Get a reference data set with zero delays in the test generator.
                 self._get_data_set(channel, zero_delays=True)
 
                 ref_values_pol_0 = self._get_beam_value(0, channel)
@@ -277,6 +281,7 @@ class TestTilePointing(BaseDaqTest):
                 ref_values_pol_1 = self._get_beam_value(1, channel)
                 self.test_logger.debug(f"{ref_values_pol_1=}")
 
+                # Get a data set with random delays in the test generator.
                 self._get_data_set(channel, zero_delays=False)
 
                 uncorrected_values_pol_0 = self._get_beam_value(0, channel)
@@ -284,8 +289,10 @@ class TestTilePointing(BaseDaqTest):
                 uncorrected_values_pol_1 = self._get_beam_value(1, channel)
                 self.test_logger.debug(f"{uncorrected_values_pol_1=}")
 
+                # Apply pointing delays in HW to offset the test generator delays.
                 self._set_pointing_delays()
 
+                # Get a data set with the corrected beam values.
                 self._get_data_set(channel, zero_delays=False)
 
                 corrected_values_pol_0 = self._get_beam_value(0, channel)
@@ -293,6 +300,7 @@ class TestTilePointing(BaseDaqTest):
                 corrected_values_pol_1 = self._get_beam_value(1, channel)
                 self.test_logger.debug(f"{corrected_values_pol_1=}")
 
+                # Check the corrected beam values against the reference values.
                 self._check_data(
                     ref_values_pol_0,
                     ref_values_pol_1,

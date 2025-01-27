@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a basic test for a station."""
+"""An implementation of a test for the tile beamformer."""
 from __future__ import annotations
 
 import itertools
@@ -21,13 +21,12 @@ from pydaq.persisters import BeamFormatFileManager  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from ...tile.tile_data import TileData
+from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestTileBeamformer"]
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class BeamDataReceivedHandler(BaseDataReceivedHandler):
@@ -48,7 +47,7 @@ class BeamDataReceivedHandler(BaseDataReceivedHandler):
         :param nof_channels: number of channels used in the test
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32
+        self._nof_samples = TileData.ADC_CHANNELS
         self._nof_channels = nof_channels
         super().__init__(logger, nof_tiles, data_created_callback)
 
@@ -139,7 +138,7 @@ class TestTileBeamformer(BaseDaqTest):
         self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
         self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
-        self._start_freq = 156.25e6
+        self._start_freq = 156.25e6  # Hz
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _send_beam_data(self: TestTileBeamformer) -> None:
@@ -193,7 +192,10 @@ class TestTileBeamformer(BaseDaqTest):
             self._configure_test_generator(
                 frequency,
                 0.5,
-                adc_channels=[antenna_no * 2, antenna_no * 2 + 1],
+                adc_channels=[
+                    antenna_no * TileData.POLS_PER_ANTENNA,
+                    antenna_no * TileData.POLS_PER_ANTENNA + 1,
+                ],
                 delays=self._delays,
             )
             self._send_beam_data()
@@ -205,8 +207,8 @@ class TestTileBeamformer(BaseDaqTest):
                 single_input_data[tile_no][1][antenna_no] = self._get_beam_value(
                     tile_no, 1, channel
                 )
-            self._data_created_event.clear()
             self._stop_directory_watch()
+            self._data_created_event.clear()
         return single_input_data
 
     def _get_all_antenna_data_set(self: TestTileBeamformer, channel: int) -> None:
@@ -225,8 +227,8 @@ class TestTileBeamformer(BaseDaqTest):
         )
         self._send_beam_data()
         assert self._data_created_event.wait(20)
-        self._data_created_event.clear()
         self._stop_directory_watch()
+        self._data_created_event.clear()
 
     def _calibrate_tpms(
         self: TestTileBeamformer,
@@ -256,7 +258,9 @@ class TestTileBeamformer(BaseDaqTest):
                         * ref_values[tile_no]
                         / single_input_data[tile_no][pol][antenna]
                     )
-                    self.test_logger.error(coeffs[tile_no][pol][antenna])
+            self.test_logger.debug(
+                f"Calibration coeffs for tile {tile_no} : {coeffs[tile_no]}"
+            )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(
@@ -362,13 +366,15 @@ class TestTileBeamformer(BaseDaqTest):
     def test(self: TestTileBeamformer) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self.test_logger.debug("Testing beamformed data.")
-        test_channels = range(7 + 1)
-        self.component_manager._set_channeliser_rounding(np.full(512, 5))
+        test_channels = range(8)  # Test 8 channels
+        self.component_manager._set_channeliser_rounding(
+            np.full(TileData.NUM_FREQUENCY_CHANNELS, 5)
+        )
         self.component_manager.stop_adcs()
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
         start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
+            datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
         )
         self.component_manager.start_beamformer(
             start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0

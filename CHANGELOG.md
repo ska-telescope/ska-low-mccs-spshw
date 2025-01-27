@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-5] Add Tile beamformer test to self-check.
+
 ## 0.23.0
 
 * [MCCS-2256] Removed cabinetbanks.

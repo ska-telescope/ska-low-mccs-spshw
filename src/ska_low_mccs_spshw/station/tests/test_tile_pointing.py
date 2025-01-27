@@ -274,6 +274,9 @@ class TestTilePointing(BaseDaqTest):
         )
         with self.reset_context():
             for channel in test_channels:
+                self._clear_pointing_delays()
+                time.sleep(1)
+
                 self._get_data_set(channel, zero_delays=True)
 
                 ref_values_pol_0 = [

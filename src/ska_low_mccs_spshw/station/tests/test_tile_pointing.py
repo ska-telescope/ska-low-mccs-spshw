@@ -123,10 +123,13 @@ class TestTilePointing(BaseDaqTest):
         # Random seed for repeatability
         random.seed(0)
         # Random set of delays to apply to the test generator, we make it here to we can
-        # use the same random delays each time.
-        self._delays = [
-            random.randrange(-32, 32, 1) for _ in range(TileData.ADC_CHANNELS)
-        ]
+        # use the same random delays each time. To offset via pointing, these delays
+        # must be the same for each polarisation.
+        self._delays = []
+        for _ in range(TileData.ADC_CHANNELS // TileData.POLS_PER_ANTENNA):
+            random_val = random.randrange(-32, 32, 1)
+            self._delays.append(random_val)
+            self._delays.append(random_val)
         # Choose a random antenna/polarisation to be the reference
         self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
         self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
@@ -190,12 +193,11 @@ class TestTilePointing(BaseDaqTest):
 
     def _set_pointing_delays(self: TestTilePointing) -> None:
         """Set the pointing delays for the TPMs."""
+        time_delays_hw = [0.0]
+        for n in range(TileData.ANTENNA_COUNT):
+            time_delays_hw.append(float(self._delays[2 * n]) * 1.25 * 1e-9)
+            time_delays_hw.append(0.0)
         for tile in self.tile_proxies:
-            time_delays_hw = []
-            for n in range(TileData.ANTENNA_COUNT):
-                time_delays_hw.append(float(self._delays[2 * n]) * 1.25 * 1e-9)
-                time_delays_hw.append(0.0)
-            time_delays_hw.insert(0, 0.0)
             tile.LoadPointingDelays(time_delays_hw)
             tile.ApplyPointingDelays("")
 

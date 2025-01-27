@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a basic test for a station."""
+"""An implementation of a test for the tile beamformer."""
 from __future__ import annotations
 
 import itertools
@@ -21,13 +21,12 @@ from pydaq.persisters import BeamFormatFileManager  # type: ignore
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 
 from ...tile.tile_data import TileData
+from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestTileBeamformer"]
-
-RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 class BeamDataReceivedHandler(BaseDataReceivedHandler):
@@ -208,8 +207,8 @@ class TestTileBeamformer(BaseDaqTest):
                 single_input_data[tile_no][1][antenna_no] = self._get_beam_value(
                     tile_no, 1, channel
                 )
-            self._data_created_event.clear()
             self._stop_directory_watch()
+            self._data_created_event.clear()
         return single_input_data
 
     def _get_all_antenna_data_set(self: TestTileBeamformer, channel: int) -> None:
@@ -228,8 +227,8 @@ class TestTileBeamformer(BaseDaqTest):
         )
         self._send_beam_data()
         assert self._data_created_event.wait(20)
-        self._data_created_event.clear()
         self._stop_directory_watch()
+        self._data_created_event.clear()
 
     def _calibrate_tpms(
         self: TestTileBeamformer,
@@ -259,7 +258,9 @@ class TestTileBeamformer(BaseDaqTest):
                         * ref_values[tile_no]
                         / single_input_data[tile_no][pol][antenna]
                     )
-                    self.test_logger.error(coeffs[tile_no][pol][antenna])
+            self.test_logger.debug(
+                f"Calibration coeffs for tile {tile_no} : {coeffs[tile_no]}"
+            )
             self._load_calibration_coefficients(tile, channel, coeffs[tile_no])
 
     def _load_calibration_coefficients(
@@ -398,7 +399,7 @@ class TestTileBeamformer(BaseDaqTest):
         self._configure_beamformer(self._start_freq)
         self._clear_pointing_delays()
         start_time = datetime.strftime(
-            datetime.fromtimestamp(int(time.time()) + 2), RFC_FORMAT
+            datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
         )
         self.component_manager.start_beamformer(
             start_time=start_time, duration=-1, subarray_beam_id=-1, scan_id=0

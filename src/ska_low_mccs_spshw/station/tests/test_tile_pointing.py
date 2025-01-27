@@ -289,6 +289,8 @@ class TestTilePointing(BaseDaqTest):
 
                 self._set_pointing_delays()
 
+                time.sleep(1)
+
                 self._get_data_set(channel, zero_delays=False)
 
                 corrected_values_pol_0 = [

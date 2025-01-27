@@ -273,25 +273,25 @@ class TestTilePointing(BaseDaqTest):
                 self._get_data_set(channel, zero_delays=True)
 
                 ref_values_pol_0 = self._get_beam_value(0, channel)
-                self.logger.debug(f"{ref_values_pol_0=}")
+                self.test_logger.debug(f"{ref_values_pol_0=}")
                 ref_values_pol_1 = self._get_beam_value(1, channel)
-                self.logger.debug(f"{ref_values_pol_1=}")
+                self.test_logger.debug(f"{ref_values_pol_1=}")
 
                 self._get_data_set(channel, zero_delays=False)
 
                 uncorrected_values_pol_0 = self._get_beam_value(0, channel)
-                self.logger.debug(f"{uncorrected_values_pol_0=}")
+                self.test_logger.debug(f"{uncorrected_values_pol_0=}")
                 uncorrected_values_pol_1 = self._get_beam_value(1, channel)
-                self.logger.debug(f"{uncorrected_values_pol_1=}")
+                self.test_logger.debug(f"{uncorrected_values_pol_1=}")
 
                 self._set_pointing_delays()
 
                 self._get_data_set(channel, zero_delays=False)
 
                 corrected_values_pol_0 = self._get_beam_value(0, channel)
-                self.logger.debug(f"{corrected_values_pol_0=}")
+                self.test_logger.debug(f"{corrected_values_pol_0=}")
                 corrected_values_pol_1 = self._get_beam_value(1, channel)
-                self.logger.debug(f"{corrected_values_pol_1=}")
+                self.test_logger.debug(f"{corrected_values_pol_1=}")
 
                 self._check_data(
                     ref_values_pol_0,

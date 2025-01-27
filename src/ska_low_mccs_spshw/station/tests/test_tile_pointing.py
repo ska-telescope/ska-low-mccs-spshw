@@ -280,12 +280,25 @@ class TestTilePointing(BaseDaqTest):
                     self._get_beam_value(tile_no, 0, channel)
                     for tile_no in range(len(self.tile_proxies))
                 ]
+                self.logger.error(f"{ref_values_pol_0=}")
                 ref_values_pol_1 = [
                     self._get_beam_value(tile_no, 1, channel)
                     for tile_no in range(len(self.tile_proxies))
                 ]
+                self.logger.error(f"{ref_values_pol_1=}")
 
                 self._get_data_set(channel, zero_delays=False)
+
+                uncorrected_values_pol_0 = [
+                    self._get_beam_value(tile_no, 0, channel)
+                    for tile_no in range(len(self.tile_proxies))
+                ]
+                self.logger.error(f"{uncorrected_values_pol_0=}")
+                uncorrected_values_pol_1 = [
+                    self._get_beam_value(tile_no, 1, channel)
+                    for tile_no in range(len(self.tile_proxies))
+                ]
+                self.logger.error(f"{uncorrected_values_pol_1=}")
 
                 self._set_pointing_delays()
 
@@ -297,10 +310,12 @@ class TestTilePointing(BaseDaqTest):
                     self._get_beam_value(tile_no, 0, channel)
                     for tile_no in range(len(self.tile_proxies))
                 ]
+                self.logger.error(f"{corrected_values_pol_0=}")
                 corrected_values_pol_1 = [
                     self._get_beam_value(tile_no, 1, channel)
                     for tile_no in range(len(self.tile_proxies))
                 ]
+                self.logger.error(f"{corrected_values_pol_1=}")
 
                 self._check_data(
                     ref_values_pol_0,

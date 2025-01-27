@@ -138,7 +138,7 @@ class TestTileBeamformer(BaseDaqTest):
         self._ref_antenna = random.randrange(0, TileData.ANTENNA_COUNT, 1)
         self._ref_pol = random.randrange(0, TileData.POLS_PER_ANTENNA, 1)
 
-        self._start_freq = 156.25e6
+        self._start_freq = 156.25e6  # Hz
         super().__init__(component_manager, logger, tile_trls, subrack_trls, daq_trl)
 
     def _send_beam_data(self: TestTileBeamformer) -> None:

@@ -156,7 +156,9 @@ def check_self_check_result(station: tango.DeviceProxy, command_info: dict) -> N
     :param command_info: a dict in which to store command IDs
 
     """
-    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=300)
+    # We're running a growing batch of tests which are taking longer to run, at the
+    # moment about 10-12 mins on average.
+    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=15 * 60)
     station.subscribe_event(
         "longRunningCommandResult",
         tango.EventType.CHANGE_EVENT,

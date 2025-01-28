@@ -2114,8 +2114,9 @@ class TestMccsTileCommands:
                 )
             )
         on_tile_device.adminMode = AdminMode.ENGINEERING
+        time.sleep(1)
         on_tile_device.subscribe_event(
-            "alarms",
+            "temperature_alm",
             EventType.CHANGE_EVENT,
             change_event_callbacks["alarms"],
         )

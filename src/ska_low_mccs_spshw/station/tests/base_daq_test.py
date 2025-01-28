@@ -97,6 +97,7 @@ class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
             try:
                 self.handle_data()
                 self._data_created_callback(data=self.data)
+                self.reset()
             except Exception as e:  # pylint: disable=broad-exception-caught
                 self._logger.error(f"Got error in callback: {repr(e)}, {e}")
                 self._logger.error(traceback.format_exc())
@@ -129,7 +130,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         :param daq_trl: trl of the daq the station has.
         :param component_manager: SpsStation component manager under test.
         """
-        self._data: np.ndarray | None
+        self._data: np.ndarray | None = None
         self._observer: InotifyObserver
         self._data_handler: BaseDataReceivedHandler
         self._pattern: list | None = None
@@ -166,6 +167,7 @@ class BaseDaqTest(TpmSelfCheckTest):
                 "directory": "/",
                 "nof_tiles": len(self.tile_proxies),
                 "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                "description": "self-check data",
             }
         )
         self.daq_proxy.Configure(json.dumps(daq_config))
@@ -225,6 +227,38 @@ class BaseDaqTest(TpmSelfCheckTest):
             tiles = [proxy]
         for tile in tiles:
             tile.StopPatternGenerator(stage)
+
+    def _configure_test_generator(
+        self: BaseDaqTest,
+        frequency: float,
+        amplitude: float,
+        delays: list[int] | None = None,
+        adc_channels: list | None = None,
+    ) -> None:
+        json_arg: dict[str, float | list] = {
+            "tone_frequency": frequency,
+            "tone_amplitude": amplitude,
+        }
+        if adc_channels is not None:
+            json_arg.update({"adc_channels": adc_channels})
+        if delays is not None:
+            json_arg.update({"delays": delays})
+        self.component_manager.configure_test_generator(json.dumps(json_arg))
+
+    def _disable_test_generator(self: BaseDaqTest) -> None:
+        self.component_manager.configure_test_generator("{}")
+
+    def _configure_beamformer(
+        self: BaseDaqTest,
+        frequency: float,
+    ) -> None:
+        region = [[int(frequency / TileData.CHANNEL_WIDTH), 0, 1, 0, 0, 0, 256]]
+        self.component_manager.set_beamformer_table(region)
+
+    def _clear_pointing_delays(self: BaseDaqTest) -> None:
+        for tile in self.tile_proxies:
+            tile.LoadPointingDelays([0.0] * (TileData.ANTENNA_COUNT * 2 + 1))
+            tile.ApplyPointingDelays("")
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
@@ -320,6 +354,8 @@ class BaseDaqTest(TpmSelfCheckTest):
         self._adders = None
         self._pattern = None
         self._stop_directory_watch()
+        if self.daq_proxy is not None:
+            self.daq_proxy.Stop()
         # self._delete_data()
 
     @contextmanager

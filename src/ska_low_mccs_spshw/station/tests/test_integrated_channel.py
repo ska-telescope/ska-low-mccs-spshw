@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a basic test for a station."""
+"""An implementation of a test for integrated channelised data from tiles."""
 from __future__ import annotations
 
 import logging

@@ -9,63 +9,13 @@
 from __future__ import annotations
 
 import json
-import logging
 from copy import copy
-from typing import Callable
-
-import numpy as np
-from pydaq.persisters import BeamFormatFileManager  # type: ignore
 
 from ...tile.tile_data import TileData
-from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
+from .base_daq_test import BaseDaqTest
+from .data_handlers import BeamDataReceivedHandler
 
 __all__ = ["TestBeam"]
-
-
-class BeamDataReceivedHandler(BaseDataReceivedHandler):
-    """Detect files created in the data directory."""
-
-    def __init__(
-        self: BeamDataReceivedHandler,
-        logger: logging.Logger,
-        nof_tiles: int,
-        data_created_callback: Callable,
-    ):
-        """
-        Initialise a new instance.
-
-        :param logger: logger for the handler
-        :param nof_tiles: number of tiles to expect data from
-        :param data_created_callback: callback to call when data received
-        """
-        self._nof_samples = TileData.ADC_CHANNELS
-        super().__init__(logger, nof_tiles, data_created_callback)
-
-    def handle_data(self: BeamDataReceivedHandler) -> None:
-        """Handle the reading of beam data."""
-        raw_file = BeamFormatFileManager(root_path=self._base_path)
-        for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(TileData.NUM_BEAMFORMER_CHANNELS),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-            self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
-
-    def initialise_data(self: BeamDataReceivedHandler) -> None:
-        """Initialise empty beam data struct."""
-        self.data = np.zeros(
-            (
-                self._nof_tiles,
-                TileData.POLS_PER_ANTENNA,
-                TileData.NUM_BEAMFORMER_CHANNELS,
-                self._nof_samples,
-                2,  # Real/Imag
-            ),
-            dtype=np.int16,
-        )
 
 
 class TestBeam(BaseDaqTest):
@@ -165,7 +115,10 @@ class TestBeam(BaseDaqTest):
     def test(self: TestBeam) -> None:
         """A test to show we can stream raw data from each available TPM to DAQ."""
         self._data_handler = BeamDataReceivedHandler(
-            self.test_logger, len(self.tile_proxies), self._data_received_callback
+            self.test_logger,
+            len(self.tile_proxies),
+            TileData.ADC_CHANNELS,
+            self._data_received_callback,
         )
         self._configure_daq("BEAM_DATA")
         self.test_logger.debug("Testing beamformed data.")

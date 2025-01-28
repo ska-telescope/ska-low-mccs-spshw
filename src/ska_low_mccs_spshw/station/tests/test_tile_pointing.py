@@ -13,67 +13,18 @@ import logging
 import random
 import time
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING
 
 import numpy as np
-from pydaq.persisters import BeamFormatFileManager  # type: ignore
 
 from ...tile.tile_data import TileData
 from ...tile.time_util import TileTime
-from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
+from .base_daq_test import BaseDaqTest
+from .data_handlers import BeamDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
 __all__ = ["TestTilePointing"]
-
-
-class BeamDataReceivedHandler(BaseDataReceivedHandler):
-    """Detect files created in the data directory."""
-
-    def __init__(
-        self: BeamDataReceivedHandler,
-        logger: logging.Logger,
-        nof_tiles: int,
-        nof_channels: int,
-        data_created_callback: Callable,
-    ):
-        """
-        Initialise a new instance.
-
-        :param logger: logger for the handler
-        :param nof_tiles: number of tiles to expect data from
-        :param nof_channels: number of channels used in the test
-        :param data_created_callback: callback to call when data received
-        """
-        self._nof_samples = TileData.ADC_CHANNELS
-        self._nof_channels = nof_channels
-        super().__init__(logger, nof_tiles, data_created_callback)
-
-    def handle_data(self: BeamDataReceivedHandler) -> None:
-        """Handle the reading of beam data."""
-        raw_file = BeamFormatFileManager(root_path=self._base_path)
-        for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                channels=range(self._nof_channels),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[tile_id, :, :, :, 0] = tile_data["real"][:, :, :, 0]
-            self.data[tile_id, :, :, :, 1] = tile_data["imag"][:, :, :, 0]
-
-    def initialise_data(self: BeamDataReceivedHandler) -> None:
-        """Initialise empty beam data struct."""
-        self.data = np.zeros(
-            (
-                self._nof_tiles,
-                TileData.POLS_PER_ANTENNA,
-                self._nof_channels,
-                self._nof_samples,
-                2,  # Real/Imag
-            ),
-            dtype=np.int16,
-        )
 
 
 class TestTilePointing(BaseDaqTest):
@@ -191,7 +142,9 @@ class TestTilePointing(BaseDaqTest):
         time_delays_hw = [0.0]
         for n in range(TileData.ANTENNA_COUNT):
             # Converting delay in frames to delay in seconds
-            time_delays_hw.append(float(self._delays[2 * n]) * 1.25 * 1e-9)
+            time_delays_hw.append(
+                float(self._delays[2 * n]) * TileData.ADC_SAMPLING_PERIOD
+            )
             time_delays_hw.append(0.0)
         for tile in self.tile_proxies:
             tile.LoadPointingDelays(time_delays_hw)

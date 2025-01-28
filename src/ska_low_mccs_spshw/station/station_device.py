@@ -169,7 +169,7 @@ class SpsStation(SKAObsDevice):
             self.logger, self._update_obs_state
         )
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
-        self._health_model: SpsStationHealthModel = SpsStationHealthModel(
+        self._health_model = SpsStationHealthModel(
             self.SubrackFQDNs, self.TileFQDNs, self._health_changed
         )
         self.set_change_event("healthState", True, False)

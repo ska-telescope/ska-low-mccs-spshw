@@ -321,6 +321,8 @@ class SpsStationComponentManager(
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
+        tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
     ) -> None:
         """
         Initialise a new instance.
@@ -353,6 +355,10 @@ class SpsStationComponentManager(
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param tile_health_changed_callback: callback to be
+            called when a tile's health changed
+        :param subrack_health_changed_callback: callback to be
+            called when a subrack's health changed
         """
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
@@ -422,6 +428,8 @@ class SpsStationComponentManager(
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
+        self._tile_health_changed_callback = tile_health_changed_callback
+        self._subrack_health_changed_callback = subrack_health_changed_callback
         # configuration parameters
         # more to come
         self._csp_ingest_address = str(csp_ingest_ip) if csp_ingest_ip else "0.0.0.0"
@@ -671,12 +679,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -854,6 +862,10 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
                 self._evaluate_power_state()
+        # Old health model.
+        if health is not None:
+            self._tile_health_changed_callback(fqdn, HealthState(health))
+        # New health model.
         if self._component_state_callback is not None:
             self._component_state_callback(device_name=fqdn, health=health, power=power)
 
@@ -868,6 +880,10 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
+        # Old health model.
+        if health is not None:
+            self._subrack_health_changed_callback(fqdn, HealthState(health))
+        # New health model.
         if self._component_state_callback is not None and health is not None:
             self._component_state_callback(
                 device_name=fqdn,

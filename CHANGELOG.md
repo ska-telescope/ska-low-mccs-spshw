@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.24.0
+
 * [THORN-54] Update SpsStation to use new health model.
 * [THORN-5] Add Tile beamformer test to self-check.
 

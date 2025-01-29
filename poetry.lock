@@ -4429,7 +4429,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
-version = "0.4.1"
+version = "0.5.0"
 description = "SKA Low MCCS DAQ Interface repository specifies the client-server interface between the DAQ and its monitoring and control component."
 optional = false
 python-versions = "^3.10"
@@ -4446,7 +4446,7 @@ ska-control-model = "^1.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface"
 reference = "thorn-12-data-rate-checker"
-resolved_reference = "83928f30ac381dc883d566a2dead9f57b0ec293f"
+resolved_reference = "3d5f44d3be3c007b8b44839b1893261693c96ced"
 
 [[package]]
 name = "ska-ser-logging"
@@ -5697,4 +5697,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "d599f0efb4c005cfb12e5a2d2e078d3b47191abc51cfe8ed041e3c934382859a"
+content-hash = "15e2a7c594615d4189ee89750cca95559aa50c1457f9629c93d272294c2c4f13"

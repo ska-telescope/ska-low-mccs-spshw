@@ -4446,7 +4446,7 @@ ska-control-model = "^1.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface"
 reference = "thorn-12-data-rate-checker"
-resolved_reference = "686ede147c67078b2f5b51dac125be3efcaefb72"
+resolved_reference = "e3206dd102dc5c585b8c58bd93f712d57fd7ee5b"
 
 [[package]]
 name = "ska-ser-logging"
@@ -4537,14 +4537,14 @@ reference = "skao"
 
 [[package]]
 name = "ska-tango-base"
-version = "1.3.0"
+version = "1.3.1"
 description = "SKA Tango base classes"
 optional = false
 python-versions = ">=3.10,<4.0"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "ska_tango_base-1.3.0-py3-none-any.whl", hash = "sha256:16862335494653252686403334047e2a8b2df159faacd0a9350098fdece5dcaf"},
-    {file = "ska_tango_base-1.3.0.tar.gz", hash = "sha256:8c807ec6d764a34a24fdef482073c48bbe5da87dfa97cfd9980e203a112d701e"},
+    {file = "ska_tango_base-1.3.1-py3-none-any.whl", hash = "sha256:ed2fb67e53991fe454f0ad4b41a5bc49533ff55d069af959b02cfbfc17f78271"},
+    {file = "ska_tango_base-1.3.1.tar.gz", hash = "sha256:a426fcb7bf80339a29cb42b3aa361b21b22f31be26ca4c2e191089c23fb1f299"},
 ]
 
 [package.dependencies]

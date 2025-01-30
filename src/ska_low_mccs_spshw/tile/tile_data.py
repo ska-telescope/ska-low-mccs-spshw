@@ -56,7 +56,7 @@ class TileData:
 
     # Correct for SPEAD packet overhead
     # https://confluence.skatelescope.org/display/SE/TPM+Data+Products+-+Packet+Length
-    SKA_DATA_SIZE = 8129
+    SKA_DATA_SIZE = 8192
     SKA_PACKET_SIZE = 8290
     STATION_BEAM_DATA_RATE_CORRECTED = (
         STATION_BEAM_DATA_RATE_PER_HZ * SKA_PACKET_SIZE / SKA_DATA_SIZE

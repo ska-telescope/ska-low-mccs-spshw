@@ -87,9 +87,9 @@ class TestStationBeamDataRate(BaseDaqTest):
         self.daq_proxy.StartDataRateMonitor(1)
 
         with self.reset_context():
-            for _ in test_iterations:
+            for iteration in test_iterations:
                 beamformer_start_time = datetime.strftime(
-                    datetime.fromtimestamp(int(time.time()) + 1), TileTime.RFC_FORMAT
+                    datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT
                 )
                 self.component_manager.start_beamformer(
                     start_time=beamformer_start_time,
@@ -97,7 +97,9 @@ class TestStationBeamDataRate(BaseDaqTest):
                     subarray_beam_id=-1,
                     scan_id=0,
                 )
-                time.sleep(2)
+                time.sleep(3)
+
+                assert self.component_manager.is_beamformer_running
 
                 data_rate_start_time = time.time()
 
@@ -119,5 +121,8 @@ class TestStationBeamDataRate(BaseDaqTest):
                         break
 
                     time.sleep(1)
+
+                self.logger.info(f"Test passed for iteration {iteration + 1}")
+                self.component_manager.stop_beamformer()
 
         self.test_logger.info("Test station beamformer data rate passed!")

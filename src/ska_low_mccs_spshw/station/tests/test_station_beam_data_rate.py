@@ -80,8 +80,8 @@ class TestStationBeamDataRate(BaseDaqTest):
         :raises AssertionError: if the data rate is not as expected.
         """
         self.test_logger.debug("Testing station beam data rate.")
-        test_iterations = range(1)
-        data_rate_check_length = 60  # seconds
+        test_iterations = range(5)  # To be made configurable
+        data_rate_check_length = 60  # seconds, to be made configurable
         self._configure_beamformer_all_regions()
         assert self.daq_proxy is not None
         self.daq_proxy.StartDataRateMonitor(1)
@@ -122,7 +122,7 @@ class TestStationBeamDataRate(BaseDaqTest):
 
                     time.sleep(1)
 
-                self.logger.info(f"Test passed for iteration {iteration + 1}")
+                self.test_logger.info(f"Test passed for iteration {iteration + 1}")
                 self.component_manager.stop_beamformer()
 
         self.test_logger.info("Test station beamformer data rate passed!")

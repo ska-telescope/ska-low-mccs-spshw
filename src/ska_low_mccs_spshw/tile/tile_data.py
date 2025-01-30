@@ -45,8 +45,15 @@ class TileData:
     FIRST_FREQUENCY_CHANNEL = 50e6
     CHANNEL_WIDTH = TOTAL_BANDWIDTH / NUM_FREQUENCY_CHANNELS
     FIRST_BEAMFORMER_CHANNEL: int = int(FIRST_FREQUENCY_CHANNEL / CHANNEL_WIDTH)
+    BEAMFORMER_BANDWIDTH = NUM_BEAMFORMER_CHANNELS * CHANNEL_WIDTH
     NUM_FPGA = 2
     BEAMF_BIT_SHIFT = 4  # Hardcoded into the pattern generator, can only shift by 4.
+    STATION_BEAM_DATA_RATE_PER_HZ = (
+        CHANNELISER_OVERSAMPLING_FACTOR * 2 * 2
+    )  # bytes / Hz (bandwidth) / s
+    FULL_STATION_BEAM_DATA_RATE = (
+        BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_PER_HZ
+    )  # bytes / s
 
     min_max_string = importlib.resources.read_text(
         __package__, "tpm_monitoring_min_max.yaml"

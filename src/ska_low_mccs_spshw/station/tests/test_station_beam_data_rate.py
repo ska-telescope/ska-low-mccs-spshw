@@ -12,6 +12,7 @@ import math
 import time
 from datetime import datetime
 
+from ...tile.tile_data import TileData
 from ...tile.time_util import TileTime
 from .base_daq_test import BaseDaqTest
 
@@ -46,7 +47,16 @@ class TestStationBeamDataRate(BaseDaqTest):
     def _configure_beamformer_all_regions(self: TestStationBeamDataRate) -> None:
         beamformer_table: list[list[int]] = []
         total_chan = 0
-        region = [64, 384, 0, 0, 0, 3, 1, 101]
+        region = [
+            TileData.FIRST_BEAMFORMER_CHANNEL,
+            TileData.NUM_BEAMFORMER_CHANNELS,
+            0,
+            0,
+            0,
+            3,  # arbitrary non-zero
+            1,  # arbirary non-zero
+            101,  # arbitrary non-zero
+        ]
         start_channel = region[0]
         nchannels = region[1]
         total_chan += nchannels
@@ -94,8 +104,12 @@ class TestStationBeamDataRate(BaseDaqTest):
                 while True:
                     elapsed_time = time.time() - data_rate_start_time
 
-                    current_data_rate = self.daq_proxy.GetDataRate()
-                    if not math.isclose(current_data_rate, 1.34, rel_tol=0.1):
+                    current_data_rate = self.daq_proxy.dataRate
+                    if not math.isclose(
+                        current_data_rate,
+                        TileData.FULL_STATION_BEAM_DATA_RATE / 1024**3,  # to gb/s
+                        rel_tol=0.1,
+                    ):
                         self.test_logger.error(
                             f"Data rate is not as expected: {current_data_rate}"
                         )

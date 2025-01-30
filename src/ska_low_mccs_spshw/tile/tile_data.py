@@ -48,11 +48,23 @@ class TileData:
     BEAMFORMER_BANDWIDTH = NUM_BEAMFORMER_CHANNELS * CHANNEL_WIDTH
     NUM_FPGA = 2
     BEAMF_BIT_SHIFT = 4  # Hardcoded into the pattern generator, can only shift by 4.
+
+    # Base data rate per Hz per second
     STATION_BEAM_DATA_RATE_PER_HZ = (
         CHANNELISER_OVERSAMPLING_FACTOR * POLS_PER_ANTENNA * 2  # real/imag
     )  # bytes / Hz (bandwidth) / s
+
+    # Correct for SPEAD packet overhead
+    # https://confluence.skatelescope.org/display/SE/TPM+Data+Products+-+Packet+Length
+    SKA_DATA_SIZE = 8129
+    SKA_PACKET_SIZE = 8290
+    STATION_BEAM_DATA_RATE_CORRECTED = (
+        STATION_BEAM_DATA_RATE_PER_HZ * SKA_PACKET_SIZE / SKA_DATA_SIZE
+    )
+
+    # Multiply by full bandwith to calculate maximum expected data rate
     FULL_STATION_BEAM_DATA_RATE = (
-        BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_PER_HZ
+        BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
     )  # bytes / s
 
     min_max_string = importlib.resources.read_text(

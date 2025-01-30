@@ -49,7 +49,7 @@ class TileData:
     NUM_FPGA = 2
     BEAMF_BIT_SHIFT = 4  # Hardcoded into the pattern generator, can only shift by 4.
     STATION_BEAM_DATA_RATE_PER_HZ = (
-        CHANNELISER_OVERSAMPLING_FACTOR * 2 * 2
+        CHANNELISER_OVERSAMPLING_FACTOR * POLS_PER_ANTENNA * 2  # real/imag
     )  # bytes / Hz (bandwidth) / s
     FULL_STATION_BEAM_DATA_RATE = (
         BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_PER_HZ

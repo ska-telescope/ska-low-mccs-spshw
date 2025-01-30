@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a test for the tile pointing."""
+"""An implementation of a test for the station beam data rate."""
 from __future__ import annotations
 
 import math
@@ -21,17 +21,16 @@ __all__ = ["TestStationBeamDataRate"]
 
 class TestStationBeamDataRate(BaseDaqTest):
     """
-    Test the tile beamformer on each TPM.
+    Test the station beam data rate.
 
     ##########
     TEST STEPS
     ##########
 
-    1. Configure DAQ to be ready to receive beam data from your TPMs.
-    2. Send beam data from each TPM with zero delays in the test generator.
-    3. Send beam data from each TPM with random delays in the test generator.
-    4. Correct the beam data using pointing delays.
-    5. Compare the corrected beam data with the reference beam data.
+    1. Configure the beamformer table for your TPMs to be for the full bandwidth
+    2. Start the beamformer.
+    3. Measure the data rate from DAQ for 1 min, comparing to expected rate.
+    4. Repeat for n iterations.
 
     #################
     TEST REQUIREMENTS
@@ -45,6 +44,7 @@ class TestStationBeamDataRate(BaseDaqTest):
     """
 
     def _configure_beamformer_all_regions(self: TestStationBeamDataRate) -> None:
+        """Configure the beamformer table on each TPM to be for the full bandwidth."""
         beamformer_table: list[list[int]] = []
         total_chan = 0
         region = [

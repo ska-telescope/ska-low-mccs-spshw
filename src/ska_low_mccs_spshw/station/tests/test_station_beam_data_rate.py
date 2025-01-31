@@ -46,26 +46,25 @@ class TestStationBeamDataRate(BaseDaqTest):
     def _configure_beamformer_all_regions(self: TestStationBeamDataRate) -> None:
         """Configure the beamformer table on each TPM to be for the full bandwidth."""
         beamformer_table: list[list[int]] = []
-        total_chan = 0
-        region = [
-            TileData.FIRST_BEAMFORMER_CHANNEL,
-            TileData.NUM_BEAMFORMER_CHANNELS,
-            0,
-            0,
-            0,
-            3,  # arbitrary non-zero
-            1,  # arbirary non-zero
-            101,  # arbitrary non-zero
-        ]
-        start_channel = region[0]
-        nchannels = region[1]
-        total_chan += nchannels
-        subarray_logical_channel = region[4]
+
+        start_channel = TileData.FIRST_BEAMFORMER_CHANNEL
+        nchannels = TileData.NUM_BEAMFORMER_CHANNELS
+        subarray_logical_channel = 0
+
         for channel_0 in range(start_channel, start_channel + nchannels, 8):
-            entry = [channel_0] + region[2:8]
-            entry[3] = subarray_logical_channel
-            subarray_logical_channel = subarray_logical_channel + 8
-            beamformer_table.append(entry)
+            beamformer_table.append(
+                [
+                    channel_0,
+                    0,
+                    0,
+                    subarray_logical_channel,
+                    3,  # arbitrary non-zero
+                    1,  # arbitrary non-zero
+                    101,  # arbitrary non-zero
+                ]
+            )
+            subarray_logical_channel += 8
+
         self.component_manager.set_beamformer_table(beamformer_table)
 
     def _reset(self: TestStationBeamDataRate) -> None:

@@ -1,7 +1,8 @@
 # Version History
 
-## Unreleased
+## 0.23.1
 
+* [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied
 * [THORN-5] Add Tile beamformer test to self-check.
 
 ## 0.23.0

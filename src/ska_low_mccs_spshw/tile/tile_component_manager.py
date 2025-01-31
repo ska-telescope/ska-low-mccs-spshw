@@ -2204,7 +2204,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 return (ResultCode.REJECTED, "Time too early")
 
         self.logger.info("TileComponentManager: switch_calibration_bank")
-        with acquire_timeout(self._hardware_lock, timeout=1) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
             if acquired:
                 try:
                     self.tile.switch_calibration_bank(switch_time=load_frame)
@@ -2237,7 +2237,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: Result code and message.
         """
         self.logger.info("TileComponentManager: load_calibration_coefficients")
-        with acquire_timeout(self._hardware_lock, timeout=1) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
             if acquired:
                 try:
                     self.tile.load_calibration_coefficients(

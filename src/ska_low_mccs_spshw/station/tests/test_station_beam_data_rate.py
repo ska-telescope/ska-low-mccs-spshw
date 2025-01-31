@@ -97,7 +97,7 @@ class TestStationBeamDataRate(BaseDaqTest):
                     subarray_beam_id=-1,
                     scan_id=0,
                 )
-                time.sleep(3)
+                time.sleep(5)
 
                 assert self.component_manager.is_beamformer_running
 

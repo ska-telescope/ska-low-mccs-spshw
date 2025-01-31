@@ -4049,8 +4049,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
-
         def do(
             self: MccsTile.ApplyCalibrationCommand,
             *args: Any,
@@ -4069,8 +4067,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             switch_time = args[0]
 
-            self._component_manager.apply_calibration(switch_time)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return_code, message = self._component_manager.apply_calibration(
+                switch_time
+            )
+            return (return_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

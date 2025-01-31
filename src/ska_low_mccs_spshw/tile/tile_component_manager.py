@@ -2182,13 +2182,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @check_communicating
-    def apply_calibration(self: TileComponentManager, load_time: str = "") -> None:
+    def apply_calibration(
+        self: TileComponentManager, load_time: str = ""
+    ) -> tuple[ResultCode, str]:
         """
         Load the calibration coefficients at the specified time delay.
 
         :param load_time: switch time as ISO formatted time
 
-        :raises ValueError: invalid time
+        :return: Result code and message.
         """
         if load_time == "":
             load_frame = 0
@@ -2197,24 +2199,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
             if load_frame < 0:
-                self.logger.error(f"apply_calibration: Invalid time {load_time}")
-                raise ValueError(f"Invalid time {load_time}")
+                return (ResultCode.REJECTED, f"Invalid time {load_time}")
             if (load_frame - self.fpga_current_frame) < 20:
-                self.logger.error("apply_calibration: time not enough in the future")
-                raise ValueError("Time too early")
+                return (ResultCode.REJECTED, "Time too early")
 
         self.logger.info("TileComponentManager: switch_calibration_bank")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=1) as acquired:
             if acquired:
                 try:
                     self.tile.switch_calibration_bank(switch_time=load_frame)
                 # pylint: disable=broad-except
                 except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
                     )
             else:
-                self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "ApplyCalibration command completed OK")
 
     def load_calibration_coefficients(
         self: TileComponentManager,

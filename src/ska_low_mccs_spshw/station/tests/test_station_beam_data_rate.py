@@ -82,6 +82,7 @@ class TestStationBeamDataRate(BaseDaqTest):
         test_iterations = range(5)  # To be made configurable
         data_rate_check_length = 60  # seconds, to be made configurable
         self._configure_beamformer_all_regions()
+        self._configure_csp_ingest()
         assert self.daq_proxy is not None
         self.daq_proxy.StartDataRateMonitor(1)
 

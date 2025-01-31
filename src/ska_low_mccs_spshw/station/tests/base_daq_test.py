@@ -128,6 +128,15 @@ class BaseDaqTest(TpmSelfCheckTest):
             }
             self.component_manager.set_lmc_download(**tpm_config)
 
+    def _configure_csp_ingest(self: BaseDaqTest) -> None:
+        assert self.daq_proxy is not None
+        daq_status = json.loads(self.daq_proxy.DaqStatus())
+        self.component_manager.set_csp_ingest(
+            daq_status["Receiver IP"][0],
+            0xF0D0,
+            daq_status["Receiver Ports"][0],
+        )
+
     def _configure_and_start_pattern_generator(
         self: BaseDaqTest,
         stage: str,

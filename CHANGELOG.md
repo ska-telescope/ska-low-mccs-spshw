@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-5] Add Tile beamformer test to self-check.
+* [THORN-12] Add methods/attribute to measure data rate through DAQ network interface.
 
 ## 0.23.0
 

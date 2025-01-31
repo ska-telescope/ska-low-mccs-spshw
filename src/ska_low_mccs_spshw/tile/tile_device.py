@@ -3933,8 +3933,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
-
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand,
             argin: list[float],
@@ -3977,10 +3975,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 for i in range(1, len(argin), 8)
             ]
 
-            self._component_manager.load_calibration_coefficients(
+            result, message = self._component_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (result, message)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadCalibrationCoefficients(

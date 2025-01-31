@@ -2223,7 +2223,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         antenna: int,
         calibration_coefficients: list[list[complex]],
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Load calibration coefficients.
 
@@ -2233,9 +2233,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param antenna: the antenna to which the coefficients apply
         :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
+
+        :return: Result code and message.
         """
         self.logger.info("TileComponentManager: load_calibration_coefficients")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=1) as acquired:
             if acquired:
                 try:
                     self.tile.load_calibration_coefficients(
@@ -2243,11 +2245,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                 # pylint: disable=broad-except
                 except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
                     )
             else:
-                self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "LoadCalibrationCoefficents command completed OK")
 
     def initialise_beamformer(
         self: TileComponentManager,

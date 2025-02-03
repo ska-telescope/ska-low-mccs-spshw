@@ -67,7 +67,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         """
         self._data: np.ndarray | None = None
         self._observer: InotifyObserver
-        self._data_handler: BaseDataReceivedHandler
+        self._data_handler: BaseDataReceivedHandler | None = None
         self._pattern: list | None = None
         self._adders: list | None = None
         self._data_created_event: Event = Event()
@@ -128,6 +128,15 @@ class BaseDaqTest(TpmSelfCheckTest):
             }
             self.component_manager.set_lmc_download(**tpm_config)
 
+    def _configure_csp_ingest(self: BaseDaqTest) -> None:
+        assert self.daq_proxy is not None
+        daq_status = json.loads(self.daq_proxy.DaqStatus())
+        self.component_manager.set_csp_ingest(
+            daq_status["Receiver IP"][0],
+            0xF0D0,
+            daq_status["Receiver Ports"][0],
+        )
+
     def _configure_and_start_pattern_generator(
         self: BaseDaqTest,
         stage: str,
@@ -183,10 +192,7 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _disable_test_generator(self: BaseDaqTest) -> None:
         self.component_manager.configure_test_generator("{}")
 
-    def _configure_beamformer(
-        self: BaseDaqTest,
-        frequency: float,
-    ) -> None:
+    def _configure_beamformer(self: BaseDaqTest, frequency: float) -> None:
         region = [[int(frequency / TileData.CHANNEL_WIDTH), 0, 1, 0, 0, 0, 256]]
         self.component_manager.set_beamformer_table(region)
 
@@ -333,7 +339,8 @@ class BaseDaqTest(TpmSelfCheckTest):
             yield
         finally:
             self._reset()
-            self._data_handler.reset()
+            if self._data_handler is not None:
+                self._data_handler.reset()
 
     def check_requirements(self: BaseDaqTest) -> tuple[bool, str]:
         """

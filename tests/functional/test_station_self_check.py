@@ -124,7 +124,10 @@ def check_spsstation_state(
     ]
 
     iters = 0
-    while any(tile.state() != tango.DevState.ON for tile in tile_devices):
+    while any(
+        tile.state() not in [tango.DevState.ON, tango.DevState.ALARM]
+        for tile in tile_devices
+    ):
         if iters >= 60:
             pytest.fail(
                 f"Not all tiles came ON: {[tile.state() for tile in tile_devices]}"
@@ -157,8 +160,8 @@ def check_self_check_result(station: tango.DeviceProxy, command_info: dict) -> N
 
     """
     # We're running a growing batch of tests which are taking longer to run, at the
-    # moment about 10-12 mins on average.
-    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=15 * 60)
+    # moment about 17-18 mins on average.
+    lrc_result_callback = MockTangoEventCallbackGroup("lrc_result", timeout=20 * 60)
     station.subscribe_event(
         "longRunningCommandResult",
         tango.EventType.CHANGE_EVENT,

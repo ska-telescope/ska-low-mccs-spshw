@@ -95,6 +95,45 @@ def retry_command_on_exception(
     )
 
 
+class _SubrackProxy(DeviceComponentManager):
+    """A proxy to a subrack, for a station to use."""
+
+    # def _device_admin_mode_changed(
+    #     self: _SubrackProxy,
+    #     event_name: str,
+    #     event_value: AdminMode,
+    #     event_quality: tango.AttrQuality,
+    # ) -> None:
+    #     """
+    #     Handle an change event on device admin mode.
+
+    #     :param event_name: name of the event; will always be
+    #         "adminMode" for this callback
+    #     :param event_value: the new admin mode
+    #     :param event_quality: the quality of the change event
+    #     """
+    #     super()._device_admin_mode_changed(event_name, event_value, event_quality)
+    #     if self._proxy is None:
+    #         return
+    #     self.logger.warning(
+    #         f"Change event IDs: {self._proxy._change_event_subscription_ids}"
+    #     )
+    #     # with self._proxy._change_event_lock:
+    #     if event_value in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
+    #         # Resub to health state change events if necessary.
+    #         if not self._proxy._change_event_subscription_ids["healthState".lower()]:
+    #             if self._component_state_callback is not None:
+    #                 self.logger.info("Resubscribing to device health updates.")
+    #                 self._proxy.add_change_event_callback(
+    #                     "healthState", self._component_state_callback
+    #                 )
+    #     else:
+    #         # Unsub to health state change events if necessary.
+    #         self.logger.info("Unsubscribing to device health updates.")
+    #         if self._proxy._change_event_subscription_ids["healthState".lower()]:
+    #             self._proxy.unsubscribe_change_event("healthState")
+
+
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -170,6 +209,36 @@ class _TileProxy(DeviceComponentManager):
                 )
         super()._device_state_changed(event_name, event_value, event_quality)
 
+    # def _device_admin_mode_changed(
+    #     self: _TileProxy,
+    #     event_name: str,
+    #     event_value: AdminMode,
+    #     event_quality: tango.AttrQuality,
+    # ) -> None:
+    #     """
+    #     Handle an change event on device admin mode.
+
+    #     :param event_name: name of the event; will always be
+    #         "adminMode" for this callback
+    #     :param event_value: the new admin mode
+    #     :param event_quality: the quality of the change event
+    #     """
+    #     super()._device_admin_mode_changed(event_name, event_value, event_quality)
+    #     if self._proxy is None:
+    #         return
+    #     # with self._proxy._change_event_lock:
+    #     if event_value in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
+    #         # Resub to health state change events if necessary.
+    #         if not self._proxy._change_event_subscription_ids["healthState".lower()]:
+    #             if self._component_state_callback is not None:
+    #                 self._proxy.add_change_event_callback(
+    #                     "healthState", self._component_state_callback
+    #                 )
+    #     else:
+    #         # Unsub to health state change events if necessary.
+    #         if self._proxy._change_event_subscription_ids["healthState".lower()]:
+    #             self._proxy.unsubscribe_change_event("healthState")
+
     def preadu_levels(self: _TileProxy) -> list[float]:
         """
         Return preAdu levels.
@@ -217,7 +286,6 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        # self._connect_in_progress: bool = False
         super().__init__(
             fqdn,
             logger,
@@ -231,7 +299,6 @@ class _DaqProxy(DeviceComponentManager):
         self._proxy.Configure(cfg)
 
     def start_communicating(self: _DaqProxy) -> None:
-        # self._connect_in_progress = True
         super().start_communicating()
 
     def _device_state_changed(
@@ -245,7 +312,6 @@ class _DaqProxy(DeviceComponentManager):
             and event_value == tango.DevState.ON
         ):
             assert self._proxy is not None  # for the type checker
-            # self._connect_in_progress = False
             self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
@@ -406,7 +472,7 @@ class SpsStationComponentManager(
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: DeviceComponentManager(
+            subrack_fqdn: _SubrackProxy(
                 subrack_fqdn,
                 logger,
                 functools.partial(
@@ -682,12 +748,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -740,6 +806,7 @@ class SpsStationComponentManager(
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
+        self.logger.warning("START COMMS CALLED")
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
@@ -753,6 +820,7 @@ class SpsStationComponentManager(
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
+        self.logger.warning("STOP COMMS CALLED")
         if self.communication_state == CommunicationStatus.DISABLED:
             return
 
@@ -783,6 +851,18 @@ class SpsStationComponentManager(
         # of order, which breaks tests. Therefore we need to serialise access.
         with self._device_communication_state_lock:
             self._communication_states[fqdn] = communication_state
+            if communication_state == CommunicationStatus.ESTABLISHED:
+                # Read the subdevice healthstate and update model via component callback
+                # This is necessary to update the health model with when cycling
+                # adminMode from ONLINE to OFFLINE to ONLINE or subdevices will
+                # remain UNKNOWN in healthRollup until a new health change event.
+                subdevice = self._tile_proxies.get(fqdn) or self._subrack_proxies.get(
+                    fqdn
+                )
+                if subdevice is not None and self._component_state_callback is not None:
+                    self._component_state_callback(
+                        device_name=fqdn, health=subdevice._health
+                    )
 
             if self.communication_state == CommunicationStatus.DISABLED:
                 return
@@ -869,8 +949,8 @@ class SpsStationComponentManager(
         if health is not None:
             self._tile_health_changed_callback(fqdn, HealthState(health))
         # New health model.
-        if self._component_state_callback is not None:
-            self._component_state_callback(device_name=fqdn, health=health, power=power)
+        if self._component_state_callback is not None and health is not None:
+            self._component_state_callback(device_name=fqdn, health=health)
 
     @threadsafe
     def _subrack_state_changed(

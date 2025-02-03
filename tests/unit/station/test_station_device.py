@@ -1687,6 +1687,8 @@ def test_health(
                 "tile_failed": 0.2,
                 "pps_delta_degraded": 4,
                 "pps_delta_failed": 9,
+                "subracks": [1, 1, 1],  # Expect these to be overwritten
+                "tiles": [1, 1, 2],  # Expect these to be overwritten
             },
             {
                 "subrack_degraded": 0.1,

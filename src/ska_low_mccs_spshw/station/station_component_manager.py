@@ -217,7 +217,7 @@ class _DaqProxy(DeviceComponentManager):
             called when the component state changes
         """
         self._station_id = station_id
-        self._connect_in_progress: bool = False
+        # self._connect_in_progress: bool = False
         super().__init__(
             fqdn,
             logger,
@@ -231,7 +231,7 @@ class _DaqProxy(DeviceComponentManager):
         self._proxy.Configure(cfg)
 
     def start_communicating(self: _DaqProxy) -> None:
-        self._connect_in_progress = True
+        # self._connect_in_progress = True
         super().start_communicating()
 
     def _device_state_changed(
@@ -240,9 +240,12 @@ class _DaqProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        if self._connect_in_progress and event_value == tango.DevState.ON:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
             assert self._proxy is not None  # for the type checker
-            self._connect_in_progress = False
+            # self._connect_in_progress = False
             self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 

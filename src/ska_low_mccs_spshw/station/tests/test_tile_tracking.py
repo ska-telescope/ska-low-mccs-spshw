@@ -154,7 +154,7 @@ class TestTileTracking(BaseDaqTest):
         start_freq = 350e6  # Hz, gives exact DC
         self._configure_beamformer(start_freq)
         self._configure_test_generator(
-            start_freq, 2, delays=[0] * TileData.ADC_CHANNELS
+            start_freq, 1, delays=[0] * TileData.ADC_CHANNELS
         )
         self._reset_tpm_calibration(1.0)
         self._set_pointing_delay_rates()

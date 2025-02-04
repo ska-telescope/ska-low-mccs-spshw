@@ -177,7 +177,7 @@ class TestTileTracking(BaseDaqTest):
             for iteration in range(iterations):
                 self._get_data_set()
 
-                val = self._get_beam_value(0, int(start_freq / TileData.CHANNEL_WIDTH))
+                val = self._get_beam_value(0, 0)
                 self.test_logger.debug(
                     f"Reference value iteration {iteration+1}: {val}"
                 )

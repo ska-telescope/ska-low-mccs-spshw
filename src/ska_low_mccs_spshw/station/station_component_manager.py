@@ -95,45 +95,6 @@ def retry_command_on_exception(
     )
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
-
-    # def _device_admin_mode_changed(
-    #     self: _SubrackProxy,
-    #     event_name: str,
-    #     event_value: AdminMode,
-    #     event_quality: tango.AttrQuality,
-    # ) -> None:
-    #     """
-    #     Handle an change event on device admin mode.
-
-    #     :param event_name: name of the event; will always be
-    #         "adminMode" for this callback
-    #     :param event_value: the new admin mode
-    #     :param event_quality: the quality of the change event
-    #     """
-    #     super()._device_admin_mode_changed(event_name, event_value, event_quality)
-    #     if self._proxy is None:
-    #         return
-    #     self.logger.warning(
-    #         f"Change event IDs: {self._proxy._change_event_subscription_ids}"
-    #     )
-    #     # with self._proxy._change_event_lock:
-    #     if event_value in [AdminMode.ONLINE, AdminMode.ENGINEERING]:
-    #         # Resub to health state change events if necessary.
-    #         if not self._proxy._change_event_subscription_ids["healthState".lower()]:
-    #             if self._component_state_callback is not None:
-    #                 self.logger.info("Resubscribing to device health updates.")
-    #                 self._proxy.add_change_event_callback(
-    #                     "healthState", self._component_state_callback
-    #                 )
-    #     else:
-    #         # Unsub to health state change events if necessary.
-    #         self.logger.info("Unsubscribing to device health updates.")
-    #         if self._proxy._change_event_subscription_ids["healthState".lower()]:
-    #             self._proxy.unsubscribe_change_event("healthState")
-
-
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -472,7 +433,7 @@ class SpsStationComponentManager(
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: _SubrackProxy(
+            subrack_fqdn: DeviceComponentManager(
                 subrack_fqdn,
                 logger,
                 functools.partial(
@@ -748,12 +709,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [

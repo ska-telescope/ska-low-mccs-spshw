@@ -1,11 +1,15 @@
 # Version History
 
-## Unreleased
-
 ## 0.24.0
 
 * [THORN-54] Update SpsStation to use new health model.
+
+## 0.23.1
+
+* [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied
 * [THORN-5] Add Tile beamformer test to self-check.
+* [THORN-12] Add methods/attribute to measure data rate through DAQ network interface.
+* [THORN-13] Add station beam data rate test to self-check.
 
 ## 0.23.0
 

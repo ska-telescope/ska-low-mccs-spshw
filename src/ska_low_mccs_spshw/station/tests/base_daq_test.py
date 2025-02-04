@@ -8,29 +8,26 @@
 """An implementation of a basic test for a station."""
 from __future__ import annotations
 
-import abc
+import itertools
 import json
 import logging
-import os
 import random
 import shutil
 import string
-import threading
 import time
-import traceback
 from contextlib import contextmanager
 from threading import Event
-from typing import TYPE_CHECKING, Any, Callable, Iterator
+from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
 from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
 
 from ...tile.tile_data import TileData
 from .base_tpm_test import TpmSelfCheckTest
+from .data_handlers import BaseDataReceivedHandler
 
 if TYPE_CHECKING:
     from ..station_component_manager import SpsStationComponentManager
@@ -44,68 +41,6 @@ DATA_TYPE_TO_BITWIDTH = {
     "INT_BEAM": (12, 12),
     "INT_CHANNEL": (8, 8),
 }
-
-
-class BaseDataReceivedHandler(FileSystemEventHandler, abc.ABC):
-    """Base class for the data received handler."""
-
-    def __init__(
-        self: BaseDataReceivedHandler,
-        logger: logging.Logger,
-        nof_tiles: int,
-        data_created_callback: Callable,
-    ):
-        """
-        Initialise a new instance.
-
-        :param logger: logger for the handler
-        :param nof_tiles: number of tiles to expect data from
-        :param data_created_callback: callback to call when data received
-        """
-        self._logger: logging.Logger = logger
-        self._data_created_callback = data_created_callback
-        self._nof_tiles = nof_tiles
-        self._base_path = ""
-        self._tile_id = 0
-        self.data: np.ndarray
-        self._callback_lock = threading.Lock()
-        self.initialise_data()
-
-    @abc.abstractmethod
-    def initialise_data(self: BaseDataReceivedHandler) -> None:
-        """Initialise empty data structure for file type.."""
-
-    @abc.abstractmethod
-    def handle_data(self: BaseDataReceivedHandler) -> None:
-        """Handle reading the data from received HDF5."""
-
-    def on_created(self: BaseDataReceivedHandler, event: FileSystemEvent) -> None:
-        """
-        Check every event for newly created files to process.
-
-        :param event: Event to check.
-        """
-        with self._callback_lock:
-            if not event._src_path.endswith(".hdf5") or event.is_directory:
-                return
-            self._tile_id += 1
-            if self._tile_id < self._nof_tiles:
-                self._logger.debug(f"Got {self._tile_id} files so far.")
-                return
-            self._logger.debug("Got data for all tiles, gathering data.")
-            self._base_path = os.path.split(event._src_path)[0]
-            try:
-                self.handle_data()
-                self._data_created_callback(data=self.data)
-                self.reset()
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                self._logger.error(f"Got error in callback: {repr(e)}, {e}")
-                self._logger.error(traceback.format_exc())
-
-    def reset(self: BaseDataReceivedHandler) -> None:
-        """Reset instance variables for re-use."""
-        self._tile_id = 0
-        self.initialise_data()
 
 
 # pylint: disable=too-many-instance-attributes
@@ -132,7 +67,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         """
         self._data: np.ndarray | None = None
         self._observer: InotifyObserver
-        self._data_handler: BaseDataReceivedHandler
+        self._data_handler: BaseDataReceivedHandler | None = None
         self._pattern: list | None = None
         self._adders: list | None = None
         self._data_created_event: Event = Event()
@@ -193,6 +128,15 @@ class BaseDaqTest(TpmSelfCheckTest):
             }
             self.component_manager.set_lmc_download(**tpm_config)
 
+    def _configure_csp_ingest(self: BaseDaqTest) -> None:
+        assert self.daq_proxy is not None
+        daq_status = json.loads(self.daq_proxy.DaqStatus())
+        self.component_manager.set_csp_ingest(
+            daq_status["Receiver IP"][0],
+            0xF0D0,
+            daq_status["Receiver Ports"][0],
+        )
+
     def _configure_and_start_pattern_generator(
         self: BaseDaqTest,
         stage: str,
@@ -248,10 +192,7 @@ class BaseDaqTest(TpmSelfCheckTest):
     def _disable_test_generator(self: BaseDaqTest) -> None:
         self.component_manager.configure_test_generator("{}")
 
-    def _configure_beamformer(
-        self: BaseDaqTest,
-        frequency: float,
-    ) -> None:
+    def _configure_beamformer(self: BaseDaqTest, frequency: float) -> None:
         region = [[int(frequency / TileData.CHANNEL_WIDTH), 0, 1, 0, 0, 0, 256]]
         self.component_manager.set_beamformer_table(region)
 
@@ -259,6 +200,35 @@ class BaseDaqTest(TpmSelfCheckTest):
         for tile in self.tile_proxies:
             tile.LoadPointingDelays([0.0] * (TileData.ANTENNA_COUNT * 2 + 1))
             tile.ApplyPointingDelays("")
+
+    def _reset_calibration_coefficients(
+        self: BaseDaqTest, tile: MccsDeviceProxy, gain: float = 1.0
+    ) -> None:
+        """
+        Reset the calibration coefficients for the TPMs to given gain.
+
+        :param tile: the tile to reset the calibration coefficients for.
+        :param gain: the gain to reset the calibration coefficients to.
+        """
+        complex_coefficients = [
+            [complex(gain), complex(0.0), complex(0.0), complex(gain)]
+        ] * TileData.NUM_BEAMFORMER_CHANNELS
+        for antenna in range(TileData.ANTENNA_COUNT):
+            inp = list(itertools.chain.from_iterable(complex_coefficients))
+            out = [[v.real, v.imag] for v in inp]
+            coefficients = list(itertools.chain.from_iterable(out))
+            coefficients.insert(0, float(antenna))
+            tile.LoadCalibrationCoefficients(coefficients)
+        tile.ApplyCalibration("")
+
+    def _reset_tpm_calibration(self: BaseDaqTest, gain: float = 1.0) -> None:
+        """
+        Reset the calibration coefficients for all TPMs.
+
+        :param gain: the gain to reset the calibration coefficients to.
+        """
+        for tile in self.tile_proxies:
+            self._reset_calibration_coefficients(tile, gain)
 
     def _start_directory_watch(self: BaseDaqTest) -> None:
         self.test_logger.debug("Starting directory watch")
@@ -369,7 +339,8 @@ class BaseDaqTest(TpmSelfCheckTest):
             yield
         finally:
             self._reset()
-            self._data_handler.reset()
+            if self._data_handler is not None:
+                self._data_handler.reset()
 
     def check_requirements(self: BaseDaqTest) -> tuple[bool, str]:
         """

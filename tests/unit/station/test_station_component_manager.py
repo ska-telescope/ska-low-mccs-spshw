@@ -663,7 +663,6 @@ def test_power_state_transitions(
         assert tile._proxy.state() == tango.DevState.ON
         callbacks["component_state"].assert_call(
             device_name=tile._name,
-            power=None,
             health=HealthState.OK,
             lookahead=20,
         )
@@ -671,7 +670,6 @@ def test_power_state_transitions(
         callbacks["component_state"].assert_call(
             device_name=tile._name,
             power=PowerState.ON,
-            health=None,
             lookahead=20,
         )
     callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=10)

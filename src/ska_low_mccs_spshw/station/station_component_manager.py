@@ -748,12 +748,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
-                antenna_config["delay"]
-            )
-            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
-                antenna_config["delay"]
-            )
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_x_channel"]
+            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][
+                antenna_config["tpm_y_channel"]
+            ] = antenna_config["delay"]
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -944,13 +944,17 @@ class SpsStationComponentManager(
         if power is not None:
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
+                if self._component_state_callback is not None:
+                    self._component_state_callback(device_name=fqdn, power=power)
+
                 self._evaluate_power_state()
-        # Old health model.
+
         if health is not None:
+            # Old health model.
             self._tile_health_changed_callback(fqdn, HealthState(health))
-        # New health model.
-        if self._component_state_callback is not None and health is not None:
-            self._component_state_callback(device_name=fqdn, health=health)
+            # New health model.
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, health=health)
 
     @threadsafe
     def _subrack_state_changed(

@@ -21,6 +21,7 @@ __all__ = [
     "InitialiseStation",
     "BasicTangoTest",
     "TestStationBeamDataRate",
+    "TestTileTracking",
 ]
 
 
@@ -36,3 +37,4 @@ from .test_station_initialise import InitialiseStation
 from .test_tango import BasicTangoTest
 from .test_tile_beamformer import TestTileBeamformer
 from .test_tile_pointing import TestTilePointing
+from .test_tile_tracking import TestTileTracking

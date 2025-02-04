@@ -156,7 +156,7 @@ class TestTileTracking(BaseDaqTest):
         self._configure_test_generator(
             start_freq, 2, delays=[0] * TileData.ADC_CHANNELS
         )
-        self._reset_tpm_calibration(1.0)
+        self._reset_tpm_calibration(2.0)
         self._set_pointing_delay_rates()
         start_time = datetime.strftime(
             datetime.fromtimestamp(int(time.time()) + 2), TileTime.RFC_FORMAT

@@ -71,10 +71,7 @@ class TestTileTracking(BaseDaqTest):
         """
         sample = 0
         assert self._data is not None
-        return (
-            self._data[:, pol, channel, sample, 0]
-            + self._data[:, pol, channel, sample, 1] * 1j
-        )
+        return self._data[:, pol, :, sample, 0] + self._data[:, pol, :, sample, 1] * 1j
 
     def _get_data_set(self: TestTileTracking) -> None:
         """Get the beam data for each TPM."""

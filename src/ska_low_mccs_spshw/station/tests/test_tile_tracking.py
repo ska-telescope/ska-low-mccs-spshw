@@ -148,7 +148,7 @@ class TestTileTracking(BaseDaqTest):
         """Test to verify HW pointing offsets delays in the test generator."""
         self.test_logger.debug("Testing tile pointing.")
         self.component_manager._set_channeliser_rounding(
-            np.full(TileData.NUM_FREQUENCY_CHANNELS, 3)
+            np.full(TileData.NUM_FREQUENCY_CHANNELS, 2)
         )
         self.component_manager.stop_adcs()
         start_freq = 350e6  # Hz, gives exact DC

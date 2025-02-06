@@ -1544,15 +1544,6 @@ def test_AcquireDataForCalibration(
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
 
-    [_], [command_id] = station_device.AcquireDataForCalibration(channel)
-    tile_command_mock: MockCallable = getattr(
-        mock_tile_device_proxies[0], "SendDataSamples"
-    )
-
-    # This sleep is needed because AcquireDataForCalibration will
-    # Check Running Consumers is None before starting DAQ.
-    time.sleep(2)
-
     def _mocked_daq_status_callable() -> str:
         return json.dumps(
             {
@@ -1566,6 +1557,11 @@ def test_AcquireDataForCalibration(
         )
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable)
+
+    [_], [command_id] = station_device.AcquireDataForCalibration(channel)
+    tile_command_mock: MockCallable = getattr(
+        mock_tile_device_proxies[0], "SendDataSamples"
+    )
 
     tile_command_mock.assert_next_call(
         json.dumps(

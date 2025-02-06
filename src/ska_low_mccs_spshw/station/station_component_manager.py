@@ -2881,42 +2881,32 @@ class SpsStationComponentManager(
                 )
             return
 
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-
-        def _check_aborted() -> bool:
-            if task_abort_event and task_abort_event.is_set():
-                self.logger.info("AcquireDataForCalibration task has been aborted")
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.ABORTED,
-                        result=(ResultCode.ABORTED, "Task aborted"),
-                    )
-                return True
-            return False
-
-        data_send_mode: str = "channel"
-
-        try:
-            self.logger.info(
-                "AcquireDataForCalibration configuring tiles and daq for calibration"
-            )
-            self._configure_station_for_calibration()
-            if _check_aborted():
-                return
-        except AssertionError as e:
-            self.logger.error(f"Unable to configure station {repr(e)}")
+        assert self._daq_proxy is not None
+        daq_status = json.loads(
+            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+        )
+        daq_mode: str = "CORRELATOR_DATA"
+        if (
+            len(daq_status["Running Consumers"]) == 0
+            or daq_mode not in daq_status["Running Consumers"][0]
+        ):
             if task_callback:
                 task_callback(
-                    status=TaskStatus.FAILED,
+                    status=TaskStatus.REJECTED,
                     result=(
-                        ResultCode.FAILED,
-                        "AcquireDataForCalibration failed. "
-                        f"Unable to configure station {repr(e)}",
+                        ResultCode.REJECTED,
+                        (
+                            "AcquireDataForCalibration failed."
+                            " Station not configured for calibration."
+                        ),
                     ),
                 )
             return
 
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        data_send_mode: str = "channel"
         # Send data from tpms
         self.send_data_samples(
             json.dumps(

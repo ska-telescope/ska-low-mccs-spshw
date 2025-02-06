@@ -580,20 +580,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             tango.DevState.FAULT,
         ]
 
-    def is_Off_allowed(self: MccsTile) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
-
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
-
     # ----------
     # Callbacks
     # ----------

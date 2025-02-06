@@ -1207,6 +1207,22 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler(channel)
         return ([return_code], [message])
 
+    @command(dtype_out="DevVarLongStringArray")
+    def ConfigureStationForCalibration(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Configure the station for calibration.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
+            >>> dp.command_inout("ConfigureStationForCalibration")
+        """
+        handler = self.get_command_object("ConfigureStationForCalibration")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
     @command(
         dtype_out="DevVarLongStringArray",
     )

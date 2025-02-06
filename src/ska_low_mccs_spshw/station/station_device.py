@@ -218,6 +218,7 @@ class SpsStation(SKAObsDevice):
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
             ("AcquireDataForCalibration", "acquire_data_for_calibration", None),
+            ("ConfigureStationForCalibration, configure_station_for_calibration", None),
             ("TriggerAdcEqualisation", "trigger_adc_equalisation", None),
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),

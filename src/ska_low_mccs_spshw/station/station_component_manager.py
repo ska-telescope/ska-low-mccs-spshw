@@ -662,12 +662,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -2854,114 +2854,6 @@ class SpsStationComponentManager(
             task_callback=task_callback,
         )
 
-    def _configure_station_for_calibration(self: SpsStationComponentManager) -> None:
-        daq_mode: str = "CORRELATOR_DATA"
-        nof_correlator_samples: int = 1835008
-        receiver_frame_size: int = 9000
-        nof_channels: int = 1
-
-        max_tries: int = 10
-        tick: float = 0.5
-
-        # Get DAQ running with correlator
-        assert self._daq_proxy is not None
-        assert self._daq_proxy._proxy is not None
-
-        daq_status = json.loads(
-            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-        )
-
-        # TODO: We have to stop all consumers before sending again
-        # https://jira.skatelescope.org/browse/MCCS-2183
-        if len(daq_status["Running Consumers"]) > 0:
-            self.logger.info("Stopping all consumers...")
-            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
-            if rc != ResultCode.OK:
-                self.logger.warning("Unable to stop daq consumers.")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(
-                        self._daq_proxy._proxy, "DaqStatus", None
-                    )
-                )
-                if len(daq_status["Running Consumers"]) == 0:
-                    continue
-                time.sleep(tick)
-            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
-
-        retry_command_on_exception(
-            self._daq_proxy._proxy,
-            "configure",
-            json.dumps(
-                {
-                    "nof_tiles": self._number_of_tiles,
-                    "nof_channels": nof_channels,
-                    "directory": "correlator_data",  # Appended to ADR-55 path.
-                    "nof_correlator_samples": nof_correlator_samples,
-                    "receiver_frame_size": receiver_frame_size,
-                }
-            ),
-        )
-        retry_command_on_exception(
-            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
-        )
-        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-            )
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
-            time.sleep(tick)
-
-        assert (
-            len(daq_status["Running Consumers"]) > 0
-            and daq_mode in daq_status["Running Consumers"][0]
-        ), f"Failed to start {daq_mode}."
-
-        self.set_lmc_download(
-            mode="10g",
-            payload_length=8192,  # Default for using 10g
-            dst_ip=daq_status["Receiver IP"][0],
-            dst_port=daq_status["Receiver Ports"][0],
-        )
-
-    @property
-    def csp_spead_format(self: SpsStationComponentManager) -> str:
-        """
-        Get CSP SPEAD format.
-
-        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
-        using a reference Unix time specified in the header.
-        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
-
-        :return: CSP Spead format. AAVS or SKA
-        """
-        return self._csp_spead_format
-
-    @csp_spead_format.setter  # type: ignore[no-redef]
-    def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
-        """
-        Set CSP SPEAD format.
-
-        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
-        using a reference Unix time specified in the header.
-        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
-
-        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
-        """
-        if spead_format in ["AAVS", "SKA"]:
-            self._csp_spead_format = spead_format
-        else:
-            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
-            return
-        for proxy in self._tile_proxies.values():
-            assert proxy._proxy is not None  # for the type checker
-            proxy._proxy.cspSpeadFormat = spead_format
-
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -3041,6 +2933,176 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
             )
+
+    def configure_station_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure station for calibration method.
+
+        This method returns immediately after it submitted
+        `self._configure_station_for_calibration` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._configure_station_for_calibration,
+            task_callback=task_callback,
+        )
+
+    @check_communicating
+    def _configure_station_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Configure station for calibration.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        def _check_aborted() -> bool:
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("ConfigureStationForCalibration task has been aborted")
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.ABORTED,
+                        result=(ResultCode.ABORTED, "Task aborted"),
+                    )
+                return True
+            return False
+
+        daq_mode: str = "CORRELATOR_DATA"
+        nof_correlator_samples: int = 1835008
+        receiver_frame_size: int = 9000
+        nof_channels: int = 1
+
+        max_tries: int = 10
+        tick: float = 0.5
+
+        # Get DAQ running with correlator
+        assert self._daq_proxy is not None
+        assert self._daq_proxy._proxy is not None
+
+        daq_status = json.loads(
+            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+        )
+        if _check_aborted():
+            return
+
+        # TODO: We have to stop all consumers before sending again
+        # https://jira.skatelescope.org/browse/MCCS-2183
+        if len(daq_status["Running Consumers"]) > 0:
+            self.logger.info("Stopping all consumers...")
+            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
+            if rc != ResultCode.OK:
+                self.logger.warning("Unable to stop daq consumers.")
+            for _ in range(max_tries):
+                daq_status = json.loads(
+                    retry_command_on_exception(
+                        self._daq_proxy._proxy, "DaqStatus", None
+                    )
+                )
+                if len(daq_status["Running Consumers"]) == 0:
+                    continue
+                if _check_aborted():
+                    return
+                time.sleep(tick)
+
+            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "configure",
+            json.dumps(
+                {
+                    "nof_tiles": self._number_of_tiles,
+                    "nof_channels": nof_channels,
+                    "directory": "correlator_data",  # Appended to ADR-55 path.
+                    "nof_correlator_samples": nof_correlator_samples,
+                    "receiver_frame_size": receiver_frame_size,
+                }
+            ),
+        )
+        if _check_aborted():
+            return
+
+        retry_command_on_exception(
+            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
+        )
+        if _check_aborted():
+            return
+
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            )
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                break
+            if _check_aborted():
+                return
+            time.sleep(tick)
+
+        assert (
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+        self.set_lmc_download(
+            mode="10g",
+            payload_length=8192,  # Default for using 10g
+            dst_ip=daq_status["Receiver IP"][0],
+            dst_port=daq_status["Receiver Ports"][0],
+        )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Station configured for calibration."),
+            )
+
+    @property
+    def csp_spead_format(self: SpsStationComponentManager) -> str:
+        """
+        Get CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :return: CSP Spead format. AAVS or SKA
+        """
+        return self._csp_spead_format
+
+    @csp_spead_format.setter  # type: ignore[no-redef]
+    def csp_spead_format(self: SpsStationComponentManager, spead_format: str) -> None:
+        """
+        Set CSP SPEAD format.
+
+        CSP format is: AAVS for the format used in AAVS2-AAVS3 system,
+        using a reference Unix time specified in the header.
+        SKA for the format defined in SPS-CBF ICD, based on TAI2000 epoch.
+
+        :param spead_format: format used in CBF SPEAD header: "AAVS" or "SKA"
+        """
+        if spead_format in ["AAVS", "SKA"]:
+            self._csp_spead_format = spead_format
+        else:
+            self.logger.error("Invalid SPEAD format: should be AAVS or SKA")
+            return
+        for proxy in self._tile_proxies.values():
+            assert proxy._proxy is not None  # for the type checker
+            proxy._proxy.cspSpeadFormat = spead_format
 
     @check_communicating
     def set_channeliser_rounding(

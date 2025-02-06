@@ -2944,6 +2944,7 @@ class SpsStationComponentManager(
         )
 
     @check_communicating
+    # pylint: disable=too-many-branches
     def _configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,

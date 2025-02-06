@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-746] MccsTile.Off() now works in DevState ALARM.
+
 ## 0.23.1
 
 * [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied

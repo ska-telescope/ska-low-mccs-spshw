@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-766] Reject multiple calls to DAQ.Start() in a row.
 * [SKB-746] MccsTile.Off() now works in DevState ALARM.
 
 ## 0.23.1

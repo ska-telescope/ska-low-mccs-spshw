@@ -115,6 +115,12 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
             }
         ),
     )
+    builder.add_result_command(
+        "Stop", result_code=ResultCode.QUEUED, status="Task queued"
+    )
+    builder.add_result_command(
+        "Start", result_code=ResultCode.QUEUED, status="Task queued"
+    )
     return builder()
 
 

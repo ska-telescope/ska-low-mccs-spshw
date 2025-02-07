@@ -1544,7 +1544,7 @@ def test_AcquireDataForCalibration(
         tile.tileProgrammingState = "Synchronised"
     time.sleep(0.1)
 
-    def _mocked_daq_status_callable() -> str:
+    def _mocked_daq_status_callable_started() -> str:
         return json.dumps(
             {
                 "Running Consumers": [["CORRELATOR_DATA", 8]],
@@ -1556,7 +1556,7 @@ def test_AcquireDataForCalibration(
             }
         )
 
-    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable)
+    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_started)
 
     [_], [command_id] = station_device.AcquireDataForCalibration(channel)
     tile_command_mock: MockCallable = getattr(
@@ -1576,6 +1576,20 @@ def test_AcquireDataForCalibration(
         json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
         == "CORRELATOR_DATA"
     )
+
+    def _mocked_daq_status_callable_stopped() -> str:
+        return json.dumps(
+            {
+                "Running Consumers": [],
+                "Receiver Interface": "eth0",
+                "Receiver Ports": [4660],
+                "Receiver IP": ["10.244.170.166"],
+                "Bandpass Monitor": False,
+                "Daq Health": ["OK", 0],
+            }
+        )
+
+    mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_stopped)
 
     timeout = 20
     current_time = 0

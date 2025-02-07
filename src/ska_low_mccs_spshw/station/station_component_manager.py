@@ -2881,30 +2881,49 @@ class SpsStationComponentManager(
                 )
             return
 
-        assert self._daq_proxy is not None
-        daq_status = json.loads(
-            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-        )
-        daq_mode: str = "CORRELATOR_DATA"
-        if (
-            len(daq_status["Running Consumers"]) == 0
-            or daq_mode not in daq_status["Running Consumers"][0]
-        ):
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.REJECTED,
-                    result=(
-                        ResultCode.REJECTED,
-                        (
-                            "AcquireDataForCalibration failed."
-                            " Station not configured for calibration."
-                        ),
-                    ),
-                )
-            return
+        def _check_aborted() -> bool:
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("ConfigureStationForCalibration task has been aborted")
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.ABORTED,
+                        result=(ResultCode.ABORTED, "Task aborted"),
+                    )
+                return True
+            return False
 
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
+
+        max_tries: int = 10
+        tick: float = 0.5
+        assert self._daq_proxy is not None
+        daq_mode: str = "CORRELATOR_DATA"
+
+        retry_command_on_exception(
+            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
+        )
+        if _check_aborted():
+            return
+
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            )
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                break
+            if _check_aborted():
+                return
+            time.sleep(tick)
+
+        assert (
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
 
         data_send_mode: str = "channel"
         # Send data from tpms
@@ -2918,6 +2937,21 @@ class SpsStationComponentManager(
             )
         )
         self.logger.debug(f"Raw channel spigot sent for {channel=}")
+        self.logger.info("Stopping all consumers...")
+        rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
+        if rc != ResultCode.OK:
+            self.logger.warning("Unable to stop daq consumers.")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            )
+            if len(daq_status["Running Consumers"]) == 0:
+                continue
+            if _check_aborted():
+                return
+            time.sleep(tick)
+
+        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
         if task_callback:
             task_callback(
                 status=TaskStatus.COMPLETED,
@@ -2970,7 +3004,6 @@ class SpsStationComponentManager(
                 return True
             return False
 
-        daq_mode: str = "CORRELATOR_DATA"
         nof_correlator_samples: int = 1835008
         receiver_frame_size: int = 9000
         nof_channels: int = 1
@@ -3024,31 +3057,6 @@ class SpsStationComponentManager(
         )
         if _check_aborted():
             return
-
-        retry_command_on_exception(
-            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
-        )
-        if _check_aborted():
-            return
-
-        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-            )
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
-            if _check_aborted():
-                return
-            time.sleep(tick)
-
-        assert (
-            len(daq_status["Running Consumers"]) > 0
-            and daq_mode in daq_status["Running Consumers"][0]
-        ), f"Failed to start {daq_mode}."
 
         self.set_lmc_download(
             mode="10g",

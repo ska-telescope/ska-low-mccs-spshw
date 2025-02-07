@@ -2844,7 +2844,7 @@ class SpsStationComponentManager(
 
         :return: a task staus and response message
         """
-        if channel < 0 or channel > 510:
+        if channel < 0 or channel >= TileData.NUM_FREQUENCY_CHANNELS:
             self.logger.error(f"Invalid channel{channel}")
             return (TaskStatus.REJECTED, "Invalid channel")
 
@@ -2978,7 +2978,6 @@ class SpsStationComponentManager(
         )
 
     @check_communicating
-    # pylint: disable=too-many-branches
     def _configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -3052,6 +3051,7 @@ class SpsStationComponentManager(
                     "directory": "correlator_data",  # Appended to ADR-55 path.
                     "nof_correlator_samples": nof_correlator_samples,
                     "receiver_frame_size": receiver_frame_size,
+                    "description": "Data from AcquireDataForCalibration",
                 }
             ),
         )

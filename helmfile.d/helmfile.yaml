@@ -27,7 +27,7 @@ environments:
   aa0.5-production:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?c3d6b36ffd08ffb3a1c286f8968e077c0168b71d#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?650bc1f2686659d35f877471c0535c4629b449b6#tmdata
         datasets:
         - aa0.5.yaml
         - stations/s8-1.yaml

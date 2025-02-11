@@ -32,7 +32,8 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.base import CommandTracker, SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
     FastCommand,
@@ -66,7 +67,7 @@ def engineering_mode_required(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
-        device: SKABaseDevice = args[0]
+        device: MccsBaseDevice = args[0]
         if device._admin_mode != AdminMode.ENGINEERING:
             return (
                 [ResultCode.REJECTED],
@@ -112,7 +113,7 @@ def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
-class MccsTile(SKABaseDevice[TileComponentManager]):
+class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     # -----------------

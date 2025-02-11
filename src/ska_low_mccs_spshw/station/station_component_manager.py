@@ -2961,6 +2961,7 @@ class SpsStationComponentManager(
     def configure_station_for_calibration(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        **daq_config: dict[str, Any],
     ) -> tuple[TaskStatus, str]:
         """
         Submit the configure station for calibration method.
@@ -2969,12 +2970,14 @@ class SpsStationComponentManager(
         `self._configure_station_for_calibration` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param daq_config: any extra config to configure DAQ with
 
         :return: a task staus and response message
         """
         return self.submit_task(
             self._configure_station_for_calibration,
             task_callback=task_callback,
+            kwargs=daq_config,
         )
 
     @check_communicating
@@ -2982,12 +2985,14 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
+        **daq_config: dict[str, Any],
     ) -> None:
         """
         Configure station for calibration.
 
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
+        :param daq_config: any extra config to configure DAQ with
         """
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
@@ -3041,19 +3046,20 @@ class SpsStationComponentManager(
 
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
+        base_config = {
+            "nof_tiles": self._number_of_tiles,
+            "nof_channels": nof_channels,
+            "directory": "correlator_data",  # Appended to ADR-55 path.
+            "nof_correlator_samples": nof_correlator_samples,
+            "receiver_frame_size": receiver_frame_size,
+            "description": "Data from AcquireDataForCalibration",
+        }
+        base_config.update(daq_config)
+
         retry_command_on_exception(
             self._daq_proxy._proxy,
             "configure",
-            json.dumps(
-                {
-                    "nof_tiles": self._number_of_tiles,
-                    "nof_channels": nof_channels,
-                    "directory": "correlator_data",  # Appended to ADR-55 path.
-                    "nof_correlator_samples": nof_correlator_samples,
-                    "receiver_frame_size": receiver_frame_size,
-                    "description": "Data from AcquireDataForCalibration",
-                }
-            ),
+            json.dumps(base_config),
         )
         if _check_aborted():
             return

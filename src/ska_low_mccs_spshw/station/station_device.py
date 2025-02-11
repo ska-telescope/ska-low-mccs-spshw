@@ -1211,20 +1211,26 @@ class SpsStation(SKAObsDevice):
         (return_code, message) = handler(channel)
         return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def ConfigureStationForCalibration(self: SpsStation) -> DevVarLongStringArrayType:
+    @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")
+    def ConfigureStationForCalibration(
+        self: SpsStation, argin: str
+    ) -> DevVarLongStringArrayType:
         """
         Configure the station for calibration.
+
+        :param argin: a JSON-ified dictionary containing optional additions/overrides to
+            default DAQ configuration.
 
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
         :example:
             >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
-            >>> dp.command_inout("ConfigureStationForCalibration")
+            >>> json_arg = json.dumps({"description" : "Calibration data for s8-2"})
+            >>> dp.command_inout("ConfigureStationForCalibration", json_arg)
         """
         handler = self.get_command_object("ConfigureStationForCalibration")
-        (return_code, message) = handler()
+        (return_code, message) = handler(**json.loads(argin))
         return ([return_code], [message])
 
     @command(

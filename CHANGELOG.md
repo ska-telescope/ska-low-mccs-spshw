@@ -4,6 +4,11 @@
 
 * [SKB-765] Add ConfigureStationForCalibration command, which handles DAQ configuration for calibration. This functionality was pulled from AcquireDataForCalibration.
 
+## 0.24.0
+
+* [SKB-766] Reject multiple calls to DAQ.Start() in a row.
+* [SKB-746] MccsTile.Off() now works in DevState ALARM.
+
 ## 0.23.1
 
 * [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied

@@ -1,6 +1,6 @@
 # Version History
 
-## 0.24.0
+## 0.25.0
 
 * [SKB-765] Add ConfigureStationForCalibration command, which handles DAQ configuration for calibration. This functionality was pulled from AcquireDataForCalibration.
 

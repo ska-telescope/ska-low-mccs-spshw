@@ -1,5 +1,9 @@
 # Version History
 
+## 0.24.0
+
+* [SKB-765] Add ConfigureStationForCalibration command, which handles DAQ configuration for calibration. This functionality was pulled from AcquireDataForCalibration.
+
 ## 0.23.1
 
 * [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied

@@ -76,6 +76,11 @@ server:
             values: 
             - {{quote .}}
 {{- end }}
+{{- with $this_daq.dedicated_bandpass}}
+          - name: "BandpassDaq"
+            values: 
+            - {{quote .}}
+{{- end }}
 {{- with $this_daq.logging_level_default}}
           - name: "LoggingLevelDefault"
             values: 

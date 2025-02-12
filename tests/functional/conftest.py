@@ -277,6 +277,7 @@ def poll_until_consumer_running(
     :param no_of_iters: number of times to iterate
     """
     status = json.loads(daq.DaqStatus())
+    print(status)
     for consumer in status["Running Consumers"]:
         if wanted_consumer in consumer:
             return
@@ -434,8 +435,9 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
     time_elapsed = 0
     timeout = 10
     while time_elapsed < timeout:
-        if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state:
+        daq_status = json.loads(daq_device.DaqStatus())
+        if daq_status["Bandpass Monitor"] == state:
             break
         time.sleep(1)
         time_elapsed += 1
-    assert json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state
+    assert daq_status["Bandpass Monitor"] == state

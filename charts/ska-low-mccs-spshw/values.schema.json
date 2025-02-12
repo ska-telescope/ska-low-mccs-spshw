@@ -225,6 +225,10 @@
                               "type": "string",
                               "format": "uri"
                             },
+                            "dedicated_bandpass": {
+                              "type": "boolean",
+                              "default": false
+                            },
                             "logging_level_default": {
                               "type": "integer",
                               "minimum": 0,

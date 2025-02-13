@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+
 ## 0.24.0
 
 * [SKB-766] Reject multiple calls to DAQ.Start() in a row.

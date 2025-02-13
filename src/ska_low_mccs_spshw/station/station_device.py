@@ -71,7 +71,7 @@ def engineering_mode_required(func: Callable) -> Callable:
 
 
 # pylint: disable=too-many-instance-attributes
-class SpsStation(SKAObsDevice):
+class SpsStation(SKAObsDevice, MccsBaseDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
     # -----------------

@@ -27,12 +27,12 @@ environments:
   aa0.5-production:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?c3d6b36ffd08ffb3a1c286f8968e077c0168b71d#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?689ff1ab69b56a8537650b403ef6865caa5c9e27#tmdata
         datasets:
         - aa0.5.yaml
         - stations/s8-1.yaml
         - stations/s8-6.yaml
-        - stations/s9-1.yaml
+        # - stations/s9-1.yaml  # Currently does not have required keys for antenna.attenuation_x/y
         - stations/s9-2.yaml
         - stations/s10-3.yaml
         - channeliser_rounding.yaml

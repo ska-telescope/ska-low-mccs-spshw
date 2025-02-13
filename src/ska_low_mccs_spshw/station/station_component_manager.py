@@ -229,6 +229,20 @@ class _DaqProxy(DeviceComponentManager):
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
 
+    def _device_state_changed(
+        self: _DaqProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
+            assert self._proxy is not None  # for the type checker
+            self._configure_station_id()
+        super()._device_state_changed(event_name, event_value, event_quality)
+
     def _update_communication_state(
         self: _DaqProxy,
         communication_state: CommunicationStatus,
@@ -751,13 +765,6 @@ class SpsStationComponentManager(
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
-        if (
-            fqdn == self._daq_trl
-            and communication_state == CommunicationStatus.ESTABLISHED
-        ):
-            # Set StationID in DAQ.
-            assert self._daq_proxy is not None
-            self._daq_proxy._configure_station_id()
         if self._communication_states.get(fqdn) is None:
             self.logger.info(
                 f"The communication state for {fqdn} is not rolled up. "

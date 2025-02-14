@@ -1243,6 +1243,7 @@ class TestMccsTile:
         assert tile_device.healthModelParams == json.dumps(expected_result)
 
 
+# pylint: disable=too-many-public-methods
 class TestMccsTileCommands:
     """Tests of MccsTile device commands."""
 
@@ -1790,6 +1791,159 @@ class TestMccsTileCommands:
 
         with pytest.raises(DevFailed, match="ValueError"):
             _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
+
+    def test_SetUpAntennaBuffer(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test for SetUpAntennaBuffer.
+
+        :param on_tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        # Set up the antenna buffer
+        arg = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+        }
+        json_arg = json.dumps(arg)
+        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Confrim that the values have updated correctly
+        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
+        for key, value in arg.items():
+            assert value == buffer[key]
+
+    def test_StartAntennaBuffer(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test for StartAntennaBuffer.
+
+        :param on_tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        # Set up the antenna buffer
+        json_arg = json.dumps(
+            {
+                "mode": "NSDN",
+                "DDR_start_address": 256 * 1024**2,
+                "max_DDR_byte_size": 512 * 1024**2,
+            }
+        )
+        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Start the antenna buffer
+        arg = {
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": None,
+            "continuous_mode": True,
+        }
+        json_arg = json.dumps(arg)
+        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Confrim that the values have updated correctly
+        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
+        for key, value in arg.items():
+            assert value == buffer[key]
+
+    def test_ReadAntennaBuffer(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test for ReadAntennaBuffer.
+
+        :param on_tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        # Set up the antenna buffer
+        json_arg = json.dumps(
+            {
+                "mode": "NSDN",
+                "DDR_start_address": 256 * 1024**2,
+                "max_DDR_byte_size": 512 * 1024**2,
+            }
+        )
+        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Start the antenna buffer
+        json_arg = json.dumps(
+            {
+                "antennas": [1, 9],
+                "start_time": 1,
+                "timestamp_capture_duration": None,
+                "continuous_mode": True,
+            }
+        )
+        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Read antenna buffer
+        [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
+        assert result_code == ResultCode.OK
+
+        # Confrim that the values have updated correctly
+        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is True
+        assert buffer["stop_antenna_buffer"] is True
+
+    def test_StopAntennaBuffer(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+    ) -> None:
+        """
+        Test for StopAntennaBuffer.
+
+        :param on_tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        """
+        # Set up the antenna buffer
+        json_arg = json.dumps(
+            {
+                "mode": "NSDN",
+                "DDR_start_address": 256 * 1024**2,
+                "max_DDR_byte_size": 512 * 1024**2,
+            }
+        )
+        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Start the antenna buffer
+        json_arg = json.dumps(
+            {
+                "antennas": [1, 9],
+                "start_time": 1,
+                "timestamp_capture_duration": None,
+                "continuous_mode": True,
+            }
+        )
+        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
+        assert result_code == ResultCode.OK
+
+        # Stop antenna buffer
+        [[result_code], [message]] = on_tile_device.StopAntennaBuffer()
+        assert result_code == ResultCode.OK
+
+        # Confrim that the values have updated correctly
+        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
+        assert buffer["stop_antenna_buffer"] is True
 
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))

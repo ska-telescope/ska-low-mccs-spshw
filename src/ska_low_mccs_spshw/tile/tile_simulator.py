@@ -936,6 +936,13 @@ class TileSimulator:
         self._rfi_count = np.zeros(
             (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
         )
+        self._antenna_buffer_tile_attribute: dict[str, Any] = {
+            "DDR_start_address": 0,
+            "max_DDR_byte_size": 0,
+            "set_up_complete": False,
+            "data_capture_initiated": False,
+            "used_fpga_id": [],
+        }
 
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
@@ -1345,6 +1352,167 @@ class TileSimulator:
         if self.tpm is None:
             return False
         return self.tpm._is_programmed
+
+    @connected
+    def set_up_antenna_buffer(
+        self: TileSimulator,
+        mode: str = "SDN",
+        ddr_start_byte_address: int = 512 * 1024**2,
+        max_ddr_byte_size: Optional[int] = None,
+    ) -> None:
+        """Mock set_up_antenna_buffer.
+
+        :param mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
+        """
+        payload_length = 8192 if mode.upper() == "SDN" else 1536
+
+        if not max_ddr_byte_size:
+            # assume the antenna buffer capacity is 4 GB
+            max_ddr_byte_size = (4 * 1024**3) - ddr_start_byte_address
+
+        # log the original message
+        self.logger.info(
+            f"AntennaBuffer: Setup parameters - Mode={mode}, ",
+            f"Payload Length={payload_length},",
+            f" DDR Start Address={ddr_start_byte_address},",
+            f" Max DDR Size={max_ddr_byte_size}",
+        )
+        # save values to buffer attributes
+        self._antenna_buffer_tile_attribute = {
+            "mode": mode,
+            "DDR_start_address": ddr_start_byte_address,
+            "max_DDR_byte_size": max_ddr_byte_size,
+            "set_up_complete": True,
+        }
+
+    @connected
+    def start_antenna_buffer(
+        self: TileSimulator,
+        antennas: list,
+        start_time: int = -1,
+        timestamp_capture_duration: int = 75,
+        continuous_mode: bool = False,
+    ) -> int:
+        """Mock start_antenna_buffer.
+
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
+
+        :raises Exception: when antenna IDS are missing/incorrect or antenna
+            buffer was not intiated.
+
+        :return: ddr write size
+        """
+        # Check that the antenna buffer was set up
+        if not self._antenna_buffer_tile_attribute["set_up_complete"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please set up the antenna buffer",
+                "before writing",
+            )
+
+        # Antennas must be specifed.
+        if not antennas:
+            raise Exception(
+                "AntennaBuffer ERROR: Antennas list is empty ",
+                "please give at lease one antenna ID",
+            )
+
+        # Antenna index is from 0 to 15.
+        invalid_input = [x for x in antennas if x < 0 or x > 15]
+        if invalid_input:
+            raise Exception(
+                "AntennaBuffer ERROR: out of range antenna IDs present ",
+                f"{invalid_input}. Please give an antenna ID from 0 to 15",
+            )
+
+        # Remove duplicates and then split the list in 2 parts
+        antennas = list(dict.fromkeys(antennas))
+        antennas = [[x for x in antennas if x < 8], [x - 8 for x in antennas if x >= 8]]
+        self.logger.info(f"Antennas lists of lists = {antennas}")
+
+        # clear old fpgas
+        self._antenna_buffer_tile_attribute["used_fpga_id"] = []
+
+        for fpga_id in range(2):
+            if antennas[fpga_id]:
+                # log which antennas and fpgas are used
+                self.logger.info(
+                    f"AntennaBuffer will be using FPGA {fpga_id+1},",
+                    f" antennas = {antennas[fpga_id]}",
+                )
+                self._antenna_buffer_tile_attribute["used_fpga_id"].append(fpga_id)
+
+                # Note: this may need improvement later if we want to test in more
+                # detail, for now we mock the possible errors
+                # Try and calculate a value for the ddr_write_size
+                if continuous_mode:
+                    ddr_write_size = (
+                        self._antenna_buffer_tile_attribute["max_DDR_byte_size"]
+                        - self._antenna_buffer_tile_attribute["DDR_start_address"]
+                    )
+                else:
+                    # capture duration is in seconds and 4 GiB lasts about 2.68
+                    # so the size of the ddr is 4GiB/2.64 * capture duration
+                    ddr_write_size = (
+                        timestamp_capture_duration * (4032 * 1024**2 / 2.68)
+                        - self._antenna_buffer_tile_attribute["DDR_start_address"]
+                    )
+
+        self._antenna_buffer_tile_attribute.update({"data_capture_initiated": True})
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute = {
+            "antennas": antennas,
+            "start_time": start_time,
+            "timestamp_capture_duration": timestamp_capture_duration,
+            "continuous_mode": continuous_mode,
+            "read_antenna_buffer": False,
+            "stop_antenna_buffer": False,
+        }
+        return ddr_write_size
+
+    @connected
+    def read_antenna_buffer(self: TileSimulator) -> None:
+        """Mock read AntennaBuffer data from the DDR.
+
+        :raises Exception: when antenna buffer was not intiated or started.
+        """
+        if not self._antenna_buffer_tile_attribute["set_up_complete"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please set up the antenna buffer before reading"
+            )
+        if not self._antenna_buffer_tile_attribute["data_capture_initiated"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please capture antenna buffer data before reading"
+            )
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute = {
+            "read_antenna_buffer": True,
+            "stop_antenna_buffer": True,
+        }
+        return
+
+    @connected
+    def stop_antenna_buffer(self: TileSimulator) -> None:
+        """Mock stop the antenna buffer."""
+        self.logger.info(f"AntennaBuffer: Stopping for tile {self.get_tile_id()}")
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute = {
+            "stop_antenna_buffer": True,
+        }
 
     @connected
     def enable_station_beam_flagging(

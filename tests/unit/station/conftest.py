@@ -236,6 +236,19 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
 
+        @command()
+        def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
+            """
+            Mock calibration data received.
+
+            Make the station device think it has received calibration data
+            after a send data samples.
+            """
+            self.component_manager._daq_state_changed(
+                "some/daq/fqdn",
+                dataReceivedResult=("correlator", "some/file/location"),
+            )
+
     return PatchedSpsStationDevice
 
 

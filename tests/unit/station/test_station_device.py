@@ -1576,6 +1576,7 @@ def test_AcquireDataForCalibration(
         json.loads(daq_device.DaqStatus())["Running Consumers"][0][0]
         == "CORRELATOR_DATA"
     )
+    station_device.MockCalibrationDataReceived()
 
     def _mocked_daq_status_callable_stopped() -> str:
         return json.dumps(

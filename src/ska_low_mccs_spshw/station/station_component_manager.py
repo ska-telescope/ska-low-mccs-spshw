@@ -466,6 +466,9 @@ class SpsStationComponentManager(
         self._cable_lengths: dict[int, float] = {}
         self.last_pointing_delays = [0.0] * 513
 
+        self.acquiring_data_for_calibration = threading.Event()
+        self.calibration_data_received_event = threading.Event()
+
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
 
@@ -889,7 +892,14 @@ class SpsStationComponentManager(
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
         if "dataReceivedResult" in state_change:
-            data_received_result = state_change.get("dataReceivedResult")
+            data_received_result: tuple[str, str] = state_change.get(
+                "dataReceivedResult", ("", "")
+            )
+            if (
+                data_received_result[0] == "correlator"
+                and self.acquiring_data_for_calibration.is_set()
+            ):
+                self.calibration_data_received_event.set()
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
 
@@ -2854,6 +2864,7 @@ class SpsStationComponentManager(
             task_callback=task_callback,
         )
 
+    # pylint: disable=too-many-branches
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -2868,95 +2879,118 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
-        states = self.tile_programming_state()
-        self.logger.debug(f"tileProgrammingState: {states}")
-        if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.REJECTED,
-                    result=(
-                        ResultCode.REJECTED,
-                        "AcquireDataForCalibration failed. Tiles not synchronised.",
-                    ),
-                )
-            return
-
-        def _check_aborted() -> bool:
-            if task_abort_event and task_abort_event.is_set():
-                self.logger.info("ConfigureStationForCalibration task has been aborted")
+        self.acquiring_data_for_calibration.set()
+        try:
+            states = self.tile_programming_state()
+            self.logger.debug(f"tileProgrammingState: {states}")
+            if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
                 if task_callback:
                     task_callback(
-                        status=TaskStatus.ABORTED,
-                        result=(ResultCode.ABORTED, "Task aborted"),
+                        status=TaskStatus.REJECTED,
+                        result=(
+                            ResultCode.REJECTED,
+                            "AcquireDataForCalibration failed. Tiles not synchronised.",
+                        ),
                     )
-                return True
-            return False
+                return
 
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
+            def _check_aborted() -> bool:
+                if task_abort_event and task_abort_event.is_set():
+                    self.logger.info(
+                        "ConfigureStationForCalibration task has been aborted"
+                    )
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.ABORTED,
+                            result=(ResultCode.ABORTED, "Task aborted"),
+                        )
+                    return True
+                return False
 
-        max_tries: int = 10
-        tick: float = 0.5
-        assert self._daq_proxy is not None
-        daq_mode: str = "CORRELATOR_DATA"
+            if task_callback:
+                task_callback(status=TaskStatus.IN_PROGRESS)
 
-        retry_command_on_exception(
-            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
-        )
-        if _check_aborted():
-            return
+            max_tries: int = 10
+            tick: float = 0.5
+            assert self._daq_proxy is not None
+            daq_mode: str = "CORRELATOR_DATA"
 
-        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            retry_command_on_exception(
+                self._daq_proxy._proxy,
+                "Start",
+                json.dumps(
+                    {"modes_to_start": daq_mode},
+                ),
             )
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
             if _check_aborted():
                 return
-            time.sleep(tick)
 
-        assert (
-            len(daq_status["Running Consumers"]) > 0
-            and daq_mode in daq_status["Running Consumers"][0]
-        ), f"Failed to start {daq_mode}."
+            self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+            for _ in range(max_tries):
+                daq_status = json.loads(
+                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+                )
+                if any(
+                    status_list[0] == daq_mode
+                    for status_list in daq_status["Running Consumers"]
+                ):
+                    break
+                if _check_aborted():
+                    return
+                time.sleep(tick)
 
-        data_send_mode: str = "channel"
-        # Send data from tpms
-        self.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": data_send_mode,
-                    "first_channel": channel,
-                    "last_channel": channel,
-                }
-            )
-        )
-        self.logger.debug(f"Raw channel spigot sent for {channel=}")
-        self.logger.info("Stopping all consumers...")
-        rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
-        if rc != ResultCode.OK:
-            self.logger.warning("Unable to stop daq consumers.")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-            )
-            if len(daq_status["Running Consumers"]) == 0:
-                continue
-            if _check_aborted():
-                return
-            time.sleep(tick)
+            assert (
+                len(daq_status["Running Consumers"]) > 0
+                and daq_mode in daq_status["Running Consumers"][0]
+            ), f"Failed to start {daq_mode}."
 
-        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+            data_send_mode: str = "channel"
+            # Send data from tpms
+            self.send_data_samples(
+                json.dumps(
+                    {
+                        "data_type": data_send_mode,
+                        "first_channel": channel,
+                        "last_channel": channel,
+                    }
+                )
             )
+            self.logger.debug(f"Raw channel spigot sent for {channel=}")
+            self.logger.debug("Waiting for data to be received...")
+            got_data = self.calibration_data_received_event.wait(10)
+            self.logger.info("Stopping all consumers...")
+            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop")
+            if rc != ResultCode.OK:
+                self.logger.warning("Unable to stop daq consumers.")
+            for _ in range(max_tries):
+                daq_status = json.loads(
+                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+                )
+                if len(daq_status["Running Consumers"]) == 0:
+                    break
+                if _check_aborted():
+                    return
+                time.sleep(tick)
+
+            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+            if task_callback:
+                if got_data:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+                    )
+                else:
+                    self.logger.error("Failed to receive data in 10 seconds.")
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            "Failed to receive data in 10 seconds.",
+                        ),
+                    )
+        finally:
+            self.acquiring_data_for_calibration.clear()
+            self.calibration_data_received_event.clear()
 
     def configure_station_for_calibration(
         self: SpsStationComponentManager,
@@ -3039,7 +3073,7 @@ class SpsStationComponentManager(
                     )
                 )
                 if len(daq_status["Running Consumers"]) == 0:
-                    continue
+                    break
                 if _check_aborted():
                     return
                 time.sleep(tick)

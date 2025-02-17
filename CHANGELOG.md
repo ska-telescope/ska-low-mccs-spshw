@@ -1,8 +1,14 @@
 # Version History
 
+## Unreleased
+
+* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+* [THORN-54] Update SpsStation to use new health model.
+
 ## 0.24.0
 
-* [THORN-54] Update SpsStation to use new health model.
+* [SKB-766] Reject multiple calls to DAQ.Start() in a row.
+* [SKB-746] MccsTile.Off() now works in DevState ALARM.
 
 ## 0.23.1
 

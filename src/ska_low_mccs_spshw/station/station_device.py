@@ -31,7 +31,7 @@ from ska_control_model import (
     ResultCode,
 )
 from ska_control_model.health_rollup import HealthRollup, HealthSummary
-from ska_tango_base import SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
 from ska_tango_base.commands import JsonValidator, SubmittedSlowCommand
 from ska_tango_base.obs import SKAObsDevice
 from tango.server import attribute, command, device_property
@@ -57,7 +57,7 @@ def engineering_mode_required(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
-        device: SKABaseDevice = args[0]
+        device: MccsBaseDevice = args[0]
         if device._admin_mode != AdminMode.ENGINEERING:
             return (
                 [ResultCode.REJECTED],
@@ -72,7 +72,7 @@ def engineering_mode_required(func: Callable) -> Callable:
 
 
 # pylint: disable=too-many-instance-attributes
-class SpsStation(SKAObsDevice):
+class SpsStation(MccsBaseDevice, SKAObsDevice):
     """An implementation of an  SPS Station Tango device for MCCS."""
 
     # -----------------

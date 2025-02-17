@@ -166,7 +166,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
         testing.
     """
 
-    class PatchedSpsStationDevice(SpsStation):
+    class PatchedSpsStationDevice(SpsStation):  # pylint: disable=too-many-ancestors
         """
         SpsStation patched with extra commands for testing purposes.
 

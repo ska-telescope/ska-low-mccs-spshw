@@ -39,7 +39,7 @@ class _FaultSimulatingDevice(Device):
         self.component_manager.update_component_fault(is_faulty)
 
 
-class DemoTile(MccsTile, _FaultSimulatingDevice):
+class DemoTile(MccsTile, _FaultSimulatingDevice):  # pylint: disable=too-many-ancestors
     """Version of the MccsTile tango device with extra methods for testing/demos."""
 
     def init_device(self: DemoTile) -> None:

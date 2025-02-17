@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [SKB-761] Hardcode nof_antenna to number expected from library build.
 * [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
 
 ## 0.24.0

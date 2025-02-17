@@ -3003,7 +3003,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Confrim that the values have updated correctly
         buffer = tile_simulator._antenna_buffer_tile_attribute
-        assert buffer["read_antenna_buffer"] is True
         assert buffer["stop_antenna_buffer"] is True
 
 

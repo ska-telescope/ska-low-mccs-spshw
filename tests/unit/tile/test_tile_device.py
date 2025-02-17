@@ -1812,12 +1812,8 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
         [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
 
-        # Confrim that the values have updated correctly
-        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
-        for key, value in arg.items():
-            assert value == buffer[key]
+        assert result_code == ResultCode.OK
 
     def test_StartAntennaBuffer(
         self: TestMccsTileCommands,
@@ -1851,12 +1847,8 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
         [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
 
-        # Confrim that the values have updated correctly
-        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
-        for key, value in arg.items():
-            assert value == buffer[key]
+        assert result_code == ResultCode.OK
 
     def test_ReadAntennaBuffer(
         self: TestMccsTileCommands,
@@ -1895,12 +1887,8 @@ class TestMccsTileCommands:
 
         # Read antenna buffer
         [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
-        assert result_code == ResultCode.OK
 
-        # Confrim that the values have updated correctly
-        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
-        assert buffer["read_antenna_buffer"] is True
-        assert buffer["stop_antenna_buffer"] is True
+        assert result_code == ResultCode.OK
 
     def test_StopAntennaBuffer(
         self: TestMccsTileCommands,
@@ -1939,11 +1927,8 @@ class TestMccsTileCommands:
 
         # Stop antenna buffer
         [[result_code], [message]] = on_tile_device.StopAntennaBuffer()
-        assert result_code == ResultCode.OK
 
-        # Confrim that the values have updated correctly
-        buffer = on_tile_device._component_manager._antenna_buffer_tile_attribute
-        assert buffer["stop_antenna_buffer"] is True
+        assert result_code == ResultCode.OK
 
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))

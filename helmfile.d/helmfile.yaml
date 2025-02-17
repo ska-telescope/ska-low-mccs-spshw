@@ -32,7 +32,7 @@ environments:
         - aa0.5.yaml
         - stations/s8-1.yaml
         - stations/s8-6.yaml
-        # - stations/s9-1.yaml  # Currently does not have required keys for antenna.attenuation_x/y
+        - stations/s9-1.yaml
         - stations/s9-2.yaml
         - stations/s10-3.yaml
         - channeliser_rounding.yaml

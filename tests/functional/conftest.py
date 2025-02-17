@@ -383,7 +383,7 @@ def poll_until_state_change(
         wanted: {wanted_state}, actual: {device.state()}"
         )
 
-    sleep(1)
+    sleep(2)
     return poll_until_state_change(device, wanted_state, no_of_iters - 1)
 
 

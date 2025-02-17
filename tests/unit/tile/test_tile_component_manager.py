@@ -2869,6 +2869,143 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         assert tile_component_manager.pending_data_requests is False
 
+    def test_set_up_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for setting up the antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        # use non default values to check for errors in value propagation
+        args = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+        }
+        tile_component_manager.set_up_antenna_buffer(
+            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+        )
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+
+        # Confrim that the values have updated correctly
+        for key, item in args.items():
+            assert item == buffer[key]
+        assert buffer["set_up_complete"] is True
+
+    def test_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for starting antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        args = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": None,
+            "continuous_mode": True,
+        }
+        tile_component_manager.set_up_antenna_buffer(
+            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+        )
+
+        tile_component_manager.start_antenna_buffer(
+            args["antennas"],
+            args["start_time"],
+            args["timestamp_capture_duration"],
+            args["continuous_mode"],
+        )
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        for key, item in args.items():
+            assert item == buffer[key]
+        assert buffer["set_up_complete"] is True
+        assert buffer["data_capture_initiated"] is True
+
+    def test_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for reading antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        args = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": None,
+            "continuous_mode": True,
+        }
+        tile_component_manager.set_up_antenna_buffer(
+            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+        )
+
+        tile_component_manager.start_antenna_buffer(
+            args["antennas"],
+            args["start_time"],
+            args["timestamp_capture_duration"],
+            args["continuous_mode"],
+        )
+
+        tile_component_manager.read_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is True
+        assert buffer["stop_antenna_buffer"] is True
+
+    def test_stop_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for stoping antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        args = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": None,
+            "continuous_mode": True,
+        }
+        tile_component_manager.set_up_antenna_buffer(
+            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+        )
+
+        tile_component_manager.start_antenna_buffer(
+            args["antennas"],
+            args["start_time"],
+            args["timestamp_capture_duration"],
+            args["continuous_mode"],
+        )
+
+        tile_component_manager.stop_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is True
+        assert buffer["stop_antenna_buffer"] is True
+
 
 class TestDynamicSimulator:
     """Class for testing using the DynamicTileSimulator as a backend."""
@@ -3039,140 +3176,3 @@ class TestDynamicSimulator:
         final_rfi = tile_component_manager.tile.read_broadband_rfi()
         difference_mask = initial_rfi != final_rfi  # True where values differ
         assert np.all(final_rfi[difference_mask] > initial_rfi[difference_mask])
-
-    def test_set_up_antenna_buffer(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """Unit test for setting up the antenna buffer.
-
-        :param tile_component_manager: The TileComponentManager instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        # use non default values to check for errors in value propagation
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-        }
-        tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
-        )
-        buffer = tile_simulator._antenna_buffer_tile_attribute
-
-        # Confrim that the values have updated correctly
-        for key, item in args.items():
-            assert item == buffer[key]
-        assert buffer["set_up_complete"] is True
-
-    def test_start_antenna_buffer(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """Unit test for starting antenna buffer.
-
-        :param tile_component_manager: The TileComponentManager instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
-        }
-        tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
-        )
-
-        tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
-        )
-
-        # Confrim that the values have updated correctly
-        buffer = tile_simulator._antenna_buffer_tile_attribute
-        for key, item in args.items():
-            assert item == buffer[key]
-        assert buffer["set_up_complete"] is True
-        assert buffer["data_capture_initiated"] is True
-
-    def test_read_antenna_buffer(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """Unit test for reading antenna buffer.
-
-        :param tile_component_manager: The TileComponentManager instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
-        }
-        tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
-        )
-
-        tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
-        )
-
-        tile_component_manager.read_antenna_buffer()
-
-        # Confrim that the values have updated correctly
-        buffer = tile_simulator._antenna_buffer_tile_attribute
-        assert buffer["read_antenna_buffer"] is True
-        assert buffer["stop_antenna_buffer"] is True
-
-    def test_stop_antenna_buffer(
-        self: TestStaticSimulator,
-        tile_component_manager: TileComponentManager,
-        tile_simulator: TileSimulator,
-    ) -> None:
-        """Unit test for stoping antenna buffer.
-
-        :param tile_component_manager: The TileComponentManager instance.
-        :param tile_simulator: The tile simulator instance.
-        """
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
-        }
-        tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
-        )
-
-        tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
-        )
-
-        tile_component_manager.stop_antenna_buffer()
-
-        # Confrim that the values have updated correctly
-        buffer = tile_simulator._antenna_buffer_tile_attribute
-        assert buffer["read_antenna_buffer"] is True
-        assert buffer["stop_antenna_buffer"] is True

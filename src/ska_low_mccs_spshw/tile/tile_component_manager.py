@@ -1586,9 +1586,100 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
+    # ----------------------------
+    # AntennaBuffer
+    # ----------------------------
+
+    @check_communicating
+    def set_up_antenna_buffer(
+        self: TileComponentManager,
+        mode: Optional[str],
+        ddr_start_byte_address: Optional[int],
+        max_ddr_byte_size: Optional[int],
+    ) -> bool:
+        """Set up the antenna buffer.
+
+        :param mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
+
+        :return: True if set up ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            )
+        except Exception as err:
+            self.logger.error(f"Failed to set up antenna buffer: {err}")
+            return False
+
+        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete")
+
+    @check_communicating
+    def start_antenna_buffer(
+        self: TileComponentManager,
+        antennas: list,
+        start_time: int,
+        timestamp_capture_duration: int,
+        continuous_mode: bool,
+    ) -> bool:
+        """Start recording to the antenna buffer.
+
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
+
+        :return: True if start ran succesfully, False if it fails.
+        """
+        try:
+            ddr_write_size = self.tile.start_antenna_buffer(
+                antennas, start_time, timestamp_capture_duration, continuous_mode
+            )
+        except Exception as err:
+            self.logger.error(f"Failed to start antenna buffer: {err}")
+            return False
+
+        self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
+        return self.tile._antenna_buffer_tile_attribute.get("data_capture_initiated")
+
+    @check_communicating
+    def read_antenna_buffer(self: TileComponentManager) -> bool:
+        """Read from the antenna buffer.
+
+        :return: True if read ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.read_antenna_buffer()
+        except Exception as err:
+            self.logger.error(f"Failed to read antenna buffer: {err}")
+            return False
+        return True
+
+    @check_communicating
+    def stop_antenna_buffer(self: TileComponentManager) -> bool:
+        """Stop writing to the antenna buffer.
+
+        :return: True if stop ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.stop_antenna_buffer()
+        except Exception as err:
+            self.logger.error(f"Failed to stop antenna buffer: {err}")
+            return False
+        return True
+
     # -----------------------------
     # FastCommands
     # ----------------------------
+
     @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
         """Check we can connect to the TPM."""

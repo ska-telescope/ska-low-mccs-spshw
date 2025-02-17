@@ -2894,7 +2894,7 @@ class SpsStationComponentManager(
             "configure",
             json.dumps(
                 {
-                    "nof_tiles": self._number_of_tiles,
+                    "nof_tiles": 16,  # always 16 for correlation mode.
                     "nof_channels": nof_channels,
                     "directory": "correlator_data",  # Appended to ADR-55 path.
                     "nof_correlator_samples": nof_correlator_samples,

@@ -1378,18 +1378,18 @@ class TileSimulator:
 
         # log the original message
         self.logger.info(
-            f"AntennaBuffer: Setup parameters - Mode={mode}, ",
-            f"Payload Length={payload_length},",
-            f" DDR Start Address={ddr_start_byte_address},",
-            f" Max DDR Size={max_ddr_byte_size}",
+            f"AntennaBuffer: Setup parameters - Mode={mode}, "
+            + f"Payload Length={payload_length},"
+            + f" DDR Start Address={ddr_start_byte_address},"
+            + f" Max DDR Size={max_ddr_byte_size}"
         )
         # save values to buffer attributes
-        self._antenna_buffer_tile_attribute = {
-            "mode": mode,
-            "DDR_start_address": ddr_start_byte_address,
-            "max_DDR_byte_size": max_ddr_byte_size,
-            "set_up_complete": True,
-        }
+        self._antenna_buffer_tile_attribute["mode"] = mode
+        self._antenna_buffer_tile_attribute[
+            "DDR_start_address"
+        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
+        self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
     @connected
     def start_antenna_buffer(
@@ -1436,6 +1436,9 @@ class TileSimulator:
                 f"{invalid_input}. Please give an antenna ID from 0 to 15",
             )
 
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute["antennas"] = antennas
+
         # Remove duplicates and then split the list in 2 parts
         antennas = list(dict.fromkeys(antennas))
         antennas = [[x for x in antennas if x < 8], [x - 8 for x in antennas if x >= 8]]
@@ -1448,8 +1451,8 @@ class TileSimulator:
             if antennas[fpga_id]:
                 # log which antennas and fpgas are used
                 self.logger.info(
-                    f"AntennaBuffer will be using FPGA {fpga_id+1},",
-                    f" antennas = {antennas[fpga_id]}",
+                    f"AntennaBuffer will be using FPGA {fpga_id+1},"
+                    + f" antennas = {antennas[fpga_id]}"
                 )
                 self._antenna_buffer_tile_attribute["used_fpga_id"].append(fpga_id)
 
@@ -1472,14 +1475,13 @@ class TileSimulator:
         self._antenna_buffer_tile_attribute.update({"data_capture_initiated": True})
 
         # Save values to buffer attributes for testing
-        self._antenna_buffer_tile_attribute = {
-            "antennas": antennas,
-            "start_time": start_time,
-            "timestamp_capture_duration": timestamp_capture_duration,
-            "continuous_mode": continuous_mode,
-            "read_antenna_buffer": False,
-            "stop_antenna_buffer": False,
-        }
+        self._antenna_buffer_tile_attribute["start_time"] = start_time
+        self._antenna_buffer_tile_attribute[
+            "timestamp_capture_duration"
+        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
+        self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
         return ddr_write_size
 
     @connected
@@ -1498,10 +1500,8 @@ class TileSimulator:
             )
 
         # Save values to buffer attributes for testing
-        self._antenna_buffer_tile_attribute = {
-            "read_antenna_buffer": True,
-            "stop_antenna_buffer": True,
-        }
+        self._antenna_buffer_tile_attribute["read_antenna_buffer"] = True
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = True
         return
 
     @connected
@@ -1510,9 +1510,7 @@ class TileSimulator:
         self.logger.info(f"AntennaBuffer: Stopping for tile {self.get_tile_id()}")
 
         # Save values to buffer attributes for testing
-        self._antenna_buffer_tile_attribute = {
-            "stop_antenna_buffer": True,
-        }
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = True
 
     @connected
     def enable_station_beam_flagging(

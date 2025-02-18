@@ -154,16 +154,16 @@ def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
 
     .. code-block:: python
 
-        @connected
+        @antenna_buffer_implemented
         def set_up_antenna_buffer(self):
             ...
 
     :param func: the wrapped function
 
-    :return: True if antenna buffer is implemented, else raise Exception error
+    :return: the wrapped function
     """
 
-    def inner_func(
+    def _wrapper(
         self: TileSimulator,
         *args: Any,
         **kwargs: Any,
@@ -179,7 +179,7 @@ def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
         """
         return func(self, *args, **kwargs)
 
-    return cast(Wrapped, inner_func)
+    return cast(Wrapped, _wrapper)
 
 
 class StationBeamformer:

@@ -146,6 +146,34 @@ def check_mocked_overheating(func: Wrapped) -> Wrapped:
     return cast(Wrapped, _wrapper)
 
 
+def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
+    """
+    Check if the antenna buffer is implemented in the firmware.
+
+    :param func: the wrapped function
+
+    :return: True if antenna buffer is implemented, else raise Exception error
+    """
+
+    def inner_func(
+        self: TileSimulator,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Mock checks if the antenna buffer is implemented in the firmware.
+
+        :param self: the method called
+        :param args: positional arguments to the wrapped method
+        :param kwargs: keyword arguments to the wrapped method
+
+        :return: whatever the wrapped method returns
+        """
+        return func(self, *args, **kwargs)
+
+    return inner_func
+
+
 class StationBeamformer:
     """Station beamformer."""
 
@@ -1354,6 +1382,7 @@ class TileSimulator:
         return self.tpm._is_programmed
 
     @connected
+    @antenna_buffer_implemented
     def set_up_antenna_buffer(
         self: TileSimulator,
         mode: str = "SDN",
@@ -1392,6 +1421,7 @@ class TileSimulator:
         self._antenna_buffer_tile_attribute["set_up_complete"] = True
 
     @connected
+    @antenna_buffer_implemented
     def start_antenna_buffer(
         self: TileSimulator,
         antennas: list,
@@ -1485,6 +1515,7 @@ class TileSimulator:
         return ddr_write_size
 
     @connected
+    @antenna_buffer_implemented
     def read_antenna_buffer(self: TileSimulator) -> None:
         """Mock read AntennaBuffer data from the DDR.
 
@@ -1505,6 +1536,7 @@ class TileSimulator:
         return
 
     @connected
+    @antenna_buffer_implemented
     def stop_antenna_buffer(self: TileSimulator) -> None:
         """Mock stop the antenna buffer."""
         self.logger.info(f"AntennaBuffer: Stopping for tile {self.get_tile_id()}")

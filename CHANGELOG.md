@@ -4,9 +4,6 @@
 
 * [SKB-761] Hardcode nof_antenna to number expected from library build.
 * [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
-
-## 0.25.0
-
 * [SKB-765] Add ConfigureStationForCalibration command, which handles DAQ configuration for calibration. This functionality was pulled from AcquireDataForCalibration.
 
 ## 0.24.0

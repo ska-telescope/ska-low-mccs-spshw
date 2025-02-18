@@ -148,7 +148,15 @@ def check_mocked_overheating(func: Wrapped) -> Wrapped:
 
 def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
     """
-    Check if the antenna buffer is implemented in the firmware.
+    Return a function that checks if Antenna buffer is implmented.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @connected
+        def set_up_antenna_buffer(self):
+            ...
 
     :param func: the wrapped function
 

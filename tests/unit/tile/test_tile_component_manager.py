@@ -2880,13 +2880,16 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_simulator: The tile simulator instance.
         """
         # use non default values to check for errors in value propagation
+        mode = "NSDN"
+        ddr_start_byte_address = 256 * 1024**2
+        max_ddr_byte_size = 512 * 1024**2
         args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
+            "mode": mode,
+            "DDR_start_address": ddr_start_byte_address,
+            "max_DDR_byte_size": max_ddr_byte_size,
         }
         tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+            mode, ddr_start_byte_address, max_ddr_byte_size
         )
         buffer = tile_simulator._antenna_buffer_tile_attribute
 
@@ -2905,24 +2908,28 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
+        mode = "NSDN"
+        ddr_start_byte_address = 256 * 1024**2
+        max_ddr_byte_size = 512 * 1024**2
+        antennas = [1, 9]
+        start_time = 1
+        timestamp_capture_duration = 1
+        continuous_mode = True
         args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
+            "mode": mode,
+            "DDR_start_address": ddr_start_byte_address,
+            "max_DDR_byte_size": max_ddr_byte_size,
+            "antennas": antennas,
+            "start_time": start_time,
+            "timestamp_capture_duration": timestamp_capture_duration,
+            "continuous_mode": continuous_mode,
         }
         tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+            mode, ddr_start_byte_address, max_ddr_byte_size
         )
 
         tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
+            antennas, start_time, timestamp_capture_duration, continuous_mode
         )
 
         # Confrim that the values have updated correctly
@@ -2942,24 +2949,19 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
-        }
+        mode = "NSDN"
+        ddr_start_byte_address = 256 * 1024**2
+        max_ddr_byte_size = 512 * 1024**2
+        antennas = [1, 9]
+        start_time = 1
+        timestamp_capture_duration = 1
+        continuous_mode = True
         tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+            mode, ddr_start_byte_address, max_ddr_byte_size
         )
 
         tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
+            antennas, start_time, timestamp_capture_duration, continuous_mode
         )
 
         tile_component_manager.read_antenna_buffer()
@@ -2979,24 +2981,19 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
-        args = {
-            "mode": "NSDN",
-            "DDR_start_address": 256 * 1024**2,
-            "max_DDR_byte_size": 512 * 1024**2,
-            "antennas": [1, 9],
-            "start_time": 1,
-            "timestamp_capture_duration": None,
-            "continuous_mode": True,
-        }
+        mode = "NSDN"
+        ddr_start_byte_address = 256 * 1024**2
+        max_ddr_byte_size = 512 * 1024**2
+        antennas = [1, 9]
+        start_time = 1
+        timestamp_capture_duration = 1
+        continuous_mode = True
         tile_component_manager.set_up_antenna_buffer(
-            args["mode"], args["DDR_start_address"], args["max_DDR_byte_size"]
+            mode, ddr_start_byte_address, max_ddr_byte_size
         )
 
         tile_component_manager.start_antenna_buffer(
-            args["antennas"],
-            args["start_time"],
-            args["timestamp_capture_duration"],
-            args["continuous_mode"],
+            antennas, start_time, timestamp_capture_duration, continuous_mode
         )
 
         tile_component_manager.stop_antenna_buffer()

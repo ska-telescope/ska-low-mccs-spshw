@@ -1593,8 +1593,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def set_up_antenna_buffer(
         self: TileComponentManager,
-        mode: Optional[str],
-        ddr_start_byte_address: Optional[int],
+        mode: str,
+        ddr_start_byte_address: int,
         max_ddr_byte_size: Optional[int],
     ) -> bool:
         """Set up the antenna buffer.
@@ -1613,11 +1613,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.tile.set_up_antenna_buffer(
                 mode, ddr_start_byte_address, max_ddr_byte_size
             )
-        except Exception as err:
+        except RuntimeError as err:
             self.logger.error(f"Failed to set up antenna buffer: {err}")
             return False
-
-        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete")
+        if self.tile._antenna_buffer_tile_attribute.get("set_up_complete"):
+            return True
+        return False
 
     @check_communicating
     def start_antenna_buffer(
@@ -1643,12 +1644,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             ddr_write_size = self.tile.start_antenna_buffer(
                 antennas, start_time, timestamp_capture_duration, continuous_mode
             )
-        except Exception as err:
+        except RuntimeError as err:
             self.logger.error(f"Failed to start antenna buffer: {err}")
             return False
 
         self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
-        return self.tile._antenna_buffer_tile_attribute.get("data_capture_initiated")
+        if self.tile._antenna_buffer_tile_attribute.get("data_capture_initiated"):
+            return True
+        return False
 
     @check_communicating
     def read_antenna_buffer(self: TileComponentManager) -> bool:
@@ -1658,7 +1661,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         try:
             self.tile.read_antenna_buffer()
-        except Exception as err:
+        except RuntimeError as err:
             self.logger.error(f"Failed to read antenna buffer: {err}")
             return False
         return True
@@ -1671,7 +1674,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         try:
             self.tile.stop_antenna_buffer()
-        except Exception as err:
+        except RuntimeError as err:
             self.logger.error(f"Failed to stop antenna buffer: {err}")
             return False
         return True

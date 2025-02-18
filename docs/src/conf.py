@@ -22,6 +22,18 @@ import sphinx.ext.autodoc
 from sphinx.ext.autodoc.mock import _MockObject
 
 
+def skip_member(app, what, name, obj, skip, options):
+    if name in {
+        "antenna_buffer_implemented",
+    }:
+        return True  # Skip documenting these members
+    return skip
+
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_member)
+
+
 def call_mock(self, *args, **kw):
     from types import FunctionType, MethodType
 

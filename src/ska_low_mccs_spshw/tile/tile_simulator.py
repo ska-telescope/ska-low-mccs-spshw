@@ -171,7 +171,7 @@ def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
         """
         return func(self, *args, **kwargs)
 
-    return inner_func
+    return cast(Wrapped, inner_func)
 
 
 class StationBeamformer:

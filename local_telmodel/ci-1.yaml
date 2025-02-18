@@ -49,4 +49,8 @@ platform:
           tpm_fibre_input: 1
           tpm_x_channel: 16
           tpm_y_channel: 17
+          delay_x: 0
+          delay_y: 0
+          attenuation_x: 0
+          attenuation_y: 0
           delay: 63

@@ -79,6 +79,7 @@ def test_initialise_can_execute(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
+    subrack_device.inheritModes = False
     subrack_device.subscribe_event(
         "state",
         tango.EventType.CHANGE_EVENT,
@@ -153,6 +154,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         assert sps_station_device.adminMode == AdminMode.OFFLINE
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
@@ -286,6 +290,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -327,6 +334,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -391,6 +401,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -455,6 +468,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -529,6 +545,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -616,6 +635,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,
@@ -692,6 +714,9 @@ class TestStationTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        subrack_device.inheritModes = False
+        tile_device.inheritModes = False
+        daq_device.inheritModes = False
         self.turn_station_on(
             sps_station_device,
             subrack_device,

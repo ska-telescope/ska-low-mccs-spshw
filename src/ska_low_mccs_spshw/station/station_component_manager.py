@@ -665,12 +665,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -3081,7 +3081,7 @@ class SpsStationComponentManager(
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
         base_config = {
-            "nof_tiles": self._number_of_tiles,
+            "nof_tiles": 16,  # always 16 for correlation mode.
             "nof_channels": nof_channels,
             "directory": "correlator_data",  # Appended to ADR-55 path.
             "nof_correlator_samples": nof_correlator_samples,

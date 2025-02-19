@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-This file contains a test for the SpsStation.SelfCheck() method.
+This file contains a test for the tile dropped packets test.
 
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
@@ -171,7 +171,7 @@ def tile_start_data_acq(
     first_tile.startacquisition("{}")
 
 
-@then("the Tile dropped packets stays 0")
+@then("the Tile dropped packets is 0 after 30 seconds")
 def tile_dropped_packets_stays_0(
     first_tile: tango.DeviceProxy,
 ) -> None:

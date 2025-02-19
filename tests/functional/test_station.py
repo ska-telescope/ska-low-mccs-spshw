@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-This file contains a test for the SpsStation.SelfCheck() method.
+This file contains a test for the station syncronisation.
 
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
@@ -150,7 +150,7 @@ def check_spsstation_state(
     assert station.state() == tango.DevState.ON
 
 
-@given("the station is unsynchronised")
+@given("the station is initialised")
 def station_not_synched(station: tango.DeviceProxy) -> None:
     """
     Verify that a device is in the desired state.

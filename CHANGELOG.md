@@ -1,10 +1,11 @@
 # Version History
 
-## 0.25.0
-
 ## 1.0.0
 
 * [THORN-17] 1.0.0 release - all MCCS repos
+
+## 0.25.0
+
 * [SKB-761] Hardcode nof_antenna to number expected from library build.
 * [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
 

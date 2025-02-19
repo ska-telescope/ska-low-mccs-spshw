@@ -265,7 +265,7 @@ def acquisition_duration_fixture() -> int:
 
 # pylint: disable=inconsistent-return-statements
 def poll_until_consumer_running(
-    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 5
+    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 10
 ) -> None:
     """
     Poll until a specific consumer is running.
@@ -277,7 +277,6 @@ def poll_until_consumer_running(
     :param no_of_iters: number of times to iterate
     """
     status = json.loads(daq.DaqStatus())
-    print(status)
     for consumer in status["Running Consumers"]:
         if wanted_consumer in consumer:
             return

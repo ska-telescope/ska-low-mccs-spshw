@@ -5,69 +5,17 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""An implementation of a basic test for a station."""
+"""An implementation of a test for integrated channelised data from tiles."""
 from __future__ import annotations
 
-import logging
 import time
 from copy import copy
-from typing import Callable
-
-import numpy as np
-from pydaq.persisters import ChannelFormatFileManager, FileDAQModes  # type: ignore
 
 from ...tile.tile_data import TileData
-from .base_daq_test import BaseDaqTest, BaseDataReceivedHandler
+from .base_daq_test import BaseDaqTest
+from .data_handlers import IntegratedChannelDataReceivedHandler
 
 __all__ = ["TestIntegratedChannel"]
-
-
-class IntegratedChannelDataReceivedHandler(BaseDataReceivedHandler):
-    """Detect files created in the data directory."""
-
-    def __init__(
-        self: IntegratedChannelDataReceivedHandler,
-        logger: logging.Logger,
-        nof_tiles: int,
-        data_created_callback: Callable,
-    ):
-        """
-        Initialise a new instance.
-
-        :param logger: logger for the handler
-        :param nof_tiles: number of tiles to expect data from
-        :param data_created_callback: callback to call when data received
-        """
-        self._nof_samples = 1
-        super().__init__(logger, nof_tiles, data_created_callback)
-
-    def handle_data(self: IntegratedChannelDataReceivedHandler) -> None:
-        """Handle the reading of integrated channel data."""
-        raw_file = ChannelFormatFileManager(
-            root_path=self._base_path, daq_mode=FileDAQModes.Integrated
-        )
-        for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            start_idx = TileData.ANTENNA_COUNT * tile_id
-            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
-            self.data[:, start_idx:end_idx, :, :] = tile_data
-
-    def initialise_data(self: IntegratedChannelDataReceivedHandler) -> None:
-        """Initialise empty integrated channel data struct."""
-        self.data = np.zeros(
-            (
-                TileData.NUM_FREQUENCY_CHANNELS,
-                self._nof_tiles * TileData.ANTENNA_COUNT,
-                TileData.POLS_PER_ANTENNA,
-                self._nof_samples,
-            ),
-            dtype=np.uint32,
-        )
 
 
 class TestIntegratedChannel(BaseDaqTest):

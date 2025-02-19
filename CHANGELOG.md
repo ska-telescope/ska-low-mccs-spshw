@@ -1,5 +1,26 @@
 # Version History
 
+## 0.25.0
+
+* [SKB-761] Hardcode nof_antenna to number expected from library build.
+* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+
+## 0.24.0
+
+* [SKB-766] Reject multiple calls to DAQ.Start() in a row.
+* [SKB-746] MccsTile.Off() now works in DevState ALARM.
+
+## 0.23.1
+
+* [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied
+* [THORN-5] Add Tile beamformer test to self-check.
+* [THORN-12] Add methods/attribute to measure data rate through DAQ network interface.
+* [THORN-13] Add station beam data rate test to self-check.
+
+## 0.23.0
+
+* [MCCS-2256] Removed cabinetbanks.
+
 ## 0.22.0
 
 * [MCCS-2330] Seperate alarms attribute into constituents.

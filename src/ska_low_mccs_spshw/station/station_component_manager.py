@@ -2894,7 +2894,7 @@ class SpsStationComponentManager(
             "configure",
             json.dumps(
                 {
-                    "nof_tiles": self._number_of_tiles,
+                    "nof_tiles": 16,  # always 16 for correlation mode.
                     "nof_channels": nof_channels,
                     "directory": "correlator_data",  # Appended to ADR-55 path.
                     "nof_correlator_samples": nof_correlator_samples,
@@ -3176,6 +3176,30 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "ADC equalisation complete."),
             )
+
+    def start_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Start ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StartADCs", require_synchronised=True)
+
+    def stop_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopADCs", require_synchronised=True)
 
     def describe_test(self, test_name: str) -> str:
         """

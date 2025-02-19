@@ -16,7 +16,8 @@ import sys
 from typing import Any, Callable, Final, Optional
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
-from ska_tango_base.base import BaseComponentManager, SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
@@ -263,7 +264,7 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
 
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
-class MccsSubrack(SKABaseDevice[SubrackComponentManager]):
+class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     """A Tango device for monitor and control of an SPS subrack."""
 
     # ----------

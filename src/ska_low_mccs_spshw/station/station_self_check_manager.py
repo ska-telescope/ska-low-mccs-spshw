@@ -22,6 +22,9 @@ from .tests import (
     TestIntegratedChannel,
     TestRaw,
     TestResult,
+    TestStationBeamDataRate,
+    TestTileBeamformer,
+    TestTilePointing,
     TpmSelfCheckTest,
 )
 
@@ -83,6 +86,9 @@ class SpsStationSelfCheckManager:
                 TestBeam,
                 TestIntegratedBeam,
                 TestIntegratedChannel,
+                TestTileBeamformer,
+                TestTilePointing,
+                TestStationBeamDataRate,
             ]
         ]
 

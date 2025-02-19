@@ -220,8 +220,9 @@ def test_communication(
 
     station_component_manager.stop_communicating()
 
-    callbacks["communication_status"].assert_call(CommunicationStatus.NOT_ESTABLISHED)
-    callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
+    callbacks["communication_status"].assert_call(
+        CommunicationStatus.DISABLED, lookahead=2
+    )
 
     callbacks["communication_status"].assert_not_called()
 

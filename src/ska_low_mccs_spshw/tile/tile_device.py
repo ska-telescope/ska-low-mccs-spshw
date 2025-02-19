@@ -32,7 +32,8 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.base import CommandTracker, SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
     FastCommand,
@@ -66,7 +67,7 @@ def engineering_mode_required(func: Callable) -> Callable:
 
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
-        device: SKABaseDevice = args[0]
+        device: MccsBaseDevice = args[0]
         if device._admin_mode != AdminMode.ENGINEERING:
             return (
                 [ResultCode.REJECTED],
@@ -112,7 +113,7 @@ def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
-class MccsTile(SKABaseDevice[TileComponentManager]):
+class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     # -----------------
@@ -571,20 +572,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     #         return (ResultCode.OK, message)
 
     def is_On_allowed(self: MccsTile) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
-
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
-
-    def is_Off_allowed(self: MccsTile) -> bool:
         """
         Check if command `On` is allowed in the current device state.
 
@@ -3937,8 +3924,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
-
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand,
             argin: list[float],
@@ -3981,10 +3966,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 for i in range(1, len(argin), 8)
             ]
 
-            self._component_manager.load_calibration_coefficients(
+            result, message = self._component_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (result, message)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadCalibrationCoefficients(
@@ -4053,8 +4038,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
-
         def do(
             self: MccsTile.ApplyCalibrationCommand,
             *args: Any,
@@ -4073,8 +4056,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             switch_time = args[0]
 
-            self._component_manager.apply_calibration(switch_time)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return_code, message = self._component_manager.apply_calibration(
+                switch_time
+            )
+            return (return_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

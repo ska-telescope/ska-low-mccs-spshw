@@ -1,8 +1,8 @@
 # Version History
 
-## 0.26.0
+## 1.0.0
 
-* [THORN-21] Added antenna buffer control methods.
+* [THORN-17] 1.0.0 release - all MCCS repos
 
 ## 0.25.0
 

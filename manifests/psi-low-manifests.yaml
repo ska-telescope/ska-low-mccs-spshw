@@ -1,0 +1,2743 @@
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: daqs-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: spsstations-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: subracks-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tpms-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# Device Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: daqs-ska-low-mccs-spshw-dsconfig-json
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+data:
+  configuration.json: |
+    {
+      "servers": {
+        "spshw_device_server" : {
+          "daq-psi-low": {
+            "MccsDaqReceiver": {
+              "low-mccs/daqreceiver/psi-low": {
+                "properties": {
+                  "DaqId": [
+                    "1"
+                    ],
+                  "Host": [
+                    "daqrx-psi-low"
+                    ],
+                  "Port": [
+                    "50051"
+                    ],
+                  "ConsumersToStart": [
+                    "DaqModes.INTEGRATED_CHANNEL_DATA"
+                    ],
+                  "SkuidUrl": [
+                    "http://ska-ser-skuid-ska-ser-skuid-svc:9870/"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ]
+                }
+              }
+            }
+          },
+          "daq-psi-low-bandpass": {
+            "MccsDaqReceiver": {
+              "low-mccs/daqreceiver/psi-low-bandpass": {
+                "properties": {
+                  "DaqId": [
+                    "1"
+                    ],
+                  "Host": [
+                    "daqrx-psi-low-bandpass"
+                    ],
+                  "Port": [
+                    "50051"
+                    ],
+                  "ConsumersToStart": [
+                    "DaqModes.INTEGRATED_CHANNEL_DATA"
+                    ],
+                  "SkuidUrl": [
+                    "http://ska-ser-skuid-ska-ser-skuid-svc:9870/"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  bootstrap.sh: |
+    #/bin/sh
+    json2tango -w -a -u data/configuration.json
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      echo "finished normally."
+      exit 0
+    else
+      if [ $rc -eq 2 ]; then
+        echo "finished with an update."
+        exit 0
+      else
+        echo "finished with an ERROR."
+        exit $rc
+      fi
+    fi
+  spshw_device_server.py: |
+    
+    #!/usr/bin/env python
+    
+    import importlib
+    import importlib.util
+    from tango.server import run
+    
+    classes = []
+    
+    def main(args=None, **kwargs):
+      
+      return run(classes=(classes), args=args, **kwargs)
+    
+    if __name__ == '__main__':
+        main()
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# Device Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: spsstations-ska-low-mccs-spshw-dsconfig-json
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+data:
+  configuration.json: |
+    {
+      "servers": {
+        "spshw_device_server" : {
+          "spsstation-psi-low": {
+            "SpsStation": {
+              "low-mccs/spsstation/psi-low": {
+                "properties": {
+                  "StationId": [
+                    "1"
+                    ],
+                  "AntennaConfigURI": [
+                    ],
+                  "SdnFirstInterface": [
+                    "10.0.0.152/16"
+                    ],
+                  "DaqTRL": [
+                    "low-mccs/daqreceiver/psi-low"
+                    ],
+                  "SubrackFQDNs": [
+                    "low-mccs/subrack/psi-low-sr1"
+                    ],
+                  "TileFQDNs": [
+                    "low-mccs/tile/psi-low-tpm5",
+                    "low-mccs/tile/psi-low-tpm7",
+                    "low-mccs/tile/psi-low-tpm8"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  bootstrap.sh: |
+    #/bin/sh
+    json2tango -w -a -u data/configuration.json
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      echo "finished normally."
+      exit 0
+    else
+      if [ $rc -eq 2 ]; then
+        echo "finished with an update."
+        exit 0
+      else
+        echo "finished with an ERROR."
+        exit $rc
+      fi
+    fi
+  spshw_device_server.py: |
+    
+    #!/usr/bin/env python
+    
+    import importlib
+    import importlib.util
+    from tango.server import run
+    
+    classes = []
+    
+    def main(args=None, **kwargs):
+      
+      return run(classes=(classes), args=args, **kwargs)
+    
+    if __name__ == '__main__':
+        main()
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# Device Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: subracks-ska-low-mccs-spshw-dsconfig-json
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+data:
+  configuration.json: |
+    {
+      "servers": {
+        "spshw_device_server" : {
+          "subrack-psi-low-sr1": {
+            "MccsSubrack": {
+              "low-mccs/subrack/psi-low-sr1": {
+                "properties": {
+                  "SubrackIp": [
+                    "10.0.10.80"
+                    ],
+                  "SubrackPort": [
+                    "8081"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  bootstrap.sh: |
+    #/bin/sh
+    json2tango -w -a -u data/configuration.json
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      echo "finished normally."
+      exit 0
+    else
+      if [ $rc -eq 2 ]; then
+        echo "finished with an update."
+        exit 0
+      else
+        echo "finished with an ERROR."
+        exit $rc
+      fi
+    fi
+  spshw_device_server.py: |
+    
+    #!/usr/bin/env python
+    
+    import importlib
+    import importlib.util
+    from tango.server import run
+    
+    classes = []
+    
+    def main(args=None, **kwargs):
+      
+      return run(classes=(classes), args=args, **kwargs)
+    
+    if __name__ == '__main__':
+        main()
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# Device Server configuration
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: tpms-ska-low-mccs-spshw-dsconfig-json
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+data:
+  configuration.json: |
+    {
+      "servers": {
+        "spshw_device_server" : {
+          "tile-psi-low-tpm5": {
+            "MccsTile": {
+              "low-mccs/tile/psi-low-tpm5": {
+                "properties": {
+                  "TileId": [
+                    "4"
+                    ],
+                  "StationId": [
+                    "1"
+                    ],
+                  "SubrackFQDN": [
+                    "low-mccs/subrack/psi-low-sr1"
+                    ],
+                  "SubrackBay": [
+                    "5"
+                    ],
+                  "AntennasPerTile": [
+                    "16"
+                    ],
+                  "TpmIp": [
+                    "10.0.10.91"
+                    ],
+                  "TpmCpldPort": [
+                    "10000"
+                    ],
+                  "TpmVersion": [
+                    "tpm_v1_6"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ],
+                  "PreaduAttenuation": [
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0"
+                    ]
+                }
+              }
+            }
+          },
+          "tile-psi-low-tpm7": {
+            "MccsTile": {
+              "low-mccs/tile/psi-low-tpm7": {
+                "properties": {
+                  "TileId": [
+                    "6"
+                    ],
+                  "StationId": [
+                    "1"
+                    ],
+                  "SubrackFQDN": [
+                    "low-mccs/subrack/psi-low-sr1"
+                    ],
+                  "SubrackBay": [
+                    "7"
+                    ],
+                  "AntennasPerTile": [
+                    "16"
+                    ],
+                  "TpmIp": [
+                    "10.0.10.93"
+                    ],
+                  "TpmCpldPort": [
+                    "10000"
+                    ],
+                  "TpmVersion": [
+                    "tpm_v1_6"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ],
+                  "PreaduAttenuation": [
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0"
+                    ]
+                }
+              }
+            }
+          },
+          "tile-psi-low-tpm8": {
+            "MccsTile": {
+              "low-mccs/tile/psi-low-tpm8": {
+                "properties": {
+                  "TileId": [
+                    "7"
+                    ],
+                  "StationId": [
+                    "1"
+                    ],
+                  "SubrackFQDN": [
+                    "low-mccs/subrack/psi-low-sr1"
+                    ],
+                  "SubrackBay": [
+                    "8"
+                    ],
+                  "AntennasPerTile": [
+                    "16"
+                    ],
+                  "TpmIp": [
+                    "10.0.10.94"
+                    ],
+                  "TpmCpldPort": [
+                    "10000"
+                    ],
+                  "TpmVersion": [
+                    "tpm_v1_6"
+                    ],
+                  "LoggingLevelDefault": [
+                    "5"
+                    ],
+                  "PreaduAttenuation": [
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0",
+                    "0"
+                    ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  bootstrap.sh: |
+    #/bin/sh
+    json2tango -w -a -u data/configuration.json
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      echo "finished normally."
+      exit 0
+    else
+      if [ $rc -eq 2 ]; then
+        echo "finished with an update."
+        exit 0
+      else
+        echo "finished with an ERROR."
+        exit $rc
+      fi
+    fi
+  spshw_device_server.py: |
+    
+    #!/usr/bin/env python
+    
+    import importlib
+    import importlib.util
+    from tango.server import run
+    
+    classes = []
+    
+    def main(args=None, **kwargs):
+      
+      return run(classes=(classes), args=args, **kwargs)
+    
+    if __name__ == '__main__':
+        main()
+---
+# Source: ska-low-mccs-spshw/templates/eda-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mccs-spshw-eda-config
+  namespace: ska-low-mccs
+  labels:
+    eda-config: ska-low-mccs-spshw
+data:
+  eda-config.yaml: |-
+    db: "*" # depends on the platform we are uploading to
+    manager: "*" # depends on the platform we are uploading to
+    archiver: "*" # depends on the platform we are uploading to
+    configuration:
+      - class: SpsStation
+        attributes:
+          buildState:
+            code_push_event: true
+            archive_period: 0
+          versionId:
+            code_push_event: true
+            archive_period: 0
+          healthState:
+            code_push_event: true
+            archive_period: 0
+          adminMode:
+            code_push_event: true
+            archive_period: 0
+          simulationMode:
+            code_push_event: true
+            archive_period: 0
+          testMode:
+            code_push_event: true
+            archive_period: 0
+          obsState:
+            code_push_event: true
+            archive_period: 0
+          commandedObsState:
+            code_push_event: true
+            archive_period: 0
+          obsMode:
+            code_push_event: true
+            archive_period: 0
+          configurationProgress:
+            code_push_event: true
+            archive_period: 0
+          configurationDelayExpected:
+            code_push_event: true
+            archive_period: 0
+          xPolBandpass:
+            code_push_event: true
+            archive_period: 0
+          yPolBandpass:
+            code_push_event: true
+            archive_period: 0
+          daqTRL:
+            code_push_event: true
+            archive_period: 0
+          isCalibrated:
+            code_push_event: true
+            archive_period: 0
+          isConfigured:
+            code_push_event: true
+            archive_period: 0
+          antennasMapping:
+            code_push_event: true
+            archive_period: 0
+          antennaInfo:
+            code_push_event: true
+            archive_period: 0
+          staticTimeDelays:
+            code_push_event: true
+            archive_period: 0
+          channeliserRounding:
+            code_push_event: true
+            archive_period: 0
+          cspRounding:
+            code_push_event: true
+            archive_period: 0
+          preaduLevels:
+            code_push_event: true
+            archive_period: 0
+          ppsDelays:
+            code_push_event: true
+            archive_period: 0
+          ppsDelayCorrections:
+            code_push_event: true
+            archive_period: 0
+          ppsDelaySpread:
+            code_push_event: true
+            archive_period: 0
+          beamformerTable:
+            code_push_event: true
+            archive_period: 0
+          fortyGbNetworkAddress:
+            code_push_event: true
+            archive_period: 0
+          cspIngestAddress:
+            code_push_event: true
+            archive_period: 0
+          cspIngestPort:
+            code_push_event: true
+            archive_period: 0
+          cspSourcePort:
+            code_push_event: true
+            archive_period: 0
+          isProgrammed:
+            code_push_event: true
+            archive_period: 0
+          testGeneratorActive:
+            code_push_event: true
+            archive_period: 0
+          isBeamformerRunning:
+            code_push_event: true
+            archive_period: 0
+          tileProgrammingState:
+            code_push_event: true
+            archive_period: 0
+          adcPower:
+            code_push_event: true
+            archive_period: 0
+          boardTemperaturesSummary:
+            code_push_event: true
+            archive_period: 0
+          fpgaTemperaturesSummary:
+            code_push_event: true
+            archive_period: 0
+          ppsDelaySummary:
+            code_push_event: true
+            archive_period: 0
+          sysrefPresentSummary:
+            code_push_event: true
+            archive_period: 0
+          pllLockedSummary:
+            code_push_event: true
+            archive_period: 0
+          ppsPresentSummary:
+            code_push_event: true
+            archive_period: 0
+          clockPresentSummary:
+            code_push_event: true
+            archive_period: 0
+          fortyGbNetworkErrors:
+            code_push_event: true
+            archive_period: 0
+          healthModelParams:
+            code_push_event: true
+            archive_period: 0
+          State:
+            code_push_event: true
+            archive_period: 0
+          Status:
+            code_push_event: true
+            archive_period: 0
+      - class: MccsSubrack
+        attributes:
+          buildState:
+            code_push_event: true
+            archive_period: 0
+          versionId:
+            code_push_event: true
+            archive_period: 0
+          healthState:
+            code_push_event: true
+            archive_period: 0
+          adminMode:
+            code_push_event: true
+            archive_period: 0
+          simulationMode:
+            code_push_event: true
+            archive_period: 0
+          testMode:
+            code_push_event: true
+            archive_period: 0
+          healthModelParams:
+            code_push_event: true
+            archive_period: 0
+          tpmCount:
+            code_push_event: true
+            archive_period: 0
+          tpmPresent:
+            code_push_event: true
+            archive_period: 0
+          tpm1PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm2PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm3PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm4PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm5PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm6PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm7PowerState:
+            code_push_event: true
+            archive_period: 0
+          tpm8PowerState:
+            code_push_event: true
+            archive_period: 0
+          backplaneTemperatures:
+            code_push_event: true
+            archive_period: 0
+          boardTemperatures:
+            code_push_event: true
+            archive_period: 0
+          boardCurrent:
+            code_push_event: true
+            archive_period: 0
+          cpldPllLocked:
+            code_push_event: true
+            archive_period: 0
+          powerSupplyCurrents:
+            code_push_event: true
+            archive_period: 0
+          powerSupplyFanSpeeds:
+            code_push_event: true
+            archive_period: 0
+          powerSupplyPowers:
+            code_push_event: true
+            archive_period: 0
+          powerSupplyVoltages:
+            code_push_event: true
+            archive_period: 0
+          subrackFanSpeeds:
+            code_push_event: true
+            archive_period: 0
+          subrackFanSpeedsPercent:
+            code_push_event: true
+            archive_period: 0
+          subrackFanModes:
+            code_push_event: true
+            archive_period: 0
+          subrackPllLocked:
+            code_push_event: true
+            archive_period: 0
+          subrackTimestamp:
+            code_push_event: true
+            archive_period: 0
+          tpmCurrents:
+            code_push_event: true
+            archive_period: 0
+          tpmPowers:
+            code_push_event: true
+            archive_period: 0
+          tpmVoltages:
+            code_push_event: true
+            archive_period: 0
+          State:
+            code_push_event: true
+            archive_period: 0
+          Status:
+            code_push_event: true
+            archive_period: 0
+      - class: MccsTile
+        attributes:
+          buildState:
+            code_push_event: true
+            archive_period: 0
+          versionId:
+            code_push_event: true
+            archive_period: 0
+          healthState:
+            code_push_event: true
+            archive_period: 0
+          adminMode:
+            code_push_event: true
+            archive_period: 0
+          simulationMode:
+            code_push_event: true
+            archive_period: 0
+          testMode:
+            code_push_event: true
+            archive_period: 0
+          voltages:
+            code_push_event: true
+            archive_period: 0
+          temperatures:
+            code_push_event: true
+            archive_period: 0
+          currents:
+            code_push_event: true
+            archive_period: 0
+          timing:
+            code_push_event: true
+            archive_period: 0
+          io:
+            code_push_event: true
+            archive_period: 0
+          dsp:
+            code_push_event: true
+            archive_period: 0
+          cspDestinationIp:
+            code_push_event: true
+            archive_period: 0
+          cspDestinationMac:
+            code_push_event: true
+            archive_period: 0
+          cspDestinationPort:
+            code_push_event: true
+            archive_period: 0
+          logicalTileId:
+            code_push_event: true
+            archive_period: 0
+          tileProgrammingState:
+            code_push_event: true
+            archive_period: 0
+          stationId:
+            code_push_event: true
+            archive_period: 0
+          firmwareName:
+            code_push_event: true
+            archive_period: 0
+          firmwareVersion:
+            code_push_event: true
+            archive_period: 0
+          voltageMon:
+            code_push_event: true
+            archive_period: 0
+          isProgrammed:
+            code_push_event: true
+            archive_period: 0
+          boardTemperature:
+            code_push_event: true
+            archive_period: 0
+          fpga1Temperature:
+            code_push_event: true
+            archive_period: 0
+          fpga2Temperature:
+            code_push_event: true
+            archive_period: 0
+          fpgasUnixTime:
+            code_push_event: true
+            archive_period: 0
+          fpgaTime:
+            code_push_event: true
+            archive_period: 0
+          fpgaReferenceTime:
+            code_push_event: true
+            archive_period: 0
+          fpgaFrameTime:
+            code_push_event: true
+            archive_period: 0
+          antennaIds:
+            code_push_event: true
+            archive_period: 0
+          fortyGbDestinationIps:
+            code_push_event: true
+            archive_period: 0
+          fortyGbDestinationPorts:
+            code_push_event: true
+            archive_period: 0
+          adcPower:
+            code_push_event: true
+            archive_period: 0
+          currentTileBeamformerFrame:
+            code_push_event: true
+            archive_period: 0
+          currentFrame:
+            code_push_event: true
+            archive_period: 0
+          pendingDataRequests:
+            code_push_event: true
+            archive_period: 0
+          isBeamformerRunning:
+            code_push_event: true
+            archive_period: 0
+          phaseTerminalCount:
+            code_push_event: true
+            archive_period: 0
+          ppsDelay:
+            code_push_event: true
+            archive_period: 0
+          ppsDelayDrift:
+            code_push_event: true
+            archive_period: 0
+          ppsDelayCorrection:
+            code_push_event: true
+            archive_period: 0
+          testGeneratorActive:
+            code_push_event: true
+            archive_period: 0
+          ppsPresent:
+            code_push_event: true
+            archive_period: 0
+          clockPresent:
+            code_push_event: true
+            archive_period: 0
+          sysrefPresent:
+            code_push_event: true
+            archive_period: 0
+          pllLocked:
+            code_push_event: true
+            archive_period: 0
+          channeliserRounding:
+            code_push_event: true
+            archive_period: 0
+          staticTimeDelays:
+            code_push_event: true
+            archive_period: 0
+          cspRounding:
+            code_push_event: true
+            archive_period: 0
+          preaduLevels:
+            code_push_event: true
+            archive_period: 0
+          beamformerTable:
+            code_push_event: true
+            archive_period: 0
+          healthModelParams:
+            code_push_event: true
+            archive_period: 0
+          temperatureHealth:
+            code_push_event: true
+            archive_period: 0
+          voltageHealth:
+            code_push_event: true
+            archive_period: 0
+          currentHealth:
+            code_push_event: true
+            archive_period: 0
+          alarmHealth:
+            code_push_event: true
+            archive_period: 0
+          adcHealth:
+            code_push_event: true
+            archive_period: 0
+          timingHealth:
+            code_push_event: true
+            archive_period: 0
+          ioHealth:
+            code_push_event: true
+            archive_period: 0
+          dspHealth:
+            code_push_event: true
+            archive_period: 0
+          adc_pll_status:
+            code_push_event: true
+            archive_period: 0
+          tile_beamformer_status:
+            code_push_event: true
+            archive_period: 0
+          station_beamformer_status:
+            code_push_event: true
+            archive_period: 0
+          station_beamformer_error_count:
+            code_push_event: true
+            archive_period: 0
+          crc_error_count:
+            code_push_event: true
+            archive_period: 0
+          bip_error_count:
+            code_push_event: true
+            archive_period: 0
+          decode_error_count:
+            code_push_event: true
+            archive_period: 0
+          linkup_loss_count:
+            code_push_event: true
+            archive_period: 0
+          arp:
+            code_push_event: true
+            archive_period: 0
+          udp_status:
+            code_push_event: true
+            archive_period: 0
+          ddr_initialisation:
+            code_push_event: true
+            archive_period: 0
+          ddr_reset_counter:
+            code_push_event: true
+            archive_period: 0
+          f2f_soft_errors:
+            code_push_event: true
+            archive_period: 0
+          f2f_hard_errors:
+            code_push_event: true
+            archive_period: 0
+          resync_count:
+            code_push_event: true
+            archive_period: 0
+          lane_status:
+            code_push_event: true
+            archive_period: 0
+          link_status:
+            code_push_event: true
+            archive_period: 0
+          lane_error_count:
+            code_push_event: true
+            archive_period: 0
+          clock_managers:
+            code_push_event: true
+            archive_period: 0
+          clocks:
+            code_push_event: true
+            archive_period: 0
+          adc_sysref_counter:
+            code_push_event: true
+            archive_period: 0
+          adc_ssref_timing_requirements:
+            code_push_event: true
+            archive_period: 0
+          qpll_status:
+            code_push_event: true
+            archive_period: 0
+          f2f_pll_status:
+            code_push_event: true
+            archive_period: 0
+          timing_pll_status:
+            code_push_event: true
+            archive_period: 0
+          State:
+            code_push_event: true
+            archive_period: 0
+          Status:
+            code_push_event: true
+            archive_period: 0
+      - class: MccsDaqReceiver
+        attributes:
+          buildState:
+            code_push_event: true
+            archive_period: 0
+          versionId:
+            code_push_event: true
+            archive_period: 0
+          healthState:
+            code_push_event: true
+            archive_period: 0
+          adminMode:
+            code_push_event: true
+            archive_period: 0
+          simulationMode:
+            code_push_event: true
+            archive_period: 0
+          testMode:
+            code_push_event: true
+            archive_period: 0
+          dataReceivedResult:
+            code_push_event: true
+            archive_period: 0
+          xPolBandpass:
+            code_push_event: true
+            archive_period: 0
+          yPolBandpass:
+            code_push_event: true
+            archive_period: 0
+          rmsPlot:
+            code_push_event: true
+            archive_period: 0
+          State:
+            code_push_event: true
+            archive_period: 0
+          Status:
+            code_push_event: true
+            archive_period: 0
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: daq-data
+spec:
+  storageClassName: nfss1
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 250Mi
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: daqs-role-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["list", "get", "watch"]
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spsstations-role-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["list", "get", "watch"]
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: subracks-role-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["list", "get", "watch"]
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tpms-role-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+rules:
+- apiGroups: ["batch"]
+  resources: ["jobs"]
+  verbs: ["list", "get", "watch"]
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: daqs-role-bind-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+subjects:
+- kind: ServiceAccount
+  name: daqs-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+roleRef:
+  kind: Role
+  name: daqs-role-ska-low-mccs-spshw
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: spsstations-role-bind-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+subjects:
+- kind: ServiceAccount
+  name: spsstations-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+roleRef:
+  kind: Role
+  name: spsstations-role-ska-low-mccs-spshw
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: subracks-role-bind-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+subjects:
+- kind: ServiceAccount
+  name: subracks-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+roleRef:
+  kind: Role
+  name: subracks-role-ska-low-mccs-spshw
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: tpms-role-bind-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+subjects:
+- kind: ServiceAccount
+  name: tpms-sa-ska-low-mccs-spshw
+  namespace: ska-low-mccs
+roleRef:
+  kind: Role
+  name: tpms-role-ska-low-mccs-spshw
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqrx-psi-low
+  labels:
+    component: daqrx-psi-low
+spec:
+  ports:
+  - name: daqrx-psi-low-grpc-port
+    port: 50051
+    protocol: TCP
+  selector:
+    component: daqrx-psi-low-server
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqrx-psi-low-data
+  labels:
+    component: daqrx-psi-low
+spec:
+  ports:
+  - name: daqrx-psi-low-data-port
+    port: 4660
+    protocol: UDP
+  selector:
+    component: daqrx-psi-low-server
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqrx-psi-low-bandpass
+  labels:
+    component: daqrx-psi-low-bandpass
+spec:
+  ports:
+  - name: daqrx-psi-low-bandpass-grpc-port
+    port: 50051
+    protocol: TCP
+  selector:
+    component: daqrx-psi-low-bandpass-server
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqrx-psi-low-bandpass-data
+  labels:
+    component: daqrx-psi-low-bandpass
+spec:
+  type: LoadBalancer
+  ports:
+  - name: daqrx-psi-low-bandpass-data-port
+    port: 4660
+    protocol: UDP
+  selector:
+    component: daqrx-psi-low-bandpass-server
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqs-daq-psi-low
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: daqs-daq-psi-low
+    function: ska-low-mccs-spshw-daq-tango
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: daqs-daq-psi-low
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: daqs-daq-psi-low-bandpass
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: daqs-daq-psi-low-bandpass
+    function: ska-low-mccs-spshw-daq-tango
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: daqs-daq-psi-low-bandpass
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: spsstations-spsstation-psi-low
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: spsstations-spsstation-psi-low
+    function: ska-low-mccs-spshw-spsstation
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: LoadBalancer
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: spsstations-spsstation-psi-low
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: subracks-subrack-psi-low-sr1
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: subracks-subrack-psi-low-sr1
+    function: ska-low-mccs-spshw-subrack
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: subracks-subrack-psi-low-sr1
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpms-tile-psi-low-tpm5
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm5
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: tpms-tile-psi-low-tpm5
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpms-tile-psi-low-tpm7
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm7
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: tpms-tile-psi-low-tpm7
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# one k8s service per instance
+apiVersion: v1
+kind: Service
+metadata:
+  name: tpms-tile-psi-low-tpm8
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm8
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  type: ClusterIP
+  ports:
+  - name: tango-server
+    port: 45450
+    targetPort: 45450
+  - name: tango-heartbeat
+    port: 45460
+    targetPort: 45460
+  - name: tango-event
+    port: 45470
+    targetPort: 45470
+  selector:
+    subsystem: low-mccs-spshw
+    component: tpms-tile-psi-low-tpm8
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: daqrx-psi-low-server
+  labels:
+    component: daqrx-psi-low-server
+spec:
+  selector:
+    matchLabels:
+      component: daqrx-psi-low-server
+  serviceName: daqrx-psi-low
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        k8s.v1.cni.cncf.io/networks: kube-system/psi-low-sps@sdn1
+      labels:
+        component: daqrx-psi-low-server
+    spec:
+      runtimeClassName: nvidia
+      containers:
+      - command:
+        - MccsDaqServer
+        name: daqrx-psi-low-server
+        image: artefact.skao.int/ska-low-mccs-daq:1.0.0
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: DAQ_GRPC_PORT
+            value: "50051"
+          - name: DAQ_RECEIVER_INTERFACE
+            value: "sdn1"
+          - name: DAQ_RECEIVER_IP
+            value: ""
+          - name: DAQ_RECEIVER_PORTS
+            value: "4660"
+        ports:
+          - containerPort: 50051
+            protocol: TCP
+        resources:
+          limits:
+            nvidia.com/gpu: "1"
+        securityContext:
+          capabilities:
+            add:
+            - NET_RAW
+            - IPC_LOCK
+            - SYS_NICE
+            - SYS_ADMIN
+            - KILL
+            - SYS_TIME
+        volumeMounts:
+        - name: daq-mount
+          mountPath: /product # ADR-55 requires this name
+      volumes:
+      - name: daq-mount
+        persistentVolumeClaim:
+          claimName: daq-data
+      securityContext:
+        fsGroup: 1000
+---
+# Source: ska-low-mccs-spshw/charts/ska-low-mccs-daq/templates/daq-server.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: daqrx-psi-low-bandpass-server
+  labels:
+    component: daqrx-psi-low-bandpass-server
+spec:
+  selector:
+    matchLabels:
+      component: daqrx-psi-low-bandpass-server
+  serviceName: daqrx-psi-low-bandpass
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: daqrx-psi-low-bandpass-server
+    spec:
+      containers:
+      - command:
+        - MccsDaqServer
+        name: daqrx-psi-low-bandpass-server
+        image: artefact.skao.int/ska-low-mccs-daq:1.0.0
+        imagePullPolicy: IfNotPresent
+        env:
+          - name: DAQ_GRPC_PORT
+            value: "50051"
+          - name: DAQ_RECEIVER_INTERFACE
+            value: "eth0"
+          - name: DAQ_RECEIVER_IP
+            value: ""
+          - name: DAQ_RECEIVER_PORTS
+            value: "4660"
+        ports:
+          - containerPort: 50051
+            protocol: TCP
+        resources:
+          limits:
+            memory: 4G
+            nvidia.com/gpu: "0"
+        securityContext:
+          capabilities:
+            add:
+            - NET_RAW
+            - IPC_LOCK
+            - SYS_NICE
+            - SYS_ADMIN
+            - KILL
+            - SYS_TIME
+        volumeMounts:
+        - name: daq-mount
+          mountPath: /product # ADR-55 requires this name
+      volumes:
+      - name: daq-mount
+        emptyDir:
+          medium: Memory
+      securityContext:
+        fsGroup: 1000
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: daqs-daq-psi-low
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: daqs-daq-psi-low
+    function: ska-low-mccs-spshw-daq-tango
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: daqs-daq-psi-low
+      subsystem: low-mccs-spshw
+  serviceName: daqs-daq-psi-low
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: daqs-daq-psi-low
+        function: ska-low-mccs-spshw-daq-tango
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: daqs-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: daqs-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 daqs-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job daqs-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "daq-psi-low"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: daqs-daq-psi-low.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: daqs-daq-psi-low-bandpass
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: daqs-daq-psi-low-bandpass
+    function: ska-low-mccs-spshw-daq-tango
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: daqs-daq-psi-low-bandpass
+      subsystem: low-mccs-spshw
+  serviceName: daqs-daq-psi-low-bandpass
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: daqs-daq-psi-low-bandpass
+        function: ska-low-mccs-spshw-daq-tango
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: daqs-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: daqs-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 daqs-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job daqs-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "daq-psi-low-bandpass"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: daqs-daq-psi-low-bandpass.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: spsstations-spsstation-psi-low
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: spsstations-spsstation-psi-low
+    function: ska-low-mccs-spshw-spsstation
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: spsstations-spsstation-psi-low
+      subsystem: low-mccs-spshw
+  serviceName: spsstations-spsstation-psi-low
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: spsstations-spsstation-psi-low
+        function: ska-low-mccs-spshw-spsstation
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: spsstations-ska-low-mccs-spshw-dsconfig-json
+        
+        - name: daq-data
+          persistentVolumeClaim:
+            claimName: daq-data
+      serviceAccountName: spsstations-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 spsstations-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job spsstations-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "spsstation-psi-low"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+          - mountPath: /product
+            name: daq-data
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: spsstations-spsstation-psi-low.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: subracks-subrack-psi-low-sr1
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: subracks-subrack-psi-low-sr1
+    function: ska-low-mccs-spshw-subrack
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: subracks-subrack-psi-low-sr1
+      subsystem: low-mccs-spshw
+  serviceName: subracks-subrack-psi-low-sr1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: subracks-subrack-psi-low-sr1
+        function: ska-low-mccs-spshw-subrack
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: subracks-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: subracks-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 subracks-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job subracks-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "subrack-psi-low-sr1"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: subracks-subrack-psi-low-sr1.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+
+      nodeSelector:
+        kubernetes.io/hostname: psi-node3
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tpms-tile-psi-low-tpm5
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm5
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: tpms-tile-psi-low-tpm5
+      subsystem: low-mccs-spshw
+  serviceName: tpms-tile-psi-low-tpm5
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: tpms-tile-psi-low-tpm5
+        function: ska-low-mccs-spshw-tile
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: tpms-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: tpms-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 tpms-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job tpms-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "tile-psi-low-tpm5"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: tpms-tile-psi-low-tpm5.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+
+      nodeSelector:
+        kubernetes.io/hostname: psi-node3
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tpms-tile-psi-low-tpm7
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm7
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: tpms-tile-psi-low-tpm7
+      subsystem: low-mccs-spshw
+  serviceName: tpms-tile-psi-low-tpm7
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: tpms-tile-psi-low-tpm7
+        function: ska-low-mccs-spshw-tile
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: tpms-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: tpms-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 tpms-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job tpms-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "tile-psi-low-tpm7"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: tpms-tile-psi-low-tpm7.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+
+      nodeSelector:
+        kubernetes.io/hostname: psi-node3
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: tpms-tile-psi-low-tpm8
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: tpms-tile-psi-low-tpm8
+    function: ska-low-mccs-spshw-tile
+    domain: ska-low-mccs-spshw
+    subsystem: low-mccs-spshw
+
+spec:
+  selector:
+    matchLabels:
+      component: tpms-tile-psi-low-tpm8
+      subsystem: low-mccs-spshw
+  serviceName: tpms-tile-psi-low-tpm8
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        component: tpms-tile-psi-low-tpm8
+        function: ska-low-mccs-spshw-tile
+        domain: ska-low-mccs-spshw
+        subsystem: low-mccs-spshw
+        app: ska-low-mccs-spshw
+    
+    spec:
+      volumes:
+        - name: configuration
+          configMap:
+            name: tpms-ska-low-mccs-spshw-dsconfig-json
+        
+      serviceAccountName: tpms-sa-ska-low-mccs-spshw
+      initContainers:
+      - name: wait-for-configuration
+        image: "bitnami/kubectl:latest"
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - kubectl wait job --for=jsonpath='{.status.succeeded}'=1 tpms-ska-low-mccs-spshw-config --timeout=120s || ( ! kubectl get job tpms-ska-low-mccs-spshw-config ); echo $?
+
+      - name: check-dependencies-0
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --ping-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: device-server
+        image: "artefact.skao.int/ska-low-mccs-spshw:1.0.0"
+        imagePullPolicy: IfNotPresent
+        command:
+          - retry
+          - --max=60
+          - --
+          - spshw_device_server
+          - "tile-psi-low-tpm8"
+          - -ORBendPoint
+          - giop:tcp::$(TANGO_SERVER_PORT)
+          - -ORBendPointPublish
+          - giop:tcp:$(TANGO_SERVER_PUBLISH_HOSTNAME):$(TANGO_SERVER_PORT)
+        ports:
+        - containerPort: 45450
+          name: tango-server
+        - containerPort: 45460
+          name: tango-heartbeat
+        - containerPort: 45470
+          name: tango-event
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+          
+        livenessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        readinessProbe:
+          tcpSocket:
+            port: 45450
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 3
+          successThreshold: 1
+          failureThreshold: 3
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        - name: TANGO_SERVER_PORT
+          value: "45450"
+        - name: TANGO_ZMQ_HEARTBEAT_PORT
+          value: "45460"
+        - name: TANGO_ZMQ_EVENT_PORT
+          value: "45470"
+        - name: TANGO_SERVER_PUBLISH_HOSTNAME
+          value: tpms-tile-psi-low-tpm8.ska-low-mccs.svc.cluster.local
+        resources:
+          requests:
+            cpu: 20m
+            memory: 50Mi
+
+      nodeSelector:
+        kubernetes.io/hostname: psi-node3
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# run once Job for loading Device Server config
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: daqs-ska-low-mccs-spshw-config
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      initContainers:
+      - name: check-databaseds-ready
+        image: artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --check-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: dsconfig
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command: # exit code 2 is CONFIG_APPLIED - https://github.com/MaxIV-KitsControls/lib-maxiv-dsconfig/blob/master/dsconfig/utils.py#L11 !!!! this should not be an error !!!!
+          - retry
+          - --max=60
+          - --
+          - sh
+          - data/bootstrap.sh
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: daqs-ska-low-mccs-spshw-dsconfig-json
+      restartPolicy: Never
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# run once Job for loading Device Server config
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: spsstations-ska-low-mccs-spshw-config
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      initContainers:
+      - name: check-databaseds-ready
+        image: artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --check-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: dsconfig
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command: # exit code 2 is CONFIG_APPLIED - https://github.com/MaxIV-KitsControls/lib-maxiv-dsconfig/blob/master/dsconfig/utils.py#L11 !!!! this should not be an error !!!!
+          - retry
+          - --max=60
+          - --
+          - sh
+          - data/bootstrap.sh
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: spsstations-ska-low-mccs-spshw-dsconfig-json
+      restartPolicy: Never
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# run once Job for loading Device Server config
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: subracks-ska-low-mccs-spshw-config
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      initContainers:
+      - name: check-databaseds-ready
+        image: artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --check-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: dsconfig
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command: # exit code 2 is CONFIG_APPLIED - https://github.com/MaxIV-KitsControls/lib-maxiv-dsconfig/blob/master/dsconfig/utils.py#L11 !!!! this should not be an error !!!!
+          - retry
+          - --max=60
+          - --
+          - sh
+          - data/bootstrap.sh
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: subracks-ska-low-mccs-spshw-dsconfig-json
+      restartPolicy: Never
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+---
+# run once Job for loading Device Server config
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: tpms-ska-low-mccs-spshw-config
+  namespace: ska-low-mccs
+  labels:
+    app: ska-low-mccs-spshw
+    component: configurator
+    function: deployment
+    intent: enabling
+    domain: self-configuration
+
+spec:
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      initContainers:
+      - name: check-databaseds-ready
+        image: artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1
+        imagePullPolicy: IfNotPresent
+        command:
+          - sh
+          - -c
+        args:
+          - retry
+          - --max=60
+          - --
+          - tango_admin
+          - --check-device
+          - sys/database/2
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+      containers:
+      - name: dsconfig
+        image: "artefact.skao.int/ska-tango-images-tango-dsconfig:1.5.1"
+        imagePullPolicy: IfNotPresent
+        command: # exit code 2 is CONFIG_APPLIED - https://github.com/MaxIV-KitsControls/lib-maxiv-dsconfig/blob/master/dsconfig/utils.py#L11 !!!! this should not be an error !!!!
+          - retry
+          - --max=60
+          - --
+          - sh
+          - data/bootstrap.sh
+        env:
+        - name: TANGO_HOST
+          value: databaseds-tango-base:10000
+        volumeMounts:
+          - name: configuration
+            mountPath: data
+            readOnly: true
+      volumes:
+        - name: configuration
+          configMap:
+            name: tpms-ska-low-mccs-spshw-dsconfig-json
+      restartPolicy: Never
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# if (.deviceserver.secrets)
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+
+ # range instances
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# if (.deviceserver.secrets)
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+
+ # range instances
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# if (.deviceserver.secrets)
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+
+ # range instances
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+# if (.deviceserver.secrets)
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+---
+# Source: ska-low-mccs-spshw/templates/deviceservers.yaml
+## if has
+
+ # range instances
+

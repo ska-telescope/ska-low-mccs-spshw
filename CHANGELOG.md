@@ -8,6 +8,7 @@
 
 * [SKB-761] Hardcode nof_antenna to number expected from library build.
 * [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+* [THORN-27] Add `BandpassDaq` property to DaqReceiver. Where this is `True` these Daqs will automatically attempt to keep bandpass monitoring running.
 
 ## 0.24.0
 

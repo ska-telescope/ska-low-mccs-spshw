@@ -18,6 +18,7 @@ __all__ = [
     "TestIntegratedBeam",
     "TestIntegratedChannel",
     "TestRaw",
+    "TestAntennaBuffer",
     "InitialiseStation",
     "BasicTangoTest",
     "TestStationBeamDataRate",
@@ -31,6 +32,7 @@ from .test_channel_data import TestChannel
 from .test_integrated_beam import TestIntegratedBeam
 from .test_integrated_channel import TestIntegratedChannel
 from .test_raw_data import TestRaw
+from .test_antenna_buffer import TestAntennaBuffer
 from .test_station_beam_data_rate import TestStationBeamDataRate
 from .test_station_initialise import InitialiseStation
 from .test_tango import BasicTangoTest

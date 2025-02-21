@@ -8,16 +8,15 @@
 """An implementation of a test for the antenna buffer."""
 from __future__ import annotations
 
-import json  # noqa
-
-from pyaavs.tile import Tile  # noqa
-
-from ska_low_mccs_spshw.tile.tile_device import MccsTile  # noqa
+from ska_low_mccs_spshw.station.station_component_manager import _TileProxy
 
 # from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
-from .data_handlers import RawDataReceivedHandler  # noqa
 
+# import json  # noqa
+# from pyaavs.tile import Tile  # noqa
+# from ska_low_mccs_spshw.tile.tile_device import MccsTile  # noqa
+# from .data_handlers import RawDataReceivedHandler  # noqa
 # from copy import copy
 
 
@@ -48,7 +47,7 @@ class TestAntennaBuffer(BaseDaqTest):
         """Run the test for a tpm."""
         self.logger.info("Starting the TPM phase")
         # get aavs tiles
-        tiles = self.component_manager._tile_proxies.values()
+        tiles: dict[str, _TileProxy] = self.component_manager._tile_proxies
         aavs_tiles = {}
         self.logger.info("Getting aavs tiles")
         for name, tile in tiles.items():

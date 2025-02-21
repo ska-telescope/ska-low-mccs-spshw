@@ -7,16 +7,13 @@ defaults:
 #
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
-  deviceServers:
-    spsstations:
-      itf1:
+  ska-tango-devices:
+    devices:
+      SpsStation:
         low-mccs/spsstation/itf1:
-          device_properties:
-            ParentTRL: ""
-      itf2:
+          ParentTRL: ""
         low-mccs/spsstation/itf2:
-          device_properties:
-            ParentTRL: ""
+          ParentTRL: ""
 #   image:
 #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
 #     tag: 0.11.0-dev.cc21201e6

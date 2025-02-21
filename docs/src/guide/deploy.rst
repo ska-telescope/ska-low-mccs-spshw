@@ -221,44 +221,100 @@ and will need to specify its own.
 --------------------------------
 Direct deployment of helm charts
 --------------------------------
-It is possible to deploy helm charts directly.
-However note that platform-specific chart configuration is handled by helmfile,
-so the helm chart values files are expected to provide
-a deterministic, fully-configured specification
-of what devices and simulators should be deployed.
+The `ska-low-mccs-spshw`` helm chart uses `ska-tango-devices`
+to configure and deploy its Tango devices. 
+For details on `ska-tango-devices`,
+see its `README <hhttps://gitlab.com/ska-telescope/ska-tango-devices/-/blob/main/README.md>`_
+
+Defining devices
+~~~~~~~~~~~~~~~~
+Devices are defined under `ska-tango-devices.devices`,
+as a nested dictionary in which the bottom-level key is the name of a device class,
+the next is the name of a device TRL,
+and the last is device property names and values.
 For example:
 
 .. code-block:: yaml
 
-   deviceServers:
-     subracks:
-       "s8-1-1":
-         srmb_host: subrack-simulator-s8-1
-         srmb_port: 8081
-         logging_level_default: 5
-         nodeSelector:
-           kubernetes.io/hostname: psi-node3
-     tpms:
-       "s8-1-10":
-         tile_id: 10
-         host: 10.0.10.201
-         port: 10000
-         version: tpm_v1_6
-         subrack: "s8-1-1"
-         subrack_slot: 1
-         simulation_config: 1
-         test_config: 1
-         logging_level_default: 5
-         nodeSelector:
-           kubernetes.io/hostname: psi-node3
-         device_properties: # Arbitrary properties.
-           PollRate: 0.1
-   simulators:
-     subracks:
-       "s8-1-1":
-         srmb_host: subrack-simulator-s8-1
-         srmb_port: 8081
+  ska-tango-devices:
+    devices:
+      MccsTile:
+        low-mccs/tile/s8-1-tpm01:
+          SubrackFQDN: low-mccs/subrack/s8-1-1
+          SubrackBay: 1
+          TileId: 1
+          StationId: 345
+          TpmIp: 10.132.0.8
 
+It is also possible to specify default values for a device class
+in the `deviceDefaults` key:
 
-The device_properties key may be used to configure arbitrary properties
-on the device.
+.. code-block:: yaml
+
+  ska-tango-devices:
+    deviceDefaults:
+     MccsTile:
+       TpmCpldPort: 10000
+       TpmVersion: tpm_v1_6
+       AntennasPerTile: 16
+       PollRate: 0.2
+
+Defaults are applied to all devices of the specified class,
+but any device-specific value provided under the `devices` key takes precedence.
+
+Defining device servers
+~~~~~~~~~~~~~~~~~~~~~~~
+Device servers are specified under the `ska-tango-devices.deviceServers` key.
+This contains configuration specific to the device server,
+and the kubernetes pod in which it runs.
+
+The key hierarchy is:
+
+.. code-block:: yaml
+
+  ska-tango-devices:
+    <device_server_type>:
+      <device_server_instance>:
+        <property_name>: <property_value>
+
+For example:
+
+.. code-block:: yaml
+
+  ska-tango-devices:
+    spshw:
+      tile-s8-1-tpm-01:
+        expose: false
+        devices:
+          MccsTile:
+          - low-mccs/tile/s8-1-tpm01
+      spsstation-s8-1:
+        extraVolumes:
+        - name: daq-data
+          persistentVolumeClaim:
+            claimName: daq-data
+        extraVolumeMounts:
+          - name: daq-data
+            mountPath: /product
+        devices:
+          SpsStation:
+          - low-mccs/spsstation/s8-1
+
+The device server type `spshw` is already defined by the `ska-low-mccs-spshw` chart,
+and it is the only device server type available;
+so all your device instances should sit under this.
+
+Most of the keys that specify a device server instance are optional,
+but one is mandatory:
+the `devices` key specifies the devices to be run by the device server instance,
+and is a list of device TRLs, grouped by device class.
+These device TRLs must refer to an entry in the `devices` key.
+That is, first we specify the devices that we want under the `device` key,
+and then we allocate those devices to device servers under the `deviceServers` key.
+
+It is possible to add device server types, or modify the existing one,
+via the `deviceServerTypes` key,
+but this should not normally be done.
+If it should be necessary to do so,
+that indicates a problem with the `ska-low-mccs-spshw` chart
+that should be fixed.

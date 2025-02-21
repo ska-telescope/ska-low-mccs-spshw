@@ -1,0 +1,236 @@
+#  -*- coding: utf-8 -*
+#
+# This file is part of the SKA Low MCCS project
+#
+#
+# Distributed under the terms of the BSD 3-clause new license.
+# See LICENSE for more info.
+"""ATest the data transmission from the antenna_buffer to the DAQ."""
+from __future__ import annotations
+
+import json
+from copy import copy
+from typing import Optional
+
+from ...tile.tile_data import TileData
+
+# from ...tile.tile_data import TileData
+from .base_daq_test import BaseDaqTest
+
+__all__ = ["TestAntennaBuffer"]
+
+
+class TestAntennaBuffer(BaseDaqTest):
+    """
+    Test we can send raw data from the Antenna Buffer to the DAQ correctly.
+
+    ##########
+    TEST STEPS
+    ##########
+
+
+    #################
+    TEST REQUIREMENTS
+    #################
+
+    TBA
+    """
+
+    def test(self: TestAntennaBuffer) -> None:
+        """Test the data transmission from the Antenna Buffer to the DAQ."""
+        fpga_list = [0, 1]
+        for fpga in fpga_list:
+            self.test_fpga(fpga_id=fpga)
+
+    def test_fpga(
+        self: TestAntennaBuffer,
+        fpga_id: int = 0,
+        use_1g: bool = True,
+        start_address: int = 67108864 * 8,
+        timestamp_capture_duration: int = 75,
+    ) -> None:
+        """Test data stream from the Antenna Buffer to DAQ.
+
+        :param fpga_id: FPGA ID to test (default is 0)
+        :param use_1g: Whether to use 1G or 10G interface (default is True)
+        :param start_address: Starting address for data transfer
+        :param timestamp_capture_duration: time duration in timestamps.
+        """
+        self.test_logger.info(f"Executing test for fpga_id: {fpga_id}")
+        self.test_logger.info(f"{use_1g =}")
+        self.test_logger.info(f"{start_address =}")
+        self.test_logger.info(f"{timestamp_capture_duration =}")
+
+        if fpga_id == 0:
+            antenna_ids = [0, 1]
+        else:
+            antenna_ids = [8, 9]
+
+        if use_1g:
+            tx_mode = "NSDN"
+            receiver_frame_size = 1664
+        else:
+            tx_mode = "SDN"
+            receiver_frame_size = 8320
+
+        self.test_logger.info(f"{antenna_ids =}")
+        self.test_logger.info(f"{tx_mode =}")
+        self.test_logger.info(f"{receiver_frame_size =}")
+
+        daq_config = {
+            "nof_beam_channels": 384,
+            "nof_beam_samples": 32,
+            "receiver_frame_size": receiver_frame_size,
+            "max_filesize": 8,
+        }
+        with self.reset_context():
+            self.test_logger.debug("Starting directory watch")
+            self._start_directory_watch()
+            self.test_logger.debug("Set up pattern generator")
+            self._configure_and_start_pattern_generator(
+                "jesd", pattern=list(range(1024)), adders=[0] * 32
+            )
+            self._set_up_antenna_buffer(
+                mode=tx_mode,
+                ddr_start_byte_address=start_address,
+                max_ddr_byte_size=None,
+            )
+            self._start_antenna_buffer(
+                antenna_ids=antenna_ids,
+                start_time=-1,
+                timestamp_capture_duration=timestamp_capture_duration,
+                continuous_mode=False,
+            )
+            # Use RAW_DATA for now, we may need something else later
+            self._configure_daq(
+                daq_mode="RAW_DATA", integrated=False, daq_config=daq_config
+            )
+            self._read_antenna_buffer()
+            self._check_data(fpga_id)
+
+    def _set_up_antenna_buffer(
+        self: TestAntennaBuffer,
+        mode: str,
+        ddr_start_byte_address: int,
+        max_ddr_byte_size: Optional[int] = None,
+    ) -> None:
+        """Set up the antenna buffer.
+
+        :param mode:netwrok to transmit antenna buffer data to. Options: 'SDN'
+                (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+                data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+                (in bytes). If 'None' is chosen, the method will assume the last
+                address to be the final address of the DDR chip
+
+        """
+        self.test_logger.info("Setting up antenna buffer for all tiles")
+        for tile in self.tile_proxies:
+            tile.SetUpAntennaBuffer(
+                json.dumps(
+                    {
+                        "mode": mode,
+                        "DDR_start_address": ddr_start_byte_address,
+                        "max_DDR_byte_size": max_ddr_byte_size,
+                    }
+                )
+            )
+
+    def _start_antenna_buffer(
+        self: TestAntennaBuffer,
+        antenna_ids: list[int],
+        start_time: int,
+        timestamp_capture_duration: int,
+        continuous_mode: bool = False,
+    ) -> list[int]:
+        """Start the antenna buffer.
+
+        :param antenna_ids: List of antenna IDs.
+        :param start_time: Start time in seconds since epoch.
+        :param timestamp_capture_duration: capture duration in timestamps.
+        :param continuous_mode: Whether to run in continuous mode or not.
+
+        :return: The actual buffer byte size used by each tile.
+        """
+        self.test_logger.info("Starting antenna buffer for all tiles")
+
+        actual_buffer_byte_size = []
+
+        for tile in self.tile_proxies:
+            actual_buffer_byte_size.append(
+                tile.StartAntennaBuffer(
+                    json.dumps(
+                        {
+                            "antennas": antenna_ids,
+                            "start_time": start_time,
+                            "timestamp_capture_duration": timestamp_capture_duration,
+                            "continuous_mode": continuous_mode,
+                        }
+                    )
+                )
+            )
+        return actual_buffer_byte_size
+
+    def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
+        """Read from the antenna buffer."""
+        self.test_logger.info("Reading antenna buffer for all tiles")
+        for tile in self.tile_proxies:
+            tile.ReadAntennaBuffer()
+
+    # pylint: disable=too-many-locals
+    def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
+        """Check that DAQ data is as expected.
+
+        :param fpga_id: the ID of the fpga to check.
+
+        :raises AssertionError: if the data is not as expected.
+        """
+        self.test_logger.debug("Checking received data")
+        assert self._data is not None
+        assert self._pattern is not None
+        assert self._adders is not None
+
+        data = copy(self._data)
+        adders = copy(self._adders)
+        pattern = copy(self._pattern)
+        channels, antennas, polarisations, samples, _ = data.shape
+        self.test_logger.info(f"data shape: {data.shape}")
+        for channel in range(channels):
+            for antenna in range(antennas):
+                for polarisation in range(polarisations):
+                    self.test_logger.info(
+                        f"channel: {channel}, antenna: {antenna},"
+                        + f" polarisation: {polarisation}"
+                    )
+                    sample_idx = TileData.POLS_PER_ANTENNA * channel
+                    signal_idx = (
+                        antenna % TileData.ANTENNA_COUNT
+                    ) * TileData.POLS_PER_ANTENNA + polarisation
+                    exp_re = pattern[sample_idx] + adders[signal_idx]
+                    exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
+                    expected_data_real = self._signed(exp_re, "CHANNEL")
+                    expected_data_imag = self._signed(exp_im, "CHANNEL")
+                    self.test_logger.info(f"{expected_data_real =}")
+                    self.test_logger.info(f"{expected_data_imag =}")
+                    for i in range(samples):
+                        if (
+                            expected_data_real != data[antenna, polarisation, i, 0]
+                            or expected_data_imag != data[antenna, polarisation, i, 1]
+                        ):
+                            self.test_logger.error("Data Error!")
+                            self.test_logger.error(f"FPGA ID: {fpga_id}")
+                            self.test_logger.error(f"Antenna: {antenna}")
+                            self.test_logger.error(f"Polarization: {polarisation}")
+                            self.test_logger.error(f"Sample index: {i}")
+                            self.test_logger.error(
+                                f"Expected data real: {expected_data_real}"
+                            )
+                            self.test_logger.error(
+                                f"Expected data imag: {expected_data_imag}"
+                            )
+                            self.test_logger.error(
+                                "Received data: " f"{data[antenna, polarisation, i, :]}"
+                            )
+                            raise AssertionError
+                    self.test_logger.info("Data check passed")

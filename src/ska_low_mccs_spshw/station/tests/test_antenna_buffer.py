@@ -5,14 +5,14 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# mypy: ignore-errors
 """An implementation of a test for the antenna buffer."""
 from __future__ import annotations
-
-from ska_low_mccs_spshw.station.station_component_manager import _TileProxy
 
 # from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
 
+# from ska_low_mccs_spshw.station.station_component_manager import _TileProxy
 # import json  # noqa
 # from pyaavs.tile import Tile  # noqa
 # from ska_low_mccs_spshw.tile.tile_device import MccsTile  # noqa
@@ -47,10 +47,12 @@ class TestAntennaBuffer(BaseDaqTest):
         """Run the test for a tpm."""
         self.logger.info("Starting the TPM phase")
         # get aavs tiles
-        tiles: dict[str, _TileProxy] = self.component_manager._tile_proxies
+        tiles = self.component_manager._tile_proxies
         aavs_tiles = {}
         self.logger.info("Getting aavs tiles")
         for name, tile in tiles.items():
+            tile._connect_to_device()
+            # pylint: enable=import-error
             aavs_tiles[name] = tile._proxy._component_manager.tile
             self.logger.info(f"Tile acquired: {name}")
 

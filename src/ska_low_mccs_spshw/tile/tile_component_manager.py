@@ -1616,9 +1616,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         except RuntimeError as err:
             self.logger.error(f"Failed to set up antenna buffer: {err}")
             return False
-        if self.tile._antenna_buffer_tile_attribute.get("set_up_complete"):
-            return True
-        return False
+        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete", False)
 
     @check_communicating
     def start_antenna_buffer(
@@ -1650,9 +1648,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             return False
 
         self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
-        if self.tile._antenna_buffer_tile_attribute.get("data_capture_initiated"):
-            return True
-        return False
+        return self.tile._antenna_buffer_tile_attribute.get(
+            "data_capture_initiated", False
+        )
 
     @check_communicating
     def read_antenna_buffer(self: TileComponentManager) -> bool:

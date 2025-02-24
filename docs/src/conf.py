@@ -102,7 +102,7 @@ nitpick_ignore = [
     ("py:class", "uvicorn.config.Config"),  # mkdocs-based
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
-    ("py:class", "ska_low_mccs_common.MccsDeviceProxy"),
+    ("py:class", "ska_low_mccs_common.EventSerialiser"),
     ("py:class", "pyfabil.base.definitions.Device"),
     ("py:class", "HealthState"),
     ("py:class", "TaskStatus"),

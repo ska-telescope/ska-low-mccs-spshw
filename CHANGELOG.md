@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-* [THORN-85] Update devices to serialise their events through the EventSerialiser. This should have no operational changes, but an attribute EventHistory is now available on all devices to debug which events this device received, where they came from, the order they came in, and what callbacks were executed with those events. It is a json-ified list of lists.
+* [THORN-85] Update devices to serialise their events through the EventSerialiser. This should have no operational
+changes, but an attribute EventHistory is now available on all devices to debug which events this device received,
+where they came from, the order they came in, and what callbacks were executed with those events. It is a json-ified list of lists.
 
 ## 1.0.0
 

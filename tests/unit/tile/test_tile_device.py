@@ -1797,12 +1797,12 @@ class TestMccsTileCommands:
         with pytest.raises(DevFailed, match="ValueError"):
             _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
 
-    def test_SetUpAntennaBuffer(
+    def test_AntennaBuffer(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
     ) -> None:
         """
-        Test for SetUpAntennaBuffer.
+        Test for the AntennaBuffer commands.
 
         :param on_tile_device: fixture that provides a
         :param on_tile_device: fixture that provides a
@@ -1820,29 +1820,6 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
-    def test_StartAntennaBuffer(
-        self: TestMccsTileCommands,
-        on_tile_device: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for StartAntennaBuffer.
-
-        :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        # Set up the antenna buffer
-        json_arg = json.dumps(
-            {
-                "mode": "NSDN",
-                "DDR_start_address": 256 * 1024**2,
-                "max_DDR_byte_size": 512 * 1024**2,
-            }
-        )
-        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
-
         # Start the antenna buffer
         arg = {
             "antennas": [1, 9],
@@ -1855,79 +1832,9 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
-    def test_ReadAntennaBuffer(
-        self: TestMccsTileCommands,
-        on_tile_device: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for ReadAntennaBuffer.
-
-        :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        # Set up the antenna buffer
-        json_arg = json.dumps(
-            {
-                "mode": "NSDN",
-                "DDR_start_address": 256 * 1024**2,
-                "max_DDR_byte_size": 512 * 1024**2,
-            }
-        )
-        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
-
-        # Start the antenna buffer
-        json_arg = json.dumps(
-            {
-                "antennas": [1, 9],
-                "start_time": 1,
-                "timestamp_capture_duration": None,
-                "continuous_mode": True,
-            }
-        )
-        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
-
         # Read antenna buffer
         [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
 
-        assert result_code == ResultCode.OK
-
-    def test_StopAntennaBuffer(
-        self: TestMccsTileCommands,
-        on_tile_device: MccsDeviceProxy,
-    ) -> None:
-        """
-        Test for StopAntennaBuffer.
-
-        :param on_tile_device: fixture that provides a
-        :param on_tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        """
-        # Set up the antenna buffer
-        json_arg = json.dumps(
-            {
-                "mode": "NSDN",
-                "DDR_start_address": 256 * 1024**2,
-                "max_DDR_byte_size": 512 * 1024**2,
-            }
-        )
-        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
-        assert result_code == ResultCode.OK
-
-        # Start the antenna buffer
-        json_arg = json.dumps(
-            {
-                "antennas": [1, 9],
-                "start_time": 1,
-                "timestamp_capture_duration": None,
-                "continuous_mode": True,
-            }
-        )
-        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
         assert result_code == ResultCode.OK
 
         # Stop antenna buffer

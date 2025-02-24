@@ -175,8 +175,12 @@ def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
         :param args: positional arguments to the wrapped method
         :param kwargs: keyword arguments to the wrapped method
 
+        :raises LibraryError: when Antenna Buffer is not implemented
+
         :return: whatever the wrapped method returns
         """
+        if not self._antenna_buffer_implemented:
+            raise LibraryError("Antenna Buffer not implemented by FPGA firmware")
         return func(self, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)
@@ -979,6 +983,7 @@ class TileSimulator:
             "data_capture_initiated": False,
             "used_fpga_id": [],
         }
+        self._antenna_buffer_implemented = True
 
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
@@ -1455,23 +1460,23 @@ class TileSimulator:
         # Check that the antenna buffer was set up
         if not self._antenna_buffer_tile_attribute["set_up_complete"]:
             raise Exception(
-                "AntennaBuffer ERROR: Please set up the antenna buffer",
-                "before writing",
+                "AntennaBuffer ERROR: Please set up the antenna buffer "
+                + "before writing"
             )
 
         # Antennas must be specifed.
         if not antennas:
             raise Exception(
-                "AntennaBuffer ERROR: Antennas list is empty ",
-                "please give at lease one antenna ID",
+                "AntennaBuffer ERROR: Antennas list is empty "
+                + "please give at lease one antenna ID"
             )
 
         # Antenna index is from 0 to 15.
         invalid_input = [x for x in antennas if x < 0 or x > 15]
         if invalid_input:
             raise Exception(
-                "AntennaBuffer ERROR: out of range antenna IDs present ",
-                f"{invalid_input}. Please give an antenna ID from 0 to 15",
+                "AntennaBuffer ERROR: out of range antenna IDs present "
+                + f"{invalid_input}. Please give an antenna ID from 0 to 15"
             )
 
         # Save values to buffer attributes for testing

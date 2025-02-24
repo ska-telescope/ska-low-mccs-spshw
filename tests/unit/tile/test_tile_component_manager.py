@@ -2913,6 +2913,31 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             assert antenna_values[key] == buffer[key]
         assert buffer["set_up_complete"] is True
 
+    def test_fail_setup_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test setup when antenna buffer is not implemented.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_simulator._antenna_buffer_implemented = False
+        try:
+            tile_component_manager.set_up_antenna_buffer(
+                antenna_values["mode"],
+                antenna_values["DDR_start_address"],
+                antenna_values["max_DDR_byte_size"],
+            )
+        except LibraryError as err:
+            assert str(err) == ("Antenna Buffer not implemented by FPGA firmware")
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is False
+
     def test_start_antenna_buffer(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -2945,6 +2970,73 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert buffer["set_up_complete"] is True
         assert buffer["data_capture_initiated"] is True
 
+    # pylint: disable=broad-exception-caught
+    def test_fail_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test start antenna buffer with incorrect setup/values.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Start without a setup
+        try:
+            tile_component_manager.start_antenna_buffer(
+                antenna_values["antennas"],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+        except Exception as err:
+            assert str(err) == (
+                "AntennaBuffer ERROR: Please set up the "
+                + "antenna buffer before writing"
+            )
+
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is True
+
+        # No antennas specified
+        try:
+            tile_component_manager.start_antenna_buffer(
+                [],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+        except Exception as err:
+            assert str(err) == (
+                "AntennaBuffer ERROR: Antennas list is empty "
+                + "please give at lease one antenna ID"
+            )
+
+        # Invalid antennas specified
+        try:
+            invalid_input = [-1, 16]
+            tile_component_manager.start_antenna_buffer(
+                invalid_input,
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+        except Exception as err:
+            assert str(err) == (
+                "AntennaBuffer ERROR: out of range antenna IDs present "
+                + f"{invalid_input}. Please give an antenna ID from 0 to 15"
+            )
+
+        assert buffer["data_capture_initiated"] is False
+
     def test_read_antenna_buffer(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -2976,6 +3068,46 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         buffer = tile_simulator._antenna_buffer_tile_attribute
         assert buffer["read_antenna_buffer"] is True
         assert buffer["stop_antenna_buffer"] is True
+
+    # pylint: disable=broad-exception-caught
+    def test_fail_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test read antenna buffer without prior setup.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Fail when antenna buffer is not set up
+        try:
+            tile_component_manager.read_antenna_buffer()
+        except Exception as err:
+            assert str(err) == (
+                "AntennaBuffer ERROR: Please set up the antenna buffer before reading"
+            )
+
+        # Fail when buffer is set up nothing was captured
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+        try:
+            tile_component_manager.read_antenna_buffer()
+        except Exception as err:
+            assert str(err) == (
+                "AntennaBuffer ERROR: Please capture antenna buffer data before reading"
+            )
+            return
+
+        # The test should not reach this if the function fails properly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is False
+        assert buffer["stop_antenna_buffer"] is False
 
     def test_stop_antenna_buffer(
         self: TestStaticSimulator,

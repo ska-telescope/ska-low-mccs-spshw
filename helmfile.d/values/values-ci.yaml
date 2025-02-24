@@ -8,7 +8,7 @@ defaults:
 # helm_values:
 #   image:
 #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.24.0-dirty
+#     tag: 1.0.0-dirty
 
 #   ska-low-mccs-daq:
 #     image:

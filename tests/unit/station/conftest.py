@@ -115,6 +115,12 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
             }
         ),
     )
+    builder.add_result_command(
+        "Stop", result_code=ResultCode.QUEUED, status="Task queued"
+    )
+    builder.add_result_command(
+        "Start", result_code=ResultCode.QUEUED, status="Task queued"
+    )
     return builder()
 
 
@@ -244,6 +250,19 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             device = argin_dict["device"]
             health = argin_dict["health"]
             self._health_rollup.health_changed(source=device, health=health)
+
+        @command()
+        def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
+            """
+            Mock calibration data received.
+
+            Make the station device think it has received calibration data
+            after a send data samples.
+            """
+            self.component_manager._daq_state_changed(
+                "some/daq/fqdn",
+                dataReceivedResult=("correlator", "some/file/location"),
+            )
 
     return PatchedSpsStationDevice
 

@@ -1,9 +1,23 @@
 # Version History
 
-## Unreleased
+## unreleased
 
-* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
 * [THORN-54] Update SpsStation to use new health model.
+
+## 1.1.0
+
+* [SKB-765] Update SpsStation.AcquireDataForCalibration to not configure DAQ, this is now done in SpsStation.ConfigureStationForCalibration
+* [SKB-765] AcquireDataForCalibration now starts DAQ, sends data, waits for receipt of data then stops daq.
+
+## 1.0.0
+
+* [THORN-17] 1.0.0 release - all MCCS repos
+
+## 0.25.0
+
+* [SKB-761] Hardcode nof_antenna to number expected from library build.
+* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+* [THORN-27] Add `BandpassDaq` property to DaqReceiver. Where this is `True` these Daqs will automatically attempt to keep bandpass monitoring running.
 
 ## 0.24.0
 

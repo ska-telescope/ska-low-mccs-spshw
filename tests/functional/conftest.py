@@ -265,7 +265,7 @@ def acquisition_duration_fixture() -> int:
 
 # pylint: disable=inconsistent-return-statements
 def poll_until_consumer_running(
-    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 5
+    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 10
 ) -> None:
     """
     Poll until a specific consumer is running.
@@ -382,7 +382,7 @@ def poll_until_state_change(
         wanted: {wanted_state}, actual: {device.state()}"
         )
 
-    sleep(1)
+    sleep(2)
     return poll_until_state_change(device, wanted_state, no_of_iters - 1)
 
 
@@ -434,8 +434,9 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
     time_elapsed = 0
     timeout = 10
     while time_elapsed < timeout:
-        if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state:
+        daq_status = json.loads(daq_device.DaqStatus())
+        if daq_status["Bandpass Monitor"] == state:
             break
         time.sleep(1)
         time_elapsed += 1
-    assert json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state
+    assert daq_status["Bandpass Monitor"] == state

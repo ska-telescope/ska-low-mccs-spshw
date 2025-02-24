@@ -5682,7 +5682,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 mode, ddr_start_byte_address, max_ddr_byte_size
             ):
                 result = self._component_manager.tile._antenna_buffer_tile_attribute
-                self.logger.error(f"+=+=+=+=+= {result}")
                 return (ResultCode.OK, str(result))
             return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
@@ -5780,6 +5779,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * start_time: the first time stamp that will be written into the DDR.
                 When set to -1, the buffer will begin writing as soon as possible.
             * timestamp_capture_duration: the capture duration in timestamps.
+                Timestamps are in units of 256 ADC samples (256*1.08us).
             * continuous_mode: "True" for continous capture. If enabled, time capture
                 durations is ignored
 

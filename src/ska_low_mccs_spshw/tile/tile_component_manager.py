@@ -1633,7 +1633,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param start_time: the first time stamp that will be written into the DDR.
             When set to -1, the buffer will begin writing as soon as possible.
         :param timestamp_capture_duration: the capture duration in timestamps.
-            Timestamps are in units of 256 ADC samples.
+            Timestamps are in units of 256 ADC samples (256*1.08us).
         :param continuous_mode: "True" for continous capture. If enabled, time capture
             durations is ignored
 

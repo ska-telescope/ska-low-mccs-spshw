@@ -1495,16 +1495,12 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        pytest.xfail(
-            reason="""This function is causing intermittent failures,
-            xfailing for now, will fix under THORN-80"""
-        )
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
             match=(
                 "To execute this command we must be in state "
-                "'Programmed', 'Initialised'Not implemented yet or 'Synchronised'!"
+                "'Programmed', 'Initialised' or 'Synchronised'!"
             ),
         ):
             _ = off_tile_device.GetFirmwareAvailable()
@@ -1800,6 +1796,7 @@ class TestMccsTileCommands:
     def test_AntennaBuffer(
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
     ) -> None:
         """
         Test for the AntennaBuffer commands.
@@ -1808,6 +1805,8 @@ class TestMccsTileCommands:
         :param on_tile_device: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
         """
         # Set up the antenna buffer
         arg = {
@@ -1816,19 +1815,32 @@ class TestMccsTileCommands:
             "max_DDR_byte_size": 512 * 1024**2,
         }
         json_arg = json.dumps(arg)
+
         [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
 
+        tile_component_manager.set_up_antenna_buffer.assert_call(
+            arg["mode"],
+            arg["DDR_start_address"],
+            arg["max_DDR_byte_size"],
+        )
         assert result_code == ResultCode.OK
 
         # Start the antenna buffer
         arg = {
             "antennas": [1, 9],
             "start_time": 1,
-            "timestamp_capture_duration": None,
+            "timestamp_capture_duration": 50,
             "continuous_mode": True,
         }
         json_arg = json.dumps(arg)
         [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
+
+        tile_component_manager.start_antenna_buffer.assert_call(
+            arg["antennas"],
+            arg["start_time"],
+            arg["timestamp_capture_duration"],
+            arg["continuous_mode"],
+        )
 
         assert result_code == ResultCode.OK
 

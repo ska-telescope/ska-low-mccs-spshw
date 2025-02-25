@@ -1,8 +1,13 @@
 # Version History
 
-## 1.1.0
+## 1.2.0
 
 * [THORN-21] Added antenna buffer control methods.
+
+## 1.1.0
+
+* [SKB-765] Update SpsStation.AcquireDataForCalibration to not configure DAQ, this is now done in SpsStation.ConfigureStationForCalibration
+* [SKB-765] AcquireDataForCalibration now starts DAQ, sends data, waits for receipt of data then stops daq.
 
 ## 1.0.0
 
@@ -12,6 +17,7 @@
 
 * [SKB-761] Hardcode nof_antenna to number expected from library build.
 * [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+* [THORN-27] Add `BandpassDaq` property to DaqReceiver. Where this is `True` these Daqs will automatically attempt to keep bandpass monitoring running.
 
 ## 0.24.0
 

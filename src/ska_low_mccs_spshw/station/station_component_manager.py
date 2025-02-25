@@ -737,7 +737,6 @@ class SpsStationComponentManager(
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
-        self.logger.warning("START COMMS CALLED")
         if self.communication_state == CommunicationStatus.ESTABLISHED:
             return
         self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
@@ -751,7 +750,6 @@ class SpsStationComponentManager(
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
-        self.logger.warning("STOP COMMS CALLED")
         if self.communication_state == CommunicationStatus.DISABLED:
             return
 

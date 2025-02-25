@@ -508,7 +508,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 mode="constant",
             )
 
-        if "device_name" in state_change:
+        device_name = state_change.get("device_name")
+        if device_name is not None:
             device_name = state_change["device_name"]
             health = None if health is None else HealthState(health)
             self.logger.debug(
@@ -522,20 +523,22 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         else:
             super()._component_state_changed(fault=fault, power=power)
 
-        if "is_configured" in state_change:
+        if state_change.get("is_configured") is not None:
             is_configured = cast(bool, state_change.get("is_configured"))
             self._obs_state_model.is_configured_changed(is_configured)
-        if "adc_power" in state_change:
+
+        if state_change.get("adc_power") is not None:
             self._adc_power = state_change.get("adc_power")
             self.push_change_event("adcPower", self._adc_power)
             self.push_archive_event("adcPower", self._adc_power)
-        if "dataReceivedResult" in state_change:
+
+        if state_change.get("dataReceivedResult") is not None:
             self._data_received_result = state_change.get("dataReceivedResult")
             self.push_change_event("dataReceivedResult", self._data_received_result)
             self.push_archive_event("dataReceivedResult", self._data_received_result)
 
-        if "xPolBandpass" in state_change:
-            x_bandpass_data = state_change.get("xPolBandpass")
+        x_bandpass_data = state_change.get("xPolBandpass")
+        if x_bandpass_data is not None:
             if isinstance(x_bandpass_data, np.ndarray):
                 x_pol_bandpass_ordered: np.ndarray = np.zeros(
                     shape=bandpass_data_shape, dtype=float
@@ -564,8 +567,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                     type(x_bandpass_data),
                 )
 
-        if "yPolBandpass" in state_change:
-            y_bandpass_data = state_change.get("yPolBandpass")
+        y_bandpass_data = state_change.get("yPolBandpass")
+        if y_bandpass_data is not None:
             if isinstance(y_bandpass_data, np.ndarray):
                 y_pol_bandpass_ordered: np.ndarray = np.zeros(
                     shape=bandpass_data_shape, dtype=float
@@ -595,9 +598,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
                 )
 
         # TODO: Refactor this into an extensible health related method.
-        if "ppsDelaySpread" in state_change:
-            pps_delay_spread = state_change.get("ppsDelaySpread")
-            assert pps_delay_spread is not None
+        pps_delay_spread = state_change.get("ppsDelaySpread")
+        if pps_delay_spread is not None:
             self.push_change_event("ppsDelaySpread", pps_delay_spread)
             self.push_archive_event("ppsDelaySpread", pps_delay_spread)
             self._health_model.update_state(pps_delay_spread=pps_delay_spread)
@@ -1203,8 +1205,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         for key, threshold in thresholds.items():
             if key not in self._health_thresholds:
                 self.logger.info(
-                    f"New key: {key} added to health thresholds with limit: {threshold}"
+                    f"Invalid Key Supplied: {key}. "
+                    f"Allowed keys: {self._health_thresholds.keys()}"
                 )
+                continue
             self._health_thresholds[key] = threshold
 
             # TODO: Modify rollup classes to allow this.

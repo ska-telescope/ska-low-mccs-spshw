@@ -5674,9 +5674,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             decoded_dict = json.loads(args[0])
             mode = decoded_dict.get("mode", "SDN")
             ddr_start_byte_address = decoded_dict.get(
-                "ddr_start_byte_address", 512 * 1024**2
+                "DDR_start_address", 512 * 1024**2
             )
-            max_ddr_byte_size = decoded_dict.get("max_ddr_byte_size", None)
+            max_ddr_byte_size = decoded_dict.get("max_DDR_byte_size", None)
 
             if self._component_manager.set_up_antenna_buffer(
                 mode, ddr_start_byte_address, max_ddr_byte_size

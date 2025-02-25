@@ -237,6 +237,21 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
 
         @command()
+        def MockSubdeviceHealth(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock a subdevice health change.
+
+            :param argin: A json string with the device trl and new health.
+
+            Make the station device think it has received a health change
+            event from a subdevice.
+            """
+            argin_dict = json.loads(argin)
+            device = argin_dict["device"]
+            health = argin_dict["health"]
+            self._health_rollup.health_changed(source=device, health=health)
+
+        @command()
         def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
             """
             Mock calibration data received.

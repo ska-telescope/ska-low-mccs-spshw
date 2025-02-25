@@ -780,6 +780,18 @@ class SpsStationComponentManager(
         # of order, which breaks tests. Therefore we need to serialise access.
         with self._device_communication_state_lock:
             self._communication_states[fqdn] = communication_state
+            if communication_state == CommunicationStatus.ESTABLISHED:
+                # Read the subdevice healthstate and update model via component callback
+                # This is necessary to update the health model with when cycling
+                # adminMode from ONLINE to OFFLINE to ONLINE or subdevices will
+                # remain UNKNOWN in healthRollup until a new health change event.
+                subdevice = self._tile_proxies.get(fqdn) or self._subrack_proxies.get(
+                    fqdn
+                )
+                if subdevice is not None and self._component_state_callback is not None:
+                    self._component_state_callback(
+                        device_name=fqdn, health=subdevice._health
+                    )
 
             if self.communication_state == CommunicationStatus.DISABLED:
                 return
@@ -861,9 +873,17 @@ class SpsStationComponentManager(
         if power is not None:
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
+                if self._component_state_callback is not None:
+                    self._component_state_callback(device_name=fqdn, power=power)
+
                 self._evaluate_power_state()
+
         if health is not None:
+            # Old health model.
             self._tile_health_changed_callback(fqdn, HealthState(health))
+            # New health model.
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, health=health)
 
     @threadsafe
     def _subrack_state_changed(
@@ -876,8 +896,15 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
+        # Old health model.
         if health is not None:
             self._subrack_health_changed_callback(fqdn, HealthState(health))
+        # New health model.
+        if self._component_state_callback is not None and health is not None:
+            self._component_state_callback(
+                device_name=fqdn,
+                health=health,
+            )
 
     @threadsafe
     def _daq_state_changed(

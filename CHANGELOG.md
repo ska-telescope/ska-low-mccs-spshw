@@ -1,5 +1,11 @@
 # Version History
 
+## unreleased
+
+## 1.2.0
+
+* [THORN-54] Update SpsStation to use new health model.
+
 ## 1.1.0
 
 * [SKB-765] Update SpsStation.AcquireDataForCalibration to not configure DAQ, this is now done in SpsStation.ConfigureStationForCalibration

@@ -1,6 +1,6 @@
 # Version History
 
-## unreleased
+## 1.3.0
 
 * [THORN-21] Added antenna buffer control methods.
 

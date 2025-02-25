@@ -2,6 +2,8 @@
 
 ## unreleased
 
+## 1.2.0
+
 * [THORN-54] Update SpsStation to use new health model.
 
 ## 1.1.0

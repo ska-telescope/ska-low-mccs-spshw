@@ -300,6 +300,7 @@ class TestMccsTile:
             "ioHealth",
             "dspHealth",
             "healthReport",
+            "inheritModes",
         ]
 
     @pytest.fixture(name="tango_attributes")
@@ -338,6 +339,11 @@ class TestMccsTile:
             "longRunningCommandIDsInQueue",
             "longRunningCommandInProgress",
             "longRunningCommandProgress",
+            "lrcProtocolVersions",
+            "lrcFinished",
+            "_lrcEvent",
+            "lrcQueue",
+            "lrcExecuting",
         ]
 
     @pytest.fixture(name="not_implemented_attributes")
@@ -580,7 +586,7 @@ class TestMccsTile:
             (Using a TileSimulator)
         """
         # This latency represents the average time to process the results of a poll.
-        latency: float = 0.02
+        latency: float = 0.06
         time_to_poll_attributes = (poll_rate + latency) * len(
             RequestIterator.INITIALISED_POLLED_ATTRIBUTES
         )
@@ -598,7 +604,12 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
             change_event_callbacks["state"],
         )
-
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
         change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         assert tile_device.healthState == HealthState.UNKNOWN
@@ -607,6 +618,7 @@ class TestMccsTile:
         assert tile_device.adminMode == AdminMode.ONLINE
         change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
         change_event_callbacks["state"].assert_change_event(DevState.OFF)
+        change_event_callbacks["tile_programming_state"].assert_change_event("Off")
 
         tile_component_manager._update_communication_state(
             CommunicationStatus.ESTABLISHED
@@ -655,28 +667,22 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
         )
         change_event_callbacks["state"].assert_change_event(DevState.OFF, lookahead=10)
-
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Off", lookahead=10
+        )
         for attr in tile_device.get_attribute_list():
             if attr not in all_excluded_attribute:
                 try:
                     assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
                 except AssertionError:
-                    pytest.xfail(
-                        reason="Due to SKB-609, "
-                        "the INVALID attribute functionality has been removed"
-                    )
-                    # pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
+                    pytest.fail(f"{attr=} was not in quality ATTR_INVALID")
         for attr in active_read_attributes:
             try:
                 assert tile_device[attr].quality == tango.AttrQuality.ATTR_INVALID
             except tango.DevFailed:
                 pass
-            except Exception:  # pylint: disable=broad-except
-                pytest.xfail(
-                    reason="Due to SKB-609, "
-                    "the INVALID attribute functionality has been removed"
-                )
-                # pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
+            except Exception as e:  # pylint: disable=broad-except
+                pytest.fail(f"Unexpected exception {attr=} raised. {repr(e)}")
 
         tile_device.On()
         tile_component_manager._subrack_says_tpm_power_changed(
@@ -685,6 +691,7 @@ class TestMccsTile:
             EventType.CHANGE_EVENT,
         )
         change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=5)
+        change_event_callbacks["health_state"].assert_change_event(HealthState.UNKNOWN)
         change_event_callbacks["health_state"].assert_change_event(HealthState.OK)
         assert tile_device.healthState == HealthState.OK
         time.sleep(time_to_poll_attributes)
@@ -787,11 +794,7 @@ class TestMccsTile:
 
     @pytest.mark.parametrize(
         "attribute_name",
-        [
-            "adcPower",
-            "preaduLevels",
-            "tileProgrammingState",
-        ],
+        ["adcPower", "preaduLevels", "tileProgrammingState", "linkup_loss_count"],
     )
     def test_archive(
         self: TestMccsTile,

@@ -72,10 +72,9 @@ class AttributeManager:
         :param value: the value we want to update attribute with.
         :param post: Optional flag to post an update.
         """
-        # new_value: Any = self._converter(value) if self._converter else value
-        # value_changed = new_value != self._value
-        value_changed = self.value_changed(value)
-        self._value = value
+        new_value: Any = self._converter(value) if self._converter else value
+        value_changed = self.value_changed(new_value)
+        self._value = new_value
         self._last_update = time.time()
         if self._value is None:
             self._quality = tango.AttrQuality.ATTR_INVALID
@@ -87,7 +86,7 @@ class AttributeManager:
     def mark_stale(self: AttributeManager) -> None:
         """Mark attribute as stale."""
         if (
-            self.value_changed(self._initial_value)
+            not self.value_changed(self._initial_value)
             or self._quality == tango.AttrQuality.ATTR_INVALID
         ):
             return
@@ -107,10 +106,9 @@ class AttributeManager:
         :return: A tuple with value, last_updated and quaility.
             Or None if attribute has not had an update yet.
         """
-        # if self._value is not None:
-        #     return self._value, time.time(), self._quality
-        # return self._value
-        return self._value, self._last_update, self._quality
+        if self._value is not None:
+            return self._value, time.time(), self._quality
+        return self._value
 
     def notify(self: AttributeManager, value_changed: bool) -> None:
         """

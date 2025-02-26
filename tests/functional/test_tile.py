@@ -183,7 +183,7 @@ def tile_dropped_packets_stays_0(
     first_tile: tango.DeviceProxy,
 ) -> None:
     """
-    Assert that the number of dropped packets is 0
+    Assert that the number of dropped packets is 0.
 
     :param first_tile: tile device under test.
     """

@@ -159,8 +159,16 @@ def station_not_synched(station: tango.DeviceProxy) -> None:
     """
     if not all(status in ("Initialised") for status in station.tileProgrammingState):
         station.initialise()
-        time.sleep(5)
-        assert all(status in ("Initialised") for status in station.tileProgrammingState)
+        timeout = 0
+        while timeout < 60:
+            if all(
+                status in ("Initialised") for status in station.tileProgrammingState
+            ):
+                break
+            time.sleep(1)
+            timeout = timeout + 1
+        if timeout >= 60:
+            assert False, "Stations failed to initialise"
 
 
 @when("the station is ordered to synchronise")
@@ -183,11 +191,12 @@ def station_is_synced(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    timeout = 60  # seconds
-    print("Waiting for all remaining unprogrammed tiles initialise")
-    while timeout > 0:
+    deadline = time.time() + 60  # seconds
+    print("Waiting for all remaining unprogrammed tiles Synchronise")
+    while time.time() < deadline:
         time.sleep(2)
+
         if all(status == "Synchronised" for status in station.tileProgrammingState):
             break
-    if timeout <= 0:
-        print("Error: timeout in waiting for tiles to initialize")
+    else:
+        pytest.fail("Timeout in waiting for tiles to Synchronise")

@@ -169,6 +169,13 @@ def tile_start_data_acq(
     :param first_tile: tile device under test.
     """
     first_tile.startacquisition("{}")
+    timeout = 0
+    while timeout < 60:
+        if first_tile.tileprogrammingstate == "Synchronised":
+            break
+        time.sleep(1)
+        timeout = timeout + 1
+    assert timeout <= 60, "Tiles didn't synchronise"
 
 
 @then("the Tile dropped packets is 0 after 30 seconds")
@@ -176,10 +183,20 @@ def tile_dropped_packets_stays_0(
     first_tile: tango.DeviceProxy,
 ) -> None:
     """
-    Verify that a device is in the desired state.
+    Assert that the number of dropped packets is 0
 
     :param first_tile: tile device under test.
     """
+    timeout = 0
+    time.sleep(5)
+    while timeout < 30:
+        if (
+            first_tile.data_router_discarded_packets
+            == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+        ):
+            break
+        time.sleep(1)
+        timeout = timeout + 1
     assert (
         first_tile.data_router_discarded_packets == '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
     )

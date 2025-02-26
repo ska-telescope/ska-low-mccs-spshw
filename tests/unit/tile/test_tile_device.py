@@ -255,6 +255,10 @@ def turn_tile_on(
     tile_device.MockTpmOn()
 
     change_event_callbacks["tile_programming_state"].assert_change_event(
+        "Unconnected", lookahead=2, consume_nonmatches=True
+    )
+
+    change_event_callbacks["tile_programming_state"].assert_change_event(
         "NotProgrammed", lookahead=2, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
@@ -1494,16 +1498,12 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-        pytest.xfail(
-            reason="""This function is causing intermittent failures,
-            xfailing for now, will fix under THORN-80"""
-        )
         # At this point, the component should be unconnected, as not turned on
         with pytest.raises(
             DevFailed,
             match=(
                 "To execute this command we must be in state "
-                "'Programmed', 'Initialised'Not implemented yet or 'Synchronised'!"
+                "'Programmed', 'Initialised' or 'Synchronised'! "
             ),
         ):
             _ = off_tile_device.GetFirmwareAvailable()

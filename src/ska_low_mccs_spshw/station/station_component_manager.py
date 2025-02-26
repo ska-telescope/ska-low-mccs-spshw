@@ -826,6 +826,14 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            self.logger.debug(
+                f"Tile {logical_tile_id} attribute {attribute_name} "
+                f"has quality {attribute_quality}. "
+                "SpsStation is not yet capable of handling this. "
+                "Ignoring!"
+            )
+            return
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
@@ -1892,6 +1900,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelay is not None
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
 
@@ -1917,6 +1926,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelayCorrection is not None
             self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
 
         return copy.deepcopy(self._pps_delay_corrections)
@@ -2201,49 +2211,67 @@ class SpsStationComponentManager(
             rms_values = rms_values + list(proxy.adc_power())
         return rms_values
 
-    def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def board_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of board temperatures.
 
         :return: minimum, average and maximum of board temperatures
         """
-        board_temperatures = list(
-            tile._proxy is not None and tile._proxy.boardTemperature
+        board_temperatures = [
+            tile._proxy.boardTemperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.boardTemperature is not None
+        ]
+        if len(board_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         return [
             min(board_temperatures),
             mean(board_temperatures),
             max(board_temperatures),
         ]
 
-    def fpga_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def fpga_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of FPGAs temperatures.
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_1_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga1Temperature
+        fpga_1_temperatures = [
+            tile._proxy.fpga1Temperature
             for tile in self._tile_proxies.values()
-        )
-        fpga_2_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga2Temperature
+            if tile._proxy is not None and tile._proxy.fpga1Temperature is not None
+        ]
+        fpga_2_temperatures = [
+            tile._proxy.fpga2Temperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.fpga2Temperature is not None
+        ]
+        if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
         return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
-    def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
+    def pps_delay_summary(self: SpsStationComponentManager) -> list[float] | None:
         """
         Get summary of PPS delays.
 
         :return: minimum, average and maximum of PPS delays
         """
-        pps_delays = list(
-            tile._proxy is not None and tile._proxy.ppsDelay
+        pps_delays = [
+            tile._proxy.ppsDelay
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.ppsDelay is not None
+        ]
+        if len(pps_delays) == 0:
+            self.logger.info("No data available for summary.")
+            return None
+
         return [min(pps_delays), mean(pps_delays), max(pps_delays)]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:

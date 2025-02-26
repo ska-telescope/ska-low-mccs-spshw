@@ -73,7 +73,10 @@ class AttributeManager:
         :param post: Optional flag to post an update.
         """
         new_value: Any = self._converter(value) if self._converter else value
-        value_changed = self.value_changed(new_value)
+        value_changed = (
+            self.value_changed(new_value)
+            or self._quality == tango.AttrQuality.ATTR_INVALID
+        )
         self._value = new_value
         self._last_update = time.time()
         if self._value is None:

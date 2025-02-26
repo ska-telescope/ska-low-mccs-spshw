@@ -201,7 +201,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 ip=tpm_ip,
                 port=tpm_cpld_port,
                 logger=logger,
-                tpm_version=tpm_version,
             )
 
         super().__init__(

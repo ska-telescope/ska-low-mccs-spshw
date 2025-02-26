@@ -3988,6 +3988,26 @@ url = "https://pypi.org/simple"
 reference = "PyPI-public"
 
 [[package]]
+name = "reactivex"
+version = "4.0.4"
+description = "ReactiveX (Rx) for Python"
+optional = false
+python-versions = ">=3.7,<4.0"
+groups = ["main"]
+files = [
+    {file = "reactivex-4.0.4-py3-none-any.whl", hash = "sha256:0004796c420bd9e68aad8e65627d85a8e13f293de76656165dffbcb3a0e3fb6a"},
+    {file = "reactivex-4.0.4.tar.gz", hash = "sha256:e912e6591022ab9176df8348a653fe8c8fa7a301f26f9931c9d8c78a650e04e8"},
+]
+
+[package.dependencies]
+typing-extensions = ">=4.1.1,<5.0.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
 name = "recommonmark"
 version = "0.7.1"
 description = "A docutils-compatibility bridge to CommonMark, enabling you to write CommonMark inside of Docutils & Sphinx projects."
@@ -4395,6 +4415,7 @@ files = [
 
 [package.dependencies]
 pytango = ">=9.4.2,<11.0.0"
+reactivex = {version = ">=4.0.4,<5.0.0", optional = true, markers = "extra == \"health-rollup\""}
 transitions = ">=0.9.0,<0.10.0"
 
 [package.extras]
@@ -5709,4 +5730,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "6d62f11ffc5eb2bcf75f8afd21060425cd267b5aa708027ae37e87b491b679f4"
+content-hash = "9e67d60796e885856ec1abea031a1dbf2e84867663b91e4c2057906fc7d56885"

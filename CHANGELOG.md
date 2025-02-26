@@ -6,6 +6,15 @@
 changes, but an attribute EventHistory is now available on all devices to debug which events this device received,
 where they came from, the order they came in, and what callbacks were executed with those events. It is a json-ified list of lists.
 
+## 1.2.0
+
+* [THORN-54] Update SpsStation to use new health model.
+
+## 1.1.0
+
+* [SKB-765] Update SpsStation.AcquireDataForCalibration to not configure DAQ, this is now done in SpsStation.ConfigureStationForCalibration
+* [SKB-765] AcquireDataForCalibration now starts DAQ, sends data, waits for receipt of data then stops daq.
+
 ## 1.0.0
 
 * [THORN-17] 1.0.0 release - all MCCS repos

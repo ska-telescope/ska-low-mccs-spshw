@@ -388,6 +388,7 @@ def set_tile_health_params(station_devices: dict[str, tango.DeviceProxy]) -> Non
 
 
 @when("the Subracks board temperature thresholds are adjusted")
+@given("the Subracks board temperature thresholds are adjusted")
 def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> None:
     """
     Set the board temperature thresholds of the Subrack.
@@ -402,6 +403,24 @@ def set_subrack_health_params(station_devices: dict[str, tango.DeviceProxy]) -> 
     }
     for subrack in station_devices["Subracks"]:
         subrack.healthModelParams = json.dumps(new_board_params)
+
+
+@when("the Station healthThresholds are adjusted")
+def set_station_health_params(station_devices: dict[str, tango.DeviceProxy]) -> None:
+    """
+    Set the health thresholds of the Station.
+
+    Changes the Station's healthThresholds for subracks from the default
+    of [1, 1, 1] to [2, 2, 2] so that one failed subrack will not cause
+    health to be FAILED.
+
+    :param station_devices: dictionary of device proxies.
+    """
+    new_health_params = {
+        "subracks": [2, 2, 2],
+    }
+    for station in station_devices["Station"]:
+        station.healthThresholds = json.dumps(new_health_params)
 
 
 @when("all attributes are read on a Tile")

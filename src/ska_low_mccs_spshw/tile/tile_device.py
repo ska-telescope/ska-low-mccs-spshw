@@ -1903,7 +1903,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: True if Tile is in Programmed, Initialised or Synchronised states.
         """
-        prog_state = self._attribute_state["tileProgrammingState"].read()
+        prog_state = self._attribute_state["tileProgrammingState"].read()[0]
         if prog_state in ["Programmed", "Initialised", "Synchronised"]:
             return True
         reason = "CommandNotAllowed"

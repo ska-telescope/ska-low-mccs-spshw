@@ -212,6 +212,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            event_serialiser=self._event_serialiser,
         )
 
     def init_command_objects(self: SpsStation) -> None:

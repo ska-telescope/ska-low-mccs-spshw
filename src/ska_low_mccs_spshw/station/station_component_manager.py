@@ -33,6 +33,7 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
+from ska_low_mccs_common import EventSerialiser
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
@@ -108,6 +109,7 @@ class _TileProxy(DeviceComponentManager):
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         attribute_changed_callback: Callable,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -126,6 +128,7 @@ class _TileProxy(DeviceComponentManager):
             called when the component state changes
         :param attribute_changed_callback: callback to be called when
             desired attributes change.
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
@@ -135,6 +138,7 @@ class _TileProxy(DeviceComponentManager):
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
     def get_change_event_callbacks(self) -> dict[str, Callable]:
@@ -200,6 +204,7 @@ class _DaqProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -215,6 +220,7 @@ class _DaqProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
         super().__init__(
@@ -222,6 +228,7 @@ class _DaqProxy(DeviceComponentManager):
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
     def _configure_station_id(self: _DaqProxy) -> None:
@@ -320,6 +327,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -356,7 +364,9 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param event_serialiser: the event serialiser to be used by this object.
         """
+        self._event_serialiser = event_serialiser
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
         self._daq_trl = daq_trl
@@ -394,6 +404,7 @@ class SpsStationComponentManager(
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
                 self._on_tile_attribute_change,
+                event_serialiser=self._event_serialiser,
             )
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
@@ -407,6 +418,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
                 functools.partial(self._subrack_state_changed, subrack_fqdn),
+                event_serialiser=self._event_serialiser,
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
@@ -420,6 +432,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, self._daq_trl
                 ),
                 functools.partial(self._daq_state_changed, self._daq_trl),
+                event_serialiser=self._event_serialiser,
             )
             self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {

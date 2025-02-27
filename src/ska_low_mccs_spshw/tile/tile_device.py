@@ -425,6 +425,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._component_state_changed,
             self._update_attribute_callback,
             # self._tile_device_state_callback,
+            event_serialiser=self._event_serialiser,
         )
 
     def init_command_objects(self: MccsTile) -> None:

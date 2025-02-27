@@ -27,7 +27,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
 from ska_tango_base.base import check_communicating
@@ -104,6 +104,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
         _tile: Optional[TileSimulator] = None,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -142,6 +143,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             is updated.
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         """
         self._subrack_fqdn = subrack_fqdn
@@ -189,6 +191,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
+
+        self._event_serialiser = event_serialiser
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or DynamicTileSimulator(logger)
@@ -631,7 +635,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if unconnected:
             self.logger.info("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self.logger, connect=False
+                self._subrack_fqdn,
+                self.logger,
+                connect=False,
+                event_serialiser=self._event_serialiser,
             )
             self.logger.info("Connecting to the subrack")
             try:

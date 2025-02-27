@@ -34,6 +34,7 @@ from ska_control_model import (
     TaskStatus,
 )
 from ska_low_mccs_common import EventSerialiser
+from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
@@ -513,6 +514,15 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+        self._communication_manager = CommunicationManager(
+            self._update_communication_state,
+            self._update_component_state,
+            self.logger,
+            self._subrack_proxies,
+            self._tile_proxies,
+            {self._daq_trl: self._daq_proxy},
+        )
+
         self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,
             logger=self.logger,
@@ -750,74 +760,20 @@ class SpsStationComponentManager(
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-
-        for tile_proxy in self._tile_proxies.values():
-            tile_proxy.start_communicating()
-        for subrack_proxy in self._subrack_proxies.values():
-            subrack_proxy.start_communicating()
-        if self._daq_proxy is not None:
-            self._daq_proxy.start_communicating()
+        self._communication_manager.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
-
-        for tile_proxy in self._tile_proxies.values():
-            tile_proxy.stop_communicating()
-        for subrack_proxy in self._subrack_proxies.values():
-            subrack_proxy.stop_communicating()
-        if self._daq_proxy is not None:
-            self._daq_proxy.stop_communicating()
-
-        self._update_communication_state(CommunicationStatus.DISABLED)
-        self._update_component_state(power=None, fault=None)
+        self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
-        if self._communication_states.get(fqdn) is None:
-            self.logger.info(
-                f"The communication state for {fqdn} is not rolled up. "
-                f"But is reporting {communication_state}"
-            )
-            return
-        # Many callback threads could be hitting this method at the same time, so it's
-        # possible (likely) that the GIL will suspend a thread between checking if it
-        # need to update, and actually updating. This leads to callbacks appearing out
-        # of order, which breaks tests. Therefore we need to serialise access.
-        with self._device_communication_state_lock:
-            self._communication_states[fqdn] = communication_state
-            if communication_state == CommunicationStatus.ESTABLISHED:
-                # Read the subdevice healthstate and update model via component callback
-                # This is necessary to update the health model with when cycling
-                # adminMode from ONLINE to OFFLINE to ONLINE or subdevices will
-                # remain UNKNOWN in healthRollup until a new health change event.
-                subdevice = self._tile_proxies.get(fqdn) or self._subrack_proxies.get(
-                    fqdn
-                )
-                if subdevice is not None and self._component_state_callback is not None:
-                    self._component_state_callback(
-                        device_name=fqdn, health=subdevice._health
-                    )
-
-            if self.communication_state == CommunicationStatus.DISABLED:
-                return
-
-            if CommunicationStatus.DISABLED in self._communication_states.values():
-                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            elif (
-                CommunicationStatus.NOT_ESTABLISHED
-                in self._communication_states.values()
-            ):
-                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            else:
-                self._update_communication_state(CommunicationStatus.ESTABLISHED)
+        self._communication_manager.update_communication_status(
+            fqdn, communication_state
+        )
 
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,

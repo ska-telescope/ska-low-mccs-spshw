@@ -2856,14 +2856,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "prettytable"
-version = "3.14.0"
+version = "3.15.0"
 description = "A simple Python library for easily displaying tabular data in a visually appealing ASCII table format"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "prettytable-3.14.0-py3-none-any.whl", hash = "sha256:61d5c68f04a94acc73c7aac64f0f380f5bed4d2959d59edc6e4cbb7a0e7b55c4"},
-    {file = "prettytable-3.14.0.tar.gz", hash = "sha256:b804b8d51db23959b96b329094debdbbdf10c8c3aa75958c5988cfd7f78501dd"},
+    {file = "prettytable-3.15.0-py3-none-any.whl", hash = "sha256:49429c06e6721dcca25f08ede3e9401abe2afd35d87e4336a72ee89b09a53c68"},
+    {file = "prettytable-3.15.0.tar.gz", hash = "sha256:c72dff9c1ede57f9a511fddc8f10af3c8a86dd293f5adf75825a5e6bf81ff73b"},
 ]
 
 [package.dependencies]
@@ -4344,14 +4344,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "setuptools"
-version = "75.8.1"
+version = "75.8.2"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "docs"]
 files = [
-    {file = "setuptools-75.8.1-py3-none-any.whl", hash = "sha256:3bc32c0b84c643299ca94e77f834730f126efd621de0cc1de64119e0e17dab1f"},
-    {file = "setuptools-75.8.1.tar.gz", hash = "sha256:65fb779a8f28895242923582eadca2337285f0891c2c9e160754df917c3d2530"},
+    {file = "setuptools-75.8.2-py3-none-any.whl", hash = "sha256:558e47c15f1811c1fa7adbd0096669bf76c1d3f433f58324df69f3f5ecac4e8f"},
+    {file = "setuptools-75.8.2.tar.gz", hash = "sha256:4880473a969e5f23f2a2be3646b2dfd84af9028716d398e46192f84bc36900d2"},
 ]
 
 [package.extras]
@@ -4428,36 +4428,35 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "1.2.0"
+version = "1.3.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
-python-versions = ">=3.10,<4.0"
+python-versions = "^3.10"
 groups = ["main"]
-files = [
-    {file = "ska_low_mccs_common-1.2.0-py3-none-any.whl", hash = "sha256:043317aa455e855b2cf8241ae1fec9764ac76d8ddc0b67fd43e0752386fbe272"},
-    {file = "ska_low_mccs_common-1.2.0.tar.gz", hash = "sha256:4f58cb330ee29285f8be5bd4963ed00b34a36feb698e7d0acc71e752d1117d4f"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 attrs = ">=24.2.0"
-backoff = ">=2.2.1,<3.0.0"
-jsonschema = ">=4.21.1,<5.0.0"
-jsonschema-specifications = ">=2023.03.6,<2023.4.0"
-numpy = ">=1.26.4,<2.0.0"
+backoff = "^2.2.1"
+jsonschema = "^4.21.1"
+jsonschema-specifications = "~2023.03.6"
+numpy = "^1.26.4"
 pytango = ">=9.5.1,<11.0.0"
-PyYAML = ">=6.0.1,<7.0.0"
-referencing = ">=0.28.4,<0.29.0"
-requests = ">=2.31.0,<3.0.0"
-ska-control-model = ">=1.0.0,<2.0.0"
-ska-ser-logging = ">=0.4.2,<0.5.0"
-ska-tango-base = ">=1.0.0,<2.0.0"
-ska-tango-testing = ">=0,<1"
-transitions = ">=0.9.0,<0.10.0"
+PyYAML = "^6.0.1"
+referencing = "~0.28.4"
+requests = "^2.31.0"
+ska-control-model = "^1.0.0"
+ska-ser-logging = "^0.4.2"
+ska-tango-base = "^1.0.0"
+ska-tango-testing = "^0"
+transitions = "^0.9.0"
 
 [package.source]
-type = "legacy"
-url = "https://artefact.skao.int/repository/pypi-internal/simple"
-reference = "skao"
+type = "git"
+url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common.git"
+reference = "thorn-86"
+resolved_reference = "c046f80b3d427b8b08e27427c79a2027008b49bf"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -5730,4 +5729,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "e45bd9822b8b082d028190ac146546cb93f0765728277b6da8d80b1c3dbc6926"
+content-hash = "b5056dc4323e8450aae24400be3785f456dfcc359b2712ea4a18aff4aa7198aa"

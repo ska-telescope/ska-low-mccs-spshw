@@ -1801,6 +1801,7 @@ class TestMccsTileCommands:
         self: TestMccsTileCommands,
         on_tile_device: MccsDeviceProxy,
         tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for the AntennaBuffer commands.
@@ -1811,6 +1812,8 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param tile_component_manager: A component manager.
             (Using a TileSimulator)
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
         """
         # Set up the antenna buffer
         arg = {
@@ -1837,21 +1840,27 @@ class TestMccsTileCommands:
             "continuous_mode": True,
         }
         json_arg = json.dumps(arg)
-        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
 
-        tile_component_manager.start_antenna_buffer.assert_call(
-            arg["antennas"],
-            arg["start_time"],
-            arg["timestamp_capture_duration"],
-            arg["continuous_mode"],
+        on_tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(TaskStatus.COMPLETED)
+
+        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
+        assert result_code == TaskStatus.IN_PROGRESS
+
+        change_event_callbacks["lrc_command"].assert_change_event(
+            Anything, lookahead=10
         )
 
-        assert result_code == ResultCode.OK
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         # Read antenna buffer
         [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
-
-        assert result_code == ResultCode.OK
+        assert result_code == TaskStatus.IN_PROGRESS
+        change_event_callbacks["lrc_command"].assert_change_event(TaskStatus.COMPLETED)
 
         # Stop antenna buffer
         [[result_code], [message]] = on_tile_device.StopAntennaBuffer()

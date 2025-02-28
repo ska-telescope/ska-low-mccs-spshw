@@ -473,8 +473,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
             ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
-            ("StartAntennaBuffer", self.StartAntennaBufferCommand),
-            ("ReadAntennaBuffer", self.ReadAntennaBufferCommand),
             ("StopAntennaBuffer", self.StopAntennaBufferCommand),
         ]:
             self.register_command_object(
@@ -486,6 +484,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
+            ("ReadAntennaBuffer", "read_antenna_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer"),
             ("Configure", "configure"),
         ]:
             self.register_command_object(
@@ -5706,66 +5706,36 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StartAntennaBufferCommand(FastCommand):
+    class StartAntennaBufferCommand(SubmittedSlowCommand):
         """Class for handling the StartAntennaBuffer(argin) command."""
 
         def __init__(
             self: MccsTile.StartAntennaBufferCommand,
+            command_tracker: CommandTracker,
             component_manager: TileComponentManager,
-            logger: logging.Logger,
+            callback: Callable | None = None,
+            logger: logging.Logger | None = None,
         ) -> None:
             """
             Initialise a new StartAntennaBufferCommand instance.
 
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
+            :param command_tracker: the device's command tracker
+            :param component_manager: the device's component manager
+            :param callback: an optional callback to be called when this
+                command starts and finishes.
+            :param logger: a logger for this command to log with.
             """
             self._component_manager = component_manager
-            super().__init__(logger)
+            super().__init__(
+                "StartAntennaBuffer",
+                command_tracker,
+                component_manager,
+                "start_antenna_buffer",
+                callback=callback,
+                logger=logger,
+            )
 
         SUCCEEDED_MESSAGE = "StartAntennaBuffer command completed OK"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.StartAntennaBufferCommand,
-            *args: Any,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StartAntennaBuffer` command.
-
-            :param args: a string containing a json serialised dictionary
-
-            :raises ValueError: when antenna IDs are unspecified
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            decoded_dict = json.loads(args[0])
-            antennas = decoded_dict.get("antennas")
-            if antennas is None:
-                err = "Antennas list is empty, please provide at least one antenna id"
-                self.logger.error(f"{err}: {decoded_dict}")
-                raise ValueError(f"{err}: {decoded_dict}")
-            continuous_mode = decoded_dict.get("continuous_mode", False)
-            if continuous_mode:
-                start_time = decoded_dict.get("start_time", -1)
-                timestamp_capture_duration = decoded_dict.get(
-                    "timestamp_capture_duration", None
-                )
-            else:
-                start_time = decoded_dict.get("start_time", -1)
-                timestamp_capture_duration = decoded_dict.get(
-                    "timestamp_capture_duration", 75
-                )
-
-            self._component_manager.start_antenna_buffer(
-                antennas,
-                start_time,
-                timestamp_capture_duration,
-                continuous_mode,
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -5790,41 +5760,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("StartAntennaBuffer")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
-
-    class ReadAntennaBufferCommand(FastCommand):
-        """Class for handling the ReadAntennaBuffer command."""
-
-        def __init__(
-            self: MccsTile.ReadAntennaBufferCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger,
-        ) -> None:
-            """
-            Initialise a new ReadAntennaBufferCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: the logger to be used by this Command. If not
-                provided, then a default module logger will be used.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "ReadAntennaBuffer command completed OK"
-        FAILED_MESSAGE = "ReadAntennaBuffer command failed to compelte"
-
-        def do(  # type: ignore[override]
-            self: MccsTile.ReadAntennaBufferCommand,
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.ReadAntennaBuffer` command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            if self._component_manager.read_antenna_buffer():
-                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:

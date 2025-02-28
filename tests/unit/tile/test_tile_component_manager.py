@@ -2956,7 +2956,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             antenna_values["max_DDR_byte_size"],
         )
 
-        tile_component_manager.start_antenna_buffer(
+        tile_component_manager._start_antenna_buffer(
             antenna_values["antennas"],
             antenna_values["start_time"],
             antenna_values["timestamp_capture_duration"],
@@ -2988,7 +2988,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             match="AntennaBuffer ERROR: Please set up the "
             + "antenna buffer before writing",
         ):
-            tile_component_manager.start_antenna_buffer(
+            tile_component_manager._start_antenna_buffer(
                 antenna_values["antennas"],
                 antenna_values["start_time"],
                 antenna_values["timestamp_capture_duration"],
@@ -3010,7 +3010,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             match="AntennaBuffer ERROR: Antennas list is empty "
             + "please give at lease one antenna ID",
         ):
-            tile_component_manager.start_antenna_buffer(
+            tile_component_manager._start_antenna_buffer(
                 [],
                 antenna_values["start_time"],
                 antenna_values["timestamp_capture_duration"],
@@ -3024,7 +3024,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             match="AntennaBuffer ERROR: out of range antenna IDs "
             + "present \\[-1, 16\\]. Please give an antenna ID from 0 to 15",
         ):
-            tile_component_manager.start_antenna_buffer(
+            tile_component_manager._start_antenna_buffer(
                 invalid_input,
                 antenna_values["start_time"],
                 antenna_values["timestamp_capture_duration"],
@@ -3051,7 +3051,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             antenna_values["max_DDR_byte_size"],
         )
 
-        tile_component_manager.start_antenna_buffer(
+        tile_component_manager._start_antenna_buffer(
             antenna_values["antennas"],
             antenna_values["start_time"],
             antenna_values["timestamp_capture_duration"],
@@ -3116,7 +3116,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             antenna_values["max_DDR_byte_size"],
         )
 
-        tile_component_manager.start_antenna_buffer(
+        tile_component_manager._start_antenna_buffer(
             antenna_values["antennas"],
             antenna_values["start_time"],
             antenna_values["timestamp_capture_duration"],

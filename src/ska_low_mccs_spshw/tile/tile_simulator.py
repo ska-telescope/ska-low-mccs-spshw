@@ -550,6 +550,14 @@ class MockTpm:
         """
         return self.preadu
 
+    def get_register_list(self: MockTpm) -> list[str]:
+        """
+        Return register list.
+
+        :return: list of items in register.
+        """
+        return ["1", "2"]
+
     @property
     def info(self: MockTpm) -> dict[str, Any]:
         """

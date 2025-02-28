@@ -5,12 +5,12 @@ defaults:
 # These are passed through to the helm values file as-is.
 # For example,
 #
-# helm_values:
-#   image:
-#     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 1.0.0-dirty
+helm_values:
+  image:
+    registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
+    tag: 1.2.0-dirty
 
-#   ska-low-mccs-daq:
-#     image:
-#       registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
-#       tag: 0.6.1-dev.c72446f19
+  ska-low-mccs-daq:
+    image:
+      registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-daq
+      tag: 1.0.0-dev.cd4a951a7

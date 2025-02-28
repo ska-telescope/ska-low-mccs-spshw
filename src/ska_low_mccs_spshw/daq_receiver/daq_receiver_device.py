@@ -300,6 +300,7 @@ class MccsDaqReceiver(MccsBaseDevice):
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
+        self.logger.error("joe start here")
 
     def _init_state_model(self: MccsDaqReceiver) -> None:
         """Initialise the state model."""
@@ -511,7 +512,7 @@ class MccsDaqReceiver(MccsBaseDevice):
         :param metadata: the metadata for the data received
         """
         self.logger.info(
-            "Data of type %s has been written to file %s", data_mode, file_name
+            f"Data of type {data_mode} has been written to file {file_name}"
         )
         try:
             metadata_dict = json.loads(metadata)

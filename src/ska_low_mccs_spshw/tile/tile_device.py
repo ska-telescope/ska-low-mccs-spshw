@@ -192,6 +192,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
         )
 
+        self.logger.error("JOE START HERE")
+
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
@@ -2223,6 +2225,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: PLL lock state
         """
         return self._attribute_state["pllLocked"].read()[0]
+
+    @attribute(dtype=("DevString",))
+    def joe_command(self: MccsTile) -> str:
+        """
+        Report if ADC clock PLL is in locked state.
+
+        :return: PLL lock state
+        """
+        return json.dumps(self.component_manager.print_memory_map())
 
     @attribute(
         dtype=("DevLong",),

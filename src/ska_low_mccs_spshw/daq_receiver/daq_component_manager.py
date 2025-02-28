@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable=too-many-lines
 """This module implements component management for DaqReceivers."""
 from __future__ import annotations
 
@@ -449,6 +450,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             message indicating status. The message is for
             information purpose only.
         """
+        self.logger.error(f"configure daq, new config == {daq_config}")
         self.logger.info("Configuring DAQ receiver.")
         result_code, message = self._daq_client.configure_daq(daq_config)
         if result_code == ResultCode.OK:
@@ -513,15 +515,34 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         # Check data directory is in correct format, if not then reconfigure.
         # This delays the start call by a lot if SKUID isn't there.
+        self.logger.error(f"start daq with mode to start: {modes_to_start}")
         if not self._data_directory_format_adr55_compliant():
+            self.logger.error("not complient")
             config = {"directory": self._construct_adr55_filepath()}
-            self.configure_daq(json.dumps(config))
-            self.logger.info(
-                "Data directory automatically reconfigured to: %s", config["directory"]
-            )
+
+            result_code, _ = self.configure_daq(json.dumps(config))
+            if result_code == ResultCode.OK:
+                self.logger.info(
+                    "Data directory automatically reconfigured to: %s",
+                    config["directory"],
+                )
+            else:
+                self.logger.error("Data directory failed to reconfigure")
+
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result="Data directory failed to reconfigure",
+                    )
+                return
         try:
+            self.logger.error("try")
+            self.logger.error(f"daq_status == {self.daq_status()}")
+            self.logger.error(f"daq_config == {self.get_configuration()}")
             modes_to_start = modes_to_start or self._consumers_to_start
+            self.logger.error(f"modes_to_start == {modes_to_start}")
             for response in self._daq_client.start_daq(modes_to_start):
+                self.logger.error(f"response == {response}")
                 if task_callback:
                     if "status" in response:
                         task_callback(
@@ -812,7 +833,11 @@ class DaqComponentManager(TaskExecutorComponentManager):
         current_directory = self.get_configuration()["directory"].split("/", maxsplit=5)
         # Reconstruct ADR-55 relevant part of the fp to match against.
         current_directory_root = "/".join(current_directory[0:5])
-        return PurePath(current_directory_root).match(f"/product/*/{SUBSYSTEM_SLUG}/*")
+        val = PurePath(current_directory_root).match(f"/product/*/{SUBSYSTEM_SLUG}/*")
+        self.logger.error(f"current_directory == {current_directory}")
+        self.logger.error(f"current_directory_root == {current_directory_root}")
+        self.logger.error(f"return val == {val}")
+        return val
 
     def _construct_adr55_filepath(
         self: DaqComponentManager,

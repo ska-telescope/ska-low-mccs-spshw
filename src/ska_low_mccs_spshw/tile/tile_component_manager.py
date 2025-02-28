@@ -3419,6 +3419,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 raise TimeoutError("Failed to acquire lock")
 
+    def print_memory_map(self: TileComponentManager) -> str:
+        """
+        Print memory map.
+
+        :return: my string.
+        """
+        if self.tile and self.tile.tpm and self.tile.tpm.get_register_list is not None:
+            self.logger.error(f"JOE REG LIST == {self.tile.tpm.get_register_list()}")
+            return f"JOE REG LIST == {self.tile.tpm.get_register_list()}"
+        return "things missing"
+
     def start_adcs(self: TileComponentManager) -> None:
         """
         Start the ADCs.

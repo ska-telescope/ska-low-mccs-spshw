@@ -307,6 +307,7 @@ class RequestIterator:
         return item
 
 
+# pylint: disable=too-many-instance-attributes
 class TileRequestProvider:
     """
     A class that manages requests for the Tile.
@@ -336,6 +337,8 @@ class TileRequestProvider:
         self.initialise_request: Optional[TileLRCRequest] = None
         self.download_firmware_request: Optional[TileLRCRequest] = None
         self.start_acquisition_request: Optional[TileLRCRequest] = None
+        self.start_antenna_buffer: Optional[TileLRCRequest] = None
+        self.read_antenna_buffer: Optional[TileLRCRequest] = None
         self._desire_connection = False
         self.command_wipe_time: dict[str, float] = {}
 
@@ -406,6 +409,44 @@ class TileRequestProvider:
             wipe_time = time.time() + 60
         self.command_wipe_time["start_acquisition"] = wipe_time
         self.start_acquisition_request.notify_queued()
+
+    def desire_start_antenna_buffer(
+        self, request: TileLRCRequest, wipe_time: Optional[float] = None
+    ) -> None:
+        """
+        Register a request to start the antenna buffer.
+
+        :param request: The start acquisition request to execute on
+            a poll.
+        :param wipe_time: the approx time at which to wipe this command.
+        """
+        if self.start_antenna_buffer:
+            self.start_antenna_buffer.notify_removed_from_queue()
+            self.start_antenna_buffer = None
+        self.start_antenna_buffer = request
+        if wipe_time is None:
+            wipe_time = time.time() + 60
+        self.command_wipe_time["start_antenna_buffer"] = wipe_time
+        self.start_antenna_buffer.notify_queued()
+
+    def desire_read_antenna_buffer(
+        self, request: TileLRCRequest, wipe_time: Optional[float] = None
+    ) -> None:
+        """
+        Register a request to start the antenna buffer.
+
+        :param request: The start acquisition request to execute on
+            a poll.
+        :param wipe_time: the approx time at which to wipe this command.
+        """
+        if self.read_antenna_buffer:
+            self.read_antenna_buffer.notify_removed_from_queue()
+            self.read_antenna_buffer = None
+        self.read_antenna_buffer = request
+        if wipe_time is None:
+            wipe_time = time.time() + 60
+        self.command_wipe_time["read_antenna_buffer"] = wipe_time
+        self.read_antenna_buffer.notify_queued()
 
     def _wipe_old_long_running_commands(self) -> None:
         """Remove old commands."""

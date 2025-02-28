@@ -1846,16 +1846,13 @@ class TestMccsTileCommands:
             EventType.CHANGE_EVENT,
             change_event_callbacks["lrc_command"],
         )
-        change_event_callbacks["lrc_command"].assert_change_event(TaskStatus.COMPLETED)
 
         [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
         assert result_code == TaskStatus.IN_PROGRESS
 
         change_event_callbacks["lrc_command"].assert_change_event(
-            Anything, lookahead=10
+            TaskStatus.COMPLETED, lookahead=10
         )
-
-        change_event_callbacks["lrc_command"].assert_change_event(Anything)
 
         # Read antenna buffer
         [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()

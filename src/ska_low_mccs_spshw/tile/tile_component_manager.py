@@ -1638,6 +1638,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
         kwargs = json.loads(argin)
         request = TileLRCRequest(
             name="start_antenna_buffer",
@@ -1645,7 +1650,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             **kwargs,
         )
-        request.notify_queued()
+        self._request_provider.desire_start_antenna_buffer(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -1711,12 +1716,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
         request = TileLRCRequest(
             name="read_antenna_buffer",
             command_object=self._read_antenna_buffer,
             task_callback=task_callback,
         )
-        request.notify_queued()
+        self._request_provider.desire_read_antenna_buffer(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating

@@ -262,8 +262,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "rfi_count": "rfiCount",
         }
 
-        # NOTE: This has been removed to eliminate SKB-609 segfault.
-        # The root cause is UNKNOWN still.
         attribute_converters: dict[str, Any] = {
             "adc_pll_status": _serialise_object,
             "station_beamformer_error_count": _serialise_object,
@@ -697,15 +695,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :param alarms: The alarms we want to unpack.
         :param mark_invalid: mark attribute as invalid.
         """
-        for (
-            alarm_name,
-            alarm_path,
-        ) in self.__alarm_attribute_map.items():
-            if mark_invalid or alarms is None:
+        if mark_invalid or alarms is None:
+            for alarm_name, _ in self.__alarm_attribute_map.items():
                 self._attribute_state[alarm_name].mark_stale()
-                continue
-            alarm_value: int | None = alarms.get(alarm_path)
-            self._attribute_state[alarm_name].update(alarm_value)
+        else:
+            for alarm_name, alarm_path in self.__alarm_attribute_map.items():
+                alarm_value = alarms.get(alarm_path)
+                self._attribute_state[alarm_name].update(alarm_value)
 
     def unpack_monitoring_point(
         self: MccsTile,
@@ -2048,12 +2044,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: current frame
         """
-        # try:
-        #     return self.component_manager.current_tile_beamformer_frame
-        # except TimeoutError as e:
-        #     self.logger.warning(
-        #         f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
-        #     )
+        try:
+            return self.component_manager.current_tile_beamformer_frame
+        except TimeoutError as e:
+            self.logger.warning(
+                f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
+            )
         return self._attribute_state["currentTileBeamformerFrame"].read()
 
     @attribute(dtype="DevString")

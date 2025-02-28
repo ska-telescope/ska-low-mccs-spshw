@@ -82,6 +82,22 @@ def available_stations_fixture(true_context: bool) -> list[str]:
     return [DEFAULT_STATION_LABEL]
 
 
+@pytest.fixture(name="available_tiles")
+def available_tiles_fixture(true_context: bool) -> list[str]:
+    """
+    Return the name of the tiles under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: the name of the station under test
+    """
+    if true_context:
+        db = tango.Database()
+        tiles = db.get_device_exported("low-mccs/tile/*")
+        return [str(tile).rsplit("low-mccs/tile/", maxsplit=1)[-1] for tile in tiles]
+    return [DEFAULT_STATION_LABEL]
+
+
 @pytest.fixture(name="functional_test_context_generator", scope="module")
 def functional_test_context_generator_fixture(
     true_context: bool,
@@ -215,6 +231,8 @@ def functional_test_context_fixture(
         if subrack_address is None:
             harness.add_subrack_simulator(subrack_id)
         harness.add_subrack_device(subrack_id, subrack_address)
+        harness.add_tile_device(1)
+        harness.set_sps_station_device(subrack_ids=range(1, 2), tile_ids=range(1, 2))
         harness.set_daq_instance()
         harness.set_daq_device(
             daq_id,

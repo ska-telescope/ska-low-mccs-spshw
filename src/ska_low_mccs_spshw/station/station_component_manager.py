@@ -827,6 +827,7 @@ class SpsStationComponentManager(
         attribute_quality: tango.AttrQuality,
     ) -> None:
         # TODO: See THORN-89
+        # TODO: See THORN-89
         if attribute_quality == tango.AttrQuality.ATTR_INVALID:
             self.logger.debug(
                 f"Tile {logical_tile_id} attribute {attribute_name} "

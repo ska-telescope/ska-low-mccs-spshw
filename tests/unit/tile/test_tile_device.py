@@ -301,6 +301,7 @@ class TestMccsTile:
             "dspHealth",
             "healthReport",
             "inheritModes",
+            "eventHistory",
         ]
 
     @pytest.fixture(name="tango_attributes")
@@ -380,6 +381,7 @@ class TestMccsTile:
             "srcip40gfpga2",
             "lastPointingDelays",
             "cspSpeadFormat",
+            "parentTRL",
         ]
 
     @pytest.fixture(name="active_read_attributes")

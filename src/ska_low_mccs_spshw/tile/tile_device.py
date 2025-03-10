@@ -710,6 +710,35 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 alarm_value = alarms.get(alarm_path)
                 self._attribute_state[alarm_name].update(alarm_value)
 
+    def unpack_monitoring_point(
+        self: MccsTile,
+        health_structure: dict[str, Any],
+        dictionary_path: list[str],
+    ) -> Any:
+        """
+        Unpack the monitoring point value from dictionary.
+
+        :param health_structure: A nested health_structure dictionary
+        :param dictionary_path: A list of strings used to traverse the dictionary.
+
+        :example:
+
+        >> tile_health = {'timing': { 'pps': {'status': False}}}
+        >> pps=['timing', 'pps', 'status']
+        >> value = unpack_monitoring_point(tile_health, pps)
+        >> print(value) ->  False
+
+        :return: the monitoring point value or None.
+        """
+        structure = health_structure
+        for key in dictionary_path:
+            try:
+                structure = structure[key]
+            except KeyError as e:
+                self.logger.error(f"Key error when locating TANGO attribute value: {e}")
+                return None
+        return structure
+
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
     ) -> None:
@@ -746,35 +775,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.logger.error(
                         f"Caught unexpected exception {attribute_name=}: {repr(e)}"
                     )
-
-    def unpack_monitoring_point(
-        self: MccsTile,
-        health_structure: dict[str, Any],
-        dictionary_path: list[str],
-    ) -> Any:
-        """
-        Unpack the monitoring point value from dictionary.
-
-        :param health_structure: A nested health_structure dictionary
-        :param dictionary_path: A list of strings used to traverse the dictionary.
-
-        :example:
-
-        >> tile_health = {'timing': { 'pps': {'status': False}}}
-        >> pps=['timing', 'pps', 'status']
-        >> value = unpack_monitoring_point(tile_health, pps)
-        >> print(value) ->  False
-
-        :return: the monitoring point value or None.
-        """
-        structure = health_structure
-        for key in dictionary_path:
-            try:
-                structure = structure[key]
-            except KeyError as e:
-                self.logger.error(f"Key error when locating TANGO attribute value: {e}")
-                return None
-        return structure
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """

@@ -28,7 +28,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
 from ska_tango_base.base import check_communicating
@@ -105,6 +105,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
         _tile: Optional[TileSimulator] = None,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -143,6 +144,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             is updated.
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         """
         self._subrack_fqdn = subrack_fqdn
@@ -190,6 +192,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
+
+        self._event_serialiser = event_serialiser
 
         if simulation_mode == SimulationMode.TRUE:
             self.tile = _tile or DynamicTileSimulator(logger)
@@ -431,6 +435,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")
             self.active_request = None
+        elif isinstance(self.active_request, TileRequest):
+            if self.active_request.publish:
+                self._update_attribute_callback(
+                    mark_invalid=True, **{self.active_request.name: None}
+                )
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
@@ -530,19 +539,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param names: a set containing the attributes that will no longer
             be provided for polling.
         """
-        # while len(names) != 0:
-        #     val = names.pop()
-        #     if _ATTRIBUTE_MAP.get(val) is not None:
-        #         mapped_val = _ATTRIBUTE_MAP[val]
-        #         try:
-        #             self._update_attribute_callback(
-        #                 mark_invalid=True, **{mapped_val: None}
-        #             )
-        #         except Exception as e:
-        #             self.logger.warning(
-        #                 f"Issue marking attribute {mapped_val} INVALID. {e}"
-        #             )
-        #             continue
+        while len(names) != 0:
+            val = names.pop()
+            if _ATTRIBUTE_MAP.get(val) is not None:
+                mapped_val = _ATTRIBUTE_MAP[val]
+                try:
+                    self._update_attribute_callback(
+                        mark_invalid=True, **{mapped_val: None}
+                    )
+                except Exception as e:  # pylint: disable=broad-except
+                    self.logger.warning(
+                        f"Issue marking attribute {mapped_val} INVALID. {e}"
+                    )
+                    continue
 
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
@@ -632,7 +641,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if unconnected:
             self.logger.info("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self.logger, connect=False
+                self._subrack_fqdn,
+                self.logger,
+                connect=False,
+                event_serialiser=self._event_serialiser,
             )
             self.logger.info("Connecting to the subrack")
             try:

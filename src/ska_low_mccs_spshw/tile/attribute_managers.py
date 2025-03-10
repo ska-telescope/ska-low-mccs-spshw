@@ -55,7 +55,7 @@ class AttributeManager:
         self._last_update = time.time()
         self._value_time_quality_callback = value_time_quality_callback
 
-    def value_changed(self: AttributeManager, value: Any) -> bool:
+    def _value_changed(self: AttributeManager, value: Any) -> bool:
         """
         Check if value has changed since last poll.
 
@@ -72,33 +72,50 @@ class AttributeManager:
         :param value: the value we want to update attribute with.
         :param post: Optional flag to post an update.
         """
-        # new_value: Any = self._converter(value) if self._converter else value
-        # value_changed = new_value != self._value
-        value_changed = self.value_changed(value)
-        self._value = value
+        is_event_required = False
         self._last_update = time.time()
-        if self._value is None:
-            self._quality = tango.AttrQuality.ATTR_INVALID
+        new_value: Any = (
+            self._converter(value) if self._converter and value is not None else value
+        )
+
+        if new_value is None:
+            # Move to invalid and require event!
+            if self._quality != tango.AttrQuality.ATTR_INVALID:
+                self._quality = tango.AttrQuality.ATTR_INVALID
+                is_event_required = True
         else:
-            self.update_quality()
-        if post:
-            self.notify(value_changed)
+            # Check for quality or value changes!
+            if self._update_quality(new_value) or self._value_changed(new_value):
+                is_event_required = True
+
+            self._value = new_value
+
+        if post and is_event_required:
+            self.__notify()
 
     def mark_stale(self: AttributeManager) -> None:
         """Mark attribute as stale."""
-        if (
-            self.value_changed(self._initial_value)
-            or self._quality == tango.AttrQuality.ATTR_INVALID
-        ):
-            return
-        self._last_update = time.time()
-        self._quality = tango.AttrQuality.ATTR_INVALID
-        if self._value is not None:
-            self.notify(True)
+        # Update with None and push
+        self.update(None, True)
 
-    def update_quality(self: AttributeManager) -> None:
-        """Update the attribute quality factor."""
-        self._quality = tango.AttrQuality.ATTR_VALID
+    def _update_quality(self: AttributeManager, new_value: Any) -> bool:
+        """
+        Update the attribute quality factor.
+
+        :param new_value: the value we are checking.
+
+        :return: True if there was a change in quality.
+            False if there was no change.
+        """
+        evaluated_quality = (
+            tango.AttrQuality.ATTR_VALID
+            if new_value is not None
+            else tango.AttrQuality.ATTR_INVALID
+        )
+        if self._quality != evaluated_quality:
+            self._quality = evaluated_quality
+            return True
+        return False
 
     def read(self: AttributeManager) -> Any:
         """
@@ -107,24 +124,15 @@ class AttributeManager:
         :return: A tuple with value, last_updated and quaility.
             Or None if attribute has not had an update yet.
         """
-        # if self._value is not None:
-        #     return self._value, time.time(), self._quality
-        # return self._value
-        return self._value, self._last_update, self._quality
+        if self._value is not None:
+            return self._value, time.time(), self._quality
+        return self._value
 
-    def notify(self: AttributeManager, value_changed: bool) -> None:
-        """
-        Notify callback with value.
-
-        :param value_changed: a flag representing if the value changed
-            from the previous value.
-        """
-        if value_changed:
-            self._value_time_quality_callback(
-                self._value, self._last_update, self._quality
-            )
-            if self.alarm_handler is not None:
-                self.alarm_handler()
+    def __notify(self: AttributeManager) -> None:
+        """Notify callback with value."""
+        self._value_time_quality_callback(self._value, self._last_update, self._quality)
+        if self.alarm_handler is not None:
+            self.alarm_handler()
 
 
 class BoolAttributeManager(AttributeManager):
@@ -163,19 +171,33 @@ class BoolAttributeManager(AttributeManager):
             case _:
                 self._alarm_on_true = None
 
-    def update_quality(self: BoolAttributeManager) -> None:
-        """Update attribute quality."""
-        self._quality = (
-            tango.AttrQuality.ATTR_ALARM
-            if self._alarm_on_true is self._value
-            else tango.AttrQuality.ATTR_VALID
-        )
+    def _update_quality(self: BoolAttributeManager, new_value: Any) -> bool:
+        """
+        Update the attribute quality factor.
+
+        :param new_value: the new value we are checking
+
+        :return: True if there was a change in quality.
+            False if there was no change
+        """
+        if new_value is None:
+            evaluated_quality = tango.AttrQuality.ATTR_INVALID
+        else:
+            evaluated_quality = (
+                tango.AttrQuality.ATTR_ALARM
+                if self._alarm_on_true is new_value
+                else tango.AttrQuality.ATTR_VALID
+            )
+        if self._quality != evaluated_quality:
+            self._quality = evaluated_quality
+            return True
+        return False
 
 
 class NpArrayAttributeManager(AttributeManager):
     """An AttributeManager for a np.ndarray attribute."""
 
-    def value_changed(self: AttributeManager, value: np.ndarray) -> bool:
+    def _value_changed(self: AttributeManager, value: np.ndarray) -> bool:
         """
         Check if value has changed since last poll.
 

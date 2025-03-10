@@ -33,6 +33,7 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
+from ska_low_mccs_common import EventSerialiser
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
@@ -108,6 +109,7 @@ class _TileProxy(DeviceComponentManager):
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
         attribute_changed_callback: Callable,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -126,6 +128,7 @@ class _TileProxy(DeviceComponentManager):
             called when the component state changes
         :param attribute_changed_callback: callback to be called when
             desired attributes change.
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
@@ -135,6 +138,7 @@ class _TileProxy(DeviceComponentManager):
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
     def get_change_event_callbacks(self) -> dict[str, Callable]:
@@ -200,6 +204,7 @@ class _DaqProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -215,6 +220,7 @@ class _DaqProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
         super().__init__(
@@ -222,6 +228,7 @@ class _DaqProxy(DeviceComponentManager):
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
     def _configure_station_id(self: _DaqProxy) -> None:
@@ -320,6 +327,7 @@ class SpsStationComponentManager(
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -356,7 +364,9 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param event_serialiser: the event serialiser to be used by this object.
         """
+        self._event_serialiser = event_serialiser
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
         self._daq_trl = daq_trl
@@ -394,6 +404,7 @@ class SpsStationComponentManager(
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
                 self._on_tile_attribute_change,
+                event_serialiser=self._event_serialiser,
             )
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
@@ -407,6 +418,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
                 functools.partial(self._subrack_state_changed, subrack_fqdn),
+                event_serialiser=self._event_serialiser,
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
@@ -420,6 +432,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, self._daq_trl
                 ),
                 functools.partial(self._daq_state_changed, self._daq_trl),
+                event_serialiser=self._event_serialiser,
             )
             self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
@@ -813,6 +826,16 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
+        # TODO: See THORN-89
+        # TODO: See THORN-89
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            self.logger.debug(
+                f"Tile {logical_tile_id} attribute {attribute_name} "
+                f"has quality {attribute_quality}. "
+                "SpsStation is not yet capable of handling this. "
+                "Ignoring!"
+            )
+            return
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
@@ -1879,6 +1902,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelay is not None
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
 
@@ -1904,6 +1928,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelayCorrection is not None
             self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
 
         return copy.deepcopy(self._pps_delay_corrections)
@@ -2188,49 +2213,67 @@ class SpsStationComponentManager(
             rms_values = rms_values + list(proxy.adc_power())
         return rms_values
 
-    def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def board_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of board temperatures.
 
         :return: minimum, average and maximum of board temperatures
         """
-        board_temperatures = list(
-            tile._proxy is not None and tile._proxy.boardTemperature
+        board_temperatures = [
+            tile._proxy.boardTemperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.boardTemperature is not None
+        ]
+        if len(board_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         return [
             min(board_temperatures),
             mean(board_temperatures),
             max(board_temperatures),
         ]
 
-    def fpga_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def fpga_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of FPGAs temperatures.
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_1_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga1Temperature
+        fpga_1_temperatures = [
+            tile._proxy.fpga1Temperature
             for tile in self._tile_proxies.values()
-        )
-        fpga_2_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga2Temperature
+            if tile._proxy is not None and tile._proxy.fpga1Temperature is not None
+        ]
+        fpga_2_temperatures = [
+            tile._proxy.fpga2Temperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.fpga2Temperature is not None
+        ]
+        if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
         return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
-    def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
+    def pps_delay_summary(self: SpsStationComponentManager) -> list[float] | None:
         """
         Get summary of PPS delays.
 
         :return: minimum, average and maximum of PPS delays
         """
-        pps_delays = list(
-            tile._proxy is not None and tile._proxy.ppsDelay
+        pps_delays = [
+            tile._proxy.ppsDelay
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.ppsDelay is not None
+        ]
+        if len(pps_delays) == 0:
+            self.logger.info("No data available for summary.")
+            return None
+
         return [min(pps_delays), mean(pps_delays), max(pps_delays)]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:

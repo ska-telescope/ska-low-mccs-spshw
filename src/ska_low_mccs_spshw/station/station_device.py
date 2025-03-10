@@ -212,6 +212,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self._component_state_changed,
             self._health_model.tile_health_changed,
             self._health_model.subrack_health_changed,
+            event_serialiser=self._event_serialiser,
         )
 
     def init_command_objects(self: SpsStation) -> None:
@@ -1066,7 +1067,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self._adc_power
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
-    def boardTemperaturesSummary(self: SpsStation) -> list[float]:
+    def boardTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of board temperatures (minimum, average, maximum).
 
@@ -1075,7 +1076,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.board_temperature_summary()
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
-    def fpgaTemperaturesSummary(self: SpsStation) -> list[float]:
+    def fpgaTemperaturesSummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of FPGA temperatures (minimum, average, maximum).
 
@@ -1084,7 +1085,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self.component_manager.fpga_temperature_summary()
 
     @attribute(dtype=("DevDouble",), max_dim_x=3)
-    def ppsDelaySummary(self: SpsStation) -> list[float]:
+    def ppsDelaySummary(self: SpsStation) -> list[float] | None:
         """
         Get summary of PPS delay (minimum, average, maximum).
 

@@ -3058,7 +3058,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             antenna_values["continuous_mode"],
         )
 
-        tile_component_manager.read_antenna_buffer()
+        tile_component_manager._read_antenna_buffer()
 
         # Confrim that the values have updated correctly
         buffer = tile_simulator._antenna_buffer_tile_attribute
@@ -3083,7 +3083,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             match="AntennaBuffer ERROR: Please set up the antenna buffer before"
             + " reading",
         ):
-            tile_component_manager.read_antenna_buffer()
+            tile_component_manager._read_antenna_buffer()
 
         # Fail when buffer is set up nothing was captured
         tile_component_manager.set_up_antenna_buffer(
@@ -3096,7 +3096,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             match="AntennaBuffer ERROR: Please capture antenna buffer data before"
             + " reading",
         ):
-            tile_component_manager.read_antenna_buffer()
+            tile_component_manager._read_antenna_buffer()
 
     def test_stop_antenna_buffer(
         self: TestStaticSimulator,

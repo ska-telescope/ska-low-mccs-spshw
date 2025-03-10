@@ -481,13 +481,34 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
-        for command_name, method_name in [
-            ("Initialise", "initialise"),
-            ("DownloadFirmware", "download_firmware"),
-            ("ReadAntennaBuffer", "read_antenna_buffer"),
-            ("StartAntennaBuffer", "start_antenna_buffer"),
-            ("Configure", "configure"),
+
+        def _callback(hook: str, running: bool) -> None:
+            action = "invoked" if running else "completed"
+            full_action = f"{hook}_{action}"
+            self.logger.debug(full_action)
+
+        for command_name, method_name, schema, state_model_hook in [
+            ("Initialise", "initialise", None, None),
+            ("DownloadFirmware", "download_firmware", None, None),
+            ("ReadAntennaBuffer", "read_antenna_buffer", None, "read_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer", None, "start_buffer"),
+            ("Configure", "configure", None, None),
         ]:
+            callback = (
+                None
+                if state_model_hook is None
+                else functools.partial(_callback, state_model_hook)
+            )
+            validator = (
+                None
+                if schema is None
+                else JsonValidator(
+                    command_name,
+                    schema,
+                    logger=self.logger,
+                )
+            )
+
             self.register_command_object(
                 command_name,
                 SubmittedSlowCommand(
@@ -495,8 +516,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._command_tracker,
                     self.component_manager,
                     method_name,
-                    callback=None,
+                    callback=callback,
                     logger=self.logger,
+                    validator=validator,
                 ),
             )
         self.register_command_object(
@@ -5705,37 +5727,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("SetUpAntennaBuffer")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
-
-    class StartAntennaBufferCommand(SubmittedSlowCommand):
-        """Class for handling the StartAntennaBuffer(argin) command."""
-
-        def __init__(
-            self: MccsTile.StartAntennaBufferCommand,
-            command_tracker: CommandTracker,
-            component_manager: TileComponentManager,
-            callback: Callable | None = None,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StartAntennaBufferCommand instance.
-
-            :param command_tracker: the device's command tracker
-            :param component_manager: the device's component manager
-            :param callback: an optional callback to be called when this
-                command starts and finishes.
-            :param logger: a logger for this command to log with.
-            """
-            self._component_manager = component_manager
-            super().__init__(
-                "StartAntennaBuffer",
-                command_tracker,
-                component_manager,
-                "start_antenna_buffer",
-                callback=callback,
-                logger=logger,
-            )
-
-        SUCCEEDED_MESSAGE = "StartAntennaBuffer command completed OK"
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:

@@ -1815,6 +1815,13 @@ class TestMccsTileCommands:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
+        # create callbacks to monitor changes in states
+        on_tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+
         # Set up the antenna buffer
         arg = {
             "mode": "NSDN",
@@ -1841,23 +1848,23 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
 
-        on_tile_device.subscribe_event(
-            "longrunningcommandstatus",
-            EventType.CHANGE_EVENT,
-            change_event_callbacks["lrc_command"],
-        )
+        [[result_code], [unique_id]] = on_tile_device.StartAntennaBuffer(json_arg)
 
-        [[result_code], [message]] = on_tile_device.StartAntennaBuffer(json_arg)
-        assert result_code == TaskStatus.IN_PROGRESS
-
-        change_event_callbacks["lrc_command"].assert_change_event(
-            TaskStatus.COMPLETED, lookahead=10
-        )
+        lrc_queue = json.loads(on_tile_device.lrcQueue[-1])
+        assert lrc_queue["name"] == "StartAntennaBuffer"
+        time.sleep(0.1)
+        lrc_finished = json.loads(on_tile_device.lrcFinished[-1])
+        assert lrc_finished["name"] == "StartAntennaBuffer"
 
         # Read antenna buffer
         [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
         assert result_code == TaskStatus.IN_PROGRESS
-        change_event_callbacks["lrc_command"].assert_change_event(TaskStatus.COMPLETED)
+
+        lrc_queue = json.loads(on_tile_device.lrcQueue[-1])
+        assert lrc_queue["name"] == "ReadAntennaBuffer"
+        time.sleep(0.1)
+        lrc_finished = json.loads(on_tile_device.lrcFinished[-1])
+        assert lrc_finished["name"] == "ReadAntennaBuffer"
 
         # Stop antenna buffer
         [[result_code], [message]] = on_tile_device.StopAntennaBuffer()

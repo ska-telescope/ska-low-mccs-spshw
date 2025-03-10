@@ -326,6 +326,15 @@ class TestTileComponentManager:
             callbacks["communication_status"].assert_call(
                 CommunicationStatus.ESTABLISHED
             )
+        elif (
+            first_power_state == PowerState.ON
+            and second_power_state == PowerState.UNKNOWN
+        ):
+            # Subrack says TPM power is UNKNOWN. The TPM is not
+            # connectable. Therefore, we have lost communication.
+            callbacks["communication_status"].assert_call(
+                CommunicationStatus.NOT_ESTABLISHED
+            )
         else:
             callbacks["communication_status"].assert_not_called()
 

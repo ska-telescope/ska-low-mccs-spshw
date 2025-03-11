@@ -1853,23 +1853,19 @@ class TestMccsTileCommands:
         }
         json_arg = json.dumps(arg)
 
-        [[result_code], [unique_id]] = on_tile_device.StartAntennaBuffer(json_arg)
+        [[result_code], [lrc_id]] = on_tile_device.StartAntennaBuffer(json_arg)
 
-        lrc_queue = json.loads(on_tile_device.lrcQueue[-1])
-        assert lrc_queue["name"] == "StartAntennaBuffer"
-        time.sleep(0.1)
-        lrc_finished = json.loads(on_tile_device.lrcFinished[-1])
-        assert lrc_finished["name"] == "StartAntennaBuffer"
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
 
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
         # Read antenna buffer
-        [[result_code], [message]] = on_tile_device.ReadAntennaBuffer()
-        assert result_code == TaskStatus.IN_PROGRESS
+        [[result_code], [lrc_id]] = on_tile_device.ReadAntennaBuffer()
 
-        lrc_queue = json.loads(on_tile_device.lrcQueue[-1])
-        assert lrc_queue["name"] == "ReadAntennaBuffer"
-        time.sleep(0.1)
-        lrc_finished = json.loads(on_tile_device.lrcFinished[-1])
-        assert lrc_finished["name"] == "ReadAntennaBuffer"
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
 
         # Stop antenna buffer
         [[result_code], [message]] = on_tile_device.StopAntennaBuffer()

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-122] HotFix issue 'devstate not accounting ppsPresent attribute'
 * [THORN-122] HotFix issue 'unable with deploying MccsTile when TPM OFF state.'
 * [THORN-85] Update devices to serialise their events through the EventSerialiser. This should have no operational
 changes, but an attribute EventHistory is now available on all devices to debug which events this device received,

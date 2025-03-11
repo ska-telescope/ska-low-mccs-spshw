@@ -391,9 +391,9 @@ def patched_tile_device_class_fixture(
                 wrapped_set_up_antenna_buffer
             )
             wrapped_start_antenna_buffer = MockCallable(
-                wraps=tile_component_manager.start_antenna_buffer
+                wraps=tile_component_manager._start_antenna_buffer
             )
-            tile_component_manager.start_antenna_buffer = (  # type: ignore[assignment]
+            tile_component_manager._start_antenna_buffer = (  # type: ignore[assignment]
                 wrapped_start_antenna_buffer
             )
             return tile_component_manager

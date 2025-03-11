@@ -4,6 +4,12 @@
 
 * [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
 flush out issues with rapid changes of adminmode.
+
+## 1.3.0
+
+* [THORN-122] HotFix issue 'devstate not accounting ppsPresent attribute'
+* [THORN-122] HotFix issue 'unable with deploying MccsTile when TPM OFF state.'
+* [SKB-520] Mark attributes as INVALID.
 * [THORN-85] Update devices to serialise their events through the EventSerialiser. This should have no operational
 changes, but an attribute EventHistory is now available on all devices to debug which events this device received,
 where they came from, the order they came in, and what callbacks were executed with those events. It is a json-ified list of lists.

@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 1.3.0
 
 * [THORN-122] HotFix issue 'devstate not accounting ppsPresent attribute'
 * [THORN-122] HotFix issue 'unable with deploying MccsTile when TPM OFF state.'

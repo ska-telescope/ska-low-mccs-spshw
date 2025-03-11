@@ -33,6 +33,27 @@ from tests.harness import (
 )
 
 
+@pytest.fixture(name="tile_state_map")
+def tile_state_map() -> dict[tuple[PowerState, bool], tango.DevState]:
+    """
+    Return a map to expected state.
+
+    :returns: a dictionary containing a tuple with first entry being
+        Tpm Power as reported by the subrack, the second entry being
+        whether the TPM is connectable as the key. The result is the
+        expected state of the device.
+    """
+    # (subrack_says_tpm_power, is_tpm_reachable) -> resulting DevState
+    return {
+        (PowerState.UNKNOWN, False): tango.DevState.UNKNOWN,
+        (PowerState.OFF, False): tango.DevState.OFF,
+        (PowerState.ON, False): tango.DevState.ON,
+        (PowerState.UNKNOWN, True): tango.DevState.FAULT,
+        (PowerState.OFF, True): tango.DevState.FAULT,
+        (PowerState.ON, True): tango.DevState.ON,
+    }
+
+
 @pytest.fixture(name="mock_factory")
 def mock_factory_fixture() -> Callable[[], unittest.mock.Mock]:
     """

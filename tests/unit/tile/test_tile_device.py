@@ -535,6 +535,79 @@ class TestMccsTile:
         else:
             assert (on_tile_device.staticTimeDelays == init_value).all()
 
+    # pylint: disable=too-many-arguments
+    @pytest.mark.parametrize(
+        "subrack_reports_tpm_power",
+        [
+            PowerState.UNKNOWN,
+            PowerState.OFF,
+            PowerState.ON,
+        ],
+    )
+    @pytest.mark.parametrize(
+        "is_tpm_connectable",
+        [False, True],
+    )
+    def test_state(
+        self: TestMccsTile,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        subrack_reports_tpm_power: PowerState,
+        is_tpm_connectable: bool,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+        tile_state_map: dict[tuple[PowerState, bool], DevState],
+    ) -> None:
+        """
+        Test state in response to upstream report and polling information.
+
+        Using the TPM power as reported by the subrack and
+        the connection information from polling the TPM.
+        Check that the tango device transitions to the correct
+        state determined by the fixture `tile_state_map`.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param subrack_reports_tpm_power: the TPM power as reported by the subrack
+        :param is_tpm_connectable: a bool representing if the TPM is connectable.
+        :param tile_state_map: fixture containing a map to expected state.
+        """
+        initial_state = DevState.ON
+        on_tile_device.subscribe_event(
+            "state",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(initial_state)
+
+        if is_tpm_connectable:
+            tile_simulator.mock_on(lock=True)
+        else:
+            tile_simulator.mock_off(lock=True)
+
+        tile_component_manager._subrack_says_tpm_power_changed(
+            "tpm1PowerState",
+            subrack_reports_tpm_power,
+            EventType.CHANGE_EVENT,
+        )
+
+        expected_result = tile_state_map[
+            (subrack_reports_tpm_power, is_tpm_connectable)
+        ]
+        if expected_result != initial_state:
+            change_event_callbacks["state"].assert_change_event(
+                expected_result, lookahead=3
+            )
+        else:
+            change_event_callbacks["state"].assert_not_called()
+
     # pylint: disable=too-many-statements, too-many-locals, too-many-arguments
     def test_basic_attribute_quality(
         self: TestMccsTile,

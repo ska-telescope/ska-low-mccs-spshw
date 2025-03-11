@@ -443,6 +443,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.power_state = self._subrack_says_tpm_power
         self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+        if self._subrack_says_tpm_power == PowerState.UNKNOWN:
+            super().poll_failed(exception)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions

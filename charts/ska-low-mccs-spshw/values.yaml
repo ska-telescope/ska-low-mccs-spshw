@@ -47,7 +47,7 @@ resources:
 image:
   registry: artefact.skao.int
   name: ska-low-mccs-spshw
-  tag: ~ # defaults to chart's appVersion when empty
+  tag: 1.3.0-dirty # defaults to chart's appVersion when empty
   pullPolicy: IfNotPresent
 
 daqDataRepository: daq-data

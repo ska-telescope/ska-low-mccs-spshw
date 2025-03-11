@@ -510,33 +510,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Long running commands
         #
 
-        def _callback(hook: str, running: bool) -> None:
-            action = "invoked" if running else "completed"
-            full_action = f"{hook}_{action}"
-            self.logger.debug(full_action)
-
-        for command_name, method_name, schema, state_model_hook in [
-            ("Initialise", "initialise", None, None),
-            ("DownloadFirmware", "download_firmware", None, None),
-            ("ReadAntennaBuffer", "read_antenna_buffer", None, "read_buffer"),
-            ("StartAntennaBuffer", "start_antenna_buffer", None, "start_buffer"),
-            ("Configure", "configure", None, None),
+        for command_name, method_name in [
+            ("Initialise", "initialise"),
+            ("DownloadFirmware", "download_firmware"),
+            ("ReadAntennaBuffer", "read_antenna_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer"),
+            ("Configure", "configure"),
         ]:
-            callback = (
-                None
-                if state_model_hook is None
-                else functools.partial(_callback, state_model_hook)
-            )
-            validator = (
-                None
-                if schema is None
-                else JsonValidator(
-                    command_name,
-                    schema,
-                    logger=self.logger,
-                )
-            )
-
             self.register_command_object(
                 command_name,
                 SubmittedSlowCommand(
@@ -544,11 +524,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self._command_tracker,
                     self.component_manager,
                     method_name,
-                    callback=callback,
+                    callback=None,
                     logger=self.logger,
-                    validator=validator,
                 ),
             )
+
         self.register_command_object(
             "StartAcquisition",
             MccsTile.StartAcquisitionCommand(

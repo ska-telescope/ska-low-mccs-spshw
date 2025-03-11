@@ -2212,7 +2212,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         force_alarm: bool = False
         if (
             self._attribute_state["ppsPresent"].read() is not None
-            and self._attribute_state["ppsPresent"].read() is False
+            and self._attribute_state["ppsPresent"].read()[0] is False
         ):
             self.logger.warning("no PPS signal present, raising ALARM")
             force_alarm = True

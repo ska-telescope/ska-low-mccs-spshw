@@ -721,7 +721,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Connect if not already.
             with self._hardware_lock:
                 if not self.is_connected:
-                    self.connect()
+                    try:
+                        self.connect()
+                    except Exception:  # pylint: disable=broad-except
+                        pass
 
             if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
                 if (

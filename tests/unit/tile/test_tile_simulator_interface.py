@@ -21,6 +21,7 @@ from ska_low_mccs_spshw.tile import TileSimulator
 SIMULATOR_ONLY_METHODS = [
     "mock_on",
     "mock_off",
+    "__is_connectable",
     "_timed_thread",
     "evaluate_mcu_action",
 ]

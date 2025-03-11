@@ -1787,17 +1787,13 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = False
-            self._is_cpld_connectable = False
-            self._is_fpga1_connectable = False
-            self._is_fpga2_connectable = False
+            self.__is_connectable(False)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
         else:
             self.mock_connection_success = False
-            self._is_cpld_connectable = False
-            self._is_fpga1_connectable = False
-            self._is_fpga2_connectable = False
+            self.__is_connectable(False)
 
     def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
@@ -1807,17 +1803,23 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = True
-            self._is_cpld_connectable = True
-            self._is_fpga1_connectable = True
-            self._is_fpga2_connectable = True
+            self.__is_connectable(True)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
         else:
             self.mock_connection_success = True
-            self._is_cpld_connectable = True
-            self._is_fpga1_connectable = True
-            self._is_fpga2_connectable = True
+            self.__is_connectable(True)
+
+    def __is_connectable(self: TileSimulator, connectable: bool) -> None:
+        """
+        Set the connection status.
+
+        :param connectable: True if the CPLD and FPGAs are connectable.
+        """
+        self._is_cpld_connectable = connectable
+        self._is_fpga1_connectable = connectable
+        self._is_fpga2_connectable = connectable
 
     @check_mocked_overheating
     @connected

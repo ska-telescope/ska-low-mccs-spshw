@@ -441,8 +441,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     mark_invalid=True, **{self.active_request.name: None}
                 )
 
+        self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+        self._update_component_state(
+            power=self._subrack_says_tpm_power, fault=self.fault_state
+        )
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
@@ -484,7 +487,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_faulty: bool = False
         match poll_success:
             case False:
-                pass
+                with self._hardware_lock:
+                    if not self.is_connected:
+                        if self._subrack_says_tpm_power == PowerState.ON:
+                            self.logger.error(
+                                "Unable to connect to TPM, "
+                                "however subrack reports it as ON. "
+                            )
+                            is_faulty = True
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the

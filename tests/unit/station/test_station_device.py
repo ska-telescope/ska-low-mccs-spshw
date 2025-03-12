@@ -1073,6 +1073,7 @@ def test_SetCspIngest(
     num_tiles: int,
     sdn_first_interface: str,
     sdn_gateway: str,
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test of the SetCspIngest command.
@@ -1085,10 +1086,21 @@ def test_SetCspIngest(
         in the block allocated to this station for science data.
     :param sdn_gateway: IP address of the subnet gateway.
         An empty string signifiese that no gateway is defined.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
+    station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     station_device.MockSubracksOn()
     station_device.MockTilesOn()
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.STANDBY)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
     station_device.SetCspIngest(
         json.dumps(
             {

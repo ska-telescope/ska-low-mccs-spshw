@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
+flush out issues with rapid changes of adminmode.
+
 ## 1.3.0
 
 * [THORN-122] HotFix issue 'devstate not accounting ppsPresent attribute'

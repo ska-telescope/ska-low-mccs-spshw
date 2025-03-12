@@ -17,7 +17,7 @@ import pytest
 import tango
 from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
-from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock import MockCallable, MockCallableGroup
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
@@ -404,6 +404,18 @@ def patched_tile_device_class_fixture(
             )
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
+            )
+            wrapped_set_up_antenna_buffer = MockCallable(
+                wraps=tile_component_manager.set_up_antenna_buffer
+            )
+            tile_component_manager.set_up_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_set_up_antenna_buffer
+            )
+            wrapped_start_antenna_buffer = MockCallable(
+                wraps=tile_component_manager._start_antenna_buffer
+            )
+            tile_component_manager._start_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_start_antenna_buffer
             )
             return tile_component_manager
 

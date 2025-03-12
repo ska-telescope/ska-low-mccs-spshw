@@ -1325,6 +1325,7 @@ class TestMccsTile:
         assert tile_device.healthModelParams == json.dumps(expected_result)
 
 
+# pylint: disable=too-many-public-methods
 class TestMccsTileCommands:
     """Tests of MccsTile device commands."""
 
@@ -1873,6 +1874,76 @@ class TestMccsTileCommands:
 
         with pytest.raises(DevFailed, match="ValueError"):
             _ = on_tile_device.LoadCalibrationCoefficients(coefficients[0:16])
+
+    def test_AntennaBuffer(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test for the AntennaBuffer commands.
+
+        :param on_tile_device: fixture that provides a
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        # create callbacks to monitor changes in states
+        on_tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+
+        # Set up the antenna buffer
+        arg = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+        }
+        json_arg = json.dumps(arg)
+
+        [[result_code], [message]] = on_tile_device.SetUpAntennaBuffer(json_arg)
+
+        tile_component_manager.set_up_antenna_buffer.assert_call(
+            arg["mode"],
+            arg["DDR_start_address"],
+            arg["max_DDR_byte_size"],
+        )
+        assert result_code == ResultCode.OK
+
+        # Start the antenna buffer
+        arg = {
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": 50,
+            "continuous_mode": True,
+        }
+        json_arg = json.dumps(arg)
+
+        [[result_code], [lrc_id]] = on_tile_device.StartAntennaBuffer(json_arg)
+
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
+
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        # Read antenna buffer
+        [[result_code], [lrc_id]] = on_tile_device.ReadAntennaBuffer()
+
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
+
+        # Stop antenna buffer
+        [[result_code], [message]] = on_tile_device.StopAntennaBuffer()
+
+        assert result_code == ResultCode.OK
 
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))

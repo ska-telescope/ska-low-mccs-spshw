@@ -443,9 +443,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(
-            power=self._subrack_says_tpm_power, fault=self.fault_state
-        )
+
+        # ================================================================
+        # Update fault before power to allow exit from fault before OFF.
+        # "else Action component_no_fault is not allowed in op_state OFF."
+        # can occur
+        self._update_component_state(fault=self.fault_state)
+        # ================================================================
+        self._update_component_state(power=self._subrack_says_tpm_power)
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
@@ -488,13 +493,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         match poll_success:
             case False:
                 with self._hardware_lock:
-                    if not self.is_connected:
-                        if self._subrack_says_tpm_power == PowerState.ON:
-                            self.logger.error(
-                                "Unable to connect to TPM, "
-                                "however subrack reports it as ON. "
-                            )
-                            is_faulty = True
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.ON
+                    ):
+                        self.logger.error(
+                            "Unable to connect to TPM, "
+                            "however subrack reports it as ON. "
+                        )
+                        is_faulty = True
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the

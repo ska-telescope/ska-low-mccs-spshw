@@ -16,8 +16,9 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
-from functools import wraps
+from functools import reduce, wraps
 from ipaddress import IPv4Address
+from operator import getitem
 from typing import Any, Callable, Final, NoReturn
 
 import numpy as np
@@ -710,35 +711,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 alarm_value = alarms.get(alarm_path)
                 self._attribute_state[alarm_name].update(alarm_value)
 
-    def unpack_monitoring_point(
-        self: MccsTile,
-        health_structure: dict[str, Any],
-        dictionary_path: list[str],
-    ) -> Any:
-        """
-        Unpack the monitoring point value from dictionary.
-
-        :param health_structure: A nested health_structure dictionary
-        :param dictionary_path: A list of strings used to traverse the dictionary.
-
-        :example:
-
-        >> tile_health = {'timing': { 'pps': {'status': False}}}
-        >> pps=['timing', 'pps', 'status']
-        >> value = unpack_monitoring_point(tile_health, pps)
-        >> print(value) ->  False
-
-        :return: the monitoring point value or None.
-        """
-        structure = health_structure
-        for key in dictionary_path:
-            try:
-                structure = structure[key]
-            except KeyError as e:
-                self.logger.error(f"Key error when locating TANGO attribute value: {e}")
-                return None
-        return structure
-
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
     ) -> None:
@@ -758,9 +730,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
 
-            attribute_value = self.unpack_monitoring_point(
-                self.tile_health_structure, dictionary_path
+            attribute_value = reduce(
+                getitem, dictionary_path, self.tile_health_structure
             )
+
             if attribute_value is not None:
                 try:
                     if attribute_name in self._attribute_state:

@@ -8,13 +8,12 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import copy
 import ipaddress
 import json
 import logging
 import threading
 import time
-from typing import Any, Callable, Final, NoReturn, Optional, cast
+from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
 import tango
@@ -172,7 +171,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
         self._nof_blocks: int = 0
-        self._firmware_list: Optional[list[dict[str, Any]]] = None
+        self._firmware_list: List[dict[str, Any]] = []
         self._station_id = station_id
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
@@ -1298,7 +1297,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def firmware_available(
         self: TileComponentManager,
-    ) -> Optional[list[dict[str, Any]]]:
+    ) -> List[dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 
@@ -1308,7 +1307,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self._firmware_list = self.tile.get_firmware_list()
+                    self._firmware_list = list(self.tile.get_firmware_list())
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -1316,7 +1315,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-        return copy.deepcopy(self._firmware_list)
+        return self._firmware_list
 
     @property
     def register_list(self: TileComponentManager) -> list[str]:
@@ -2722,7 +2721,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: cached value for the channeliser truncation
         """
-        return copy.deepcopy(self._channeliser_truncation)
+        return list(self._channeliser_truncation)
 
     @channeliser_truncation.setter
     def channeliser_truncation(
@@ -2770,7 +2769,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
                         self._update_attribute_callback(
-                            channeliser_rounding=copy.deepcopy(trunc)
+                            channeliser_rounding=list(trunc)
                         )
                     # pylint: disable=broad-except
                     except Exception as e:

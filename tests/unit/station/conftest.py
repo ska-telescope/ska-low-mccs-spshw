@@ -115,6 +115,12 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
             }
         ),
     )
+    builder.add_result_command(
+        "Stop", result_code=ResultCode.QUEUED, status="Task queued"
+    )
+    builder.add_result_command(
+        "Start", result_code=ResultCode.QUEUED, status="Task queued"
+    )
     return builder()
 
 
@@ -229,6 +235,34 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
+
+        @command()
+        def MockSubdeviceHealth(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock a subdevice health change.
+
+            :param argin: A json string with the device trl and new health.
+
+            Make the station device think it has received a health change
+            event from a subdevice.
+            """
+            argin_dict = json.loads(argin)
+            device = argin_dict["device"]
+            health = argin_dict["health"]
+            self._health_rollup.health_changed(source=device, health=health)
+
+        @command()
+        def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
+            """
+            Mock calibration data received.
+
+            Make the station device think it has received calibration data
+            after a send data samples.
+            """
+            self.component_manager._daq_state_changed(
+                "some/daq/fqdn",
+                dataReceivedResult=("correlator", "some/file/location"),
+            )
 
     return PatchedSpsStationDevice
 

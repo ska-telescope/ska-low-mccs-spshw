@@ -262,9 +262,36 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "rfi_count": "rfiCount",
         }
 
-        # NOTE: This has been removed to eliminate SKB-609 segfault.
-        # The root cause is UNKNOWN still.
-        attribute_converters: dict[str, Any] = {}
+        attribute_converters: dict[str, Any] = {
+            "adc_pll_status": _serialise_object,
+            "station_beamformer_error_count": _serialise_object,
+            "crc_error_count": _serialise_object,
+            "bip_error_count": _serialise_object,
+            "decode_error_count": _serialise_object,
+            "linkup_loss_count": _serialise_object,
+            "ddr_reset_counter": _serialise_object,
+            "resync_count": _serialise_object,
+            "lane_error_count": _serialise_object,
+            "clock_managers": _serialise_object,
+            "clocks": _serialise_object,
+            "adc_sysref_counter": _serialise_object,
+            "adc_sysref_timing_requirements": _serialise_object,
+            "coreCommunicationStatus": _serialise_object,
+            "qpll_status": _serialise_object,
+            "f2f_pll_status": _serialise_object,
+            "timing_pll_status": _serialise_object,
+            "voltages": _serialise_object,
+            "temperatures": _serialise_object,
+            "currents": _serialise_object,
+            "timing": _serialise_object,
+            "io": _serialise_object,
+            "dsp": _serialise_object,
+            "data_router_status": _serialise_object,
+            "data_router_discarded_packets": _serialise_object,
+            "station_beamformer_flagged_count": _serialise_object,
+            "adcs": _serialise_object,
+            "beamformerTable": _flatten_list,
+        }
 
         # A dictionary mapping the Tango Attribute name to its AttributeManager.
         self._attribute_state: dict[str, AttributeManager] = {}
@@ -425,6 +452,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._component_state_changed,
             self._update_attribute_callback,
             # self._tile_device_state_callback,
+            event_serialiser=self._event_serialiser,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -472,6 +500,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("StopADCs", self.StopAdcsCommand),
             ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
+            ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
+            ("StopAntennaBuffer", self.StopAntennaBufferCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -479,9 +509,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
+
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
+            ("ReadAntennaBuffer", "read_antenna_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer"),
             ("Configure", "configure"),
         ]:
             self.register_command_object(
@@ -495,6 +528,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     logger=self.logger,
                 ),
             )
+
         self.register_command_object(
             "StartAcquisition",
             MccsTile.StartAcquisitionCommand(
@@ -604,19 +638,25 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     def _update_attribute_callback(
         self: MccsTile,
+        mark_invalid: bool = False,
         **state_change: Any,
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value
-                self._health_model.update_state(tile_health_structure=attribute_value)
-                self.update_tile_health_attributes()
+                self.tile_health_structure = attribute_value if not mark_invalid else {}
+                self._health_model.update_state(
+                    tile_health_structure=self.tile_health_structure
+                )
+                self.update_tile_health_attributes(mark_invalid=mark_invalid)
             elif attribute_name == "global_status_alarms":
-                self.unpack_alarms(attribute_value)
+                self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
                 try:
                     tango_name = self.attr_map[attribute_name]
-                    self._attribute_state[tango_name].update(attribute_value)
+                    if mark_invalid:
+                        self._attribute_state[tango_name].mark_stale()
+                    else:
+                        self._attribute_state[tango_name].update(attribute_value)
 
                 except KeyError as e:
                     self.logger.error(f"Key Error {repr(e)}")
@@ -653,20 +693,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     def unpack_alarms(
         self: MccsTile,
         alarms: dict[str, int],
+        mark_invalid: bool = False,
     ) -> None:
         """
         Unpack a dictionary of alarms.
 
         :param alarms: The alarms we want to unpack.
+        :param mark_invalid: mark attribute as invalid.
         """
-        for (
-            alarm_name,
-            alarm_path,
-        ) in self.__alarm_attribute_map.items():
-            alarm_value: int | None = alarms.get(alarm_path)
-            if alarm_value is None:
-                continue
-            self._attribute_state[alarm_name].update(alarm_value)
+        if mark_invalid or alarms is None:
+            for alarm_name, _ in self.__alarm_attribute_map.items():
+                self._attribute_state[alarm_name].mark_stale()
+        else:
+            for alarm_name, alarm_path in self.__alarm_attribute_map.items():
+                alarm_value = alarms.get(alarm_path)
+                self._attribute_state[alarm_name].update(alarm_value)
 
     def unpack_monitoring_point(
         self: MccsTile,
@@ -766,7 +807,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         try:
             attr = self._multi_attr.get_attr_by_name(attr_name)
-            attr_value = self._attribute_state[attr_name].read()[0]
+            attr_value = self._attribute_state[attr_name].read()
             if attr.is_max_alarm():
                 self.logger.warning(
                     f"Attribute {attr_name} changed to {attr_value}, "
@@ -848,7 +889,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the pll status of all ADCs
         """
-        return json.dumps(self._attribute_state["adc_pll_status"].read()[0])
+        return self._attribute_state["adc_pll_status"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -867,7 +908,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the status of the tile beamformer.
         """
-        return self._attribute_state["tile_beamformer_status"].read()[0]
+        return self._attribute_state["tile_beamformer_status"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -885,7 +926,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the status of the station beamformer.
         """
-        return self._attribute_state["station_beamformer_status"].read()[0]
+        return self._attribute_state["station_beamformer_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -903,9 +944,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the station beamformer error count per FPGA.
         """
-        return json.dumps(
-            self._attribute_state["station_beamformer_error_count"].read()[0]
-        )
+        return self._attribute_state["station_beamformer_error_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -928,9 +967,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the station beamformer error count per FPGA.
         """
-        return json.dumps(
-            self._attribute_state["station_beamformer_flagged_count"].read()[0]
-        )
+        return self._attribute_state["station_beamformer_flagged_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -948,7 +985,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the crc error count per FPGA.
         """
-        return json.dumps(self._attribute_state["crc_error_count"].read()[0])
+        return self._attribute_state["crc_error_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -967,7 +1004,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the bip error count per FPGA.
         """
-        return json.dumps(self._attribute_state["bip_error_count"].read()[0])
+        return self._attribute_state["bip_error_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -988,7 +1025,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the decode error count per FPGA.
         """
-        return json.dumps(self._attribute_state["decode_error_count"].read()[0])
+        return self._attribute_state["decode_error_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -1006,7 +1043,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the linkup loss count per FPGA.
         """
-        return json.dumps(self._attribute_state["linkup_loss_count"].read()[0])
+        return self._attribute_state["linkup_loss_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -1024,7 +1061,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the linkup loss count per FPGA.
         """
-        return json.dumps(self._attribute_state["data_router_status"].read()[0])
+        return self._attribute_state["data_router_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1042,9 +1079,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the linkup loss count per FPGA.
         """
-        return json.dumps(
-            self._attribute_state["data_router_discarded_packets"].read()[0]
-        )
+        return self._attribute_state["data_router_discarded_packets"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1062,7 +1097,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the arp status.
         """
-        return self._attribute_state["arp"].read()[0]
+        return self._attribute_state["arp"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1080,7 +1115,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the UDP status.
         """
-        return self._attribute_state["udp_status"].read()[0]
+        return self._attribute_state["udp_status"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1098,7 +1133,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the ddr initialisation status.
         """
-        return self._attribute_state["ddr_initialisation"].read()[0]
+        return self._attribute_state["ddr_initialisation"].read()
 
     @attribute(
         dtype="DevString",
@@ -1116,7 +1151,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the ddr reset count per FPGA.
         """
-        return json.dumps(self._attribute_state["ddr_reset_counter"].read()[0])
+        return self._attribute_state["ddr_reset_counter"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1134,7 +1169,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the f2f interface soft error count.
         """
-        return self._attribute_state["f2f_soft_errors"].read()[0]
+        return self._attribute_state["f2f_soft_errors"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1154,7 +1189,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the f2f interface hard error count.
         """
-        return self._attribute_state["f2f_hard_errors"].read()[0]
+        return self._attribute_state["f2f_hard_errors"].read()
 
     @attribute(
         dtype="DevString",
@@ -1172,7 +1207,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the resync count per FPGA.
         """
-        return json.dumps(self._attribute_state["resync_count"].read()[0])
+        return self._attribute_state["resync_count"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1190,7 +1225,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the lane status.
         """
-        return self._attribute_state["lane_status"].read()[0]
+        return self._attribute_state["lane_status"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1208,7 +1243,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the link status.
         """
-        return self._attribute_state["link_status"].read()[0]
+        return self._attribute_state["link_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1233,7 +1268,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the error count per lane, per core, per FPGA.
         """
-        return json.dumps(self._attribute_state["lane_error_count"].read()[0])
+        return self._attribute_state["lane_error_count"].read()
 
     @attribute(
         dtype="DevString",
@@ -1254,7 +1289,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the PLL lock status and lock loss counter for C2C, JESD and DSP.
         """
-        return json.dumps(self._attribute_state["clock_managers"].read()[0])
+        return self._attribute_state["clock_managers"].read()
 
     # @attribute(
     #     dtype="DevString",
@@ -1273,7 +1308,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     #     :return: number of times ddr interface has been read.
     #     """
-    #     return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
+    #     return self._attribute_state["ddr_rd_cnt"].read())
 
     # @attribute(
     #     dtype="DevString",
@@ -1292,7 +1327,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     #     :return: number of times ddr interface has been written to.
     #     """
-    #     return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
+    #     return self._attribute_state["ddr_wr_cnt"].read())
 
     # @attribute(
     #     dtype="DevString",
@@ -1313,7 +1348,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     #     :return: number of times ddr interface
     #       has responded to a read with valid data.
     #     """
-    #     return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
+    #     return self._attribute_state["ddr_rd_dat_cnt"].read())
 
     @attribute(
         dtype="DevString",
@@ -1332,7 +1367,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the status of clocks for the interfaces of both FPGAs.
         """
-        return json.dumps(self._attribute_state["clocks"].read()[0])
+        return self._attribute_state["clocks"].read()
 
     @attribute(
         dtype="DevString",
@@ -1350,7 +1385,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the sysref_counter of all ADCs
         """
-        return json.dumps(self._attribute_state["adc_sysref_counter"].read()[0])
+        return self._attribute_state["adc_sysref_counter"].read()
 
     @attribute(
         dtype="DevString",
@@ -1368,9 +1403,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the sysref_timing_requirements of all ADCs
         """
-        return json.dumps(
-            self._attribute_state["adc_sysref_timing_requirements"].read()[0]
-        )
+        return self._attribute_state["adc_sysref_timing_requirements"].read()
 
     @attribute(
         dtype="DevString",
@@ -1389,7 +1422,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the QPLL lock status and lock loss counter.
         """
-        return json.dumps(self._attribute_state["qpll_status"].read()[0])
+        return self._attribute_state["qpll_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1408,7 +1441,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the PLL lock status and lock loss counter.
         """
-        return json.dumps(self._attribute_state["f2f_pll_status"].read()[0])
+        return self._attribute_state["f2f_pll_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1428,7 +1461,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the PLL lock status and lock loss counter.
         """
-        return json.dumps(self._attribute_state["timing_pll_status"].read()[0])
+        return self._attribute_state["timing_pll_status"].read()
 
     @attribute(
         dtype="DevString",
@@ -1479,7 +1512,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: voltages available
         """
-        return json.dumps(self._attribute_state["voltages"].read()[0])
+        return self._attribute_state["voltages"].read()
 
     @attribute(
         dtype="DevString",
@@ -1491,7 +1524,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: temperatures available
         """
-        return json.dumps(self._attribute_state["temperatures"].read()[0])
+        return self._attribute_state["temperatures"].read()
 
     @attribute(
         dtype="DevString",
@@ -1503,7 +1536,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: currents available
         """
-        return json.dumps(self._attribute_state["currents"].read()[0])
+        return self._attribute_state["currents"].read()
 
     @attribute(
         dtype="DevString",
@@ -1515,7 +1548,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: timing signals status
         """
-        return json.dumps(self._attribute_state["timing"].read()[0])
+        return self._attribute_state["timing"].read()
 
     @attribute(
         dtype="DevString",
@@ -1527,7 +1560,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: I/O interfaces status
         """
-        return json.dumps(self._attribute_state["io"].read()[0])
+        return self._attribute_state["io"].read()
 
     @attribute(
         dtype="DevString",
@@ -1539,7 +1572,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the tile beamformer and station beamformer status
         """
-        return json.dumps(self._attribute_state["dsp"].read()[0])
+        return self._attribute_state["dsp"].read()
 
     @attribute(
         dtype="DevString",
@@ -1551,7 +1584,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the ADC status
         """
-        return json.dumps(self._attribute_state["adcs"].read()[0])
+        return self._attribute_state["adcs"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1570,7 +1603,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: The alarm state for I2C.
         """
-        return self._attribute_state["I2C_access_alm"].read()[0]
+        return self._attribute_state["I2C_access_alm"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1589,7 +1622,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: The alarm state for temperature.
         """
-        return self._attribute_state["temperature_alm"].read()[0]
+        return self._attribute_state["temperature_alm"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1608,7 +1641,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: The alarm state for voltage.
         """
-        return self._attribute_state["voltage_alm"].read()[0]
+        return self._attribute_state["voltage_alm"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1627,7 +1660,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: The alarm state for SEMwd.
         """
-        return self._attribute_state["SEM_wd"].read()[0]
+        return self._attribute_state["SEM_wd"].read()
 
     @attribute(
         dtype="DevShort",
@@ -1646,7 +1679,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: The alarm state for MCUwd.
         """
-        return self._attribute_state["MCU_wd"].read()[0]
+        return self._attribute_state["MCU_wd"].read()
 
     @attribute(
         dtype="DevString",
@@ -1748,7 +1781,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the logical tile id
         """
-        return self._attribute_state["logicalTileId"].read()[0]
+        return self._attribute_state["logicalTileId"].read()
 
     @logicalTileId.write  # type: ignore[no-redef]
     def logicalTileId(self: MccsTile, value: int) -> None:
@@ -1768,7 +1801,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: a string describing the programming state of the tile
         """
-        return self._attribute_state["tileProgrammingState"].read()[0]
+        return self._attribute_state["tileProgrammingState"].read()
 
     @attribute(dtype="DevLong")
     def stationId(self: MccsTile) -> int:
@@ -1777,7 +1810,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the id of the station to which this tile is assigned
         """
-        station = self._attribute_state["stationId"].read()[0]
+        station = self._attribute_state["stationId"].read()
         message = f"stationId: read value = {station}"
         self.logger.info(message)
         return station
@@ -1855,7 +1888,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Internal supply of the TPM
         """
-        return self._attribute_state["voltageMon"].read()[0]
+        return self._attribute_state["voltageMon"].read()
 
     @attribute(dtype="DevBoolean")
     def isProgrammed(self: MccsTile) -> bool:
@@ -1900,7 +1933,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 1
         """
-        return self._attribute_state["fpga1Temperature"].read()[0]
+        return self._attribute_state["fpga1Temperature"].read()
 
     @attribute(
         dtype="DevDouble",
@@ -1918,7 +1951,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the temperature of FPGA 2
         """
-        return self._attribute_state["fpga2Temperature"].read()[0]
+        return self._attribute_state["fpga2Temperature"].read()
 
     @attribute(dtype=("DevLong",), max_dim_x=2)
     def fpgasUnixTime(self: MccsTile) -> list[int]:
@@ -2005,7 +2038,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: RMP power of ADC signals
         """
-        return self._attribute_state["adcPower"].read()[0]
+        return self._attribute_state["adcPower"].read()
 
     @attribute(dtype="DevLong")
     def currentTileBeamformerFrame(self: MccsTile) -> int:
@@ -2023,7 +2056,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.logger.warning(
                 f"{repr(e)}, " "Reading cached value for currentTileBeamformerFrame"
             )
-        return self._attribute_state["currentTileBeamformerFrame"].read()[0]
+        return self._attribute_state["currentTileBeamformerFrame"].read()
 
     @attribute(dtype="DevString")
     def coreCommunicationStatus(self: MccsTile) -> str | None:
@@ -2041,7 +2074,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :return: dictionary containing if the CPLD and FPGAs are
             connectable or None if not yet polled.
         """
-        return json.dumps(self._attribute_state["coreCommunicationStatus"].read()[0])
+        return self._attribute_state["coreCommunicationStatus"].read()
 
     @attribute(dtype="DevLong")
     def currentFrame(self: MccsTile) -> int:
@@ -2080,7 +2113,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: phase terminal count
         """
-        return self._attribute_state["phaseTerminalCount"].read()[0]
+        return self._attribute_state["phaseTerminalCount"].read()
 
     @phaseTerminalCount.write  # type: ignore[no-redef]
     def phaseTerminalCount(self: MccsTile, value: int) -> None:
@@ -2098,10 +2131,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Return the PPS delay in 1.25ns units.
         """
-        if self._attribute_state["ppsDelay"].read()[0] is None:
+        if self._attribute_state["ppsDelay"].read() is None:
             power = self.component_manager.pps_delay
             self._attribute_state["ppsDelay"].update(power, post=False)
-        return self._attribute_state["ppsDelay"].read()[0]
+        return self._attribute_state["ppsDelay"].read()
 
     @attribute(dtype="DevLong")
     def ppsDrift(self: MccsTile) -> int:
@@ -2119,7 +2152,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Return the PPS delay in 1.25ns units.
         """
-        return self._attribute_state["ppsDelayCorrection"].read()[0]
+        return self._attribute_state["ppsDelayCorrection"].read()
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
     def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
@@ -2222,7 +2255,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: PLL lock state
         """
-        return self._attribute_state["pllLocked"].read()[0]
+        return self._attribute_state["pllLocked"].read()
 
     @attribute(
         dtype=("DevLong",),
@@ -2238,10 +2271,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :returns: list of 512 values, one per channel.
         """
-        if self._attribute_state["channeliserRounding"].read()[0] is None:
+        if self._attribute_state["channeliserRounding"].read() is None:
             rounding = self.component_manager.channeliser_truncation
             self._attribute_state["channeliserRounding"].update(rounding, post=False)
-        return self._attribute_state["channeliserRounding"].read()[0]
+        return self._attribute_state["channeliserRounding"].read()
 
     @channeliserRounding.write  # type: ignore[no-redef]
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
@@ -2267,7 +2300,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self._attribute_state["staticTimeDelays"].read()[0]
+        return self._attribute_state["staticTimeDelays"].read()
 
     @staticTimeDelays.write  # type: ignore[no-redef]
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
@@ -2294,7 +2327,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: CSP formatter rounding for each logical channel.
         """
-        return self._attribute_state["cspRounding"].read()[0]
+        return self._attribute_state["cspRounding"].read()
 
     @cspRounding.write  # type: ignore[no-redef]
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
@@ -2334,7 +2367,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: Array of one value per antenna/polarization (32 per tile)
         """
-        return self._attribute_state["preaduLevels"].read()[0]
+        return self._attribute_state["preaduLevels"].read()
 
     @preaduLevels.write  # type: ignore[no-redef]
     def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
@@ -2363,10 +2396,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: list of up to 7*48 values
         """
-        table = self._attribute_state["beamformerTable"].read()[0]
-        if not table:
-            return None
-        return list(itertools.chain.from_iterable(table))
+        return self._attribute_state["beamformerTable"].read()
 
     @attribute(
         dtype="DevString",
@@ -2611,7 +2641,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :returns: the RFI count per antenna/pol.
         """
-        return self._attribute_state["rfiCount"].read()[0]
+        return self._attribute_state["rfiCount"].read()
 
     @attribute(
         dtype="DevDouble",
@@ -2636,7 +2666,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the board temperature
         """
-        return self._attribute_state["boardTemperature"].read()[0]
+        return self._attribute_state["boardTemperature"].read()
 
     # # --------
     # # Commands
@@ -5628,6 +5658,166 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("SetFirmwareTemperatureThresholds")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    # -------------
+    # AntennaBuffer
+    # -------------
+
+    class SetUpAntennaBufferCommand(FastCommand):
+        """Class for handling the SetUpAntennaBuffer(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetUpAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new SetUpAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "SetUpAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "SetUpAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetUpAntennaBufferCommand,
+            *args: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetUpAntennaBuffer` command.
+
+            :param args: a string containing a json serialised dictionary
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            decoded_dict = json.loads(args[0])
+            mode = decoded_dict.get("mode", "SDN")
+            ddr_start_byte_address = decoded_dict.get(
+                "DDR_start_address", 512 * 1024**2
+            )
+            max_ddr_byte_size = decoded_dict.get("max_DDR_byte_size", None)
+
+            if self._component_manager.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            ):
+                result = self._component_manager.tile._antenna_buffer_tile_attribute
+                return (ResultCode.OK, str(result))
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetUpAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """Set up the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+                (Science Data Network) and 'NSDN' (Non-Science Data Network)
+            * ddr_start_byte_address: first address in the DDR for antenna buffer
+                data to be written in (in bytes).
+            * max_ddr_byte_size: last address for writing antenna buffer data
+                (in bytes). If 'None' is chosen, the method will assume the last
+                address to be the final address of the DDR chip
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("SetUpAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Start recording to the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+                One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+            * start_time: the first time stamp that will be written into the DDR.
+                When set to -1, the buffer will begin writing as soon as possible.
+            * timestamp_capture_duration: the capture duration in timestamps.
+                Timestamps are in units of 256 ADC samples (256*1.08us).
+            * continuous_mode: "True" for continous capture. If enabled, time capture
+                durations is ignored
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        """
+        handler = self.get_command_object("StartAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray")
+    def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Read the data from the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("ReadAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class StopAntennaBufferCommand(FastCommand):
+        """Class for handling the StopAntennaBuffer command."""
+
+        def __init__(
+            self: MccsTile.StopAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new StopAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "StopAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.StopAntennaBufferCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopAntennaBuffer` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            if self._component_manager.stop_antenna_buffer():
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def StopAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Stop writting to the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("StopAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    # ---------------
+    # On/Off commands
+    # ---------------
 
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
         dtype_out="DevVarLongStringArray"

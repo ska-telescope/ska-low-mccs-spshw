@@ -17,7 +17,7 @@ import pytest
 import tango
 from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
-from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock import MockCallable, MockCallableGroup
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
@@ -31,6 +31,27 @@ from tests.harness import (
     SpsTangoTestHarnessContext,
     get_subrack_name,
 )
+
+
+@pytest.fixture(name="tile_state_map")
+def tile_state_map() -> dict[tuple[PowerState, bool], tango.DevState]:
+    """
+    Return a map to expected state.
+
+    :returns: a dictionary containing a tuple with first entry being
+        Tpm Power as reported by the subrack, the second entry being
+        whether the TPM is connectable as the key. The result is the
+        expected state of the device.
+    """
+    # (subrack_says_tpm_power, is_tpm_reachable) -> resulting DevState
+    return {
+        (PowerState.UNKNOWN, False): tango.DevState.UNKNOWN,
+        (PowerState.OFF, False): tango.DevState.OFF,
+        (PowerState.ON, False): tango.DevState.ON,
+        (PowerState.UNKNOWN, True): tango.DevState.FAULT,
+        (PowerState.OFF, True): tango.DevState.FAULT,
+        (PowerState.ON, True): tango.DevState.ON,
+    }
 
 
 @pytest.fixture(name="mock_factory")
@@ -383,6 +404,18 @@ def patched_tile_device_class_fixture(
             )
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
+            )
+            wrapped_set_up_antenna_buffer = MockCallable(
+                wraps=tile_component_manager.set_up_antenna_buffer
+            )
+            tile_component_manager.set_up_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_set_up_antenna_buffer
+            )
+            wrapped_start_antenna_buffer = MockCallable(
+                wraps=tile_component_manager._start_antenna_buffer
+            )
+            tile_component_manager._start_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_start_antenna_buffer
             )
             return tile_component_manager
 

@@ -124,15 +124,13 @@ class TestAttributeManager:
         post_change_event_callback.assert_not_called()
         test_dictionary = {"foo": 1, "bar": 2}
         attribute_manager_with_converter.update(test_dictionary)
-        try:
-            post_change_event_callback.assert_called_once_with(
-                json.dumps(test_dictionary), ANY, tango.AttrQuality.ATTR_VALID
-            )
-            post_change_event_callback.reset_mock()
-            attribute_manager_with_converter.update(test_dictionary)
-            post_change_event_callback.assert_not_called()
-        except AssertionError:
-            pytest.xfail("SKB-609: removed this functionality. Issue still UNKNOWN")
+
+        post_change_event_callback.assert_called_once_with(
+            json.dumps(test_dictionary), ANY, tango.AttrQuality.ATTR_VALID
+        )
+        post_change_event_callback.reset_mock()
+        attribute_manager_with_converter.update(test_dictionary)
+        post_change_event_callback.assert_not_called()
 
 
 class TestBoolAttributeManager:

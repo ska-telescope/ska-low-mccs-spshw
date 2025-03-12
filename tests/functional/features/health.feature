@@ -40,6 +40,21 @@ Feature: Test health
         And the Station reports that its HealthState is FAILED
         And the Subracks reports that its HealthState is FAILED
 
+    Scenario: Health changes when healthThresholds changes
+        Given the Station is online
+        And the Station has been commanded to turn On
+        And the Station reports that its state is ON
+        And the Tiles reports that its state is ON
+        And the Subracks reports that its HealthState is OK
+        And the Tiles reports that its HealthState is OK
+        And the Station reports that its HealthState is OK
+        And the Subracks board temperature thresholds are adjusted
+        And the Tiles reports that its HealthState is OK
+        And the Station reports that its HealthState is FAILED
+        And the Subracks reports that its HealthState is FAILED
+        When the Station healthThresholds are adjusted
+        Then the Station reports that its HealthState is OK
+
     # This isn't really a health scenario but the code exists for these steps already.
     # TODO: Refactor out generic test steps.
     Scenario: Test Standby to On

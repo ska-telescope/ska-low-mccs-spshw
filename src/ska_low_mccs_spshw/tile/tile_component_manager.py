@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import copy
 import ipaddress
+import json
 import logging
 import threading
 import time
@@ -1600,9 +1601,198 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
+    # ----------------------------
+    # AntennaBuffer
+    # ----------------------------
+
+    @check_communicating
+    def set_up_antenna_buffer(
+        self: TileComponentManager,
+        mode: str,
+        ddr_start_byte_address: int,
+        max_ddr_byte_size: Optional[int],
+    ) -> bool:
+        """Set up the antenna buffer.
+
+        :param mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
+
+        :return: True if set up ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            )
+        except RuntimeError as err:
+            self.logger.error(f"Failed to set up antenna buffer: {err}")
+            return False
+        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete", False)
+
+    @abort_task_on_exception
+    @check_communicating
+    def start_antenna_buffer(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str] | None:
+        """Submit the start antenna buffer method.
+
+        This method returns immediately after it submitted
+        `self._start_antenna_buffer` for execution.
+
+        :param argin: can either be the design name returned from
+            GetFirmwareAvailable command, or a path to a
+            file
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
+        kwargs = json.loads(argin)
+        request = TileLRCRequest(
+            name="start_antenna_buffer",
+            command_object=self._start_antenna_buffer,
+            task_callback=task_callback,
+            **kwargs,
+        )
+        self._request_provider.desire_start_antenna_buffer(request)
+        return TaskStatus.QUEUED, "Task staged"
+
+    @check_communicating
+    def _start_antenna_buffer(
+        self: TileComponentManager,
+        antennas: list,
+        start_time: int,
+        timestamp_capture_duration: int,
+        continuous_mode: bool,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """Start recording to the antenna buffer.
+
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+            Timestamps are in units of 256 ADC samples (256*1.08us).
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        success = True
+        try:
+            ddr_write_size = self.tile.start_antenna_buffer(
+                antennas, start_time, timestamp_capture_duration, continuous_mode
+            )
+        except RuntimeError as err:
+            self.logger.error(f"Failed to start antenna buffer: {err}")
+            success = False
+
+        self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
+        success = self.tile._antenna_buffer_tile_attribute.get(
+            "data_capture_initiated", False
+        )
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Start acquisition has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                )
+            return
+
+    def read_antenna_buffer(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str] | None:
+        """Read from the antenna buffer.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
+        request = TileLRCRequest(
+            name="read_antenna_buffer",
+            command_object=self._read_antenna_buffer,
+            task_callback=task_callback,
+        )
+        self._request_provider.desire_read_antenna_buffer(request)
+        return TaskStatus.QUEUED, "Task staged"
+
+    @check_communicating
+    def _read_antenna_buffer(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """Read from the antenna buffer.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        success = True
+        try:
+            self.tile.read_antenna_buffer()
+        except RuntimeError as err:
+            self.logger.error(f"Failed to read antenna buffer: {err}")
+            success = False
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Read antenna buffer has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Read antenna buffer task failed"
+                )
+            return
+
+    @check_communicating
+    def stop_antenna_buffer(self: TileComponentManager) -> bool:
+        """Stop writing to the antenna buffer.
+
+        :return: True if stop ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.stop_antenna_buffer()
+        except RuntimeError as err:
+            self.logger.error(f"Failed to stop antenna buffer: {err}")
+            return False
+        return True
+
     # -----------------------------
     # FastCommands
     # ----------------------------
+
     @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
         """Check we can connect to the TPM."""

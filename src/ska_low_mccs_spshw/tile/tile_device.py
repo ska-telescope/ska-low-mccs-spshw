@@ -500,6 +500,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("StopADCs", self.StopAdcsCommand),
             ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
             ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
+            ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
+            ("StopAntennaBuffer", self.StopAntennaBufferCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -507,9 +509,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
+
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
+            ("ReadAntennaBuffer", "read_antenna_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer"),
             ("Configure", "configure"),
         ]:
             self.register_command_object(
@@ -523,6 +528,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     logger=self.logger,
                 ),
             )
+
         self.register_command_object(
             "StartAcquisition",
             MccsTile.StartAcquisitionCommand(
@@ -5652,6 +5658,166 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("SetFirmwareTemperatureThresholds")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    # -------------
+    # AntennaBuffer
+    # -------------
+
+    class SetUpAntennaBufferCommand(FastCommand):
+        """Class for handling the SetUpAntennaBuffer(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetUpAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new SetUpAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "SetUpAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "SetUpAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetUpAntennaBufferCommand,
+            *args: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetUpAntennaBuffer` command.
+
+            :param args: a string containing a json serialised dictionary
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            decoded_dict = json.loads(args[0])
+            mode = decoded_dict.get("mode", "SDN")
+            ddr_start_byte_address = decoded_dict.get(
+                "DDR_start_address", 512 * 1024**2
+            )
+            max_ddr_byte_size = decoded_dict.get("max_DDR_byte_size", None)
+
+            if self._component_manager.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            ):
+                result = self._component_manager.tile._antenna_buffer_tile_attribute
+                return (ResultCode.OK, str(result))
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetUpAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """Set up the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+                (Science Data Network) and 'NSDN' (Non-Science Data Network)
+            * ddr_start_byte_address: first address in the DDR for antenna buffer
+                data to be written in (in bytes).
+            * max_ddr_byte_size: last address for writing antenna buffer data
+                (in bytes). If 'None' is chosen, the method will assume the last
+                address to be the final address of the DDR chip
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("SetUpAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Start recording to the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+                One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+            * start_time: the first time stamp that will be written into the DDR.
+                When set to -1, the buffer will begin writing as soon as possible.
+            * timestamp_capture_duration: the capture duration in timestamps.
+                Timestamps are in units of 256 ADC samples (256*1.08us).
+            * continuous_mode: "True" for continous capture. If enabled, time capture
+                durations is ignored
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        """
+        handler = self.get_command_object("StartAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray")
+    def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Read the data from the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("ReadAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class StopAntennaBufferCommand(FastCommand):
+        """Class for handling the StopAntennaBuffer command."""
+
+        def __init__(
+            self: MccsTile.StopAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new StopAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "StopAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.StopAntennaBufferCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopAntennaBuffer` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            if self._component_manager.stop_antenna_buffer():
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def StopAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Stop writting to the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("StopAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    # ---------------
+    # On/Off commands
+    # ---------------
 
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
         dtype_out="DevVarLongStringArray"

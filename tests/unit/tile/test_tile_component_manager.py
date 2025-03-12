@@ -567,6 +567,26 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         return tile_component_manager
 
+    @pytest.fixture()
+    def antenna_values(
+        self: TestStaticSimulator,
+    ) -> dict:
+        """Return a set of values for starting the antenna buffer.
+
+        :returns: dict
+        """
+        # use non default values to check for errors in value propagation
+        antenna_values = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": 1,
+            "continuous_mode": True,
+        }
+        return antenna_values
+
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
         (
@@ -2877,6 +2897,245 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.stop_data_transmission()
 
         assert tile_component_manager.pending_data_requests is False
+
+    def test_set_up_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for setting up the antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+
+        # Confrim that the values have updated correctly
+        for key in ["mode", "DDR_start_address", "max_DDR_byte_size"]:
+            assert antenna_values[key] == buffer[key]
+        assert buffer["set_up_complete"] is True
+
+    def test_fail_setup_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test setup when antenna buffer is not implemented.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_simulator._antenna_buffer_implemented = False
+        with pytest.raises(
+            LibraryError, match="Antenna Buffer not implemented by FPGA firmware"
+        ):
+            tile_component_manager.set_up_antenna_buffer(
+                antenna_values["mode"],
+                antenna_values["DDR_start_address"],
+                antenna_values["max_DDR_byte_size"],
+            )
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is False
+
+    def test_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for starting antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        for key, item in antenna_values.items():
+            assert item == buffer[key]
+        assert buffer["set_up_complete"] is True
+        assert buffer["data_capture_initiated"] is True
+
+    def test_fail_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test start antenna buffer with incorrect setup/values.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Start without a setup
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please set up the "
+            + "antenna buffer before writing",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                antenna_values["antennas"],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is True
+
+        # No antennas specified
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Antennas list is empty "
+            + "please give at lease one antenna ID",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                [],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        # Invalid antennas specified
+        invalid_input = [-1, 16]
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: out of range antenna IDs "
+            + "present \\[-1, 16\\]. Please give an antenna ID from 0 to 15",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                invalid_input,
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        assert buffer["data_capture_initiated"] is False
+
+    def test_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for reading antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+
+        tile_component_manager._read_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is True
+        assert buffer["stop_antenna_buffer"] is True
+
+    def test_fail_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test read antenna buffer without prior setup.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Fail when antenna buffer is not set up
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please set up the antenna buffer before"
+            + " reading",
+        ):
+            tile_component_manager._read_antenna_buffer()
+
+        # Fail when buffer is set up nothing was captured
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please capture antenna buffer data before"
+            + " reading",
+        ):
+            tile_component_manager._read_antenna_buffer()
+
+    def test_stop_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for stoping antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+        tile_component_manager.stop_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["stop_antenna_buffer"] is True
 
 
 class TestDynamicSimulator:

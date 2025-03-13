@@ -98,6 +98,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tpm_cpld_port: int,
         tpm_version: str,
         preadu_levels: list[float] | None,
+        static_time_delays: list[float],
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
@@ -133,6 +134,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param preadu_levels: preADU gain attenuation settings to apply for this TPM.
+        :param static_time_delays: Delays in nanoseconds to account
+            for static delay missmatches.
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
@@ -188,6 +191,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             tpm_version = ""
         self._tpm_version = tpm_version
         self._preadu_levels = preadu_levels
+        self._static_time_delays: list[float] = static_time_delays
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
@@ -979,6 +983,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 f"* pps correction of {pps_delay_correction} \n"
                 f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
                 f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
+                f"* staticTimeDelays of {self._static_time_delays} \n"
+                f"* PreAduLevels of {self._preadu_levels} \n"
             )
             self.tile.initialise(
                 tile_id=self._tile_id,
@@ -986,6 +992,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 active_40g_ports_setting="port1-only",
                 src_ip_fpga1=self.src_ip_40g_fpga1,
                 src_ip_fpga2=self.src_ip_40g_fpga2,
+                time_delays=self._static_time_delays,
             )
 
             self.tile.set_station_id(0, 0)

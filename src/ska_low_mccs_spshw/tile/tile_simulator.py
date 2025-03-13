@@ -1136,7 +1136,7 @@ class TileSimulator:
         enable_test: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
-        time_delays: int = 0,
+        time_delays: float | int | list = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
         qsfp_detection: str = "auto",
@@ -1202,6 +1202,7 @@ class TileSimulator:
             return
         self.logger.info(f"delay correction set to {pps_delay}")
         self.pps_correction = pps_delay
+        self.set_time_delays(time_delays)
         self._is_first = is_first_tile
         self._is_last = is_last_tile
         self._tile_id = tile_id
@@ -1862,7 +1863,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_time_delays(self: TileSimulator, delays: list[float]) -> bool:
+    def set_time_delays(self: TileSimulator, delays: int | float | list[float]) -> bool:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -1871,6 +1872,9 @@ class TileSimulator:
 
         :returns: True if command executed to completion.
         """
+        if isinstance(delays, int | float):
+            # simply convert to list
+            delays = [delays] * 32
         if len(delays) != 32:
             self.logger.error(
                 "Invalid delays specfied (must be a " "list of numbers of length 32)"

@@ -8,7 +8,6 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
 
-import copy
 import functools
 import importlib  # allow forward references in type hints
 import itertools
@@ -17,8 +16,9 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
-from functools import wraps
+from functools import reduce, wraps
 from ipaddress import IPv4Address
+from operator import getitem
 from typing import Any, Callable, Final, NoReturn
 
 import numpy as np
@@ -643,7 +643,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value if not mark_invalid else {}
+                self.tile_health_structure = dict(
+                    attribute_value if not mark_invalid else {}
+                )
                 self._health_model.update_state(
                     tile_health_structure=self.tile_health_structure
                 )
@@ -709,42 +711,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 alarm_value = alarms.get(alarm_path)
                 self._attribute_state[alarm_name].update(alarm_value)
 
-    def unpack_monitoring_point(
-        self: MccsTile,
-        health_structure: dict[str, Any],
-        dictionary_path: list[str],
-    ) -> Any:
-        """
-        Unpack the monitoring point value from dictionary.
-
-        :param health_structure: A nested health_structure dictionary
-        :param dictionary_path: A list of strings used to traverse the dictionary.
-
-        :example:
-
-        >> tile_health = {'timing': { 'pps': {'status': False}}}
-        >> pps=['timing', 'pps', 'status']
-        >> value = unpack_monitoring_point(tile_health, pps)
-        >> print(value) ->  False
-
-        :return: the monitoring point value or None.
-        """
-        structure = copy.deepcopy(health_structure)
-        idx_list = copy.deepcopy(dictionary_path)
-        for key in idx_list:
-            try:
-                if len(idx_list) == 1:
-                    return structure[key]
-                idx_list.pop(0)
-                return self.unpack_monitoring_point(structure[key], idx_list)
-
-            except KeyError as e:
-                self.logger.error(
-                    f"Key error raise when locating tango_attribute value : {e}"
-                )
-                break
-        return None
-
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
     ) -> None:
@@ -758,30 +724,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
             if mark_invalid:
-                try:
+                if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
-                except KeyError:
+                else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
-            attribute_value = self.unpack_monitoring_point(
-                copy.deepcopy(self.tile_health_structure),
-                dictionary_path,
+
+            attribute_value = reduce(
+                getitem, dictionary_path, self.tile_health_structure
             )
-            if attribute_value is None:
-                continue
-            try:
-                self._attribute_state[attribute_name].update(attribute_value)
-            except KeyError:
-                self.logger.warning(f"Attribute {attribute_name} not found.")
-                continue
-            except Exception as e:  # pylint: disable=broad-except
-                # Note: attribute converters were removed in
-                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
-                # These converters added in skb-520 can be implemented
-                # now that skb-609 is fixed.
-                self.logger.error(
-                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
-                )
+
+            if attribute_value is not None:
+                try:
+                    if attribute_name in self._attribute_state:
+                        self._attribute_state[attribute_name].update(attribute_value)
+                    else:
+                        self.logger.warning(f"Attribute {attribute_name} not found.")
+                except Exception as e:  # pylint: disable=broad-except
+                    # Note: attribute converters were removed in
+                    # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                    # These converters added in skb-520 can be implemented
+                    # now that skb-609 is fixed.
+                    self.logger.error(
+                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """

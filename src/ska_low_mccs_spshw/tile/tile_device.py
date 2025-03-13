@@ -135,6 +135,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+    StaticTimeDelays = device_property(
+        dtype=(float,),
+        default_value=[0.0] * 32,  # Default no offsets
+        doc="Delays in nanoseconds to account for static delay missmatches.",
+    )
 
     # ---------------
     # Initialisation
@@ -187,6 +192,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
             f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
+            f"\tStaticTimeDelays: {self.StaticTimeDelays}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -446,6 +452,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.TpmCpldPort,
             self.TpmVersion,
             self.PreaduAttenuation,
+            self.StaticTimeDelays,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,

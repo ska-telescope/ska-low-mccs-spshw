@@ -295,6 +295,7 @@ def tile_component_manager_fixture(
         tpm_cpld_port,
         tpm_version,
         [20.0] * 32,
+        [2.0] * 32,
         get_subrack_name(subrack_id),
         subrack_bay,
         unittest.mock.Mock(),

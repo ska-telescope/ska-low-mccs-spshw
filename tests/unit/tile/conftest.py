@@ -208,7 +208,7 @@ def tpm_version_fixture() -> str:
 
 
 PREADU_ATTENUATION: Final = [20.0] * 32
-STATIC_TIME_DELAYS: Final = [2.0] * 32
+STATIC_TIME_DELAYS: Final = [2.5] * 32
 
 
 @pytest.fixture(name="preadu_attenuation")

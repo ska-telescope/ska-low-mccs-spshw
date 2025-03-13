@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-96] Add optional property StaticTimeDelays to MccsTile.
 * [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
 flush out issues with rapid changes of adminmode.
 

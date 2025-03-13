@@ -711,6 +711,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
+
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -725,15 +728,22 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.power_state = PowerState.ON
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
-            # Connect if not already.
             with self._hardware_lock:
-                if not self.is_connected:
+                __is_connected = self.is_connected
+                # Connect if not already.
+                if not __is_connected:
                     try:
                         self.connect()
+                        __is_connected = True
                     except Exception:  # pylint: disable=broad-except
                         pass
 
-            if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+            # Attempt reinitialisation if connected
+            # and not already initialised/ing.
+            if __is_connected and self.tpm_status not in [
+                TpmStatus.INITIALISED,
+                TpmStatus.SYNCHRONISED,
+            ]:
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
@@ -759,9 +769,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         else:
             self._tile_time.set_reference_time(0)
-
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

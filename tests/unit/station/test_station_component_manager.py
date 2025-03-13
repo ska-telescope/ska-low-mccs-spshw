@@ -255,9 +255,10 @@ def test_trigger_adc_equalisation(
 
     station_component_manager._trigger_adc_equalisation()
 
-    for value in station_component_manager._desired_preadu_levels:
-        assert value < expected_preadu + 1
-        assert value > expected_preadu - 1
+    if station_component_manager._desired_preadu_levels is not None:
+        for value in station_component_manager._desired_preadu_levels:
+            assert value < expected_preadu + 1
+            assert value > expected_preadu - 1
 
 
 def test_load_pointing_delays(

@@ -259,9 +259,14 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             Make the station device think it has received calibration data
             after a send data samples.
             """
+            base_dir = "/product/eb-mvp01-20250314-00005/ska-low-mccs/5/correlator_data"
+            file_name = "/correlation_burst_106_20250314_58668_0.hdf5"
             self.component_manager._daq_state_changed(
                 "some/daq/fqdn",
-                dataReceivedResult=("correlator", "some/file/location"),
+                dataReceivedResult=(
+                    "correlator",
+                    json.dumps({"file_name": base_dir + file_name}),
+                ),
             )
 
     return PatchedSpsStationDevice

@@ -496,6 +496,7 @@ class SpsStationComponentManager(
 
         self.acquiring_data_for_calibration = threading.Event()
         self.calibration_data_received_event = threading.Event()
+        self._last_calibration_file_received = ""
 
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
@@ -913,6 +914,9 @@ class SpsStationComponentManager(
                 and self.acquiring_data_for_calibration.is_set()
             ):
                 self.calibration_data_received_event.set()
+                self._last_calibration_file_received = json.loads(
+                    data_received_result[1]
+                )["file_name"]
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
 
@@ -2873,8 +2877,10 @@ class SpsStationComponentManager(
 
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,
-        channel: int,
         task_callback: Optional[Callable] = None,
+        *,
+        first_channel: int,
+        last_channel: int,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -2882,18 +2888,15 @@ class SpsStationComponentManager(
         This method returns immediately after it submitted
         `self._acquire_data_for_calibration` for execution.
 
-        :param channel: channel to calibrate for
+        :param first_channel: first channel to calibrate for
+        :param last_channel: first channel to calibrate for
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
-        if channel < 0 or channel >= TileData.NUM_FREQUENCY_CHANNELS:
-            self.logger.error(f"Invalid channel{channel}")
-            return (TaskStatus.REJECTED, "Invalid channel")
-
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[channel],
+            args=[first_channel, last_channel],
             task_callback=task_callback,
         )
 
@@ -2901,14 +2904,16 @@ class SpsStationComponentManager(
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
-        channel: int,
+        first_channel: int,
+        last_channel: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Acquire data for calibration.
 
-        :param channel: channel to calibrate for
+        :param first_channel: first channel to calibrate for
+        :param last_channel: first channel to calibrate for
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -2983,18 +2988,40 @@ class SpsStationComponentManager(
                 json.dumps(
                     {
                         "data_type": data_send_mode,
-                        "first_channel": channel,
-                        "last_channel": channel,
+                        "first_channel": first_channel,
+                        "last_channel": last_channel,
+                        "n_samples": 1835008,
                     }
                 )
             )
-            self.logger.debug(f"Raw channel spigot sent for {channel=}")
+            self.logger.debug(
+                f"Raw channel spigot sent for {first_channel=}, {last_channel=}"
+            )
             self.logger.debug("Waiting for data to be received...")
-            got_data = self.calibration_data_received_event.wait(10)
+            success = True
+            while True:
+                if _check_aborted():
+                    return
+                if not self.calibration_data_received_event.wait(timeout=10):
+                    self.logger.error("Failed to receive data in 10 seconds.")
+                    success = False
+                    break
+                filename = self._last_calibration_file_received.split(
+                    "correlation_burst_"
+                )[1]
+                channel = int(filename.split("_")[0])
+                if channel == last_channel:
+                    self.logger.info(
+                        f"Got data for {channel}, this is the last channel expected."
+                    )
+                    break
+                self.logger.debug(
+                    f"Got data for {channel}, waiting "
+                    f"for {last_channel}, {last_channel - channel} more."
+                )
+                self.calibration_data_received_event.clear()
             self.logger.info("Stopping all consumers...")
-            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop")
-            if rc != ResultCode.OK:
-                self.logger.warning("Unable to stop daq consumers.")
+            retry_command_on_exception(self._daq_proxy._proxy, "Stop")
             for _ in range(max_tries):
                 daq_status = json.loads(
                     retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
@@ -3007,13 +3034,12 @@ class SpsStationComponentManager(
 
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
             if task_callback:
-                if got_data:
+                if success:
                     task_callback(
                         status=TaskStatus.COMPLETED,
                         result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
                     )
                 else:
-                    self.logger.error("Failed to receive data in 10 seconds.")
                     task_callback(
                         status=TaskStatus.FAILED,
                         result=(
@@ -3077,7 +3103,6 @@ class SpsStationComponentManager(
 
         nof_correlator_samples: int = 1835008
         receiver_frame_size: int = 9000
-        nof_channels: int = 1
 
         max_tries: int = 10
         tick: float = 0.5
@@ -3115,7 +3140,6 @@ class SpsStationComponentManager(
 
         base_config = {
             "nof_tiles": 16,  # always 16 for correlation mode.
-            "nof_channels": nof_channels,
             "directory": "correlator_data",  # Appended to ADR-55 path.
             "nof_correlator_samples": nof_correlator_samples,
             "receiver_frame_size": receiver_frame_size,

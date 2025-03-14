@@ -233,10 +233,24 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["test_name"],
         }
 
+        acquire_correlator_data_schema = {
+            "$schema": "http://json-schema.org/draft-07/schema#",
+            "type": "object",
+            "properties": {
+                "first_channel": {"type": "integer"},
+                "last_channel": {"type": "integer"},
+            },
+            "required": ["first_channel", "last_channel"],
+        }
+
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("StartAcquisition", "start_acquisition", None),
-            ("AcquireDataForCalibration", "acquire_data_for_calibration", None),
+            (
+                "AcquireDataForCalibration",
+                "acquire_data_for_calibration",
+                acquire_correlator_data_schema,
+            ),
             (
                 "ConfigureStationForCalibration",
                 "configure_station_for_calibration",
@@ -1492,25 +1506,27 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return ([return_code], [message])
 
     @command(
-        dtype_in="DevLong",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     def AcquireDataForCalibration(
-        self: SpsStation, channel: int
+        self: SpsStation, argin: str
     ) -> DevVarLongStringArrayType:
         """
         Start acquiring data for calibration.
 
-        :param channel: channel to calibrate for
+        :param argin: json-ified dictionary containing the keys first_channel
+            and last_channel
         :return: A tuple containing a return code and a string message indicating
             status. The message is for information purpose only.
 
         :example:
             >>> dp = tango.DeviceProxy("low-mccs/spsstation/ci-1")
-            >>> dp.command_inout("AcquireDataForCalibration", 153)
+            >>> argin = json.dumps({"first_channel": 64, "last_channel": 448})
+            >>> dp.command_inout("AcquireDataForCalibration", argin)
         """
         handler = self.get_command_object("AcquireDataForCalibration")
-        (return_code, message) = handler(channel)
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray", dtype_in="DevString")

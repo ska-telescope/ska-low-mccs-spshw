@@ -226,10 +226,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        self._tpm_status = TpmStatus(self.tpm_status)
-        self._update_attribute_callback(
-            programming_state=self._tpm_status.pretty_name()
-        )
 
         request_spec = self._request_provider.get_request(self._tpm_status)
         # If already a request simply return.
@@ -265,7 +261,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 except Exception as e:
                     # polling attempt was unsuccessful
                     self.logger.warning(f"Connection to tpm lost! : {e}")
-                    self.tile.tpm = None
                     request = TileRequest("connect", self.connect)
             case "IS_PROGRAMMED":
                 request = TileRequest(
@@ -412,6 +407,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
+        self.logger.error("Released polling lock")
         return TileResponse(
             poll_request.name,
             result,
@@ -431,6 +427,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
+
+        # We do not evaluate error codes. Connect is not already!
+        assert self._request_provider is not None
+        self._request_provider.desire_connection()
+
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")
@@ -441,11 +442,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     mark_invalid=True, **{self.active_request.name: None}
                 )
 
+        self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+
+        # ================================================================
+        # Update fault before power to allow exit from fault before OFF.
+        # "else Action component_no_fault is not allowed in op_state OFF."
+        # can occur
+        self._update_component_state(fault=self.fault_state)
+        # ================================================================
+        self._update_component_state(power=self._subrack_says_tpm_power)
+
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
+        with self._hardware_lock:
+            self._tpm_status = self.tpm_status
+            self._update_attribute_callback(
+                programming_state=self._tpm_status.pretty_name()
+            )
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
         # better.
@@ -484,7 +499,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_faulty: bool = False
         match poll_success:
             case False:
-                pass
+                with self._hardware_lock:
+                    self.logger.error("polll failed checking cinnected")
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.ON
+                    ):
+                        self.logger.error(
+                            "Unable to connect to TPM, "
+                            "however subrack reports it as ON. "
+                        )
+                        is_faulty = True
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the
@@ -513,15 +538,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
+        self.logger.error("Poll did indeed succeees")
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_completed()
             self.active_request = None
 
         self.update_fault_state(poll_success=True)
-
-        # We managed to poll hardware therefore we are PowerState.ON.
-        # DevState and HealthState is to be determined by the attribute value reported
-        self.power_state = PowerState.ON
 
         # Publish all responses to TANGO interface.
         try:
@@ -555,19 +577,36 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     continue
 
+    def stop_communicating(self):
+        self.logger.error("It was called ")
+        self.logger.error(f"{self.communication_state=}")
+        return super().stop_communicating()
+
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
+        self._tpm_status = TpmStatus.UNKNOWN
+        self.power_state = PowerState.UNKNOWN
+        self._update_attribute_callback(
+            programming_state=TpmStatus.UNKNOWN.pretty_name()
+        )
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack()
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
+        self.logger.error("Begin")
         self._request_provider = None
+        self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
+        try:
+            self._update_attribute_callback(programming_state=None)
+        except Exception as e:
+            self.logger.error(f"ofefji {e=}")
         self.power_state = PowerState.UNKNOWN
+        self.logger.error("End")
         super().polling_stopped()
 
     def off(
@@ -671,6 +710,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if connected, else False.
         """
+        self.logger.error("checking connection")
         return self.tile.check_communication()["CPLD"]
 
     def _subrack_says_tpm_power_changed(
@@ -694,6 +734,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
+
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
+
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -704,16 +748,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
 
+        self.power_state = event_value
+        # Connect if not already.
+        self.logger.error("entering")
+        with self._hardware_lock:
+            self.logger.error("entering 2")
+            __is_connected = self.is_connected
+            # Connect if not already.
+            if not __is_connected or self.tile.tpm is None:
+                try:
+                    self.logger.error("Connecting")
+                    self.connect()
+                    __is_connected = True
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            # self._tpm_status = self.tpm_status
+
+        self.logger.error("Leaving")
         if event_value == PowerState.ON:
-            self.power_state = PowerState.ON
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
-            # Connect if not already.
-            with self._hardware_lock:
-                if not self.is_connected:
-                    self.connect()
-
-            if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+            # Attempt reinitialisation if connected
+            # and not already initialised/ing.
+            if __is_connected and self._tpm_status not in [
+                TpmStatus.INITIALISED,
+                TpmStatus.SYNCHRONISED,
+            ]:
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
@@ -739,9 +799,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         else:
             self._tile_time.set_reference_time(0)
-
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """
@@ -792,47 +849,47 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._global_reference_time = start_time
 
     @property
+    @check_hardware_lock_claimed
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
         Return the TPM status.
 
         :return: the TPM status
         """
-        if self.power_state == PowerState.UNKNOWN:
-            status = TpmStatus.UNKNOWN
-        elif self.power_state != PowerState.ON:
-            status = TpmStatus.OFF
-        else:
-            try:
-                with self._hardware_lock:
-                    core_communication = self.tile.check_communication()
-                    self._update_attribute_callback(
-                        core_communication=core_communication
-                    )
-                    if core_communication["CPLD"]:
-                        if (
-                            not core_communication["FPGA0"]
-                            or not core_communication["FPGA1"]
-                        ):
-                            self.logger.warning(
-                                "Unable to connect with at least 1 FPGA"
-                            )
-                    if not any(core_communication.values()):
-                        self.logger.error(
-                            "Unconnected. Unable to connect to the CPLD, FPGA1 or FPGA2"
-                        )
-                        status = TpmStatus.UNCONNECTED
-                    elif self.tile.is_programmed() is False:
-                        status = TpmStatus.UNPROGRAMMED
-                    elif self._check_initialised() is False:
-                        status = TpmStatus.PROGRAMMED
-                    elif self._check_channeliser_started() is False:
-                        status = TpmStatus.INITIALISED
-                    else:
-                        status = TpmStatus.SYNCHRONISED
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"tile: tpm_status failed: {e}")
+        try:
+            core_communication = self.tile.check_communication()
+            self._update_attribute_callback(core_communication=core_communication)
+            if core_communication["CPLD"]:
+                if not core_communication["FPGA0"] or not core_communication["FPGA1"]:
+                    self.logger.warning("Unable to connect with at least 1 FPGA")
+            if not any(core_communication.values()):
+                self.logger.error(
+                    "Unconnected. Unable to connect to the CPLD, FPGA1 or FPGA2"
+                )
+                if self.power_state == PowerState.UNKNOWN:
+                    status = TpmStatus.UNKNOWN
+                elif self.power_state != PowerState.ON:
+                    status = TpmStatus.OFF
+                else:
+                    status = TpmStatus.UNCONNECTED
+            elif self.tile.is_programmed() is False:
+                status = TpmStatus.UNPROGRAMMED
+            elif self._check_initialised() is False:
+                status = TpmStatus.PROGRAMMED
+            elif self._check_channeliser_started() is False:
+                status = TpmStatus.INITIALISED
+            else:
+                status = TpmStatus.SYNCHRONISED
+        # pylint: disable=broad-except
+        except Exception as e:
+            self.logger.warning(f"tile: tpm_status failed: {e}")
+            if self.is_connected:
+                status = TpmStatus.UNPROGRAMMED
+            elif self.power_state == PowerState.UNKNOWN:
+                status = TpmStatus.UNKNOWN
+            elif self.power_state != PowerState.ON:
+                status = TpmStatus.OFF
+            else:
                 status = TpmStatus.UNCONNECTED
         return status
 
@@ -922,8 +979,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
+        self.logger.error("dsoiuhsioduhih ")
         if force_reprogramming:
             self.tile.erase_fpgas()
+            self._tpm_status = TpmStatus.UNPROGRAMMED
             self._update_attribute_callback(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
             )
@@ -939,6 +998,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Initialisation after programming the FPGA
         #
         if prog_status:
+            self._tpm_status = TpmStatus.PROGRAMMED
             self._update_attribute_callback(
                 programming_state=TpmStatus.PROGRAMMED.pretty_name()
             )
@@ -981,7 +1041,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
 
             self.logger.info("TileComponentManager: initialisation completed")
-
+            self._tpm_status = TpmStatus.INITIALISED
+            self._update_attribute_callback(
+                programming_state=TpmStatus.INITIALISED.pretty_name()
+            )
             if self._global_reference_time:
                 self.logger.info("Global reference time specifed, starting acquisition")
                 self._start_acquisition()
@@ -1153,6 +1216,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._tile_time.set_reference_time(0)
         else:
             self._tile_time.set_reference_time(self._fpga_reference_time)
+        self._tpm_status = TpmStatus.SYNCHRONISED
+        self._update_attribute_callback(
+            programming_state=TpmStatus.SYNCHRONISED.pretty_name()
+        )
 
     # --------------------------------
     # Properties
@@ -1795,8 +1862,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
         """Check we can connect to the TPM."""
-        self.tile.connect()
-        self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+        self.logger.error("connect checking connected")
+        if not self.is_connected or self.tile.tpm is None:
+            self.tile.connect()
+            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+        # Cache the value
+        self._tpm_status = self.tpm_status
+        self._update_attribute_callback(
+            programming_state=self._tpm_status.pretty_name()
+        )
+        self.logger.error("end of connect")
 
     def set_pps_delay_correction(
         self: TileComponentManager,

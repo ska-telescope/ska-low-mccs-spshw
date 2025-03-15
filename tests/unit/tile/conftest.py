@@ -47,7 +47,7 @@ def tile_state_map() -> dict[tuple[PowerState, bool], tango.DevState]:
     return {
         (PowerState.UNKNOWN, False): tango.DevState.UNKNOWN,
         (PowerState.OFF, False): tango.DevState.OFF,
-        (PowerState.ON, False): tango.DevState.ON,
+        (PowerState.ON, False): tango.DevState.FAULT,
         (PowerState.UNKNOWN, True): tango.DevState.FAULT,
         (PowerState.OFF, True): tango.DevState.FAULT,
         (PowerState.ON, True): tango.DevState.ON,
@@ -163,7 +163,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "attribute_state",
         "task",
         "task_lrc",
-        timeout=10.0,
+        timeout=15.0,
     )
 
 

@@ -1481,22 +1481,21 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
         """
-        tile_simulator.mock_off()
-        assert tile_component_manager.tpm_status == TpmStatus.UNCONNECTED
-        tile_simulator.mock_on()
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-        tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
         with tile_component_manager._hardware_lock:
+            tile_simulator.mock_off()
+            assert tile_component_manager.tpm_status == TpmStatus.UNCONNECTED
+            tile_simulator.mock_on()
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            tile_simulator.tpm._is_programmed = False
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
             tile_component_manager._execute_initialise(
                 force_reprogramming=True, pps_delay_correction=0
             )
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
             tile_component_manager._start_acquisition()
-        assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
-        tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
+            tile_simulator.tpm._is_programmed = False
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
     def test_load_time_delays(
         self: TestStaticSimulator,
@@ -1610,7 +1609,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm
         tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
         # check the fpga time is not moving
         initial_time = tile_component_manager.fpgas_time
@@ -1636,8 +1636,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         # Assert
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-        assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
         assert tile_component_manager.firmware_name == "itpm_v1_6.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
@@ -1673,7 +1674,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             result=Anything,
         )
         # Check TpmStatus is UNPROGRAMMED.
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -2880,7 +2882,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param attribute: The attribute to be read.
         """
         tile_simulator.connect()
-        _ = getattr(tile_component_manager, attribute)
+        with tile_component_manager._hardware_lock:
+            _ = getattr(tile_component_manager, attribute)
 
     def test_update_pending_data_requests(
         self: TestStaticSimulator,
@@ -2898,7 +2901,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
         assert tile_component_manager.tile.is_programmed()
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_simulator.tpm._is_programmed = True
         tile_simulator._is_programmed = True
 

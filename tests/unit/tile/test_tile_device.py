@@ -255,11 +255,7 @@ def turn_tile_on(
     tile_device.MockTpmOn()
 
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "Unconnected", lookahead=2, consume_nonmatches=True
-    )
-
-    change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed", lookahead=2, consume_nonmatches=True
+        "NotProgrammed", lookahead=3, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event(

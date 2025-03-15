@@ -1776,6 +1776,9 @@ class TileSimulator:
             if self.tpm is None:
                 # Use defined tpm if specified.
                 self.tpm = self._mocked_tpm or MockTpm(self.logger)
+                # This sleep is to wait for the timed thread to
+                # update a register.
+                time.sleep(0.12)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")

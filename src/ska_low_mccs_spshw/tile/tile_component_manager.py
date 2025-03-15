@@ -459,11 +459,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
-        with self._hardware_lock:
-            self._tpm_status = self.tpm_status
-            self._update_attribute_callback(
-                programming_state=self._tpm_status.pretty_name()
-            )
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
         # better.
@@ -579,11 +574,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     continue
 
-    def stop_communicating(self):
-        self.logger.error("It was called ")
-        self.logger.error(f"{self.communication_state=}")
-        return super().stop_communicating()
-
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
@@ -603,10 +593,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
-        try:
-            self._update_attribute_callback(programming_state=None)
-        except Exception as e:
-            self.logger.error(f"ofefji {e=}")
+        self._update_attribute_callback(programming_state=None)
         self.power_state = PowerState.UNKNOWN
         self.logger.error("End")
         super().polling_stopped()
@@ -764,7 +751,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except
                     pass
-            # self._tpm_status = self.tpm_status
 
         self.logger.error("Leaving")
         if event_value == PowerState.ON:
@@ -858,23 +844,22 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the TPM status
         """
+        core_communication = self.tile.check_communication()
+        self._update_attribute_callback(core_communication=core_communication)
+
+        if not any(core_communication.values()):
+            # TPM OFF or Network Issue
+            if self.power_state == PowerState.UNKNOWN:
+                return TpmStatus.UNKNOWN
+            if self.power_state != PowerState.ON:
+                return TpmStatus.OFF
+            return TpmStatus.UNCONNECTED
+
         try:
-            core_communication = self.tile.check_communication()
-            self._update_attribute_callback(core_communication=core_communication)
-            if core_communication["CPLD"]:
-                if not core_communication["FPGA0"] or not core_communication["FPGA1"]:
-                    self.logger.warning("Unable to connect with at least 1 FPGA")
-            if not any(core_communication.values()):
-                self.logger.error(
-                    "Unconnected. Unable to connect to the CPLD, FPGA1 or FPGA2"
-                )
-                if self.power_state == PowerState.UNKNOWN:
-                    status = TpmStatus.UNKNOWN
-                elif self.power_state != PowerState.ON:
-                    status = TpmStatus.OFF
-                else:
-                    status = TpmStatus.UNCONNECTED
-            elif self.tile.is_programmed() is False:
+            # We are connected to at least the CPLD.
+            # TPM ON, FPGAs not programmed or TPM overtemperature self shutdown
+            status = TpmStatus.UNPROGRAMMED
+            if self.tile.is_programmed() is False:
                 status = TpmStatus.UNPROGRAMMED
             elif self._check_initialised() is False:
                 status = TpmStatus.PROGRAMMED
@@ -882,18 +867,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 status = TpmStatus.INITIALISED
             else:
                 status = TpmStatus.SYNCHRONISED
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.warning(f"tile: tpm_status failed: {e}")
-            if self.is_connected:
-                status = TpmStatus.UNPROGRAMMED
-            elif self.power_state == PowerState.UNKNOWN:
-                status = TpmStatus.UNKNOWN
-            elif self.power_state != PowerState.ON:
-                status = TpmStatus.OFF
-            else:
-                status = TpmStatus.UNCONNECTED
-        return status
+            return status
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.error(
+                "Unexpected exception raised when "
+                f"evaluating TileProgrammingState: {e}\n"
+                f"Last known state = {status.pretty_name()}"
+            )
+            # Return the last know TpmStatus.
+            return status
 
     def ping(self: TileComponentManager) -> None:
         """Check we can communicate with TPM."""
@@ -1866,17 +1848,28 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
-        """Check we can connect to the TPM."""
+        """
+        Check we can connect to the TPM.
+
+        :raises ConnectionError: when unable to connect to TPM
+        """
         self.logger.error("connect checking connected")
         if not self.is_connected or self.tile.tpm is None:
-            self.tile.connect()
-            self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
-        # Cache the value
+            try:
+                self.tile.connect()
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+            except Exception as e:
+                self.__update_tpm_status()
+                raise ConnectionError("Failed in connect to TPM") from e
+        self.__update_tpm_status()
+        self.logger.error("end of connect")
+
+    def __update_tpm_status(self: TileComponentManager) -> None:
+        """Update the TpmStatus."""
         self._tpm_status = self.tpm_status
         self._update_attribute_callback(
             programming_state=self._tpm_status.pretty_name()
         )
-        self.logger.error("end of connect")
 
     def set_pps_delay_correction(
         self: TileComponentManager,

@@ -123,7 +123,6 @@ class TestTileComponentManager:
 
         callbacks["communication_status"].assert_not_called()
         tile_component_manager.stop_communicating()
-
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
@@ -178,12 +177,17 @@ class TestTileComponentManager:
                     lookahead=5,
                 )
                 callbacks["attribute_state"].assert_call(
+                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
+                    lookahead=5,
+                    consume_nonmatches=True,
+                )
+                callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
                     lookahead=5,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=2
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
@@ -1095,10 +1099,12 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # First Initialse the tile_component_manager.
         # -------------------------
         # check the fpga time is not moving
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         assert tile_simulator.tpm
         tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
         initial_time = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1117,7 +1123,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             result=(ResultCode.OK, "Command executed to completion."),
         )
         # Assert
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
         initial_time1 = tile_component_manager.fpgas_time
@@ -1137,7 +1144,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         start_time = datetime.datetime.strftime(
             datetime.datetime.fromtimestamp(int(time.time()) + future_time), RFC_FORMAT
         )
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
             start_time=start_time, delay=1, task_callback=callbacks["task"]
         )
@@ -1154,7 +1162,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         time.sleep(1.5)
         final_time3 = tile_component_manager.fpga_current_frame
         assert initial_time3 != final_time3
-        assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
 
         # Check that exceptions are handled.
         # Shorthand for linter line length
@@ -1386,7 +1395,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
         tile_simulator.tpm._is_programmed = True
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
         tile_simulator.tpm._register_map[
             "fpga1.pps_manager.sync_time_val"

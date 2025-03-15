@@ -1792,6 +1792,7 @@ class TileSimulator:
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = False
             self.__is_connectable(False)
@@ -1808,6 +1809,7 @@ class TileSimulator:
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = True
             self.__is_connectable(True)
@@ -1832,6 +1834,16 @@ class TileSimulator:
         :return: mocked item at address
         """
         return self.tpm[key]  # type: ignore
+
+    def __is_connectable(self: TileSimulator, connectable: bool) -> None:
+        """
+        Set the connection status.
+
+        :param connectable: True if the CPLD and FPGAs are connectable.
+        """
+        self._is_cpld_connectable = connectable
+        self._is_fpga1_connectable = connectable
+        self._is_fpga2_connectable = connectable
 
     @check_mocked_overheating
     @connected

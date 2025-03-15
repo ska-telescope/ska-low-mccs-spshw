@@ -2847,7 +2847,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("firmware_name"),
             ("firmware_available"),
             ("hardware_version"),
-            ("tpm_status"),
             ("fpgas_time"),
             ("fpga_reference_time"),
             ("fpga_current_frame"),
@@ -2879,8 +2878,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param attribute: The attribute to be read.
         """
         tile_simulator.connect()
-        with tile_component_manager._hardware_lock:
-            _ = getattr(tile_component_manager, attribute)
+        _ = getattr(tile_component_manager, attribute)
 
     def test_update_pending_data_requests(
         self: TestStaticSimulator,

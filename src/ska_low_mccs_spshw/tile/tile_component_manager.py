@@ -417,7 +417,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Claim lock before we attempt a request.
         with self._hardware_lock:
             result = poll_request()
-        self.logger.error("Released polling lock")
         return TileResponse(
             poll_request.name,
             result,
@@ -541,7 +540,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param poll_response: response to the pool, including any values
             read.
         """
-        self.logger.error("Poll did indeed succeees")
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_completed()
             self.active_request = None
@@ -593,14 +591,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
-        self.logger.error("Begin")
         self._request_provider = None
         self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
         self.power_state = PowerState.UNKNOWN
-        self.logger.error("End")
         super().polling_stopped()
 
     def off(
@@ -705,7 +701,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if connected, else False.
         """
-        self.logger.error("checking connection")
+        self.logger.info("checking connection")
         return self.tile.check_communication()["CPLD"]
 
     def _subrack_says_tpm_power_changed(
@@ -730,9 +726,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"called but event_name is {event_name}."
         )
 
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
-
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -742,6 +735,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if event_value == PowerState.OFF:
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
+
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
 
         self.power_state = event_value
         # Connect if not already.
@@ -970,7 +966,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        self.logger.error("dsoiuhsioduhih ")
         if force_reprogramming:
             self.tile.erase_fpgas()
             self._tpm_status = TpmStatus.UNPROGRAMMED

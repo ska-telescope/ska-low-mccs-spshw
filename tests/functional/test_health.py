@@ -444,7 +444,8 @@ def read_all_tile_attributes(
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)
-            except tango.DevFailed:
+            except tango.DevFailed as df:
+                print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None
 
 

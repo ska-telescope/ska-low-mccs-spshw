@@ -160,6 +160,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
+        # The callback from subrack will evaluate if the tpm
+        # needs to be initialised. There is a rare race condition
+        # where the evaluation will attempt initialisation although
+        # initialisation is already in progress. This lock is used
+        # to ensure this evaluation is correct
+        self._initialise_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
         self.active_request: TileRequest | TileLRCRequest | None = None
         self._request_provider: Optional[TileRequestProvider] = None
@@ -593,7 +599,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
-        self._update_attribute_callback(programming_state=None)
         self.power_state = PowerState.UNKNOWN
         self.logger.error("End")
         super().polling_stopped()
@@ -655,7 +660,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         self.logger.info("Initialise command placed in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
-        self._request_provider.desire_initialise(request)
+        with self._initialise_lock:
+            self._request_provider.desire_initialise(request)
         return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
@@ -739,9 +745,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.power_state = event_value
         # Connect if not already.
-        self.logger.error("entering")
         with self._hardware_lock:
-            self.logger.error("entering 2")
             __is_connected = self.is_connected
             # Connect if not already.
             if not __is_connected or self.tile.tpm is None:
@@ -752,7 +756,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 except Exception:  # pylint: disable=broad-except
                     pass
 
-        self.logger.error("Leaving")
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
@@ -762,28 +765,30 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 TpmStatus.INITIALISED,
                 TpmStatus.SYNCHRONISED,
             ]:
-                if (
-                    self._request_provider
-                    and self._request_provider.initialise_request is None
-                    and not isinstance(self.active_request, TileLRCRequest)
-                    or isinstance(self.active_request, TileLRCRequest)
-                    and self.active_request.name.lower() != "initialise"
-                ):
-                    request = TileLRCRequest(
-                        name="initialise",
-                        command_object=self._execute_initialise,
-                        task_callback=None,
-                        force_reprogramming=False,
-                        pps_delay_correction=self._pps_delay_correction,
-                    )
-                    self.logger.info(
-                        "Subrack has registered that the TPM has power "
-                        "but is not yet initialised of synchronised. "
-                        "Initialising."
-                    )
-                    assert self._request_provider is not None
-                    self.logger.info("Initialise command placed in poll QUEUE")
-                    self._request_provider.desire_initialise(request)
+                with self._initialise_lock:
+                    if (
+                        self._request_provider
+                        and self._request_provider.initialise_request is None
+                        and not isinstance(self.active_request, TileLRCRequest)
+                        or isinstance(self.active_request, TileLRCRequest)
+                        and self.active_request.name.lower() != "initialise"
+                    ):
+                        request = TileLRCRequest(
+                            name="initialise",
+                            command_object=self._execute_initialise,
+                            task_callback=None,
+                            force_reprogramming=False,
+                            pps_delay_correction=self._pps_delay_correction,
+                        )
+                        self.logger.info(
+                            "Subrack has registered that the TPM has power "
+                            "but is not yet initialised of synchronised. "
+                            "Initialising."
+                        )
+                        assert self._request_provider is not None
+                        self.logger.info("Initialise command placed in poll QUEUE")
+
+                        self._request_provider.desire_initialise(request)
 
         else:
             self._tile_time.set_reference_time(0)
@@ -945,8 +950,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             force_reprogramming=force_reprogramming,
             pps_delay_correction=self._pps_delay_correction,
         )
-        self._request_provider.desire_initialise(request)
-        self.logger.info("Initialise command placed in poll QUEUE")
+        with self._initialise_lock:
+            self._request_provider.desire_initialise(request)
+        self.logger.info("Initialise command placed in poll QUEUE 2")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating

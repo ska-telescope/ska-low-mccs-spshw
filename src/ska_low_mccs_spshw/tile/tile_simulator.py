@@ -1844,16 +1844,6 @@ class TileSimulator:
         """
         return self.tpm[key]  # type: ignore
 
-    def __is_connectable(self: TileSimulator, connectable: bool) -> None:
-        """
-        Set the connection status.
-
-        :param connectable: True if the CPLD and FPGAs are connectable.
-        """
-        self._is_cpld_connectable = connectable
-        self._is_fpga1_connectable = connectable
-        self._is_fpga2_connectable = connectable
-
     @check_mocked_overheating
     @connected
     def __setitem__(self: TileSimulator, key: int | str, value: Any) -> None:

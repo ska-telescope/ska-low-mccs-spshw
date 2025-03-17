@@ -118,7 +118,7 @@ class TestTileComponentManager:
                 )
                 callbacks["component_state"].assert_call(power=power_state, lookahead=4)
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
                 )
 
         callbacks["communication_status"].assert_not_called()

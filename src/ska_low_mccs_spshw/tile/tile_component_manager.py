@@ -441,8 +441,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     mark_invalid=True, **{self.active_request.name: None}
                 )
 
+        self.update_fault_state(poll_success=False)
         self.power_state = self._subrack_says_tpm_power
-        self._update_component_state(power=self._subrack_says_tpm_power, fault=None)
+
+        # ================================================================
+        # Update fault before power to allow exit from fault before OFF.
+        # "else Action component_no_fault is not allowed in op_state OFF."
+        # can occur
+        self._update_component_state(fault=self.fault_state)
+        # ================================================================
+        self._update_component_state(power=self._subrack_says_tpm_power)
         if self._subrack_says_tpm_power == PowerState.UNKNOWN:
             super().poll_failed(exception)
 
@@ -484,7 +492,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_faulty: bool = False
         match poll_success:
             case False:
-                pass
+                with self._hardware_lock:
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.ON
+                    ):
+                        self.logger.error(
+                            "Unable to connect to TPM, "
+                            "however subrack reports it as ON. "
+                        )
+                        is_faulty = True
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the
@@ -694,6 +711,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
+
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -704,16 +722,29 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
 
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
+
         if event_value == PowerState.ON:
             self.power_state = PowerState.ON
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
-            # Connect if not already.
             with self._hardware_lock:
-                if not self.is_connected:
-                    self.connect()
+                __is_connected = self.is_connected
+                # Connect if not already.
+                if not __is_connected:
+                    try:
+                        self.connect()
+                        __is_connected = True
+                    except Exception:  # pylint: disable=broad-except
+                        self.logger.warning("Unable to connnect to TPM")
 
-            if self.tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
+            # Attempt reinitialisation if connected
+            # and not already initialised/ing.
+            if __is_connected and self.tpm_status not in [
+                TpmStatus.INITIALISED,
+                TpmStatus.SYNCHRONISED,
+            ]:
                 if (
                     self._request_provider
                     and self._request_provider.initialise_request is None
@@ -739,9 +770,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         else:
             self._tile_time.set_reference_time(0)
-
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """

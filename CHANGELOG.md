@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-123] Add FAULT when subrack reports TPM ON and TPM is not connectable.
 * [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
 flush out issues with rapid changes of adminmode.
 

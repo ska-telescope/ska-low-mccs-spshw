@@ -3,6 +3,7 @@
 ## 1.5.0
 
 * [THORN-103] SpsStation.AcquireDataForCalibration now launches a frequency sweep, as such the interface has changed. It now expected a json-ified dictionary containing the keys first_channel and last_channel.
+* [THORN-123] Add FAULT when subrack reports TPM ON and TPM is not connectable.
 * [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
 flush out issues with rapid changes of adminmode.
 

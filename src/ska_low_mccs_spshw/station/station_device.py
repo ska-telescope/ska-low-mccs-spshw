@@ -237,8 +237,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "$schema": "http://json-schema.org/draft-07/schema#",
             "type": "object",
             "properties": {
-                "first_channel": {"type": "integer"},
-                "last_channel": {"type": "integer"},
+                "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
+                "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
             },
             "required": ["first_channel", "last_channel"],
         }

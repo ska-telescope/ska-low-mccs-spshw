@@ -18,7 +18,9 @@ import json
 import logging
 import threading
 import time
+from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from queue import Empty, Queue
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
@@ -95,6 +97,48 @@ def retry_command_on_exception(
     raise TimeoutError(
         f"Unable to execute command {command_name} on {device_proxy.dev_name()}"
     )
+
+
+class UniqueQueue(Queue):
+    """
+    A class for a queue of unique items.
+
+    For whatever reason we seem to sometimes get duplicate events, we don't want to
+    re-process the same file so this class makes sure when we add to the queue, it
+    is only added if not already in the queue.
+    """
+
+    def _init(self, maxsize: int) -> None:
+        """
+        Implement init hook given from base class.
+
+        :param maxsize: max queue size.
+        """
+        self.queue: deque[Any] = deque()
+        self.set: set[Any] = set()
+
+    def _put(self, item: Any) -> None:
+        """
+        Implement put hook given from base class.
+
+        If the item is already in the set, do not put the item in the queue.
+
+        :param item: the item to put in the queue.
+        """
+        if item in self.set:
+            return
+        self.queue.append(item)
+        self.set.add(item)
+
+    def _get(self) -> Any:
+        """
+        Implement get hook given from base class.
+
+        :returns: an item in the queue in a FIFO manner.
+        """
+        item = self.queue.popleft()
+        self.set.remove(item)
+        return item
 
 
 class _TileProxy(DeviceComponentManager):
@@ -495,8 +539,7 @@ class SpsStationComponentManager(
         self.last_pointing_delays = [0.0] * 513
 
         self.acquiring_data_for_calibration = threading.Event()
-        self.calibration_data_received_event = threading.Event()
-        self._last_calibration_file_received = ""
+        self.calibration_data_received_queue = UniqueQueue()
 
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
@@ -913,10 +956,9 @@ class SpsStationComponentManager(
                 data_received_result[0] == "correlator"
                 and self.acquiring_data_for_calibration.is_set()
             ):
-                self.calibration_data_received_event.set()
-                self._last_calibration_file_received = json.loads(
-                    data_received_result[1]
-                )["file_name"]
+                self.calibration_data_received_queue.put(
+                    json.loads(data_received_result[1])["file_name"]
+                )
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
 
@@ -2889,7 +2931,7 @@ class SpsStationComponentManager(
         `self._acquire_data_for_calibration` for execution.
 
         :param first_channel: first channel to calibrate for
-        :param last_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
@@ -2900,7 +2942,52 @@ class SpsStationComponentManager(
             task_callback=task_callback,
         )
 
-    # pylint: disable=too-many-branches
+    def _start_daq(
+        self: SpsStationComponentManager,
+        daq_mode: str,
+        max_tries: int = 10,
+        tick: float = 0.5,
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "Start",
+            json.dumps(
+                {"modes_to_start": daq_mode},
+            ),
+        )
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                return
+            time.sleep(tick)
+
+        assert (
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+    def _stop_daq(
+        self: SpsStationComponentManager, max_tries: int = 10, tick: float = 0.5
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(self._daq_proxy._proxy, "Stop")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if len(daq_status["Running Consumers"]) == 0:
+                return
+            time.sleep(tick)
+
+        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
@@ -2913,7 +3000,7 @@ class SpsStationComponentManager(
         Acquire data for calibration.
 
         :param first_channel: first channel to calibrate for
-        :param last_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -2948,46 +3035,13 @@ class SpsStationComponentManager(
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
 
-            max_tries: int = 10
-            tick: float = 0.5
-            assert self._daq_proxy is not None
-            daq_mode: str = "CORRELATOR_DATA"
+            self._start_daq("CORRELATOR_DATA")
 
-            retry_command_on_exception(
-                self._daq_proxy._proxy,
-                "Start",
-                json.dumps(
-                    {"modes_to_start": daq_mode},
-                ),
-            )
-            if _check_aborted():
-                return
-
-            self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
-                )
-                if any(
-                    status_list[0] == daq_mode
-                    for status_list in daq_status["Running Consumers"]
-                ):
-                    break
-                if _check_aborted():
-                    return
-                time.sleep(tick)
-
-            assert (
-                len(daq_status["Running Consumers"]) > 0
-                and daq_mode in daq_status["Running Consumers"][0]
-            ), f"Failed to start {daq_mode}."
-
-            data_send_mode: str = "channel"
             # Send data from tpms
             self.send_data_samples(
                 json.dumps(
                     {
-                        "data_type": data_send_mode,
+                        "data_type": "channel",
                         "first_channel": first_channel,
                         "last_channel": last_channel,
                         "n_samples": 1835008,
@@ -3002,13 +3056,14 @@ class SpsStationComponentManager(
             while True:
                 if _check_aborted():
                     return
-                if not self.calibration_data_received_event.wait(timeout=10):
+                try:
+                    filename = self.calibration_data_received_queue.get(
+                        timeout=10
+                    ).split("correlation_burst_")[1]
+                except Empty:
                     self.logger.error("Failed to receive data in 10 seconds.")
                     success = False
                     break
-                filename = self._last_calibration_file_received.split(
-                    "correlation_burst_"
-                )[1]
                 channel = int(filename.split("_")[0])
                 if channel == last_channel:
                     self.logger.info(
@@ -3019,20 +3074,9 @@ class SpsStationComponentManager(
                     f"Got data for {channel}, waiting "
                     f"for {last_channel}, {last_channel - channel} more."
                 )
-                self.calibration_data_received_event.clear()
             self.logger.info("Stopping all consumers...")
-            retry_command_on_exception(self._daq_proxy._proxy, "Stop")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
-                )
-                if len(daq_status["Running Consumers"]) == 0:
-                    break
-                if _check_aborted():
-                    return
-                time.sleep(tick)
+            self._stop_daq()
 
-            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
             if task_callback:
                 if success:
                     task_callback(
@@ -3049,7 +3093,6 @@ class SpsStationComponentManager(
                     )
         finally:
             self.acquiring_data_for_calibration.clear()
-            self.calibration_data_received_event.clear()
 
     def configure_station_for_calibration(
         self: SpsStationComponentManager,

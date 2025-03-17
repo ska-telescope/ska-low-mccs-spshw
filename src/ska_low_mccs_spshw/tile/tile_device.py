@@ -2713,7 +2713,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             **kwargs: Any,
         ) -> bool:
             """
-            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingStateCommand` command.
+            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingState` command.
 
             :param args: unspecified positional arguments. This should be empty and is
                 provided for type hinting only

@@ -837,6 +837,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             self._global_reference_time = start_time
 
+    def reevaluate_tpm_status(self: TileComponentManager) -> bool:
+        """
+        Reevaluate the TpmStatus.
+
+        NOTE: This method should not be needed. But can be used as a
+        sanity check on the TileProgrammingState
+
+        :return: True is the re-evaluated TpmStatus differs from the
+            automated evaluation.
+        """
+        with self._hardware_lock:
+            _initial_tpm_status = self._tpm_status
+            self.__update_tpm_status()
+            if _initial_tpm_status != self._tpm_status:
+                self.logger.warning(
+                    "The reevaluation of the TpmStatus returned "
+                    "a different value to the automatic state "
+                    "evaluation."
+                )
+            return _initial_tpm_status != self._tpm_status
+
     @property
     @check_hardware_lock_claimed
     def tpm_status(self: TileComponentManager) -> TpmStatus:

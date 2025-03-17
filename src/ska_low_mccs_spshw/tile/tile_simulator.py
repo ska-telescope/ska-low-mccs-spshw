@@ -1207,6 +1207,12 @@ class TileSimulator:
         self._is_last = is_last_tile
         self._tile_id = tile_id
         self._station_id = station_id
+        self.sync_time = 0
+        reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
+        reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
+        if self.tpm:
+            self.tpm[reg1] = 0
+            self.tpm[reg2] = 0
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
         time.sleep(random.randint(1, 3))

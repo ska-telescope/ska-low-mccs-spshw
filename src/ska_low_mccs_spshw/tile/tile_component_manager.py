@@ -711,8 +711,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
 
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
@@ -723,6 +721,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if event_value == PowerState.OFF:
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
+
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
 
         if event_value == PowerState.ON:
             self.power_state = PowerState.ON
@@ -736,7 +737,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         self.connect()
                         __is_connected = True
                     except Exception:  # pylint: disable=broad-except
-                        pass
+                        self.logger.warning("Unable to connnect to TPM")
 
             # Attempt reinitialisation if connected
             # and not already initialised/ing.

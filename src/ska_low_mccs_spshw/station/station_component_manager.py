@@ -18,9 +18,8 @@ import json
 import logging
 import threading
 import time
-from collections import deque
 from concurrent.futures import Future, ThreadPoolExecutor, wait
-from queue import Empty, Queue
+from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
@@ -42,7 +41,7 @@ from ska_low_mccs_common.component import (
     MccsBaseComponentManager,
 )
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from ska_low_mccs_common.utils import lock_power_state, threadsafe
+from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
@@ -97,48 +96,6 @@ def retry_command_on_exception(
     raise TimeoutError(
         f"Unable to execute command {command_name} on {device_proxy.dev_name()}"
     )
-
-
-class UniqueQueue(Queue):
-    """
-    A class for a queue of unique items.
-
-    For whatever reason we seem to sometimes get duplicate events, we don't want to
-    re-process the same file so this class makes sure when we add to the queue, it
-    is only added if not already in the queue.
-    """
-
-    def _init(self, maxsize: int) -> None:
-        """
-        Implement init hook given from base class.
-
-        :param maxsize: max queue size.
-        """
-        self.queue: deque[Any] = deque()
-        self.set: set[Any] = set()
-
-    def _put(self, item: Any) -> None:
-        """
-        Implement put hook given from base class.
-
-        If the item is already in the set, do not put the item in the queue.
-
-        :param item: the item to put in the queue.
-        """
-        if item in self.set:
-            return
-        self.queue.append(item)
-        self.set.add(item)
-
-    def _get(self) -> Any:
-        """
-        Implement get hook given from base class.
-
-        :returns: an item in the queue in a FIFO manner.
-        """
-        item = self.queue.popleft()
-        self.set.remove(item)
-        return item
 
 
 class _TileProxy(DeviceComponentManager):
@@ -539,7 +496,7 @@ class SpsStationComponentManager(
         self.last_pointing_delays = [0.0] * 513
 
         self.acquiring_data_for_calibration = threading.Event()
-        self.calibration_data_received_queue = UniqueQueue()
+        self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
@@ -3093,6 +3050,7 @@ class SpsStationComponentManager(
                     )
         finally:
             self.acquiring_data_for_calibration.clear()
+            self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
     def configure_station_for_calibration(
         self: SpsStationComponentManager,

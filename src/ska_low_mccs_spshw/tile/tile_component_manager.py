@@ -437,7 +437,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         self.logger.error(f"Failed poll with exception : {exception}")
 
-        # We do not evaluate error codes. Connect is not already!
+        # We do not evaluate error codes. Connect if not already!
         assert self._request_provider is not None
         self._request_provider.desire_connection()
 
@@ -581,11 +581,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def polling_started(self: TileComponentManager) -> None:
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
-        self._tpm_status = TpmStatus.UNKNOWN
-        self.power_state = PowerState.UNKNOWN
-        self._update_attribute_callback(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
         self._request_provider.desire_connection()
         self._start_communicating_with_subrack()
 
@@ -654,7 +649,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             force_reprogramming=False,
             pps_delay_correction=self._pps_delay_correction,
         )
-        self.logger.info("Initialise command placed in poll QUEUE")
+        self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
             self._request_provider.desire_initialise(request)
@@ -701,7 +696,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if connected, else False.
         """
-        self.logger.info("checking connection")
+        self.logger.info("Checking connection")
         return self.tile.check_communication()["CPLD"]
 
     def _subrack_says_tpm_power_changed(
@@ -746,11 +741,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Connect if not already.
             if not __is_connected or self.tile.tpm is None:
                 try:
-                    self.logger.error("Connecting")
                     self.connect()
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except
-                    pass
+                    self.logger.error("Subrack callback failed to connect to hardware.")
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
@@ -782,7 +776,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                             "Initialising."
                         )
                         assert self._request_provider is not None
-                        self.logger.info("Initialise command placed in poll QUEUE")
+                        self.logger.info(
+                            "Subrack callback placed initialise in poll QUEUE"
+                        )
 
                         self._request_provider.desire_initialise(request)
 
@@ -969,7 +965,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         )
         with self._initialise_lock:
             self._request_provider.desire_initialise(request)
-        self.logger.info("Initialise command placed in poll QUEUE 2")
+        self.logger.info("Initialise command placed initialise in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -1876,12 +1872,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ConnectionError: when unable to connect to TPM
         """
-        self.logger.error("connect checking connected")
         if not self.is_connected or self.tile.tpm is None:
             try:
+                self.logger.info("Connecting to TPM")
                 self.tile.connect()
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
             except Exception as e:
+                self.logger.error(f"Failed to connect to TPM {e}")
                 self.__update_tpm_status()
                 raise ConnectionError("Failed in connect to TPM") from e
         self.__update_tpm_status()

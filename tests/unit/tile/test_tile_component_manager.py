@@ -108,14 +108,10 @@ class TestTileComponentManager:
                     lookahead=5,
                 )
             case PowerState.UNKNOWN:
-                callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
-                )
+                # No state update!
+                pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
-                callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
-                )
                 callbacks["component_state"].assert_call(power=power_state, lookahead=4)
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
@@ -175,11 +171,6 @@ class TestTileComponentManager:
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
                     lookahead=5,
-                )
-                callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNKNOWN.pretty_name(),
-                    lookahead=5,
-                    consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
@@ -369,9 +360,6 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
             lookahead=5,  # Unknown for number of polls until subrack callback.

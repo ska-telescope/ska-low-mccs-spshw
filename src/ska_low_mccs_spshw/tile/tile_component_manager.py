@@ -31,6 +31,7 @@ from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
 from ska_tango_base.base import check_communicating
+from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .tile_poll_management import (
@@ -160,6 +161,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
+        self._task_executor = TaskExecutor(max_workers=1)
         # The callback from subrack will evaluate if the tpm
         # needs to be initialised. There is a rare race condition
         # where the evaluation will attempt initialisation although
@@ -1184,44 +1186,74 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             self._global_reference_time = global_reference_time
 
-        executed = False
         self.logger.info(f"Start acquisition: start time: {start_time}, delay: {delay}")
-        try:
-            # Check if ARP table is populated before starting
-            self.tile.reset_eth_errors()
-            self.tile.check_arp_table()
-            # Start data acquisition on board
-            self.tile.start_acquisition(
-                start_time,
-                delay,
-                global_reference_time,
-            )
-            executed = True
-            self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
-        if not executed:
-            return
-        self.logger.info("Waiting for start acquisition")
-        max_timeout = 60  # Maximum delay, in 0.1 seconds
-        started = False
-        for i in range(max_timeout):
-            time.sleep(0.1)
+        # Check if ARP table is populated before starting
+        self.tile.reset_eth_errors()
+        self.tile.check_arp_table()
+        # Start data acquisition on board
+        self.tile.start_acquisition(
+            start_time,
+            delay,
+            global_reference_time,
+        )
+        self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
 
+        if start_time is None:
+            deadline = time.time() + delay
+        else:
+            deadline = start_time + delay
+
+        # Abort and open new thread without waiting.
+        self.logger.info(
+            "New request to synchronise. Replacing old monitoring thread with new!"
+        )
+        self._task_executor.abort()
+        self._task_executor.submit(
+            self.__wait_for_synchronised, kwargs={"deadline": deadline}
+        )
+
+    def __wait_for_synchronised(
+        self: TileComponentManager,
+        deadline: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Wait for synchronisation until deadline.
+
+        :param deadline: the time to wait until giving up.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+
+        def __check_channeliser_started() -> bool:
+            started = False
             try:
-                started = self._check_channeliser_started()
+                with self._hardware_lock:
+                    started = self._check_channeliser_started()
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-        if not started:
-            self.logger.warning(
-                f"Acquisition not started after {max_timeout*0.1} seconds"
-            )
-            self._tile_time.set_reference_time(0)
+            return started
+
+        while time.time() < deadline + 1:
+            if task_abort_event is not None:
+                if task_abort_event.is_set():
+                    self.logger.info("Waiter thread stopped.")
+                    return
+            started = __check_channeliser_started()
+            if started:
+                break
+            time.sleep(0.2)
         else:
-            self._tile_time.set_reference_time(self._fpga_reference_time)
+            started = __check_channeliser_started()
+            if not started:
+                self.logger.warning("Acquisition not started in time.")
+                self._tile_time.set_reference_time(0)
+                return
+
+        self._tile_time.set_reference_time(self._fpga_reference_time)
         self._tpm_status = TpmStatus.SYNCHRONISED
         self._update_attribute_callback(
             programming_state=TpmStatus.SYNCHRONISED.pretty_name()

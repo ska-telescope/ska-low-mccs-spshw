@@ -1461,6 +1461,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the tpm status reports as expected.
@@ -1468,6 +1469,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The tile_component_manager under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
+        :param callbacks: A dictionary used to assert callbacks.
         """
         with tile_component_manager._hardware_lock:
             tile_simulator.mock_off()
@@ -1480,7 +1482,18 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
                 force_reprogramming=True, pps_delay_correction=0
             )
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-            tile_component_manager._start_acquisition()
+            tile_component_manager._start_acquisition(delay=0)
+
+        # Start acquisition will start a thread to determine if the desired state
+        # is reached. In order to do so it must claim the lock to probe hardware
+        # Hence we leave lock and wait for callback.
+        callbacks["attribute_state"].assert_against_call(
+            programming_state=TpmStatus.SYNCHRONISED.pretty_name(),
+            lookahead=20,
+            consume_nonmatches=True,
+        )
+
+        with tile_component_manager._hardware_lock:
             assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
             tile_simulator.tpm._is_programmed = False
             assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED

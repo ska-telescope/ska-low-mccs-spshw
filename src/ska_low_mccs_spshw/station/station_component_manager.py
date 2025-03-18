@@ -483,10 +483,10 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
-        self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
-        self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
+        self._desired_static_delays: None | list[float] = None
+        self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
@@ -1558,8 +1558,16 @@ class SpsStationComponentManager(
             )  # indexes for parameters for individual signals
             i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            tile.preaduLevels = self._desired_preadu_levels[i1:i2]
-            tile.staticTimeDelays = self._desired_static_delays[i1:i2]
+            if self._desired_preadu_levels is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance PreaduAttenuation "
+                )
+                tile.preaduLevels = self._desired_preadu_levels[i1:i2]
+            if self._desired_static_delays is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance StaticTimeDelays "
+                )
+                tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
             tile.cspSpeadFormat = self._csp_spead_format
@@ -1927,13 +1935,15 @@ class SpsStationComponentManager(
         return static_delays
 
     @static_delays.setter
-    def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    def static_delays(
+        self: SpsStationComponentManager, delays: list[int | float]
+    ) -> None:
         """
         Set static time delay correction.
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
-        self._desired_static_delays = copy.deepcopy(delays)
+        self._desired_static_delays = delays
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
@@ -2043,7 +2053,7 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._desired_preadu_levels = copy.deepcopy(levels)
+        self._desired_preadu_levels = levels
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker

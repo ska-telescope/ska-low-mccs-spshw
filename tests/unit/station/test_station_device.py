@@ -1498,7 +1498,8 @@ def test_AcquireDataForCalibration(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-    channel = 106
+    first_channel = 106
+    last_channel = 106
 
     station_device.subscribe_event(
         "state",
@@ -1529,7 +1530,9 @@ def test_AcquireDataForCalibration(
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_started)
 
-    [_], [command_id] = station_device.AcquireDataForCalibration(channel)
+    [_], [command_id] = station_device.AcquireDataForCalibration(
+        json.dumps({"first_channel": first_channel, "last_channel": last_channel})
+    )
     tile_command_mock: MockCallable = getattr(
         mock_tile_device_proxies[0], "SendDataSamples"
     )
@@ -1538,8 +1541,9 @@ def test_AcquireDataForCalibration(
         json.dumps(
             {
                 "data_type": "channel",
-                "first_channel": channel,
-                "last_channel": channel,
+                "first_channel": first_channel,
+                "last_channel": last_channel,
+                "n_samples": 1835008,
             }
         )
     )

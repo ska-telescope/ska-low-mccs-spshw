@@ -495,9 +495,6 @@ class SpsStationComponentManager(
         self._cable_lengths: dict[int, float] = {}
         self.last_pointing_delays = [0.0] * 513
 
-        self.acquiring_data_for_calibration = threading.Event()
-        self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
-
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
 
@@ -531,6 +528,9 @@ class SpsStationComponentManager(
             subrack_trls=list(self._subrack_proxies.keys()),
             daq_trl=self._daq_trl,
         )
+
+        self.acquiring_data_for_calibration = threading.Event()
+        self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
         if antenna_config_uri:
             logger.debug("Retrieving antenna mapping.")

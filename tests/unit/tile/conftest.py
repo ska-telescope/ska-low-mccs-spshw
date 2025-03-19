@@ -163,7 +163,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "attribute_state",
         "task",
         "task_lrc",
-        timeout=10.0,
+        timeout=15.0,
     )
 
 

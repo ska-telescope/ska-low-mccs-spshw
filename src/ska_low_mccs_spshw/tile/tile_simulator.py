@@ -1207,6 +1207,12 @@ class TileSimulator:
         self._is_last = is_last_tile
         self._tile_id = tile_id
         self._station_id = station_id
+        self.sync_time = 0
+        reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
+        reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
+        if self.tpm:
+            self.tpm[reg1] = 0
+            self.tpm[reg2] = 0
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
         time.sleep(random.randint(1, 3))
@@ -1776,6 +1782,9 @@ class TileSimulator:
             if self.tpm is None:
                 # Use defined tpm if specified.
                 self.tpm = self._mocked_tpm or MockTpm(self.logger)
+                # This sleep is to wait for the timed thread to
+                # update a register.
+                time.sleep(0.12)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -1792,6 +1801,7 @@ class TileSimulator:
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = False
             self.__is_connectable(False)
@@ -1808,6 +1818,7 @@ class TileSimulator:
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = True
             self.__is_connectable(True)

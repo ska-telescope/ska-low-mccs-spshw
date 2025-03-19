@@ -468,6 +468,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
             (
                 "SetFirmwareTemperatureThresholds",
                 self.SetFirmwareTemperatureThresholdsCommand,
@@ -1890,6 +1891,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
+    def is_engineering(self: MccsTile) -> bool:
+        """
+        Return a flag representing whether we are in Engineering mode.
+
+        :return: True if Tile is in Engineering Mode.
+        """
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+
+        return is_engineering
+
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -2688,6 +2706,57 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("Initialise")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
+
+    class EvaluateTileProgrammingStateCommand(FastCommand):
+        """Class for handling the EvaluateTileProgrammingStateCommand() command."""
+
+        def __init__(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EvaluateTileProgrammingStateCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingState` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: True if the re-evaluated TpmStatus differs from the
+                automated evaluation.
+            """
+            return self._component_manager.reevaluate_tpm_status()
+
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    def EvaluateTileProgrammingState(self: MccsTile) -> bool:
+        """
+        Re-evaluate the TileProgrammingState.
+
+        Evaluate and update the TileProgrammingState.
+        Return True is the re-evaluation returned a different value to
+        the value from automatic detection.
+        (A value of True could signify a race condition,
+        or that there is a bug in the automatic evaluation.)
+
+        :return: True is the re-evaluation of TpmStatus returns a different value.
+        """
+        handler = self.get_command_object("EvaluateTileProgrammingState")
+        return handler()
 
     class GetFirmwareAvailableCommand(FastCommand):
         """Class for handling the GetFirmwareAvailable() command."""

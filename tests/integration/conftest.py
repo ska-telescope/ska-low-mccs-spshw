@@ -78,6 +78,16 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
+@pytest.fixture(name="preadu_level_property")
+def preadu_level_property_fixture() -> list[float]:
+    """
+    Return the preaduAttenuation to configure TPM.
+
+    :return: The preaduAttenuation property of the tile.
+    """
+    return [20.0] * 32
+
+
 @pytest.fixture(name="daq_id")
 def daq_id_fixture() -> int:
     """
@@ -265,6 +275,7 @@ def tile_component_manager_fixture(
     station_id: int,
     subrack_id: int,
     subrack_bay: int,
+    preadu_level_property: list[float],
     tpm_version: str,
     tile_simulator: TileSimulator,
 ) -> TileComponentManager:
@@ -278,6 +289,7 @@ def tile_component_manager_fixture(
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_bay: This tile's position in its subrack
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param preadu_level_property: the tpms preaduattentuaion configuration.
 
     :return: a TPM component manager in the specified simulation mode.
     """
@@ -294,7 +306,7 @@ def tile_component_manager_fixture(
         "tpm_ip",
         tpm_cpld_port,
         tpm_version,
-        [20.0] * 32,
+        preadu_level_property,
         [2.0] * 32,
         get_subrack_name(subrack_id),
         subrack_bay,

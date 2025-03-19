@@ -79,14 +79,10 @@ _ATTRIBUTE_MAP: Final = {
 
 
 class TaskCompleteWaiter(TaskCallbackType):
-    """
-    Wait for task_status COMPLETE.
-
-    This class can likely be generalised to TaskStatusWaiter.
-    """
+    """Wait for task to complete."""
 
     def __init__(self: TaskCompleteWaiter) -> None:
-        """Imitialise a new instance."""
+        """Initialise a new instance."""
         self._expected_status = TaskStatus.COMPLETED
         self._status: TaskStatus | None = None
         self._progress = 0

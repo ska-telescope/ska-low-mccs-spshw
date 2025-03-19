@@ -2027,12 +2027,21 @@ class TestMccsTileCommands:
             callbacks with asynchrony support.
         """
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
-
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         execute_lrc_to_completion(
             change_event_callbacks,
             on_tile_device,
             "StartAcquisition",
             json.dumps({"delay": 5}),
+        )
+
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised", lookahead=8
         )
         args = [
             {"data_type": "raw", "sync": True, "seconds": 6.7},

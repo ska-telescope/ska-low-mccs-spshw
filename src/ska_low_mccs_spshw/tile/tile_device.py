@@ -1891,6 +1891,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
+    def is_engineering(self: MccsTile) -> bool:
+        """
+        Return a flag representing whether we are in Engineering mode.
+
+        :return: True if Tile is in Engineering Mode.
+        """
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+
+        return is_engineering
+
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -2725,7 +2742,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             return self._component_manager.reevaluate_tpm_status()
 
-    @command(dtype_out="DevBoolean")
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
     def EvaluateTileProgrammingState(self: MccsTile) -> bool:
         """
         Re-evaluate the TileProgrammingState.

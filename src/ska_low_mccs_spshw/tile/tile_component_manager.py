@@ -30,7 +30,7 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
-from ska_tango_base.base import check_communicating
+from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
@@ -76,6 +76,65 @@ _ATTRIBUTE_MAP: Final = {
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
     "RFI_COUNT": "rfi_count",
 }
+
+
+class TaskCompleteWaiter(TaskCallbackType):
+    """
+    Wait for task_status COMPLETE.
+
+    This class can likely be generalised to TaskStatusWaiter.
+    """
+
+    def __init__(self: TaskCompleteWaiter) -> None:
+        """Imitialise a new instance."""
+        self._expected_status = TaskStatus.COMPLETED
+        self._status: TaskStatus | None = None
+        self._progress = 0
+        self._result = None
+        self._exception: Exception | None = None
+        self._condition = threading.Condition()
+
+    def __call__(
+        self: TaskCompleteWaiter,
+        status: TaskStatus | None = None,
+        progress: int | None = None,
+        result: Any = None,
+        exception: Exception | None = None,
+    ) -> None:
+        # Update the internal state based on callback inputs
+        if status is not None:
+            self._status = status
+        if progress is not None:
+            self._progress = progress
+        if result is not None:
+            self._result = result
+        if exception is not None:
+            self._exception = exception
+
+        # Notify that the task has updated its status
+        with self._condition:
+            self._condition.notify_all()
+
+    def wait(self: TaskCompleteWaiter, timeout: float) -> bool:
+        """
+        Wait until the task reaches the expected status or the timeout is reached.
+
+        :param timeout: timeout in seconds.
+
+        :return: True if we arrived at TaskStatus.COMPLETED.
+        """
+        with self._condition:
+            start_time = time.time()
+            while (
+                self._status != self._expected_status
+                and time.time() - start_time < timeout
+            ):
+                remaining_time = timeout - (time.time() - start_time)
+                if remaining_time > 0:
+                    self._condition.wait(timeout=remaining_time)
+                else:
+                    return False
+            return self._status == self._expected_status
 
 
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
@@ -161,7 +220,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
-        self._task_executor = TaskExecutor(max_workers=1)
+        # This TaskExecutor is used to check the synchronisation state
+        # of the TPM.
+        self._synchronised_checker = TaskExecutor(max_workers=1)
         # The callback from subrack will evaluate if the tpm
         # needs to be initialised. There is a rare race condition
         # where the evaluation will attempt initialisation although
@@ -1180,7 +1241,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
         :param global_reference_time: the start time assumed for starting the timestamp
+
+        :raises TimeoutError: When unable to abort previous command.
         """
+        # Wait for COMPLETE status.
+        task_waiter = TaskCompleteWaiter()
+        self._synchronised_checker.abort(task_waiter)
+        # An arbitrary 10 seconds hard failure when we are unable to stop
+        # the state waiter thread,
+        if not task_waiter.wait(timeout=10):
+            raise TimeoutError("Unable to abort previous waiter thread in time. ")
+
         if global_reference_time is None:
             global_reference_time = self._global_reference_time
         else:
@@ -1208,8 +1279,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info(
             "New request to synchronise. Replacing old monitoring thread with new!"
         )
-        self._task_executor.abort()
-        self._task_executor.submit(
+        self._synchronised_checker.submit(
             self.__wait_for_synchronised, kwargs={"deadline": deadline}
         )
 

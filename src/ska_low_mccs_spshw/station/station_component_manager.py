@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
@@ -33,12 +34,14 @@ from ska_control_model import (
     ResultCode,
     TaskStatus,
 )
+from ska_low_mccs_common import EventSerialiser
+from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     DeviceComponentManager,
     MccsBaseComponentManager,
 )
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from ska_low_mccs_common.utils import lock_power_state, threadsafe
+from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
@@ -95,71 +98,6 @@ def retry_command_on_exception(
     )
 
 
-class _SubrackProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
-
-    # pylint: disable=too-many-arguments
-    def __init__(
-        self: _SubrackProxy,
-        fqdn: str,
-        station_id: int,
-        logger: logging.Logger,
-        communication_state_changed_callback: Callable[[CommunicationStatus], None],
-        component_state_changed_callback: Callable[[dict[str, Any]], None],
-    ) -> None:
-        """
-        Initialise a new instance.
-
-        :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
-            is to be assigned
-        :param logger: the logger to be used by this object.
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        :param communication_state_changed_callback: callback to be
-            called when the status of the communications channel between
-            the component manager and its component changes
-        :param component_state_changed_callback: callback to be
-            called when the component state changes
-        """
-        self._station_id = station_id
-        self._connecting = False
-
-        super().__init__(
-            fqdn,
-            logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
-        )
-
-    def start_communicating(self: _SubrackProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
-
-    def _device_state_changed(
-        self: _SubrackProxy,
-        event_name: str,
-        event_value: tango.DevState,
-        event_quality: tango.AttrQuality,
-    ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
-            assert self._proxy is not None  # for the type checker
-            self._connecting = False
-        super()._device_state_changed(event_name, event_value, event_quality)
-
-    def _update_communication_state(
-        self: _SubrackProxy,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
-        super()._update_communication_state(communication_state)
-
-
 class _TileProxy(DeviceComponentManager):
     """A proxy to a tile, for a station to use."""
 
@@ -172,6 +110,8 @@ class _TileProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        attribute_changed_callback: Callable,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -188,21 +128,32 @@ class _TileProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param attribute_changed_callback: callback to be called when
+            desired attributes change.
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
         self._logical_tile_id = logical_tile_id
-        self._connecting = False
-
+        self._attribute_changed_callback = attribute_changed_callback
         super().__init__(
             fqdn,
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
-    def start_communicating(self: _TileProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "adcPower": self._on_attribute_change,
+            "staticTimeDelays": self._on_attribute_change,
+            "preaduLevels": self._on_attribute_change,
+            "ppsDelay": self._on_attribute_change,
+        }
+
+    def _on_attribute_change(self, *args: Any, **kwargs: Any) -> None:
+        self._attribute_changed_callback(self._logical_tile_id, *args, **kwargs)
 
     def _device_state_changed(
         self: _TileProxy,
@@ -223,21 +174,7 @@ class _TileProxy(DeviceComponentManager):
                     f"{self._logical_tile_id}, tile has logicalTileID "
                     f"{self._proxy.logicalTileId}"
                 )
-            if self._connecting:
-                self._connecting = False
         super()._device_state_changed(event_name, event_value, event_quality)
-
-    def _update_communication_state(
-        self: _TileProxy,
-        communication_state: CommunicationStatus,
-    ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
-        super()._update_communication_state(communication_state)
 
     def preadu_levels(self: _TileProxy) -> list[float]:
         """
@@ -259,7 +196,7 @@ class _TileProxy(DeviceComponentManager):
 
 
 class _DaqProxy(DeviceComponentManager):
-    """A proxy to a subrack, for a station to use."""
+    """A proxy to a DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
     def __init__(
@@ -269,12 +206,13 @@ class _DaqProxy(DeviceComponentManager):
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
 
         :param fqdn: the FQDN of the device
-        :param station_id: the id of the station to which this station
+        :param station_id: the id of the station to which this daq
             is to be assigned
         :param logger: the logger to be used by this object.
         :param component_state_changed_callback: callback to be
@@ -284,20 +222,21 @@ class _DaqProxy(DeviceComponentManager):
             the component manager and its component changes
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
         """
         self._station_id = station_id
-        self._connecting = False
-
         super().__init__(
             fqdn,
             logger,
             communication_state_changed_callback,
             component_state_changed_callback,
+            event_serialiser=event_serialiser,
         )
 
-    def start_communicating(self: _DaqProxy) -> None:
-        self._connecting = True
-        super().start_communicating()
+    def _configure_station_id(self: _DaqProxy) -> None:
+        assert self._proxy is not None
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
 
     def _device_state_changed(
         self: _DaqProxy,
@@ -305,9 +244,12 @@ class _DaqProxy(DeviceComponentManager):
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
     ) -> None:
-        if self._connecting and event_value == tango.DevState.ON:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
             assert self._proxy is not None  # for the type checker
-            self._connecting = False
+            self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
     def _update_communication_state(
@@ -319,7 +261,6 @@ class _DaqProxy(DeviceComponentManager):
         # This might be better done for all of these proxy devices in the common repo.
         if communication_state == CommunicationStatus.ESTABLISHED:
             assert self._proxy is not None
-            self._proxy.set_source(tango.DevSource.DEV)
 
             self._proxy.add_change_event_callback(
                 "xPolBandpass", self._daq_data_callback
@@ -381,12 +322,14 @@ class SpsStationComponentManager(
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
         channeliser_rounding: list[int] | None,
+        csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         tile_health_changed_callback: Callable[[str, Optional[HealthState]], None],
         subrack_health_changed_callback: Callable[[str, Optional[HealthState]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -405,6 +348,13 @@ class SpsStationComponentManager(
             or None if the network has no gateway.
         :param csp_ingest_ip: IP address of the CSP ingest for this station.
         :param channeliser_rounding: The channeliser rounding to use for this station.
+        :param csp_rounding: The CSP rounding to use for this station.
+            An integer value between 0 and 7.
+            Currently the underlying library accepts a list of 384 values
+            (one for each coarse channel sent to CSP)
+            but it actually only uses the first one of these.
+            Until it is updated to support a full list,
+            we restrict this interface to one integer.
         :param antenna_config_uri: location of the antenna mapping file
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
@@ -416,7 +366,9 @@ class SpsStationComponentManager(
             called when a tile's health changed
         :param subrack_health_changed_callback: callback to be
             called when a subrack's health changed
+        :param event_serialiser: the event serialiser to be used by this object.
         """
+        self._event_serialiser = event_serialiser
         self._daq_proxy: Optional[_DaqProxy] = None
         self._station_id = station_id
         self._daq_trl = daq_trl
@@ -453,20 +405,22 @@ class SpsStationComponentManager(
                 logger,
                 functools.partial(self._device_communication_state_changed, tile_fqdn),
                 functools.partial(self._tile_state_changed, tile_fqdn),
+                self._on_tile_attribute_change,
+                event_serialiser=self._event_serialiser,
             )
             # TODO: Extracting tile id from TRL of the form "low-mccs/tile/s8-1-tpm01"
             # But this code should not be relying on assumptions about TRL structure
             self._tile_id_mapping[tile_fqdn.split("-")[-1][3:]] = logical_tile_id
 
         self._subrack_proxies = {
-            subrack_fqdn: _SubrackProxy(
+            subrack_fqdn: DeviceComponentManager(
                 subrack_fqdn,
-                station_id,
                 logger,
                 functools.partial(
                     self._device_communication_state_changed, subrack_fqdn
                 ),
                 functools.partial(self._subrack_state_changed, subrack_fqdn),
+                event_serialiser=self._event_serialiser,
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
@@ -480,6 +434,7 @@ class SpsStationComponentManager(
                     self._device_communication_state_changed, self._daq_trl
                 ),
                 functools.partial(self._daq_state_changed, self._daq_trl),
+                event_serialiser=self._event_serialiser,
             )
             self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
@@ -528,10 +483,10 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
-        self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
-        self._csp_rounding = [3] * 384
-        self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
+        self._csp_rounding = [csp_rounding] * 384
+        self._desired_static_delays: None | list[float] = None
+        self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
@@ -557,6 +512,15 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+        self._communication_manager = CommunicationManager(
+            self._update_communication_state,
+            self._update_component_state,
+            self.logger,
+            self._subrack_proxies,
+            self._tile_proxies,
+            {self._daq_trl: self._daq_proxy},
+        )
+
         self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,
             logger=self.logger,
@@ -564,6 +528,9 @@ class SpsStationComponentManager(
             subrack_trls=list(self._subrack_proxies.keys()),
             daq_trl=self._daq_trl,
         )
+
+        self.acquiring_data_for_calibration = threading.Event()
+        self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
         if antenna_config_uri:
             logger.debug("Retrieving antenna mapping.")
@@ -794,104 +761,20 @@ class SpsStationComponentManager(
 
     def start_communicating(self: SpsStationComponentManager) -> None:
         """Establish communication with the station components."""
-        if self.communication_state == CommunicationStatus.ESTABLISHED:
-            return
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-
-        for tile_proxy in self._tile_proxies.values():
-            tile_proxy.start_communicating()
-        for subrack_proxy in self._subrack_proxies.values():
-            subrack_proxy.start_communicating()
-        if self._daq_proxy is not None:
-            self._daq_proxy.start_communicating()
+        self._communication_manager.start_communicating()
 
     def stop_communicating(self: SpsStationComponentManager) -> None:
         """Break off communication with the station components."""
-        if self.communication_state == CommunicationStatus.DISABLED:
-            return
-
-        for tile_proxy in self._tile_proxies.values():
-            tile_proxy.stop_communicating()
-        for subrack_proxy in self._subrack_proxies.values():
-            subrack_proxy.stop_communicating()
-        if self._daq_proxy is not None:
-            self._daq_proxy.stop_communicating()
-
-        self._update_communication_state(CommunicationStatus.DISABLED)
-        self._update_component_state(power=None, fault=None)
+        self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
         communication_state: CommunicationStatus,
     ) -> None:
-        # Many callback threads could be hitting this method at the same time, so it's
-        # possible (likely) that the GIL will suspend a thread between checking if it
-        # need to update, and actually updating. This leads to callbacks appearing out
-        # of order, which breaks tests. Therefore we need to serialise access.
-        with self._device_communication_state_lock:
-            self._communication_states[fqdn] = communication_state
-
-            if self.communication_state == CommunicationStatus.DISABLED:
-                return
-
-            if CommunicationStatus.DISABLED in self._communication_states.values():
-                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            elif (
-                CommunicationStatus.NOT_ESTABLISHED
-                in self._communication_states.values()
-            ):
-                self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
-            else:
-                self._update_communication_state(CommunicationStatus.ESTABLISHED)
-
-    def subscribe_to_attributes(
-        self: SpsStationComponentManager,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Subscribe to attributes of interest.
-
-        This will form subscriptions to attributes on subdevices
-        `MccsTile` and `MccsSubrack` if attribute not already subscribed.
-
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Abort the task
-        """
-        # Subscribe to Subrack attributes
-        for fqdn in self._subrack_proxies.keys():
-            self.logger.warning(
-                f"Subscriptions for subrack attributes not yet implemented {fqdn}"
-            )
-
-        # Subscribe to Tile attributes
-        for fqdn, proxy_object in self._tile_proxies.items():
-            try:
-                if proxy_object._proxy is None:
-                    raise ValueError(f"proxy for {fqdn} is None " "Unable to subscribe")
-                for tile_attribute in self.tile_attributes_to_subscribe:
-                    if (
-                        tile_attribute
-                        not in proxy_object._proxy._change_event_callbacks.keys()
-                    ):
-                        proxy_object._proxy.add_change_event_callback(
-                            tile_attribute,
-                            functools.partial(
-                                self._on_tile_attribute_change,
-                                proxy_object._logical_tile_id,
-                            ),
-                            stateless=True,
-                        )
-            except ValueError as e:
-                self.logger.warning(
-                    f"unable to form subscription for {fqdn} : {repr(e)}"
-                )
-            except Exception as e:  # pylint: disable=broad-except
-                self.logger.error(
-                    "Exception raised when attempting to subscribe "
-                    f"to attribute on device{fqdn} :{repr(e)}"
-                )
+        self._communication_manager.update_communication_status(
+            fqdn, communication_state
+        )
 
     def _on_tile_attribute_change(
         self: SpsStationComponentManager,
@@ -900,6 +783,16 @@ class SpsStationComponentManager(
         attribute_value: Any,
         attribute_quality: tango.AttrQuality,
     ) -> None:
+        # TODO: See THORN-89
+        # TODO: See THORN-89
+        if attribute_quality == tango.AttrQuality.ATTR_INVALID:
+            self.logger.debug(
+                f"Tile {logical_tile_id} attribute {attribute_name} "
+                f"has quality {attribute_quality}. "
+                "SpsStation is not yet capable of handling this. "
+                "Ignoring!"
+            )
+            return
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
@@ -947,7 +840,6 @@ class SpsStationComponentManager(
         """
         super()._update_communication_state(communication_state)
         if communication_state == CommunicationStatus.ESTABLISHED:
-            self.submit_task(self.subscribe_to_attributes)
             self._update_component_state(is_configured=self.is_configured)
 
     @threadsafe
@@ -961,9 +853,17 @@ class SpsStationComponentManager(
         if power is not None:
             with self._power_state_lock:
                 self._tile_power_states[fqdn] = power
+                if self._component_state_callback is not None:
+                    self._component_state_callback(device_name=fqdn, power=power)
+
                 self._evaluate_power_state()
+
         if health is not None:
+            # Old health model.
             self._tile_health_changed_callback(fqdn, HealthState(health))
+            # New health model.
+            if self._component_state_callback is not None:
+                self._component_state_callback(device_name=fqdn, health=health)
 
     @threadsafe
     def _subrack_state_changed(
@@ -976,8 +876,15 @@ class SpsStationComponentManager(
             with self._power_state_lock:
                 self._subrack_power_states[fqdn] = power
                 self._evaluate_power_state()
+        # Old health model.
         if health is not None:
             self._subrack_health_changed_callback(fqdn, HealthState(health))
+        # New health model.
+        if self._component_state_callback is not None and health is not None:
+            self._component_state_callback(
+                device_name=fqdn,
+                health=health,
+            )
 
     @threadsafe
     def _daq_state_changed(
@@ -999,7 +906,16 @@ class SpsStationComponentManager(
             if self._component_state_callback is not None:
                 self._component_state_callback(yPolBandpass=y_bandpass_data)
         if "dataReceivedResult" in state_change:
-            data_received_result = state_change.get("dataReceivedResult")
+            data_received_result: tuple[str, str] = state_change.get(
+                "dataReceivedResult", ("", "")
+            )
+            if (
+                data_received_result[0] == "correlator"
+                and self.acquiring_data_for_calibration.is_set()
+            ):
+                self.calibration_data_received_queue.put(
+                    json.loads(data_received_result[1])["file_name"]
+                )
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
 
@@ -1272,6 +1188,7 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        # pylint: disable=too-many-branches
         message: str = ""
         self.logger.debug("Starting on sequence.")
         self.logger.debug("State transitions suppressed during power command.")
@@ -1333,6 +1250,10 @@ class SpsStationComponentManager(
             self.logger.debug("End initialisation")
             task_status = TaskStatus.COMPLETED
             message = "On Command Completed"
+        elif result_code is ResultCode.ABORTED:
+            self.logger.error("Initialisation aborted")
+            task_status = TaskStatus.ABORTED
+            message = "On Command aborted"
         else:
             self.logger.error("Initialisation failed")
             task_status = TaskStatus.FAILED
@@ -1490,7 +1411,7 @@ class SpsStationComponentManager(
                     result_code = proxy.on()
                     time.sleep(0.25)  # stagger power on by 0.25 seconds per tile
                     results.append(result_code)
-                if ResultCode.FAILED in results:
+                if TaskStatus.FAILED in results:
                     return ResultCode.FAILED
         # wait for tiles to come up
         timeout = 180  # Seconds. Switch may take up to 3 min to recognize a new link
@@ -1501,6 +1422,9 @@ class SpsStationComponentManager(
             desired_states.append("Initialised")
         while time.time() < last_time:
             time.sleep(tick)
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("_turn_on_tiles task has been aborted")
+                return ResultCode.ABORTED
             states = self.tile_programming_state()
             self.logger.debug(f"tileProgrammingState: {states}")
             if all(state in desired_states for state in states):
@@ -1634,8 +1558,16 @@ class SpsStationComponentManager(
             )  # indexes for parameters for individual signals
             i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            tile.preaduLevels = self._desired_preadu_levels[i1:i2]
-            tile.staticTimeDelays = self._desired_static_delays[i1:i2]
+            if self._desired_preadu_levels is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance PreaduAttenuation "
+                )
+                tile.preaduLevels = self._desired_preadu_levels[i1:i2]
+            if self._desired_static_delays is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance StaticTimeDelays "
+                )
+                tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
             tile.cspSpeadFormat = self._csp_spead_format
@@ -1780,24 +1712,30 @@ class SpsStationComponentManager(
         tiles = list(self._tile_proxies.values())
         tile0 = tiles[0]._proxy
         assert tile0 is not None
-        time0 = (tile0.fpgasUnixTime)[0]
-        timeout = 15
-        while (tile0.fpgasUnixTime)[0] == time0:
-            if timeout == 0:
-                self.logger.error("Timeout waiting for FPGA time second tick")
-                return ResultCode.FAILED
-            time.sleep(0.1)
-            timeout = timeout - 1
-        result: list[int] = []
-        time.sleep(0.4)  # Wait till mid second
-        for proxy in tiles:
-            assert proxy._proxy is not None
-            result = result + list(proxy._proxy.fpgasUnixTime)
-        self.logger.debug(f"Current FPGA times:{result}")
-        if any(result[0] != time_n for time_n in result):
-            self.logger.error("FPGA time counters not synced")
-            return ResultCode.FAILED
-        return ResultCode.OK
+
+        for i in range(5):
+            time0 = (tile0.fpgasUnixTime)[0]
+            timeout = 15
+            while (tile0.fpgasUnixTime)[0] == time0:
+                if timeout == 0:
+                    self.logger.error("Timeout waiting for FPGA time second tick")
+                    return ResultCode.FAILED
+                time.sleep(0.1)
+                timeout = timeout - 1
+            result: list[int] = []
+            time.sleep(0.4)  # Wait till mid second
+            for proxy in tiles:
+                assert proxy._proxy is not None
+                result = result + list(proxy._proxy.fpgasUnixTime)
+            self.logger.debug(f"Current FPGA times:{result}")
+            if any(result[0] != time_n for time_n in result):
+                self.logger.error("FPGA time counters not synced, try again")
+                time.sleep(1)
+            else:
+                return ResultCode.OK
+
+        self.logger.error("FPGA time counters not synced after 5 retries")
+        return ResultCode.FAILED
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -1931,6 +1869,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelay is not None
             self._pps_delays[i] = proxy._proxy.ppsDelay
         return copy.deepcopy(self._pps_delays)
 
@@ -1956,6 +1895,7 @@ class SpsStationComponentManager(
         """
         for i, proxy in enumerate(self._tile_proxies.values()):
             assert proxy._proxy is not None  # for the type checker
+            assert proxy._proxy.ppsDelayCorrection is not None
             self._pps_delay_corrections[i] = proxy._proxy.ppsDelayCorrection
 
         return copy.deepcopy(self._pps_delay_corrections)
@@ -1995,13 +1935,15 @@ class SpsStationComponentManager(
         return static_delays
 
     @static_delays.setter
-    def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    def static_delays(
+        self: SpsStationComponentManager, delays: list[int | float]
+    ) -> None:
         """
         Set static time delay correction.
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
-        self._desired_static_delays = copy.deepcopy(delays)
+        self._desired_static_delays = delays
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
@@ -2111,7 +2053,7 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._desired_preadu_levels = copy.deepcopy(levels)
+        self._desired_preadu_levels = levels
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
@@ -2240,49 +2182,67 @@ class SpsStationComponentManager(
             rms_values = rms_values + list(proxy.adc_power())
         return rms_values
 
-    def board_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def board_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of board temperatures.
 
         :return: minimum, average and maximum of board temperatures
         """
-        board_temperatures = list(
-            tile._proxy is not None and tile._proxy.boardTemperature
+        board_temperatures = [
+            tile._proxy.boardTemperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.boardTemperature is not None
+        ]
+        if len(board_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         return [
             min(board_temperatures),
             mean(board_temperatures),
             max(board_temperatures),
         ]
 
-    def fpga_temperature_summary(self: SpsStationComponentManager) -> list[float]:
+    def fpga_temperature_summary(
+        self: SpsStationComponentManager,
+    ) -> list[float] | None:
         """
         Get summary of FPGAs temperatures.
 
         :return: minimum, average and maximum of FPGAs temperatures
         """
-        fpga_1_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga1Temperature
+        fpga_1_temperatures = [
+            tile._proxy.fpga1Temperature
             for tile in self._tile_proxies.values()
-        )
-        fpga_2_temperatures = list(
-            tile._proxy is not None and tile._proxy.fpga2Temperature
+            if tile._proxy is not None and tile._proxy.fpga1Temperature is not None
+        ]
+        fpga_2_temperatures = [
+            tile._proxy.fpga2Temperature
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.fpga2Temperature is not None
+        ]
+        if len(fpga_1_temperatures) == 0 or len(fpga_2_temperatures) == 0:
+            self.logger.info("No data available for summary.")
+            return None
         fpga_temperatures = fpga_1_temperatures + fpga_2_temperatures
         return [min(fpga_temperatures), mean(fpga_temperatures), max(fpga_temperatures)]
 
-    def pps_delay_summary(self: SpsStationComponentManager) -> list[float]:
+    def pps_delay_summary(self: SpsStationComponentManager) -> list[float] | None:
         """
         Get summary of PPS delays.
 
         :return: minimum, average and maximum of PPS delays
         """
-        pps_delays = list(
-            tile._proxy is not None and tile._proxy.ppsDelay
+        pps_delays = [
+            tile._proxy.ppsDelay
             for tile in self._tile_proxies.values()
-        )
+            if tile._proxy is not None and tile._proxy.ppsDelay is not None
+        ]
+        if len(pps_delays) == 0:
+            self.logger.info("No data available for summary.")
+            return None
+
         return [min(pps_delays), mean(pps_delays), max(pps_delays)]
 
     def sysref_present_summary(self: SpsStationComponentManager) -> bool:
@@ -2367,6 +2327,24 @@ class SpsStationComponentManager(
         :return: list of self-check tests available.
         """
         return self.self_check_manager._tpm_test_names
+
+    @property
+    def keep_test_data(self: "SpsStationComponentManager") -> bool:
+        """
+        Get whether test data will be kept from the self_check_manager.
+
+        :return: whether the test data will be kept.
+        """
+        return self.self_check_manager.keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self: "SpsStationComponentManager", value: bool) -> None:
+        """
+        Set whether test data will be kept from the self_check_manager.
+
+        :param value: whether or not to keep test data.
+        """
+        self.self_check_manager.keep_test_data = value
 
     # ------------
     # commands
@@ -2908,8 +2886,10 @@ class SpsStationComponentManager(
 
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,
-        channel: int,
         task_callback: Optional[Callable] = None,
+        *,
+        first_channel: int,
+        last_channel: int,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -2917,26 +2897,223 @@ class SpsStationComponentManager(
         This method returns immediately after it submitted
         `self._acquire_data_for_calibration` for execution.
 
-        :param channel: channel to calibrate for
+        :param first_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
-        if channel < 0 or channel > 510:
-            self.logger.error(f"Invalid channel{channel}")
-            return (TaskStatus.REJECTED, "Invalid channel")
-
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[channel],
+            args=[first_channel, last_channel],
             task_callback=task_callback,
         )
 
-    def _configure_station_for_calibration(self: SpsStationComponentManager) -> None:
-        daq_mode: str = "CORRELATOR_DATA"
+    def _start_daq(
+        self: SpsStationComponentManager,
+        daq_mode: str,
+        max_tries: int = 10,
+        tick: float = 0.5,
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "Start",
+            json.dumps(
+                {"modes_to_start": daq_mode},
+            ),
+        )
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                return
+            time.sleep(tick)
+
+        assert (
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+    def _stop_daq(
+        self: SpsStationComponentManager, max_tries: int = 10, tick: float = 0.5
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(self._daq_proxy._proxy, "Stop")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if len(daq_status["Running Consumers"]) == 0:
+                return
+            time.sleep(tick)
+
+        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
+    @check_communicating
+    def _acquire_data_for_calibration(
+        self: SpsStationComponentManager,
+        first_channel: int,
+        last_channel: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Acquire data for calibration.
+
+        :param first_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        self.acquiring_data_for_calibration.set()
+        try:
+            states = self.tile_programming_state()
+            self.logger.debug(f"tileProgrammingState: {states}")
+            if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.REJECTED,
+                        result=(
+                            ResultCode.REJECTED,
+                            "AcquireDataForCalibration failed. Tiles not synchronised.",
+                        ),
+                    )
+                return
+
+            def _check_aborted() -> bool:
+                if task_abort_event and task_abort_event.is_set():
+                    self.logger.info(
+                        "ConfigureStationForCalibration task has been aborted"
+                    )
+                    if task_callback:
+                        task_callback(
+                            status=TaskStatus.ABORTED,
+                            result=(ResultCode.ABORTED, "Task aborted"),
+                        )
+                    return True
+                return False
+
+            if task_callback:
+                task_callback(status=TaskStatus.IN_PROGRESS)
+
+            self._start_daq("CORRELATOR_DATA")
+
+            # Send data from tpms
+            self.send_data_samples(
+                json.dumps(
+                    {
+                        "data_type": "channel",
+                        "first_channel": first_channel,
+                        "last_channel": last_channel,
+                        "n_samples": 1835008,
+                    }
+                )
+            )
+            self.logger.debug(
+                f"Raw channel spigot sent for {first_channel=}, {last_channel=}"
+            )
+            self.logger.debug("Waiting for data to be received...")
+            success = True
+            while True:
+                if _check_aborted():
+                    return
+                try:
+                    filename = self.calibration_data_received_queue.get(
+                        timeout=10
+                    ).split("correlation_burst_")[1]
+                except Empty:
+                    self.logger.error("Failed to receive data in 10 seconds.")
+                    success = False
+                    break
+                channel = int(filename.split("_")[0])
+                if channel == last_channel:
+                    self.logger.info(
+                        f"Got data for {channel}, this is the last channel expected."
+                    )
+                    break
+                self.logger.debug(
+                    f"Got data for {channel}, waiting "
+                    f"for {last_channel}, {last_channel - channel} more."
+                )
+            self.logger.info("Stopping all consumers...")
+            self._stop_daq()
+
+            if task_callback:
+                if success:
+                    task_callback(
+                        status=TaskStatus.COMPLETED,
+                        result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
+                    )
+                else:
+                    task_callback(
+                        status=TaskStatus.FAILED,
+                        result=(
+                            ResultCode.FAILED,
+                            "Failed to receive data in 10 seconds.",
+                        ),
+                    )
+        finally:
+            self.acquiring_data_for_calibration.clear()
+            self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
+
+    def configure_station_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        **daq_config: dict[str, Any],
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the configure station for calibration method.
+
+        This method returns immediately after it submitted
+        `self._configure_station_for_calibration` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param daq_config: any extra config to configure DAQ with
+
+        :return: a task staus and response message
+        """
+        return self.submit_task(
+            self._configure_station_for_calibration,
+            task_callback=task_callback,
+            kwargs=daq_config,
+        )
+
+    @check_communicating
+    def _configure_station_for_calibration(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+        **daq_config: dict[str, Any],
+    ) -> None:
+        """
+        Configure station for calibration.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        :param daq_config: any extra config to configure DAQ with
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        def _check_aborted() -> bool:
+            if task_abort_event and task_abort_event.is_set():
+                self.logger.info("ConfigureStationForCalibration task has been aborted")
+                if task_callback:
+                    task_callback(
+                        status=TaskStatus.ABORTED,
+                        result=(ResultCode.ABORTED, "Task aborted"),
+                    )
+                return True
+            return False
+
         nof_correlator_samples: int = 1835008
         receiver_frame_size: int = 9000
-        nof_channels: int = 1
 
         max_tries: int = 10
         tick: float = 0.5
@@ -2948,6 +3125,8 @@ class SpsStationComponentManager(
         daq_status = json.loads(
             retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
         )
+        if _check_aborted():
+            return
 
         # TODO: We have to stop all consumers before sending again
         # https://jira.skatelescope.org/browse/MCCS-2183
@@ -2963,42 +3142,29 @@ class SpsStationComponentManager(
                     )
                 )
                 if len(daq_status["Running Consumers"]) == 0:
-                    continue
+                    break
+                if _check_aborted():
+                    return
                 time.sleep(tick)
+
             assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
+        base_config = {
+            "nof_tiles": 16,  # always 16 for correlation mode.
+            "directory": "correlator_data",  # Appended to ADR-55 path.
+            "nof_correlator_samples": nof_correlator_samples,
+            "receiver_frame_size": receiver_frame_size,
+            "description": "Data from AcquireDataForCalibration",
+        }
+        base_config.update(daq_config)
 
         retry_command_on_exception(
             self._daq_proxy._proxy,
             "configure",
-            json.dumps(
-                {
-                    "nof_tiles": self._number_of_tiles,
-                    "nof_channels": nof_channels,
-                    "directory": "correlator_data",  # Appended to ADR-55 path.
-                    "nof_correlator_samples": nof_correlator_samples,
-                    "receiver_frame_size": receiver_frame_size,
-                }
-            ),
+            json.dumps(base_config),
         )
-        retry_command_on_exception(
-            self._daq_proxy._proxy, "Start", json.dumps({"modes_to_start": daq_mode})
-        )
-        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-        for _ in range(max_tries):
-            daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
-            )
-            if any(
-                status_list[0] == daq_mode
-                for status_list in daq_status["Running Consumers"]
-            ):
-                break
-            time.sleep(tick)
-
-        assert (
-            len(daq_status["Running Consumers"]) > 0
-            and daq_mode in daq_status["Running Consumers"][0]
-        ), f"Failed to start {daq_mode}."
+        if _check_aborted():
+            return
 
         self.set_lmc_download(
             mode="10g",
@@ -3006,6 +3172,11 @@ class SpsStationComponentManager(
             dst_ip=daq_status["Receiver IP"][0],
             dst_port=daq_status["Receiver Ports"][0],
         )
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Station configured for calibration."),
+            )
 
     @property
     def csp_spead_format(self: SpsStationComponentManager) -> str:
@@ -3039,86 +3210,6 @@ class SpsStationComponentManager(
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             proxy._proxy.cspSpeadFormat = spead_format
-
-    @check_communicating
-    def _acquire_data_for_calibration(
-        self: SpsStationComponentManager,
-        channel: int,
-        task_callback: Optional[Callable] = None,
-        task_abort_event: Optional[threading.Event] = None,
-    ) -> None:
-        """
-        Acquire data for calibration.
-
-        :param channel: channel to calibrate for
-        :param task_callback: Update task state, defaults to None
-        :param task_abort_event: Check for abort, defaults to None
-        """
-        states = self.tile_programming_state()
-        self.logger.debug(f"tileProgrammingState: {states}")
-        if any(state != TpmStatus.SYNCHRONISED.pretty_name() for state in states):
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.REJECTED,
-                    result=(
-                        ResultCode.REJECTED,
-                        "AcquireDataForCalibration failed. Tiles not synchronised.",
-                    ),
-                )
-            return
-
-        if task_callback:
-            task_callback(status=TaskStatus.IN_PROGRESS)
-
-        def _check_aborted() -> bool:
-            if task_abort_event and task_abort_event.is_set():
-                self.logger.info("AcquireDataForCalibration task has been aborted")
-                if task_callback:
-                    task_callback(
-                        status=TaskStatus.ABORTED,
-                        result=(ResultCode.ABORTED, "Task aborted"),
-                    )
-                return True
-            return False
-
-        data_send_mode: str = "channel"
-
-        try:
-            self.logger.info(
-                "AcquireDataForCalibration configuring tiles and daq for calibration"
-            )
-            self._configure_station_for_calibration()
-            if _check_aborted():
-                return
-        except AssertionError as e:
-            self.logger.error(f"Unable to configure station {repr(e)}")
-            if task_callback:
-                task_callback(
-                    status=TaskStatus.FAILED,
-                    result=(
-                        ResultCode.FAILED,
-                        "AcquireDataForCalibration failed. "
-                        f"Unable to configure station {repr(e)}",
-                    ),
-                )
-            return
-
-        # Send data from tpms
-        self.send_data_samples(
-            json.dumps(
-                {
-                    "data_type": data_send_mode,
-                    "first_channel": channel,
-                    "last_channel": channel,
-                }
-            )
-        )
-        self.logger.debug(f"Raw channel spigot sent for {channel=}")
-        if task_callback:
-            task_callback(
-                status=TaskStatus.COMPLETED,
-                result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
-            )
 
     @check_communicating
     def set_channeliser_rounding(
@@ -3254,6 +3345,30 @@ class SpsStationComponentManager(
                 status=TaskStatus.COMPLETED,
                 result=(ResultCode.OK, "ADC equalisation complete."),
             )
+
+    def start_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Start ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StartADCs", require_synchronised=True)
+
+    def stop_adcs(
+        self: SpsStationComponentManager,
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Stop ADCs on all tiles.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        return self._execute_async_on_tiles("StopADCs", require_synchronised=True)
 
     def describe_test(self, test_name: str) -> str:
         """

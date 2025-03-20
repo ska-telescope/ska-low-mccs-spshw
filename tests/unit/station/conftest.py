@@ -13,7 +13,7 @@ import unittest.mock
 
 import pytest
 import tango
-from ska_control_model import PowerState, ResultCode
+from ska_control_model import AdminMode, HealthState, PowerState, ResultCode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
 from tango.server import command
 
@@ -32,6 +32,8 @@ def mock_subrack_device_proxy_fixture() -> unittest.mock.Mock:
     """
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
     builder.add_result_command("Off", ResultCode.STARTED)
     builder.add_result_command("On", ResultCode.STARTED)
     return builder()
@@ -50,6 +52,13 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
     logical_tile_id = tile_id - 1
     builder = MockDeviceBuilder()
     builder.set_state(tango.DevState.ON)
+    builder.add_attribute("adminMode", AdminMode.ONLINE)
+    builder.add_attribute("healthState", HealthState.OK)
+    builder.add_attribute("ppsDelay", 0)
+    builder.add_attribute("preaduLevels", [22.0] * 32)
+    builder.add_attribute("adcPower", [17.0] * 32)
+    builder.add_attribute("staticTimeDelays", [0] * 32)
+    builder.add_attribute("ppsDelay", 0)
     builder.add_attribute("cspRounding", [2] * 384)
     builder.add_attribute("pendingDataRequests", False)
     builder.add_result_command("LoadPointingDelays", ResultCode.QUEUED)
@@ -106,6 +115,12 @@ def mock_daq_device_proxy_fixture() -> MockDeviceBuilder:
             }
         ),
     )
+    builder.add_result_command(
+        "Stop", result_code=ResultCode.QUEUED, status="Task queued"
+    )
+    builder.add_result_command(
+        "Start", result_code=ResultCode.QUEUED, status="Task queued"
+    )
     return builder()
 
 
@@ -157,7 +172,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
         testing.
     """
 
-    class PatchedSpsStationDevice(SpsStation):
+    class PatchedSpsStationDevice(SpsStation):  # pylint: disable=too-many-ancestors
         """
         SpsStation patched with extra commands for testing purposes.
 
@@ -220,6 +235,39 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             for name in self.component_manager._tile_proxies:
                 self.component_manager._tile_state_changed(name, power=PowerState.ON)
+
+        @command()
+        def MockSubdeviceHealth(self: PatchedSpsStationDevice, argin: str) -> None:
+            """
+            Mock a subdevice health change.
+
+            :param argin: A json string with the device trl and new health.
+
+            Make the station device think it has received a health change
+            event from a subdevice.
+            """
+            argin_dict = json.loads(argin)
+            device = argin_dict["device"]
+            health = argin_dict["health"]
+            self._health_rollup.health_changed(source=device, health=health)
+
+        @command()
+        def MockCalibrationDataReceived(self: PatchedSpsStationDevice) -> None:
+            """
+            Mock calibration data received.
+
+            Make the station device think it has received calibration data
+            after a send data samples.
+            """
+            base_dir = "/product/eb-mvp01-20250314-00005/ska-low-mccs/5/correlator_data"
+            file_name = "/correlation_burst_106_20250314_58668_0.hdf5"
+            self.component_manager._daq_state_changed(
+                "some/daq/fqdn",
+                dataReceivedResult=(
+                    "correlator",
+                    json.dumps({"file_name": base_dir + file_name}),
+                ),
+            )
 
     return PatchedSpsStationDevice
 

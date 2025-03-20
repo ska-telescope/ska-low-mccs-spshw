@@ -11,13 +11,13 @@ from __future__ import annotations
 import logging
 import time
 import unittest.mock
-from typing import Callable, Iterator
+from typing import Callable, Final, Iterator
 
 import pytest
 import tango
 from ska_control_model import PowerState, ResultCode, SimulationMode, TestMode
 from ska_low_mccs_common.testing.mock import MockDeviceBuilder
-from ska_tango_testing.mock import MockCallableGroup
+from ska_tango_testing.mock import MockCallable, MockCallableGroup
 from tango.server import command
 
 from ska_low_mccs_spshw import MccsTile
@@ -31,6 +31,27 @@ from tests.harness import (
     SpsTangoTestHarnessContext,
     get_subrack_name,
 )
+
+
+@pytest.fixture(name="tile_state_map")
+def tile_state_map() -> dict[tuple[PowerState, bool], tango.DevState]:
+    """
+    Return a map to expected state.
+
+    :returns: a dictionary containing a tuple with first entry being
+        Tpm Power as reported by the subrack, the second entry being
+        whether the TPM is connectable as the key. The result is the
+        expected state of the device.
+    """
+    # (subrack_says_tpm_power, is_tpm_reachable) -> resulting DevState
+    return {
+        (PowerState.UNKNOWN, False): tango.DevState.UNKNOWN,
+        (PowerState.OFF, False): tango.DevState.OFF,
+        (PowerState.ON, False): tango.DevState.FAULT,
+        (PowerState.UNKNOWN, True): tango.DevState.FAULT,
+        (PowerState.OFF, True): tango.DevState.FAULT,
+        (PowerState.ON, True): tango.DevState.ON,
+    }
 
 
 @pytest.fixture(name="mock_factory")
@@ -142,7 +163,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "attribute_state",
         "task",
         "task_lrc",
-        timeout=10.0,
+        timeout=15.0,
     )
 
 
@@ -186,6 +207,30 @@ def tpm_version_fixture() -> str:
     return "tpm_v1_6"
 
 
+PREADU_ATTENUATION: Final = [20.0] * 32
+STATIC_TIME_DELAYS: Final = [2.5] * 32
+
+
+@pytest.fixture(name="preadu_attenuation")
+def preadu_attenuation_fixture() -> list[float]:
+    """
+    Return the preADU attenuation to set on the tile under test.
+
+    :return: the preADU attenuation to set on the tile under test.
+    """
+    return PREADU_ATTENUATION
+
+
+@pytest.fixture(name="static_time_delays")
+def static_time_delays_fixture() -> list[float]:
+    """
+    Return the preADU attenuation to set on the tile under test.
+
+    :return: the preADU attenuation to set on the tile under test.
+    """
+    return STATIC_TIME_DELAYS
+
+
 @pytest.fixture(name="tile_simulator")
 def tile_simulator_fixture(logger: logging.Logger) -> TileSimulator:
     """
@@ -209,6 +254,8 @@ def tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
+    preadu_attenuation: list[float],
+    static_time_delays: list[float],
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
@@ -226,6 +273,8 @@ def tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param preadu_attenuation: the preADU attenuation to set on the tile.
+    :param static_time_delays: the static delays offset to apply to the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param poll_rate: the polling rate
@@ -244,6 +293,8 @@ def tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
+        preadu_attenuation,
+        static_time_delays,
         get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],
@@ -275,6 +326,8 @@ def dynamic_tile_component_manager_fixture(
     tpm_ip: str,
     tpm_cpld_port: int,
     tpm_version: str,
+    preadu_attenuation: list[float],
+    static_time_delays: list[float],
     subrack_id: int,
     subrack_tpm_id: int,
     callbacks: MockCallableGroup,
@@ -291,6 +344,8 @@ def dynamic_tile_component_manager_fixture(
     :param tpm_ip: the IP address of the tile
     :param tpm_cpld_port: the port at which the tile is accessed for control
     :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+    :param preadu_attenuation: the preADU attenuation to set on the tile.
+    :param static_time_delays: the static delays offset to apply to the tile.
     :param subrack_id: ID of the subrack that controls power to this tile
     :param subrack_tpm_id: This tile's position in its subrack
     :param poll_rate: the polling rate
@@ -309,6 +364,8 @@ def dynamic_tile_component_manager_fixture(
         tpm_ip,
         tpm_cpld_port,
         tpm_version,
+        preadu_attenuation,
+        static_time_delays,
         get_subrack_name(subrack_id),
         subrack_tpm_id,
         callbacks["communication_status"],
@@ -364,6 +421,18 @@ def patched_tile_device_class_fixture(
             )
             tile_component_manager._update_attribute_callback = (
                 self._update_attribute_callback
+            )
+            wrapped_set_up_antenna_buffer = MockCallable(
+                wraps=tile_component_manager.set_up_antenna_buffer
+            )
+            tile_component_manager.set_up_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_set_up_antenna_buffer
+            )
+            wrapped_start_antenna_buffer = MockCallable(
+                wraps=tile_component_manager._start_antenna_buffer
+            )
+            tile_component_manager._start_antenna_buffer = (  # type: ignore[assignment]
+                wrapped_start_antenna_buffer
             )
             return tile_component_manager
 

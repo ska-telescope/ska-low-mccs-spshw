@@ -6,7 +6,6 @@
 #
 PROJECT = ska-low-mccs-spshw
 include .make/base.mk
-include .make/tmdata.mk
 
 ########################################################################
 # DOCS
@@ -42,12 +41,12 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 6.0.0
+FIRMWARE_VERSION = 6.2.0
 DESIRED_FIRMWARE_FILE_NAME = itpm_v1_6.bit
 
 install-firmware:
 	mkdir temp_firmware
-	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska_low_sps_tpmfirmware-$(FIRMWARE_VERSION).tar.gz
+	curl -sSL --retry 3 --connect-timeout 15 --output temp_firmware/firmware_files.tar.gz https://artefact.skao.int/repository/raw-internal/ska-low-sps-tpm-fpga-$(FIRMWARE_VERSION).tar.gz
 	gzip -d temp_firmware/firmware_files.tar.gz
 	tar -xvf temp_firmware/firmware_files.tar -C temp_firmware
 	cp temp_firmware/tpm_firmware.bit $(DESIRED_FIRMWARE_FILE_NAME)
@@ -98,6 +97,10 @@ K8S_TEST_RUNNER_PYTEST_OPTIONS = -v --true-context \
 	--junitxml=$(JUNITXML_REPORT_PATH) \
 	--cucumberjson=$(CUCUMBER_JSON_PATH) \
 	--json-report --json-report-file=$(JSON_REPORT_PATH)
+
+ifdef HW_DEPLOYMENT
+K8S_TEST_RUNNER_PYTEST_OPTIONS += --hw-deployment
+endif
 
 K8S_TEST_RUNNER_PYTEST_TARGET = tests/functional
 K8S_TEST_RUNNER_PIP_INSTALL_ARGS = -r tests/functional/requirements.txt

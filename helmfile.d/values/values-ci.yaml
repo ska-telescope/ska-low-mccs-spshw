@@ -1,78 +1,25 @@
 defaults:
   logging_level_default: 5
 
-platform:
-  metadata:
-    version: 0.8.0
-
-  cluster:
-    daq:
-      storage_class: nfss1
-
-  array:
-    stations:
-      - ci-1
-      - real-daq-1
-
-  stations:
-    ci-1:
-      id: 1
-      sps:
-        sdn_first_interface: 10.0.0.152/25
-        daq:
-          calibration:
-            simulated: true
-          bandpass:
-            simulated: true
-        pdus:
-          pdur1:
-            host: 10.0.10.210
-            device_definition: src/ska_low_mccs_spshw/pdu/pdu/pdu.yaml
-            v2_community: private
-        subracks:
-          sr1:
-            simulated: true
-            srmb_host: srmb-1
-            srmb_port: 8081
-        tpms:
-          tpm10:
-            id: 9
-            simulated: true
-            host: 10.0.10.201
-            port: 10000
-            version: tpm_v1_6
-            subrack: sr1
-            subrack_slot: 1
-        antenna_config_uri:
-          uri: "car:ska-low-aavs3?main"
-          path: "instrument/mccs-configuration/aavs3.yaml"
-    real-daq-1:
-      id: 1
-      sps:
-        sdn_first_interface: 10.1.0.152/25
-        subracks:
-          sr1:
-            simulated: true
-            srmb_host: srmb-1
-            srmb_port: 8081
-        tpms:
-          tpm10:
-            id: 9
-            simulated: true
-            host: 10.0.10.201
-            port: 10000
-            version: tpm_v1_6
-            subrack: sr1
-            subrack_slot: 1
-
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,
 #
-# helm_values:
+helm_values:
+  # Null ParentTRL given by platform spec, currently the only place to do this.
+  deviceServers:
+    spsstations:
+      ci-1:
+        low-mccs/spsstation/ci-1:
+          device_properties:
+            ParentTRL: ""
+      real-daq-1:
+        low-mccs/spsstation/real-daq-1:
+          device_properties:
+            ParentTRL: ""
 #   image:
 #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
-#     tag: 0.17.6-dirty
+#     tag: 1.0.0-dirty
 
 #   ska-low-mccs-daq:
 #     image:

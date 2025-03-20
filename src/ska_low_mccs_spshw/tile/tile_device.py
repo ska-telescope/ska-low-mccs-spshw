@@ -8,7 +8,6 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
 
-import copy
 import functools
 import importlib  # allow forward references in type hints
 import itertools
@@ -17,7 +16,9 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
+from functools import reduce, wraps
 from ipaddress import IPv4Address
+from operator import getitem
 from typing import Any, Callable, Final, NoReturn
 
 import numpy as np
@@ -31,7 +32,8 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_tango_base.base import CommandTracker, SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
     FastCommand,
@@ -41,9 +43,9 @@ from ska_tango_base.commands import (
 from tango.server import attribute, command, device_property
 
 from .attribute_managers import (
-    AlarmAttributeManager,
     AttributeManager,
     BoolAttributeManager,
+    NpArrayAttributeManager,
 )
 from .tile_component_manager import TileComponentManager
 from .tile_health_model import TileHealthModel
@@ -52,6 +54,31 @@ from .tpm_status import TpmStatus
 __all__ = ["MccsTile", "main"]
 
 DevVarLongStringArrayType = tuple[list[ResultCode], list[str]]
+
+
+def engineering_mode_required(func: Callable) -> Callable:
+    """
+    Return a decorator for engineering only commands.
+
+    :param func: the command which is engineering mode only.
+
+    :returns: decorator to check for engineering mode before running command.
+    """
+
+    @wraps(func)
+    def wrapper(*args: Any, **kwargs: Any) -> DevVarLongStringArrayType:
+        device: MccsBaseDevice = args[0]
+        if device._admin_mode != AdminMode.ENGINEERING:
+            return (
+                [ResultCode.REJECTED],
+                [
+                    f"Device in adminmode {device._admin_mode.name}, "
+                    "this command requires engineering."
+                ],
+            )
+        return func(*args, **kwargs)
+
+    return wrapper
 
 
 @dataclass
@@ -86,7 +113,7 @@ def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
 
 
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
-class MccsTile(SKABaseDevice[TileComponentManager]):
+class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
 
     # -----------------
@@ -106,6 +133,13 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     TpmIp = device_property(dtype=str, default_value="0.0.0.0")
     TpmCpldPort = device_property(dtype=int, default_value=10000)
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
+
+    PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+    StaticDelays = device_property(
+        dtype=(float,),
+        default_value=[0.0] * 32,  # Default no offsets
+        doc="Delays in nanoseconds to account for static delay missmatches.",
+    )
 
     # ---------------
     # Initialisation
@@ -157,6 +191,8 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             f"\tSimulationConfig: {self.SimulationConfig}\n"
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
+            f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
+            f"\tStaticDelays: {self.StaticDelays}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -165,6 +201,11 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
+            "I2C_access_alm": "I2C_access_alm",
+            "temperature_alm": "temperature_alm",
+            "voltage_alm": "voltage_alm",
+            "SEM_wd": "SEM_wd",
+            "MCU_wd": "MCU_wd",
             "programming_state": "tileProgrammingState",
             "adc_rms": "adcPower",
             "static_delays": "staticTimeDelays",
@@ -207,24 +248,27 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "resync_count": "resync_count",
             "ddr_initialisation": "ddr_initialisation",
             "ddr_reset_counter": "ddr_reset_counter",
-            "ddr_rd_cnt": "ddr_rd_cnt",
-            "ddr_wr_cnt": "ddr_wr_cnt",
-            "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
+            # "ddr_rd_cnt": "ddr_rd_cnt",
+            # "ddr_wr_cnt": "ddr_wr_cnt",
+            # "ddr_rd_dat_cnt": "ddr_rd_dat_cnt",
             "arp": "arp",
             "udp_status": "udp_status",
             "crc_error_count": "crc_error_count",
             "bip_error_count": "bip_error_count",
             "decode_error_count": "decode_error_count",
             "linkup_loss_count": "linkup_loss_count",
+            "data_router_status": "data_router_status",
+            "data_router_discarded_packets": "data_router_discarded_packets",
             "tile_beamformer_status": "tile_beamformer_status",
             "station_beamformer_status": "station_beamformer_status",
             "station_beamformer_error_count": "station_beamformer_error_count",
+            "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
-            "global_status_alarms": "alarms",
             "board_temperature": "boardTemperature",
+            "rfi_count": "rfiCount",
         }
 
-        attribute_converters = {
+        attribute_converters: dict[str, Any] = {
             "adc_pll_status": _serialise_object,
             "station_beamformer_error_count": _serialise_object,
             "crc_error_count": _serialise_object,
@@ -248,6 +292,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "timing": _serialise_object,
             "io": _serialise_object,
             "dsp": _serialise_object,
+            "data_router_status": _serialise_object,
+            "data_router_discarded_packets": _serialise_object,
+            "station_beamformer_flagged_count": _serialise_object,
             "adcs": _serialise_object,
             "beamformerTable": _flatten_list,
         }
@@ -270,6 +317,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         # - Temperature: defining a alarm handler to shutdown TPM on ALARM.
         # - stationId and logicalTileId given an initial value from configuration.
         # - alarms: alarms raised by firmware are collected in a dictionary.
+        # - rfiCount: np.ndarray needs a different truth comparison.
         # We have a specific handler for this attribute.
         self._attribute_state.update(
             {
@@ -307,11 +355,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                         self.shutdown_on_max_alarm, "fpga2Temperature"
                     ),
                 ),
-                "alarms": AlarmAttributeManager(
-                    functools.partial(self.post_change_event, "alarms"),
+                "rfiCount": NpArrayAttributeManager(
+                    functools.partial(self.post_change_event, "rfiCount")
                 ),
             }
         )
+
+        self.__alarm_attribute_map: dict[str, str] = {
+            "I2C_access_alm": "I2C_access_alm",
+            "temperature_alm": "temperature_alm",
+            "voltage_alm": "voltage_alm",
+            "SEM_wd": "SEM_wd",
+            "MCU_wd": "MCU_wd",
+        }
 
         self.attribute_monitoring_point_map: dict[str, list[str]] = {
             "ppsPresent": ["timing", "pps", "status"],
@@ -335,9 +391,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "adc_sysref_counter": ["adcs", "sysref_counter"],
             "clocks": ["timing", "clocks"],
             "clock_managers": ["timing", "clock_managers"],
-            "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
-            "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
-            "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
+            # "ddr_rd_cnt": ["io", "ddr_interface", "rd_cnt"],
+            # "ddr_wr_cnt": ["io", "ddr_interface", "wr_cnt"],
+            # "ddr_rd_dat_cnt": ["io", "ddr_interface", "rd_dat_cnt"],
             "lane_error_count": ["io", "jesd_interface", "lane_error_count"],
             "lane_status": ["io", "jesd_interface", "lane_status"],
             "link_status": ["io", "jesd_interface", "link_status"],
@@ -350,12 +406,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             "bip_error_count": ["io", "udp_interface", "bip_error_count"],
             "decode_error_count": ["io", "udp_interface", "decode_error_count"],
             "linkup_loss_count": ["io", "udp_interface", "linkup_loss_count"],
+            "data_router_status": ["io", "data_router", "status"],
+            "data_router_discarded_packets": ["io", "data_router", "discarded_packets"],
             "tile_beamformer_status": ["dsp", "tile_beamf"],
             "station_beamformer_status": ["dsp", "station_beamf", "status"],
             "station_beamformer_error_count": [
                 "dsp",
                 "station_beamf",
                 "ddr_parity_error_count",
+            ],
+            "station_beamformer_flagged_count": [
+                "dsp",
+                "station_beamf",
+                "discarded_or_flagged_packet_count",
             ],
         }
 
@@ -388,12 +451,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self.TpmIp,
             self.TpmCpldPort,
             self.TpmVersion,
+            self.PreaduAttenuation,
+            self.StaticDelays,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,
             self._component_state_changed,
             self._update_attribute_callback,
             # self._tile_device_state_callback,
+            event_serialiser=self._event_serialiser,
         )
 
     def init_command_objects(self: MccsTile) -> None:
@@ -402,6 +468,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
             (
                 "SetFirmwareTemperatureThresholds",
                 self.SetFirmwareTemperatureThresholdsCommand,
@@ -434,6 +501,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             ("SendDataSamples", self.SendDataSamplesCommand),
             ("StopDataTransmission", self.StopDataTransmissionCommand),
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
+            ("ConfigurePatternGenerator", self.ConfigurePatternGeneratorCommand),
+            ("StartPatternGenerator", self.StartPatternGeneratorCommand),
+            ("StopPatternGenerator", self.StopPatternGeneratorCommand),
+            ("StartADCs", self.StartAdcsCommand),
+            ("StopADCs", self.StopAdcsCommand),
+            ("EnableStationBeamFlagging", self.EnableStationBeamFlaggingCommand),
+            ("DisableStationBeamFlagging", self.DisableStationBeamFlaggingCommand),
+            ("SetUpAntennaBuffer", self.SetUpAntennaBufferCommand),
+            ("StopAntennaBuffer", self.StopAntennaBufferCommand),
         ]:
             self.register_command_object(
                 command_name, command_object(self.component_manager, self.logger)
@@ -441,9 +517,12 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         #
         # Long running commands
         #
+
         for command_name, method_name in [
             ("Initialise", "initialise"),
             ("DownloadFirmware", "download_firmware"),
+            ("ReadAntennaBuffer", "read_antenna_buffer"),
+            ("StartAntennaBuffer", "start_antenna_buffer"),
             ("Configure", "configure"),
         ]:
             self.register_command_object(
@@ -457,6 +536,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                     logger=self.logger,
                 ),
             )
+
         self.register_command_object(
             "StartAcquisition",
             MccsTile.StartAcquisitionCommand(
@@ -543,20 +623,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             tango.DevState.FAULT,
         ]
 
-    def is_Off_allowed(self: MccsTile) -> bool:
-        """
-        Check if command `On` is allowed in the current device state.
-
-        :return: ``True`` if the command is allowed
-        """
-        return self.get_state() in [
-            tango.DevState.OFF,
-            tango.DevState.STANDBY,
-            tango.DevState.ON,
-            tango.DevState.UNKNOWN,
-            tango.DevState.FAULT,
-        ]
-
     # ----------
     # Callbacks
     # ----------
@@ -585,11 +651,15 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value if not mark_invalid else {}
+                self.tile_health_structure = dict(
+                    attribute_value if not mark_invalid else {}
+                )
                 self._health_model.update_state(
                     tile_health_structure=self.tile_health_structure
                 )
                 self.update_tile_health_attributes(mark_invalid=mark_invalid)
+            elif attribute_name == "global_status_alarms":
+                self.unpack_alarms(attribute_value, mark_invalid=mark_invalid)
             else:
                 try:
                     tango_name = self.attr_map[attribute_name]
@@ -601,7 +671,9 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 except KeyError as e:
                     self.logger.error(f"Key Error {repr(e)}")
                 except Exception as e:  # pylint: disable=broad-except
-                    self.logger.error(f"Caught unexpected exception: {repr(e)}")
+                    self.logger.error(
+                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    )
 
     # TODO: Upstream this interface change to SKABaseDevice
     # pylint: disable-next=arguments-differ
@@ -628,41 +700,24 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         else:
             self._health_model.update_state(fault=fault)
 
-    def unpack_monitoring_point(
+    def unpack_alarms(
         self: MccsTile,
-        health_structure: dict[str, Any],
-        dictionary_path: list[str],
-    ) -> Any:
+        alarms: dict[str, int],
+        mark_invalid: bool = False,
+    ) -> None:
         """
-        Unpack the monitoring point value from dictionary.
+        Unpack a dictionary of alarms.
 
-        :param health_structure: A nested health_structure dictionary
-        :param dictionary_path: A list of strings used to traverse the dictionary.
-
-        :example:
-
-        >> tile_health = {'timing': { 'pps': {'status': False}}}
-        >> pps=['timing', 'pps', 'status']
-        >> value = unpack_monitoring_point(tile_health, pps)
-        >> print(value) ->  False
-
-        :return: the monitoring point value or None.
+        :param alarms: The alarms we want to unpack.
+        :param mark_invalid: mark attribute as invalid.
         """
-        structure = copy.deepcopy(health_structure)
-        idx_list = copy.deepcopy(dictionary_path)
-        for key in idx_list:
-            try:
-                if len(idx_list) == 1:
-                    return structure[key]
-                idx_list.pop(0)
-                return self.unpack_monitoring_point(structure[key], idx_list)
-
-            except KeyError as e:
-                self.logger.error(
-                    f"Key error raise when locating tango_attribute value : {e}"
-                )
-                break
-        return None
+        if mark_invalid or alarms is None:
+            for alarm_name, _ in self.__alarm_attribute_map.items():
+                self._attribute_state[alarm_name].mark_stale()
+        else:
+            for alarm_name, alarm_path in self.__alarm_attribute_map.items():
+                alarm_value = alarms.get(alarm_path)
+                self._attribute_state[alarm_name].update(alarm_value)
 
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
@@ -677,22 +732,30 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
             if mark_invalid:
-                try:
+                if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
-                except KeyError:
+                else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
-            attribute_value = self.unpack_monitoring_point(
-                copy.deepcopy(self.tile_health_structure),
-                dictionary_path,
+
+            attribute_value = reduce(
+                getitem, dictionary_path, self.tile_health_structure
             )
-            if attribute_value is None:
-                continue
-            try:
-                self._attribute_state[attribute_name].update(attribute_value)
-            except KeyError:
-                self.logger.warning(f"Attribute {attribute_name} not found.")
-                continue
+
+            if attribute_value is not None:
+                try:
+                    if attribute_name in self._attribute_state:
+                        self._attribute_state[attribute_name].update(attribute_value)
+                    else:
+                        self.logger.warning(f"Attribute {attribute_name} not found.")
+                except Exception as e:  # pylint: disable=broad-except
+                    # Note: attribute converters were removed in
+                    # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                    # These converters added in skb-520 can be implemented
+                    # now that skb-609 is fixed.
+                    self.logger.error(
+                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -718,7 +781,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         try:
             attr = self._multi_attr.get_attr_by_name(attr_name)
-            attr_value = self._attribute_state[attr_name].read()[0]
+            attr_value = self._attribute_state[attr_name].read()
             if attr.is_max_alarm():
                 self.logger.warning(
                     f"Attribute {attr_name} changed to {attr_value}, "
@@ -859,6 +922,29 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevString",
+        label="station_beamformer_flagged_count",
+    )
+    def station_beamformer_flagged_count(self: MccsTile) -> str:
+        """
+        Return the station beamformer error count per FPGA.
+
+        Note: When station beam flagging is enabled,
+        this returns a count of packets flagged,
+        but when station beam flagging is disabled,
+        this instead returns a count of packets discarded/dropped
+
+        Expected: 0 if no parity errors detected.
+
+        :example:
+            >>> tile.station_beamformer_flagged_count
+            '{"FPGA0": 0, "FPGA1": 0}'
+
+        :return: the station beamformer error count per FPGA.
+        """
+        return self._attribute_state["station_beamformer_flagged_count"].read()
+
+    @attribute(
+        dtype="DevString",
         label="crc_error_count",
     )
     def crc_error_count(self: MccsTile) -> str:
@@ -932,6 +1018,42 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         :return: the linkup loss count per FPGA.
         """
         return self._attribute_state["linkup_loss_count"].read()
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_status",
+    )
+    def data_router_status(self: MccsTile) -> str:
+        """
+        Return the status of the data router.
+
+        Expected: 0 if no status OK.
+
+        :example:
+            >>> tile.data_router_status
+            '{"FPGA0": 0, "FPGA1": 0}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return self._attribute_state["data_router_status"].read()
+
+    @attribute(
+        dtype="DevString",
+        label="data_router_discarded_packets",
+    )
+    def data_router_discarded_packets(self: MccsTile) -> str:
+        """
+        Return the number of discarded packets.
+
+        Expected: 0 if no packets are discarded.
+
+        :example:
+            >>> tile.data_router_discarded_packets
+            '{"FPGA0": [0, 0], "FPGA1": [0, 0]}'
+
+        :return: the linkup loss count per FPGA.
+        """
+        return self._attribute_state["data_router_discarded_packets"].read()
 
     @attribute(
         dtype="DevBoolean",
@@ -1143,63 +1265,64 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self._attribute_state["clock_managers"].read()
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_cnt",
-    )
-    def ddr_rd_cnt(self: MccsTile) -> str:
-        """
-        Return the read counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_cnt",
+    # )
+    # def ddr_rd_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been read.
+    #     Expected: `integer` number of times ddr interface has been read.
 
-        :example:
-            >>> tile.ddr_rd_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been read.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_cnt"].read()[0])
+    #     :return: number of times ddr interface has been read.
+    #     """
+    #     return self._attribute_state["ddr_rd_cnt"].read())
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_wr_cnt",
-    )
-    def ddr_wr_cnt(self: MccsTile) -> str:
-        """
-        Return the write counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_wr_cnt",
+    # )
+    # def ddr_wr_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the write counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has been written to.
+    #     Expected: `integer` number of times ddr interface has been written to.
 
-        :example:
-            >>> tile.ddr_wr_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_wr_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has been written to.
-        """
-        return json.dumps(self._attribute_state["ddr_wr_cnt"].read()[0])
+    #     :return: number of times ddr interface has been written to.
+    #     """
+    #     return self._attribute_state["ddr_wr_cnt"].read())
 
-    @attribute(
-        dtype="DevString",
-        label="ddr_rd_dat_cnt",
-    )
-    def ddr_rd_dat_cnt(self: MccsTile) -> str:
-        """
-        Return the read valid counter of the ddr interface.
+    # @attribute(
+    #     dtype="DevString",
+    #     label="ddr_rd_dat_cnt",
+    # )
+    # def ddr_rd_dat_cnt(self: MccsTile) -> str:
+    #     """
+    #     Return the read valid counter of the ddr interface.
 
-        Expected: `integer` number of times ddr interface has responded to a read
-        with valid data.
+    #     Expected: `integer` number of times ddr interface has responded to a read
+    #     with valid data.
 
-        :example:
-            >>> tile.ddr_rd_dat_cnt
-            '{"FPGA0": 0,
-            "FPGA1": 0}'
+    #     :example:
+    #         >>> tile.ddr_rd_dat_cnt
+    #         '{"FPGA0": 0,
+    #         "FPGA1": 0}'
 
-        :return: number of times ddr interface has responded to a read with valid data.
-        """
-        return json.dumps(self._attribute_state["ddr_rd_dat_cnt"].read()[0])
+    #     :return: number of times ddr interface
+    #       has responded to a read with valid data.
+    #     """
+    #     return self._attribute_state["ddr_rd_dat_cnt"].read())
 
     @attribute(
         dtype="DevString",
@@ -1438,20 +1561,99 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self._attribute_state["adcs"].read()
 
     @attribute(
-        dtype="DevString",
-        label="alarms",
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
     )
-    def alarms(self: MccsTile) -> tuple[str, float, tango.AttrQuality]:
+    def I2C_access_alm(
+        self: MccsTile,
+    ) -> int | None:
         """
-        Return the TPM's alarm status.
+        Return the I2C alarm reading.
 
-        :return: the TPM's alarm status
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for I2C.
         """
-        return (
-            json.dumps(self._attribute_state["alarms"].read()[0]),
-            self._attribute_state["alarms"].read()[1],
-            self._attribute_state["alarms"].read()[2],
-        )
+        return self._attribute_state["I2C_access_alm"].read()
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def temperature_alm(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the Temperature alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for temperature.
+        """
+        return self._attribute_state["temperature_alm"].read()
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def voltage_alm(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the Voltage alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for voltage.
+        """
+        return self._attribute_state["voltage_alm"].read()
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def SEM_wd(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the SEMwd alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for SEMwd.
+        """
+        return self._attribute_state["SEM_wd"].read()
+
+    @attribute(
+        dtype="DevShort",
+        max_warning=1,
+        max_alarm=2,
+    )
+    def MCU_wd(
+        self: MccsTile,
+    ) -> int | None:
+        """
+        Return the MCUwd alarm reading.
+
+        0 -> OK
+        1 -> WARN
+        2 -> ALARM
+
+        :return: The alarm state for MCUwd.
+        """
+        return self._attribute_state["MCU_wd"].read()
 
     @attribute(
         dtype="DevString",
@@ -1688,6 +1890,23 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         )
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
+
+    def is_engineering(self: MccsTile) -> bool:
+        """
+        Return a flag representing whether we are in Engineering mode.
+
+        :return: True if Tile is in Engineering Mode.
+        """
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+
+        return is_engineering
 
     @attribute(
         dtype="DevDouble",
@@ -2403,6 +2622,19 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         return self.component_manager.last_pointing_delays
 
     @attribute(
+        dtype=(("DevLong",),),
+        max_dim_x=2,  # pol
+        max_dim_y=16,  # antenna
+    )
+    def rfiCount(self: MccsTile) -> list[list]:
+        """
+        Return the RFI count per antenna/pol.
+
+        :returns: the RFI count per antenna/pol.
+        """
+        return self._attribute_state["rfiCount"].read()
+
+    @attribute(
         dtype="DevDouble",
         abs_change=0.1,
         min_value=15.0,
@@ -2474,6 +2706,57 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         handler = self.get_command_object("Initialise")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
+
+    class EvaluateTileProgrammingStateCommand(FastCommand):
+        """Class for handling the EvaluateTileProgrammingStateCommand() command."""
+
+        def __init__(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EvaluateTileProgrammingStateCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingState` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: True if the re-evaluated TpmStatus differs from the
+                automated evaluation.
+            """
+            return self._component_manager.reevaluate_tpm_status()
+
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    def EvaluateTileProgrammingState(self: MccsTile) -> bool:
+        """
+        Re-evaluate the TileProgrammingState.
+
+        Evaluate and update the TileProgrammingState.
+        Return True is the re-evaluation returned a different value to
+        the value from automatic detection.
+        (A value of True could signify a race condition,
+        or that there is a bug in the automatic evaluation.)
+
+        :return: True is the re-evaluation of TpmStatus returns a different value.
+        """
+        handler = self.get_command_object("EvaluateTileProgrammingState")
+        return handler()
 
     class GetFirmwareAvailableCommand(FastCommand):
         """Class for handling the GetFirmwareAvailable() command."""
@@ -3709,8 +3992,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "LoadCalibrationCoefficents command completed OK"
-
         def do(  # type: ignore[override]
             self: MccsTile.LoadCalibrationCoefficientsCommand,
             argin: list[float],
@@ -3753,10 +4034,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 for i in range(1, len(argin), 8)
             ]
 
-            self._component_manager.load_calibration_coefficients(
+            result, message = self._component_manager.load_calibration_coefficients(
                 antenna, calibration_coefficients
             )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (result, message)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
     def LoadCalibrationCoefficients(
@@ -3825,8 +4106,6 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             self._component_manager = component_manager
             super().__init__(logger)
 
-        SUCCEEDED_MESSAGE = "ApplyCalibration command completed OK"
-
         def do(
             self: MccsTile.ApplyCalibrationCommand,
             *args: Any,
@@ -3845,8 +4124,10 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
             """
             switch_time = args[0]
 
-            self._component_manager.apply_calibration(switch_time)
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return_code, message = self._component_manager.apply_calibration(
+                switch_time
+            )
+            return (return_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
@@ -4749,6 +5030,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
                 amplitude_noise,
                 pulse_code,
                 amplitude_pulse,
+                kwargs.get("delays"),
                 set_time,
             )
 
@@ -4774,6 +5056,7 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         return self.admin_mode_model.admin_mode == AdminMode.ENGINEERING
 
+    @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -4821,6 +5104,446 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         """
         handler = self.get_command_object("ConfigureTestGenerator")
         (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class ConfigurePatternGeneratorCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigurePatternGenerator() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigurePatternGenerator.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigurePatternGenerator.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.ConfigurePatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new ConfigurePatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("ConfigurePatternGenerator", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        SUCCEEDED_MESSAGE = "ConfigurePatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.ConfigurePatternGeneratorCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.ConfigurePatternGenerator` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            """
+            self._component_manager.configure_pattern_generator(**kwargs)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def ConfigurePatternGenerator(
+        self: MccsTile, argin: str
+    ) -> DevVarLongStringArrayType:
+        """
+        Set the test pattern generator using the provided configuration.
+
+        :param argin: JSON dictionary with the following keywords:
+
+        * stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of the
+            channelizer), or 'beamf' (output of the tile beamformer).
+        * pattern: The data pattern in time order. Must be an array of length 1
+            to 1024. Represents values in time order, not for antennas or
+            polarizations.
+        * adders: A list of 32 integers that expands the pattern to cover 16
+            antennas and 2 polarizations. The adders map the pattern to hardware
+            signals.
+        * start: Boolean flag to indicate whether to start the pattern
+            immediately. If False, the pattern can be started manually later.
+        * shift: Optional bit shift (divides by 2^shift). Must not be used in
+            'beamf' stage, where it is always overridden to 4.
+            * zero: Integer (0-65535) used as a mask to disable the pattern on
+            specific antennas and polarizations. Applied to both FPGAs, supports
+            up to 8 antennas and 2 polarizations.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> test_pattern = list(range(1024))
+        >>> for n in range(1024):
+                if n % 2 == 0:
+                    test_pattern[n] = n
+                else:
+                    test_pattern[n] = random.randrange(0, 255, 1)
+        >>> test_adders = list(range(32))
+        >>> config = {"stage": "jesd", "pattern": test_pattern, "adders":
+                      test_adders, "start": True}
+        >>> jstr = json.dumps(config)
+        >>> values = dp.command_inout("ConfigurePatternGenerator", jstr)
+        """
+        handler = self.get_command_object("ConfigurePatternGenerator")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class StopPatternGeneratorCommand(FastCommand):
+        """
+        Class for handling the StopPatternGenerator(argin) command.
+
+        This command takes as input a positional argument specifying the stage in the
+        signal chain where the pattern was injected.
+        """
+
+        def __init__(
+            self: MccsTile.StopPatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StopPatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopPatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.StopPatternGeneratorCommand,
+            stage: str,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopPatternGenerator` commands.
+
+            :param stage: The stage in the signal chain where the pattern was injected.
+                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+                or 'beamf' (output of tile beamformer), or 'all' for all stages.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.stop_pattern_generator(stage)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StopPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+        """
+        Stop the pattern generator at the specified stage.
+
+        The stage can be the output of the JESD, the channelizer, or the beamformer.
+
+        :param stage: A positional string argument specifying the stage in the signal
+            chain where the pattern was injected. Options are: 'jesd' (output of ADCs),
+            'channel' (output of channelizer), 'beamf' (output of tile beamformer),
+            or 'all' for all stages.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopPatternGenerator", "jesd")
+        """
+        handler = self.get_command_object("StopPatternGenerator")
+        (return_code, message) = handler(stage)
+        return ([return_code], [message])
+
+    class StartPatternGeneratorCommand(FastCommand):
+        """
+        Class for handling the StartPatternGenerator(argin) command.
+
+        This command takes as input a positional argument specifying the stage in the
+        signal chain where the pattern should be injected.
+        """
+
+        def __init__(
+            self: MccsTile.StartPatternGeneratorCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StartPatternGeneratorCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StartPatternGenerator command completed OK"
+
+        def do(
+            self: MccsTile.StartPatternGeneratorCommand,
+            stage: str,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StartPatternGenerator` commands.
+
+            :param stage: The stage in the signal chain where the pattern was injected.
+                Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+                or 'beamf' (output of tile beamformer), or 'all' for all stages.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.start_pattern_generator(stage)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
+        """
+        Start the pattern generator at the specified stage.
+
+        The stage can be the output of the JESD, the channelizer, or the beamformer.
+
+        :param stage: A positional string argument specifying the stage in the signal
+            chain where the pattern was injected. Options are: 'jesd' (output of ADCs),
+            'channel' (output of channelizer), 'beamf' (output of tile beamformer),
+            or 'all' for all stages.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StartPatternGenerator", "channel")
+        """
+        handler = self.get_command_object("StartPatternGenerator")
+        (return_code, message) = handler(stage)
+        return ([return_code], [message])
+
+    class StartAdcsCommand(FastCommand):
+        """Class for handling the StartAdcs command."""
+
+        def __init__(
+            self: MccsTile.StartAdcsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StartAdcsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StartAdcs command completed OK"
+
+        def do(self: MccsTile.StartAdcsCommand) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StartADCs` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.start_adcs()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_out="DevVarLongStringArray")
+    def StartADCs(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Start the ADCs.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StartADCs")
+        """
+        handler = self.get_command_object("StartADCs")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class StopAdcsCommand(FastCommand):
+        """Class for handling the StopAdcs command."""
+
+        def __init__(
+            self: MccsTile.StopAdcsCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new StopAdcsCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopAdcs command completed OK"
+
+        def do(self: MccsTile.StopAdcsCommand) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopADCs` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.stop_adcs()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @engineering_mode_required
+    @command(dtype_out="DevVarLongStringArray")
+    def StopADCs(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Stop the ADCs.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("StopADCs")
+        """
+        handler = self.get_command_object("StopADCs")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class EnableStationBeamFlaggingCommand(FastCommand):
+        """Class for handling the EnableStationBeamFlagging command."""
+
+        def __init__(
+            self: MccsTile.EnableStationBeamFlaggingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EnableStationBeamFlaggingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "EnableStationBeamFlagging command completed OK"
+
+        def do(
+            self: MccsTile.EnableStationBeamFlaggingCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.EnableStationBeamFlagging` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.enable_station_beam_flagging()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Enable station beam flagging.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("EnableStationBeamFlagging")
+        """
+        handler = self.get_command_object("EnableStationBeamFlagging")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class DisableStationBeamFlaggingCommand(FastCommand):
+        """Class for handling the DisableStationBeamFlagging command."""
+
+        def __init__(
+            self: MccsTile.DisableStationBeamFlaggingCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new DisableStationBeamFlaggingCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "DisableStationBeamFlagging command completed OK"
+
+        def do(
+            self: MccsTile.DisableStationBeamFlaggingCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.DisableStationBeamFlagging` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            self._component_manager.disable_station_beam_flagging()
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Disable station beam flagging.
+
+        :return: A tuple containing a return code and a string message
+            indicating status. The message is for information purposes only.
+
+        TODO THORN-68: Currently we can't verify if the flag has been set correctly,
+        this functionality will get added later
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dp.command_inout("DisableStationBeamFlagging")
+        """
+        handler = self.get_command_object("DisableStationBeamFlagging")
+        (return_code, message) = handler()
         return ([return_code], [message])
 
     def __str__(self: MccsTile) -> str:
@@ -4977,6 +5700,166 @@ class MccsTile(SKABaseDevice[TileComponentManager]):
         handler = self.get_command_object("SetFirmwareTemperatureThresholds")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    # -------------
+    # AntennaBuffer
+    # -------------
+
+    class SetUpAntennaBufferCommand(FastCommand):
+        """Class for handling the SetUpAntennaBuffer(argin) command."""
+
+        def __init__(
+            self: MccsTile.SetUpAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new SetUpAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "SetUpAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "SetUpAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.SetUpAntennaBufferCommand,
+            *args: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.SetUpAntennaBuffer` command.
+
+            :param args: a string containing a json serialised dictionary
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            decoded_dict = json.loads(args[0])
+            mode = decoded_dict.get("mode", "SDN")
+            ddr_start_byte_address = decoded_dict.get(
+                "DDR_start_address", 512 * 1024**2
+            )
+            max_ddr_byte_size = decoded_dict.get("max_DDR_byte_size", None)
+
+            if self._component_manager.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            ):
+                result = self._component_manager.tile._antenna_buffer_tile_attribute
+                return (ResultCode.OK, str(result))
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def SetUpAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """Set up the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+                (Science Data Network) and 'NSDN' (Non-Science Data Network)
+            * ddr_start_byte_address: first address in the DDR for antenna buffer
+                data to be written in (in bytes).
+            * max_ddr_byte_size: last address for writing antenna buffer data
+                (in bytes). If 'None' is chosen, the method will assume the last
+                address to be the final address of the DDR chip
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("SetUpAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Start recording to the antenna buffer.
+
+        :param argin: a json serialised dictionary containing the following keys:
+
+            * antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+                One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+            * start_time: the first time stamp that will be written into the DDR.
+                When set to -1, the buffer will begin writing as soon as possible.
+            * timestamp_capture_duration: the capture duration in timestamps.
+                Timestamps are in units of 256 ADC samples (256*1.08us).
+            * continuous_mode: "True" for continous capture. If enabled, time capture
+                durations is ignored
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+
+        """
+        handler = self.get_command_object("StartAntennaBuffer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray")
+    def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Read the data from the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("ReadAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    class StopAntennaBufferCommand(FastCommand):
+        """Class for handling the StopAntennaBuffer command."""
+
+        def __init__(
+            self: MccsTile.StopAntennaBufferCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger,
+        ) -> None:
+            """
+            Initialise a new StopAntennaBufferCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: the logger to be used by this Command. If not
+                provided, then a default module logger will be used.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        SUCCEEDED_MESSAGE = "StopAntennaBuffer command completed OK"
+        FAILED_MESSAGE = "StopAntennaBuffer command failed to compelte"
+
+        def do(  # type: ignore[override]
+            self: MccsTile.StopAntennaBufferCommand,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.StopAntennaBuffer` command.
+
+            :return: A tuple containing a return code and a string
+                message indicating status. The message is for
+                information purpose only.
+            """
+            if self._component_manager.stop_antenna_buffer():
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
+
+    @command(dtype_out="DevVarLongStringArray")
+    def StopAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
+        """
+        Stop writting to the antenna buffer.
+
+        :return: A tuple containing a return code and a string message indicating
+            status. The message is for information purpose only.
+        """
+        handler = self.get_command_object("StopAntennaBuffer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    # ---------------
+    # On/Off commands
+    # ---------------
 
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
         dtype_out="DevVarLongStringArray"

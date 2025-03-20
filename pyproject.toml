@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ska-low-mccs-spshw"
-version = "0.17.7"
+version = "1.5.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS SPSHW) of the SKA Low telescope"
 license = "BSD-3-Clause"
 authors = ["MCCS team"]
@@ -18,18 +18,18 @@ url = 'https://pypi.org/simple'
 priority = "supplemental"
 
 [tool.poetry.dependencies]
-python = ">=3.10,<3.11" 
-aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", rev="208e99a3bf6f273173b483af0bbe371749670b9e",  subdirectory = "python" }
-pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", rev = "1866115f9694f5c234ae1a087f82170fbd09a33f" }
+python = "~3.10"
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", tag = "2.1.3", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", tag = "2.1.0" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
-pytango = "^9.5.1"
+pytango = "^10.0.0"
 PyYAML = "^6.0.1"
 requests = "^2.31.0"
 scipy = "^1.11.2"
-ska-tango-base = "^1.0.0"
-ska-control-model = "^1.0.0"
-ska-low-mccs-common = "^0.14.1"
+ska-control-model = { version = "^1.2.0", extras = ["health_rollup"] }
+ska-tango-base = "^1.2.3"
+ska-low-mccs-common = "^1.4.0"
 ska-ser-skuid = "^3.3.3"
 fastapi = "^0.103.1"
 pydantic-core = "^2.18.1"
@@ -41,9 +41,23 @@ astropy="5.3.4"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
-ska-low-mccs-daq-interface = "^0.4.0"
+ska-low-mccs-daq-interface = "^1.0.0"
+watchdog = "^3.0.0"
+h5py = "^3.12.1"
+lockfile = "^0.12.2"
+scapy = "^2.6.0"
+pytz = "^2024.2"
+configparser = "^7.1.0"
+matplotlib = "^3.9.2"
+mongoengine = "^0.29.1"
+pymongo = "^4.10.1"
+tabulate = "^0.9.0"
+get_nic = "^0.0.3"
+pyqt5 = "^5.15.11"
+netifaces-binary = "^0.11.0"
+recommonmark = "^0.7.1"
 pysnmp = "^7.1.4"
-ska-ser-snmp = "^0.3.1"
+ska-ser-snmp = "^0.4.1"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"
@@ -77,9 +91,9 @@ types-requests = "^2.31.0.2"
 types-pyyaml = "^6.0.12.11"
 isort = "^5.12.0"
 httpx = "^0.24.1"
-ska-tango-testing = "^0.6.1"
+ska-tango-testing = "^0.7.3"
 pysnmp = "^7.1.4"
-ska-ser-snmp = "^0.3.1"
+ska-ser-snmp = "^0.4.1"
 
 [tool.poetry.group.docs.dependencies]
 Sphinx = "^6.2.1"
@@ -93,12 +107,13 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-ska-low-mccs-daq-interface = "^0.4.0"
+ska-low-mccs-daq-interface = "^1.0.0"
 ska-telmodel = "^1.4.1"
 pysnmp = "^7.1.4"
-ska-ser-snmp = "^0.3.1"
+ska-ser-snmp = "^0.4.1"
 
 [tool.poetry.scripts]
+spshw_device_server = "ska_low_mccs_spshw:main"
 SpsStation = "ska_low_mccs_spshw.station.station_device:main"
 MccsSubrack = "ska_low_mccs_spshw.subrack.subrack_device:main"
 SubrackSimulator = "ska_low_mccs_spshw.subrack.subrack_simulator_server:main"

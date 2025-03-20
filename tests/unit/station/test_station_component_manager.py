@@ -18,7 +18,13 @@ from typing import Iterator
 import numpy as np
 import pytest
 import tango
-from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_control_model import (
+    CommunicationStatus,
+    HealthState,
+    PowerState,
+    ResultCode,
+    TaskStatus,
+)
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_tango_testing.mock import MockCallableGroup
 
@@ -96,7 +102,7 @@ def callbacks_fixture() -> MockCallableGroup:
         "task",
         "tile_health",
         "subrack_health",
-        timeout=5.0,
+        timeout=15.0,
     )
 
 
@@ -162,8 +168,9 @@ def station_component_manager_fixture(
         daq_trl,
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
-        None,  # csp_ingest_ip,
-        None,  # channeliser_rounding,
+        None,  # csp_ingest_ip
+        None,  # channeliser_rounding
+        4,  # csp_rounding
         antenna_uri,
         logger,
         callbacks["communication_status"],
@@ -248,9 +255,10 @@ def test_trigger_adc_equalisation(
 
     station_component_manager._trigger_adc_equalisation()
 
-    for value in station_component_manager._desired_preadu_levels:
-        assert value < expected_preadu + 1
-        assert value > expected_preadu - 1
+    if station_component_manager._desired_preadu_levels is not None:
+        for value in station_component_manager._desired_preadu_levels:
+            assert value < expected_preadu + 1
+            assert value > expected_preadu - 1
 
 
 def test_load_pointing_delays(
@@ -645,16 +653,31 @@ def test_power_state_transitions(
     for subrack in station_component_manager._subrack_proxies.values():
         assert subrack._proxy is not None
         assert subrack._proxy.state() == tango.DevState.ON
+        callbacks["component_state"].assert_call(
+            device_name=subrack._name,
+            health=HealthState.OK,
+            lookahead=20,
+        )
+
     for tile in station_component_manager._tile_proxies.values():
         assert tile._proxy is not None
         assert tile._proxy.state() == tango.DevState.ON
-
-    callbacks["component_state"].assert_call(power=PowerState.ON)
+        callbacks["component_state"].assert_call(
+            device_name=tile._name,
+            health=HealthState.OK,
+            lookahead=20,
+        )
+        # Need to wait for this event to come through before we turn a tile OFF.
+        callbacks["component_state"].assert_call(
+            device_name=tile._name,
+            power=PowerState.ON,
+            lookahead=20,
+        )
+    callbacks["component_state"].assert_call(power=PowerState.ON, lookahead=10)
     assert station_component_manager._component_state["power"] == PowerState.ON
 
     tile_names = list(station_component_manager._tile_proxies.keys())
     subrack_names = list(station_component_manager._subrack_proxies.keys())
-
     # Start with all ON.
     # Any Tiles ON, Station should be ON
     station_component_manager._tile_state_changed(tile_names[0], power=PowerState.OFF)

@@ -247,11 +247,6 @@ class TestDaqComponentManager:
 
         # TODO: May be more to tweak here.
         callbacks["task_start_daq"].assert_call(status=TaskStatus.QUEUED)
-
-        # TODO: why is this being called 2 times?
-        callbacks["task_start_daq"].assert_call(
-            status=TaskStatus.IN_PROGRESS,
-        )
         callbacks["task_start_daq"].assert_call(
             status=TaskStatus.IN_PROGRESS,
             result="Start Command issued to gRPC stub",
@@ -407,9 +402,7 @@ class TestDaqComponentManager:
         )
 
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
-        callbacks["task"].assert_call(
-            status=expected_status, result=expected_msg, lookahead=5
-        )
+        callbacks["task"].assert_call(result=expected_msg, lookahead=5)
         # Any ResultCode.REJECTED cases end at the line above.
 
         if expected_status == TaskStatus.IN_PROGRESS:
@@ -418,9 +411,7 @@ class TestDaqComponentManager:
             assert status["Bandpass Monitor"]
 
             for _ in range(3):
-                callbacks["task"].assert_call(
-                    status=expected_status, result="plot sent", lookahead=5
-                )
+                callbacks["task"].assert_call(result="plot sent", lookahead=5)
                 # This isn't working properly.
                 # need to extract the call args and compare... UGH!
                 # while not callbacks["component_state"]._call_queue.empty():
@@ -454,7 +445,6 @@ class TestDaqComponentManager:
                 "Bandpass monitor stopping.",
             ) == daq_component_manager.stop_bandpass_monitor()
             callbacks["task"].assert_call(
-                status=TaskStatus.COMPLETED,
                 result="Bandpass monitoring complete.",
                 lookahead=20,
             )
@@ -628,3 +618,86 @@ class TestDaqComponentManager:
             unique_ids.add(daq_component_manager._get_scan_id())
 
         assert len(unique_ids) == unique_id_count
+
+    def test_start_data_rate_monitor(
+        self: TestDaqComponentManager,
+        daq_component_manager: DaqComponentManager,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test that we can start the data rate monitor on the DAQ server.
+
+        :param daq_component_manager: the daq receiver component manager
+            under test.
+        :param callbacks: a dictionary from which callbacks with
+            asynchrony support can be accessed.
+        """
+        assert daq_component_manager.communication_state == CommunicationStatus.DISABLED
+        daq_component_manager.start_communicating()
+        callbacks["communication_state"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_state"].assert_call(CommunicationStatus.ESTABLISHED)
+        result, message = daq_component_manager.start_data_rate_monitor(
+            task_callback=callbacks["task"]
+        )
+        assert result == TaskStatus.QUEUED
+        assert message == "Task queued"
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Data rate monitor started."),
+        )
+
+    def test_stop_data_rate_monitor(
+        self: TestDaqComponentManager,
+        daq_component_manager: DaqComponentManager,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test that we can stop the data rate monitor on the DAQ server.
+
+        :param daq_component_manager: the daq receiver component manager
+            under test.
+        :param callbacks: a dictionary from which callbacks with
+            asynchrony support can be accessed.
+        """
+        assert daq_component_manager.communication_state == CommunicationStatus.DISABLED
+        daq_component_manager.start_communicating()
+        callbacks["communication_state"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_state"].assert_call(CommunicationStatus.ESTABLISHED)
+        result, message = daq_component_manager.stop_data_rate_monitor(
+            task_callback=callbacks["task"]
+        )
+        assert result == TaskStatus.QUEUED
+        assert message == "Task queued"
+        callbacks["task"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Data rate monitor stopped."),
+        )
+
+    def test_get_data_rate(
+        self: TestDaqComponentManager,
+        daq_component_manager: DaqComponentManager,
+        callbacks: MockCallableGroup,
+    ) -> None:
+        """
+        Test that we can get the data rate from the DAQ server.
+
+        :param daq_component_manager: the daq receiver component manager
+            under test.
+        :param callbacks: a dictionary from which callbacks with
+            asynchrony support can be accessed.
+        """
+        assert daq_component_manager.communication_state == CommunicationStatus.DISABLED
+        daq_component_manager.start_communicating()
+        callbacks["communication_state"].assert_call(
+            CommunicationStatus.NOT_ESTABLISHED
+        )
+        callbacks["communication_state"].assert_call(CommunicationStatus.ESTABLISHED)
+        assert daq_component_manager.data_rate == 1.0

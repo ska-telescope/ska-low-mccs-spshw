@@ -13,12 +13,25 @@ import threading
 from collections import OrderedDict
 from typing import Any, Callable, Final, Optional
 
+from fastapi import HTTPException
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
-from ska_low_mccs_common.component import MccsBaseComponentManager, WebHardwareClient
+from ska_low_mccs_common.component import (
+    HardwareClientResponseStatusCodes,
+    MccsBaseComponentManager,
+    WebHardwareClient,
+)
 from ska_tango_base.poller import PollingComponentManager
 
 from .http_stack import HttpPollRequest, HttpPollResponse
 from .subrack_data import FanMode, SubrackData
+
+
+class HttpError(Exception):
+    """Exception class for HttpErrors."""
+
+
+class RequestError(Exception):
+    """Exception class for RequestExceptions."""
 
 
 # pylint: disable-next=too-many-instance-attributes
@@ -36,6 +49,7 @@ class SubrackDriver(
         communication_state_callback: Callable,
         component_state_callback: Callable,
         update_rate: float = 5.0,
+        _subrack_client: Any = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -58,9 +72,9 @@ class SubrackDriver(
             However, if the `update_rate` is 5.0, then routine reads of
             instrument values will only occur every 50th poll (i.e.
             every 5 seconds).
+        :param _subrack_client: an optional subrack client to use.
         """
-        self._client = WebHardwareClient(host, port)
-
+        self._client = _subrack_client or WebHardwareClient(host, port)
         self._poll_rate: Final = 0.1
         self._max_tick: Final = int(update_rate / self._poll_rate)
 
@@ -500,8 +514,12 @@ class SubrackDriver(
         :param poll_request: specification of the reads and writes to be
             performed in this poll.
 
-        :raises ConnectionError: if an error is raised from the lower
-            layer
+        :raises RequestError: When the client returns
+            HardwareClientResponseStatusCodes.REQUEST_EXCEPTION
+        :raises HttpError: When the client returns
+            HardwareClientResponseStatusCodes.HTTP_ERROR
+        :raises ValueError: When the client returns
+            an unknown HardwareClientResponseStatusCodes.
 
         :return: responses to queries in this poll
         """
@@ -518,20 +536,45 @@ class SubrackDriver(
                 command, " ".join(str(arg) for arg in args)
             )
             self.logger.debug(f"Response: {command_response}")
-            if command_response["status"] == "ERROR":
-                # TODO: [MCCS-1329] Only raise connection errors
-                # if the error indicates loss of communication.
-                # Otherwise return error details through the query response.
-                self.logger.error(
-                    f"Command error for {command}: Info {command_response['info']}"
-                )
+            if command_response["status"] not in [
+                HardwareClientResponseStatusCodes.OK.name,
+                HardwareClientResponseStatusCodes.STARTED.name,
+                HardwareClientResponseStatusCodes.BUSY.name,
+            ]:
                 if self._active_callback is not None:
                     self._active_callback(status=TaskStatus.FAILED)
                     self._active_callback = None
-                raise ConnectionError(f"Received ERROR response from command {command}")
-            if command_response["status"] == "STARTED":
+                match command_response["status"]:
+                    case HardwareClientResponseStatusCodes.ERROR.name:
+                        self.logger.error(
+                            "An error was reported when attempting to execute_command "
+                            f"with {command=}, {args=}."
+                            f"error_info={command_response['info']}"
+                        )
+                    case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
+                        raise RequestError(f"{command_response['info']}")
+                    case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
+                        raise HttpError(f"{command_response['info']}")
+                    case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
+                        self.logger.error(
+                            "Error decoding return from "
+                            f"{command=} with {args=}. "
+                            f"Error_info={command_response['info']}"
+                        )
+                    case _:
+                        raise ValueError(
+                            f"UNKNOWN status code {command_response['status']} "
+                            "returned from command (check client)."
+                        )
+
+            if (
+                command_response["status"]
+                == HardwareClientResponseStatusCodes.STARTED.name
+            ):
                 self._board_is_busy = True
-            elif command_response["status"] == "OK":
+            elif (
+                command_response["status"] == HardwareClientResponseStatusCodes.OK.name
+            ):
                 # command has been completed,
                 poll_response.add_command_response(
                     command, command_response["retvalue"]
@@ -543,31 +586,73 @@ class SubrackDriver(
 
         for name, value in poll_request.setattributes:
             attribute_response = self._client.set_attribute(name, value)
-            if attribute_response["status"] == "ERROR":
-                # TODO: [MCCS-1329] Only raise connection errors
-                # if the error indicates loss of communication.
-                # Otherwise return error details through the query response.
-                self.logger.error(
-                    f"setattribute error for{name}: Info {attribute_response['info']}"
-                )
-                raise ConnectionError(
-                    f"Received ERROR response from setattribute {name}"
-                )
+            if attribute_response["status"] not in [
+                HardwareClientResponseStatusCodes.OK.name,
+                HardwareClientResponseStatusCodes.STARTED.name,
+                HardwareClientResponseStatusCodes.BUSY.name,
+            ]:
+                match attribute_response["status"]:
+                    case HardwareClientResponseStatusCodes.ERROR.name:
+                        self.logger.error(
+                            "An error was reported when attempting to set_attribute "
+                            f"using params {name=}, {value=}."
+                            f"error_info={attribute_response['info']}"
+                        )
+                    case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
+                        raise RequestError(f"{attribute_response['info']}")
+                    case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
+                        raise HttpError(f"{attribute_response['info']}")
+                    case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
+                        self.logger.error(
+                            "Error decoding return from set_attribute, "
+                            f"Setting {name=}, {value=}.  "
+                            f"Error_info={attribute_response['info']}"
+                        )
+                    case (
+                        HardwareClientResponseStatusCodes.BUSY.name
+                        | HardwareClientResponseStatusCodes.STARTED.name
+                    ):
+                        pass
+                    case _:
+                        raise ValueError(
+                            f"UNKNOWN status code {attribute_response['status']} "
+                            "returned from set_attribute (check client)."
+                        )
         for attribute in poll_request.getattributes:
             attribute_response = self._client.get_attribute(attribute)
-            if attribute_response["status"] == "ERROR":
-                # TODO: [MCCS-1329] Only raise connection errors
-                # if the error indicates loss of communication.
-                # Otherwise return error details through the query response.
-                self.logger.error(
-                    f"getattribute error for {attribute}: "
-                    f"Info {attribute_response['info']}"
-                )
-                raise ConnectionError(
-                    f"Received ERROR response from getattribute {attribute}"
-                )
-            if attribute_response["status"] == "OK":
-                poll_response.add_query_response(attribute, attribute_response["value"])
+            match attribute_response["status"]:
+                case HardwareClientResponseStatusCodes.OK.name:
+                    poll_response.add_query_response(
+                        attribute, attribute_response["value"]
+                    )
+                case HardwareClientResponseStatusCodes.ERROR.name:
+                    self.logger.error(
+                        "An error was reported when attempting to get_attribute "
+                        f"of name {attribute}."
+                        f"error_info={attribute_response['info']}"
+                    )
+                    poll_response.add_query_response(attribute, None)
+                case HardwareClientResponseStatusCodes.JSON_DECODE_ERROR.name:
+                    self.logger.warning(
+                        "Error decoding message returned from get_attribute "
+                        f"{attribute=}, error_info={attribute_response['info']} ."
+                        "Setting attribute value to None (i.e UNKNOWN.)"
+                    )
+                    poll_response.add_query_response(attribute, None)
+                case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
+                    raise RequestError(f"{attribute_response['info']}")
+                case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
+                    raise HttpError(f"{attribute_response['info']}")
+                case (
+                    HardwareClientResponseStatusCodes.BUSY.name
+                    | HardwareClientResponseStatusCodes.STARTED.name
+                ):
+                    pass
+                case _:
+                    raise ValueError(
+                        f"UNKNOWN status code {attribute_response['status']} "
+                        "returned from get_attribute (check client)."
+                    )
         return poll_response
 
     def poll_succeeded(self: SubrackDriver, poll_response: HttpPollResponse) -> None:
@@ -667,7 +752,16 @@ class SubrackDriver(
         :param exception: the exception that was raised by a recent poll
             attempt.
         """
-        self.logger.exception(f"Poll failed: {exception}")
-        # TODO MCCS-1329: depending on the exception we may not be UNKNOWN.
-        self._update_component_state(power=PowerState.UNKNOWN, fault=None)
-        self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        if isinstance(exception, HTTPException):
+            self._update_component_state(fault=True)
+        if isinstance(exception, HttpError):
+            self.logger.warning(f"Request was not OK {exception}")
+            self._update_component_state(fault=True)
+            self._update_communication_state(CommunicationStatus.ESTABLISHED)
+        elif isinstance(exception, RequestError):
+            self.logger.exception(f"Poll failed: {exception}")
+            self._update_component_state(power=PowerState.UNKNOWN, fault=False)
+            self._update_communication_state(CommunicationStatus.NOT_ESTABLISHED)
+        else:
+            self.logger.exception(f"Poll failed unexpected exception: {exception}")
+            self._update_component_state(fault=True)

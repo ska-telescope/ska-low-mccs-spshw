@@ -19,8 +19,9 @@ import re
 import threading
 import time
 from ipaddress import IPv4Address
-from typing import Any, Callable, Final, List, TypeVar, Union, cast
+from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
+import numpy as np
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
@@ -141,6 +142,46 @@ def check_mocked_overheating(func: Wrapped) -> Wrapped:
             )
         else:
             return func(self, *args, **kwargs)
+
+    return cast(Wrapped, _wrapper)
+
+
+def antenna_buffer_implemented(func: Wrapped) -> Wrapped:
+    """
+    Return a function that checks if Antenna buffer is implmented.
+
+    This function is intended to be used as a decorator:
+
+    .. code-block:: python
+
+        @antenna_buffer_implemented
+        def set_up_antenna_buffer(self):
+            ...
+
+    :param func: the wrapped function
+
+    :return: the wrapped function
+    """
+
+    def _wrapper(
+        self: TileSimulator,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Any:
+        """
+        Mock checks if the antenna buffer is implemented in the firmware.
+
+        :param self: the method called
+        :param args: positional arguments to the wrapped method
+        :param kwargs: keyword arguments to the wrapped method
+
+        :raises LibraryError: when Antenna Buffer is not implemented
+
+        :return: whatever the wrapped method returns
+        """
+        if not self._antenna_buffer_implemented:
+            raise LibraryError("Antenna Buffer not implemented by FPGA firmware")
+        return func(self, *args, **kwargs)
 
     return cast(Wrapped, _wrapper)
 
@@ -279,8 +320,8 @@ class MockTpm:
     # Requires only registers which are directly accessed from
     # the TpmDriver.
     PLL_LOCKED_REGISTER: Final = 0xE7
-    _register_map: dict[Union[int, str], Any] = {
-        "0x30000000": [0x21033009],
+    REGISTER_MAP_DEFAULTS: dict[str, int] = {
+        "0x30000000": 0x21033009,
         "fpga1.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga2.dsp_regfile.stream_status.channelizer_vld": 0,
         "fpga1.test_generator.delay_0": 0,
@@ -338,6 +379,9 @@ class MockTpm:
         self._address_map: dict[str, int] = {}
         self.tpm_firmware_information = MockTpmFirmwareInformation()
         self._40g_configuration: dict[str, Any] = {}
+        self._station_beam_flagging = False
+
+        self._register_map = MockTpm.REGISTER_MAP_DEFAULTS.copy()
 
     def get_board_info(self: MockTpm) -> dict[str, Any]:
         """
@@ -646,7 +690,7 @@ class MockTpm:
     def write_register(
         self: MockTpm,
         register: int | str,
-        values: int,
+        values: list[int],
         offset: int = 0,
         retry: bool = True,
     ) -> None:
@@ -658,17 +702,24 @@ class MockTpm:
         :param offset: Memory address offset to write to
         :param retry: retry
 
-        :raises LibraryError:Attempting to set a register not in the memory address.
+        :raises LibraryError: Attempting to set a register not in the memory address.
+        :raises NotImplementedError: if trying to write more than one value
+
         """
+        if len(values) != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only write one value to a register at a time."
+            )
+
         if isinstance(register, int):
             register = hex(register)
         if register == "" or register == "unknown":
             raise LibraryError(f"Unknown register: {register}")
-        self._register_map[register] = values
+        self._register_map[register] = values[0]
 
     def read_register(
         self: MockTpm, register: int | str, n: int = 1, offset: int = 0
-    ) -> Any:
+    ) -> list[int]:
         """
         Get register value.
 
@@ -676,14 +727,21 @@ class MockTpm:
         :param n: Number of words to read
         :param offset: Memory address offset to read from
 
+        :raises NotImplementedError: if trying to read more than one value
+
         :return: Values
         """
+        if n != 1 or offset != 0:
+            raise NotImplementedError(
+                "MockTpm can only read one value from a register at a time."
+            )
+
         if register == ("pll", 0x508):
-            return self.PLL_LOCKED_REGISTER
+            return [self.PLL_LOCKED_REGISTER]
         if isinstance(register, int):
             register = hex(register)
 
-        return self._register_map.get(register)
+        return [self._register_map[register]]
 
     def read_address(self: MockTpm, address: int, n: int = 1) -> Any:
         """
@@ -861,6 +919,8 @@ class TileSimulator:
         self.fortygb_core_list: list[dict[str, Any]] = [
             {},
         ]
+        # An optional mocked TPM to use in testing.
+        self._mocked_tpm: MockTpm | None = None
         self._power_locked = False
         self.mock_connection_success = True
         self.fpgas_time: list[int] = self.FPGAS_TIME
@@ -913,9 +973,18 @@ class TileSimulator:
             "last_channel": 383,
             "current_channel": 0,
         }
-        # return self._register_map.get(str(address), 0)
+        self._rfi_count = np.zeros(
+            (TileData.ANTENNA_COUNT, TileData.POLS_PER_ANTENNA), dtype=int
+        )
+        self._antenna_buffer_tile_attribute: dict[str, Any] = {
+            "DDR_start_address": 0,
+            "max_DDR_byte_size": 0,
+            "set_up_complete": False,
+            "data_capture_initiated": False,
+            "used_fpga_id": [],
+        }
+        self._antenna_buffer_implemented = True
 
-    @check_mocked_overheating
     @connected
     def get_health_status(self: TileSimulator, **kwargs: Any) -> dict[str, Any]:
         """
@@ -926,6 +995,10 @@ class TileSimulator:
 
         :return: mocked fetch of health.
         """
+        if any([value == 2 for value in self._global_status_alarms.values()]):
+            # aavs-system return a subset of the health with mcu alarms
+            # when a hard shutoff has occured.
+            return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
 
     @check_mocked_overheating
@@ -1063,7 +1136,7 @@ class TileSimulator:
         enable_test: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
-        time_delays: int = 0,
+        time_delays: float | int | list = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
         qsfp_detection: str = "auto",
@@ -1129,10 +1202,17 @@ class TileSimulator:
             return
         self.logger.info(f"delay correction set to {pps_delay}")
         self.pps_correction = pps_delay
+        self.set_time_delays(time_delays)
         self._is_first = is_first_tile
         self._is_last = is_last_tile
         self._tile_id = tile_id
         self._station_id = station_id
+        self.sync_time = 0
+        reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
+        reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
+        if self.tpm:
+            self.tpm[reg1] = 0
+            self.tpm[reg2] = 0
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
         time.sleep(random.randint(1, 3))
@@ -1320,6 +1400,191 @@ class TileSimulator:
         if self.tpm is None:
             return False
         return self.tpm._is_programmed
+
+    @connected
+    @antenna_buffer_implemented
+    def set_up_antenna_buffer(
+        self: TileSimulator,
+        mode: str = "SDN",
+        ddr_start_byte_address: int = 512 * 1024**2,
+        max_ddr_byte_size: Optional[int] = None,
+    ) -> None:
+        """Mock set_up_antenna_buffer.
+
+        :param mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
+        """
+        payload_length = 8192 if mode.upper() == "SDN" else 1536
+
+        if not max_ddr_byte_size:
+            # assume the antenna buffer capacity is 4 GB
+            max_ddr_byte_size = (4 * 1024**3) - ddr_start_byte_address
+
+        # log the original message
+        self.logger.info(
+            f"AntennaBuffer: Setup parameters - Mode={mode}, "
+            + f"Payload Length={payload_length},"
+            + f" DDR Start Address={ddr_start_byte_address},"
+            + f" Max DDR Size={max_ddr_byte_size}"
+        )
+        # save values to buffer attributes
+        self._antenna_buffer_tile_attribute["mode"] = mode
+        self._antenna_buffer_tile_attribute[
+            "DDR_start_address"
+        ] = ddr_start_byte_address
+        self._antenna_buffer_tile_attribute["max_DDR_byte_size"] = max_ddr_byte_size
+        self._antenna_buffer_tile_attribute["set_up_complete"] = True
+
+    @connected
+    @antenna_buffer_implemented
+    def start_antenna_buffer(
+        self: TileSimulator,
+        antennas: list,
+        start_time: int = -1,
+        timestamp_capture_duration: int = 75,
+        continuous_mode: bool = False,
+    ) -> int:
+        """Mock start_antenna_buffer.
+
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
+
+        :raises Exception: when antenna IDS are missing/incorrect or antenna
+            buffer was not intiated.
+
+        :return: ddr write size
+        """
+        # Check that the antenna buffer was set up
+        if not self._antenna_buffer_tile_attribute["set_up_complete"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please set up the antenna buffer "
+                + "before writing"
+            )
+
+        # Antennas must be specifed.
+        if not antennas:
+            raise Exception(
+                "AntennaBuffer ERROR: Antennas list is empty "
+                + "please give at lease one antenna ID"
+            )
+
+        # Antenna index is from 0 to 15.
+        invalid_input = [x for x in antennas if x < 0 or x > 15]
+        if invalid_input:
+            raise Exception(
+                "AntennaBuffer ERROR: out of range antenna IDs present "
+                + f"{invalid_input}. Please give an antenna ID from 0 to 15"
+            )
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute["antennas"] = antennas
+
+        # Remove duplicates and then split the list in 2 parts
+        antennas = list(dict.fromkeys(antennas))
+        antennas = [[x for x in antennas if x < 8], [x - 8 for x in antennas if x >= 8]]
+        self.logger.info(f"Antennas lists of lists = {antennas}")
+
+        # clear old fpgas
+        self._antenna_buffer_tile_attribute["used_fpga_id"] = []
+
+        for fpga_id in range(2):
+            if antennas[fpga_id]:
+                # log which antennas and fpgas are used
+                self.logger.info(
+                    f"AntennaBuffer will be using FPGA {fpga_id+1},"
+                    + f" antennas = {antennas[fpga_id]}"
+                )
+                self._antenna_buffer_tile_attribute["used_fpga_id"].append(fpga_id)
+
+                # Note: this may need improvement later if we want to test in more
+                # detail, for now we mock the possible errors
+                # Try and calculate a value for the ddr_write_size
+                if continuous_mode:
+                    ddr_write_size = (
+                        self._antenna_buffer_tile_attribute["max_DDR_byte_size"]
+                        - self._antenna_buffer_tile_attribute["DDR_start_address"]
+                    )
+                else:
+                    # capture duration is in seconds and 4 GiB lasts about 2.68
+                    # so the size of the ddr is 4GiB/2.64 * capture duration
+                    ddr_write_size = (
+                        timestamp_capture_duration * (4032 * 1024**2 / 2.68)
+                        - self._antenna_buffer_tile_attribute["DDR_start_address"]
+                    )
+
+        self._antenna_buffer_tile_attribute.update({"data_capture_initiated": True})
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute["start_time"] = start_time
+        self._antenna_buffer_tile_attribute[
+            "timestamp_capture_duration"
+        ] = timestamp_capture_duration
+        self._antenna_buffer_tile_attribute["continuous_mode"] = continuous_mode
+        self._antenna_buffer_tile_attribute["read_antenna_buffer"] = False
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = False
+        return ddr_write_size
+
+    @connected
+    @antenna_buffer_implemented
+    def read_antenna_buffer(self: TileSimulator) -> None:
+        """Mock read AntennaBuffer data from the DDR.
+
+        :raises Exception: when antenna buffer was not intiated or started.
+        """
+        if not self._antenna_buffer_tile_attribute["set_up_complete"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please set up the antenna buffer before reading"
+            )
+        if not self._antenna_buffer_tile_attribute["data_capture_initiated"]:
+            raise Exception(
+                "AntennaBuffer ERROR: Please capture antenna buffer data before reading"
+            )
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute["read_antenna_buffer"] = True
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = True
+        return
+
+    @connected
+    @antenna_buffer_implemented
+    def stop_antenna_buffer(self: TileSimulator) -> None:
+        """Mock stop the antenna buffer."""
+        self.logger.info(f"AntennaBuffer: Stopping for tile {self.get_tile_id()}")
+
+        # Save values to buffer attributes for testing
+        self._antenna_buffer_tile_attribute["stop_antenna_buffer"] = True
+
+    @connected
+    def enable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Enable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = True
+
+    @connected
+    def disable_station_beam_flagging(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> None:
+        """
+        Disable station beam flagging.
+
+        :param fpga_id: id of the fpga.
+        """
+        self._station_beam_flagging = False
 
     @property
     def tile_info(self: TileSimulator) -> str:
@@ -1515,7 +1780,11 @@ class TileSimulator:
         self.logger.info("Connect called on the simulator")
         if self.mock_connection_success:
             if self.tpm is None:
-                self.tpm = MockTpm(self.logger)
+                # Use defined tpm if specified.
+                self.tpm = self._mocked_tpm or MockTpm(self.logger)
+                # This sleep is to wait for the timed thread to
+                # update a register.
+                time.sleep(0.12)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -1528,11 +1797,14 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = False
+            self.__is_connectable(False)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = False
+            self.__is_connectable(False)
 
     def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
@@ -1542,11 +1814,24 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = True
+            self.__is_connectable(True)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = True
+            self.__is_connectable(True)
+
+    def __is_connectable(self: TileSimulator, connectable: bool) -> None:
+        """
+        Set the connection status.
+
+        :param connectable: True if the CPLD and FPGAs are connectable.
+        """
+        self._is_cpld_connectable = connectable
+        self._is_fpga1_connectable = connectable
+        self._is_fpga2_connectable = connectable
 
     @check_mocked_overheating
     @connected
@@ -1589,7 +1874,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_time_delays(self: TileSimulator, delays: list[float]) -> bool:
+    def set_time_delays(self: TileSimulator, delays: int | float | list[float]) -> bool:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -1598,6 +1883,9 @@ class TileSimulator:
 
         :returns: True if command executed to completion.
         """
+        if isinstance(delays, int | float):
+            # simply convert to list
+            delays = [delays] * 32
         if len(delays) != 32:
             self.logger.error(
                 "Invalid delays specfied (must be a " "list of numbers of length 32)"
@@ -1889,12 +2177,12 @@ class TileSimulator:
         """
         # Check if number of samples is a multiple of 32
 
-        if number_of_samples % 32 != 0:
-            new_value = (int(number_of_samples / 32) + 1) * 32
-            self.logger.warning(
-                f"{number_of_samples} is not a multiple of 32, using {new_value}"
-            )
-            number_of_samples = new_value
+        # if number_of_samples % 32 != 0:
+        #     new_value = (int(number_of_samples / 32) + 1) * 32
+        #     self.logger.warning(
+        #         f"{number_of_samples} is not a multiple of 32, using {new_value}"
+        #     )
+        #     number_of_samples = new_value
         self.stop_data_transmission()
 
         if not self.dst_ip:
@@ -2110,6 +2398,72 @@ class TileSimulator:
         """
         self.logger.error("test_generator_input_select not implemented in simulator")
 
+    @check_mocked_overheating
+    @connected
+    def set_pattern(
+        self: TileSimulator,
+        stage: str,
+        pattern: list[int],
+        adders: list[int],
+        start: bool,
+        shift: int = 0,
+        zero: int = 0,
+    ) -> None:
+        """
+        Configure the TPM pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+        :param pattern: The data pattern in time order. This must be a list of integers
+            with a length between 1 and 1024. The pattern represents values
+            in time order (not antennas or polarizations).
+        :param adders: A list of 32 integers that expands the pattern to cover 16
+            antennas and 2 polarizations in hardware. This list maps the pattern to the
+            corresponding signals for the antennas and polarizations.
+        :param start: Boolean flag indicating whether to start the pattern immediately.
+            If False, the pattern will need to be started manually later.
+        :param shift: Optional bit shift (divides the pattern by 2^shift). This must not
+            be used in the 'beamf' stage, where it is always overridden to 4.
+            The default value is 0.
+        :param zero: An integer (0-65535) used as a mask to disable the pattern on
+            specific antennas and polarizations. The same mask is applied to both FPGAs,
+            supporting up to 8 antennas and 2 polarizations. The default value is 0.
+        """
+        self.logger.info(f"Setting pattern generator on stage: {stage}")
+        self.logger.debug(f"Pattern: {pattern}")
+        self.logger.debug(f"Adders: {adders}")
+        self.logger.debug(f"Start: {start}")
+        self.logger.debug(f"Shift: {shift}")
+        self.logger.debug(f"Zero: {zero}")
+        self.logger.error("set_pattern not implemented in simulator yet.")
+
+    @check_mocked_overheating
+    @connected
+    def start_pattern(self: TileSimulator, stage: str) -> None:
+        """
+        Start the pattern generator at the specified stage.
+
+        :param stage: The stage in the signal chain where the pattern should be started.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer), or 'all' for all stages.
+        """
+        self.logger.info(f"Starting pattern generator on stage: {stage}")
+        self.logger.error("start_pattern not implemented in simulator yet.")
+
+    @check_mocked_overheating
+    @connected
+    def stop_pattern(self: TileSimulator, stage: str) -> None:
+        """
+        Stop the pattern generator at the specified stage.
+
+        :param stage: The stage in the signal chain where the pattern should be stopped.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer), or 'all' for all stages.
+        """
+        self.logger.info(f"Stopping pattern generator on stage: {stage}")
+        self.logger.error("stop_pattern not fully implemented in simulator yet.")
+
     def _timed_thread(self: TileSimulator) -> None:
         """Thread to update time related registers."""
         while True:
@@ -2271,11 +2625,13 @@ class TileSimulator:
             self.logger.warning(
                 "We are overheating, CPLD is turning the overheating components OFF!"
             )
+            self._tile_health_structure["alarms"]["temperature_alm"] = 2
             self._global_status_alarms["temperature_alm"] = 2
             self._is_fpga1_connectable = False
             self._is_fpga2_connectable = False
             self.tpm_mocked_overheating = True
         else:
+            self._tile_health_structure["alarms"]["temperature_alm"] = 0
             self._global_status_alarms["temperature_alm"] = 0
             self.tpm_mocked_overheating = False
             self._is_fpga1_connectable = True
@@ -2372,6 +2728,16 @@ class TileSimulator:
         :return: True for new new (SKA) format, False for old (AAVS)
         """
         return self.csp_spead_format == "SKA"
+
+    def read_broadband_rfi(self, antennas: range = range(16)) -> np.ndarray:
+        """
+        Read out the broadband RFI counters.
+
+        :param antennas: list antennas of which rfi counters to read
+
+        :return: rfi counters
+        """
+        return self._rfi_count[np.array(antennas)]
 
     @check_mocked_overheating
     @connected
@@ -2473,23 +2839,24 @@ class DynamicTileSimulator(TileSimulator):
 
         self._updater = DynamicValuesUpdater(1.0)
         self._updater.add_target(
-            DynamicValuesGenerator(4.55, 5.45), self._voltage_changed
+            DynamicValuesGenerator(4.9, 5.1), self._voltage_changed
         )
         self._updater.add_target(
             DynamicValuesGenerator(0.05, 2.95), self._current_changed
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._board_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga1_temperature_changed,
         )
         self._updater.add_target(
-            DynamicValuesGenerator(16.0, 47.0),
+            DynamicValuesGenerator(30.0, 47.0),
             self._fpga2_temperature_changed,
         )
+        self._updater.add_target(self.random_antenna_generator(), self._rfi_changed)
         self._updater.start()
 
     def __del__(self: DynamicTileSimulator) -> None:
@@ -2617,3 +2984,26 @@ class DynamicTileSimulator(TileSimulator):
         """
         self._fpga2_temperature = fpga2_temperature
         self._tile_health_structure["temperatures"]["FPGA1"] = fpga2_temperature
+
+    def _rfi_changed(
+        self: DynamicTileSimulator, antenna_incremented: tuple[int, int]
+    ) -> None:
+        """
+        Call this method when the RFI count increments.
+
+        :param antenna_incremented: which antenna/pol got RFI.
+        """
+        self._rfi_count[antenna_incremented[0]][antenna_incremented[1]] += 1
+
+    @classmethod
+    def random_antenna_generator(cls) -> Generator[tuple[int, int]]:
+        """
+        Generate a random antenna/pol number.
+
+        :yields: a random antenna/pol number.
+        """
+        while True:
+            yield (
+                random.randint(0, TileData.ANTENNA_COUNT - 1),
+                random.randint(0, TileData.POLS_PER_ANTENNA - 1),
+            )

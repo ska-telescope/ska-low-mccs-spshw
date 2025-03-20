@@ -1,0 +1,24 @@
+
+platform:
+  stations:
+    real-daq-1:
+      id: 1
+      sps:
+        antenna_config_uri:
+          - file://local_telmodel
+          - real-daq-1.yaml
+        sdn_first_interface: 10.1.0.152/25
+        subracks:
+          sr1:
+            simulated: true
+            srmb_host: srmb-1
+            srmb_port: 8081
+        tpms:
+          tpm10:
+            id: 9
+            simulated: true
+            host: 10.0.10.201
+            port: 10000
+            version: tpm_v1_6
+            subrack: sr1
+            subrack_slot: 1

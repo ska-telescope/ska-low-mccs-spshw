@@ -20,7 +20,11 @@ import pytest
 import tango
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
+from tests.harness import (
+    DEFAULT_STATION_LABEL,
+    SpsTangoTestHarness,
+    SpsTangoTestHarnessContext,
+)
 
 
 # TODO: https://github.com/pytest-dev/pytest-forked/issues/67
@@ -48,6 +52,50 @@ def pytest_addoption(
             "need to spin up a Tango test context"
         ),
     )
+    parser.addoption(
+        "--hw-deployment",
+        action="store_true",
+        default=False,
+        help=(
+            "Tell pytest that you have a true Tango context against HW and can "
+            "run HW only tests"
+        ),
+    )
+
+
+@pytest.fixture(name="available_stations")
+def available_stations_fixture(true_context: bool) -> list[str]:
+    """
+    Return the name of the station under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: the name of the station under test
+    """
+    if true_context:
+        db = tango.Database()
+        stations = db.get_device_exported("low-mccs/spsstation/*")
+        return [
+            str(station).rsplit("low-mccs/spsstation/", maxsplit=1)[-1]
+            for station in stations
+        ]
+    return [DEFAULT_STATION_LABEL]
+
+
+@pytest.fixture(name="available_tiles")
+def available_tiles_fixture(true_context: bool) -> list[str]:
+    """
+    Return the name of the tiles under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: the name of the station under test
+    """
+    if true_context:
+        db = tango.Database()
+        tiles = db.get_device_exported("low-mccs/tile/*")
+        return [str(tile).rsplit("low-mccs/tile/", maxsplit=1)[-1] for tile in tiles]
+    return [DEFAULT_STATION_LABEL]
 
 
 @pytest.fixture(name="functional_test_context_generator", scope="module")
@@ -70,14 +118,10 @@ def functional_test_context_generator_fixture(
     :return: a callable to generate context containing the devices under test
     """
 
-    def _generate(
-        station_label: str, run_in_cluster_only: bool = False
-    ) -> Iterator[SpsTangoTestHarnessContext]:
+    def _generate(station_label: str) -> Iterator[SpsTangoTestHarnessContext]:
         harness = SpsTangoTestHarness(station_label)
 
         if not true_context:
-            if run_in_cluster_only:
-                pytest.skip("This test will only run in a true context.")
             if subrack_address is None:
                 harness.add_subrack_simulator(subrack_id)
             harness.add_subrack_device(subrack_id, subrack_address)
@@ -114,6 +158,19 @@ def true_context_fixture(request: pytest.FixtureRequest) -> bool:
     if os.getenv("TRUE_TANGO_CONTEXT", None):
         return True
     return False
+
+
+@pytest.fixture(name="hw_context", scope="session")
+def hw_context_fixture(request: pytest.FixtureRequest) -> bool:
+    """
+    Return whether to test against an real HW only.
+
+    :param request: A pytest object giving access to the requesting test
+        context.
+
+    :return: whether to to test against an real HW only.
+    """
+    return request.config.getoption("--hw-deployment")
 
 
 @pytest.fixture(name="subrack_address", scope="module")
@@ -174,6 +231,8 @@ def functional_test_context_fixture(
         if subrack_address is None:
             harness.add_subrack_simulator(subrack_id)
         harness.add_subrack_device(subrack_id, subrack_address)
+        harness.add_tile_device(1)
+        harness.set_sps_station_device(subrack_ids=range(1, 2), tile_ids=range(1, 2))
         harness.set_daq_instance()
         harness.set_daq_device(
             daq_id,
@@ -207,6 +266,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         "data_received_callback",
         "tile_adminMode",
         "device_state",
+        "device_adminmode",
         timeout=30.0,
     )
 
@@ -223,7 +283,7 @@ def acquisition_duration_fixture() -> int:
 
 # pylint: disable=inconsistent-return-statements
 def poll_until_consumer_running(
-    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 5
+    daq: tango.DeviceProxy, wanted_consumer: str, no_of_iters: int = 10
 ) -> None:
     """
     Poll until a specific consumer is running.
@@ -340,7 +400,7 @@ def poll_until_state_change(
         wanted: {wanted_state}, actual: {device.state()}"
         )
 
-    sleep(1)
+    sleep(2)
     return poll_until_state_change(device, wanted_state, no_of_iters - 1)
 
 
@@ -392,8 +452,9 @@ def verify_bandpass_state(daq_device: tango.DeviceProxy, state: bool) -> None:
     time_elapsed = 0
     timeout = 10
     while time_elapsed < timeout:
-        if json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state:
+        daq_status = json.loads(daq_device.DaqStatus())
+        if daq_status["Bandpass Monitor"] == state:
             break
         time.sleep(1)
         time_elapsed += 1
-    assert json.loads(daq_device.DaqStatus())["Bandpass Monitor"] == state
+    assert daq_status["Bandpass Monitor"] == state

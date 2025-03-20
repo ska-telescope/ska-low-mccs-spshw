@@ -61,9 +61,6 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
-  # Telescope model data job
-  - project: 'ska-telescope/templates-repository'
-    file: 'gitlab-ci/includes/tmdata.gitlab-ci.yml'
 
 psi-low-k8s-test:
   stage: test-psi-low
@@ -82,7 +79,7 @@ psi-low-k8s-test:
     PASS_PROXY_CONFIG: "yes"
     JUNITXML_REPORT_PATH: build/reports/psi-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/psi-low-cucumber.json
-    JSON_REPORT_PATH: build/reports/psi-low-report.json
+    JSON_REPORT_PATH: build/reports/report.json
   before_script:
     - make k8s-install-chart
     - make k8s-wait
@@ -145,10 +142,11 @@ ral-low-k8s-test:
     TANGO_HOST: "tango-databaseds.$KUBE_NAMESPACE:10000"
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
     K8S_HELMFILE_ENV: ral-software
-    STATION_LABEL: ral-software
+    STATION_LABEL: stfc-ral-software
     JUNITXML_REPORT_PATH: build/reports/ral-low-functional-tests.xml
     CUCUMBER_JSON_PATH: build/reports/ral-low-cucumber.json
-    JSON_REPORT_PATH: build/reports/ral-low-report.json
+    JSON_REPORT_PATH: build/reports/report.json
+    HW_DEPLOYMENT: true
   before_script:
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
     - make k8s-install-chart
@@ -160,6 +158,23 @@ ral-low-k8s-test:
     reports:
       junit: build/report.xml
     when: always
+
+ral-low-xray-publish:
+  stage: test-ral-low
+  when: manual
+  needs:
+    - ral-low-k8s-test
+  tags:
+    - k8srunner-stfc-ral
+  image: $SKA_K8S_TOOLS_BUILD_DEPLOY
+  variables:
+    TEST_ENV: STFC-RAL
+    REALHW_OR_SIMULATED: real
+    XRAY_TEST_RESULT_FILE: build/reports/ral-low-cucumber.json
+  script:
+    - pip install -U ska-ser-xray --extra-index-url "https://artefact.skao.int/repository/pypi-internal/simple"
+    - make xray-publish
+  allow_failure: true
 
 ral-low-stop-k8s:
   stage: test-ral-low

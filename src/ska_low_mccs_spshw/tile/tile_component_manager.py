@@ -8,17 +8,16 @@
 """This module implements component management for tiles."""
 from __future__ import annotations
 
-import copy
 import ipaddress
+import json
 import logging
 import threading
 import time
-from typing import Any, Callable, Final, NoReturn, Optional, cast
+from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
 import tango
-from pyaavs.tile import Tile as Tile12
-from pyaavs.tile_wrapper import Tile as HwTile
+from pyaavs.tile import Tile
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 from ska_control_model import (
     CommunicationStatus,
@@ -28,10 +27,11 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
-from ska_low_mccs_common import MccsDeviceProxy
+from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
-from ska_tango_base.base import check_communicating
+from ska_tango_base.base import TaskCallbackType, check_communicating
+from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
 from .tile_poll_management import (
@@ -40,7 +40,7 @@ from .tile_poll_management import (
     TileRequestProvider,
     TileResponse,
 )
-from .tile_simulator import TileSimulator
+from .tile_simulator import DynamicTileSimulator, TileSimulator
 from .time_util import TileTime
 from .tpm_status import TpmStatus
 from .utils import abort_task_on_exception, acquire_timeout, check_hardware_lock_claimed
@@ -74,7 +74,63 @@ _ATTRIBUTE_MAP: Final = {
     "CHECK_CPLD_COMMS": "global_status_alarms",
     "ARP_TABLE": "arp_table",
     "TILE_BEAMFORMER_FRAME": "tile_beamformer_frame",
+    "RFI_COUNT": "rfi_count",
 }
+
+
+class TaskCompleteWaiter(TaskCallbackType):
+    """Wait for task to complete."""
+
+    def __init__(self: TaskCompleteWaiter) -> None:
+        """Initialise a new instance."""
+        self._expected_status = TaskStatus.COMPLETED
+        self._status: TaskStatus | None = None
+        self._progress = 0
+        self._result = None
+        self._exception: Exception | None = None
+        self._condition = threading.Condition()
+
+    def __call__(
+        self: TaskCompleteWaiter,
+        status: TaskStatus | None = None,
+        progress: int | None = None,
+        result: Any = None,
+        exception: Exception | None = None,
+    ) -> None:
+        # Update the internal state based on callback inputs
+        if status is not None:
+            self._status = status
+        if progress is not None:
+            self._progress = progress
+        if result is not None:
+            self._result = result
+        if exception is not None:
+            self._exception = exception
+
+        # Notify that the task has updated its status
+        with self._condition:
+            self._condition.notify_all()
+
+    def wait(self: TaskCompleteWaiter, timeout: float) -> bool:
+        """
+        Wait until the task reaches the expected status or the timeout is reached.
+
+        :param timeout: timeout in seconds.
+
+        :return: True if we arrived at TaskStatus.COMPLETED.
+        """
+        with self._condition:
+            start_time = time.time()
+            while (
+                self._status != self._expected_status
+                and time.time() - start_time < timeout
+            ):
+                remaining_time = timeout - (time.time() - start_time)
+                if remaining_time > 0:
+                    self._condition.wait(timeout=remaining_time)
+                else:
+                    return False
+            return self._status == self._expected_status
 
 
 # pylint: disable=too-many-instance-attributes, too-many-lines, too-many-public-methods
@@ -85,7 +141,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments
+    # pylint: disable=too-many-arguments, too-many-locals
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -97,12 +153,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         tpm_ip: str,
         tpm_cpld_port: int,
         tpm_version: str,
+        preadu_levels: list[float] | None,
+        static_time_delays: list[float],
         subrack_fqdn: str,
         subrack_tpm_id: int,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
         update_attribute_callback: Callable[..., None],
         _tile: Optional[TileSimulator] = None,
+        event_serialiser: Optional[EventSerialiser] = None,
     ) -> None:
         """
         Initialise a new instance.
@@ -130,6 +189,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param tpm_ip: the IP address of the tile
         :param tpm_cpld_port: the port at which the tile is accessed for control
         :param tpm_version: TPM version: "tpm_v1_2" or "tpm_v1_6"
+        :param preadu_levels: preADU gain attenuation settings to apply for this TPM.
+        :param static_time_delays: Delays in nanoseconds to account
+            for static delay missmatches.
         :param subrack_fqdn: FQDN of the subrack that controls power to
             this tile
         :param subrack_tpm_id: This tile's position in its subrack
@@ -140,6 +202,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             is updated.
         :param component_state_changed_callback: callback to be
             called when the component state changes
+        :param event_serialiser: serialiser for events
         :param _tile: Optional tile to inject.
         """
         self._subrack_fqdn = subrack_fqdn
@@ -153,6 +216,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self._simulation_mode = simulation_mode
         self._hardware_lock = threading.Lock()
+        # This TaskExecutor is used to check the synchronisation state
+        # of the TPM.
+        self._synchronised_checker = TaskExecutor(max_workers=1)
+        # The callback from subrack will evaluate if the tpm
+        # needs to be initialised. There is a rare race condition
+        # where the evaluation will attempt initialisation although
+        # initialisation is already in progress. This lock is used
+        # to ensure this evaluation is correct
+        self._initialise_lock = threading.Lock()
         self.power_state: PowerState = PowerState.UNKNOWN
         self.active_request: TileRequest | TileLRCRequest | None = None
         self._request_provider: Optional[TileRequestProvider] = None
@@ -167,7 +239,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._pending_data_requests = False
         self._tile_time = TileTime(0)
         self._nof_blocks: int = 0
-        self._firmware_list: Optional[list[dict[str, Any]]] = None
+        self._firmware_list: List[dict[str, Any]] = []
         self._station_id = station_id
         self._tile_id = tile_id
         self._tpm_status = TpmStatus.UNKNOWN
@@ -183,21 +255,22 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
             tpm_version = ""
         self._tpm_version = tpm_version
+        self._preadu_levels = preadu_levels
+        self._static_time_delays: list[float] = static_time_delays
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
 
+        self._event_serialiser = event_serialiser
+
         if simulation_mode == SimulationMode.TRUE:
-            self.tile = _tile or TileSimulator(logger)
+            self.tile = _tile or DynamicTileSimulator(logger)
         else:
-            self.tile = cast(
-                Tile12,
-                HwTile(
-                    ip=tpm_ip,
-                    port=tpm_cpld_port,
-                    logger=logger,
-                    tpm_version=tpm_version,
-                ),
+            self.tile = Tile(
+                ip=tpm_ip,
+                port=tpm_cpld_port,
+                logger=logger,
+                tpm_version=tpm_version,
             )
 
         super().__init__(
@@ -222,13 +295,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise AssertionError(
                 "The request provider is None, unable to get next request"
             )
-        self._tpm_status = TpmStatus(self.tpm_status)
-        self._update_attribute_callback(
-            programming_state=self._tpm_status.pretty_name()
-        )
 
         request_spec = self._request_provider.get_request(self._tpm_status)
-        self._update_component_state(power=self.power_state, fault=self.fault_state)
         # If already a request simply return.
         if isinstance(request_spec, TileRequest):
             return request_spec
@@ -262,7 +330,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 except Exception as e:
                     # polling attempt was unsuccessful
                     self.logger.warning(f"Connection to tpm lost! : {e}")
-                    self.tile.tpm = None
                     request = TileRequest("connect", self.connect)
             case "IS_PROGRAMMED":
                 request = TileRequest(
@@ -375,6 +442,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.current_tile_beamformer_frame,
                     publish=True,
                 )
+            case "RFI_COUNT":
+                request = TileRequest(
+                    _ATTRIBUTE_MAP[request_spec],
+                    self.tile.read_broadband_rfi,
+                    publish=True,
+                )
             case _:
                 message = f"Unrecognised poll request {repr(request_spec)}"
                 self.logger.error(message)
@@ -422,6 +495,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         self.logger.error(f"Failed poll with exception : {exception}")
+
+        # We do not evaluate error codes. Connect if not already!
+        assert self._request_provider is not None
+        self._request_provider.desire_connection()
+
         # Update command tracker if defined in request.
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_failed(f"Exception: {repr(exception)}")
@@ -432,8 +510,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     mark_invalid=True, **{self.active_request.name: None}
                 )
 
-        self.power_state = self._subrack_says_tpm_power
         self.update_fault_state(poll_success=False)
+        self.power_state = self._subrack_says_tpm_power
+
+        # ================================================================
+        # Update fault before power to allow exit from fault before OFF.
+        # "else Action component_no_fault is not allowed in op_state OFF."
+        # can occur
+        self._update_component_state(fault=self.fault_state)
+        # ================================================================
+        self._update_component_state(power=self._subrack_says_tpm_power)
+        if self._subrack_says_tpm_power == PowerState.UNKNOWN:
+            super().poll_failed(exception)
 
         # TODO: would be great to formalise and document the exceptions raised
         # from the pyaavs.Tile. That way it will allow use to handle exceptions
@@ -473,7 +561,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_faulty: bool = False
         match poll_success:
             case False:
-                pass
+                with self._hardware_lock:
+                    if (
+                        not self.is_connected
+                        and self._subrack_says_tpm_power == PowerState.ON
+                    ):
+                        self.logger.error(
+                            "Unable to connect to TPM, "
+                            "however subrack reports it as ON. "
+                        )
+                        is_faulty = True
             case True:
                 if self._subrack_says_tpm_power != PowerState.ON:
                     # This is an inconsistent state, we can connect with the
@@ -508,16 +605,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.update_fault_state(poll_success=True)
 
-        # We managed to poll hardware therefore we are PowerState.ON.
-        # DevState and HealthState is to be determined by the attribute value reported
-        self.power_state = PowerState.ON
-
         # Publish all responses to TANGO interface.
-        if poll_response.publish:
-            self._update_attribute_callback(  # type: ignore[misc]
-                **{poll_response.command: poll_response.data},
-            )
+        try:
+            if poll_response.publish:
+                self._update_attribute_callback(  # type: ignore[misc]
+                    **{poll_response.command: poll_response.data},
+                )
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.warning(f"Exception raised in attribute callback {e}")
         super().poll_succeeded(poll_response)
+        self._update_component_state(power=PowerState.ON, fault=self.fault_state)
 
     def _on_arrested_attribute(self: TileComponentManager, names: set[str]) -> None:
         """
@@ -549,6 +646,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     def polling_stopped(self: TileComponentManager) -> None:
         """Uninitialise the request provider and set state UNKNOWN."""
         self._request_provider = None
+        self._tpm_status = TpmStatus.UNKNOWN
         self._update_attribute_callback(
             programming_state=TpmStatus.UNKNOWN.pretty_name()
         )
@@ -610,9 +708,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             force_reprogramming=False,
             pps_delay_correction=self._pps_delay_correction,
         )
-        self.logger.info("Initialise command placed in poll QUEUE")
+        self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
-        self._request_provider.desire_initialise(request)
+        with self._initialise_lock:
+            self._request_provider.desire_initialise(request)
         return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
@@ -628,7 +727,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if unconnected:
             self.logger.info("Starting subrack proxy creation")
             self._subrack_proxy = MccsDeviceProxy(
-                self._subrack_fqdn, self.logger, connect=False
+                self._subrack_fqdn,
+                self.logger,
+                connect=False,
+                event_serialiser=self._event_serialiser,
             )
             self.logger.info("Connecting to the subrack")
             try:
@@ -640,10 +742,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"Could not connect to '{self._subrack_fqdn}'"
                 ) from dev_failed
 
-        cast(MccsDeviceProxy, self._subrack_proxy).add_change_event_callback(
-            f"tpm{self._subrack_tpm_id}PowerState",
-            self._subrack_says_tpm_power_changed,
-        )
+            self._subrack_proxy.add_change_event_callback(
+                f"tpm{self._subrack_tpm_id}PowerState",
+                self._subrack_says_tpm_power_changed,
+            )
+
+    @property
+    @check_hardware_lock_claimed
+    def is_connected(self) -> bool:
+        """
+        Check the communication with CPLD.
+
+        :return: True if connected, else False.
+        """
+        self.logger.info("Checking connection")
+        return self.tile.check_communication()["CPLD"]
 
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
@@ -666,6 +779,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"subrack 'tpm{self._subrack_tpm_id}PowerState' attribute changed callback "
             f"called but event_name is {event_name}."
         )
+
         if self._simulation_mode == SimulationMode.TRUE and isinstance(
             self.tile, TileSimulator
         ):
@@ -676,38 +790,59 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Mocking tpm off")
                 self.tile.mock_off()
 
+        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
+        self._subrack_says_tpm_power = event_value
+
+        self.power_state = event_value
+        # Connect if not already.
+        with self._hardware_lock:
+            __is_connected = self.is_connected
+            # Connect if not already.
+            if not __is_connected or self.tile.tpm is None:
+                try:
+                    self.connect()
+                    __is_connected = True
+                except Exception:  # pylint: disable=broad-except
+                    self.logger.error("Subrack callback failed to connect to hardware.")
+
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
-            if self._tpm_status not in [TpmStatus.INITIALISED, TpmStatus.SYNCHRONISED]:
-                if (
-                    self._request_provider
-                    and self._request_provider.initialise_request is None
-                    and not isinstance(self.active_request, TileLRCRequest)
-                    or isinstance(self.active_request, TileLRCRequest)
-                    and self.active_request.name.lower() != "initialise"
-                ):
-                    request = TileLRCRequest(
-                        name="initialise",
-                        command_object=self._execute_initialise,
-                        task_callback=None,
-                        force_reprogramming=False,
-                        pps_delay_correction=self._pps_delay_correction,
-                    )
-                    self.logger.info(
-                        "Subrack has registered that the TPM has power "
-                        "but is not yet initialised of synchronised. "
-                        "Initialising."
-                    )
-                    assert self._request_provider is not None
-                    self.logger.info("Initialise command placed in poll QUEUE")
-                    self._request_provider.desire_initialise(request)
+            # Attempt reinitialisation if connected
+            # and not already initialised/ing.
+            if __is_connected and self._tpm_status not in [
+                TpmStatus.INITIALISED,
+                TpmStatus.SYNCHRONISED,
+            ]:
+                with self._initialise_lock:
+                    if (
+                        self._request_provider
+                        and self._request_provider.initialise_request is None
+                        and not isinstance(self.active_request, TileLRCRequest)
+                        or isinstance(self.active_request, TileLRCRequest)
+                        and self.active_request.name.lower() != "initialise"
+                    ):
+                        request = TileLRCRequest(
+                            name="initialise",
+                            command_object=self._execute_initialise,
+                            task_callback=None,
+                            force_reprogramming=False,
+                            pps_delay_correction=self._pps_delay_correction,
+                        )
+                        self.logger.info(
+                            "Subrack has registered that the TPM has power "
+                            "but is not yet initialised of synchronised. "
+                            "Initialising."
+                        )
+                        assert self._request_provider is not None
+                        self.logger.info(
+                            "Subrack callback placed initialise in poll QUEUE"
+                        )
+
+                        self._request_provider.desire_initialise(request)
 
         else:
             self._tile_time.set_reference_time(0)
-
-        self.logger.info(f"subrack says power is {PowerState(event_value).name}")
-        self._subrack_says_tpm_power = event_value
 
     def tile_info(self: TileComponentManager) -> dict[str, Any]:
         """
@@ -757,51 +892,73 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             self._global_reference_time = start_time
 
+    def reevaluate_tpm_status(self: TileComponentManager) -> bool:
+        """
+        Reevaluate the TpmStatus.
+
+        NOTE: This method should not be needed. But can be used as a
+        sanity check on the TileProgrammingState
+
+        :return: True is the re-evaluated TpmStatus differs from the
+            automated evaluation.
+        """
+        with self._hardware_lock:
+            _initial_tpm_status = self._tpm_status
+            self.__update_tpm_status()
+            if _initial_tpm_status != self._tpm_status:
+                self.logger.warning(
+                    "The reevaluation of the TpmStatus returned "
+                    "a different value to the automatic state "
+                    "evaluation."
+                )
+            return _initial_tpm_status != self._tpm_status
+
     @property
+    @check_hardware_lock_claimed
     def tpm_status(self: TileComponentManager) -> TpmStatus:
         """
         Return the TPM status.
 
         :return: the TPM status
         """
-        if self.power_state == PowerState.UNKNOWN:
-            status = TpmStatus.UNKNOWN
-        elif self.power_state != PowerState.ON:
-            status = TpmStatus.OFF
-        else:
-            try:
-                with self._hardware_lock:
-                    core_communication = self.tile.check_communication()
-                    self._update_attribute_callback(
-                        core_communication=core_communication
-                    )
-                    if core_communication["CPLD"]:
-                        if (
-                            not core_communication["FPGA0"]
-                            or not core_communication["FPGA1"]
-                        ):
-                            self.logger.warning(
-                                "Unable to connect with at least 1 FPGA"
-                            )
-                    _is_programmed = self.tile.is_programmed()
-                    if _is_programmed is False:
-                        status = TpmStatus.UNPROGRAMMED
-                    elif self._check_initialised() is False:
-                        status = TpmStatus.PROGRAMMED
-                    elif self._check_channeliser_started() is False:
-                        status = TpmStatus.INITIALISED
-                    else:
-                        status = TpmStatus.SYNCHRONISED
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"tile: tpm_status failed: {e}")
-                status = TpmStatus.UNCONNECTED
-        return status
+        core_communication = self.tile.check_communication()
+        self._update_attribute_callback(core_communication=core_communication)
+
+        if not any(core_communication.values()):
+            # TPM OFF or Network Issue
+            if self.power_state == PowerState.UNKNOWN:
+                return TpmStatus.UNKNOWN
+            if self.power_state != PowerState.ON:
+                return TpmStatus.OFF
+            return TpmStatus.UNCONNECTED
+
+        try:
+            # We are connected to at least the CPLD.
+            # TPM ON, FPGAs not programmed or TPM overtemperature self shutdown
+            status = TpmStatus.UNPROGRAMMED
+            if self.tile.is_programmed() is False:
+                status = TpmStatus.UNPROGRAMMED
+            elif self._check_initialised() is False:
+                status = TpmStatus.PROGRAMMED
+            elif self._check_channeliser_started() is False:
+                status = TpmStatus.INITIALISED
+            else:
+                status = TpmStatus.SYNCHRONISED
+            return status
+        except Exception as e:  # pylint: disable=broad-except
+            self.logger.error(
+                "Unexpected exception raised when "
+                f"evaluating TileProgrammingState: {e}\n"
+                f"Last known state = {status.pretty_name()}"
+            )
+            # Return the last know TpmStatus.
+            return status
 
     def ping(self: TileComponentManager) -> None:
         """Check we can communicate with TPM."""
         with self._hardware_lock:
             self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+        self.__update_tpm_status()
 
     @check_hardware_lock_claimed
     def _check_initialised(self: TileComponentManager) -> bool:
@@ -865,8 +1022,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             force_reprogramming=force_reprogramming,
             pps_delay_correction=self._pps_delay_correction,
         )
-        self._request_provider.desire_initialise(request)
-        self.logger.info("Initialise command placed in poll QUEUE")
+        with self._initialise_lock:
+            self._request_provider.desire_initialise(request)
+        self.logger.info("Initialise command placed initialise in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -886,6 +1044,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if force_reprogramming:
             self.tile.erase_fpgas()
+            self._tpm_status = TpmStatus.UNPROGRAMMED
             self._update_attribute_callback(
                 programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
             )
@@ -901,6 +1060,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # Initialisation after programming the FPGA
         #
         if prog_status:
+            self._tpm_status = TpmStatus.PROGRAMMED
             self._update_attribute_callback(
                 programming_state=TpmStatus.PROGRAMMED.pretty_name()
             )
@@ -913,6 +1073,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 f"* pps correction of {pps_delay_correction} \n"
                 f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
                 f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
+                f"* staticTimeDelays of {self._static_time_delays} \n"
+                f"* PreAduLevels of {self._preadu_levels} \n"
             )
             self.tile.initialise(
                 tile_id=self._tile_id,
@@ -920,6 +1082,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 active_40g_ports_setting="port1-only",
                 src_ip_fpga1=self.src_ip_40g_fpga1,
                 src_ip_fpga2=self.src_ip_40g_fpga2,
+                time_delays=self._static_time_delays,
             )
 
             self.tile.set_station_id(0, 0)
@@ -934,8 +1097,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # self.tile.post_synchronisation()
             self.tile.set_station_id(self._station_id, self._tile_id)
 
-            self.logger.info("TileComponentManager: initialisation completed")
+            if self._preadu_levels:
+                self.logger.info("TileComponentManager: setting PreADU attenuation...")
+                self.tile.set_preadu_levels(self._preadu_levels)
+                if self.tile.get_preadu_levels() != self._preadu_levels:
+                    self.logger.warning(
+                        "TileComponentManager: set PreADU attenuation failed"
+                    )
 
+            self.logger.info("TileComponentManager: initialisation completed")
+            self._tpm_status = TpmStatus.INITIALISED
+            self._update_attribute_callback(
+                programming_state=TpmStatus.INITIALISED.pretty_name()
+            )
             if self._global_reference_time:
                 self.logger.info("Global reference time specifed, starting acquisition")
                 self._start_acquisition()
@@ -1063,50 +1237,93 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param start_time: the time at which to start data acquisition, defaults to None
         :param delay: delay start, defaults to 2
         :param global_reference_time: the start time assumed for starting the timestamp
+
+        :raises TimeoutError: When unable to abort previous command.
         """
+        # Wait for COMPLETE status.
+        task_waiter = TaskCompleteWaiter()
+        self._synchronised_checker.abort(task_waiter)
+        # An arbitrary 10 seconds hard failure when we are unable to stop
+        # the state waiter thread,
+        if not task_waiter.wait(timeout=10):
+            raise TimeoutError("Unable to abort previous waiter thread in time. ")
+
         if global_reference_time is None:
             global_reference_time = self._global_reference_time
         else:
             self._global_reference_time = global_reference_time
 
-        executed = False
         self.logger.info(f"Start acquisition: start time: {start_time}, delay: {delay}")
-        try:
-            # Check if ARP table is populated before starting
-            self.tile.reset_eth_errors()
-            self.tile.check_arp_table()
-            # Start data acquisition on board
-            self.tile.start_acquisition(
-                start_time,
-                delay,
-                global_reference_time,
-            )
-            executed = True
-            self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
-        # pylint: disable=broad-except
-        except Exception as e:
-            self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
-        if not executed:
-            return
-        self.logger.info("Waiting for start acquisition")
-        max_timeout = 60  # Maximum delay, in 0.1 seconds
-        started = False
-        for i in range(max_timeout):
-            time.sleep(0.1)
+        # Check if ARP table is populated before starting
+        self.tile.reset_eth_errors()
+        self.tile.check_arp_table()
+        # Start data acquisition on board
+        self.tile.start_acquisition(
+            start_time,
+            delay,
+            global_reference_time,
+        )
+        self._fpga_reference_time = self.tile["fpga1.pps_manager.sync_time_val"]
 
+        if start_time is None:
+            deadline = time.time() + delay
+        else:
+            deadline = start_time + delay
+
+        # Abort and open new thread without waiting.
+        self.logger.info(
+            "New request to synchronise. Replacing old monitoring thread with new!"
+        )
+        self._synchronised_checker.submit(
+            self.__wait_for_synchronised, kwargs={"deadline": deadline}
+        )
+
+    def __wait_for_synchronised(
+        self: TileComponentManager,
+        deadline: int,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """
+        Wait for synchronisation until deadline.
+
+        :param deadline: the time to wait until giving up.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+
+        def __check_channeliser_started() -> bool:
+            started = False
             try:
-                started = self._check_channeliser_started()
+                with self._hardware_lock:
+                    started = self._check_channeliser_started()
             # pylint: disable=broad-except
             except Exception as e:
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
-        if not started:
-            self.logger.warning(
-                f"Acquisition not started after {max_timeout*0.1} seconds"
-            )
-            self._tile_time.set_reference_time(0)
+            return started
+
+        while time.time() < deadline + 1:
+            if task_abort_event is not None:
+                if task_abort_event.is_set():
+                    self.logger.info("Waiter thread stopped.")
+                    return
+            started = __check_channeliser_started()
+            if started:
+                break
+            time.sleep(0.2)
         else:
-            self._tile_time.set_reference_time(self._fpga_reference_time)
+            started = __check_channeliser_started()
+            if not started:
+                self.logger.warning("Acquisition not started in time.")
+                self._tile_time.set_reference_time(0)
+                return
+
+        self._tile_time.set_reference_time(self._fpga_reference_time)
+        self._tpm_status = TpmStatus.SYNCHRONISED
+        self._update_attribute_callback(
+            programming_state=TpmStatus.SYNCHRONISED.pretty_name()
+        )
 
     # --------------------------------
     # Properties
@@ -1251,7 +1468,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def firmware_available(
         self: TileComponentManager,
-    ) -> Optional[list[dict[str, Any]]]:
+    ) -> List[dict[str, Any]]:
         """
         Return the list of the firmware loaded in the system.
 
@@ -1261,7 +1478,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    self._firmware_list = self.tile.get_firmware_list()
+                    self._firmware_list = list(self.tile.get_firmware_list())
                 # pylint: disable=broad-except
                 except Exception as e:
                     self.logger.warning(
@@ -1269,7 +1486,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
             else:
                 self.logger.warning("Failed to acquire hardware lock")
-        return copy.deepcopy(self._firmware_list)
+        return self._firmware_list
 
     @property
     def register_list(self: TileComponentManager) -> list[str]:
@@ -1554,14 +1771,223 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
+    # ----------------------------
+    # AntennaBuffer
+    # ----------------------------
+
+    @check_communicating
+    def set_up_antenna_buffer(
+        self: TileComponentManager,
+        mode: str,
+        ddr_start_byte_address: int,
+        max_ddr_byte_size: Optional[int],
+    ) -> bool:
+        """Set up the antenna buffer.
+
+        :param mode: netwrok to transmit antenna buffer data to. Options: 'SDN'
+            (Science Data Network) and 'NSDN' (Non-Science Data Network)
+        :param ddr_start_byte_address: first address in the DDR for antenna buffer
+            data to be written in (in bytes).
+        :param max_ddr_byte_size: last address for writing antenna buffer data
+            (in bytes). If 'None' is chosen, the method will assume the last
+            address to be the final address of the DDR chip
+
+        :return: True if set up ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.set_up_antenna_buffer(
+                mode, ddr_start_byte_address, max_ddr_byte_size
+            )
+        except RuntimeError as err:
+            self.logger.error(f"Failed to set up antenna buffer: {err}")
+            return False
+        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete", False)
+
+    @abort_task_on_exception
+    @check_communicating
+    def start_antenna_buffer(
+        self: TileComponentManager,
+        argin: str,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str] | None:
+        """Submit the start antenna buffer method.
+
+        This method returns immediately after it submitted
+        `self._start_antenna_buffer` for execution.
+
+        :param argin: can either be the design name returned from
+            GetFirmwareAvailable command, or a path to a
+            file
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
+        kwargs = json.loads(argin)
+        request = TileLRCRequest(
+            name="start_antenna_buffer",
+            command_object=self._start_antenna_buffer,
+            task_callback=task_callback,
+            **kwargs,
+        )
+        self._request_provider.desire_start_antenna_buffer(request)
+        return TaskStatus.QUEUED, "Task staged"
+
+    @check_communicating
+    def _start_antenna_buffer(
+        self: TileComponentManager,
+        antennas: list,
+        start_time: int,
+        timestamp_capture_duration: int,
+        continuous_mode: bool,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """Start recording to the antenna buffer.
+
+        :param antennas: a list of antenna IDs to be used by the buffer, from 0 to 15.
+            One or two antennas can be used for each FPGA, or 1 to 4 per buffer.
+        :param start_time: the first time stamp that will be written into the DDR.
+            When set to -1, the buffer will begin writing as soon as possible.
+        :param timestamp_capture_duration: the capture duration in timestamps.
+            Timestamps are in units of 256 ADC samples (256*1.08us).
+        :param continuous_mode: "True" for continous capture. If enabled, time capture
+            durations is ignored
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        success = True
+        try:
+            ddr_write_size = self.tile.start_antenna_buffer(
+                antennas, start_time, timestamp_capture_duration, continuous_mode
+            )
+        except RuntimeError as err:
+            self.logger.error(f"Failed to start antenna buffer: {err}")
+            success = False
+
+        self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
+        success = self.tile._antenna_buffer_tile_attribute.get(
+            "data_capture_initiated", False
+        )
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Start acquisition has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                )
+            return
+
+    def read_antenna_buffer(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str] | None:
+        """Read from the antenna buffer.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+            identify the command
+        """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
+        request = TileLRCRequest(
+            name="read_antenna_buffer",
+            command_object=self._read_antenna_buffer,
+            task_callback=task_callback,
+        )
+        self._request_provider.desire_read_antenna_buffer(request)
+        return TaskStatus.QUEUED, "Task staged"
+
+    @check_communicating
+    def _read_antenna_buffer(
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
+        """Read from the antenna buffer.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Check for abort, defaults to None
+        """
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+        success = True
+        try:
+            self.tile.read_antenna_buffer()
+        except RuntimeError as err:
+            self.logger.error(f"Failed to read antenna buffer: {err}")
+            success = False
+
+        if task_callback:
+            if success:
+                task_callback(
+                    status=TaskStatus.COMPLETED,
+                    result="Read antenna buffer has completed",
+                )
+            else:
+                task_callback(
+                    status=TaskStatus.FAILED, result="Read antenna buffer task failed"
+                )
+            return
+
+    @check_communicating
+    def stop_antenna_buffer(self: TileComponentManager) -> bool:
+        """Stop writing to the antenna buffer.
+
+        :return: True if stop ran succesfully, False if it fails.
+        """
+        try:
+            self.tile.stop_antenna_buffer()
+        except RuntimeError as err:
+            self.logger.error(f"Failed to stop antenna buffer: {err}")
+            return False
+        return True
+
     # -----------------------------
     # FastCommands
     # ----------------------------
+
     @check_hardware_lock_claimed
     def connect(self: TileComponentManager) -> None:
-        """Check we can connect to the TPM."""
-        self.tile.connect()
-        self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+        """
+        Check we can connect to the TPM.
+
+        :raises ConnectionError: when unable to connect to TPM
+        """
+        if not self.is_connected or self.tile.tpm is None:
+            try:
+                self.logger.info("Connecting to TPM")
+                self.tile.connect()
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+            except Exception as e:
+                self.logger.error(f"Failed to connect to TPM {e}")
+                self.__update_tpm_status()
+                raise ConnectionError("Failed in connect to TPM") from e
+        self.__update_tpm_status()
+        self.logger.error("end of connect")
+
+    def __update_tpm_status(self: TileComponentManager) -> None:
+        """Update the TpmStatus."""
+        self._tpm_status = self.tpm_status
+        self._update_attribute_callback(
+            programming_state=self._tpm_status.pretty_name()
+        )
 
     def set_pps_delay_correction(
         self: TileComponentManager,
@@ -2150,13 +2576,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
 
     @check_communicating
-    def apply_calibration(self: TileComponentManager, load_time: str = "") -> None:
+    def apply_calibration(
+        self: TileComponentManager, load_time: str = ""
+    ) -> tuple[ResultCode, str]:
         """
         Load the calibration coefficients at the specified time delay.
 
         :param load_time: switch time as ISO formatted time
 
-        :raises ValueError: invalid time
+        :return: Result code and message.
         """
         if load_time == "":
             load_frame = 0
@@ -2165,30 +2593,31 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         else:
             load_frame = self._tile_time.frame_from_utc_time(load_time)
             if load_frame < 0:
-                self.logger.error(f"apply_calibration: Invalid time {load_time}")
-                raise ValueError(f"Invalid time {load_time}")
+                return (ResultCode.REJECTED, f"Invalid time {load_time}")
             if (load_frame - self.fpga_current_frame) < 20:
-                self.logger.error("apply_calibration: time not enough in the future")
-                raise ValueError("Time too early")
+                return (ResultCode.REJECTED, "Time too early")
 
         self.logger.info("TileComponentManager: switch_calibration_bank")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
             if acquired:
                 try:
                     self.tile.switch_calibration_bank(switch_time=load_frame)
                 # pylint: disable=broad-except
                 except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
                     )
             else:
-                self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "ApplyCalibration command completed OK")
 
     def load_calibration_coefficients(
         self: TileComponentManager,
         antenna: int,
         calibration_coefficients: list[list[complex]],
-    ) -> None:
+    ) -> tuple[ResultCode, str]:
         """
         Load calibration coefficients.
 
@@ -2198,9 +2627,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param antenna: the antenna to which the coefficients apply
         :param calibration_coefficients: a bidirectional complex array of
             coefficients, flattened into a list
+
+        :return: Result code and message.
         """
         self.logger.info("TileComponentManager: load_calibration_coefficients")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+        with acquire_timeout(self._hardware_lock, timeout=2) as acquired:
             if acquired:
                 try:
                     self.tile.load_calibration_coefficients(
@@ -2208,11 +2639,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                 # pylint: disable=broad-except
                 except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
+                    return (
+                        ResultCode.FAILED,
+                        f"TileComponentManager: Tile access failed: {e}",
                     )
             else:
-                self.logger.warning("Failed to acquire hardware lock")
+                return (ResultCode.FAILED, "Failed to acquire hardware lock")
+
+        return (ResultCode.OK, "LoadCalibrationCoefficents command completed OK")
 
     def initialise_beamformer(
         self: TileComponentManager,
@@ -2478,7 +2912,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: cached value for the channeliser truncation
         """
-        return copy.deepcopy(self._channeliser_truncation)
+        return list(self._channeliser_truncation)
 
     @channeliser_truncation.setter
     def channeliser_truncation(
@@ -2526,7 +2960,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     try:
                         self.tile.set_channeliser_truncation(trunc, chan)
                         self._update_attribute_callback(
-                            channeliser_rounding=copy.deepcopy(trunc)
+                            channeliser_rounding=list(trunc)
                         )
                     # pylint: disable=broad-except
                     except Exception as e:
@@ -2967,6 +3401,61 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
+    def flagged_packets(self: TileComponentManager) -> dict:
+        """
+        Return the total number of flagged packets by the TPM.
+
+        :return: the total number of flagged packets by the TPM
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["dsp"]["station_beamf"][
+                    "discarded_or_flagged_packet_count"
+                ]
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
+    def data_router_status(self: TileComponentManager) -> dict:
+        """
+        Return the data router values.
+
+        :return: The status of both FPGAs
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["io"]["data_router"]
+
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
+    def data_router_discarded_packets(self: TileComponentManager) -> dict:
+        """
+        Return the data router values.
+
+        :return: The number of discarded packets
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                return self.tile.get_health_status()["io"]["data_router"]
+
+        raise TimeoutError(
+            "Failed to check flagged_packets, lock not acquired in time."
+        )
+
+    @property
+    @check_communicating
     def fpga1_temperature(self: TileComponentManager) -> float:
         """
         Return the temperature of FPGA 1.
@@ -3130,6 +3619,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         amplitude_noise: float,
         pulse_code: int,
         amplitude_pulse: float,
+        delays: list[float] | None = None,
         load_time: Optional[str] = None,
     ) -> None:
         """
@@ -3147,6 +3637,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             Range 0 to 7: 16,12,8,6,4,3,2 times frame frequency
         :param amplitude_pulse: pulse peak amplitude, normalized
             to 127.5 ADC units, resolution 0.5 ADU
+        :param delays: delays to load into the test generator, list of 32 floats.
         :param load_time: Time to start the generator. in UTC ISO formatted string.
 
         :raises ValueError: invalid time specified
@@ -3200,6 +3691,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     self.tile.test_generator_set_noise(amplitude_noise, load_frame)
                     self.tile.set_test_generator_pulse(pulse_code, amplitude_pulse)
+                    if delays is not None:
+                        self.tile.test_generator_set_delay(delays)
                     self.tile["fpga1.test_generator.control.load_dds0"] = 1
                     self.tile["fpga2.test_generator.control.load_dds0"] = 1
                     end_time = self.tile.get_fpga_timestamp()
@@ -3250,3 +3743,105 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param active: True if the generator has been activated
         """
         self._test_generator_active = active
+
+    def configure_pattern_generator(
+        self: TileComponentManager,
+        stage: str,
+        pattern: list[int],
+        adders: list[int],
+        start: bool = False,
+        shift: int = 0,
+        zero: int = 0,
+    ) -> None:
+        """
+        Configure the TPM pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+        :param pattern: The data pattern in time order. This must be a list of integers
+            with a length between 1 and 1024. The pattern represents values
+            in time order (not antennas or polarizations).
+        :param adders: A list of 32 integers that expands the pattern to cover 16
+            antennas and 2 polarizations in hardware. This list maps the pattern to the
+            corresponding signals for the antennas and polarizations.
+        :param start: Boolean flag indicating whether to start the pattern immediately.
+            If False, the pattern will need to be started manually later.
+        :param shift: Optional bit shift (divides the pattern by 2^shift). This must not
+            be used in the 'beamf' stage, where it is always overridden to 4.
+            The default value is 0.
+        :param zero: An integer (0-65535) used as a mask to disable the pattern on
+            specific antennas and polarizations. The same mask is applied to both FPGAs,
+            supporting up to 8 antennas and 2 polarizations. The default value is 0.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
+        """
+        Stop the pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern was injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.stop_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def start_pattern_generator(self: TileComponentManager, stage: str) -> None:
+        """
+        Start the pattern generator.
+
+        :param stage: The stage in the signal chain where the pattern was injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.start_pattern(stage)
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def start_adcs(self: TileComponentManager) -> None:
+        """
+        Start the ADCs.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.enable_all_adcs()
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def stop_adcs(self: TileComponentManager) -> None:
+        """
+        Stop the ADCs.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                self.tile.disable_all_adcs()
+            else:
+                raise TimeoutError("Failed to acquire lock")
+
+    def enable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Enable station beam flagging."""
+        self.tile.enable_station_beam_flagging()
+
+    def disable_station_beam_flagging(self: TileComponentManager) -> None:
+        """Disable station beam flagging."""
+        self.tile.disable_station_beam_flagging()

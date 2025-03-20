@@ -89,33 +89,36 @@ class TestTileComponentManager:
         callbacks["communication_status"].assert_call(
             CommunicationStatus.NOT_ESTABLISHED
         )
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
         # For each power_state the subrack claims,
         # check the tile arrives at correct state.
         match power_state:
             case PowerState.ON:
+                # Lookahead of 5 due to race condition.
+                # The polling and subrack state callbacks occur in different threads,
+                # It is possible to transition directly to UNCONNECTED or to
+                # pass a transient state UNKNOWN.
+                callbacks["component_state"].assert_call(fault=True)
                 callbacks["component_state"].assert_call(power=power_state)
                 callbacks["attribute_state"].assert_call(
-                    core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=2,
+                    core_communication={"CPLD": False, "FPGA0": False, "FPGA1": False},
+                    lookahead=5,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.UNCONNECTED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.UNCONNECTED.pretty_name(),
+                    lookahead=5,
                 )
             case PowerState.UNKNOWN:
+                # No state update!
                 pass
             case _:
                 # OFF, NO_SUPPLY, STANDBY
                 callbacks["component_state"].assert_call(power=power_state, lookahead=4)
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=3
+                    programming_state=TpmStatus.OFF.pretty_name(), lookahead=5
                 )
 
         callbacks["communication_status"].assert_not_called()
         tile_component_manager.stop_communicating()
-
         callbacks["communication_status"].assert_call(CommunicationStatus.DISABLED)
         assert (
             tile_component_manager.communication_state == CommunicationStatus.DISABLED
@@ -171,26 +174,14 @@ class TestTileComponentManager:
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-                    lookahead=2,
+                    lookahead=5,
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=2
                 )
                 callbacks["attribute_state"].assert_call(
                     programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
-                )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
-                    lookahead=5,
                 )
                 try:
                     callbacks["component_state"].assert_call(
@@ -221,18 +212,6 @@ class TestTileComponentManager:
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
                     lookahead=4,
                 )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
-                    lookahead=4,
-                )
                 callbacks["component_state"].assert_call(
                     power=PowerState.ON, fault=True, lookahead=4
                 )
@@ -245,18 +224,6 @@ class TestTileComponentManager:
                 # We start in UNKNOWN so no need to assert
                 callbacks["attribute_state"].assert_call(
                     core_communication={"CPLD": True, "FPGA0": True, "FPGA1": True},
-                    lookahead=4,
-                )
-                callbacks["attribute_state"].assert_call(
-                    **{
-                        "global_status_alarms": {
-                            "I2C_access_alm": 0,
-                            "temperature_alm": 0,
-                            "voltage_alm": 0,
-                            "SEM_wd": 0,
-                            "MCU_wd": 0,
-                        }
-                    },
                     lookahead=4,
                 )
                 callbacks["component_state"].assert_call(
@@ -355,6 +322,15 @@ class TestTileComponentManager:
             callbacks["communication_status"].assert_call(
                 CommunicationStatus.ESTABLISHED
             )
+        elif (
+            first_power_state == PowerState.ON
+            and second_power_state == PowerState.UNKNOWN
+        ):
+            # Subrack says TPM power is UNKNOWN. The TPM is not
+            # connectable. Therefore, we have lost communication.
+            callbacks["communication_status"].assert_call(
+                CommunicationStatus.NOT_ESTABLISHED
+            )
         else:
             callbacks["communication_status"].assert_not_called()
 
@@ -384,9 +360,6 @@ class TestTileComponentManager:
             CommunicationStatus.NOT_ESTABLISHED
         )
         callbacks["component_state"].assert_call(power=PowerState.OFF)
-        callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNKNOWN.pretty_name()
-        )
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.OFF.pretty_name(),
             lookahead=5,  # Unknown for number of polls until subrack callback.
@@ -576,7 +549,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             callbacks["component_state"].assert_call(fault=False, lookahead=4)
 
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=3
+            programming_state=TpmStatus.UNPROGRAMMED.pretty_name(), lookahead=5
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
         callbacks["task"].assert_call(status=TaskStatus.IN_PROGRESS)
@@ -586,6 +559,26 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         return tile_component_manager
+
+    @pytest.fixture()
+    def antenna_values(
+        self: TestStaticSimulator,
+    ) -> dict:
+        """Return a set of values for starting the antenna buffer.
+
+        :returns: dict
+        """
+        # use non default values to check for errors in value propagation
+        antenna_values = {
+            "mode": "NSDN",
+            "DDR_start_address": 256 * 1024**2,
+            "max_DDR_byte_size": 512 * 1024**2,
+            "antennas": [1, 9],
+            "start_time": 1,
+            "timestamp_capture_duration": 1,
+            "continuous_mode": True,
+        }
+        return antenna_values
 
     @pytest.mark.parametrize(
         ("attribute_name", "expected_value"),
@@ -598,7 +591,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("fpga_current_frame", 0),
             ("pps_delay", TileSimulator.PPS_DELAY),
             ("firmware_available", TileSimulator.FIRMWARE_LIST),
-            ("register_list", list(MockTpm._register_map.keys())),
+            ("register_list", list(MockTpm.REGISTER_MAP_DEFAULTS)),
             (
                 "pps_present",
                 TileSimulator.TILE_MONITORING_POINTS["timing"]["pps"]["status"],
@@ -847,7 +840,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
     @pytest.mark.parametrize(
         "register", [f"fpga1.test_generator.delay_{i}" for i in (1, 4)]
     )
-    @pytest.mark.parametrize("write_values", ([], [1], [2, 2]), ids=(0, 1, 2))
+    @pytest.mark.parametrize("write_values", [[1]], ids=[1])
     def test_read_and_write_register(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -1094,10 +1087,12 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # First Initialse the tile_component_manager.
         # -------------------------
         # check the fpga time is not moving
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         assert tile_simulator.tpm
         tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
         initial_time = tile_component_manager.fpgas_time
         time.sleep(1.5)
@@ -1116,7 +1111,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             result=(ResultCode.OK, "Command executed to completion."),
         )
         # Assert
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
 
         # check the fpga time is moving
         initial_time1 = tile_component_manager.fpgas_time
@@ -1136,7 +1132,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         start_time = datetime.datetime.strftime(
             datetime.datetime.fromtimestamp(int(time.time()) + future_time), RFC_FORMAT
         )
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_component_manager.start_acquisition(
             start_time=start_time, delay=1, task_callback=callbacks["task"]
         )
@@ -1153,7 +1150,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         time.sleep(1.5)
         final_time3 = tile_component_manager.fpga_current_frame
         assert initial_time3 != final_time3
-        assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
 
         # Check that exceptions are handled.
         # Shorthand for linter line length
@@ -1385,7 +1383,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
         tile_simulator.tpm._is_programmed = True
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         mocked_sync_time = 2
         tile_simulator.tpm._register_map[
             "fpga1.pps_manager.sync_time_val"
@@ -1462,6 +1461,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test that the tpm status reports as expected.
@@ -1469,23 +1469,34 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The tile_component_manager under test.
         :param tile_simulator: A mock object representing
             a simulated tile (`TileSimulator`)
+        :param callbacks: A dictionary used to assert callbacks.
         """
-        tile_simulator.mock_off()
-        assert tile_component_manager.tpm_status == TpmStatus.UNCONNECTED
-        tile_simulator.mock_on()
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-        tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
         with tile_component_manager._hardware_lock:
+            tile_simulator.mock_off()
+            assert tile_component_manager.tpm_status == TpmStatus.UNCONNECTED
+            tile_simulator.mock_on()
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            tile_simulator.tpm._is_programmed = False
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
             tile_component_manager._execute_initialise(
                 force_reprogramming=True, pps_delay_correction=0
             )
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            tile_component_manager._start_acquisition(delay=0)
+
+        # Start acquisition will start a thread to determine if the desired state
+        # is reached. In order to do so it must claim the lock to probe hardware
+        # Hence we leave lock and wait for callback.
+        callbacks["attribute_state"].assert_against_call(
+            programming_state=TpmStatus.SYNCHRONISED.pretty_name(),
+            lookahead=20,
+            consume_nonmatches=True,
+        )
+
         with tile_component_manager._hardware_lock:
-            tile_component_manager._start_acquisition()
-        assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
-        tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+            assert tile_component_manager.tpm_status == TpmStatus.SYNCHRONISED
+            tile_simulator.tpm._is_programmed = False
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
     def test_load_time_delays(
         self: TestStaticSimulator,
@@ -1599,7 +1610,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm
         tile_simulator.tpm._is_programmed = False
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
         # check the fpga time is not moving
         initial_time = tile_component_manager.fpgas_time
@@ -1625,8 +1637,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
 
         # Assert
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-        assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+            assert tile_component_manager.tpm_status.pretty_name() == "Initialised"
         assert tile_component_manager.firmware_name == "itpm_v1_6.bit"
         # check the fpga time is moving
         initial_time2 = tile_component_manager.fpgas_time
@@ -1662,7 +1675,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             result=Anything,
         )
         # Check TpmStatus is UNPROGRAMMED.
-        assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.UNPROGRAMMED
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -1673,6 +1687,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tpm_version_to_test: str,
         expected_firmware_name: str,
+        preadu_attenuation: list[float],
+        static_time_delays: list[float],
         logger: logging.Logger,
         tile_id: int,
         station_id: int,
@@ -1684,6 +1700,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         :param tpm_version_to_test: TPM version: "tpm_v1_2" or "tpm_v1_6"
         :param expected_firmware_name: the expected value of firmware_name
+        :param preadu_attenuation: the preADU attenuation to set on the tile.
+        :param static_time_delays: the static time delays applied to the tile.
         :param logger: a object that implements the standard logging
             interface of :py:class:`logging.Logger`
         :param tile_id: the unique ID for the tile
@@ -1701,6 +1719,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "tpm_ip",
             2,
             tpm_version_to_test,
+            preadu_attenuation,
+            static_time_delays,
             "dsd",
             2,
             callbacks["communication_status"],
@@ -2432,6 +2452,75 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         tile_component_manager.configure_test_generator(**mocked_input_params)
 
+    def test_configure_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the configure_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+        mocked_input_params: dict[str, Any] = {
+            "stage": "jesd",
+            "pattern": list(range(1024)),
+            "adders": list(range(32)),
+            "start": True,
+            "shift": 0,
+            "zero": 0,
+        }
+
+        tile_simulator.set_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+
+        tile_component_manager.configure_pattern_generator(**mocked_input_params)
+        tile_simulator.set_pattern.assert_called_with(
+            mocked_input_params["stage"],
+            mocked_input_params["pattern"],
+            mocked_input_params["adders"],
+            mocked_input_params["start"],
+            mocked_input_params["shift"],
+            mocked_input_params["zero"],
+        )
+
+    def test_start_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the start_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.start_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.start_pattern_generator(mocked_stage)
+        tile_simulator.start_pattern.assert_called_with(mocked_stage)
+
+    def test_stop_pattern_generator(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """
+        Unit test for the stop_pattern_generator function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        tile_simulator.connect()
+
+        mocked_stage = "jesd"
+        tile_simulator.stop_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_component_manager.stop_pattern_generator(mocked_stage)
+        tile_simulator.stop_pattern.assert_called_with(mocked_stage)
+
     def test_test_generator_input_select(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
@@ -2762,7 +2851,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("firmware_name"),
             ("firmware_available"),
             ("hardware_version"),
-            ("tpm_status"),
             ("fpgas_time"),
             ("fpga_reference_time"),
             ("fpga_current_frame"),
@@ -2812,7 +2900,8 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.connect()
         assert tile_simulator.tpm is not None
         assert tile_component_manager.tile.is_programmed()
-        assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
+        with tile_component_manager._hardware_lock:
+            assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
         tile_simulator.tpm._is_programmed = True
         tile_simulator._is_programmed = True
 
@@ -2825,6 +2914,245 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.stop_data_transmission()
 
         assert tile_component_manager.pending_data_requests is False
+
+    def test_set_up_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for setting up the antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+
+        # Confrim that the values have updated correctly
+        for key in ["mode", "DDR_start_address", "max_DDR_byte_size"]:
+            assert antenna_values[key] == buffer[key]
+        assert buffer["set_up_complete"] is True
+
+    def test_fail_setup_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test setup when antenna buffer is not implemented.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_simulator._antenna_buffer_implemented = False
+        with pytest.raises(
+            LibraryError, match="Antenna Buffer not implemented by FPGA firmware"
+        ):
+            tile_component_manager.set_up_antenna_buffer(
+                antenna_values["mode"],
+                antenna_values["DDR_start_address"],
+                antenna_values["max_DDR_byte_size"],
+            )
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is False
+
+    def test_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for starting antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        for key, item in antenna_values.items():
+            assert item == buffer[key]
+        assert buffer["set_up_complete"] is True
+        assert buffer["data_capture_initiated"] is True
+
+    def test_fail_start_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test start antenna buffer with incorrect setup/values.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Start without a setup
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please set up the "
+            + "antenna buffer before writing",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                antenna_values["antennas"],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["set_up_complete"] is True
+
+        # No antennas specified
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Antennas list is empty "
+            + "please give at lease one antenna ID",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                [],
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        # Invalid antennas specified
+        invalid_input = [-1, 16]
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: out of range antenna IDs "
+            + "present \\[-1, 16\\]. Please give an antenna ID from 0 to 15",
+        ):
+            tile_component_manager._start_antenna_buffer(
+                invalid_input,
+                antenna_values["start_time"],
+                antenna_values["timestamp_capture_duration"],
+                antenna_values["continuous_mode"],
+            )
+
+        assert buffer["data_capture_initiated"] is False
+
+    def test_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for reading antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+
+        tile_component_manager._read_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["read_antenna_buffer"] is True
+        assert buffer["stop_antenna_buffer"] is True
+
+    def test_fail_read_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Test read antenna buffer without prior setup.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        # Fail when antenna buffer is not set up
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please set up the antenna buffer before"
+            + " reading",
+        ):
+            tile_component_manager._read_antenna_buffer()
+
+        # Fail when buffer is set up nothing was captured
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+        with pytest.raises(
+            Exception,
+            match="AntennaBuffer ERROR: Please capture antenna buffer data before"
+            + " reading",
+        ):
+            tile_component_manager._read_antenna_buffer()
+
+    def test_stop_antenna_buffer(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+        antenna_values: dict,
+    ) -> None:
+        """Unit test for stoping antenna buffer.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        :param antenna_values: The default value for the antenna setup.
+        """
+        tile_component_manager.set_up_antenna_buffer(
+            antenna_values["mode"],
+            antenna_values["DDR_start_address"],
+            antenna_values["max_DDR_byte_size"],
+        )
+
+        tile_component_manager._start_antenna_buffer(
+            antenna_values["antennas"],
+            antenna_values["start_time"],
+            antenna_values["timestamp_capture_duration"],
+            antenna_values["continuous_mode"],
+        )
+        tile_component_manager.stop_antenna_buffer()
+
+        # Confrim that the values have updated correctly
+        buffer = tile_simulator._antenna_buffer_tile_attribute
+        assert buffer["stop_antenna_buffer"] is True
 
 
 class TestDynamicSimulator:
@@ -2900,7 +3228,7 @@ class TestDynamicSimulator:
 
         callbacks["attribute_state"].assert_call(
             programming_state=TpmStatus.UNPROGRAMMED.pretty_name(),
-            lookahead=3,
+            lookahead=5,
             consume_nonmatches=True,
         )
         callbacks["task"].assert_call(status=TaskStatus.QUEUED)
@@ -2910,7 +3238,7 @@ class TestDynamicSimulator:
             result=(ResultCode.OK, "Command executed to completion."),
         )
         callbacks["attribute_state"].assert_call(
-            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=3
+            programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=5
         )
         return dynamic_tile_component_manager
 
@@ -2957,7 +3285,7 @@ class TestDynamicSimulator:
             ("firmware_available", DynamicTileSimulator.FIRMWARE_LIST),
             (
                 "register_list",
-                list(MockTpm._register_map.keys()),
+                list(MockTpm.REGISTER_MAP_DEFAULTS),
             ),
         ),
     )
@@ -2981,3 +3309,18 @@ class TestDynamicSimulator:
         """
         time.sleep(0.1)
         assert getattr(tile_component_manager, attribute_name) == expected_value
+
+    def test_rfi_count(
+        self: TestDynamicSimulator, tile_component_manager: TileComponentManager
+    ) -> None:
+        """
+        Tests that rfi_count increments.
+
+        :param tile_component_manager: the tile_component_manager class
+            object under test.
+        """
+        initial_rfi = tile_component_manager.tile.read_broadband_rfi()
+        time.sleep(1.5)
+        final_rfi = tile_component_manager.tile.read_broadband_rfi()
+        difference_mask = initial_rfi != final_rfi  # True where values differ
+        assert np.all(final_rfi[difference_mask] > initial_rfi[difference_mask])

@@ -10,11 +10,23 @@ from __future__ import annotations
 
 import logging
 import time
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-from .tests.base_tpm_test import TestResult, TpmSelfCheckTest
-from .tests.test_station_initialise import InitialiseStation
-from .tests.test_tango import BasicTangoTest
+from .tests import (
+    BaseDaqTest,
+    BasicTangoTest,
+    InitialiseStation,
+    TestBeam,
+    TestChannel,
+    TestIntegratedBeam,
+    TestIntegratedChannel,
+    TestRaw,
+    TestResult,
+    TestStationBeamDataRate,
+    TestTileBeamformer,
+    TestTilePointing,
+    TpmSelfCheckTest,
+)
 
 __all__ = ["SpsStationSelfCheckManager"]
 
@@ -51,21 +63,42 @@ class SpsStationSelfCheckManager:
         self._subrack_trls = subrack_trls
         self._daq_trl = daq_trl
         self._component_manager = component_manager
+        self._keep_test_data = True
 
-        tpm_tests = [
-            tpm_test(
+        # Jank to get around https://github.com/python/mypy/issues/3115 and
+        # https://github.com/python/mypy/issues/16509
+        def _instantiate_test(test: Any) -> TpmSelfCheckTest:
+            return test(
                 component_manager=self._component_manager,
                 logger=self.logger,
                 tile_trls=list(self._tile_trls),
                 subrack_trls=list(self._subrack_trls),
                 daq_trl=self._daq_trl,
             )
-            for tpm_test in [BasicTangoTest, InitialiseStation]
+
+        tpm_tests = [
+            _instantiate_test(tpm_test)
+            for tpm_test in [
+                BasicTangoTest,
+                InitialiseStation,
+                TestRaw,
+                TestChannel,
+                TestBeam,
+                TestIntegratedBeam,
+                TestIntegratedChannel,
+                TestTileBeamformer,
+                TestTilePointing,
+                TestStationBeamDataRate,
+            ]
         ]
+
         self._tpm_test_names = [tpm_test.__class__.__name__ for tpm_test in tpm_tests]
         self._tpm_tests: dict[str, TpmSelfCheckTest] = {
             tpm_test.__class__.__name__: tpm_test for tpm_test in tpm_tests
         }
+        for test in self._tpm_tests:
+            if isinstance(test, BaseDaqTest):
+                test.keep_data = self._keep_test_data
 
     def _clear_logs_and_report(self: SpsStationSelfCheckManager) -> None:
         self._test_report = "Test report:\n\n"
@@ -160,3 +193,24 @@ class SpsStationSelfCheckManager:
         self: SpsStationSelfCheckManager, test_result: TestResult, test_name: str
     ) -> None:
         self._test_report += f"Test: {test_name}," f" Result: {test_result.name}\n"
+
+    @property
+    def keep_test_data(self) -> bool:
+        """
+        Return whether or not to keep any test data.
+
+        :return: whether or not to keep any test data.
+        """
+        return self._keep_test_data
+
+    @keep_test_data.setter
+    def keep_test_data(self, value: bool) -> None:
+        """
+        Set whether or not to keep any test data.
+
+        :param value: whether or not to keep any test data.
+        """
+        self._keep_test_data = value
+        for test in self._tpm_tests.values():
+            if isinstance(test, BaseDaqTest):
+                test.keep_data = value

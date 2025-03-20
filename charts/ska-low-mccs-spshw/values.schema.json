@@ -105,11 +105,19 @@
                                 }
                               ]
                             },
+                            "csp_rounding": {
+                              "type": "integer",
+                              "minimumValue": 0,
+                              "maximumValue": 7
+                            },
                             "antenna_config_uri": {
                               "type": "array",
                               "items": {
                                 "type": "string"
                               }
+                            },
+                            "device_properties": {
+                              "type": "object"
                             },
                             "subracks": {
                               "type": "array",
@@ -186,6 +194,9 @@
                             "host": {
                               "type": "string",
                               "format": "hostname"
+                            },
+                            "device_properties": {
+                              "type": "object"
                             },
                             "port": {
                               "type": "integer",
@@ -273,6 +284,9 @@
                               "type": "integer",
                               "minimum": 1
                             },
+                            "device_properties": {
+                              "type": "object"
+                            },
                             "logging_level_default": {
                               "type": "integer",
                               "minimum": 0,
@@ -335,6 +349,9 @@
                               "type": "integer",
                               "minimum": 1,
                               "maximum": 512
+                            },
+                            "device_properties": {
+                              "type": "object"
                             },
                             "host": {
                               "type": "string",
@@ -429,6 +446,9 @@
                             "device_definition": {
                               "type": "string"
                             },
+                            "repo": {
+                              "type": "string"
+                            },
                             "priv_key": {
                               "type": "string"
                             },
@@ -457,6 +477,9 @@
                               "type": "integer",
                               "minimum": 0,
                               "maximum": 5
+                            },
+                            "device_properties": {
+                              "type": "object"
                             }
                           },
                           "required": [

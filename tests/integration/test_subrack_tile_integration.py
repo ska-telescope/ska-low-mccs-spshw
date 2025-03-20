@@ -255,8 +255,6 @@ class TestSubrackTileIntegration:
 
         # The tile device receives this event too. It transitions to OFF.
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.OFF)
-        change_event_callbacks["tile_state"].assert_not_called()
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
 
 class TestMccsTileTpmDriver:
@@ -432,6 +430,7 @@ class TestMccsTileTpmDriver:
             (on_command_id, "COMPLETED")
         )
         wait_for_completed_command_to_clear_from_queue(tile_device)
+        wait_for_completed_command_to_clear_from_queue(subrack_device)
 
     def test_start_acquisition(
         self: TestMccsTileTpmDriver,
@@ -475,7 +474,6 @@ class TestMccsTileTpmDriver:
         time.sleep(sleep_time)
         final_frame = tile_device.currentFrame
         assert final_frame > initial_frame
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_send_data_samples(
         self: TestMccsTileTpmDriver,
@@ -529,7 +527,6 @@ class TestMccsTileTpmDriver:
         [[_], [command_id]] = tile_device.SendDataSamples(
             json.dumps({"data_type": "raw"})
         )
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_40g_core(
         self: TestMccsTileTpmDriver,
@@ -576,7 +573,6 @@ class TestMccsTileTpmDriver:
         result = json.loads(result_str)
         # check is a subset
         assert config.items() <= result.items()
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_40g_core_with_bad_configuration(
         self: TestMccsTileTpmDriver,
@@ -624,7 +620,6 @@ class TestMccsTileTpmDriver:
             match="ValueError: Invalid core id or arp table id specified",
         ):
             tile_device.Get40GCoreConfiguration(json.dumps(arg))
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_configure_beamformer(
         self: TestMccsTileTpmDriver,
@@ -670,7 +665,6 @@ class TestMccsTileTpmDriver:
         table = list(tile_device.beamformerTable)
         expected = [2, 0, 0, 0, 0, 0, 0] + [0, 0, 0, 0, 0, 0, 0] * 47
         assert table == expected
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     def test_preadu_levels(
         self: TestMccsTileTpmDriver,
@@ -722,7 +716,6 @@ class TestMccsTileTpmDriver:
 
         # TANGO returns a ndarray.
         assert tile_device.preadulevels.tolist() == final_level  # type: ignore
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     # pylint: disable=too-many-arguments
     def test_pps_present(
@@ -774,7 +767,6 @@ class TestMccsTileTpmDriver:
             == tango.AttrQuality.ATTR_ALARM
         )
         assert tile_device.state() == tango.DevState.ALARM
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     # pylint: disable=too-many-arguments
     def test_pps_delay(
@@ -830,7 +822,6 @@ class TestMccsTileTpmDriver:
 
         assert np.array_equal(final_corrections, tile_under_test_pps_delay)
         # assert tile_device.ppsDelay == tile_under_test_pps_delay
-        wait_for_completed_command_to_clear_from_queue(tile_device)
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(
@@ -1222,4 +1213,65 @@ class TestMccsTileTpmDriver:
         change_event_callbacks["tile_state"].assert_not_called()
         tile_device.adminMode = AdminMode.OFFLINE
         change_event_callbacks["tile_state"].assert_change_event(tango.DevState.DISABLE)
-        wait_for_completed_command_to_clear_from_queue(tile_device)
+
+    def test_tpm_discovery(
+        self: TestMccsTileTpmDriver,
+        tile_device: tango.DeviceProxy,
+        subrack_device: tango.DeviceProxy,
+        tile_simulator: TileSimulator,
+        change_event_callbacks: MockTangoEventCallbackGroup,
+    ) -> None:
+        """
+        Test discovery of TPM state.
+
+        This test was created to capture SKB-687. It will check:
+        - Whether MccsTile can discover the correct TileProgrammingState
+        - The subrack callback does not drive state when Synchronised.
+
+        :param subrack_device: the subrack Tango device under test.
+        :param tile_device: the tile Tango device under test.
+        :param tile_simulator: the backend tile simulator. This is
+            what tile_device is observing.
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
+        """
+        # We are mocking the TPM in a prexisting SYNCHRONISED state.
+        # To check we do not re-initialise.
+        tile_simulator.mock_on(lock=True)
+        tile_simulator.program_fpgas("itpm_v1_6.bit")
+        tile_simulator.initialise()
+        tile_simulator.start_acquisition(delay=0)
+        tile_simulator._mocked_tpm = tile_simulator.tpm
+        tile_simulator.tpm = None
+        tile_simulator._is_cpld_connectable = False
+
+        subrack_device.subscribe_event(
+            "tpm1PowerState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["subrack_tpm_power_state"],
+        )
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.UNKNOWN
+        )
+
+        subrack_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.OFF
+        )
+        subrack_device.PowerUpTpms()
+        change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
+            PowerState.ON
+        )
+
+        tile_device.subscribe_event(
+            "tileProgrammingState",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event("Unknown")
+
+        tile_device.adminMode = AdminMode.ONLINE
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised", lookahead=2, consume_nonmatches=True
+        )
+        change_event_callbacks["tile_programming_state"].assert_not_called()

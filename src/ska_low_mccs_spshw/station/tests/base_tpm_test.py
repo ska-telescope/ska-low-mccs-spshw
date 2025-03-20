@@ -80,6 +80,7 @@ class TpmSelfCheckTest(abc.ABC):
             MccsDeviceProxy(fqdn=tile_trl, logger=self.logger)
             for tile_trl in self.tile_trls
         ]
+        self.tile_proxies.sort(key=lambda proxy: proxy.logicalTileId)
         self.subrack_proxies = [
             MccsDeviceProxy(fqdn=subrack_trl, logger=self.logger)
             for subrack_trl in self.subrack_trls

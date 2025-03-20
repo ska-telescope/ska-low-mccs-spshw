@@ -17,7 +17,7 @@ from typing import Iterator, Type, Union
 import pytest
 import pytest_mock
 import tango
-from ska_control_model import AdminMode, HealthState, ResultCode
+from ska_control_model import AdminMode, HealthState, ResultCode, TaskStatus
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango.server import Device, command
@@ -28,6 +28,7 @@ from tests.functional.conftest import (
     poll_until_command_result,
     poll_until_consumers_running,
     poll_until_consumers_stopped,
+    verify_bandpass_state,
 )
 from tests.harness import SpsTangoTestHarness, SpsTangoTestHarnessContext
 
@@ -102,6 +103,7 @@ class TestMccsDaqReceiver:
         daq_interface: str,
         daq_ports: list[int],
         daq_ip: str,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for DaqStatus.
@@ -118,9 +120,19 @@ class TestMccsDaqReceiver:
         :param device_under_test: fixture that provides a
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
+        :param change_event_callbacks: group of Tango change event callbacks
+            with asynchony support.
         """
         # Set adminMode so we can control device.
         device_under_test.adminMode = AdminMode.ONLINE
+        device_under_test.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            tango.DevState.ON, consume_nonmatches=True, lookahead=5
+        )
 
         # Configure.
         daq_config = {
@@ -161,6 +173,7 @@ class TestMccsDaqReceiver:
         self: TestMccsDaqReceiver,
         device_under_test: tango.DeviceProxy,
         daq_modes: str,
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for Start().
@@ -173,9 +186,19 @@ class TestMccsDaqReceiver:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         :param daq_modes: The DAQ consumers to start.
+        :param change_event_callbacks: group of Tango change event
+            callback with asynchrony support
         """
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.adminMode == AdminMode.ONLINE
+        device_under_test.subscribe_event(
+            "state",
+            tango.EventType.CHANGE_EVENT,
+            change_event_callbacks["state"],
+        )
+        change_event_callbacks["state"].assert_change_event(
+            tango.DevState.ON, consume_nonmatches=True, lookahead=5
+        )
 
         start_args = json.dumps({"modes_to_start": f"{daq_modes}"})
         [result_code], [response] = device_under_test.Start(start_args)
@@ -241,6 +264,14 @@ class TestPatchedDaq:
         mock_component_manager = unittest.mock.Mock()
         mock_component_manager.start_daq.return_value = (ResultCode.OK, "Daq started")
         mock_component_manager.stop_daq.return_value = (ResultCode.OK, "Daq stopped")
+        mock_component_manager.start_data_rate_monitor.return_value = (
+            TaskStatus.QUEUED,
+            "Task queued",
+        )
+        mock_component_manager.stop_data_rate_monitor.return_value = (
+            TaskStatus.QUEUED,
+            "Task queued",
+        )
         mock_component_manager._set_consumers_to_start.return_value = (
             ResultCode.OK,
             "SetConsumers command completed OK",
@@ -255,12 +286,44 @@ class TestPatchedDaq:
         )
         mock_component_manager.max_queued_tasks = 0
         mock_component_manager.max_executing_tasks = 1
+        mock_component_manager._dedicated_bandpass_daq = False
+        mock_component_manager.daq_status.side_effect = [
+            json.dumps(
+                {
+                    "Daq Health": [HealthState.OK.name, HealthState.OK.value],
+                    "Running Consumers": [[]],
+                    "Receiver Interface": "lo",
+                    "Receiver IP": ["123.456.789.000"],
+                    "Bandpass Monitor": False,
+                }
+            ),
+            json.dumps(
+                {
+                    "Daq Health": [HealthState.OK.name, HealthState.OK.value],
+                    "Running Consumers": [["INTEGRATED_CHANNEL_DATA", 5]],
+                    "Receiver Interface": "lo",
+                    "Receiver IP": ["123.456.789.000"],
+                    "Bandpass Monitor": False,
+                }
+            ),
+            json.dumps(
+                {
+                    "Daq Health": [HealthState.OK.name, HealthState.OK.value],
+                    "Running Consumers": [["INTEGRATED_CHANNEL_DATA", 5]],
+                    "Receiver Interface": "lo",
+                    "Receiver IP": ["123.456.789.000"],
+                    "Bandpass Monitor": True,
+                }
+            ),
+        ]
         # configuration = {
         #     "start_daq.return_value": ,
         #     "stop_daq.return_value": ,
         #     "_set_consumers_to_start.return_value": ,
         # }
         # mock_component_manager.configure_mock(**configuration)
+        # Currently a check in base classes that causes an exception if attr is present.
+        del mock_component_manager.abort_commands
         return mock_component_manager
 
     @pytest.fixture(name="device_class_under_test")
@@ -303,6 +366,18 @@ class TestPatchedDaq:
                 :param input_data: the input data to the callback in json form.
                 """
                 self._received_data_callback(*input_data)
+
+            @command(dtype_in="DevBoolean")
+            def SetBandpassDaq(self: _PatchedDaqReceiver, value: bool) -> None:
+                """
+                Set the bandpass DAQ.
+
+                :param value: the value to set the bandpass DAQ to.
+                """
+                self.BandpassDaq = value
+                assert self.BandpassDaq == value
+                self.component_manager._dedicated_bandpass_daq = value
+                assert self.component_manager._dedicated_bandpass_daq == value
 
         return _PatchedDaqReceiver
 
@@ -592,6 +667,7 @@ class TestPatchedDaq:
         """
         device_under_test.adminMode = AdminMode.ONLINE
         assert device_under_test.adminMode == AdminMode.ONLINE
+        sleep(0.1)
 
         # Call start_bandpass
         bandpass_config = '{"some_key": "some_value"}'
@@ -604,3 +680,62 @@ class TestPatchedDaq:
         call_args = (
             mock_component_manager.stop_bandpass_monitor.assert_called_once_with()
         )
+
+    def test_start_stop_data_rate_monitor(
+        self: TestPatchedDaq,
+        device_under_test: tango.DeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for StartDataRateMonitor() and StopDataRateMonitor().
+
+        This tests that when we pass an interval to the `StartDataRateMonitor`
+        command that it is successfully passed into the
+        component manager
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: a mock component manager that has
+            been patched into the device under test
+        """
+        device_under_test.adminMode = AdminMode.ONLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
+        sleep(0.1)
+
+        _ = device_under_test.StartDataRateMonitor(1)
+        call_args = mock_component_manager.start_data_rate_monitor.call_args
+        # A bit clunky but it gets padded with command IDs etc.
+        assert call_args[0][0] == 1
+
+        _ = device_under_test.StopDataRateMonitor()
+
+        mock_component_manager.stop_data_rate_monitor.assert_called_once()
+
+    def test_auto_start_bandpass_device(
+        self: TestPatchedDaq,
+        device_under_test: tango.DeviceProxy,
+        mock_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for StartBandpassMonitor().
+
+        Tests that when a Daq device is marked as a bandpass daq that it
+        automatically starts bandpass monitoring. Weak test.
+
+        :param device_under_test: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param mock_component_manager: a mock component manager that has
+            been patched into the device under test
+        """
+        device_under_test.SetBandpassDaq(True)
+        device_under_test.adminMode = AdminMode.ONLINE
+        assert device_under_test.adminMode == AdminMode.ONLINE
+        # Wait for integrated channel consumer to start.
+        poll_until_consumers_running(
+            device_under_test,
+            [str(DaqModes.INTEGRATED_CHANNEL_DATA).rsplit(".", maxsplit=1)[-1]],
+        )
+        # Wait for bandpass monitor to start.
+        verify_bandpass_state(device_under_test, True)

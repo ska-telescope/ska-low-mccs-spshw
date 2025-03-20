@@ -1,5 +1,125 @@
 # Version History
 
+## 1.5.0
+
+* [THORN-103] SpsStation.AcquireDataForCalibration now launches a frequency sweep, as such the interface has changed. It now expected a json-ified dictionary containing the keys first_channel and last_channel.
+* [THORN-96] Add optional property StaticTimeDelays to MccsTile.
+* [THORN-117] Reduce cpu time per poll spend on redundant evaluation of TpmStatus.
+* [THORN-117] Add EvaluateTileProgrammingState command to MccsTile.
+* [THORN-123] Add FAULT when subrack reports TPM ON and TPM is not connectable.
+* [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
+flush out issues with rapid changes of adminmode.
+
+## 1.4.0
+
+* [THORN-21] Added antenna buffer control methods.
+
+## 1.3.0
+
+* [THORN-122] HotFix issue 'devstate not accounting ppsPresent attribute'
+* [THORN-122] HotFix issue 'unable with deploying MccsTile when TPM OFF state.'
+* [SKB-520] Mark attributes as INVALID.
+* [THORN-85] Update devices to serialise their events through the EventSerialiser. This should have no operational
+changes, but an attribute EventHistory is now available on all devices to debug which events this device received,
+where they came from, the order they came in, and what callbacks were executed with those events. It is a json-ified list of lists.
+
+## 1.2.0
+
+* [THORN-54] Update SpsStation to use new health model.
+
+## 1.1.0
+
+* [SKB-765] Update SpsStation.AcquireDataForCalibration to not configure DAQ, this is now done in SpsStation.ConfigureStationForCalibration
+* [SKB-765] AcquireDataForCalibration now starts DAQ, sends data, waits for receipt of data then stops daq.
+
+## 1.0.0
+
+* [THORN-17] 1.0.0 release - all MCCS repos
+
+## 0.25.0
+
+* [SKB-761] Hardcode nof_antenna to number expected from library build.
+* [THORN-24] Update devices to use MccsBaseDevice for mode inheritance.
+* [THORN-27] Add `BandpassDaq` property to DaqReceiver. Where this is `True` these Daqs will automatically attempt to keep bandpass monitoring running.
+
+## 0.24.0
+
+* [SKB-766] Reject multiple calls to DAQ.Start() in a row.
+* [SKB-746] MccsTile.Off() now works in DevState ALARM.
+
+## 0.23.1
+
+* [SKB-702] SpsStation takes multiple attempts for all calibration coefficients to be applied
+* [THORN-5] Add Tile beamformer test to self-check.
+* [THORN-12] Add methods/attribute to measure data rate through DAQ network interface.
+* [THORN-13] Add station beam data rate test to self-check.
+
+## 0.23.0
+
+* [MCCS-2256] Removed cabinetbanks.
+
+## 0.22.0
+
+* [MCCS-2330] Seperate alarms attribute into constituents.
+
+## 0.21.3
+
+* [SKB-705] Allow graceful handling of DaqReceiver restart. Restart running tasks on DaqHandler
+* [THORN-2] Extend Tile Control and Health Monitoring following Firmware Release 6.2.0
+* [MCCS-2330] Update pytango to 10.0.0
+* [THORN-10] Update self-check to mark test data
+
+## 0.21.2
+
+* [THORN-3] Bump TPM FPGA Firmware to version 6.2.0 in SPSHW
+* [THORN-59] Fix race condition (intermittent failure in unit test)
+* [THORN-48] Fix mock tile device builder by including attributes
+* [THORN-64] Fix rficount change events
+
+## 0.21.1
+
+* [THORN-57] Fix python package build bug that prevented publication of python wheel for 0.21.0
+
+## 0.21.0
+
+* [SKB-687] Do not automatically initialise TPM when initialised or synchronised.
+* [THORN-48] Update deploy submodule.
+* [THORN-50] Add PreaduAttenuation device property to MccsTile
+* [SKB-683] SpsStation initialise fails fpgatimes check
+* [SKB-703] Add a thread that establishes communication with the DAQ client
+* [THORN-49] Fix shared register map bug.
+* [THORN-39] Update ska-low-mccs-common to 0.15.6
+
+## 0.20.1
+
+* [THORN-37] Pull in downstream update for proxies to use DevSource.DEV
+* [THORN-40] Update RAL platform spec for new TPMs
+
+## 0.20.0
+
+* [THORN-47] Add CspRounding property to SpsStation
+
+## 0.19.0
+
+* [LOW-1131] Expose SPS Station as a LoadBalancer
+* [THORN-1] Multi-class device server endpoint
+* [MCCS-2026] Add RFI counters
+* [MCCS-2299] Add functional test for reading attributes on hardware.
+* [MCCS-2319] ddr_interface points failing health when running a scan
+* [MCCS-2328] Add enable/disable ADCs, add delays to test generator
+
+## 0.18.1
+
+* [SKB-610] Add StationID to Daq config and propagate to HDF5 metadata.
+
+## 0.18.0
+
+* [MCCS-2273] Add DAQ tests so SpsStation.SelfCheck()
+* [SKB-609] Revert changes made in SKB-520.
+* [MCCS-2265] Fix abortCommand() when turning station on.
+* [MCCS-2309] Add property "device_property" for setting arbitrary properties.
+* [MCCS-2182] Deploy PDU device with MCCS
+* [MCCS-2300] Add support for starting/stopping/configuring the pattern generator in MccsTile.
 * [MCCS-2278] Change health and state rollup/aggregation for SpsStation to reduce frequency of it entering `DevState.UNKNOWN`.
 
 ## 0.17.7

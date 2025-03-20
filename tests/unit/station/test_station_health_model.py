@@ -28,6 +28,13 @@ class TestSpsStationHealthModel:
         :return: Health model to be used.
         """
         health_model = SpsStationHealthModel(["subrack"], ["tile"], MockCallable())
+        _health_thresholds = {
+            "pps_delta_degraded": 4,
+            "pps_delta_failed": 9,
+        }
+        health_model.health_params = health_model._merge_dicts(
+            _health_thresholds, health_model.health_params
+        )
         health_model.update_state(
             communicating=True, power=PowerState.ON, pps_delay_spread=0
         )

@@ -3,7 +3,7 @@ Feature: Test bandpass monitor
     Test that antenna bandpasses can be received and plots of them can be produced
 
     Background:
-        Given interface eth0
+        Given we have a station to test against
 
     @XTP-34297
     Scenario: Not listening for integrated channel data
@@ -36,4 +36,10 @@ Feature: Test bandpass monitor
         When the Tile is commanded to send integrated channel data
         Then the DAQ reports that it has received integrated channel data
         And the DAQ saves bandpass data to its relevant attributes
+
+    Scenario: Auto-start bandpass monitoring
+        Given a bandpass DAQ device
+        When the bandpass DAQ is set ONLINE
+        Then the bandpass DAQ is started with the integrated channel data consumer
+        And the bandpass DAQ has the bandpass monitor running
 

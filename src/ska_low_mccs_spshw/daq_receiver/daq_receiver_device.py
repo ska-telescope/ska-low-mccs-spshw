@@ -4,7 +4,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE.txt for more info.
-
+# pylint: disable=too-many-lines
 """This module implements the MccsDaqReceiver device."""
 
 from __future__ import annotations  # allow forward references in type hints
@@ -15,7 +15,8 @@ from typing import Any, Optional, Union
 
 import numpy as np
 from ska_control_model import CommunicationStatus, HealthState, ResultCode
-from ska_tango_base.base import BaseComponentManager, SKABaseDevice
+from ska_low_mccs_common import MccsBaseDevice
+from ska_tango_base.base import BaseComponentManager
 from ska_tango_base.commands import (
     CommandTrackerProtocol,
     DeviceInitCommand,
@@ -180,7 +181,7 @@ class _StartBandpassMonitorCommand(SubmittedSlowCommand):
 
 
 # pylint: disable = too-many-instance-attributes
-class MccsDaqReceiver(SKABaseDevice):
+class MccsDaqReceiver(MccsBaseDevice):
     """An implementation of a MccsDaqReceiver Tango device."""
 
     # -----------------
@@ -225,6 +226,16 @@ class MccsDaqReceiver(SKABaseDevice):
         doc="The location of a running SKUID service.",
         default_value="",
     )
+    DaqInitRetryFreq = device_property(
+        dtype=int,
+        doc="The retry frequency for DAQ initialization in seconds",
+        default_value=5,
+    )
+    BandpassDaq = device_property(
+        dtype=bool,
+        doc="Whether this DaqReceiver is a dedicated bandpass monitor.",
+        default_value=False,
+    )
 
     # ---------------
     # Initialisation
@@ -244,6 +255,7 @@ class MccsDaqReceiver(SKABaseDevice):
         # `init_device` re-initialises any values defined in here.
         super().__init__(*args, **kwargs)
 
+        self.component_manager: DaqComponentManager
         self._health_state: HealthState = HealthState.UNKNOWN
         self._health_model: DaqHealthModel
         self._received_data_mode: str
@@ -282,6 +294,8 @@ class MccsDaqReceiver(SKABaseDevice):
             f"\tDaqId: {self.DaqId}\n"
             f"\tConsumersToStart: {self.ConsumersToStart}\n"
             f"\tSkuidUrl: {self.SkuidUrl}\n"
+            f"\tDaqInitRetryFreq: {self.DaqInitRetryFreq}\n"
+            f"\tBandpassDaq: {self.BandpassDaq}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -323,6 +337,8 @@ class MccsDaqReceiver(SKABaseDevice):
             self._component_communication_state_changed,
             self._component_state_callback,
             self._received_data_callback,
+            self.DaqInitRetryFreq,
+            self.BandpassDaq,
         )
 
     def init_command_objects(self: MccsDaqReceiver) -> None:
@@ -344,6 +360,8 @@ class MccsDaqReceiver(SKABaseDevice):
 
         for command_name, method_name in [
             ("Stop", "stop_daq"),
+            ("StartDataRateMonitor", "start_data_rate_monitor"),
+            ("StopDataRateMonitor", "stop_data_rate_monitor"),
         ]:
             self.register_command_object(
                 command_name,
@@ -585,6 +603,7 @@ class MccsDaqReceiver(SKABaseDevice):
             - Receiver Interface: "Interface Name": str
             - Receiver Ports: [Port_List]: list[int]
             - Receiver IP: "IP_Address": str
+            - Bandpass Monitor: [Bandpass Monitor Running: bool]
 
         :return: A json string containing the status of this DaqReceiver.
 
@@ -902,6 +921,37 @@ class MccsDaqReceiver(SKABaseDevice):
         (result_code, message) = handler()
         return ([result_code], [message])
 
+    @command(dtype_out="DevVarLongStringArray")
+    def StopDataRateMonitor(self: MccsDaqReceiver) -> DevVarLongStringArrayType:
+        """
+        Stop monitoring the data rate on the receiver interface.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("StopDataRateMonitor")
+        (result_code, message) = handler()
+        return ([result_code], [message])
+
+    @command(dtype_out="DevVarLongStringArray", dtype_in="DevLong")
+    def StartDataRateMonitor(
+        self: MccsDaqReceiver,
+        interval: float,
+    ) -> DevVarLongStringArrayType:
+        """
+        Start monitoring the data rate on the receiver interface.
+
+        :param interval: The interval in seconds at which to monitor the data rate.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("StartDataRateMonitor")
+        (result_code, message) = handler(interval)
+        return ([result_code], [message])
+
     @attribute(
         dtype=("str",),
         max_dim_x=2,  # Always the last result (unique_id, JSON-encoded result)
@@ -963,6 +1013,15 @@ class MccsDaqReceiver(SKABaseDevice):
         :return: the health report.
         """
         return self._health_model.health_report
+
+    @attribute(dtype="DevFloat")
+    def dataRate(self: MccsDaqReceiver) -> float | None:
+        """
+        Return the current data rate in Gb/s, or None if not being monitored.
+
+        :return: the current data rate in Gb/s, or None if not being monitored.
+        """
+        return self.component_manager.data_rate
 
 
 # ----------

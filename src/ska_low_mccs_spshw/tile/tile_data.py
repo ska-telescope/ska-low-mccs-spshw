@@ -28,13 +28,44 @@ class TileData:
     separate places, we store it here.
     """
 
-    SAMPLE_PERIOD = 1.08e-6
-    FRAME_PERIOD = 1.08e-6 * 256
-    CSP_FRAME_PERIOD = 1.08e-6 * 2048
+    CHANNELISER_OUTPUT_FRAME_LENGTH = 1024
+    CHANNELISER_OVERSAMPLING_FACTOR = 32 / 27
+    ADC_FRAME_LENGTH = CHANNELISER_OUTPUT_FRAME_LENGTH / CHANNELISER_OVERSAMPLING_FACTOR
+    ADC_SAMPLING_FREQ = 800e6
+    ADC_SAMPLING_PERIOD = 1 / ADC_SAMPLING_FREQ
+    TOTAL_BANDWIDTH = ADC_SAMPLING_FREQ / 2
+    SAMPLE_PERIOD = ADC_SAMPLING_PERIOD * ADC_FRAME_LENGTH
+    FRAME_PERIOD = SAMPLE_PERIOD * 256
+    CSP_FRAME_PERIOD = SAMPLE_PERIOD * 2048
     ANTENNA_COUNT = 16
-    ADC_CHANNELS = 32
+    POLS_PER_ANTENNA = 2
+    ADC_CHANNELS = ANTENNA_COUNT * POLS_PER_ANTENNA
     NUM_FREQUENCY_CHANNELS = 512
     NUM_BEAMFORMER_CHANNELS = 384
+    FIRST_FREQUENCY_CHANNEL = 50e6
+    CHANNEL_WIDTH = TOTAL_BANDWIDTH / NUM_FREQUENCY_CHANNELS
+    FIRST_BEAMFORMER_CHANNEL: int = int(FIRST_FREQUENCY_CHANNEL / CHANNEL_WIDTH)
+    BEAMFORMER_BANDWIDTH = NUM_BEAMFORMER_CHANNELS * CHANNEL_WIDTH
+    NUM_FPGA = 2
+    BEAMF_BIT_SHIFT = 4  # Hardcoded into the pattern generator, can only shift by 4.
+
+    # Base data rate per Hz per second
+    STATION_BEAM_DATA_RATE_PER_HZ = (
+        CHANNELISER_OVERSAMPLING_FACTOR * POLS_PER_ANTENNA * 2  # real/imag
+    )  # bytes / Hz (bandwidth) / s
+
+    # Correct for SPEAD packet overhead
+    # https://confluence.skatelescope.org/display/SE/TPM+Data+Products+-+Packet+Length
+    SKA_DATA_SIZE = 8192
+    SKA_PACKET_SIZE = 8290
+    STATION_BEAM_DATA_RATE_CORRECTED = (
+        STATION_BEAM_DATA_RATE_PER_HZ * SKA_PACKET_SIZE / SKA_DATA_SIZE
+    )
+
+    # Multiply by full bandwith to calculate maximum expected data rate
+    FULL_STATION_BEAM_DATA_RATE = (
+        BEAMFORMER_BANDWIDTH * STATION_BEAM_DATA_RATE_CORRECTED
+    )  # bytes / s
 
     min_max_string = importlib.resources.read_text(
         __package__, "tpm_monitoring_min_max.yaml"
@@ -251,9 +282,9 @@ class TileData:
             "ddr_interface": {
                 "initialisation": None,
                 "reset_counter": {"FPGA0": None, "FPGA1": None},
-                "rd_cnt": {"FPGA0": None, "FPGA1": None},
-                "wr_cnt": {"FPGA0": None, "FPGA1": None},
-                "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
+                # "rd_cnt": {"FPGA0": None, "FPGA1": None},
+                # "wr_cnt": {"FPGA0": None, "FPGA1": None},
+                # "rd_dat_cnt": {"FPGA0": None, "FPGA1": None},
             },
             "f2f_interface": {
                 "pll_status": None,
@@ -294,12 +325,26 @@ class TileData:
                     },
                 },
             },
+            "data_router": {
+                "status": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
+                "discarded_packets": {
+                    "FPGA0": [0, 0],
+                    "FPGA1": [0, 0],
+                },
+            },
         },
         "dsp": {
             "tile_beamf": None,
             "station_beamf": {
                 "status": None,
                 "ddr_parity_error_count": {
+                    "FPGA0": 0,
+                    "FPGA1": 0,
+                },
+                "discarded_or_flagged_packet_count": {
                     "FPGA0": 0,
                     "FPGA1": 0,
                 },
@@ -347,9 +392,21 @@ class TileData:
                 )
             else:
                 if isinstance(expected_values[p], dict):
-                    tile_structure[p] = round(
-                        (expected_values[p]["min"] + expected_values[p]["max"]) / 2, 3
-                    )
+                    if p == "voltage_alm":
+                        # The value being generated for
+                        # voltage_alm is 0.5 following mccs-1530 prompted by an
+                        # issue in bios tracked by SPRTS-141. The value of 0.5 is
+                        # not valid for this monitoring point. Here we are patching
+                        # a valid default of 0 (int). This is a bit smelly, but it
+                        # seemed better to pollute the `_generate_tile_defaults` used
+                        # by only the simulator than the tpm_monitoring_min_max.yaml
+                        # shared by both the health rules and the simulator.
+                        tile_structure[p] = 0
+                    else:
+                        tile_structure[p] = round(
+                            (expected_values[p]["min"] + expected_values[p]["max"]) / 2,
+                            3,
+                        )
                 else:
                     tile_structure[p] = expected_values[p]
         return tile_structure

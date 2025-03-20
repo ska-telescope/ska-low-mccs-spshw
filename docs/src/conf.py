@@ -22,6 +22,21 @@ import sphinx.ext.autodoc
 from sphinx.ext.autodoc.mock import _MockObject
 
 
+def skip_member(app, what, name, obj, skip, options):
+    if name in {
+        "antenna_buffer_implemented",
+        "read_antenna_buffer",
+        "set_up_antenna_buffer",
+        "start_antenna_buffer",
+        "stop_antenna_buffer",
+    }:
+        return True  # Skip documenting these members
+    return skip
+
+def setup(app):
+    app.connect("autodoc-skip-member", skip_member)
+
+
 def call_mock(self, *args, **kw):
     from types import FunctionType, MethodType
 
@@ -58,6 +73,8 @@ autodoc_mock_imports = [
     "ska_ser_skuid",
     "ska_ser_logging",
     "astropy",
+    "pydaq",
+    "watchdog",
 ]
 
 
@@ -100,8 +117,13 @@ nitpick_ignore = [
     ("py:class", "uvicorn.config.Config"),  # mkdocs-based
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
+    ("py:class", "ska_low_mccs_common.EventSerialiser"),
     ("py:class", "pyfabil.base.definitions.Device"),
     ("py:class", "HealthState"),
+    ("py:class", "TaskStatus"),
+    ("py:class", "TaskCallbackType"),
+    ("py:class", "JSONData"),
+    ("py:class", "ResultCode"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

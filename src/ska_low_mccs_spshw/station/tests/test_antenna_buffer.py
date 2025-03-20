@@ -57,9 +57,9 @@ class TestAntennaBuffer(BaseDaqTest):
         :param timestamp_capture_duration: time duration in timestamps.
         """
         self.test_logger.info(f"Executing test for fpga_id: {fpga_id}")
-        self.test_logger.info(f"{use_1g :}")
-        self.test_logger.info(f"{start_address :}")
-        self.test_logger.info(f"{timestamp_capture_duration :}")
+        self.test_logger.info(f"{use_1g =}")
+        self.test_logger.info(f"{start_address =}")
+        self.test_logger.info(f"{timestamp_capture_duration =}")
 
         if fpga_id == 0:
             antenna_ids = [0, 1]
@@ -73,7 +73,9 @@ class TestAntennaBuffer(BaseDaqTest):
             tx_mode = "SDN"
             receiver_frame_size = 8320
 
-        self.test_logger.info(f"{antenna_ids :}\n{tx_mode :}\n{receiver_frame_size :}")
+        self.test_logger.info(f"{antenna_ids =}")
+        self.test_logger.info(f"{tx_mode =}")
+        self.test_logger.info(f"{receiver_frame_size =}")
 
         daq_config = {
             "nof_beam_channels": 384,
@@ -124,7 +126,7 @@ class TestAntennaBuffer(BaseDaqTest):
                 address to be the final address of the DDR chip
 
         """
-        self.logger.info("Setting up antenna buffer for all tiles")
+        self.test_logger.info("Setting up antenna buffer for all tiles")
         for tile in self.tile_proxies:
             tile.SetUpAntennaBuffer(
                 json.dumps(
@@ -152,7 +154,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         :return: The actual buffer byte size used by each tile.
         """
-        self.logger.info("Setting up antenna buffer for all tiles")
+        self.test_logger.info("Setting up antenna buffer for all tiles")
 
         actual_buffer_byte_size = []
 
@@ -173,7 +175,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
         """Read from the antenna buffer."""
-        self.logger.info("Reading antenna buffer for all tiles")
+        self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in self.tile_proxies:
             tile.ReadAntennaBuffer()
 
@@ -194,10 +196,14 @@ class TestAntennaBuffer(BaseDaqTest):
         adders = copy(self._adders)
         pattern = copy(self._pattern)
         channels, antennas, polarisations, samples, _ = data.shape
-
+        self.test_logger.info(f"data shape: {data.shape}")
         for channel in range(channels):
             for antenna in range(antennas):
                 for polarisation in range(polarisations):
+                    self.test_logger.info(
+                        f"channel: {channel}, antenna: {antenna},"
+                        + f" polarisation: {polarisation}"
+                    )
                     sample_idx = TileData.POLS_PER_ANTENNA * channel
                     signal_idx = (
                         antenna % TileData.ANTENNA_COUNT
@@ -206,7 +212,8 @@ class TestAntennaBuffer(BaseDaqTest):
                     exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
                     expected_data_real = self._signed(exp_re, "CHANNEL")
                     expected_data_imag = self._signed(exp_im, "CHANNEL")
-
+                    self.test_logger.info(f"{expected_data_real =}")
+                    self.test_logger.info(f"{expected_data_imag =}")
                     for i in range(samples):
                         if (
                             expected_data_real != data[antenna, polarisation, i, 0]
@@ -227,3 +234,4 @@ class TestAntennaBuffer(BaseDaqTest):
                                 "Received data: " f"{data[antenna, polarisation, i, :]}"
                             )
                             raise AssertionError
+                    self.test_logger.info("Data check passed")

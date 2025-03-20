@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-121] Add deploy stage to pipeline.
+
 ## 1.5.0
 
 * [THORN-103] SpsStation.AcquireDataForCalibration now launches a frequency sweep, as such the interface has changed. It now expected a json-ified dictionary containing the keys first_channel and last_channel.

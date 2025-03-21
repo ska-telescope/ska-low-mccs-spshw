@@ -77,9 +77,10 @@ def retry_command_on_exception(
     :raises TimeoutError: if the command did not execute without exception in
         timeout period.
     """
-    assert (
-        device_proxy.adminMode == AdminMode.ONLINE
-    ), "Unable to execute command on a OFFLINE device."
+    assert device_proxy.adminMode in [
+        AdminMode.ONLINE,
+        AdminMode.ENGINEERING,
+    ], "Unable to execute command on a OFFLINE device."
     tick = 2
     terminate_time = time.time() + timeout
     while time.time() < terminate_time:

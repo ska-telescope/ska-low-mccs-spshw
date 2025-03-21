@@ -86,6 +86,8 @@ K8S_CHART_PARAMS += \
 	--selector chart=ska-tango-base \
 	--set image.registry=$(CI_REGISTRY_IMAGE) \
 	--set image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
+	--set ska-tango-devices.deviceServerTypes.spshw.image.registry=$(CI_REGISTRY_IMAGE) \
+	--set ska-tango-devices.deviceServerTypes.spshw.image.tag=$(VERSION)-dev.c$(CI_COMMIT_SHORT_SHA) \
 	--set global.exposeAllDS=false
 endif
 
@@ -187,7 +189,7 @@ k8s-pre-uninstall-chart: telmodel-deps
 ########################################################################
 helmfile-lint: telmodel-deps
 	SKIPDEPS=""
-	for environment in minikube-ci stfc-ci aa0.5-production arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-software ral-software-minikube ; do \
+	for environment in minikube-ci stfc-ci aa0.5 arcetri gmrt low-itf low-itf-minikube oxford psi-low psi-low-minikube ral-software ral-software-minikube ; do \
         echo "Linting helmfile against environment '$$environment'" ; \
 		helmfile -e $$environment lint $$SKIPDEPS; \
 		EXIT_CODE=$$? ; \

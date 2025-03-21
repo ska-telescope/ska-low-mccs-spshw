@@ -1,5 +1,13 @@
 # Version History
 
+## unreleased
+
+* [LOW-1216] Breaking changes to helm chart values schema.
+  The `ska-low-mccs-spshw` helm chart now uses `ska-tango-devices`
+  to configure and deploy its Tango devices.
+  For details, see the "Direct deployment of helm charts" section of the
+  "Deploying" page in the documentation.
+
 ## 1.5.0
 
 * [THORN-103] SpsStation.AcquireDataForCalibration now launches a frequency sweep, as such the interface has changed. It now expected a json-ified dictionary containing the keys first_channel and last_channel.

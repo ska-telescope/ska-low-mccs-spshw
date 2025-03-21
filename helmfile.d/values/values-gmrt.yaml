@@ -30,12 +30,11 @@ platform:
 #
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
-  deviceServers:
-    spsstations:
-      gmrt:
+  ska-tango-devices:
+    devices:
+      SpsStation:
         low-mccs/spsstation/gmrt:
-          device_properties:
-            ParentTRL: ""
+          ParentTRL: ""
 #   image:
 #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
 #     tag: 0.11.0-dev.cc21201e6

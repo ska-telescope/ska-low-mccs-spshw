@@ -17,105 +17,18 @@ global:
   tango_host: databaseds-tango-base:10000
   cluster_domain: cluster.local
 
-exposeDeviceServers: true
+# Image to be used for simulators etc.
+image:
+  registry: artefact.skao.int
+  name: ska-low-mccs-spshw
+  tag: 1.5.0
+  pullPolicy: IfNotPresent
 
-livenessProbe:
-  initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 3
-  successThreshold: 1
-  failureThreshold: 3
-readinessProbe:
-  initialDelaySeconds: 0
-  periodSeconds: 10
-  timeoutSeconds: 3
-  successThreshold: 1
-  failureThreshold: 3
-
-dsconfig:
-  image:
-    registry: artefact.skao.int
-    image: ska-tango-images-tango-dsconfig
-    tag: 1.5.1
-    pullPolicy: IfNotPresent
-
+# Resources for simulators etc
 resources:
   requests:
     cpu: 20m
     memory: 50Mi
-
-image:
-  registry: artefact.skao.int
-  name: ska-low-mccs-spshw
-  tag: ~ # defaults to chart's appVersion when empty
-  pullPolicy: IfNotPresent
-
-daqDataRepository: daq-data
-
-deviceServers: {} # e.g....
-  # spsstations:
-  #   s8-1:
-  #     low-mccs/spsstation/s8-1:
-  #       station_id: 345
-  #       sdn_first_interface: 10.130.0.1/25
-  #       sdn_gateway: 10.130.0.126
-  #       csp_ingest_ip: 10.132.254.0
-  #       daq_trl: low-mccs/daqreceiver/s8-1
-  #       antenna_config_uri:
-  #       - "car:ska-low-aavs3?main"
-  #       - "instrument/mccs-configuration/aavs3.yaml"
-  #       - "a1"
-  #       subracks:
-  #       - "s8-1-1"
-  #       tpms:
-  #       - "s8-1-10"
-  #       - "s8-1-13"
-  #       logging_level_default: 5
-  # daqs:
-  #   s8-1:
-  #     low-mccs/daqreceiver/s8-1:
-  #       id: 345
-  #       host: daq-simulator-s8-1
-  #       port: 50051
-  #       receiver_interface: eth0
-  #       receiver_ip: ""
-  #       receiver_port: 4660
-  #       skuid_url: http://skuid-svc:9870/
-  #       logging_level_default: 5
-  # subracks:
-  #   s8-1-1:
-  #     low-mccs/subrack/s8-1-1:
-  #       srmb_host: subrack-simulator-s8-1
-  #       srmb_port: 8081
-  #       logging_level_default: 5
-  #       nodeSelector:
-  #         kubernetes.io/hostname: psi-node3
-  # tpms:
-  #   s8-1-10:
-  #     low-mccs/tile/s8-1-10:
-  #       tile_id: 10
-  #       station_id: 345
-  #       host: 10.0.10.201
-  #       port: 10000
-  #       version: tpm_v1_6
-  #       subrack: "s8-1-1"
-  #       subrack_slot: 1
-  #       simulation_config: 1
-  #       test_config: 1
-  #       logging_level_default: 5
-  #       nodeSelector:
-  #         kubernetes.io/hostname: psi-node3
-  # pdus:
-  #   pdu-ci-1:
-  #     low-mccs/pdu/ci-1:
-  #       device_definition: /app/filepath
-  #       host: localhost
-  #       port: 8080
-  #       user_name: test
-  #       auth_key: foo
-  #       priv_key: bar
-  #       max_snmp_objects: 10
-  #       update_rate: 10
 
 simulators: {} # e.g.
   # daqs:
@@ -129,3 +42,71 @@ simulators: {} # e.g.
 
 pgadmin4:
   enabled: false
+
+ska-tango-devices:
+  domain: low
+  subsystem: mccs
+  labels:
+    app: ska-low-mccs-spshw
+
+  # deviceDefaults:
+  #   MccsTile:
+  #     TpmCpldPort: 10000
+  #     TpmVersion: tpm_v1_6
+  #     AntennasPerTile: 16
+  #     PollRate: 0.2
+
+  # devices:
+  #   MccsTile:
+  #     low-mccs/tile/s8-1-tpm01:
+  #       SubrackFQDN: low-mccs/subrack/s8-1-1
+  #       SubrackBay: 1
+  #       TileId: 1
+  #       StationId: 345
+  #       TpmIp: 10.132.0.8
+
+  deviceServerTypes:
+    spshw:
+      metadata:
+        component: spshw
+      image:
+        registry: artefact.skao.int
+        name: ska-low-mccs-spshw
+        tag: 1.5.0
+        pullPolicy: IfNotPresent
+      command: spshw
+      resources:
+        requests:
+          cpu: 20m
+          memory: 50Mi
+      livenessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 3
+        successThreshold: 1
+        failureThreshold: 3
+      readinessProbe:
+        initialDelaySeconds: 0
+        periodSeconds: 10
+        timeoutSeconds: 3
+        successThreshold: 1
+        failureThreshold: 3
+
+  # deviceServers:
+  #   spshw:
+  #     tile-s8-1-tpm-01:
+  #       expose: false
+  #       devices:
+  #         MccsTile:
+  #         - low-mccs/tile/s8-1-tpm01
+  #     spsstation-s8-1:
+  #       extraVolumes:
+  #       - name: daq-data
+  #         persistentVolumeClaim:
+  #           claimName: daq-data
+  #       extraVolumeMounts:
+  #         - name: daq-data
+  #           mountPath: /product
+  #       devices:
+  #         SpsStation:
+  #         - low-mccs/spsstation/s8-1

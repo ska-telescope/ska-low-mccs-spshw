@@ -7,16 +7,13 @@ defaults:
 #
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
-  deviceServers:
-    spsstations:
-      ci-1:
+  ska-tango-devices:
+    devices:
+      SpsStation:
         low-mccs/spsstation/ci-1:
-          device_properties:
-            ParentTRL: ""
-      real-daq-1:
+          ParentTRL: ""
         low-mccs/spsstation/real-daq-1:
-          device_properties:
-            ParentTRL: ""
+          ParentTRL: ""
 #   image:
 #     registry: docker.io/library # registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
 #     tag: 1.0.0-dirty

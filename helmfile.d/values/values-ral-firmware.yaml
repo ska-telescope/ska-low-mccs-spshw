@@ -24,12 +24,11 @@ subarraybeams:  # 6 subarraybeams, no defaults overridden
 #
 helm_values:
   # Null ParentTRL given by platform spec, currently the only place to do this.
-  deviceServers:
-    spsstations:
-      stfc-ral-firmware:
+  ska-tango-devices:
+    devices:
+      SpsStation:
         low-mccs/spsstation/stfc-ral-firmware:
-          device_properties:
-            ParentTRL: ""
+          ParentTRL: ""
 #   image:
 #     registry: registry.gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw
 #     tag: 0.11.0-dev.cc21201e6

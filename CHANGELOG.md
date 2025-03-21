@@ -1,7 +1,10 @@
 # Version History
 
-## unreleased
+## 2.0.0
 
+* [THORN-126] Allow AcquireDataForCalibration to work when daq in Engineering AdminMode.
+* [THORN-117] Reduce cpu time per poll spend on redundant evaluation of TpmStatus.
+* [THORN-117] Add EvaluateTileProgrammingState command to MccsTile.
 * [LOW-1216] Breaking changes to helm chart values schema.
   The `ska-low-mccs-spshw` helm chart now uses `ska-tango-devices`
   to configure and deploy its Tango devices.
@@ -12,8 +15,6 @@
 
 * [THORN-103] SpsStation.AcquireDataForCalibration now launches a frequency sweep, as such the interface has changed. It now expected a json-ified dictionary containing the keys first_channel and last_channel.
 * [THORN-96] Add optional property StaticTimeDelays to MccsTile.
-* [THORN-117] Reduce cpu time per poll spend on redundant evaluation of TpmStatus.
-* [THORN-117] Add EvaluateTileProgrammingState command to MccsTile.
 * [THORN-123] Add FAULT when subrack reports TPM ON and TPM is not connectable.
 * [THORN-86] SpsStation now uses the CommunicationManager from ska-low-mccs-common to manage it's communication status, this should
 flush out issues with rapid changes of adminmode.

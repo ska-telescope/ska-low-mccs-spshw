@@ -101,7 +101,6 @@ class TestAntennaBuffer(BaseDaqTest):
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
-            self.test_logger.debug("Configure DAQ")
             # Use RAW_DATA for now, we may need something else later
             self._configure_daq(
                 daq_mode="RAW_DATA", integrated=False, daq_config=daq_config
@@ -154,7 +153,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         :return: The actual buffer byte size used by each tile.
         """
-        self.test_logger.info("Setting up antenna buffer for all tiles")
+        self.test_logger.info("Starting antenna buffer for all tiles")
 
         actual_buffer_byte_size = []
 

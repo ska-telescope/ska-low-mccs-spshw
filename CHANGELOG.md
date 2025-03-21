@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 2.0.0
 
 * [THORN-126] Allow AcquireDataForCalibration to work when daq in Engineering AdminMode.
 * [THORN-117] Reduce cpu time per poll spend on redundant evaluation of TpmStatus.

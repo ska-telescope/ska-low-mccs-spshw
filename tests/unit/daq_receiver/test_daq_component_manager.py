@@ -134,6 +134,7 @@ class TestDaqComponentManager:
             ("DaqModes.STATION_BEAM_DATA", [DaqModes.STATION_BEAM_DATA]),
             ("DaqModes.CORRELATOR_DATA", [DaqModes.CORRELATOR_DATA]),
             ("DaqModes.ANTENNA_BUFFER", [DaqModes.ANTENNA_BUFFER]),
+            ("DaqModes.RAW_STATION_BEAM", [DaqModes.RAW_STATION_BEAM]),
             (
                 "DaqModes.CHANNEL_DATA, DaqModes.BEAM_DATA, DaqModes.RAW_DATA",
                 [DaqModes.CHANNEL_DATA, DaqModes.BEAM_DATA, DaqModes.RAW_DATA],
@@ -195,6 +196,7 @@ class TestDaqComponentManager:
             "DaqModes.STATION_BEAM_DATA",
             "DaqModes.CORRELATOR_DATA",
             "DaqModes.ANTENNA_BUFFER",
+            "DaqModes.RAW_STATION_BEAM",
             "DaqModes.CHANNEL_DATA, DaqModes.BEAM_DATA, DaqModes.RAW_DATA",
             "1, 2, 0",
             "DaqModes.CONTINUOUS_CHANNEL_DATA, DaqModes.ANTENNA_BUFFER, 6",

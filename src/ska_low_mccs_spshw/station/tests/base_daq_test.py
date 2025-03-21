@@ -95,6 +95,7 @@ class BaseDaqTest(TpmSelfCheckTest):
         self.daq_proxy.adminmode = AdminMode.ONLINE
         time.sleep(1)
         self.daq_proxy.adminmode = AdminMode.ENGINEERING
+        time.sleep(1)
         self.daq_proxy.Stop()
         time.sleep(1)
         daq_config.update(

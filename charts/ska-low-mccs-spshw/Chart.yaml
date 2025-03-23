@@ -11,5 +11,7 @@ dependencies:
     # version: 0.10.0-dev.cfc5b1bca
     # repository: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
   - name: ska-tango-util
-    version: ~0.4.11
-    repository: https://artefact.skao.int/repository/helm-internal
+    # version: ~0.4.11
+    # repository: https://artefact.skao.int/repository/helm-internal
+    version: 0.4.18-dirty-dev.c83629340
+    repository: https://gitlab.com/api/v4/projects/61564537/packages/helm/dev/

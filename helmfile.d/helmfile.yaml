@@ -182,6 +182,8 @@ repositories:
     url: https://jupyterhub.github.io/helm-chart
   - name: ska-low-mccs-daq
     url: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
+  - name: ska-tango-charts
+    url: https://gitlab.com/api/v4/projects/61564537/packages/helm/dev/
 
 releases:
   - name: ska-low-mccs-spshw

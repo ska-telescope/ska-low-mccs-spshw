@@ -14,11 +14,10 @@ platform:
           bandpass:
             simulated: true
         pdus:
-          pdur1:
-            host: 10.0.10.210
-            device_definition: definitions/pdu.yaml
-            repo: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw?df25b54c80de39c1ebc2063b74d3968b8c0c1783#tmdata
-            v2_community: private
+          ci-1:
+            model: Z16-ZEN-TP-FL
+            host: 10.135.253.170
+            v2_community: public
         subracks:
           sr1:
             simulated: true

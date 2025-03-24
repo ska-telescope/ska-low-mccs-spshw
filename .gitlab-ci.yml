@@ -22,6 +22,8 @@ stages:
   - lint
   - build
   - deploy
+  - integration
+  - staging
   - test
   - test-psi-low
   - test-ral-low

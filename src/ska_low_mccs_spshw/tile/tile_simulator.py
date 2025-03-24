@@ -1136,7 +1136,7 @@ class TileSimulator:
         enable_test: bool = False,
         use_internal_pps: bool = False,
         pps_delay: int = 0,
-        time_delays: int = 0,
+        time_delays: float | int | list = 0,
         is_first_tile: bool = False,
         is_last_tile: bool = False,
         qsfp_detection: str = "auto",
@@ -1202,10 +1202,17 @@ class TileSimulator:
             return
         self.logger.info(f"delay correction set to {pps_delay}")
         self.pps_correction = pps_delay
+        self.set_time_delays(time_delays)
         self._is_first = is_first_tile
         self._is_last = is_last_tile
         self._tile_id = tile_id
         self._station_id = station_id
+        self.sync_time = 0
+        reg1 = "fpga1.dsp_regfile.stream_status.channelizer_vld"
+        reg2 = "fpga2.dsp_regfile.stream_status.channelizer_vld"
+        if self.tpm:
+            self.tpm[reg1] = 0
+            self.tpm[reg2] = 0
         self._active_40g_ports_setting = active_40g_ports_setting
         self._start_polling_event.set()
         time.sleep(random.randint(1, 3))
@@ -1775,6 +1782,9 @@ class TileSimulator:
             if self.tpm is None:
                 # Use defined tpm if specified.
                 self.tpm = self._mocked_tpm or MockTpm(self.logger)
+                # This sleep is to wait for the timed thread to
+                # update a register.
+                time.sleep(0.12)
         else:
             self.tpm = None
             self.logger.error("Failed to connect to board at 'some_mocked_ip'")
@@ -1787,11 +1797,14 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = False
+            self.__is_connectable(False)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = False
+            self.__is_connectable(False)
 
     def mock_on(self: TileSimulator, lock: bool = False) -> None:
         """
@@ -1801,11 +1814,24 @@ class TileSimulator:
         """
         if lock:
             self.mock_connection_success = True
+            self.__is_connectable(True)
             self._power_locked = lock
         elif self._power_locked:
             self.logger.error("Failed to change mocked tile state")
+            self.logger.error(f"is connectable {self.mock_connection_success}")
         else:
             self.mock_connection_success = True
+            self.__is_connectable(True)
+
+    def __is_connectable(self: TileSimulator, connectable: bool) -> None:
+        """
+        Set the connection status.
+
+        :param connectable: True if the CPLD and FPGAs are connectable.
+        """
+        self._is_cpld_connectable = connectable
+        self._is_fpga1_connectable = connectable
+        self._is_fpga2_connectable = connectable
 
     @check_mocked_overheating
     @connected
@@ -1848,7 +1874,7 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def set_time_delays(self: TileSimulator, delays: list[float]) -> bool:
+    def set_time_delays(self: TileSimulator, delays: int | float | list[float]) -> bool:
         """
         Set coarse zenith delay for input ADC streams.
 
@@ -1857,6 +1883,9 @@ class TileSimulator:
 
         :returns: True if command executed to completion.
         """
+        if isinstance(delays, int | float):
+            # simply convert to list
+            delays = [delays] * 32
         if len(delays) != 32:
             self.logger.error(
                 "Invalid delays specfied (must be a " "list of numbers of length 32)"

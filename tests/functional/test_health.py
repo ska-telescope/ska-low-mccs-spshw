@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from datetime import datetime
 from typing import Any, Callable
 
 import pytest
@@ -23,6 +24,7 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tests.harness import get_sps_station_name
 
 scenarios("./features/health.feature")
+RFC_FORMAT = "%Y-%m-%dT%H:%M:%S.%fZ"
 
 
 @scenario(
@@ -233,6 +235,8 @@ def station_on(
     :param station_devices: dictionary of device proxies.
     :param command_info: dictionary to store command ID.
     """
+    start_time = datetime.strftime(datetime.fromtimestamp(time.time() + 2), RFC_FORMAT)
+    station_devices["Station"][0].globalreferencetime = start_time
     _, [command_id] = station_devices["Station"][0].On()
     command_info[station_devices["Station"][0].dev_name() + "On"] = command_id
 
@@ -444,7 +448,8 @@ def read_all_tile_attributes(
                 continue
             try:
                 attribute_read_info[attr] = getattr(tile, attr, None)
-            except tango.DevFailed:
+            except tango.DevFailed as df:
+                print(f"Exeption raised when reading {attr}: {df}")
                 attribute_read_info[attr] = None
 
 

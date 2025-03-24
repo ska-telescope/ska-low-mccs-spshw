@@ -197,7 +197,7 @@ class BoolAttributeManager(AttributeManager):
 class NpArrayAttributeManager(AttributeManager):
     """An AttributeManager for a np.ndarray attribute."""
 
-    def _value_changed(self: AttributeManager, value: np.ndarray) -> bool:
+    def _value_changed(self: NpArrayAttributeManager, value: np.ndarray) -> bool:
         """
         Check if value has changed since last poll.
 

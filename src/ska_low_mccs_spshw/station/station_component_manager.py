@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
 
@@ -40,7 +41,7 @@ from ska_low_mccs_common.component import (
     MccsBaseComponentManager,
 )
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
-from ska_low_mccs_common.utils import lock_power_state, threadsafe
+from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
 from ska_tango_base.base import check_communicating
 from ska_tango_base.executor import TaskExecutorComponentManager
 from ska_telmodel.data import TMData  # type: ignore
@@ -76,9 +77,10 @@ def retry_command_on_exception(
     :raises TimeoutError: if the command did not execute without exception in
         timeout period.
     """
-    assert (
-        device_proxy.adminMode == AdminMode.ONLINE
-    ), "Unable to execute command on a OFFLINE device."
+    assert device_proxy.adminMode in [
+        AdminMode.ONLINE,
+        AdminMode.ENGINEERING,
+    ], "Unable to execute command on a OFFLINE device."
     tick = 2
     terminate_time = time.time() + timeout
     while time.time() < terminate_time:
@@ -482,10 +484,10 @@ class SpsStationComponentManager(
         self._pps_delays = [0] * 16
         self._pps_delay_spread = 0
         self._pps_delay_corrections = [0] * 16
-        self._desired_static_delays = [0] * 512
         self._channeliser_rounding = channeliser_rounding or ([3] * 512)
         self._csp_rounding = [csp_rounding] * 384
-        self._desired_preadu_levels = [0.0] * len(tile_fqdns) * TileData.ADC_CHANNELS
+        self._desired_static_delays: None | list[float] = None
+        self._desired_preadu_levels: None | list[float] = None
         self._base_mac_address = 0x620000000000 + int(self._sdn_first_address)
 
         self._antenna_info: dict[int, dict[str, Union[int, dict[str, float]]]] = {}
@@ -493,9 +495,6 @@ class SpsStationComponentManager(
         self._antenna_mapping: dict[int, dict[str, int]] = {}
         self._cable_lengths: dict[int, float] = {}
         self.last_pointing_delays = [0.0] * 513
-
-        self.acquiring_data_for_calibration = threading.Event()
-        self.calibration_data_received_event = threading.Event()
 
         # Flag for whether to execute MccsTile batch commands async or sync.
         self.excecute_async = True
@@ -530,6 +529,9 @@ class SpsStationComponentManager(
             subrack_trls=list(self._subrack_proxies.keys()),
             daq_trl=self._daq_trl,
         )
+
+        self.acquiring_data_for_calibration = threading.Event()
+        self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
         if antenna_config_uri:
             logger.debug("Retrieving antenna mapping.")
@@ -912,7 +914,9 @@ class SpsStationComponentManager(
                 data_received_result[0] == "correlator"
                 and self.acquiring_data_for_calibration.is_set()
             ):
-                self.calibration_data_received_event.set()
+                self.calibration_data_received_queue.put(
+                    json.loads(data_received_result[1])["file_name"]
+                )
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
 
@@ -1555,8 +1559,16 @@ class SpsStationComponentManager(
             )  # indexes for parameters for individual signals
             i2 = i1 + TileData.ADC_CHANNELS
             self.logger.debug(f"Initialising tile {tile_no}: {tile.name()}")
-            tile.preaduLevels = self._desired_preadu_levels[i1:i2]
-            tile.staticTimeDelays = self._desired_static_delays[i1:i2]
+            if self._desired_preadu_levels is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance PreaduAttenuation "
+                )
+                tile.preaduLevels = self._desired_preadu_levels[i1:i2]
+            if self._desired_static_delays is not None:
+                self.logger.info(
+                    "Initialise routine overriding MccsTile instance StaticTimeDelays "
+                )
+                tile.staticTimeDelays = self._desired_static_delays[i1:i2]
             tile.channeliserRounding = self._channeliser_rounding
             tile.cspRounding = self._csp_rounding
             tile.cspSpeadFormat = self._csp_spead_format
@@ -1924,13 +1936,15 @@ class SpsStationComponentManager(
         return static_delays
 
     @static_delays.setter
-    def static_delays(self: SpsStationComponentManager, delays: list[int]) -> None:
+    def static_delays(
+        self: SpsStationComponentManager, delays: list[int | float]
+    ) -> None:
         """
         Set static time delay correction.
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
         """
-        self._desired_static_delays = copy.deepcopy(delays)
+        self._desired_static_delays = delays
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
             start_entry = (proxy._proxy.logicalTileId) * TileData.ADC_CHANNELS
@@ -2040,7 +2054,7 @@ class SpsStationComponentManager(
 
         :param levels: ttenuator level of preADU channels, one per input channel, in dB
         """
-        self._desired_preadu_levels = copy.deepcopy(levels)
+        self._desired_preadu_levels = levels
         i = 0
         for proxy in self._tile_proxies.values():
             assert proxy._proxy is not None  # for the type checker
@@ -2873,8 +2887,10 @@ class SpsStationComponentManager(
 
     def acquire_data_for_calibration(
         self: SpsStationComponentManager,
-        channel: int,
         task_callback: Optional[Callable] = None,
+        *,
+        first_channel: int,
+        last_channel: int,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -2882,33 +2898,77 @@ class SpsStationComponentManager(
         This method returns immediately after it submitted
         `self._acquire_data_for_calibration` for execution.
 
-        :param channel: channel to calibrate for
+        :param first_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
-        if channel < 0 or channel >= TileData.NUM_FREQUENCY_CHANNELS:
-            self.logger.error(f"Invalid channel{channel}")
-            return (TaskStatus.REJECTED, "Invalid channel")
-
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[channel],
+            args=[first_channel, last_channel],
             task_callback=task_callback,
         )
 
-    # pylint: disable=too-many-branches
+    def _start_daq(
+        self: SpsStationComponentManager,
+        daq_mode: str,
+        max_tries: int = 10,
+        tick: float = 0.5,
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(
+            self._daq_proxy._proxy,
+            "Start",
+            json.dumps(
+                {"modes_to_start": daq_mode},
+            ),
+        )
+        self.logger.info(f"Starting daq to capture in mode {daq_mode}")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if any(
+                status_list[0] == daq_mode
+                for status_list in daq_status["Running Consumers"]
+            ):
+                return
+            time.sleep(tick)
+
+        assert (
+            len(daq_status["Running Consumers"]) > 0
+            and daq_mode in daq_status["Running Consumers"][0]
+        ), f"Failed to start {daq_mode}."
+
+    def _stop_daq(
+        self: SpsStationComponentManager, max_tries: int = 10, tick: float = 0.5
+    ) -> None:
+        assert self._daq_proxy is not None
+        retry_command_on_exception(self._daq_proxy._proxy, "Stop")
+        for _ in range(max_tries):
+            daq_status = json.loads(
+                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+            )
+            if len(daq_status["Running Consumers"]) == 0:
+                return
+            time.sleep(tick)
+
+        assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
+
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
-        channel: int,
+        first_channel: int,
+        last_channel: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Acquire data for calibration.
 
-        :param channel: channel to calibrate for
+        :param first_channel: first channel to calibrate for
+        :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
@@ -2943,77 +3003,55 @@ class SpsStationComponentManager(
             if task_callback:
                 task_callback(status=TaskStatus.IN_PROGRESS)
 
-            max_tries: int = 10
-            tick: float = 0.5
-            assert self._daq_proxy is not None
-            daq_mode: str = "CORRELATOR_DATA"
+            self._start_daq("CORRELATOR_DATA")
 
-            retry_command_on_exception(
-                self._daq_proxy._proxy,
-                "Start",
-                json.dumps(
-                    {"modes_to_start": daq_mode},
-                ),
-            )
-            if _check_aborted():
-                return
-
-            self.logger.info(f"Starting daq to capture in mode {daq_mode}")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
-                )
-                if any(
-                    status_list[0] == daq_mode
-                    for status_list in daq_status["Running Consumers"]
-                ):
-                    break
-                if _check_aborted():
-                    return
-                time.sleep(tick)
-
-            assert (
-                len(daq_status["Running Consumers"]) > 0
-                and daq_mode in daq_status["Running Consumers"][0]
-            ), f"Failed to start {daq_mode}."
-
-            data_send_mode: str = "channel"
             # Send data from tpms
             self.send_data_samples(
                 json.dumps(
                     {
-                        "data_type": data_send_mode,
-                        "first_channel": channel,
-                        "last_channel": channel,
+                        "data_type": "channel",
+                        "first_channel": first_channel,
+                        "last_channel": last_channel,
+                        "n_samples": 1835008,
                     }
                 )
             )
-            self.logger.debug(f"Raw channel spigot sent for {channel=}")
+            self.logger.debug(
+                f"Raw channel spigot sent for {first_channel=}, {last_channel=}"
+            )
             self.logger.debug("Waiting for data to be received...")
-            got_data = self.calibration_data_received_event.wait(10)
-            self.logger.info("Stopping all consumers...")
-            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop")
-            if rc != ResultCode.OK:
-                self.logger.warning("Unable to stop daq consumers.")
-            for _ in range(max_tries):
-                daq_status = json.loads(
-                    retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
-                )
-                if len(daq_status["Running Consumers"]) == 0:
-                    break
+            success = True
+            while True:
                 if _check_aborted():
                     return
-                time.sleep(tick)
+                try:
+                    filename = self.calibration_data_received_queue.get(
+                        timeout=10
+                    ).split("correlation_burst_")[1]
+                except Empty:
+                    self.logger.error("Failed to receive data in 10 seconds.")
+                    success = False
+                    break
+                channel = int(filename.split("_")[0])
+                if channel == last_channel:
+                    self.logger.info(
+                        f"Got data for {channel}, this is the last channel expected."
+                    )
+                    break
+                self.logger.debug(
+                    f"Got data for {channel}, waiting "
+                    f"for {last_channel}, {last_channel - channel} more."
+                )
+            self.logger.info("Stopping all consumers...")
+            self._stop_daq()
 
-            assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
             if task_callback:
-                if got_data:
+                if success:
                     task_callback(
                         status=TaskStatus.COMPLETED,
                         result=(ResultCode.OK, "AcquireDataForCalibration Completed."),
                     )
                 else:
-                    self.logger.error("Failed to receive data in 10 seconds.")
                     task_callback(
                         status=TaskStatus.FAILED,
                         result=(
@@ -3023,7 +3061,7 @@ class SpsStationComponentManager(
                     )
         finally:
             self.acquiring_data_for_calibration.clear()
-            self.calibration_data_received_event.clear()
+            self.calibration_data_received_queue = UniqueQueue(logger=self.logger)
 
     def configure_station_for_calibration(
         self: SpsStationComponentManager,
@@ -3077,7 +3115,6 @@ class SpsStationComponentManager(
 
         nof_correlator_samples: int = 1835008
         receiver_frame_size: int = 9000
-        nof_channels: int = 1
 
         max_tries: int = 10
         tick: float = 0.5
@@ -3115,7 +3152,6 @@ class SpsStationComponentManager(
 
         base_config = {
             "nof_tiles": 16,  # always 16 for correlation mode.
-            "nof_channels": nof_channels,
             "directory": "correlator_data",  # Appended to ADR-55 path.
             "nof_correlator_samples": nof_correlator_samples,
             "receiver_frame_size": receiver_frame_size,

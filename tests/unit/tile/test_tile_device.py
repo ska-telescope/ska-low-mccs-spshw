@@ -47,7 +47,7 @@ from tests.test_tools import (
     wait_for_completed_command_to_clear_from_queue,
 )
 
-from .conftest import PREADU_ATTENUATION
+from .conftest import PREADU_ATTENUATION, STATIC_TIME_DELAYS
 
 # TODO: Weird hang-at-garbage-collection bug
 gc.disable()
@@ -255,11 +255,7 @@ def turn_tile_on(
     tile_device.MockTpmOn()
 
     change_event_callbacks["tile_programming_state"].assert_change_event(
-        "Unconnected", lookahead=2, consume_nonmatches=True
-    )
-
-    change_event_callbacks["tile_programming_state"].assert_change_event(
-        "NotProgrammed", lookahead=2, consume_nonmatches=True
+        "NotProgrammed", lookahead=3, consume_nonmatches=True
     )
     change_event_callbacks["tile_programming_state"].assert_change_event("Programmed")
     change_event_callbacks["tile_programming_state"].assert_change_event(
@@ -1138,7 +1134,7 @@ class TestMccsTile:
                 None,
             ),
             ("preaduLevels", PREADU_ATTENUATION, [5] * 32),
-            ("staticTimeDelays", TileSimulator.STATIC_DELAYS, [12.5] * 32),
+            ("staticTimeDelays", STATIC_TIME_DELAYS, [12.5] * 32),
             ("pllLocked", True, None),
             ("cspRounding", TileSimulator.CSP_ROUNDING, [3] * 384),
         ],
@@ -1691,7 +1687,7 @@ class TestMccsTileCommands:
             :py:class:`tango.DeviceProxy` to the device under test, in a
             :py:class:`tango.test_context.DeviceTestContext`.
         """
-        register_name: str = "fpga1.test_generator.delay_0"
+        register_name: str = "fpga1.pps_manager.pps_detected"
         values = on_tile_device.ReadRegister(register_name)
         assert list(values) == [MockTpm.REGISTER_MAP_DEFAULTS[register_name]]
 
@@ -2031,12 +2027,21 @@ class TestMccsTileCommands:
             callbacks with asynchrony support.
         """
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
-
+        on_tile_device.subscribe_event(
+            "tileProgrammingState",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["tile_programming_state"],
+        )
+        change_event_callbacks["tile_programming_state"].assert_change_event(Anything)
         execute_lrc_to_completion(
             change_event_callbacks,
             on_tile_device,
             "StartAcquisition",
             json.dumps({"delay": 5}),
+        )
+
+        change_event_callbacks["tile_programming_state"].assert_change_event(
+            "Synchronised", lookahead=8
         )
         args = [
             {"data_type": "raw", "sync": True, "seconds": 6.7},

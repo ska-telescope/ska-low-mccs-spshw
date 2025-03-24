@@ -22,6 +22,7 @@ SIMULATOR_ONLY_METHODS = [
     "mock_on",
     "mock_off",
     "_timed_thread",
+    "_TileSimulator__is_connectable",  # mangled
     "evaluate_mcu_action",
 ]
 METHODS_TO_OMIT = ["__init__", "_convert_ip_to_str"]

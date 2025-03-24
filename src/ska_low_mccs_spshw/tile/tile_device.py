@@ -8,7 +8,6 @@
 """This module implements the MCCS Tile device."""
 from __future__ import annotations
 
-import copy
 import functools
 import importlib  # allow forward references in type hints
 import itertools
@@ -17,8 +16,9 @@ import logging
 import os.path
 import sys
 from dataclasses import dataclass
-from functools import wraps
+from functools import reduce, wraps
 from ipaddress import IPv4Address
+from operator import getitem
 from typing import Any, Callable, Final, NoReturn
 
 import numpy as np
@@ -135,6 +135,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     TpmVersion = device_property(dtype=str, default_value="tpm_v1_6")
 
     PreaduAttenuation = device_property(dtype=(float,), default_value=[])
+    StaticDelays = device_property(
+        dtype=(float,),
+        default_value=[0.0] * 32,  # Default no offsets
+        doc="Delays in nanoseconds to account for static delay missmatches.",
+    )
 
     # ---------------
     # Initialisation
@@ -187,6 +192,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             f"\tTestConfig: {self.TestConfig}\n"
             f"\tPollRate: {self.PollRate}\n"
             f"\tPreaduAttenuation: {self.PreaduAttenuation}\n"
+            f"\tStaticDelays: {self.StaticDelays}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -446,6 +452,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self.TpmCpldPort,
             self.TpmVersion,
             self.PreaduAttenuation,
+            self.StaticDelays,
             self.SubrackFQDN,
             self.SubrackBay,
             self._communication_state_changed,
@@ -461,6 +468,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         for command_name, command_object in [
             ("GetFirmwareAvailable", self.GetFirmwareAvailableCommand),
+            ("EvaluateTileProgrammingState", self.EvaluateTileProgrammingStateCommand),
             (
                 "SetFirmwareTemperatureThresholds",
                 self.SetFirmwareTemperatureThresholdsCommand,
@@ -643,7 +651,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     ) -> None:
         for attribute_name, attribute_value in state_change.items():
             if attribute_name == "tile_health_structure":
-                self.tile_health_structure = attribute_value if not mark_invalid else {}
+                self.tile_health_structure = dict(
+                    attribute_value if not mark_invalid else {}
+                )
                 self._health_model.update_state(
                     tile_health_structure=self.tile_health_structure
                 )
@@ -709,42 +719,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 alarm_value = alarms.get(alarm_path)
                 self._attribute_state[alarm_name].update(alarm_value)
 
-    def unpack_monitoring_point(
-        self: MccsTile,
-        health_structure: dict[str, Any],
-        dictionary_path: list[str],
-    ) -> Any:
-        """
-        Unpack the monitoring point value from dictionary.
-
-        :param health_structure: A nested health_structure dictionary
-        :param dictionary_path: A list of strings used to traverse the dictionary.
-
-        :example:
-
-        >> tile_health = {'timing': { 'pps': {'status': False}}}
-        >> pps=['timing', 'pps', 'status']
-        >> value = unpack_monitoring_point(tile_health, pps)
-        >> print(value) ->  False
-
-        :return: the monitoring point value or None.
-        """
-        structure = copy.deepcopy(health_structure)
-        idx_list = copy.deepcopy(dictionary_path)
-        for key in idx_list:
-            try:
-                if len(idx_list) == 1:
-                    return structure[key]
-                idx_list.pop(0)
-                return self.unpack_monitoring_point(structure[key], idx_list)
-
-            except KeyError as e:
-                self.logger.error(
-                    f"Key error raise when locating tango_attribute value : {e}"
-                )
-                break
-        return None
-
     def update_tile_health_attributes(
         self: MccsTile, mark_invalid: bool = False
     ) -> None:
@@ -758,30 +732,30 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             dictionary_path,
         ) in self.attribute_monitoring_point_map.items():
             if mark_invalid:
-                try:
+                if attribute_name in self._attribute_state:
                     self._attribute_state[attribute_name].mark_stale()
-                except KeyError:
+                else:
                     self.logger.warning(f"Attribute {attribute_name} not found.")
                 continue
-            attribute_value = self.unpack_monitoring_point(
-                copy.deepcopy(self.tile_health_structure),
-                dictionary_path,
+
+            attribute_value = reduce(
+                getitem, dictionary_path, self.tile_health_structure
             )
-            if attribute_value is None:
-                continue
-            try:
-                self._attribute_state[attribute_name].update(attribute_value)
-            except KeyError:
-                self.logger.warning(f"Attribute {attribute_name} not found.")
-                continue
-            except Exception as e:  # pylint: disable=broad-except
-                # Note: attribute converters were removed in
-                # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
-                # These converters added in skb-520 can be implemented
-                # now that skb-609 is fixed.
-                self.logger.error(
-                    f"Caught unexpected exception {attribute_name=}: {repr(e)}"
-                )
+
+            if attribute_value is not None:
+                try:
+                    if attribute_name in self._attribute_state:
+                        self._attribute_state[attribute_name].update(attribute_value)
+                    else:
+                        self.logger.warning(f"Attribute {attribute_name} not found.")
+                except Exception as e:  # pylint: disable=broad-except
+                    # Note: attribute converters were removed in
+                    # https://gitlab.com/ska-telescope/mccs/ska-low-mccs-spshw/-/merge_requests/297
+                    # These converters added in skb-520 can be implemented
+                    # now that skb-609 is fixed.
+                    self.logger.error(
+                        f"Caught unexpected exception {attribute_name=}: {repr(e)}"
+                    )
 
     def _health_changed(self: MccsTile, health: HealthState) -> None:
         """
@@ -1917,6 +1891,23 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         tango.Except.throw_exception(reason, msg, self.get_name())
         return False
 
+    def is_engineering(self: MccsTile) -> bool:
+        """
+        Return a flag representing whether we are in Engineering mode.
+
+        :return: True if Tile is in Engineering Mode.
+        """
+        is_engineering = self._admin_mode == AdminMode.ENGINEERING
+        if not is_engineering:
+            reason = "CommandNotAllowed"
+            msg = (
+                "To execute this command we must be in adminMode Engineering "
+                f"Tile is currently in adminMode {AdminMode(self._admin_mode).name}"
+            )
+            tango.Except.throw_exception(reason, msg, self.get_name())
+
+        return is_engineering
+
     @attribute(
         dtype="DevDouble",
         abs_change=0.1,
@@ -2715,6 +2706,57 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("Initialise")
         (return_code, unique_id) = handler()
         return ([return_code], [unique_id])
+
+    class EvaluateTileProgrammingStateCommand(FastCommand):
+        """Class for handling the EvaluateTileProgrammingStateCommand() command."""
+
+        def __init__(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new EvaluateTileProgrammingStateCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            super().__init__(logger)
+
+        def do(
+            self: MccsTile.EvaluateTileProgrammingStateCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.EvaluateTileProgrammingState` command.
+
+            :param args: unspecified positional arguments. This should be empty and is
+                provided for type hinting only
+            :param kwargs: unspecified keyword arguments. This should be empty and is
+                provided for type hinting only
+
+            :return: True if the re-evaluated TpmStatus differs from the
+                automated evaluation.
+            """
+            return self._component_manager.reevaluate_tpm_status()
+
+    @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    def EvaluateTileProgrammingState(self: MccsTile) -> bool:
+        """
+        Re-evaluate the TileProgrammingState.
+
+        Evaluate and update the TileProgrammingState.
+        Return True is the re-evaluation returned a different value to
+        the value from automatic detection.
+        (A value of True could signify a race condition,
+        or that there is a bug in the automatic evaluation.)
+
+        :return: True is the re-evaluation of TpmStatus returns a different value.
+        """
+        handler = self.get_command_object("EvaluateTileProgrammingState")
+        return handler()
 
     class GetFirmwareAvailableCommand(FastCommand):
         """Class for handling the GetFirmwareAvailable() command."""

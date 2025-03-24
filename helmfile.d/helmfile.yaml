@@ -24,7 +24,7 @@ environments:
         - real-daq-1.yaml
     - config_files:
       - values/values-ci.yaml
-  aa0.5-production:
+  aa0.5:
     values:
     - telmodel:
       - source: gitlab://gitlab.com/ska-telescope/ska-low-tmdata?689ff1ab69b56a8537650b403ef6865caa5c9e27#tmdata
@@ -96,7 +96,7 @@ environments:
   psi-low:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?35b5a87b5b18ba56969f034210b3458c9fe997b2#tmdata
+      - source: gitlab://gitlab.com/ska-telescope/ska-psi-low?6f8e04db2f1fe47fb9d4ba946d3bad8e91fe3e56#tmdata
         datasets:
         - stations/stations.yaml # needs to be first see LOW-988 ska-telescope/ska-low-deployment@7c57c32a
         - psi-low.yaml
@@ -182,6 +182,8 @@ repositories:
     url: https://jupyterhub.github.io/helm-chart
   - name: ska-low-mccs-daq
     url: https://gitlab.com/api/v4/projects/40346229/packages/helm/dev/
+  - name: ska-tango-devices
+    url: https://gitlab.com/api/v4/projects/66823602/packages/helm/dev
 
 releases:
   - name: ska-low-mccs-spshw

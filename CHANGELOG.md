@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-121] Add deploy stage to pipeline.
+
 ## 2.0.0
 
 * [THORN-126] Allow AcquireDataForCalibration to work when daq in Engineering AdminMode.

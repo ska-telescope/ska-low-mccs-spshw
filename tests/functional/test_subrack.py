@@ -219,8 +219,7 @@ def ensure_subrack_fan_mode(
         change_event_callbacks["subrack_fan_mode"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_mode",
-        fan_modes,
+        "subrack_fan_mode", fan_modes, lookahead=2
     )
 
     if not fan_modes:
@@ -359,7 +358,7 @@ def ensure_tpm_power_state(
         subrack_device.PowerOffTpm(tpm_number)
 
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
+            PowerState.OFF, lookahead=2
         )
         print("TPM is off.")
     elif target_power == "on" and tpm_power_state == PowerState.OFF:

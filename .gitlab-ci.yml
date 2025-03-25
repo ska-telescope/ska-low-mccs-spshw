@@ -68,6 +68,12 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/deploy.gitlab-ci.yml'
 
+deploy-staging:
+  when: manual
+
+deploy-integration:
+  when: manual
+
 psi-low-k8s-test:
   stage: test-psi-low
   when: manual

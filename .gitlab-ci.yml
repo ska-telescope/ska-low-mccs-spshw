@@ -21,6 +21,9 @@ cache:
 stages:
   - lint
   - build
+  - deploy
+  - integration
+  - staging
   - test
   - test-psi-low
   - test-ral-low
@@ -61,6 +64,15 @@ include:
   - project: 'ska-telescope/templates-repository'
     file: 'gitlab-ci/includes/xray-publish.gitlab-ci.yml'
 
+  # Deploy stage
+  - project: 'ska-telescope/templates-repository'
+    file: 'gitlab-ci/includes/deploy.gitlab-ci.yml'
+
+deploy-staging:
+  when: manual
+
+deploy-integration:
+  when: manual
 
 psi-low-k8s-test:
   stage: test-psi-low

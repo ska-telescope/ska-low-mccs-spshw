@@ -178,10 +178,10 @@ class TestTileComponentManager:
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=5
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=5
                 )
                 try:
                     callbacks["component_state"].assert_call(

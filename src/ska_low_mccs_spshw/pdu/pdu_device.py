@@ -13,6 +13,7 @@ import sys
 from typing import Any, cast
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from ska_snmp_device.snmp_device import AttributePollingDevice
 from tango.server import device_property
@@ -110,8 +111,8 @@ class MccsPdu(AttributePollingDevice):
         device_definition = importlib.resources.files(
             "ska_low_mccs_spshw.pdu.pdu"
         ).joinpath(filename)
-        dynamic_attrs = self.parse_device_definition(
-            self.load_device_definition(str(device_definition), None)
+        dynamic_attrs = parse_device_definition(
+            load_device_definition(str(device_definition), None)
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 

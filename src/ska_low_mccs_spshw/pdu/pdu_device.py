@@ -36,7 +36,7 @@ class MccsPdu(AttributePollingDevice):
     UpdateRate = device_property(dtype=float, default_value=3.0)
 
     DeviceModels: dict[str, str] = {
-        "PDU": "pdu/pdu.yaml",
+        "PDU": "pdu.yaml",
     }
 
     # ---------------
@@ -108,10 +108,10 @@ class MccsPdu(AttributePollingDevice):
         # until tango.server.BaseDevice.init_device() has been called
         filename = self.DeviceModels[self.Model]
         device_definition = importlib.resources.files(
-            "ska_sat_lmc.whiterabbit.device_definitions"
+            "ska_low_mccs_spshw.pdu.pdu"
         ).joinpath(filename)
         dynamic_attrs = self.parse_device_definition(
-            self.load_device_definition(str(device_definition), self.Repo)
+            self.load_device_definition(str(device_definition), None)
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 

@@ -8,6 +8,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import importlib.resources
 import sys
 from typing import Any, cast
 
@@ -24,8 +25,7 @@ __all__ = ["MccsPdu", "main"]
 class MccsPdu(AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
-    DeviceDefinition = device_property(dtype=str, mandatory=True)
-    Repo = device_property(dtype=str, default_value="")
+    Model = device_property(dtype=str, mandatory=True)
     Host = device_property(dtype=str, mandatory=True)
     Port = device_property(dtype=int, default_value=161)
     V2Community = device_property(dtype=str)
@@ -34,6 +34,10 @@ class MccsPdu(AttributePollingDevice):
     V3PrivKey = device_property(dtype=str)
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
+
+    DeviceModels: dict[str, str] = {
+        "PDU": "pdu/pdu.yaml",
+    }
 
     # ---------------
     # Initialisation
@@ -102,8 +106,12 @@ class MccsPdu(AttributePollingDevice):
         """
         # This goes here because you don't have access to properties
         # until tango.server.BaseDevice.init_device() has been called
+        filename = self.DeviceModels[self.Model]
+        device_definition = importlib.resources.files(
+            "ska_sat_lmc.whiterabbit.device_definitions"
+        ).joinpath(filename)
         dynamic_attrs = self.parse_device_definition(
-            self.load_device_definition(self.DeviceDefinition, self.Repo)
+            self.load_device_definition(str(device_definition), self.Repo)
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 

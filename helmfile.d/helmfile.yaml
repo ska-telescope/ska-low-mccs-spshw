@@ -2,7 +2,7 @@ environments:
   minikube-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/minikube
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?820f51636a91ffd4fb9a4fe152a3afb5fd3bf484#tmdata/minikube
         datasets:
         - platform.yaml
       - source: ../../../../local_telmodel
@@ -15,7 +15,7 @@ environments:
   stfc-ci:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/stfc-cloud
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?820f51636a91ffd4fb9a4fe152a3afb5fd3bf484#tmdata/stfc-cloud
         datasets:
         - platform.yaml
       - source: ../../../../local_telmodel

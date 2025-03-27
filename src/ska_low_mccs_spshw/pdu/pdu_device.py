@@ -12,11 +12,12 @@ import importlib.resources
 import sys
 from typing import Any, cast
 
+from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
-from ska_snmp_device.snmp_device import AttributePollingDevice
-from tango.server import device_property
+from tango import Attribute
+from tango.server import attribute, device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
@@ -37,7 +38,8 @@ class MccsPdu(AttributePollingDevice):
     UpdateRate = device_property(dtype=float, default_value=3.0)
 
     DeviceModels: dict[str, str] = {
-        "PDU": "pdu.yaml",
+        "ENLOGIC": "enlogic.yaml",
+        "RARITAN": "raritan.yaml",
     }
 
     # ---------------
@@ -62,7 +64,7 @@ class MccsPdu(AttributePollingDevice):
         # (other than the super() call).
         self._health_state: HealthState
         self._health_model: PduHealthModel
-        self._dynamic_attrs: dict
+        self._dynamic_attrs: dict[str, Attribute]
         self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
 
         super().__init__(*args, **kwargs)
@@ -105,12 +107,12 @@ class MccsPdu(AttributePollingDevice):
 
         :return: SNMPComponent manager
         """
-        # This goes here because you don't have access to properties
-        # until tango.server.BaseDevice.init_device() has been called
         filename = self.DeviceModels[self.Model]
         device_definition = importlib.resources.files(
-            "ska_low_mccs_spshw.pdu.pdu"
+            "ska_low_mccs_spshw.pdu.device_definitions"
         ).joinpath(filename)
+        # This goes here because you don't have access to properties
+        # until tango.server.BaseDevice.init_device() has been called
         dynamic_attrs = parse_device_definition(
             load_device_definition(str(device_definition), None)
         )

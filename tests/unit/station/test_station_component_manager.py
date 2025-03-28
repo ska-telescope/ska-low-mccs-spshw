@@ -166,6 +166,7 @@ def station_component_manager_fixture(
         [get_subrack_name(subrack_id), get_subrack_name(subrack_id + 1)],
         [get_tile_name(tile_id + i) for i in range(0, num_tiles_to_add)],
         daq_trl,
+        daq_trl,
         ipaddress.IPv4Interface("10.0.0.152/16"),  # sdn_first_interface
         None,  # sdn_gateway
         None,  # csp_ingest_ip

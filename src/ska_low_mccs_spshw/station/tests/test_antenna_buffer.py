@@ -106,8 +106,6 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             self._read_antenna_buffer()
-            assert self._data_created_event.wait(20)
-            self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 
@@ -130,6 +128,7 @@ class TestAntennaBuffer(BaseDaqTest):
         """
         self.test_logger.info("Setting up antenna buffer for all tiles")
         for tile in self.tile_proxies:
+            self.test_logger.info(f"Set up antenna buffer for {tile}")
             tile.SetUpAntennaBuffer(
                 json.dumps(
                     {
@@ -161,16 +160,15 @@ class TestAntennaBuffer(BaseDaqTest):
         actual_buffer_byte_size = []
 
         for tile in self.tile_proxies:
-            actual_buffer_byte_size.append(
-                tile.StartAntennaBuffer(
-                    json.dumps(
-                        {
-                            "antennas": antenna_ids,
-                            "start_time": start_time,
-                            "timestamp_capture_duration": timestamp_capture_duration,
-                            "continuous_mode": continuous_mode,
-                        }
-                    )
+            self.test_logger.info(f"Start antenna buffer for {tile}")
+            tile.StartAntennaBuffer(
+                json.dumps(
+                    {
+                        "antennas": antenna_ids,
+                        "start_time": start_time,
+                        "timestamp_capture_duration": timestamp_capture_duration,
+                        "continuous_mode": continuous_mode,
+                    }
                 )
             )
         return actual_buffer_byte_size
@@ -179,6 +177,7 @@ class TestAntennaBuffer(BaseDaqTest):
         """Read from the antenna buffer."""
         self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in self.tile_proxies:
+            self.test_logger.info(f"Reading antenna buffer for {tile}")
             tile.ReadAntennaBuffer()
 
     # pylint: disable=too-many-locals

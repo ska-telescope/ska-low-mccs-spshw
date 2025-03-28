@@ -81,8 +81,11 @@ class TestAntennaBuffer(BaseDaqTest):
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "receiver_frame_size": receiver_frame_size,
-            "max_filesize": 8,
         }
+        # ANTENNA_BUFFER From pyaavs daq_reciever.py
+        self._configure_daq(
+            daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
+        )
         with self.reset_context():
             self.test_logger.debug("Starting directory watch")
             self._start_directory_watch()
@@ -101,11 +104,8 @@ class TestAntennaBuffer(BaseDaqTest):
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
-            # Use RAW_DATA for now, we may need something else later
-            self._configure_daq(
-                daq_mode="RAW_DATA", integrated=False, daq_config=daq_config
-            )
             self._read_antenna_buffer()
+            self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 
     def _set_up_antenna_buffer(
@@ -127,6 +127,7 @@ class TestAntennaBuffer(BaseDaqTest):
         """
         self.test_logger.info("Setting up antenna buffer for all tiles")
         for tile in self.tile_proxies:
+            self.test_logger.info(f"Set up antenna buffer for {tile}")
             tile.SetUpAntennaBuffer(
                 json.dumps(
                     {
@@ -143,39 +144,34 @@ class TestAntennaBuffer(BaseDaqTest):
         start_time: int,
         timestamp_capture_duration: int,
         continuous_mode: bool = False,
-    ) -> list[int]:
+    ) -> None:
         """Start the antenna buffer.
 
         :param antenna_ids: List of antenna IDs.
         :param start_time: Start time in seconds since epoch.
         :param timestamp_capture_duration: capture duration in timestamps.
         :param continuous_mode: Whether to run in continuous mode or not.
-
-        :return: The actual buffer byte size used by each tile.
         """
         self.test_logger.info("Starting antenna buffer for all tiles")
 
-        actual_buffer_byte_size = []
-
         for tile in self.tile_proxies:
-            actual_buffer_byte_size.append(
-                tile.StartAntennaBuffer(
-                    json.dumps(
-                        {
-                            "antennas": antenna_ids,
-                            "start_time": start_time,
-                            "timestamp_capture_duration": timestamp_capture_duration,
-                            "continuous_mode": continuous_mode,
-                        }
-                    )
+            self.test_logger.info(f"Start antenna buffer for {tile}")
+            tile.StartAntennaBuffer(
+                json.dumps(
+                    {
+                        "antennas": antenna_ids,
+                        "start_time": start_time,
+                        "timestamp_capture_duration": timestamp_capture_duration,
+                        "continuous_mode": continuous_mode,
+                    }
                 )
             )
-        return actual_buffer_byte_size
 
     def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
         """Read from the antenna buffer."""
         self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in self.tile_proxies:
+            self.test_logger.info(f"Reading antenna buffer for {tile}")
             tile.ReadAntennaBuffer()
 
     # pylint: disable=too-many-locals
@@ -190,6 +186,7 @@ class TestAntennaBuffer(BaseDaqTest):
         assert self._data is not None
         assert self._pattern is not None
         assert self._adders is not None
+        self.test_logger.debug(f"{self._data.shape =}")
 
         data = copy(self._data)
         adders = copy(self._adders)

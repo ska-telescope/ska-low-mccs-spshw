@@ -1,8 +1,11 @@
 # Version History
 
-## Unreleased
+## 2.1.0
 
 * [THORN-121] Add deploy stage to pipeline.
+* [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
+  bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
+  property to populate on SpsStation.
 
 ## 2.0.0
 

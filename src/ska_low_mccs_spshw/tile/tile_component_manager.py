@@ -1849,14 +1849,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if set up ran succesfully, False if it fails.
         """
-        try:
-            self.tile.set_up_antenna_buffer(
-                mode, ddr_start_byte_address, max_ddr_byte_size
-            )
-        except RuntimeError as err:
-            self.logger.error(f"Failed to set up antenna buffer: {err}")
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile.set_up_antenna_buffer(
+                        mode, ddr_start_byte_address, max_ddr_byte_size
+                    )
+                except RuntimeError as err:
+                    self.logger.error(f"Failed to set up antenna buffer: {err}")
+                    return False
+                return self.tile._antenna_buffer_tile_attribute.get(
+                    "set_up_complete", False
+                )
+            self.logger.warning("Failed to acquire hardware lock")
             return False
-        return self.tile._antenna_buffer_tile_attribute.get("set_up_complete", False)
 
     @abort_task_on_exception
     @check_communicating
@@ -1920,18 +1926,28 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         success = True
-        try:
-            ddr_write_size = self.tile.start_antenna_buffer(
-                antennas, start_time, timestamp_capture_duration, continuous_mode
-            )
-        except RuntimeError as err:
-            self.logger.error(f"Failed to start antenna buffer: {err}")
-            success = False
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    ddr_write_size = self.tile.start_antenna_buffer(
+                        antennas,
+                        start_time,
+                        timestamp_capture_duration,
+                        continuous_mode,
+                    )
+                except RuntimeError as err:
+                    self.logger.error(f"Failed to start antenna buffer: {err}")
+                    success = False
 
-        self.logger.info(f"Started antenna buffer with ddr size: {ddr_write_size}")
-        success = self.tile._antenna_buffer_tile_attribute.get(
-            "data_capture_initiated", False
-        )
+                self.logger.info(
+                    f"Started antenna buffer with ddr size: {ddr_write_size}"
+                )
+                success = self.tile._antenna_buffer_tile_attribute.get(
+                    "data_capture_initiated", False
+                )
+            else:
+                success = False
+                self.logger.warning("Failed to acquire hardware lock")
 
         if task_callback:
             if success:
@@ -1941,9 +1957,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 )
             else:
                 task_callback(
-                    status=TaskStatus.FAILED, result="Start acquisition task failed"
+                    status=TaskStatus.FAILED, result=("Start acquisition task failed")
                 )
-            return
 
     def read_antenna_buffer(
         self: TileComponentManager,
@@ -1983,11 +1998,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)
         success = True
-        try:
-            self.tile.read_antenna_buffer()
-        except RuntimeError as err:
-            self.logger.error(f"Failed to read antenna buffer: {err}")
-            success = False
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile.read_antenna_buffer()
+                except RuntimeError as err:
+                    self.logger.error(f"Failed to read antenna buffer: {err}")
+                    success = False
+            else:
+                success = False
+                self.logger.warning("Failed to acquire hardware lock")
 
         if task_callback:
             if success:
@@ -2007,12 +2027,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if stop ran succesfully, False if it fails.
         """
-        try:
-            self.tile.stop_antenna_buffer()
-        except RuntimeError as err:
-            self.logger.error(f"Failed to stop antenna buffer: {err}")
+        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
+            if acquired:
+                try:
+                    self.tile.stop_antenna_buffer()
+                except RuntimeError as err:
+                    self.logger.error(f"Failed to stop antenna buffer: {err}")
+                    return False
+                return True
+            self.logger.warning("Failed to acquire hardware lock")
             return False
-        return True
 
     # -----------------------------
     # FastCommands

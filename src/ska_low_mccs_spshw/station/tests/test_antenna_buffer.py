@@ -145,19 +145,15 @@ class TestAntennaBuffer(BaseDaqTest):
         start_time: int,
         timestamp_capture_duration: int,
         continuous_mode: bool = False,
-    ) -> list[int]:
+    ) -> None:
         """Start the antenna buffer.
 
         :param antenna_ids: List of antenna IDs.
         :param start_time: Start time in seconds since epoch.
         :param timestamp_capture_duration: capture duration in timestamps.
         :param continuous_mode: Whether to run in continuous mode or not.
-
-        :return: The actual buffer byte size used by each tile.
         """
         self.test_logger.info("Starting antenna buffer for all tiles")
-
-        actual_buffer_byte_size = []
 
         for tile in self.tile_proxies:
             self.test_logger.info(f"Start antenna buffer for {tile}")
@@ -171,7 +167,6 @@ class TestAntennaBuffer(BaseDaqTest):
                     }
                 )
             )
-        return actual_buffer_byte_size
 
     def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
         """Read from the antenna buffer."""
@@ -192,6 +187,7 @@ class TestAntennaBuffer(BaseDaqTest):
         assert self._data is not None
         assert self._pattern is not None
         assert self._adders is not None
+        self.test_logger.debug(f"{self._data.shape =}")
 
         data = copy(self._data)
         adders = copy(self._adders)

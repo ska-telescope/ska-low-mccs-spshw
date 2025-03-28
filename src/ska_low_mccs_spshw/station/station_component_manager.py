@@ -1814,7 +1814,15 @@ class SpsStationComponentManager(
                     f"Configuring LMC Integrated Download: {integrated_lmc_param}"
                 )
             # TODO: SKB-XXX, We have to juggle these around to route over 1G and 10G.
-            proxy._proxy.SetLmcDownload(json.dumps(integrated_lmc_param))
+            proxy._proxy.SetLmcDownload(
+                json.dumps(
+                    {
+                        "mode": self._lmc_integrated_mode,
+                        "destination_ip": self._lmc_integrated_ip,
+                        "destination_port": self._lmc_integrated_port,
+                    }
+                )
+            )
             proxy._proxy.SetLmcIntegratedDownload(json.dumps(integrated_lmc_param))
             proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
             proxy._proxy.ConfigureIntegratedChannelData(

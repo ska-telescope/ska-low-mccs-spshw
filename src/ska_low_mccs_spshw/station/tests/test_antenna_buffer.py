@@ -101,9 +101,9 @@ class TestAntennaBuffer(BaseDaqTest):
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
-            # From pyaavs daq_reciever.py
+            # ANTENNA_BUFFER From pyaavs daq_reciever.py
             self._configure_daq(
-                daq_mode="ANTENNA_BUFFER", integrated=False, daq_config=daq_config
+                daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
             )
             self._read_antenna_buffer()
             self._check_data(fpga_id)

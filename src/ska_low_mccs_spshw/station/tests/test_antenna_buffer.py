@@ -83,6 +83,10 @@ class TestAntennaBuffer(BaseDaqTest):
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
+        # ANTENNA_BUFFER From pyaavs daq_reciever.py
+        self._configure_daq(
+            daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
+        )
         with self.reset_context():
             self.test_logger.debug("Starting directory watch")
             self._start_directory_watch()
@@ -101,11 +105,10 @@ class TestAntennaBuffer(BaseDaqTest):
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
-            # ANTENNA_BUFFER From pyaavs daq_reciever.py
-            self._configure_daq(
-                daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
-            )
             self._read_antenna_buffer()
+            assert self._data_created_event.wait(20)
+            self._data_created_event.clear()
+            self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 
     def _set_up_antenna_buffer(

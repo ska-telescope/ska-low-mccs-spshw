@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-108] Update STFC RAL ref to use persistent DB.
 * [THORN-121] Add deploy stage to pipeline.
 
 ## 2.0.0

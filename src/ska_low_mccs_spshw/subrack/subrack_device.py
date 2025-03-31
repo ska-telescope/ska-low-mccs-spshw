@@ -32,6 +32,25 @@ from ska_low_mccs_spshw.subrack.subrack_health_model import SubrackHealthModel
 from .subrack_component_manager import SubrackComponentManager
 from .subrack_data import FanMode, SubrackData
 
+abs_change_map = {
+    "tpmCount": 1,
+    "backplaneTemperatures": 0.1,
+    "boardTemperatures": 0.1,
+    "boardCurrent": 0.1,
+    "powerSupplyCurrents": 0.1,
+    "powerSupplyFanSpeeds": 0.1,
+    "powerSupplyPowers": 0.1,
+    "powerSupplyVoltages": 0.1,
+    "subrackFanSpeeds": 0.1,
+    "subrackFanSpeedsPercent": 0.1,
+    "subrackFanModes": 1,
+    "subrackTimestamp": 1,
+    "tpmCurrents": 0.1,
+    "tpmPowers": 0.1,
+    # "tpmTemperatures": 0.1,
+    "tpmVoltages": 0.1,
+}
+
 
 class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
     # pylint: disable=line-too-long
@@ -1126,9 +1145,17 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             special_update_method = getattr(self, f"_update_{key}", None)
             if special_update_method is None:
                 tango_attribute_name = self._ATTRIBUTE_MAP[key]
-                self._hardware_attributes[tango_attribute_name] = value
-                self.push_change_event(tango_attribute_name, value)
-                self.push_archive_event(tango_attribute_name, value)
+                if abs_change_map.get(key) is not None:
+                    if (
+                        abs(self._hardware_attributes[tango_attribute_name] - value)
+                        > abs_change_map[key]
+                    ):
+                        self.push_change_event(tango_attribute_name, value)
+                        self.push_archive_event(tango_attribute_name, value)
+                else:
+                    self.push_change_event(tango_attribute_name, value)
+                    self.push_archive_event(tango_attribute_name, value)
+                    self._hardware_attributes[tango_attribute_name] = value
             else:
                 special_update_method(value)
 
@@ -1162,9 +1189,19 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self._hardware_attributes["boardCurrent"] = None
             self.push_change_event("boardCurrent", [])
         else:
-            self._hardware_attributes["boardCurrent"] = [board_current]
-            self.push_change_event("boardCurrent", [board_current])
-            self.push_archive_event("boardCurrent", [board_current])
+            if self._hardware_attributes.get("boardCurrent") is None:
+                self._hardware_attributes["boardCurrent"] = [board_current]
+                self.push_change_event("boardCurrent", [board_current])
+                self.push_archive_event("boardCurrent", [board_current])
+            else:
+                if isinstance(self._hardware_attributes["boardCurrent"], list):
+                    current_val = self._hardware_attributes["boardCurrent"][0]
+                else:
+                    current_val = self._hardware_attributes["boardCurrent"]
+                if abs(current_val - board_current) > abs_change_map["boardCurrent"]:
+                    self._hardware_attributes["boardCurrent"] = [board_current]
+                    self.push_change_event("boardCurrent", [board_current])
+                    self.push_archive_event("boardCurrent", [board_current])
         self._update_health_data()
 
     def _update_tpm_present(

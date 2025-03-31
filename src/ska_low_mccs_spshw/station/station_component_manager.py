@@ -1220,6 +1220,10 @@ class SpsStationComponentManager(
             self.logger.debug("Setting tile source IPs before initialisation")
             result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
+        if result_code == ResultCode.OK:
+            self.logger.debug("Setting global reference time")
+            self._set_global_reference_time(self._global_reference_time or None)
+
         if result_code == ResultCode.OK and not all(
             power_state == PowerState.ON
             for power_state in self._tile_power_states.values()
@@ -1230,7 +1234,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
             result_code = self._initialise_tile_parameters(
-                task_callback=task_callback, task_abort_event=task_abort_event
+                task_callback, task_abort_event
             )
             # End of the actual power on sequence.
 
@@ -1287,6 +1291,7 @@ class SpsStationComponentManager(
         )
 
     @check_communicating
+    # pylint: disable=too-many-branches
     def _initialise(
         self: SpsStationComponentManager,
         global_reference_time: Optional[str],
@@ -1328,15 +1333,18 @@ class SpsStationComponentManager(
             result_code = self._set_tile_source_ips(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Setting global reference time")
+            self._set_global_reference_time(global_reference_time)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Re-initialising tiles")
             result_code = self._reinitialise_tiles(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
             result_code = self._initialise_tile_parameters(
-                task_callback=task_callback,
-                task_abort_event=task_abort_event,
-                global_reference_time=global_reference_time,
+                task_callback,
+                task_abort_event,
             )
 
         if result_code == ResultCode.OK:
@@ -1473,6 +1481,24 @@ class SpsStationComponentManager(
         return ResultCode.OK
 
     @check_communicating
+    def _set_global_reference_time(
+        self: SpsStationComponentManager, global_reference_time: Optional[str]
+    ) -> ResultCode:
+        if self.csp_spead_format != "SKA":
+            self.logger.debug("Not setting global reference time for non-SKA format")
+            return ResultCode.OK
+        if global_reference_time is not None:
+            self._global_reference_time = global_reference_time
+        else:
+            today = datetime.now(timezone.utc).date()
+            monday_morning = today - timedelta(days=today.weekday())
+            self._global_reference_time = monday_morning.strftime(
+                "%Y-%m-%dT00:00:00.000000Z"
+            )
+        self.logger.debug(f"Global reference time: {self._global_reference_time}")
+        return ResultCode.OK
+
+    @check_communicating
     def _wait_for_arp_table(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1551,7 +1577,6 @@ class SpsStationComponentManager(
     @check_communicating
     def _initialise_tile_parameters(
         self: SpsStationComponentManager,
-        global_reference_time: Optional[str] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> ResultCode:
@@ -1561,24 +1586,12 @@ class SpsStationComponentManager(
         Inilitalse parameters which are individually set in each tile,
         after the tile has been programmed.
 
-        :param global_reference_time: Common global reference time for all TPMs,
-            needs to be some time in the last 2 weeks.
-            If not provided, 8am on the most recent Monday AWST will be used.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code
         """
         tile_no = 0
         last_tile = len(self._tile_proxies.values()) - 1
-        if global_reference_time is not None:
-            self._global_reference_time = global_reference_time
-        else:
-            today = datetime.now(timezone.utc).date()
-            monday_morning = today - timedelta(days=today.weekday())
-            self._global_reference_time = monday_morning.strftime(
-                "%Y-%m-%dT00:00:00.000000Z"
-            )
-        self.logger.debug(f"Global reference time: {self._global_reference_time}")
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
             assert tile is not None

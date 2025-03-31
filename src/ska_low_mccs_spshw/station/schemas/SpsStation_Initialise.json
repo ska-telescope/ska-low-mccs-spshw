@@ -1,0 +1,14 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/SpsStation_Initialise.json",
+    "title": "SpsStation Initialise schema",
+    "description": "Schema for SpsStations's Initialise command",
+    "type": "object",
+    "properties": {
+        "global_reference_time": {
+            "description": "Common global reference time for all TPMs, needs to be some time in the last 2 weeks. If not provided, 8am on the most recent Monday AWST will be used.",
+            "type": "string"
+        }
+    },
+    "required": []
+}

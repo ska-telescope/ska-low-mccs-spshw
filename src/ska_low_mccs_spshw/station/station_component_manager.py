@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from datetime import datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -1229,7 +1230,7 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tiles")
             result_code = self._initialise_tile_parameters(
-                task_callback, task_abort_event
+                task_callback=task_callback, task_abort_event=task_abort_event
             )
             # End of the actual power on sequence.
 
@@ -1265,6 +1266,8 @@ class SpsStationComponentManager(
     def initialise(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        global_reference_time: Optional[str] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _initialise method.
@@ -1273,13 +1276,20 @@ class SpsStationComponentManager(
         `self._initialise` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
+
         :return: a task status and response message
         """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+        return self.submit_task(
+            self._initialise, task_callback=task_callback, args=[global_reference_time]
+        )
 
     @check_communicating
     def _initialise(
         self: SpsStationComponentManager,
+        global_reference_time: Optional[str],
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1288,6 +1298,9 @@ class SpsStationComponentManager(
 
         The order to turn a station on is: subrack, then tiles
 
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
@@ -1321,7 +1334,9 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Initialising tile parameters")
             result_code = self._initialise_tile_parameters(
-                task_callback, task_abort_event
+                task_callback=task_callback,
+                task_abort_event=task_abort_event,
+                global_reference_time=global_reference_time,
             )
 
         if result_code == ResultCode.OK:
@@ -1536,6 +1551,7 @@ class SpsStationComponentManager(
     @check_communicating
     def _initialise_tile_parameters(
         self: SpsStationComponentManager,
+        global_reference_time: Optional[str] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> ResultCode:
@@ -1545,12 +1561,24 @@ class SpsStationComponentManager(
         Inilitalse parameters which are individually set in each tile,
         after the tile has been programmed.
 
+        :param global_reference_time: Common global reference time for all TPMs,
+            needs to be some time in the last 2 weeks.
+            If not provided, 8am on the most recent Monday AWST will be used.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code
         """
         tile_no = 0
         last_tile = len(self._tile_proxies.values()) - 1
+        if global_reference_time is not None:
+            self._global_reference_time = global_reference_time
+        else:
+            today = datetime.now(timezone.utc).date()
+            monday_morning = today - timedelta(days=today.weekday())
+            self._global_reference_time = monday_morning.strftime(
+                "%Y-%m-%dT00:00:00.000000Z"
+            )
+        self.logger.debug(f"Global reference time: {self._global_reference_time}")
         for proxy in self._tile_proxies.values():
             tile = proxy._proxy
             assert tile is not None

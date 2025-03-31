@@ -1447,7 +1447,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # -------------
 
     @command(
-        dtype_in="DevVoid",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     # pylint: disable=line-too-long

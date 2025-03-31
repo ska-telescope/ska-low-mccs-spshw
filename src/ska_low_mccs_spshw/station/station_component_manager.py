@@ -705,12 +705,12 @@ class SpsStationComponentManager(
                     "but device not deployed. Skipping."
                 )
                 continue
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_x_channel"]
-            ] = antenna_config["delay"]
-            tile_delays[tile_logical_id][
-                antenna_config["tpm_y_channel"]
-            ] = antenna_config["delay"]
+            tile_delays[tile_logical_id][antenna_config["tpm_x_channel"]] = (
+                antenna_config["delay"]
+            )
+            tile_delays[tile_logical_id][antenna_config["tpm_y_channel"]] = (
+                antenna_config["delay"]
+            )
         for tile_no, tile in enumerate(tile_delays):
             self.logger.debug(f"Delays for tile logcial id {tile_no} = {tile}")
         return [
@@ -1488,14 +1488,14 @@ class SpsStationComponentManager(
             self.logger.debug("Not setting global reference time for non-SKA format")
             return ResultCode.OK
         if global_reference_time is not None:
-            self._global_reference_time = global_reference_time
+            self.global_reference_time = global_reference_time
         else:
             today = datetime.now(timezone.utc).date()
             monday_morning = today - timedelta(days=today.weekday())
-            self._global_reference_time = monday_morning.strftime(
+            self.global_reference_time = monday_morning.strftime(
                 "%Y-%m-%dT00:00:00.000000Z"
             )
-        self.logger.debug(f"Global reference time: {self._global_reference_time}")
+        self.logger.debug(f"Global reference time: {self.global_reference_time}")
         return ResultCode.OK
 
     @check_communicating

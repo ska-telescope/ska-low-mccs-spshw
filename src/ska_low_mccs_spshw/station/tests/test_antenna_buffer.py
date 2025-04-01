@@ -106,8 +106,6 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             self._read_antenna_buffer()
-            tile_0 = self.tile_proxies[0].component_manager.tile
-            self.test_logger.info(tile_0.tpm.tpm_antenna_buffer[fpga_id])
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 

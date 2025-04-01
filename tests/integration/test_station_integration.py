@@ -307,7 +307,7 @@ class TestStationTileIntegration:
             execute_lrc_to_completion(
                 change_event_callbacks, sps_station_device, "Initialise", "{}"
             )
-            assert tile_device.tileProgrammingState == "Initialised"
+            assert tile_device.tileProgrammingState == "Synchronised"
             wait_for_completed_command_to_clear_from_queue(tile_device)
             wait_for_completed_command_to_clear_from_queue(sps_station_device)
 

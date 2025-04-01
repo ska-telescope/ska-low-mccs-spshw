@@ -654,7 +654,7 @@ def test_Initialise(
     )
     time.sleep(12)
     for tile in mock_tile_device_proxies:
-        tile.tileProgrammingState = "Initialised"
+        tile.tileProgrammingState = "Synchronised"
     time.sleep(4)
     change_event_callbacks["command_status"].assert_change_event(
         (command_id, "COMPLETED")

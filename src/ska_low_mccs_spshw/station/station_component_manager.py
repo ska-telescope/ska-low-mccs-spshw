@@ -1890,18 +1890,18 @@ class SpsStationComponentManager(
             f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
         )
         # TODO: SKB-804, We need to juggle these around to route over 1G and 10G.
-        self.set_lmc_download(
-            mode=self._lmc_integrated_mode,
-            dst_ip=self._lmc_integrated_ip,
-            dst_port=self._lmc_integrated_port,
-            payload_length=1024,
-        )
         self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
             channel_payload_length=self._lmc_channel_payload_length,
             beam_payload_length=self._lmc_beam_payload_length,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
+        )
+        self.set_lmc_download(
+            mode=self._lmc_integrated_mode,
+            dst_ip=self._lmc_integrated_ip,
+            dst_port=self._lmc_integrated_port,
+            payload_length=1024,
         )
         self.set_lmc_download(
             mode=str(self._lmc_param["mode"]),

@@ -1892,8 +1892,8 @@ class SpsStationComponentManager(
         # TODO: SKB-804, We need to juggle these around to route over 1G and 10G.
         self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
-            channel_payload_length=self._lmc_channel_payload_length,
-            beam_payload_length=self._lmc_beam_payload_length,
+            channel_payload_length=1024,
+            beam_payload_length=1024,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
         )

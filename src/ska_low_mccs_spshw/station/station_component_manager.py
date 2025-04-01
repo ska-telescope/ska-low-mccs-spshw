@@ -550,13 +550,13 @@ class SpsStationComponentManager(
         ]
 
         self._source_port = 0xF0D0
-        self._destination_port = 4660
+        self._destination_port: int = 4660
 
         self._sdn_first_address = sdn_first_interface.ip
         self._sdn_netmask = int(sdn_first_interface.netmask)
         self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
 
-        self._lmc_param = {
+        self._lmc_param: dict[str, str | int | None] = {
             "mode": "10G",
             "payload_length": 8192,
             "destination_ip": "0.0.0.0",
@@ -1348,6 +1348,10 @@ class SpsStationComponentManager(
             result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Routing data")
+            result_code = self._route_data(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
             result_code = self._check_station_synchronisation(
                 task_callback, task_abort_event
@@ -1384,6 +1388,7 @@ class SpsStationComponentManager(
         return self.submit_task(self._initialise, task_callback=task_callback)
 
     @check_communicating
+    # pylint: disable=too-many-branches
     def _initialise(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
@@ -1437,6 +1442,10 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Waiting for ARP table")
             result_code = self._wait_for_arp_table(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Routing data")
+            result_code = self._route_data(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1707,19 +1716,6 @@ class SpsStationComponentManager(
         :param task_abort_event: Abort the task
         :return: a result code
         """
-        if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
-            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
-            self._lmc_param["destination_ip"] = lmc_daq_status["Receiver IP"][0]
-            self._lmc_param["destination_port"] = lmc_daq_status["Receiver Ports"][0]
-        if (
-            self._bandpass_daq_proxy is not None
-            and self._bandpass_daq_proxy._proxy is not None
-        ):
-            bandpass_daq_status = json.loads(
-                self._bandpass_daq_proxy._proxy.DaqStatus()
-            )
-            self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
-            self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
         tiles = list(self._tile_proxies.values())
         #
         # Configure 40G ports.
@@ -1798,35 +1794,18 @@ class SpsStationComponentManager(
                         }
                     )
                 )
-            integrated_lmc_param = {
-                "mode": self._lmc_integrated_mode,
-                "destination_ip": self._lmc_integrated_ip,
-                "destination_port": self._lmc_integrated_port,
-                "channel_payload_length": self._lmc_channel_payload_length,
-                "beam_payload_length": self._lmc_beam_payload_length,
-                "netmask_40g": self._sdn_netmask,
-                "gateway_40g": self._sdn_gateway,
-            }
-
-            if tile == last_tile:
-                self.logger.debug(f"Configuring LMC Download: {self._lmc_param}")
-                self.logger.debug(
-                    f"Configuring LMC Integrated Download: {integrated_lmc_param}"
-                )
-            # TODO: SKB-XXX, We have to juggle these around to route over 1G and 10G.
-            proxy._proxy.SetLmcDownload(
+            proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
+            proxy._proxy.SetLmcIntegratedDownload(
                 json.dumps(
                     {
                         "mode": self._lmc_integrated_mode,
-                        "destination_ip": self._lmc_integrated_ip,
-                        "destination_port": self._lmc_integrated_port,
+                        "destination_ip": self._lmc_param["destination_ip"],
+                        "channel_payload_length": self._lmc_channel_payload_length,
+                        "beam_payload_length": self._lmc_beam_payload_length,
+                        "netmask_40g": self._sdn_netmask,
+                        "gateway_40g": self._sdn_gateway,
                     }
                 )
-            )
-            proxy._proxy.SetLmcIntegratedDownload(json.dumps(integrated_lmc_param))
-            proxy._proxy.SetLmcDownload(json.dumps(self._lmc_param))
-            proxy._proxy.ConfigureIntegratedChannelData(
-                json.dumps({"integration_time": self._bandpass_integration_time})
             )
             tile = tile + 1
         return ResultCode.OK
@@ -1873,6 +1852,73 @@ class SpsStationComponentManager(
 
         self.logger.error("FPGA time counters not synced after 5 retries")
         return ResultCode.FAILED
+
+    def _route_data(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Route data streams to relevant DAQs.
+
+        Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
+        everything else over the 10G to the LMC DAQ.
+
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
+            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
+            self._lmc_param["destination_ip"] = lmc_daq_status["Receiver IP"][0]
+            self._lmc_param["destination_port"] = lmc_daq_status["Receiver Ports"][0]
+        if (
+            self._bandpass_daq_proxy is not None
+            and self._bandpass_daq_proxy._proxy is not None
+        ):
+            bandpass_daq_status = json.loads(
+                self._bandpass_daq_proxy._proxy.DaqStatus()
+            )
+            self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
+            self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
+        self.logger.debug(
+            "Configuring LMC Download: "
+            f"{self._lmc_param['destination_ip']}:{self._lmc_param['destination_port']}"
+        )
+        self.logger.debug(
+            "Configuring LMC Integrated Download: "
+            f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
+        )
+        # TODO: SKB-804, We have to juggle these around to route over 1G and 10G.
+        self.set_lmc_download(
+            mode=self._lmc_integrated_mode,
+            dst_ip=self._lmc_integrated_ip,
+            dst_port=self._lmc_integrated_port,
+            payload_length=1024,
+        )
+        self.set_lmc_integrated_download(
+            mode=self._lmc_integrated_mode,
+            channel_payload_length=self._lmc_channel_payload_length,
+            beam_payload_length=self._lmc_beam_payload_length,
+            dst_ip=self._lmc_integrated_ip,
+            dst_port=self._lmc_integrated_port,
+        )
+        self.set_lmc_download(
+            mode=str(self._lmc_param["mode"]),
+            dst_ip=str(self._lmc_param["destination_ip"]),
+            dst_port=int(self._lmc_param["destination_port"])
+            if self._lmc_param["destination_port"] is not None
+            else 4660,
+            payload_length=int(self._lmc_param["payload_length"])
+            if self._lmc_param["payload_length"] is not None
+            else 8192,
+        )
+        self.configure_integrated_channel_data(
+            integration_time=self._bandpass_integration_time,
+            first_channel=0,
+            last_channel=511,
+        )
+        return ResultCode.OK
 
     @property  # type:ignore[misc]
     @check_communicating

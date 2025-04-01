@@ -81,7 +81,6 @@ class TestAntennaBuffer(BaseDaqTest):
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "receiver_frame_size": receiver_frame_size,
-            "max_filesize": 8,
         }
         # ANTENNA_BUFFER From pyaavs daq_reciever.py
         self._configure_daq(

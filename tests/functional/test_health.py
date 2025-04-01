@@ -132,8 +132,8 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
     tiles_fqdns = list(station_proxy.get_property("TileFQDNs")["TileFQDNs"])
     subracks_fqdns = list(station_proxy.get_property("SubrackFQDNs")["SubrackFQDNs"])
     daqs_fqdns = [
-        station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"],
-        station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"],
+        station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"][0],
+        station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"][0],
     ]
     return {
         "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],

@@ -598,7 +598,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        self._update_tpm_power_states([PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT)
+        print("updating tpm power state to ON")
+        self._update_tpm_power_states([PowerState.ON] * SubrackData.TPM_BAY_COUNT)
         return super().On()
 
     # ----------

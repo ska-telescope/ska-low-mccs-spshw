@@ -519,19 +519,12 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
-        self.logger.debug(
-            "Poller is initiating next poll. "
-            f"{len(poll_request.commands)} commands, "
-            f"{len(poll_request.getattributes)} getattributes, "
-            f"{len(poll_request.setattributes)} setattributes"
-        )
         poll_response = HttpPollResponse()
 
         for command, args in poll_request.commands:
             command_response = self._client.execute_command(
                 command, " ".join(str(arg) for arg in args)
             )
-            self.logger.debug(f"Response: {command_response}")
             if command_response["status"] not in [
                 HardwareClientResponseStatusCodes.OK.name,
                 HardwareClientResponseStatusCodes.STARTED.name,

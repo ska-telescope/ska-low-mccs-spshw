@@ -471,7 +471,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         # A callback hook to be updated after command executed.
         self.active_request = poll_request
         if isinstance(self.active_request, TileLRCRequest):
-            self.logger.debug(f"Command {poll_request.name} IN_PROGRESS")
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
         with self._hardware_lock:

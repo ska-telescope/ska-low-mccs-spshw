@@ -856,7 +856,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: Unix time used as global synchronization time
         """
-        self.logger.info(f"Global reference time read {self._global_reference_time}")
         if self._global_reference_time:
             return self._tile_time.format_time_from_timestamp(
                 self._global_reference_time
@@ -1439,8 +1438,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: firmware_version")
-
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 _firmware_list = self.tile.get_firmware_list()[0]
@@ -1466,7 +1463,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the firmware list
         """
-        self.logger.debug("TileComponentManager: firmware_available")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
@@ -1569,8 +1565,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: the FPGAs clock time
         :raises ConnectionError: if communication with tile failed
         """
-        self.logger.debug("TileComponentManager: fpgas_time")
-
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -1650,7 +1644,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: the FPGA_1 current frame counter
         :raises ConnectionError: if communication with tile failed
         """
-        self.logger.debug("TileComponentManager: fpga_current_frame")
         failed = False
         with acquire_timeout(self._hardware_lock, timeout=8.4) as acquired:
             if acquired:
@@ -1679,7 +1672,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: current_tile_beamformer_frame")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.current_tile_beamformer_frame()
@@ -3337,7 +3329,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: arp_table")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.get_arp_table()
@@ -3353,7 +3344,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug("TileComponentManager: _pending_data_requests")
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 return self.tile.check_pending_data_requests()

@@ -586,23 +586,23 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         result_code, message = handler(argin)
         return ([result_code], [message])
 
-    # @command(dtype_out="DevVarLongStringArray")
-    # def On(
-    #     self: MccsSubrack
-    # ) -> tuple[list[ResultCode], list[Optional[str]]]:
-    #     """
-    #     Turn device on.
+    @command(dtype_out="DevVarLongStringArray")
+    def On(
+        self: MccsSubrack
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Turn device on.
 
-    #     To modify behaviour for this command, modify the do() method of
-    #     the command class.
+        To modify behaviour for this command, modify the do() method of
+        the command class.
 
-    #     :return: A tuple containing a return code and a string
-    #         message indicating status. The message is for
-    #         information purpose only.
-    #     """
-    #     self._update_tpm_power_states([PowerState.UNKNOWN] *
-    # SubrackData.TPM_BAY_COUNT)
-    #     return super().On()
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        self._update_tpm_power_states([PowerState.UNKNOWN] *
+                                      SubrackData.TPM_BAY_COUNT)
+        return super().On()
 
     # ----------
     # Attributes

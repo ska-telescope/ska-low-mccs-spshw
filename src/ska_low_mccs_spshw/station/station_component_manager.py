@@ -568,8 +568,13 @@ class SpsStationComponentManager(
         self._lmc_integrated_mode = "1G"
         self._lmc_integrated_ip = "0.0.0.0"
         self._lmc_integrated_port = self._destination_port
-        self._lmc_channel_payload_length = 8192
-        self._lmc_beam_payload_length = 8192
+        self._lmc_channel_payload_length = 1024
+        self._lmc_beam_payload_length = 1024
+
+        self._lmc_mode = "10G"
+        self._lmc_ip = "0.0.0.0"
+        self._lmc_port = self._destination_port
+        self._lmc_payload_length = 8192
 
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
@@ -1870,8 +1875,8 @@ class SpsStationComponentManager(
         """
         if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
             lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
-            self._lmc_param["destination_ip"] = lmc_daq_status["Receiver IP"][0]
-            self._lmc_param["destination_port"] = lmc_daq_status["Receiver Ports"][0]
+            self._lmc_ip = lmc_daq_status["Receiver IP"][0]
+            self._lmc_port = lmc_daq_status["Receiver Ports"][0]
         if (
             self._bandpass_daq_proxy is not None
             and self._bandpass_daq_proxy._proxy is not None
@@ -1892,10 +1897,10 @@ class SpsStationComponentManager(
         # TODO: SKB-804, We need to juggle these around to route over 1G and 10G.
         self.set_lmc_integrated_download(
             mode=self._lmc_integrated_mode,
-            channel_payload_length=1024,
-            beam_payload_length=1024,
             dst_ip=self._lmc_integrated_ip,
             dst_port=self._lmc_integrated_port,
+            channel_payload_length=self._lmc_channel_payload_length,
+            beam_payload_length=self._lmc_beam_payload_length,
         )
         self.set_lmc_download(
             mode=self._lmc_integrated_mode,
@@ -1904,14 +1909,10 @@ class SpsStationComponentManager(
             payload_length=1024,
         )
         self.set_lmc_download(
-            mode=str(self._lmc_param["mode"]),
-            dst_ip=str(self._lmc_param["destination_ip"]),
-            dst_port=int(self._lmc_param["destination_port"])
-            if self._lmc_param["destination_port"] is not None
-            else 4660,
-            payload_length=int(self._lmc_param["payload_length"])
-            if self._lmc_param["payload_length"] is not None
-            else 8192,
+            mode=self._lmc_mode,
+            dst_ip=self._lmc_ip,
+            dst_port=self._lmc_port,
+            payload_length=self._lmc_payload_length,
         )
         self.configure_integrated_channel_data(
             integration_time=self._bandpass_integration_time,

@@ -264,10 +264,6 @@ def test_On(
     :param sdn_gateway: IP address of the subnet gateway.
         An empty string signifiese that no gateway is defined.
     """
-    print(station_device.LMCDaqTrl)
-    print(station_device.BandpassDaqTrl)
-    # time.sleep(5)
-    # assert False
     counter = 0
     sync_time = None
 
@@ -461,14 +457,15 @@ def test_On(
                 }
             )
         )
-        tile.SetLmcIntegratedDownload.assert_next_call(
+        tile.SetLmcIntegratedDownload.assert_last_call(
             json.dumps(
                 {
                     "mode": "1G",
+                    "channel_payload_length": 1024,
+                    "beam_payload_length": 1024,
                     "destination_ip": "10.244.170.166",
+                    "source_port": 61648,
                     "destination_port": 4660,
-                    "channel_payload_length": 8192,
-                    "beam_payload_length": 8192,
                     "netmask_40g": int(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
@@ -742,14 +739,15 @@ def test_Initialise(
                 }
             )
         )
-        tile.SetLmcIntegratedDownload.assert_next_call(
+        tile.SetLmcIntegratedDownload.assert_last_call(
             json.dumps(
                 {
                     "mode": "1G",
+                    "channel_payload_length": 1024,
+                    "beam_payload_length": 1024,
                     "destination_ip": "10.244.170.166",
+                    "source_port": 61648,
                     "destination_port": 4660,
-                    "channel_payload_length": 8192,
-                    "beam_payload_length": 8192,
                     "netmask_40g": int(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),

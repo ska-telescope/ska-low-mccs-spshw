@@ -586,7 +586,6 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         result_code, message = handler(argin)
         return ([result_code], [message])
 
-
     # @command(dtype_out="DevVarLongStringArray")
     # def On(
     #     self: MccsSubrack
@@ -601,7 +600,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #         message indicating status. The message is for
     #         information purpose only.
     #     """
-    #     self._update_tpm_power_states([PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT)
+    #     self._update_tpm_power_states([PowerState.UNKNOWN] *
+    # SubrackData.TPM_BAY_COUNT)
     #     return super().On()
 
     # ----------
@@ -1156,7 +1156,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         elif power == PowerState.UNKNOWN:
             tpm_power_state = PowerState.UNKNOWN
         if tpm_power_state is not None:
-            self.component_manager._hardware_component_manager._update_component_state["tpm_on_off"] = None
+            self.component_manager._hardware_component_manager._update_component_state[
+                "tpm_on_off"
+            ] = None
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()
         self._update_health_data()

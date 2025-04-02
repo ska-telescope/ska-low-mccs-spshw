@@ -122,7 +122,7 @@ class SubrackDriver(
             tpm_voltages=None,
         )
 
-        self.logger.debug(
+        self.logger.info(
             f"Initialising SPS subrack component manager: "
             f"Update rate is {update_rate}. "
             f"Poll rate is {self._poll_rate}. "
@@ -450,7 +450,6 @@ class SubrackDriver(
             poll.
         """
         self._tick += 1
-        self.logger.debug(f"Constructing request for next poll (tick {self._tick}).")
 
         poll_request = HttpPollRequest()
 
@@ -477,8 +476,6 @@ class SubrackDriver(
             self._attributes_to_write.clear()
 
         if self._tick > self._max_tick:
-            self.logger.debug(f"Tick {self._tick} >= {self._max_tick}.")
-            self.logger.debug("Adding queries.")
             poll_request.add_getattributes(
                 "tpm_present",
                 "tpm_on_off",
@@ -501,7 +498,6 @@ class SubrackDriver(
                 "tpm_voltages",
             )
             self._tick = 0
-        self.logger.debug("Returning request for next poll.")
         return poll_request
 
     def poll(self: SubrackDriver, poll_request: HttpPollRequest) -> HttpPollResponse:
@@ -523,7 +519,7 @@ class SubrackDriver(
 
         :return: responses to queries in this poll
         """
-        self.logger.info(
+        self.logger.debug(
             "Poller is initiating next poll. "
             f"{len(poll_request.commands)} commands, "
             f"{len(poll_request.getattributes)} getattributes, "
@@ -665,18 +661,12 @@ class SubrackDriver(
         :param poll_response: response to the pool, including any values
             read.
         """
-        self.logger.info(
-            "Handing results of successful poll. "
-            f"{len(poll_response.command_responses)} command responses, "
-            f"{len(poll_response.query_responses)} query responses"
-        )
         super().poll_succeeded(poll_response)
 
         # TODO: We should be deciding on the fault state of this device,
         # based on the values returned. For now, we just set it to
         # False.
         fault = False
-        self.logger.debug(f"Calculated fault status is {fault}.")
 
         retvalues = poll_response.command_responses
         if "command_completed" in retvalues and not retvalues["command_completed"]:
@@ -701,7 +691,6 @@ class SubrackDriver(
             self._active_callback = None
 
         values = poll_response.query_responses
-        self.logger.debug("Pushing updates.")
 
         self._update_component_state(power=PowerState.ON, fault=fault, **values)
 

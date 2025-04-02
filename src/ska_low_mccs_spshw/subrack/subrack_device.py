@@ -587,9 +587,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return ([result_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def On(
-        self: MccsSubrack
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+    def On(self: MccsSubrack) -> tuple[list[ResultCode], list[Optional[str]]]:
         """
         Turn device on.
 
@@ -600,8 +598,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             message indicating status. The message is for
             information purpose only.
         """
-        self._update_tpm_power_states([PowerState.UNKNOWN] *
-                                      SubrackData.TPM_BAY_COUNT)
+        self._update_tpm_power_states([PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT)
         return super().On()
 
     # ----------

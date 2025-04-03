@@ -60,3 +60,4 @@ testing/results/*
 
 # sphinx
 docs/src/_build
+venv/

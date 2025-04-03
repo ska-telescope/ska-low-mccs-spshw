@@ -1,7 +1,7 @@
 # Added TPM2 in simulation mode, To test with real hardware, We need to comment everything starting from overrides.
 defaults:
   logging_level_default: 5
-
+  
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,

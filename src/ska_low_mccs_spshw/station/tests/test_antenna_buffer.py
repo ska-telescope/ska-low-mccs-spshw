@@ -105,6 +105,8 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             self._read_antenna_buffer()
+            assert self._data_created_event.wait(100)
+            self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
 

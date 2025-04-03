@@ -5,6 +5,7 @@
 * [THORN-99] Prune logging.
 * [THORN-108] Update STFC RAL ref to use persistent DB.
 * [THORN-121] Add deploy stage to pipeline.
+* [THORN-134] Added ska-low-mccs-common ref.
 
 ## 2.0.0
 

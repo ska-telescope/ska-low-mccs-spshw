@@ -8,10 +8,12 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import importlib.resources
 import sys
 from typing import Any, cast
 
 from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from ska_snmp_device.snmp_device import AttributePollingDevice
 from tango.server import device_property
@@ -24,8 +26,7 @@ __all__ = ["MccsPdu", "main"]
 class MccsPdu(AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
-    DeviceDefinition = device_property(dtype=str, mandatory=True)
-    Repo = device_property(dtype=str, default_value="")
+    Model = device_property(dtype=str, mandatory=True)
     Host = device_property(dtype=str, mandatory=True)
     Port = device_property(dtype=int, default_value=161)
     V2Community = device_property(dtype=str)
@@ -34,6 +35,10 @@ class MccsPdu(AttributePollingDevice):
     V3PrivKey = device_property(dtype=str)
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
+
+    DeviceModels: dict[str, str] = {
+        "PDU": "pdu.yaml",
+    }
 
     # ---------------
     # Initialisation
@@ -102,8 +107,12 @@ class MccsPdu(AttributePollingDevice):
         """
         # This goes here because you don't have access to properties
         # until tango.server.BaseDevice.init_device() has been called
-        dynamic_attrs = self.parse_device_definition(
-            self.load_device_definition(self.DeviceDefinition, self.Repo)
+        filename = self.DeviceModels[self.Model]
+        device_definition = importlib.resources.files(
+            "ska_low_mccs_spshw.pdu.pdu"
+        ).joinpath(filename)
+        dynamic_attrs = parse_device_definition(
+            load_device_definition(str(device_definition), None)
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 

@@ -2,28 +2,6 @@
 defaults:
   logging_level_default: 5
 
-platform:
-  array:
-    stations:
-    - gmrt
-
-  stations:
-    gmrt:
-      sps:
-        daq:
-          calibration:
-            simulated: true
-          bandpass:
-            simulated: true
-        subracks:
-          sr1:
-            simulated: true
-        tpms:
-          tpm10:
-            simulated: true
-          tpm13:
-            simulated: true  
-
 # Use helm_values to set arbitrary helm values.
 # These are passed through to the helm values file as-is.
 # For example,

@@ -112,14 +112,6 @@ def _serialise_object(val: dict[str, Any] | tuple[Any, Any]) -> str:
     return json.dumps(val)
 
 
-abs_change_map = {
-    "boardTemperature": 0.1,
-    "fpga1Temperature": 0.1,
-    "fpga2Temperature": 0.2,
-    "voltageMon": 0.05,
-}
-
-
 # pylint: disable=too-many-lines, too-many-public-methods, too-many-instance-attributes
 class MccsTile(MccsBaseDevice[TileComponentManager]):
     """An implementation of a Tile Tango device for MCCS."""
@@ -350,25 +342,18 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     alarm_handler=functools.partial(
                         self.shutdown_on_max_alarm, "boardTemperature"
                     ),
-                    abs_change=abs_change_map["boardTemperature"],
                 ),
                 "fpga1Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga1Temperature"),
                     alarm_handler=functools.partial(
                         self.shutdown_on_max_alarm, "fpga1Temperature"
                     ),
-                    abs_change=abs_change_map["fpga1Temperature"],
                 ),
                 "fpga2Temperature": AttributeManager(
                     functools.partial(self.post_change_event, "fpga2Temperature"),
                     alarm_handler=functools.partial(
                         self.shutdown_on_max_alarm, "fpga2Temperature"
                     ),
-                    abs_change=abs_change_map["fpga2Temperature"],
-                ),
-                "voltageMon": AttributeManager(
-                    functools.partial(self.post_change_event, "voltageMon"),
-                    abs_change=abs_change_map["voltageMon"],
                 ),
                 "rfiCount": NpArrayAttributeManager(
                     functools.partial(self.post_change_event, "rfiCount")
@@ -438,15 +423,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, False)
-            self.set_archive_event(attr_name, True, False)
+            self.set_change_event(attr_name, True, True)
+            self.set_archive_event(attr_name, True, True)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = TileHealthModel(self._health_changed)
-        self.set_change_event("healthState", True, False)
-        self.set_archive_event("healthState", True, False)
+        self.set_change_event("healthState", True, True)
+        self.set_archive_event("healthState", True, True)
 
     def create_component_manager(
         self: MccsTile,
@@ -1865,7 +1850,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=abs_change_map["voltageMon"],
+        abs_change=0.05,
         min_value=4.5,
         max_value=5.5,
         min_alarm=4.55,
@@ -1925,7 +1910,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=abs_change_map["fpga1Temperature"],
+        abs_change=0.1,
         min_value=15.0,
         max_value=75.0,
         min_alarm=16.0,
@@ -1943,7 +1928,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=abs_change_map["fpga2Temperature"],
+        abs_change=0.2,
         min_value=15.0,
         max_value=75.0,
         min_alarm=16.0,
@@ -2035,7 +2020,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_port"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevDouble",), max_dim_x=32)
+    @attribute(dtype=("DevDouble",), max_dim_x=32, abs_change=0.1)
     def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
@@ -2363,10 +2348,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(
-        dtype=(float,),
-        max_dim_x=32,
-    )
+    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1)
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -2651,7 +2633,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @attribute(
         dtype="DevDouble",
-        abs_change=abs_change_map["boardTemperature"],
+        abs_change=0.1,
         min_value=15.0,
         max_value=70.0,
         min_alarm=16.0,

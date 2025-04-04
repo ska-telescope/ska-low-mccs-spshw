@@ -19,18 +19,15 @@ __all__ = [
 ]
 
 
-# pylint: disable=too-many-instance-attributes
 class AttributeManager:
     """The Base AttributeManager."""
 
-    # pylint: disable=too-many-arguments
     def __init__(
         self: AttributeManager,
         value_time_quality_callback: Callable,
         initial_value: Any = None,
         alarm_handler: None | Callable = None,
         converter: Callable | None = None,
-        abs_change: float | None = None,
     ) -> None:
         """
         Initialise a new AttributeManager.
@@ -45,13 +42,11 @@ class AttributeManager:
             value, timestamp, and quality factor upon update.
         :param alarm_handler: A hook to call when in ALARM.
         :param converter: a optional function to conver the value coming in.
-        :param abs_change: An optional value to determine if we should push an event
         """
         self._converter = converter
         self.alarm_handler = alarm_handler
         self._initial_value = initial_value
         self._value = initial_value
-        self._abs_change = abs_change
         self._quality = (
             tango.AttrQuality.ATTR_INVALID
             if initial_value is None
@@ -68,9 +63,7 @@ class AttributeManager:
 
         :returns: whether or not the value has changed.
         """
-        if self._abs_change is None:
-            return value != self._value
-        return abs(value - self._value) > self._abs_change
+        return value != self._value
 
     def update(self: AttributeManager, value: Any, post: bool = True) -> None:
         """

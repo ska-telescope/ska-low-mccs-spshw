@@ -20,7 +20,6 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
-from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver

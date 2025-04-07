@@ -16,7 +16,7 @@ import traceback
 from typing import Callable
 
 import numpy as np
-from pydaq.persisters import (  # type: ignore
+from ska_low_mccs_daq.aavs_system.python.pydaq.persisters import (  # type: ignore
     BeamFormatFileManager,
     ChannelFormatFileManager,
     FileDAQModes,

@@ -1564,6 +1564,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def I2C_access_alm(
         self: MccsTile,
@@ -1583,6 +1584,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def temperature_alm(
         self: MccsTile,
@@ -1602,6 +1604,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def voltage_alm(
         self: MccsTile,
@@ -1621,6 +1624,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def SEM_wd(
         self: MccsTile,
@@ -1640,6 +1644,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def MCU_wd(
         self: MccsTile,
@@ -1944,7 +1949,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["fpga2Temperature"].read()
 
-    @attribute(dtype=("DevLong",), max_dim_x=2)
+    @attribute(dtype=("DevLong",), max_dim_x=2, abs_change=1)
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
@@ -1980,7 +1985,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_frame_time
 
-    @attribute(dtype=("DevLong",), max_dim_x=16, label="Antenna ID's")
+    @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1, label="Antenna ID's")
     def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
@@ -2009,7 +2014,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_ip"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevLong",), max_dim_x=16)
+    @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1)
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -2020,7 +2025,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_port"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevDouble",), max_dim_x=32, abs_change=0.1)
+    @attribute(dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=1)
     def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
@@ -2251,6 +2256,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=512,
+        abs_change=1,
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -2280,6 +2286,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=32,
+        abs_change=1,
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
@@ -2306,6 +2313,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
+        abs_change=1,
     )
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
@@ -2348,7 +2356,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1)
+    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=1)
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -2366,7 +2374,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_preadu_levels(list(levels))
 
-    @attribute(dtype=("DevLong",), max_dim_x=336)
+    @attribute(dtype=("DevLong",), max_dim_x=336, abs_change=1)
     def beamformerTable(self: MccsTile) -> list[int] | None:
         """
         Get beamformer region table.
@@ -2622,6 +2630,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevLong",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
+        abs_change=1,
     )
     def rfiCount(self: MccsTile) -> list[list]:
         """

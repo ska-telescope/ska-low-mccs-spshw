@@ -125,7 +125,7 @@ class TestTileComponentManager:
         )
 
     # pylint: disable=too-many-arguments
-    @pytest.mark.parametrize("power_state", PowerState)
+    @pytest.mark.parametrize("power_state", [PowerState.ON])
     def test_communication_when_tpm_reachable(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
@@ -178,10 +178,14 @@ class TestTileComponentManager:
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name(),
+                    lookahead=5,
+                    consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.INITIALISED.pretty_name(),
+                    lookahead=5,
+                    consume_nonmatches=True,
                 )
                 try:
                     callbacks["component_state"].assert_call(

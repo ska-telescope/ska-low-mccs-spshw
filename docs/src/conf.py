@@ -33,6 +33,7 @@ def skip_member(app, what, name, obj, skip, options):
         return True  # Skip documenting these members
     return skip
 
+
 def setup(app):
     app.connect("autodoc-skip-member", skip_member)
 
@@ -59,9 +60,10 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
+    "h5py",
     "numpy",
     "pyfabil",
-    "pyaavs",
+    "ska_low_mccs_daq.aavs_system",
     "scipy",
     "ska_tango_base",
     "tango",
@@ -73,7 +75,6 @@ autodoc_mock_imports = [
     "ska_ser_skuid",
     "ska_ser_logging",
     "astropy",
-    "pydaq",
     "watchdog",
 ]
 

@@ -2016,7 +2016,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_port"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=1)
+    @attribute(
+        dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1
+    )
     def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
@@ -2347,7 +2349,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=1)
+    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1)
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.

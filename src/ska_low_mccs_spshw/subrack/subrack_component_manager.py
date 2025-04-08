@@ -182,6 +182,42 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback=task_callback
         )
 
+    def power_pdu_port_on(
+        self: SubrackComponentManager,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port on.
+
+        :param port_number: (one-based) number of the port to turn on.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return cast(SubrackDriver, self._hardware_component_manager).power_pdu_port_on(
+            port_number, task_callback=task_callback
+        )
+
+    def power_pdu_port_off(
+        self: SubrackComponentManager,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port on.
+
+        :param port_number: (one-based) number of the port to turn off.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return cast(SubrackDriver, self._hardware_component_manager).power_pdu_port_off(
+            port_number, task_callback=task_callback
+        )
+
     def set_subrack_fan_speed(
         self: SubrackComponentManager,
         fan_number: int,

@@ -294,6 +294,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "subrack_pll_locked": "subrackPllLocked",
         "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
+        "pdu_outlet_states": "pduOutletStates",
+        "pdu_outlet_currents": "pduCurrents",
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
@@ -422,6 +424,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerOffTpm", "turn_off_tpm"),
             ("PowerUpTpms", "turn_on_tpms"),
             ("PowerDownTpms", "turn_off_tpms"),
+            ("PowerPduPortOn", "power_pdu_port_on"),
+            ("PowerPduPortOff", "Power_pdu_port_off"),
         ]:
             self.register_command_object(
                 command_name,
@@ -584,6 +588,23 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("SetPowerSupplyFanSpeed")
+        result_code, message = handler(argin)
+        return ([result_code], [message])
+
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def PowerPduPortOn(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: int
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Turn the selected pdu port on.
+
+        :param argin: pdu port number
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("PowerPduPortOn")
         result_code, message = handler(argin)
         return ([result_code], [message])
 
@@ -1011,6 +1032,108 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :return: the subrack timestamp
         """
         return self._hardware_attributes.get("subrackTimestamp", None)
+
+    @attribute(dtype=(str,), label="pdu ip address")
+    def pduIpAddress(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu ip address.
+
+        :return: the pdu ip address.
+        """
+        return self._pdu_ip_address()
+
+    def _pdu_ip_address(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu ip address.
+
+        :return: the pdu ip address.
+        """
+        return self._hardware_attributes.get("pduIpAddress", "")
+
+    @attribute(dtype=(str,), label="pdu mac address")
+    def pduMacAddress(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu mac address.
+
+        :return: the pdu mac address.
+        """
+        return self._pdu_mac_address()
+
+    def _pdu_mac_address(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu mac address.
+
+        :return: the pdu mac address.
+        """
+        return self._hardware_attributes.get("pduMacAddress", "")
+
+    @attribute(dtype=(str,), label="pdu model")
+    def pduModel(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu model type.
+
+        :return: the pdu model type
+        """
+        return self._pdu_model()
+
+    def _pdu_model(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu model type.
+
+        :return: the pdu model type.
+        """
+        return self._hardware_attributes.get("pduModel", "")
+
+    @attribute(dtype=(int,), label="pdu number outlets")
+    def pduNumberOutlets(self: MccsSubrack) -> int:
+        """
+        Handle a Tango attribute read of thenumber of pdu outlets.
+
+        :return: the number of pdu outlets
+        """
+        return self._pdu_number_outlets()
+
+    def _pdu_number_outlets(self: MccsSubrack) -> int:
+        """
+        Handle a Tango attribute read of the number of pdu outlets.
+
+        :return: the number of pdu outlets.
+        """
+        return self._hardware_attributes.get("pduOutlets", 0)
+
+    @attribute(dtype=(str,), label="pdu port state")
+    def pduOutletStates(self: MccsSubrack) -> list[str]:
+        """
+        Handle a Tango attribute read of the state of pdu outlets.
+
+        :return: the state of the port.
+        """
+        return self._pdu_outlet_state()
+
+    def _pdu_outlet_state(self: MccsSubrack) -> list[str]:
+        """
+        Handle a Tango attribute read of the state of pdu outlets.
+
+        :return: the state of the port.
+        """
+        return self._hardware_attributes.get("pduOutlets", [])
+
+    @attribute(dtype=(float,), label="pdu port currents")
+    def pduOutletCurrents(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the current of pdu outlets.
+
+        :return: the state of the port.
+        """
+        return self._pdu_outlet_current()
+
+    def _pdu_outlet_current(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the current of pdu outlets.
+
+        :return: the state of the port.
+        """
+        return self._hardware_attributes.get("pduCurrents", [])
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float]:

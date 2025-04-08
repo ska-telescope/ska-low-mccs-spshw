@@ -3800,14 +3800,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "pytest-repeat"
-version = "0.9.3"
+version = "0.9.4"
 description = "pytest plugin for repeating tests"
 optional = false
-python-versions = ">=3.7"
+python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "pytest_repeat-0.9.3-py3-none-any.whl", hash = "sha256:26ab2df18226af9d5ce441c858f273121e92ff55f5bb311d25755b8d7abdd8ed"},
-    {file = "pytest_repeat-0.9.3.tar.gz", hash = "sha256:ffd3836dfcd67bb270bec648b330e20be37d2966448c4148c4092d1e8aba8185"},
+    {file = "pytest_repeat-0.9.4-py3-none-any.whl", hash = "sha256:c1738b4e412a6f3b3b9e0b8b29fcd7a423e50f87381ad9307ef6f5a8601139f3"},
+    {file = "pytest_repeat-0.9.4.tar.gz", hash = "sha256:d92ac14dfaa6ffcfe6917e5d16f0c9bc82380c135b03c2a5f412d2637f224485"},
 ]
 
 [package.dependencies]
@@ -4499,7 +4499,7 @@ watchdog = "^3.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq.git"
 reference = "thorn-110"
-resolved_reference = "07b55045caefc39f16dae279abcb85374bd80d55"
+resolved_reference = "2cb2e6ccb58e8792163a59c49375fa4fc4824db5"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -5793,4 +5793,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "e7924d98074c61864cbc1eaaefff1290eae2e30aac855b7ddea565bd3ea7bfa1"
+content-hash = "517459697fb7d09e153fd5f4189984add577edc4e97f318e6ff7ae52d52d6410"

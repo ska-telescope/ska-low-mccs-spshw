@@ -110,6 +110,7 @@ PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
 ska-low-mccs-daq-interface = "^1.0.0"
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", tag = "2.1.3", subdirectory = "python" }
 # ska-low-mccs-daq = "^1.0.2"
 ska-low-mccs-daq = { git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq.git", branch = "thorn-110" }
 ska-telmodel = "^1.4.1"

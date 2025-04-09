@@ -6,7 +6,7 @@ version = "2.1.3"
 description = "AAVS Software"
 optional = false
 python-versions = "*"
-groups = ["main"]
+groups = ["main", "docs"]
 files = []
 develop = false
 
@@ -5810,4 +5810,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "d07bc74ae360b905b747fbd03694acb43ee83dc5e51f9763817a4c5f59f8a709"
+content-hash = "a5d44f3105f39df5de1f6c3e8ad37f7de7db5be10ea4e4e2c52025fbe425f9d1"

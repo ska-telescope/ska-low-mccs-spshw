@@ -267,6 +267,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
                     # Give comms a moment to establish before checking again
                     sleep(2)
                     continue
+                self._update_communication_state(CommunicationStatus.ESTABLISHED)
                 if self._dedicated_bandpass_daq:
                     self._check_bandpass_monitor(current_status)
                 sleep(self._daq_initialisation_retry_frequency)

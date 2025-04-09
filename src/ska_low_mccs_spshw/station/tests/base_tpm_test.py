@@ -29,9 +29,9 @@ __all__ = ["TestResult", "TpmSelfCheckTest"]
 class TestResult(enum.IntEnum):
     """Enumerate for test results."""
 
-    FAILED = 0
+    PASSED = 0
 
-    PASSED = 1
+    FAILED = 1
 
     ERROR = 2
 

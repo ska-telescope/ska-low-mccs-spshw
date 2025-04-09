@@ -158,9 +158,14 @@ class TpmSelfCheckTest(abc.ABC):
             )
             return TestResult.NOT_RUN, self.stringio_handler.stream.getvalue()
 
+        result = TestResult.ERROR
         try:
             self.test()
             result = TestResult.PASSED
+            if self.daq_proxy is not None:
+                self.test_logger.info(f"{self.daq_proxy.State() =}")
+            else:
+                self.test_logger.info("Daq not present at end of test")
         except Exception as e:  # pylint: disable=broad-except
             error_traceback = traceback.format_exc()
             self.test_logger.error(f"{repr(e)} : {error_traceback}")

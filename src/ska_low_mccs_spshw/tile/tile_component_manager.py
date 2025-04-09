@@ -17,6 +17,7 @@ from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
 import tango
+from pyaavs.tile import Tile
 from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 from ska_control_model import (
     CommunicationStatus,
@@ -29,7 +30,6 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
-from ska_low_mccs_daq.aavs_system.python.pyaavs.tile import Tile
 from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager

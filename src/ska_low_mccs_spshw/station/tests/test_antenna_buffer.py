@@ -38,7 +38,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def test(self: TestAntennaBuffer) -> None:
         """Test the data transmission from the Antenna Buffer to the DAQ."""
-        fpga_list = [0, 1]
+        fpga_list = range(TileData.NUM_FPGA)
         for fpga in fpga_list:
             self.test_fpga(fpga_id=fpga)
 
@@ -105,7 +105,7 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             self._read_antenna_buffer()
-            assert self._data_created_event.wait(100)
+            assert self._data_created_event.wait(20)
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_data(fpga_id)
@@ -193,43 +193,42 @@ class TestAntennaBuffer(BaseDaqTest):
         data = copy(self._data)
         adders = copy(self._adders)
         pattern = copy(self._pattern)
-        channels, antennas, polarisations, samples, _ = data.shape
+        fpga_id, antennas, polarisations, samples, _ = data.shape
         self.test_logger.info(f"data shape: {data.shape}")
-        for channel in range(channels):
-            for antenna in range(antennas):
-                for polarisation in range(polarisations):
-                    self.test_logger.info(
-                        f"channel: {channel}, antenna: {antenna},"
-                        + f" polarisation: {polarisation}"
-                    )
-                    sample_idx = TileData.POLS_PER_ANTENNA * channel
-                    signal_idx = (
-                        antenna % TileData.ANTENNA_COUNT
-                    ) * TileData.POLS_PER_ANTENNA + polarisation
-                    exp_re = pattern[sample_idx] + adders[signal_idx]
-                    exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
-                    expected_data_real = self._signed(exp_re, "CHANNEL")
-                    expected_data_imag = self._signed(exp_im, "CHANNEL")
-                    self.test_logger.info(f"{expected_data_real =}")
-                    self.test_logger.info(f"{expected_data_imag =}")
-                    for i in range(samples):
-                        if (
-                            expected_data_real != data[antenna, polarisation, i, 0]
-                            or expected_data_imag != data[antenna, polarisation, i, 1]
-                        ):
-                            self.test_logger.error("Data Error!")
-                            self.test_logger.error(f"FPGA ID: {fpga_id}")
-                            self.test_logger.error(f"Antenna: {antenna}")
-                            self.test_logger.error(f"Polarization: {polarisation}")
-                            self.test_logger.error(f"Sample index: {i}")
-                            self.test_logger.error(
-                                f"Expected data real: {expected_data_real}"
-                            )
-                            self.test_logger.error(
-                                f"Expected data imag: {expected_data_imag}"
-                            )
-                            self.test_logger.error(
-                                "Received data: " f"{data[antenna, polarisation, i, :]}"
-                            )
-                            raise AssertionError
-                    self.test_logger.info("Data check passed")
+        for antenna in range(antennas):
+            for polarisation in range(polarisations):
+                self.test_logger.info(
+                    f"fpga_id: {fpga_id}, antenna: {antenna},"
+                    + f" polarisation: {polarisation}"
+                )
+                sample_idx = TileData.POLS_PER_ANTENNA * fpga_id
+                signal_idx = (
+                    antenna % TileData.ANTENNA_COUNT
+                ) * TileData.POLS_PER_ANTENNA + polarisation
+                exp_re = pattern[sample_idx] + adders[signal_idx]
+                exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
+                expected_data_real = self._signed(exp_re, "CHANNEL")
+                expected_data_imag = self._signed(exp_im, "CHANNEL")
+                self.test_logger.info(f"{expected_data_real =}")
+                self.test_logger.info(f"{expected_data_imag =}")
+                for i in range(samples):
+                    if (
+                        expected_data_real != data[antenna, polarisation, i, 0]
+                        or expected_data_imag != data[antenna, polarisation, i, 1]
+                    ):
+                        self.test_logger.error("Data Error!")
+                        self.test_logger.error(f"FPGA ID: {fpga_id}")
+                        self.test_logger.error(f"Antenna: {antenna}")
+                        self.test_logger.error(f"Polarization: {polarisation}")
+                        self.test_logger.error(f"Sample index: {i}")
+                        self.test_logger.error(
+                            f"Expected data real: {expected_data_real}"
+                        )
+                        self.test_logger.error(
+                            f"Expected data imag: {expected_data_imag}"
+                        )
+                        self.test_logger.error(
+                            "Received data: " f"{data[antenna, polarisation, i, :]}"
+                        )
+                        raise AssertionError
+                self.test_logger.info("Data check passed")

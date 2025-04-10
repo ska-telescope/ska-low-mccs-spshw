@@ -63,7 +63,7 @@ autodoc_mock_imports = [
     "h5py",
     "numpy",
     "pyfabil",
-    "ska_low_mccs_daq.aavs_system",
+    "ska_low_mccs_daq.pydaq",
     "scipy",
     "ska_tango_base",
     "tango",

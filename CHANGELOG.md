@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+* [SKB-861] Add optional argument start_time to AcquireDataForCalibration
+* [SKB-861] Update AcquireDataForCalibration default start_time to 2 seconds in future.
+
 ## 3.0.2
 
 * [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.

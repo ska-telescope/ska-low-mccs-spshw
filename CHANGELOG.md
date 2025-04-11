@@ -4,7 +4,7 @@
 
 ## 3.0.2
 
-* [THORN-144] DAQ was going to ON before doing it's automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.
+* [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.
 
 ## 3.0.1
 

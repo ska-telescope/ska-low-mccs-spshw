@@ -14,6 +14,7 @@ import itertools
 import json
 import logging
 import os.path
+import time
 import sys
 from dataclasses import dataclass
 from functools import reduce, wraps
@@ -32,7 +33,7 @@ from ska_control_model import (
     SimulationMode,
     TestMode,
 )
-from ska_low_mccs_common import MccsBaseDevice
+from ska_low_mccs_common import MccsBaseDevice, MccsDeviceProxy
 from ska_tango_base.base import CommandTracker
 from ska_tango_base.commands import (
     DeviceInitCommand,
@@ -422,9 +423,32 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ],
         }
 
+        fp1temp = self.get_attribute_config_3("fpga1Temperature")[0]
+        pllLocked = self.get_attribute_config_3("pllLocked")[0]
+        self.logger.error(f"{fp1temp.att_alarm.max_alarm=}")
+        self.logger.error(f"{pllLocked.att_alarm.max_alarm=}")
+        fp1temp.description="I have read the default and updated it"
+        updatedfp1temp = self.set_attribute_config_3(fp1temp)
+        self.logger.error(f"{updatedfp1temp=}")
         for attr_name in self._attribute_state:
             self.set_change_event(attr_name, True, False)
             self.set_archive_event(attr_name, True, False)
+
+    def server_init_hook(self):
+        self.logger.error("Server init hook called")
+
+        self.logger.error(
+            "Using the hardware version property defined to load the appropriate thresholds ..."
+        )
+        self.logger.error(
+            "Using the hardware version property defined to load the appropriate thresholds ..."
+        )
+
+        self.logger.error("Im pretending to do something...")
+        time.sleep(10)
+        self.logger.error("Done pretending!")
+        self._self_proxy = MccsDeviceProxy(self.get_name(), self.logger)
+        self._self_proxy.subscribe_event("fpga1Temperature", tango.EventType.ATTR_CONF_EVENT, self.logger.error)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
@@ -432,6 +456,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_model = TileHealthModel(self._health_changed)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
+
+    def set_attribute_config(self, new_conf):
+        self.logger.error("CAlled set_attribute_config")
+        super().set_attribute_config(new_conf)
+
+    def set_attribute_config_3(self, new_conf):
+        self.logger.error("CAlled set_attribute_config_3")
+        super().set_attribute_config_3(new_conf)
 
     def create_component_manager(
         self: MccsTile,
@@ -1755,6 +1787,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: the logical tile id
         """
+        # self.get_device_properties()
+        # attr_conf = self.get_attribute_config(["fpga1Temperature"])[0]
+        # self.logger.error(f"{attr_conf=}")
+        # attr_conf.max_alarm = "78.0"
+        # attr_conf.description="saopidj"
+        # self.set_attribute_config(attr_conf)
+
         return self._attribute_state["logicalTileId"].read()
 
     @logicalTileId.write  # type: ignore[no-redef]

@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from datetime import datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -2890,6 +2891,7 @@ class SpsStationComponentManager(
         *,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -2905,7 +2907,7 @@ class SpsStationComponentManager(
         """
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[first_channel, last_channel],
+            args=[first_channel, last_channel, start_time],
             task_callback=task_callback,
         )
 
@@ -2960,6 +2962,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -2971,6 +2974,9 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Check for abort, defaults to None
         """
+        if start_time is not None and start_time <= time.time():
+            raise ValueError("start_time must be in the future.")
+
         self.acquiring_data_for_calibration.set()
         try:
             states = self.tile_programming_state()
@@ -3004,10 +3010,19 @@ class SpsStationComponentManager(
 
             self._start_daq("CORRELATOR_DATA")
 
+            if start_time is None:
+                self.logger.error(
+                    "No start_time defined. Defaulting to 5 seconds in the future."
+                )
+                start_time = (
+                    datetime.now(timezone.utc) + timedelta(seconds=5)
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
             # Send data from tpms
             self.send_data_samples(
                 json.dumps(
                     {
+                        "start_time": start_time,
                         "data_type": "channel",
                         "first_channel": first_channel,
                         "last_channel": last_channel,

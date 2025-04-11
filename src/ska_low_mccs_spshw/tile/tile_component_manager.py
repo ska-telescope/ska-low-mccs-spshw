@@ -13,6 +13,7 @@ import json
 import logging
 import threading
 import time
+from datetime import datetime, timezone
 from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
@@ -2128,7 +2129,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :raises ValueError: error in time specification
         :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        self.logger.debug(f"send_data_samples: {data_type}")
         # Check if another operation is pending. Wait at most 0.2 seconds
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
@@ -2149,12 +2149,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.error("Cannot send data, acquisition not started")
             raise ValueError("Cannot send data, acquisition not started")
         else:
+            f= datetime.strptime(start_time, "%Y-%m-%dT%H:%M:%S.%fZ")
+            self.logger.error(f"Time till send {time.time() - f.timestamp()}")
+            self.logger.error(f"Now is {time.time()}")
             timestamp = self.frame_from_utc_time(start_time)
             if timestamp < 0:
                 self.logger.error(f"Invalid time: {start_time}")
                 raise ValueError(f"Invalid time: {start_time}")
             seconds = 0.0
-
         current_frame = self.fpga_current_frame
         tstamp: Optional[int] = timestamp or None
         if current_frame == 0:

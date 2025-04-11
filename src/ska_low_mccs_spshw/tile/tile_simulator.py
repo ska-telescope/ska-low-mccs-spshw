@@ -2175,6 +2175,7 @@ class TileSimulator:
         :param timestamp: When to start transmission
         :param seconds: When to synchronise
         """
+        self.logger.error(f"Now in sim is is {time.time()}")
         # Check if number of samples is a multiple of 32
 
         # if number_of_samples % 32 != 0:

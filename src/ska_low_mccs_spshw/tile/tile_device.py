@@ -423,15 +423,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, False)
-            self.set_archive_event(attr_name, True, False)
+            self.set_change_event(attr_name, True, True)
+            self.set_archive_event(attr_name, True, True)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = TileHealthModel(self._health_changed)
-        self.set_change_event("healthState", True, False)
-        self.set_archive_event("healthState", True, False)
+        self.set_change_event("healthState", True, True)
+        self.set_archive_event("healthState", True, True)
 
     def create_component_manager(
         self: MccsTile,
@@ -1127,10 +1127,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["ddr_reset_counter"].read()
 
-    @attribute(
-        dtype="DevShort",
-        label="f2f_soft_errors",
-    )
+    @attribute(dtype="DevShort", label="f2f_soft_errors", abs_change=1)
     def f2f_soft_errors(self: MccsTile) -> int:
         """
         Return the f2f interface soft error count.
@@ -1145,10 +1142,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["f2f_soft_errors"].read()
 
-    @attribute(
-        dtype="DevShort",
-        label="f2f_hard_errors",
-    )
+    @attribute(dtype="DevShort", label="f2f_hard_errors", abs_change=1)
     def f2f_hard_errors(self: MccsTile) -> int:
         """
         Return the f2f interface hard error count.
@@ -1564,6 +1558,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def I2C_access_alm(
         self: MccsTile,
@@ -1583,6 +1578,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def temperature_alm(
         self: MccsTile,
@@ -1602,6 +1598,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def voltage_alm(
         self: MccsTile,
@@ -1621,6 +1618,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def SEM_wd(
         self: MccsTile,
@@ -1640,6 +1638,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevShort",
         max_warning=1,
         max_alarm=2,
+        abs_change=1,
     )
     def MCU_wd(
         self: MccsTile,
@@ -1679,10 +1678,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._csp_destination_mac
 
-    @attribute(
-        dtype="DevLong",
-        label="cspDestinationPort",
-    )
+    @attribute(dtype="DevLong", label="cspDestinationPort", abs_change=1)
     def cspDestinationPort(self: MccsTile) -> int:
         """
         Return the cspDestinationMac attribute.
@@ -1691,7 +1687,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._csp_destination_port
 
-    @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True)
+    @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True, abs_change=1)
     def simulationMode(self: MccsTile) -> int:
         """
         Report the simulation mode of the device.
@@ -1719,7 +1715,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "'SimulationConfig' property set as desired. "
         )
 
-    @attribute(dtype=TestMode, memorized=True, hw_memorized=True)
+    @attribute(dtype=TestMode, memorized=True, hw_memorized=True, abs_change=1)
     def testMode(self: MccsTile) -> int:
         """
         Report the test mode of the device.
@@ -1746,7 +1742,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "the 'TestConfig' property set as desired."
         )
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.
@@ -1777,7 +1773,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["tileProgrammingState"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
@@ -1944,7 +1940,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["fpga2Temperature"].read()
 
-    @attribute(dtype=("DevLong",), max_dim_x=2)
+    @attribute(dtype=("DevLong",), max_dim_x=2, abs_change=1)
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
@@ -1980,7 +1976,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.fpga_frame_time
 
-    @attribute(dtype=("DevLong",), max_dim_x=16, label="Antenna ID's")
+    @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1, label="Antenna ID's")
     def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
@@ -2009,7 +2005,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_ip"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevLong",), max_dim_x=16)
+    @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1)
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -2020,7 +2016,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             item["dst_port"] for item in self.component_manager.get_40g_configuration()
         ]
 
-    @attribute(dtype=("DevDouble",), max_dim_x=32)
+    @attribute(
+        dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1
+    )
     def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
@@ -2067,7 +2065,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["coreCommunicationStatus"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def currentFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2097,7 +2095,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_beamformer_running
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def phaseTerminalCount(self: MccsTile) -> int:
         """
         Get phase terminal count.
@@ -2115,7 +2113,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_phase_terminal_count(value)
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
@@ -2127,7 +2125,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._attribute_state["ppsDelay"].update(power, post=False)
         return self._attribute_state["ppsDelay"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def ppsDrift(self: MccsTile) -> int:
         """
         Return the observed drift in the ppsDelay of this Tile.
@@ -2136,7 +2134,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["ppsDrift"].read()
 
-    @attribute(dtype="DevLong")
+    @attribute(dtype="DevLong", abs_change=1)
     def ppsDelayCorrection(self: MccsTile) -> int | None:
         """
         Return the correction made to the pps delay.
@@ -2251,6 +2249,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=512,
+        abs_change=1,
     )
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
@@ -2280,6 +2279,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevDouble",),
         max_dim_x=32,
+        abs_change=1,
     )
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
@@ -2306,6 +2306,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevLong",),
         max_dim_x=384,
+        abs_change=1,
     )
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
@@ -2348,10 +2349,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.global_reference_time = reference_time
 
-    @attribute(
-        dtype=(float,),
-        max_dim_x=32,
-    )
+    @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1)
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -2369,7 +2367,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         self.component_manager.set_preadu_levels(list(levels))
 
-    @attribute(dtype=("DevLong",), max_dim_x=336)
+    @attribute(dtype=("DevLong",), max_dim_x=336, abs_change=1)
     def beamformerTable(self: MccsTile) -> list[int] | None:
         """
         Get beamformer region table.
@@ -2625,6 +2623,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=(("DevLong",),),
         max_dim_x=2,  # pol
         max_dim_y=16,  # antenna
+        abs_change=1,
     )
     def rfiCount(self: MccsTile) -> list[list]:
         """

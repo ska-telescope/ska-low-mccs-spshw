@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 3.0.2
+
+* [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.
+
+## 3.0.1
+
+* pyfabil 2.1.0 -> 2.1.1 (<https://gitlab.com/ska-telescope/pyfabil/-/releases>)
+* aavs-system 2.1.3 -> 2.1.6 (<https://gitlab.com/ska-telescope/aavs-system/-/releases>)
+* TPM firmware version 6.2.0 -> 6.2.1
+
 ## 3.0.0
 
 * Update ska-tango-base 1.3.1 -> 1.3.2 (<https://gitlab.com/ska-telescope/ska-tango-base/-/releases>)

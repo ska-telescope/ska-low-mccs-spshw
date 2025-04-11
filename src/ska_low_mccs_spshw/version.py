@@ -9,7 +9,7 @@
 
 version_info = {
     "name": "ska_low_mccs_spshw",
-    "version": "2.0.0",
+    "version": "3.0.1",
     "description": (
         "Monitoring and control of SPS hardware as part of the MCCS subsystem"
     ),

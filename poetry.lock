@@ -1023,7 +1023,7 @@ version = "1.1.10"
 description = "Python 3.4 Enum backported to 3.3, 3.2, 3.1, 2.7, 2.6, 2.5, and 2.4"
 optional = false
 python-versions = "*"
-groups = ["main", "docs"]
+groups = ["main"]
 files = [
     {file = "enum34-1.1.10-py2-none-any.whl", hash = "sha256:a98a201d6de3f2ab3db284e70a33b0f896fbf35f8086594e8c9e74b909058d53"},
     {file = "enum34-1.1.10-py3-none-any.whl", hash = "sha256:c3858660960c984d6ab0ebad691265180da2b43f07e061c0f8dca9ef3cffd328"},
@@ -3207,7 +3207,7 @@ version = "2.1.0"
 description = "A general Python package for interfacing with FPGA boards"
 optional = false
 python-versions = "*"
-groups = ["main", "docs"]
+groups = ["main"]
 files = []
 develop = false
 
@@ -4504,19 +4504,17 @@ h5py = "^3.12.1"
 lockfile = "0.12.2"
 matplotlib = "^3.9.2"
 numpy = "^1.23.0"
-pyfabil = {git = "https://gitlab.com/ska-telescope/pyfabil.git", tag = "2.1.0"}
 PyYAML = "^6.0"
 singleton-decorator = "1.0.0"
 ska-control-model = "^1.0.0"
 ska-low-mccs-daq-interface = "^1.0.0"
-slacker = "0.14.0"
 watchdog = "^3.0.0"
 
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq.git"
 reference = "thorn-110"
-resolved_reference = "51121bd5bf3be93b3aed9c21bebef4c607f14524"
+resolved_reference = "bcb76b0cf725b33ff2f79480b8f897a593188e1b"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -4714,7 +4712,7 @@ version = "0.14.0"
 description = "Slack API client"
 optional = false
 python-versions = "*"
-groups = ["main", "docs"]
+groups = ["main"]
 files = [
     {file = "slacker-0.14.0.tar.gz", hash = "sha256:1ae7c597025c114e202b5c880345f150f795665bfc638010cac614ede4ed5108"},
 ]
@@ -5699,7 +5697,7 @@ version = "0.45.1"
 description = "A built-package format for Python"
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "docs"]
+groups = ["main"]
 files = [
     {file = "wheel-0.45.1-py3-none-any.whl", hash = "sha256:708e7481cc80179af0e556bbf0cc00b8444c7321e2700b8d8580231d13017248"},
     {file = "wheel-0.45.1.tar.gz", hash = "sha256:661e1abd9198507b1409a20c02106d9670b2576e916d58f520316666abca6729"},

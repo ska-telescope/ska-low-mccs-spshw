@@ -1210,7 +1210,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             delay=delay,
             global_reference_time=global_start_timestamp,
         )
-        self._request_provider.desire_start_acquisition(request)
+        self._request_provider.desire_lrc(request)
         self.logger.info("StartAcquisition command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -1819,7 +1819,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             **kwargs,
         )
-        self._request_provider.desire_start_antenna_buffer(request)
+        self._request_provider.desire_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -1895,7 +1895,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_object=self._read_antenna_buffer,
             task_callback=task_callback,
         )
-        self._request_provider.desire_read_antenna_buffer(request)
+        self._request_provider.desire_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating

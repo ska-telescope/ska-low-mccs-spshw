@@ -163,6 +163,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.tile_health_structure: dict[str, dict[str, Any]] = {}
         self._antenna_ids: list[int]
         self._info: dict[str, Any] = {}
+        self.component_manager: TileComponentManager
 
     def init_device(self: MccsTile) -> None:
         """
@@ -2658,9 +2659,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["boardTemperature"].read()
 
-    # # --------
-    # # Commands
-    # # --------
+    # --------
+    # Commands
+    # --------
 
     @command(dtype_in="DevString")
     def Configure(self: MccsTile, argin: str) -> None:

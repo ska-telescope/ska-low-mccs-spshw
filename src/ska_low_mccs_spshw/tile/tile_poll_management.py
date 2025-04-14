@@ -307,7 +307,6 @@ class RequestIterator:
         return item
 
 
-# pylint: disable=too-many-instance-attributes
 class TileRequestProvider:
     """
     A class that manages requests for the Tile.

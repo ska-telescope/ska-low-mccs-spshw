@@ -491,8 +491,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
             ("ApplyPointingDelays", self.ApplyPointingDelaysCommand),
-            ("StartBeamformer", self.StartBeamformerCommand),
-            ("StopBeamformer", self.StopBeamformerCommand),
             (
                 "ConfigureIntegratedChannelData",
                 self.ConfigureIntegratedChannelDataCommand,
@@ -519,13 +517,31 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Long running commands
         #
 
-        for command_name, method_name in [
-            ("Initialise", "initialise"),
-            ("DownloadFirmware", "download_firmware"),
-            ("ReadAntennaBuffer", "read_antenna_buffer"),
-            ("StartAntennaBuffer", "start_antenna_buffer"),
-            ("Configure", "configure"),
+        start_beamformer_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_StartBeamformer.json",
+            )
+        )
+
+        for command_name, method_name, schema in [
+            ("Initialise", "initialise", None),
+            ("DownloadFirmware", "download_firmware", None),
+            ("ReadAntennaBuffer", "read_antenna_buffer", None),
+            ("StartAntennaBuffer", "start_antenna_buffer", None),
+            ("Configure", "configure", None),
+            ("StartBeamformer", "start_beamformer", start_beamformer_schema),
+            ("StopBeamformer", "stop_beamformer", None),
         ]:
+            validator = (
+                None
+                if schema is None
+                else JsonValidator(
+                    command_name,
+                    schema,
+                    logger=self.logger,
+                )
+            )
             self.register_command_object(
                 command_name,
                 SubmittedSlowCommand(
@@ -535,6 +551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     method_name,
                     callback=None,
                     logger=self.logger,
+                    validator=validator,
                 ),
             )
 
@@ -4302,66 +4319,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    class StartBeamformerCommand(FastCommand):
-        # pylint: disable=line-too-long
-        """
-        Class for handling the StartBeamformer(argin) command.
-
-        This command takes as input a JSON string that conforms to the
-        following schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_StartBeamformer.json
-           :language: json
-        """  # noqa: E501
-
-        SCHEMA: Final = json.loads(
-            importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
-                "MccsTile_StartBeamformer.json",
-            )
-        )
-
-        def __init__(
-            self: MccsTile.StartBeamformerCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StartBeamformerCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            validator = JsonValidator("StartBeamformer", self.SCHEMA, logger)
-            super().__init__(logger, validator)
-
-        SUCCEEDED_MESSAGE = "StartBeamformer command completed OK"
-
-        def do(
-            self: MccsTile.StartBeamformerCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StartBeamformer` command functionality.
-
-            :param args: Positional arguments. This should be empty and
-                is provided for type hinting purposes only.
-            :param kwargs: keyword arguments unpacked from the JSON
-                argument to the command.
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            start_time = kwargs.get("start_time", None)
-            duration = kwargs.get("duration", -1)
-            subarray_beam_id = kwargs.get("subarray_beam_id", -1)
-            scan_id = kwargs.get("scan_id", 0)
-            self._component_manager.start_beamformer(
-                start_time, duration, subarray_beam_id, scan_id
-            )
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
-
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
     def StartBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
@@ -4391,43 +4348,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("StartBeamformer")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
-
-    class StopBeamformerCommand(FastCommand):
-        """Class for handling the StopBeamformer() command."""
-
-        def __init__(
-            self: MccsTile.StopBeamformerCommand,
-            component_manager: TileComponentManager,
-            logger: logging.Logger | None = None,
-        ) -> None:
-            """
-            Initialise a new StopBeamformerCommand instance.
-
-            :param component_manager: the device to which this command belongs.
-            :param logger: a logger for this command to use.
-            """
-            self._component_manager = component_manager
-            super().__init__(logger)
-
-        SUCCEEDED_MESSAGE = "StopBeamformer command completed OK"
-
-        def do(
-            self: MccsTile.StopBeamformerCommand, *args: Any, **kwargs: Any
-        ) -> tuple[ResultCode, str]:
-            """
-            Implement :py:meth:`.MccsTile.StopBeamformer` command functionality.
-
-            :param args: unspecified positional arguments. This should be empty and is
-                provided for type hinting only
-            :param kwargs: unspecified keyword arguments. This should be empty and is
-                provided for type hinting only
-
-            :return: A tuple containing a return code and a string
-                message indicating status. The message is for
-                information purpose only.
-            """
-            self._component_manager.stop_beamformer()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def StopBeamformer(self: MccsTile) -> DevVarLongStringArrayType:

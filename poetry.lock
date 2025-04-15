@@ -4501,31 +4501,32 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-daq"
-version = "1.0.2"
+version = "2.0.0"
 description = "Data acquisition for the SKA-Low Monitoring, Control and Calibration Subsystem (MCCS)"
 optional = false
-python-versions = "^3.10"
+python-versions = ">=3.10,<4.0"
 groups = ["main", "docs"]
-files = []
-develop = false
+files = [
+    {file = "ska_low_mccs_daq-2.0.0-py3-none-any.whl", hash = "sha256:58bc730a846f6ded6c54e866969ad73737e05ab555c163e6ea6b837cba08cb44"},
+    {file = "ska_low_mccs_daq-2.0.0.tar.gz", hash = "sha256:e5bad1de80899fa1ee318e756938f928598696c0d7a8e7054d875a9c88259873"},
+]
 
 [package.dependencies]
-future = "^0.18.2"
-h5py = "^3.12.1"
+future = ">=0.18.2,<0.19.0"
+h5py = ">=3.12.1,<4.0.0"
 lockfile = "0.12.2"
-matplotlib = "^3.9.2"
-numpy = "^1.23.0"
-PyYAML = "^6.0"
+matplotlib = ">=3.9.2,<4.0.0"
+numpy = ">=1.23.0,<2.0.0"
+PyYAML = ">=6.0,<7.0"
 singleton-decorator = "1.0.0"
-ska-control-model = "^1.0.0"
-ska-low-mccs-daq-interface = "^1.0.0"
-watchdog = "^3.0.0"
+ska-control-model = ">=1.0.0,<2.0.0"
+ska-low-mccs-daq-interface = ">=1.0.0,<2.0.0"
+watchdog = ">=3.0.0,<4.0.0"
 
 [package.source]
-type = "git"
-url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq.git"
-reference = "thorn-110"
-resolved_reference = "9eea4bdcb7e7555e53488e5a1f90220159fc326d"
+type = "legacy"
+url = "https://artefact.skao.int/repository/pypi-internal/simple"
+reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -5819,4 +5820,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "b5a7b991076dbe81fe70bd6cb2012b8e3b214fe7251ca690fed42150dc2a47fb"
+content-hash = "01b2789922d6a8b1469e802a979515198b6777f72ea6286de7c97ab4549a7d28"

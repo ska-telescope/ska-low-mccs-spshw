@@ -899,7 +899,6 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
-                self.logger.debug("handling change in adcpower")
                 self._adc_power[logical_tile_id] = attribute_value.tolist()
                 adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
@@ -909,7 +908,6 @@ class SpsStationComponentManager(
             case "statictimedelays":
                 self._static_delays[logical_tile_id] = attribute_value.tolist()
             case "preadulevels":
-                self.logger.debug("handling change in preaduLevels")
                 # Note: Currently all we do is update the attribute value.
                 self._preadu_levels[logical_tile_id] = attribute_value.tolist()
             case "ppsdelay":
@@ -1224,8 +1222,9 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
-        self.logger.debug("Starting standby sequence.")
-        self.logger.debug("State transitions suppressed during power command.")
+        self.logger.debug(
+            "Starting standby. State transitions suppressed during power command."
+        )
         result_code = ResultCode.OK  # default if nothing to do
         if task_callback:
             task_callback(status=TaskStatus.IN_PROGRESS)

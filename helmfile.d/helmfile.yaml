@@ -51,7 +51,7 @@ environments:
   gmrt:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/gmrt
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?d05713b7f9e0808c8974b979737de39db647dbd8#tmdata/gmrt
         datasets:
         - gmrt.yaml
         - stations/gmrt.yaml
@@ -119,7 +119,7 @@ environments:
   ral-software:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
         datasets:
         - stfc-ral.yaml
         - stations/stfc-ral-software.yaml
@@ -129,10 +129,10 @@ environments:
   ral-software-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
         datasets:
         - stations/stfc-ral-software.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/minikube
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/minikube
         datasets:
         - platform.yaml
       config_files:
@@ -141,7 +141,7 @@ environments:
   ral-firmware:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
         datasets:
         - stfc-ral.yaml
         - stations/stfc-ral-firmware.yaml
@@ -151,7 +151,7 @@ environments:
   ral-partial:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?80a50483154825f785545d6acfbe8724030d14a0#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
         datasets:
         - stfc-ral.yaml
         - stations/stfc-ral-partial.yaml

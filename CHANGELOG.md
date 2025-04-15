@@ -1,6 +1,8 @@
 # Version History
 
-## Unreleased
+## 3.0.3
+
+* [THORN-144] Re-release of 3.0.2 with correct image.
 
 ## 3.0.2
 

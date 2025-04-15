@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 3.0.3
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
+
 ## 3.0.2
 
 * [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.

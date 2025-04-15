@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+import importlib
 import ipaddress
 import itertools
 import json
@@ -18,7 +19,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from functools import wraps
-from typing import Any, Callable, Optional, cast
+from typing import Any, Callable, Final, Optional, cast
 
 import numpy as np
 import tango
@@ -97,6 +98,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         dtype=(str,),
         default_value=[],
     )
+    StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation
@@ -162,6 +164,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tCspRounding: {self.CspRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
+            f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -210,6 +213,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.ChanneliserRounding,
             self.CspRounding,
             self.AntennaConfigURI,
+            self.StartBandpassesInInitialise,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
@@ -246,8 +250,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["first_channel", "last_channel"],
         }
 
+        initialise_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station.schemas",
+                "SpsStation_Initialise.json",
+            )
+        )
+
         for command_name, method_name, schema in [
-            ("Initialise", "initialise", None),
+            ("Initialise", "initialise", initialise_schema),
             ("StartAcquisition", "start_acquisition", None),
             (
                 "AcquireDataForCalibration",
@@ -1461,10 +1472,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # -------------
 
     @command(
-        dtype_in="DevVoid",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
+    # pylint: disable=line-too-long
+    def Initialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Initialise the station.
 
@@ -1472,12 +1484,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
 
+        :param argin: A json-ified dictionary adhering to the initialise schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_Initialise.json
+            :language: json
+
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """
+        """  # noqa: E501
         handler = self.get_command_object("Initialise")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(dtype_in=("DevLong",), dtype_out="DevVarLongStringArray")

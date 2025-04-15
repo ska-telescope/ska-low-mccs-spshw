@@ -396,6 +396,7 @@ class SpsStationComponentManager(
         channeliser_rounding: list[int] | None,
         csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
+        start_bandpasses_in_initialise: bool,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -429,6 +430,8 @@ class SpsStationComponentManager(
             Until it is updated to support a full list,
             we restrict this interface to one integer.
         :param antenna_config_uri: location of the antenna mapping file
+        :param start_bandpasses_in_initialise: whether to start bandpasses
+            in initialise.
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -448,6 +451,7 @@ class SpsStationComponentManager(
         self._station_id = station_id
         self._lmc_daq_trl = lmc_daq_trl
         self._bandpass_daq_trl = bandpass_daq_trl
+        self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
 
@@ -1354,7 +1358,7 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code = self._route_data(task_callback, task_abort_event)
+            result_code = self._route_data(None, task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1380,6 +1384,8 @@ class SpsStationComponentManager(
     def initialise(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        start_bandpasses: Optional[bool] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _initialise method.
@@ -1388,14 +1394,19 @@ class SpsStationComponentManager(
         `self._initialise` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param start_bandpasses: Whether to configure TPMs to send
+            integrated data. Defaults to True.
         :return: a task status and response message
         """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+        return self.submit_task(
+            self._initialise, task_callback=task_callback, args=[start_bandpasses]
+        )
 
     @check_communicating
     # pylint: disable=too-many-branches
     def _initialise(
         self: SpsStationComponentManager,
+        start_bandasses: Optional[bool] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1404,6 +1415,8 @@ class SpsStationComponentManager(
 
         The order to turn a station on is: subrack, then tiles
 
+        :param start_bandasses: Whether to configure TPMs to send
+            integrated data.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
@@ -1450,7 +1463,11 @@ class SpsStationComponentManager(
 
         if result_code == ResultCode.OK:
             self.logger.debug("Routing data")
-            result_code = self._route_data(task_callback, task_abort_event)
+            result_code = self._route_data(
+                start_bandasses,
+                task_callback,
+                task_abort_event,
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1860,6 +1877,7 @@ class SpsStationComponentManager(
 
     def _route_data(
         self: SpsStationComponentManager,
+        start_bandpasses: Optional[bool] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> ResultCode:
@@ -1869,6 +1887,8 @@ class SpsStationComponentManager(
         Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
         everything else over the 10G to the LMC DAQ.
 
+        :param start_bandpasses: whether to start sending
+            integrated data, defaults to deployed default.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         :return: a result code
@@ -1914,11 +1934,16 @@ class SpsStationComponentManager(
             dst_port=self._lmc_port,
             payload_length=self._lmc_payload_length,
         )
-        self.configure_integrated_channel_data(
-            integration_time=self._bandpass_integration_time,
-            first_channel=0,
-            last_channel=511,
-        )
+        if (
+            start_bandpasses
+            if start_bandpasses is not None
+            else self._start_bandpasses_in_initialise
+        ):
+            self.configure_integrated_channel_data(
+                integration_time=self._bandpass_integration_time,
+                first_channel=0,
+                last_channel=511,
+            )
         return ResultCode.OK
 
     @property  # type:ignore[misc]

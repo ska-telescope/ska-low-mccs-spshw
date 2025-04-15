@@ -646,7 +646,7 @@ def test_Initialise(
     )
     change_event_callbacks["command_result"].assert_change_event(("", ""))
 
-    ([result_code], [command_id]) = station_device.Initialise()
+    ([result_code], [command_id]) = station_device.Initialise("{}")
     assert result_code == ResultCode.QUEUED
 
     change_event_callbacks["command_status"].assert_change_event(

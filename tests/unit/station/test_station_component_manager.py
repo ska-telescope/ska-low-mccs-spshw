@@ -179,6 +179,7 @@ def station_component_manager_fixture(
         None,  # channeliser_rounding
         4,  # csp_rounding
         antenna_uri,
+        True,  # whether or not to start bandpasses in initialise
         logger,
         callbacks["communication_status"],
         callbacks["component_state"],

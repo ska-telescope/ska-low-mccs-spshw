@@ -1,5 +1,9 @@
 # Version History
 
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
+
 ## 3.1.0
 
 * [SKB-861] Add optional argument start_time to AcquireDataForCalibration
@@ -8,10 +12,6 @@
 ## 3.0.3
 
 * [THORN-144] Re-release of 3.0.2 with correct image.
-
-## 3.0.3
-
-* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
 
 ## 3.0.2
 

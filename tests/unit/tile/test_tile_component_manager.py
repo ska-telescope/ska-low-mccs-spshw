@@ -21,7 +21,6 @@ import numpy as np
 import pytest
 import pytest_mock
 import tango
-from pyfabil.base.definitions import LibraryError
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
@@ -30,6 +29,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
+from ska_low_sps_tpm_api.base.definitions import LibraryError
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -1885,7 +1885,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([3.0] * 32)
-        # Read PyFABIL software preADU levels for preADU 1, channel 1
+        # Read ska_low_sps_tpm_api software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([4.0] * 32)

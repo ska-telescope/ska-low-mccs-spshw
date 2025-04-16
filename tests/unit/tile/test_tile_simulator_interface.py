@@ -13,8 +13,8 @@ from collections.abc import ValuesView
 from types import FunctionType
 
 import pytest
-from pyaavs.tile import Tile as AavsTile
-from pyaavs.tile import TileHealthMonitor
+from ska_low_sps_tpm_api.tile import Tile as AavsTile
+from ska_low_sps_tpm_api.tile import TileHealthMonitor
 
 from ska_low_mccs_spshw.tile import TileSimulator
 

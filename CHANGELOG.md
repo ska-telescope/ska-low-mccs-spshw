@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
+
 ## 3.1.0
 
 * [SKB-861] Add optional argument start_time to AcquireDataForCalibration

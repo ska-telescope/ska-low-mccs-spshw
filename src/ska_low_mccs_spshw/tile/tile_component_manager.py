@@ -17,8 +17,6 @@ from typing import Any, Callable, Final, List, NoReturn, Optional, cast
 
 import numpy as np
 import tango
-from pyaavs.tile import Tile
-from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
@@ -30,6 +28,13 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
+from ska_low_sps_tpm_api.base.definitions import (
+    BoardError,
+    Device,
+    LibraryError,
+    RegisterInfo,
+)
+from ska_low_sps_tpm_api.tile import Tile
 from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
@@ -49,8 +54,8 @@ __all__ = ["TileComponentManager"]
 
 # TODO MCCS-2295: Why does the TileRequestProvider, MccsTile and
 # TileComponentManager have different names for things? It seems clearer for them
-# all to use the name in pyaavs.Tile. Multiple maps like this increase the risk of a
-# mapping errors.
+# all to use the name in ska_low_sps_tpm_api.Tile. Multiple maps like this increase
+# the risk of mapping errors.
 _ATTRIBUTE_MAP: Final = {
     "HEALTH_STATUS": "tile_health_structure",
     "PREADU_LEVELS": "preadu_levels",
@@ -494,8 +499,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param exception: exception code raised from poll.
         """
         # TODO: would be great to formalise and document the exceptions raised
-        # from the pyaavs.Tile. That way it will allow use to handle exceptions
-        # better.
+        # from the ska_low_sps_tpm_api.Tile. That way it will allow use to
+        # handle exceptions better.
         match exception:
             case ConnectionError():
                 self.logger.error(f"ConnectionError found {exception}")

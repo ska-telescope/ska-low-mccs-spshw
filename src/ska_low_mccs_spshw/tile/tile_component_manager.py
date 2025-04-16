@@ -1520,10 +1520,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Check if 10 MHz clock signal is present.
 
-        :raises NotImplementedError: not implemented in aavs-system.
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
         """
         raise NotImplementedError(
-            "methods clock_present not yet implemented in aavs-system"
+            "methods clock_present not yet implemented in ska-low-sps-tpm-api"
         )
 
     @property
@@ -1532,10 +1532,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         Check if SYSREF signal is present.
 
-        :raises NotImplementedError: not implemented in aavs-system.
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
         """
         raise NotImplementedError(
-            "methods sysref_present not yet implemented in aavs-system"
+            "methods sysref_present not yet implemented in ska-low-sps-tpm-api"
         )
 
     @property

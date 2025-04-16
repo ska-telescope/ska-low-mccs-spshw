@@ -997,12 +997,12 @@ class TileSimulator:
         Get the health state of the tile.
 
         :param kwargs: Any kwargs to identify health group.
-            see aavs-system.Tile
+            see ska_low_sps_tpm_api.Tile
 
         :return: mocked fetch of health.
         """
         if any([value == 2 for value in self._global_status_alarms.values()]):
-            # aavs-system return a subset of the health with mcu alarms
+            # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)

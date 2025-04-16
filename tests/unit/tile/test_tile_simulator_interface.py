@@ -71,7 +71,7 @@ def test_interface() -> None:
     """
     Test that the TileSimulator interface is correct.
 
-    The TileSimulator aims to mock the aavs-system.
+    The TileSimulator aims to mock the ska-low-sps-tpm-api.
     This test is to ensure that the methods are available
     and have the correct signatures.
     """

@@ -96,8 +96,8 @@ def excluded_tile_attributes_fixture() -> list[str]:
     """
     return [
         "buildState",  # Mismatch between cpp and tango args.
-        "clockPresent",  # Not yet implemented in aavs-system.
-        "sysrefPresent",  # Not yet implemented in aavs-system.
+        "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.

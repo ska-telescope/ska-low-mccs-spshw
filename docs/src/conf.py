@@ -64,6 +64,7 @@ autodoc_mock_imports = [
     "ska_low_sps_tpm_api",
     "scipy",
     "ska_tango_base",
+    "ska_low_mccs_daq",
     "tango",
     "ska_control_model",
     "ska_low_mccs_common",

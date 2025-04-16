@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from itertools import count
+from queue import Empty, PriorityQueue
 from typing import Any, Callable, Optional
 
 from ska_control_model import ResultCode, TaskStatus
@@ -307,6 +309,11 @@ class RequestIterator:
         return item
 
 
+# (priority, command_counter, wipe_time, TileLRCRequest)
+# Lower numeric priority means a higher priority.
+LRCEntry = tuple[int, int, float, TileLRCRequest]
+
+
 class TileRequestProvider:
     """
     A class that manages requests for the Tile.
@@ -333,88 +340,43 @@ class TileRequestProvider:
         """
         self._stale_attribute_callback = stale_attribute_callback
         self.request_iterator = _request_iterator or RequestIterator()
-        self._lrc_list: list[TileLRCRequest] = []
-        self.initialise_request: Optional[TileLRCRequest] = None
-        self.download_firmware_request: Optional[TileLRCRequest] = None
+        self._lrc_queue: PriorityQueue[LRCEntry] = PriorityQueue()
+        # The command counter is used to ensure that commands are executed in the
+        # order they were received. It is incremented each time a command is
+        # added to the queue.
+        self._command_counter = count()
         self._desire_connection = False
-        self.command_wipe_time: dict[TileLRCRequest, float] = {}
 
     def desire_connection(self) -> None:
         """Register a request to connect with the TPM."""
         self._desire_connection = True
 
-    def desire_initialise(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to initialize a device.
-
-        :param request: The initialise request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        # Clear any previous requests.
-        for lrc_request in self._lrc_list:
-            lrc_request.notify_removed_from_queue()
-        self._lrc_list.clear()
-        self.initialise_request = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time[request] = wipe_time
-        self._lrc_list.append(self.initialise_request)
-        self.initialise_request.notify_queued()
-
-    def desire_download_firmware(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to download new firmware to a device.
-
-        :param request: The download firmware request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        if self.download_firmware_request:
-            self.download_firmware_request.notify_removed_from_queue()
-            self.download_firmware_request = None
-        self.download_firmware_request = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time[request] = wipe_time
-        self._lrc_list.append(self.download_firmware_request)
-        self.download_firmware_request.notify_queued()
-
-    def desire_lrc(
+    def enqueue_lrc(
         self,
         request: TileLRCRequest,
+        priority: int = 999,
         wipe_time: Optional[float] = None,
     ) -> None:
         """
         Register a request to be executed on the Tile.
 
+        :param priority: The priority of the request. Lower number means higher
+            priority.
         :param request: The LRC request to execute on a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
+        if request.name == "initialise":
+            while self._lrc_queue.qsize():
+                _, _, _, old_request = self._lrc_queue.get_nowait()
+                old_request.notify_removed_from_queue()
+
+            # Reset command counter back to 0
+            self._command_counter = count()
+
         if wipe_time is None:
             wipe_time = time.time() + 60
-        self.command_wipe_time[request] = wipe_time
-        self._lrc_list.append(request)
+        self._lrc_queue.put((priority, next(self._command_counter), wipe_time, request))
         request.notify_queued()
-
-    def _wipe_old_long_running_commands(self) -> None:
-        """Remove old commands."""
-        # Check if the initialise LRC need to be aborted.
-        for lrc_request in self._lrc_list:
-            if self.command_wipe_time.get(lrc_request) is not None:
-                if time.time() > self.command_wipe_time[lrc_request]:
-                    lrc_request.notify_removed_from_queue()
-                    self._lrc_list.remove(lrc_request)
-                    self.command_wipe_time.pop(lrc_request)
-                    match lrc_request.name:
-                        case "initialise":
-                            self.initialise_request = None
-                        case "download_firmware":
-                            self.download_firmware_request = None
 
     def __del__(self) -> None:
         """Clean up and notify callbacks."""
@@ -424,9 +386,7 @@ class TileRequestProvider:
             if self._stale_attribute_callback is not None:
                 self._stale_attribute_callback(stale_attributes)
 
-    def get_request(  # pylint: disable=too-many-return-statements
-        self, tpm_status: TpmStatus
-    ) -> str | TileRequest | None:
+    def get_request(self, tpm_status: TpmStatus) -> str | TileRequest | None:
         """
         Get the next request to execute on the Tile.
 
@@ -434,7 +394,6 @@ class TileRequestProvider:
 
         :return: the next request to execute on the Tile.
         """
-        self._wipe_old_long_running_commands()
         # Calculate attributes no longer being polled, and call a callback with them
         # If a callback is available.
         stale_attributes = self.request_iterator.calculate_stale_attributes(tpm_status)
@@ -447,33 +406,26 @@ class TileRequestProvider:
             self._desire_connection = False
             return "CONNECT"
 
-        # Check for any commands.
+        try:
+            lrc_entry = self._lrc_queue.get_nowait()
+        except Empty:
+            return next(self.request_iterator)
+
+        _, _, wipe_time, request = lrc_entry
+        # Check if the request has timed out.
+        # If it has, we will notify the request and remove it from the queue.
+        if time.time() > wipe_time:
+            request.notify_removed_from_queue()
+            return next(self.request_iterator)
+
         match tpm_status:
             case TpmStatus.UNPROGRAMMED | TpmStatus.PROGRAMMED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self._lrc_list.remove(self.initialise_request)
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self._lrc_list.remove(self.download_firmware_request)
-                    self.download_firmware_request = None
+                if request.name in ("initialise", "download_firmware"):
                     return request
             case TpmStatus.INITIALISED | TpmStatus.SYNCHRONISED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self._lrc_list.remove(self.initialise_request)
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self._lrc_list.remove(self.download_firmware_request)
-                    self.download_firmware_request = None
-                    return request
-                if self._lrc_list:
-                    request = self._lrc_list.pop(0)
-                    return request
+                return request
 
-        # return next item to poll
+        # If we are not in a state where we can process the request,
+        # notify the request and remove it from the queue.
+        request.notify_removed_from_queue()
         return next(self.request_iterator)

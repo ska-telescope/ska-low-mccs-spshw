@@ -308,7 +308,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             **kwargs,
         )
-        self._request_provider.desire_lrc(request)
+        self._request_provider.enqueue_lrc(request)
         self.logger.info(f"Request {command_name} QUEUED.")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -740,7 +740,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.desire_initialise(request)
+            self._request_provider.enqueue_lrc(request, priority=0)
         return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
@@ -842,11 +842,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 TpmStatus.SYNCHRONISED,
             ]:
                 with self._initialise_lock:
-                    if (
-                        self._request_provider
-                        and self._request_provider.initialise_request is None
-                        and not isinstance(self.active_request, TileLRCRequest)
-                        or isinstance(self.active_request, TileLRCRequest)
+                    if self._request_provider and not (
+                        isinstance(self.active_request, TileLRCRequest)
                         and self.active_request.name.lower() != "initialise"
                     ):
                         request = TileLRCRequest(
@@ -863,7 +860,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
                         assert self._request_provider is not None
 
-                        self._request_provider.desire_initialise(request)
+                        self._request_provider.enqueue_lrc(request, priority=0)
 
         else:
             self._tile_time.set_reference_time(0)
@@ -1046,7 +1043,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             pps_delay_correction=self._pps_delay_correction,
         )
         with self._initialise_lock:
-            self._request_provider.desire_initialise(request)
+            self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Initialise command placed initialise in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -1166,7 +1163,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             bitfile=argin,
         )
-        self._request_provider.desire_download_firmware(request)
+        self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -1843,7 +1840,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             **kwargs,
         )
-        self._request_provider.desire_lrc(request)
+        self._request_provider.enqueue_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -1919,7 +1916,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_object=self._read_antenna_buffer,
             task_callback=task_callback,
         )
-        self._request_provider.desire_lrc(request)
+        self._request_provider.enqueue_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating

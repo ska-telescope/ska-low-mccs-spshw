@@ -239,6 +239,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "properties": {
                 "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
                 "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
+                "start_time": {"type": "string"},
             },
             "required": ["first_channel", "last_channel"],
         }

@@ -1,7 +1,7 @@
 dependencies:
 - name: ska-low-mccs-daq
   repository: https://artefact.skao.int/repository/helm-internal
-  version: 1.0.2
+  version: 2.0.0
 - name: ska-tango-devices
   repository: https://artefact.skao.int/repository/helm-internal
   version: 0.2.3

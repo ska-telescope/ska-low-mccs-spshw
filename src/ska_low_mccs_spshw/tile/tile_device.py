@@ -2220,10 +2220,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Report if 10 MHz clock signal is present at the TPM input.
 
-        :raises NotImplementedError: not implemented in aavs-system.
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
         """
         raise NotImplementedError(
-            "method clockPresent not yet implemented in aavs-system"
+            "method clockPresent not yet implemented in ska-low-sps-tpm-api"
         )
 
     @attribute(dtype="DevBoolean")
@@ -2231,10 +2231,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Report if SYSREF signal is present at the FPGA.
 
-        :raises NotImplementedError: not implemented in aavs-system.
+        :raises NotImplementedError: not implemented in ska-low-sps-tpm-api.
         """
         raise NotImplementedError(
-            "method sysrefPresent not yet implemented in aavs-system"
+            "method sysrefPresent not yet implemented in ska-low-sps-tpm-api"
         )
 
     @attribute(dtype="DevBoolean")

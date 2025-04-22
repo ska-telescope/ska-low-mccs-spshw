@@ -422,10 +422,9 @@ class TileRequestProvider:
 
         match tpm_status:
             case TpmStatus.UNPROGRAMMED | TpmStatus.PROGRAMMED:
-                if request.name == "initialise":
-                    self.initialise_queued = False
-                    return request
-                if request.name == "download_firmware":
+                if request.name in ("initialise", "download_firmware"):
+                    if request.name == "initialise":
+                        self.initialise_queued = False
                     return request
             case TpmStatus.INITIALISED | TpmStatus.SYNCHRONISED:
                 return request

@@ -1906,10 +1906,7 @@ class SpsStationComponentManager(
             )
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
-        self.logger.debug(
-            "Configuring LMC Download: "
-            f"{self._lmc_param['destination_ip']}:{self._lmc_param['destination_port']}"
-        )
+        self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
         self.logger.debug(
             "Configuring LMC Integrated Download: "
             f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"

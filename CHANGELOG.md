@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
 * [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
 
 ## 3.1.0

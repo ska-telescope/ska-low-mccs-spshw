@@ -1,11 +1,16 @@
 # Version History
 
-## 3.1.0
+## 4.0.0
 
 * [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
   bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
   property to populate on SpsStation.
-
+* [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
+  this is optional, defaults to True. If set to false we won't send integrated data during
+  Initialise()
+* [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
+  optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
+  property is used.
 * [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
 
 ## 3.1.0

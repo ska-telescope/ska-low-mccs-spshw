@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from datetime import datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -3098,6 +3099,7 @@ class SpsStationComponentManager(
         *,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -3107,13 +3109,14 @@ class SpsStationComponentManager(
 
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
+        :param start_time: UTC Time for start sending data.
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[first_channel, last_channel],
+            args=[first_channel, last_channel, start_time],
             task_callback=task_callback,
         )
 
@@ -3163,17 +3166,20 @@ class SpsStationComponentManager(
 
         assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
+    # pylint: disable = too-many-branches
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Acquire data for calibration.
 
+        :param start_time: UTC Time for start sending data.
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
@@ -3211,11 +3217,18 @@ class SpsStationComponentManager(
                 task_callback(status=TaskStatus.IN_PROGRESS)
 
             self._start_daq("CORRELATOR_DATA")
-
+            if start_time is None:
+                self.logger.info(
+                    "No start_time defined. Defaulting to 2 seconds in the future."
+                )
+                start_time = (
+                    datetime.now(timezone.utc) + timedelta(seconds=2)
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             # Send data from tpms
             self.send_data_samples(
                 json.dumps(
                     {
+                        "start_time": start_time,
                         "data_type": "channel",
                         "first_channel": first_channel,
                         "last_channel": last_channel,

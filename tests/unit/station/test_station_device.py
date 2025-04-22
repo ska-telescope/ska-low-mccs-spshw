@@ -1534,9 +1534,17 @@ def test_AcquireDataForCalibration(
         )
 
     mock_daq_device_proxy.configure_mock(DaqStatus=_mocked_daq_status_callable_started)
-
+    start_time = datetime.datetime.strftime(
+        datetime.datetime.fromtimestamp(time.time() + 5), "%Y-%m-%dT%H:%M:%S.%fZ"
+    )
     [_], [command_id] = station_device.AcquireDataForCalibration(
-        json.dumps({"first_channel": first_channel, "last_channel": last_channel})
+        json.dumps(
+            {
+                "start_time": start_time,
+                "first_channel": first_channel,
+                "last_channel": last_channel,
+            }
+        )
     )
     tile_command_mock: MockCallable = getattr(
         mock_tile_device_proxies[0], "SendDataSamples"
@@ -1545,6 +1553,7 @@ def test_AcquireDataForCalibration(
     tile_command_mock.assert_next_call(
         json.dumps(
             {
+                "start_time": start_time,
                 "data_type": "channel",
                 "first_channel": first_channel,
                 "last_channel": last_channel,

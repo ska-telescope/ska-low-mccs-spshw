@@ -341,6 +341,7 @@ class TileRequestProvider:
         self._stale_attribute_callback = stale_attribute_callback
         self.request_iterator = _request_iterator or RequestIterator()
         self._lrc_queue: PriorityQueue[LRCEntry] = PriorityQueue()
+        self.initialise_queued = False
         # The command counter is used to ensure that commands are executed in the
         # order they were received. It is incremented each time a command is
         # added to the queue.
@@ -372,6 +373,7 @@ class TileRequestProvider:
 
             # Reset command counter back to 0
             self._command_counter = count()
+            self.initialise_queued = True
 
         if wipe_time is None:
             wipe_time = time.time() + 60
@@ -420,7 +422,10 @@ class TileRequestProvider:
 
         match tpm_status:
             case TpmStatus.UNPROGRAMMED | TpmStatus.PROGRAMMED:
-                if request.name in ("initialise", "download_firmware"):
+                if request.name == "initialise":
+                    self.initialise_queued = False
+                    return request
+                if request.name == "download_firmware":
                     return request
             case TpmStatus.INITIALISED | TpmStatus.SYNCHRONISED:
                 return request

@@ -842,9 +842,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 TpmStatus.SYNCHRONISED,
             ]:
                 with self._initialise_lock:
-                    if self._request_provider and not (
-                        isinstance(self.active_request, TileLRCRequest)
-                        and self.active_request.name.lower() != "initialise"
+                    if (
+                        self._request_provider
+                        and not (
+                            isinstance(self.active_request, TileLRCRequest)
+                            and self.active_request.name.lower() != "initialise"
+                        )
+                        and not self._request_provider.initialise_queued
                     ):
                         request = TileLRCRequest(
                             name="initialise",

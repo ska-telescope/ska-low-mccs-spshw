@@ -25,6 +25,8 @@ from ska_low_mccs_spshw.tile import MccsTile, TileComponentManager, TileSimulato
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
+    get_bandpass_daq_name,
+    get_lmc_daq_name,
     get_subrack_name,
 )
 
@@ -107,7 +109,6 @@ def integration_test_context_fixture(
     subrack_bay: int,
     patched_tile_device_class: MccsTile,
     daq_id: int,
-    daq_trl: str,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which both subrack simulator and Tango device are running.
@@ -120,7 +121,6 @@ def integration_test_context_fixture(
     :param patched_tile_device_class: A MccsTile class patched with
         some command to help testing.
     :param daq_id: the ID number of the DAQ receiver.
-    :param daq_trl: The Tango Resource Locator for this station's DAQ.
 
     :yields: a test context.
     """
@@ -134,11 +134,13 @@ def integration_test_context_fixture(
         device_class=patched_tile_device_class,
     )
     harness.set_daq_instance()
-    harness.set_daq_device(daq_id, address=None)
+    harness.set_lmc_daq_device(daq_id, address=None)
+    harness.set_bandpass_daq_device(daq_id, address=None)
     harness.set_sps_station_device(
         subrack_ids=[subrack_id],
         tile_ids=[tile_id],
-        daq_trl=daq_trl,
+        lmc_daq_trl=get_lmc_daq_name(),
+        bandpass_daq_trl=get_bandpass_daq_name(),
     )
 
     with harness as context:

@@ -60,6 +60,7 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
+    "h5py",
     "numpy",
     "ska_low_sps_tpm_api",
     "scipy",
@@ -74,7 +75,6 @@ autodoc_mock_imports = [
     "ska_ser_skuid",
     "ska_ser_logging",
     "astropy",
-    "pydaq",
     "watchdog",
 ]
 

@@ -11,6 +11,10 @@
 * [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
   optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
   property is used.
+  
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
 * [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
 
 ## 3.1.0

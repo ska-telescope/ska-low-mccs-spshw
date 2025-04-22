@@ -7,7 +7,7 @@
   property to populate on SpsStation.
 * [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
   this is optional, defaults to True. If set to false we won't send integrated data during
-  Initialise()
+  SpsStation.Initialise()
 * [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
   optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
   property is used.

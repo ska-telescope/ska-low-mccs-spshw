@@ -9,7 +9,7 @@ participant "MCCS\nTile\nPower\nManager" as MCCS_Tile_PM
 participant "Tile\nHardware\nManager" as Tile_HW_Man
 participant "TPM\nDriver" as TPM_Drv
 participant "Hardware\nTile" as HW_Tile
-participant "pyfabil\nTPM" as TPM
+participant "ska_low_sps_tpm_api\nTPM" as TPM
 
 Jupyter -> TMC: Startup_Telescope()
 note over MCCS_Controller: state = OFF

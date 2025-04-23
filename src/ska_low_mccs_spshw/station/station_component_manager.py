@@ -19,6 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
+from datetime import datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -199,12 +200,12 @@ class _TileProxy(DeviceComponentManager):
         return self._proxy.adcPower
 
 
-class _DaqProxy(DeviceComponentManager):
-    """A proxy to a DAQ, for a station to use."""
+class _LMCDaqProxy(DeviceComponentManager):
+    """A proxy to a LMC DAQ, for a station to use."""
 
     # pylint: disable=too-many-arguments
     def __init__(
-        self: _DaqProxy,
+        self: _LMCDaqProxy,
         fqdn: str,
         station_id: int,
         logger: logging.Logger,
@@ -237,13 +238,19 @@ class _DaqProxy(DeviceComponentManager):
             event_serialiser=event_serialiser,
         )
 
-    def _configure_station_id(self: _DaqProxy) -> None:
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "dataReceivedResult": self._daq_data_callback,
+        }
+
+    def _configure_station_id(self: _LMCDaqProxy) -> None:
         assert self._proxy is not None
         cfg = json.dumps({"station_id": self._station_id})
         self._proxy.Configure(cfg)
 
     def _device_state_changed(
-        self: _DaqProxy,
+        self: _LMCDaqProxy,
         event_name: str,
         event_value: tango.DevState,
         event_quality: tango.AttrQuality,
@@ -256,29 +263,96 @@ class _DaqProxy(DeviceComponentManager):
             self._configure_station_id()
         super()._device_state_changed(event_name, event_value, event_quality)
 
-    def _update_communication_state(
-        self: _DaqProxy,
-        communication_state: CommunicationStatus,
+    def _daq_data_callback(
+        self: _LMCDaqProxy,
+        attribute_name: str,
+        attribute_data: Any,
+        attribute_quality: Any,
     ) -> None:
-        # If communication is established with this Tango device,
-        # configure it to use the device as the source, not the Tango attribute cache.
-        # This might be better done for all of these proxy devices in the common repo.
-        if communication_state == CommunicationStatus.ESTABLISHED:
-            assert self._proxy is not None
+        """
+        Extract bandpass data or data received from event and call cb to update.
 
-            self._proxy.add_change_event_callback(
-                "xPolBandpass", self._daq_data_callback
-            )
-            self._proxy.add_change_event_callback(
-                "yPolBandpass", self._daq_data_callback
-            )
-            self._proxy.add_change_event_callback(
-                "dataReceivedResult", self._daq_data_callback
-            )
-        super()._update_communication_state(communication_state)
+        :param attribute_name: Name of attribute that changed.
+        :param attribute_data: New value of attribute.
+        :param attribute_quality: Validity of attribute change.
+        """
+        if self._component_state_callback:
+            if attribute_name.lower() == "datareceivedresult":
+                self.logger.debug("Processing change event for dataReceivedResult")
+                self._component_state_callback(dataReceivedResult=attribute_data)
+            else:
+                self.logger.error(
+                    f"Got unexpected change event for: {attribute_name} "
+                    "in DaqProxy._daq_data_callback."
+                )
+
+
+class _BandpassDaqProxy(DeviceComponentManager):
+    """A proxy to a Bandpass DAQ, for a station to use."""
+
+    # pylint: disable=too-many-arguments
+    def __init__(
+        self: _BandpassDaqProxy,
+        fqdn: str,
+        station_id: int,
+        logger: logging.Logger,
+        communication_state_changed_callback: Callable[[CommunicationStatus], None],
+        component_state_changed_callback: Callable[[dict[str, Any]], None],
+        event_serialiser: Optional[EventSerialiser] = None,
+    ) -> None:
+        """
+        Initialise a new instance.
+
+        :param fqdn: the FQDN of the device
+        :param station_id: the id of the station to which this daq
+            is to be assigned
+        :param logger: the logger to be used by this object.
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param communication_state_changed_callback: callback to be
+            called when the status of the communications channel between
+            the component manager and its component changes
+        :param component_state_changed_callback: callback to be
+            called when the component state changes
+        :param event_serialiser: the event serialiser to be used by this object
+        """
+        self._station_id = station_id
+        super().__init__(
+            fqdn,
+            logger,
+            communication_state_changed_callback,
+            component_state_changed_callback,
+            event_serialiser=event_serialiser,
+        )
+
+    def get_change_event_callbacks(self) -> dict[str, Callable]:
+        return {
+            **super().get_change_event_callbacks(),
+            "xPolBandpass": self._daq_data_callback,
+            "yPolBandpass": self._daq_data_callback,
+        }
+
+    def _configure_station_id(self: _BandpassDaqProxy) -> None:
+        assert self._proxy is not None
+        cfg = json.dumps({"station_id": self._station_id})
+        self._proxy.Configure(cfg)
+
+    def _device_state_changed(
+        self: _BandpassDaqProxy,
+        event_name: str,
+        event_value: tango.DevState,
+        event_quality: tango.AttrQuality,
+    ) -> None:
+        if (
+            self._communication_state == CommunicationStatus.ESTABLISHED
+            and event_value == tango.DevState.ON
+        ):
+            assert self._proxy is not None  # for the type checker
+            self._configure_station_id()
+        super()._device_state_changed(event_name, event_value, event_quality)
 
     def _daq_data_callback(
-        self: _DaqProxy,
+        self: _BandpassDaqProxy,
         attribute_name: str,
         attribute_data: Any,
         attribute_quality: Any,
@@ -297,9 +371,6 @@ class _DaqProxy(DeviceComponentManager):
             elif attribute_name.lower() == "ypolbandpass":
                 self.logger.debug("Processing change event for yPolBandpass")
                 self._component_state_callback(yPolBandpass=attribute_data)
-            elif attribute_name.lower() == "datareceivedresult":
-                self.logger.debug("Processing change event for dataReceivedResult")
-                self._component_state_callback(dataReceivedResult=attribute_data)
             else:
                 self.logger.error(
                     f"Got unexpected change event for: {attribute_name} "
@@ -321,13 +392,15 @@ class SpsStationComponentManager(
         station_id: int,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        daq_trl: str,
+        lmc_daq_trl: str,
+        bandpass_daq_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
         csp_ingest_ip: ipaddress.IPv4Address | None,
         channeliser_rounding: list[int] | None,
         csp_rounding: int,
         antenna_config_uri: Optional[list[str]],
+        start_bandpasses_in_initialise: bool,
         logger: logging.Logger,
         communication_state_changed_callback: Callable[[CommunicationStatus], None],
         component_state_changed_callback: Callable[..., None],
@@ -343,7 +416,8 @@ class SpsStationComponentManager(
             station's subracks
         :param tile_fqdns: FQDNs of the Tango devices which manage this
             station's TPMs
-        :param daq_trl: The TRL of this Station's DAQ Receiver.
+        :param lmc_daq_trl: The TRL of this Station's DAQ Receiver for general LMC use.
+        :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
         :param sdn_first_interface: CIDR-style IP address with mask,
             for the first interface in the block assigned for science data
             For example, "10.130.0.1/25" means
@@ -360,6 +434,8 @@ class SpsStationComponentManager(
             Until it is updated to support a full list,
             we restrict this interface to one integer.
         :param antenna_config_uri: location of the antenna mapping file
+        :param start_bandpasses_in_initialise: whether to start bandpasses
+            in initialise.
         :param logger: the logger to be used by this object.
         :param communication_state_changed_callback: callback to be
             called when the status of the communications channel between
@@ -373,9 +449,13 @@ class SpsStationComponentManager(
         :param event_serialiser: the event serialiser to be used by this object.
         """
         self._event_serialiser = event_serialiser
-        self._daq_proxy: Optional[_DaqProxy] = None
+        self._lmc_daq_proxy: Optional[_LMCDaqProxy] = None
+        self._bandpass_daq_proxy: Optional[_BandpassDaqProxy] = None
+        self._bandpass_integration_time = 5.0
         self._station_id = station_id
-        self._daq_trl = daq_trl
+        self._lmc_daq_trl = lmc_daq_trl
+        self._bandpass_daq_trl = bandpass_daq_trl
+        self._start_bandpasses_in_initialise = start_bandpasses_in_initialise
         self._is_configured = False
         self._on_called = False
 
@@ -428,19 +508,34 @@ class SpsStationComponentManager(
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
-        if self._daq_trl is not None:
+        if self._lmc_daq_trl is not None:
             # TODO: Detect a bad daq trl.
-            self._daq_proxy = _DaqProxy(
-                self._daq_trl,
+            self._lmc_daq_proxy = _LMCDaqProxy(
+                self._lmc_daq_trl,
                 station_id,
                 logger,
                 functools.partial(
-                    self._device_communication_state_changed, self._daq_trl
+                    self._device_communication_state_changed, self._lmc_daq_trl
                 ),
-                functools.partial(self._daq_state_changed, self._daq_trl),
+                functools.partial(self._lmc_daq_state_changed, self._lmc_daq_trl),
                 event_serialiser=self._event_serialiser,
             )
-            self._daq_power_state = {daq_trl: PowerState.UNKNOWN}
+            self._lmc_daq_power_state = {lmc_daq_trl: PowerState.UNKNOWN}
+        if self._bandpass_daq_trl is not None:
+            # TODO: Detect a bad daq trl.
+            self._bandpass_daq_proxy = _BandpassDaqProxy(
+                self._bandpass_daq_trl,
+                station_id,
+                logger,
+                functools.partial(
+                    self._device_communication_state_changed, self._bandpass_daq_trl
+                ),
+                functools.partial(
+                    self._bandpass_daq_state_changed, self._bandpass_daq_trl
+                ),
+                event_serialiser=self._event_serialiser,
+            )
+            self._bandpass_daq_power_state = {bandpass_daq_trl: PowerState.UNKNOWN}
         self._subrack_power_states = {
             fqdn: PowerState.UNKNOWN for fqdn in subrack_fqdns
         }
@@ -463,13 +558,13 @@ class SpsStationComponentManager(
         ]
 
         self._source_port = 0xF0D0
-        self._destination_port = 4660
+        self._destination_port: int = 4660
 
         self._sdn_first_address = sdn_first_interface.ip
         self._sdn_netmask = int(sdn_first_interface.netmask)
         self._sdn_gateway: int | None = int(sdn_gateway) if sdn_gateway else None
 
-        self._lmc_param = {
+        self._lmc_param: dict[str, str | int | None] = {
             "mode": "10G",
             "payload_length": 8192,
             "destination_ip": "0.0.0.0",
@@ -478,9 +573,16 @@ class SpsStationComponentManager(
             "netmask_40g": self._sdn_netmask,
             "gateway_40g": self._sdn_gateway,
         }
-        self._lmc_integrated_mode = "10G"
-        self._lmc_channel_payload_length = 8192
-        self._lmc_beam_payload_length = 8192
+        self._lmc_integrated_mode = "1G"
+        self._lmc_integrated_ip = "0.0.0.0"
+        self._lmc_integrated_port = self._destination_port
+        self._lmc_channel_payload_length = 1024
+        self._lmc_beam_payload_length = 1024
+
+        self._lmc_mode = "10G"
+        self._lmc_ip = "0.0.0.0"
+        self._lmc_port = self._destination_port
+        self._lmc_payload_length = 8192
 
         self._beamformer_table = [[0, 0, 0, 0, 0, 0, 0]] * 48
         self._beamformer_table[0] = [128, 0, 0, 0, 0, 0, 0]
@@ -522,7 +624,8 @@ class SpsStationComponentManager(
             self.logger,
             self._subrack_proxies,
             self._tile_proxies,
-            {self._daq_trl: self._daq_proxy},
+            {self._lmc_daq_trl: self._lmc_daq_proxy},
+            {self._bandpass_daq_trl: self._bandpass_daq_proxy},
         )
 
         self.self_check_manager = SpsStationSelfCheckManager(
@@ -530,7 +633,7 @@ class SpsStationComponentManager(
             logger=self.logger,
             tile_trls=list(self._tile_proxies.keys()),
             subrack_trls=list(self._subrack_proxies.keys()),
-            daq_trl=self._daq_trl,
+            daq_trl=self._lmc_daq_trl,
         )
 
         self.acquiring_data_for_calibration = threading.Event()
@@ -889,7 +992,7 @@ class SpsStationComponentManager(
             )
 
     @threadsafe
-    def _daq_state_changed(
+    def _lmc_daq_state_changed(
         self: SpsStationComponentManager,
         fqdn: str,
         power: Optional[PowerState] = None,
@@ -897,16 +1000,8 @@ class SpsStationComponentManager(
     ) -> None:
         if power is not None:
             with self._power_state_lock:
-                self._daq_power_state[fqdn] = power
+                self._lmc_daq_power_state[fqdn] = power
                 self._evaluate_power_state()
-        if "xPolBandpass" in state_change:
-            x_bandpass_data = state_change.get("xPolBandpass")
-            if self._component_state_callback is not None:
-                self._component_state_callback(xPolBandpass=x_bandpass_data)
-        if "yPolBandpass" in state_change:
-            y_bandpass_data = state_change.get("yPolBandpass")
-            if self._component_state_callback is not None:
-                self._component_state_callback(yPolBandpass=y_bandpass_data)
         if "dataReceivedResult" in state_change:
             data_received_result: tuple[str, str] = state_change.get(
                 "dataReceivedResult", ("", "")
@@ -920,6 +1015,26 @@ class SpsStationComponentManager(
                 )
             if self._component_state_callback is not None:
                 self._component_state_callback(dataReceivedResult=data_received_result)
+
+    @threadsafe
+    def _bandpass_daq_state_changed(
+        self: SpsStationComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        if power is not None:
+            with self._power_state_lock:
+                self._bandpass_daq_power_state[fqdn] = power
+                self._evaluate_power_state()
+        if "xPolBandpass" in state_change:
+            x_bandpass_data = state_change.get("xPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(xPolBandpass=x_bandpass_data)
+        if "yPolBandpass" in state_change:
+            y_bandpass_data = state_change.get("yPolBandpass")
+            if self._component_state_callback is not None:
+                self._component_state_callback(yPolBandpass=y_bandpass_data)
 
     def _evaluate_power_state(
         self: SpsStationComponentManager,
@@ -974,7 +1089,8 @@ class SpsStationComponentManager(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
-                f"\tDAQ: {self._daq_power_state.values()}\n"
+                f"\tLMCDAQ: {self._lmc_daq_power_state.values()}\n"
+                f"\tBandpassDAQ: {self._bandpass_daq_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)
@@ -1244,6 +1360,10 @@ class SpsStationComponentManager(
             result_code = self._wait_for_arp_table(task_callback, task_abort_event)
 
         if result_code == ResultCode.OK:
+            self.logger.debug("Routing data")
+            result_code = self._route_data(None, task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
             result_code = self._check_station_synchronisation(
                 task_callback, task_abort_event
@@ -1267,6 +1387,8 @@ class SpsStationComponentManager(
     def initialise(
         self: SpsStationComponentManager,
         task_callback: Optional[Callable] = None,
+        *,
+        start_bandpasses: Optional[bool] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _initialise method.
@@ -1275,13 +1397,19 @@ class SpsStationComponentManager(
         `self._initialise` for execution.
 
         :param task_callback: Update task state, defaults to None
+        :param start_bandpasses: Whether to configure TPMs to send
+            integrated data. Defaults to True.
         :return: a task status and response message
         """
-        return self.submit_task(self._initialise, task_callback=task_callback)
+        return self.submit_task(
+            self._initialise, task_callback=task_callback, args=[start_bandpasses]
+        )
 
     @check_communicating
+    # pylint: disable=too-many-branches
     def _initialise(
         self: SpsStationComponentManager,
+        start_bandasses: Optional[bool] = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
@@ -1290,6 +1418,8 @@ class SpsStationComponentManager(
 
         The order to turn a station on is: subrack, then tiles
 
+        :param start_bandasses: Whether to configure TPMs to send
+            integrated data.
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
@@ -1333,6 +1463,14 @@ class SpsStationComponentManager(
         if result_code == ResultCode.OK:
             self.logger.debug("Waiting for ARP table")
             result_code = self._wait_for_arp_table(task_callback, task_abort_event)
+
+        if result_code == ResultCode.OK:
+            self.logger.debug("Routing data")
+            result_code = self._route_data(
+                start_bandasses,
+                task_callback,
+                task_abort_event,
+            )
 
         if result_code == ResultCode.OK:
             self.logger.debug("Checking synchronisation")
@@ -1739,6 +1877,74 @@ class SpsStationComponentManager(
 
         self.logger.error("FPGA time counters not synced after 5 retries")
         return ResultCode.FAILED
+
+    def _route_data(
+        self: SpsStationComponentManager,
+        start_bandpasses: Optional[bool] = None,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> ResultCode:
+        """
+        Route data streams to relevant DAQs.
+
+        Route integrated data (for bandpasses) over the 1G to bandpass DAQ, route
+        everything else over the 10G to the LMC DAQ.
+
+        :param start_bandpasses: whether to start sending
+            integrated data, defaults to deployed default.
+        :param task_callback: Update task state, defaults to None
+        :param task_abort_event: Abort the task
+        :return: a result code
+        """
+        if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
+            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
+            self._lmc_ip = lmc_daq_status["Receiver IP"][0]
+            self._lmc_port = lmc_daq_status["Receiver Ports"][0]
+        if (
+            self._bandpass_daq_proxy is not None
+            and self._bandpass_daq_proxy._proxy is not None
+        ):
+            bandpass_daq_status = json.loads(
+                self._bandpass_daq_proxy._proxy.DaqStatus()
+            )
+            self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
+            self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
+        self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")
+        self.logger.debug(
+            "Configuring LMC Integrated Download: "
+            f"{self._lmc_integrated_ip}:{self._lmc_integrated_port}"
+        )
+        # TODO: SKB-804, We need to juggle these around to route over 1G and 10G.
+        self.set_lmc_integrated_download(
+            mode=self._lmc_integrated_mode,
+            dst_ip=self._lmc_integrated_ip,
+            dst_port=self._lmc_integrated_port,
+            channel_payload_length=self._lmc_channel_payload_length,
+            beam_payload_length=self._lmc_beam_payload_length,
+        )
+        self.set_lmc_download(
+            mode=self._lmc_integrated_mode,
+            dst_ip=self._lmc_integrated_ip,
+            dst_port=self._lmc_integrated_port,
+            payload_length=1024,
+        )
+        self.set_lmc_download(
+            mode=self._lmc_mode,
+            dst_ip=self._lmc_ip,
+            dst_port=self._lmc_port,
+            payload_length=self._lmc_payload_length,
+        )
+        if (
+            start_bandpasses
+            if start_bandpasses is not None
+            else self._start_bandpasses_in_initialise
+        ):
+            self.configure_integrated_channel_data(
+                integration_time=self._bandpass_integration_time,
+                first_channel=0,
+                last_channel=511,
+            )
+        return ResultCode.OK
 
     @property  # type:ignore[misc]
     @check_communicating
@@ -2972,6 +3178,7 @@ class SpsStationComponentManager(
         *,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the acquire data for calibration method.
@@ -2981,13 +3188,14 @@ class SpsStationComponentManager(
 
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
+        :param start_time: UTC Time for start sending data.
         :param task_callback: Update task state, defaults to None
 
         :return: a task staus and response message
         """
         return self.submit_task(
             self._acquire_data_for_calibration,
-            args=[first_channel, last_channel],
+            args=[first_channel, last_channel, start_time],
             task_callback=task_callback,
         )
 
@@ -2997,9 +3205,9 @@ class SpsStationComponentManager(
         max_tries: int = 10,
         tick: float = 0.5,
     ) -> None:
-        assert self._daq_proxy is not None
+        assert self._lmc_daq_proxy is not None
         retry_command_on_exception(
-            self._daq_proxy._proxy,
+            self._lmc_daq_proxy._proxy,
             "Start",
             json.dumps(
                 {"modes_to_start": daq_mode},
@@ -3008,7 +3216,7 @@ class SpsStationComponentManager(
         self.logger.info(f"Starting daq to capture in mode {daq_mode}")
         for _ in range(max_tries):
             daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+                retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus")
             )
             if any(
                 status_list[0] == daq_mode
@@ -3025,11 +3233,11 @@ class SpsStationComponentManager(
     def _stop_daq(
         self: SpsStationComponentManager, max_tries: int = 10, tick: float = 0.5
     ) -> None:
-        assert self._daq_proxy is not None
-        retry_command_on_exception(self._daq_proxy._proxy, "Stop")
+        assert self._lmc_daq_proxy is not None
+        retry_command_on_exception(self._lmc_daq_proxy._proxy, "Stop")
         for _ in range(max_tries):
             daq_status = json.loads(
-                retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus")
+                retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus")
             )
             if len(daq_status["Running Consumers"]) == 0:
                 return
@@ -3037,17 +3245,20 @@ class SpsStationComponentManager(
 
         assert daq_status["Running Consumers"] == [], "Failed to stop Daq."
 
+    # pylint: disable = too-many-branches
     @check_communicating
     def _acquire_data_for_calibration(
         self: SpsStationComponentManager,
         first_channel: int,
         last_channel: int,
+        start_time: str | None = None,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Acquire data for calibration.
 
+        :param start_time: UTC Time for start sending data.
         :param first_channel: first channel to calibrate for
         :param last_channel: last channel to calibrate for
         :param task_callback: Update task state, defaults to None
@@ -3085,11 +3296,18 @@ class SpsStationComponentManager(
                 task_callback(status=TaskStatus.IN_PROGRESS)
 
             self._start_daq("CORRELATOR_DATA")
-
+            if start_time is None:
+                self.logger.info(
+                    "No start_time defined. Defaulting to 2 seconds in the future."
+                )
+                start_time = (
+                    datetime.now(timezone.utc) + timedelta(seconds=2)
+                ).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
             # Send data from tpms
             self.send_data_samples(
                 json.dumps(
                     {
+                        "start_time": start_time,
                         "data_type": "channel",
                         "first_channel": first_channel,
                         "last_channel": last_channel,
@@ -3201,11 +3419,11 @@ class SpsStationComponentManager(
         tick: float = 0.5
 
         # Get DAQ running with correlator
-        assert self._daq_proxy is not None
-        assert self._daq_proxy._proxy is not None
+        assert self._lmc_daq_proxy is not None
+        assert self._lmc_daq_proxy._proxy is not None
 
         daq_status = json.loads(
-            retry_command_on_exception(self._daq_proxy._proxy, "DaqStatus", None)
+            retry_command_on_exception(self._lmc_daq_proxy._proxy, "DaqStatus", None)
         )
         if _check_aborted():
             return
@@ -3214,13 +3432,13 @@ class SpsStationComponentManager(
         # https://jira.skatelescope.org/browse/MCCS-2183
         if len(daq_status["Running Consumers"]) > 0:
             self.logger.info("Stopping all consumers...")
-            rc, _ = retry_command_on_exception(self._daq_proxy._proxy, "Stop", None)
+            rc, _ = retry_command_on_exception(self._lmc_daq_proxy._proxy, "Stop", None)
             if rc != ResultCode.OK:
                 self.logger.warning("Unable to stop daq consumers.")
             for _ in range(max_tries):
                 daq_status = json.loads(
                     retry_command_on_exception(
-                        self._daq_proxy._proxy, "DaqStatus", None
+                        self._lmc_daq_proxy._proxy, "DaqStatus", None
                     )
                 )
                 if len(daq_status["Running Consumers"]) == 0:
@@ -3241,7 +3459,7 @@ class SpsStationComponentManager(
         base_config.update(daq_config)
 
         retry_command_on_exception(
-            self._daq_proxy._proxy,
+            self._lmc_daq_proxy._proxy,
             "configure",
             json.dumps(base_config),
         )

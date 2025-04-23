@@ -96,8 +96,8 @@ def excluded_tile_attributes_fixture() -> list[str]:
     """
     return [
         "buildState",  # Mismatch between cpp and tango args.
-        "clockPresent",  # Not yet implemented in aavs-system.
-        "sysrefPresent",  # Not yet implemented in aavs-system.
+        "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.
@@ -131,7 +131,10 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
     station_proxy = tango.DeviceProxy(get_sps_station_name(station_name))
     tiles_fqdns = list(station_proxy.get_property("TileFQDNs")["TileFQDNs"])
     subracks_fqdns = list(station_proxy.get_property("SubrackFQDNs")["SubrackFQDNs"])
-    daqs_fqdns = list(station_proxy.get_property("DaqTRL")["DaqTRL"])
+    daqs_fqdns = [
+        station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"][0],
+        station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"][0],
+    ]
     return {
         "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],
         "Subracks": [

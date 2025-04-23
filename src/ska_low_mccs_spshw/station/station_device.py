@@ -92,11 +92,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     ChanneliserRounding = device_property(dtype=(int,), default_value=[])
     CspRounding = device_property(dtype=int, default_value=4)
 
-    DaqTRL = device_property(dtype=str, default_value="")
+    LMCDaqTRL = device_property(dtype=str, default_value="")
+    BandpassDaqTRL = device_property(dtype=str, default_value="")
     AntennaConfigURI = device_property(
         dtype=(str,),
         default_value=[],
     )
+    StartBandpassesInInitialise = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation
@@ -153,7 +155,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"Initialised {device_name} device with properties:\n"
             f"\tStationId: {self.StationId}\n"
             f"\tTileFQDNs: {self.TileFQDNs}\n"
-            f"\tDaqTRL: {self.DaqTRL}\n"
+            f"\tLMCDaqTRL: {self.LMCDaqTRL}\n"
+            f"\tBandpassDaqTRL: {self.BandpassDaqTRL}\n"
             f"\tSubrackFQDNs: {self.SubrackFQDNs}\n"
             f"\tSdnFirstInterface: {self.SdnFirstInterface}\n"
             f"\tSdnGateway: {self.SdnGateway}\n"
@@ -161,6 +164,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             f"\tChanneliserRounding: {self.ChanneliserRounding}\n"
             f"\tCspRounding: {self.CspRounding}\n"
             f"\tAntennaConfigURI: {self.AntennaConfigURI}\n"
+            f"\tStartBandpassesInInitialise: {self.StartBandpassesInInitialise}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -201,13 +205,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             self.StationId,
             self.SubrackFQDNs,
             self.TileFQDNs,
-            self.DaqTRL,
+            self.LMCDaqTRL,
+            self.BandpassDaqTRL,
             ipaddress.IPv4Interface(self.SdnFirstInterface),
             ipaddress.IPv4Address(self.SdnGateway) if self.SdnGateway else None,
             ipaddress.IPv4Address(self.CspIngestIp) if self.CspIngestIp else None,
             self.ChanneliserRounding,
             self.CspRounding,
             self.AntennaConfigURI,
+            self.StartBandpassesInInitialise,
             self.logger,
             self._communication_state_changed,
             self._component_state_changed,
@@ -240,6 +246,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "properties": {
                 "first_channel": {"type": "integer", "minimum": 1, "maximum": 512},
                 "last_channel": {"type": "integer", "minimum": 1, "maximum": 512},
+                "start_time": {"type": "string"},
             },
             "required": ["first_channel", "last_channel"],
         }
@@ -251,8 +258,15 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
         )
 
+        initialise_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station.schemas",
+                "SpsStation_Initialise.json",
+            )
+        )
+
         for command_name, method_name, schema in [
-            ("Initialise", "initialise", None),
+            ("Initialise", "initialise", initialise_schema),
             ("StartAcquisition", "start_acquisition", None),
             (
                 "AcquireDataForCalibration",
@@ -732,23 +746,42 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return self._data_received_result
 
     @attribute(dtype=str)
-    def daqTRL(self: SpsStation) -> str:
+    def LMCdaqTRL(self: SpsStation) -> str:
         """
-        Report the Tango Resource Locator for this SpsStation's DAQ instance.
+        Report the Tango Resource Locator for this SpsStation's LMC DAQ instance.
 
         :return: Return the current DAQ TRL.
         """
-        return self.DaqTRL
+        return self.LMCDaqTRL
 
-    @daqTRL.write  # type: ignore[no-redef]
-    def daqTRL(self: SpsStation, value: str) -> None:
+    @LMCdaqTRL.write  # type: ignore[no-redef]
+    def LMCdaqTRL(self: SpsStation, value: str) -> None:
         """
-        Set the Tango Resource Locator for this SpsStation's DAQ instance.
+        Set the Tango Resource Locator for this SpsStation's LMC DAQ instance.
 
         :param value: The new DAQ TRL.
         """
-        self.DaqTRL = value
-        self.component_manager._daq_trl = value
+        self.LMCDaqTRL = value
+        self.component_manager._lmc_daq_trl = value
+
+    @attribute(dtype=str)
+    def BandpassdaqTRL(self: SpsStation) -> str:
+        """
+        Report the Tango Resource Locator for this SpsStation's Bandpass DAQ instance.
+
+        :return: Return the current DAQ TRL.
+        """
+        return self.BandpassDaqTRL
+
+    @BandpassdaqTRL.write  # type: ignore[no-redef]
+    def BandpassdaqTRL(self: SpsStation, value: str) -> None:
+        """
+        Set the Tango Resource Locator for this SpsStation's Bandpass DAQ instance.
+
+        :param value: The new DAQ TRL.
+        """
+        self.BandpassDaqTRL = value
+        self.component_manager._bandpass_daq_trl = value
 
     @attribute(dtype="DevBoolean")
     def isCalibrated(self: SpsStation) -> bool:
@@ -1449,10 +1482,11 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # -------------
 
     @command(
-        dtype_in="DevVoid",
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
-    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
+    # pylint: disable=line-too-long
+    def Initialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Initialise the station.
 
@@ -1460,12 +1494,17 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             message indicating status. The message is for
             information purpose only.
 
+        :param argin: A json-ified dictionary adhering to the initialise schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_Initialise.json
+            :language: json
+
         :example:
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
-        """
+        """  # noqa: E501
         handler = self.get_command_object("Initialise")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(dtype_in=("DevLong",), dtype_out="DevVarLongStringArray")

@@ -1,6 +1,30 @@
 # Version History
 
-## Unreleased
+## 4.0.0
+
+* [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
+  bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
+  property to populate on SpsStation.
+* [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
+  this is optional, defaults to True. If set to false we won't send integrated data during
+  SpsStation.Initialise()
+* [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
+  optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
+  property is used.
+  
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
+* [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
+
+## 3.1.0
+
+* [SKB-861] Add optional argument start_time to AcquireDataForCalibration
+* [SKB-861] Update AcquireDataForCalibration default start_time to 2 seconds in future.
+
+## 3.0.3
+
+* [THORN-144] Re-release of 3.0.2 with correct image.
 
 ## 3.0.2
 

@@ -50,7 +50,8 @@ def test_context_fixture(
     harness.add_mock_subrack_device(subrack_id, mock_subrack_device_proxy)
     harness.add_mock_tile_device(tile_id, mock_tile_device_proxy)
     harness.set_daq_instance()
-    harness.set_daq_device(daq_id=daq_id, address=None)
+    harness.set_lmc_daq_device(daq_id=daq_id, address=None)
+    harness.set_bandpass_daq_device(daq_id=daq_id, address=None)
     with harness:
         yield
 

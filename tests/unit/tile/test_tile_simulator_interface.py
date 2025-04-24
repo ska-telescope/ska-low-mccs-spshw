@@ -13,8 +13,8 @@ from collections.abc import ValuesView
 from types import FunctionType
 
 import pytest
-from pyaavs.tile import Tile as AavsTile
-from pyaavs.tile import TileHealthMonitor
+from ska_low_sps_tpm_api.tile import Tile as AavsTile
+from ska_low_sps_tpm_api.tile import TileHealthMonitor
 
 from ska_low_mccs_spshw.tile import TileSimulator
 
@@ -71,7 +71,7 @@ def test_interface() -> None:
     """
     Test that the TileSimulator interface is correct.
 
-    The TileSimulator aims to mock the aavs-system.
+    The TileSimulator aims to mock the ska-low-sps-tpm-api.
     This test is to ensure that the methods are available
     and have the correct signatures.
     """

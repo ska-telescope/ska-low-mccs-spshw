@@ -2,7 +2,7 @@
 #                                                                                                                     #
 # default_config.yml                                                                                                  #
 #                                                                                                                     #
-# This is a sample station configuration file to be used with the aavs-system Python software.                        #
+# This is a sample station configuration file to be used with the ska-low-sps-tpm-api Python software.                #
 # DO NOT CHANGE THIS FILE, create a copy and modify the local copy to suit your system setup.                         #
 #                                                                                                                     #
 #######################################################################################################################

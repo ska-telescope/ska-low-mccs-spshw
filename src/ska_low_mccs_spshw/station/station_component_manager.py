@@ -392,7 +392,7 @@ class SpsStationComponentManager(
         station_id: int,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        lmc_daq_trl: str | None,
+        lmc_daq_trl: str,
         bandpass_daq_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
@@ -417,6 +417,7 @@ class SpsStationComponentManager(
         :param tile_fqdns: FQDNs of the Tango devices which manage this
             station's TPMs
         :param lmc_daq_trl: The TRL of this Station's DAQ Receiver for general LMC use.
+            Could be empty if the device property is not set.
         :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
         :param sdn_first_interface: CIDR-style IP address with mask,
             for the first interface in the block assigned for science data
@@ -618,15 +619,25 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
-        self._communication_manager = CommunicationManager(
-            self._update_communication_state,
-            self._update_component_state,
-            self.logger,
-            self._subrack_proxies,
-            self._tile_proxies,
-            {self._lmc_daq_trl: self._lmc_daq_proxy},
-            {self._bandpass_daq_trl: self._bandpass_daq_proxy},
-        )
+        if self._lmc_daq_proxy:
+            self._communication_manager = CommunicationManager(
+                self._update_communication_state,
+                self._update_component_state,
+                self.logger,
+                self._subrack_proxies,
+                self._tile_proxies,
+                {self._lmc_daq_trl: self._lmc_daq_proxy},
+                {self._bandpass_daq_trl: self._bandpass_daq_proxy},
+            )
+        else:
+            self._communication_manager = CommunicationManager(
+                self._update_communication_state,
+                self._update_component_state,
+                self.logger,
+                self._subrack_proxies,
+                self._tile_proxies,
+                {self._bandpass_daq_trl: self._bandpass_daq_proxy},
+            )
 
         self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,

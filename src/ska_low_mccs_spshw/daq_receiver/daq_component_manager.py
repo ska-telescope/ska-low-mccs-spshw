@@ -5,6 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
+# pylint: disable=too-many-lines
 """This module implements component management for DaqReceivers."""
 from __future__ import annotations
 
@@ -284,6 +285,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             [
                 self._is_bandpass_monitor_running(status),
                 self._is_integrated_channel_consumer_running(status),
+                self._is_daq_configured_for_bandpasses(),
             ]
         ):
             self.logger.warning("Problem detected in bandpass monitor, fixing...")
@@ -324,6 +326,14 @@ class DaqComponentManager(TaskExecutorComponentManager):
                     return
             self.logger.debug(f"Found {value} in DaqStatus[{status}]: {daq_status=}.")
 
+        if not self._is_daq_configured_for_bandpasses():
+            cur_cfg = self.get_configuration()
+            new_cfg: dict[str, Any] = {}
+            if cur_cfg["append_integrated"] is not False:
+                new_cfg.update(append_integrated=False)
+            if cur_cfg["nof_tiles"] != self._configuration["nof_tiles"]:
+                new_cfg.update(nof_tiles=self._configuration["nof_tiles"])
+
         if not self._is_integrated_channel_consumer_running():
             # start consumer
             self.logger.info(
@@ -346,6 +356,16 @@ class DaqComponentManager(TaskExecutorComponentManager):
             )
             self.start_bandpass_monitor(bandpass_args)
             _wait_for_status(status="Bandpass Monitor", value="True")
+
+    def _is_daq_configured_for_bandpasses(
+        self: DaqComponentManager,
+    ) -> bool:
+        cfg = self.get_configuration()
+        if cfg["append_integrated"] is not False:
+            return False
+        if cfg["nof_tiles"] != self._configuration["nof_tiles"]:
+            return False
+        return True
 
     def _is_integrated_channel_consumer_running(
         self: DaqComponentManager, status: dict[str, Any] | None = None

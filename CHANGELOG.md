@@ -1,5 +1,9 @@
 # Version History
 
+# unreleased
+
+* [SKB-854] Add check for bandpass daq configuration.
+
 ## 4.0.0
 
 * [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and

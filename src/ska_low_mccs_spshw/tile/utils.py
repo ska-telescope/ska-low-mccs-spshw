@@ -10,8 +10,13 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import functools
+import inspect
+import itertools
 import threading
+import time
 from contextlib import contextmanager
+from logging import Logger
+from types import TracebackType
 from typing import Any, Callable, Iterator, TypeVar, cast
 
 from ska_control_model import ResultCode, TaskStatus
@@ -20,8 +25,93 @@ __all__ = ["acquire_timeout", "abort_task_on_exception"]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 
 
+class LogLock:
+    """A logging lock."""
+
+    def __init__(self, name: str, log: Logger) -> None:
+        self.name = name
+        self.log = log
+        self.lock = threading.Lock()
+        self.last_acquired_at = float("inf")
+        self.last_acquired_by = ""
+
+    def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
+        """
+        Attempt to acquire the lock.
+
+        :param blocking: same as threading.Lock's blocking argument.
+        :param timeout: same as threading.Lock's timeout argument.
+
+        :return: True if the lock was acquired, False if it was not.
+        """
+        caller = self._caller()
+        self.log.debug(f"lock {self.name} requested by {caller}")
+
+        acquire_start = time.time()
+        # pylint: disable=consider-using-with
+        acquired = self.lock.acquire(blocking, timeout)
+        acquire_time = time.time() - acquire_start
+
+        if acquired:
+            self.last_acquired_at = time.time()
+            self.last_acquired_by = caller
+            self.log.debug(
+                f"lock {self.name} acquired after {acquire_time:.3f}s by {caller}"
+            )
+        else:
+            time_since_acquired = time.time() - self.last_acquired_at
+            self.log.error(
+                f"lock {self.name} not acquired after {acquire_time:.3f}s by {caller} "
+                f"- held for {time_since_acquired:.3f}s by {self.last_acquired_by}"
+            )
+        return acquired
+
+    @staticmethod
+    def _caller() -> str:
+        """
+        Return the last three interesting callers, joined by "->".
+
+        :return: the last three callers' function names, joined by "->"
+        """
+        stack = inspect.stack()
+        interesting_frames = itertools.islice(
+            itertools.dropwhile(lambda x: x[1] == __file__, stack),
+            3,
+        )
+        return ">".join(reversed([frame[3] for frame in interesting_frames]))
+
+    def release(self) -> None:
+        """Release the lock."""
+        elapsed = time.time() - self.last_acquired_at
+        caller = self._caller()
+
+        self.log.debug(f"lock {self.name} released after {elapsed:.3f}s by {caller}")
+        if elapsed > 0.1:
+            self.log.warning(f"lock {self.name} held for {elapsed:.3f}s by {caller}")
+        self.lock.release()
+
+    def locked(self) -> bool:
+        """
+        Check if lock is currently locked.
+
+        :return: True if the lock is currently locked, False otherwise.
+        """
+        return self.lock.locked()
+
+    def __enter__(self) -> bool:
+        return self.acquire()
+
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> None:
+        self.release()
+
+
 @contextmanager
-def acquire_timeout(lock: threading.Lock, timeout: float) -> Iterator[bool]:
+def acquire_timeout(lock: LogLock | threading.Lock, timeout: float) -> Iterator[bool]:
     """
     Create an implementation of a lock context manager with timeout.
 

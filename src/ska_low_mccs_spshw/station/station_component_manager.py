@@ -419,6 +419,7 @@ class SpsStationComponentManager(
         :param lmc_daq_trl: The TRL of this Station's DAQ Receiver for general LMC use.
             Could be empty if the device property is not set.
         :param bandpass_daq_trl: The TRL of this Station's DAQ Receiver for bandpasses.
+            Could be empty if the device property is not set.
         :param sdn_first_interface: CIDR-style IP address with mask,
             for the first interface in the block assigned for science data
             For example, "10.130.0.1/25" means
@@ -522,7 +523,7 @@ class SpsStationComponentManager(
                 event_serialiser=self._event_serialiser,
             )
             self._lmc_daq_power_state = {lmc_daq_trl: PowerState.UNKNOWN}
-        if self._bandpass_daq_trl is not None:
+        if self._bandpass_daq_trl:
             # TODO: Detect a bad daq trl.
             self._bandpass_daq_proxy = _BandpassDaqProxy(
                 self._bandpass_daq_trl,
@@ -619,25 +620,20 @@ class SpsStationComponentManager(
             adc_power=None,
         )
 
+        optional_devices: dict[str, DeviceComponentManager] = {}
         if self._lmc_daq_proxy:
-            self._communication_manager = CommunicationManager(
-                self._update_communication_state,
-                self._update_component_state,
-                self.logger,
-                self._subrack_proxies,
-                self._tile_proxies,
-                {self._lmc_daq_trl: self._lmc_daq_proxy},
-                {self._bandpass_daq_trl: self._bandpass_daq_proxy},
-            )
-        else:
-            self._communication_manager = CommunicationManager(
-                self._update_communication_state,
-                self._update_component_state,
-                self.logger,
-                self._subrack_proxies,
-                self._tile_proxies,
-                {self._bandpass_daq_trl: self._bandpass_daq_proxy},
-            )
+            optional_devices[self._lmc_daq_trl] = self._lmc_daq_proxy
+        if self._bandpass_daq_proxy:
+            optional_devices[self._bandpass_daq_trl] = self._bandpass_daq_proxy
+
+        self._communication_manager = CommunicationManager(
+            self._update_communication_state,
+            self._update_component_state,
+            self.logger,
+            self._subrack_proxies,
+            self._tile_proxies,
+            optional_devices,
+        )
 
         self.self_check_manager = SpsStationSelfCheckManager(
             component_manager=self,

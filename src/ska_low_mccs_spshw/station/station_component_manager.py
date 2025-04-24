@@ -392,7 +392,7 @@ class SpsStationComponentManager(
         station_id: int,
         subrack_fqdns: Sequence[str],
         tile_fqdns: Sequence[str],
-        lmc_daq_trl: str,
+        lmc_daq_trl: str | None,
         bandpass_daq_trl: str,
         sdn_first_interface: ipaddress.IPv4Interface,
         sdn_gateway: ipaddress.IPv4Address | None,
@@ -508,7 +508,7 @@ class SpsStationComponentManager(
             )
             for subrack_id, subrack_fqdn in enumerate(subrack_fqdns)
         }
-        if self._lmc_daq_trl is not None:
+        if self._lmc_daq_trl:
             # TODO: Detect a bad daq trl.
             self._lmc_daq_proxy = _LMCDaqProxy(
                 self._lmc_daq_trl,

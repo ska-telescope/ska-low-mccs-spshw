@@ -1,5 +1,9 @@
 # Version History
 
+## 5.0.1
+
+* [THORN-152] Handle missing DAQ TRL.
+
 ## 5.0.0
 
 * [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,

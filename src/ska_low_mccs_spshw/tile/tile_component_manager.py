@@ -285,6 +285,38 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             poll_rate=poll_rate,
         )
 
+    def _submit_lrc_request(
+        self: TileComponentManager,
+        command_name: str,
+        command_object: Callable,
+        task_callback: Optional[Callable] = None,
+        **kwargs: Any,
+    ) -> tuple[TaskStatus, str] | None:
+        """
+        Submit a LRC request to the polling loop.
+
+        :param command_name: name of the command
+        :param command_object: callable object to execute
+        :param task_callback: callback to be called when the task is completed
+        :param kwargs: additional arguments to be passed to the command object
+
+        :return: a result code and a message
+        """
+        if not self._request_provider:
+            if task_callback:
+                task_callback(status=TaskStatus.REJECTED)
+            self.logger.error("task REJECTED no request_provider")
+            return None
+        request = TileLRCRequest(
+            name=command_name,
+            command_object=command_object,
+            task_callback=task_callback,
+            **kwargs,
+        )
+        self._request_provider.enqueue_lrc(request)
+        self.logger.info(f"Request {command_name} QUEUED.")
+        return TaskStatus.QUEUED, "Task staged"
+
     def get_request(  # type: ignore[override]
         self: TileComponentManager,
     ) -> Optional[TileRequest | TileLRCRequest]:
@@ -713,7 +745,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.info("On command placed initialise in poll QUEUE")
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
         with self._initialise_lock:
-            self._request_provider.desire_initialise(request)
+            self._request_provider.enqueue_lrc(request, priority=0)
         return TaskStatus.QUEUED, "Task staged"
 
     def _start_communicating_with_subrack(self: TileComponentManager) -> None:
@@ -817,10 +849,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 with self._initialise_lock:
                     if (
                         self._request_provider
-                        and self._request_provider.initialise_request is None
-                        and not isinstance(self.active_request, TileLRCRequest)
-                        or isinstance(self.active_request, TileLRCRequest)
-                        and self.active_request.name.lower() != "initialise"
+                        and not (
+                            isinstance(self.active_request, TileLRCRequest)
+                            and self.active_request.name.lower() != "initialise"
+                        )
+                        and not self._request_provider.initialise_queued
                     ):
                         request = TileLRCRequest(
                             name="initialise",
@@ -836,7 +869,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
                         assert self._request_provider is not None
 
-                        self._request_provider.desire_initialise(request)
+                        self._request_provider.enqueue_lrc(request, priority=0)
 
         else:
             self._tile_time.set_reference_time(0)
@@ -1019,7 +1052,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             pps_delay_correction=self._pps_delay_correction,
         )
         with self._initialise_lock:
-            self._request_provider.desire_initialise(request)
+            self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Initialise command placed initialise in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -1139,7 +1172,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             bitfile=argin,
         )
-        self._request_provider.desire_download_firmware(request)
+        self._request_provider.enqueue_lrc(request, priority=0)
         self.logger.info("Download_firmware command placed in poll QUEUE")
         return TaskStatus.QUEUED, "Task staged"
 
@@ -1182,11 +1215,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
             identify the command
         """
-        if not self._request_provider:
-            if task_callback:
-                task_callback(status=TaskStatus.REJECTED)
-            self.logger.error("task REJECTED no request_provider")
-            return None
         if start_time is None:
             start_timestamp = None
         else:
@@ -1207,17 +1235,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 global_start_timestamp = None
             delay = 0
 
-        request = TileLRCRequest(
-            name="start_acquisition",
+        return self._submit_lrc_request(
+            command_name="start_acquisition",
             command_object=self._start_acquisition,
             task_callback=task_callback,
             start_time=start_timestamp,
             delay=delay,
             global_reference_time=global_start_timestamp,
         )
-        self._request_provider.desire_start_acquisition(request)
-        self.logger.info("StartAcquisition command placed in poll QUEUE")
-        return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
     @check_hardware_lock_claimed
@@ -1824,7 +1849,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             **kwargs,
         )
-        self._request_provider.desire_start_antenna_buffer(request)
+        self._request_provider.enqueue_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -1900,7 +1925,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_object=self._read_antenna_buffer,
             task_callback=task_callback,
         )
-        self._request_provider.desire_read_antenna_buffer(request)
+        self._request_provider.enqueue_lrc(request)
         return TaskStatus.QUEUED, "Task staged"
 
     @check_communicating
@@ -2416,40 +2441,40 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning("Failed to acquire hardware lock")
                 raise TimeoutError("_send_beam_data failed, lock not acquire in time.")
 
-    def stop_beamformer(self: TileComponentManager) -> None:
+    def stop_beamformer(
+        self: TileComponentManager, task_callback: Optional[Callable] = None
+    ) -> tuple[TaskStatus, str] | None:
         """
         Stop the beamformer.
 
-        :raises TimeoutError: raised if we fail to acquire lock in time
+        :param task_callback: Update task state, defaults to None
+
+        :return: A tuple containing a task status and a unique id string to
+
         """
-        self.logger.debug("TileComponentManager: Stop beamformer")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-            if acquired:
-                try:
-                    self.tile.stop_beamformer()
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("stop_beamformer failed, lock not acquire in time.")
+        return self._submit_lrc_request(
+            command_name="stop_beamformer",
+            command_object=self.tile.stop_beamformer,
+            task_callback=task_callback,
+        )
 
     @check_communicating
     def start_beamformer(
         self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
         start_time: Optional[str] = None,
         duration: int = -1,
         subarray_beam_id: int = -1,
         scan_id: int = 0,
-    ) -> None:
+    ) -> tuple[TaskStatus, str] | None:
         """
         Start beamforming on a specific subset of the beamformed channels.
 
         Current firmware version does not support channel mask and scan ID,
         these are ignored
 
+        :param task_callback: Update task state, defaults to None
         :param start_time: Start time as ISO formatted time
         :param duration: Scan duration, in frames, default "forever"
         :param subarray_beam_id: Subarray beam ID of the channels to be started
@@ -2458,7 +2483,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param scan_id: ID of the scan to be started. Default 0
 
         :raises ValueError: invalid time specified
-        :raises TimeoutError: raised if we fail to acquire lock in time
+
+        :returns: A tuple containing a task status and a unique id string to
+            identify the command
         """
         if start_time is None:
             start_frame: int = 0
@@ -2479,18 +2506,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             )
         if scan_id != 0:
             self.logger.warning("start_beamformer: scan ID value ignored")
-        with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
-            if acquired:
-                try:
-                    self.tile.start_beamformer(start_frame, duration)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("start_beamformer failed, lock not acquire in time.")
+
+        return self._submit_lrc_request(
+            command_name="start_beamformer",
+            command_object=self.tile.start_beamformer,
+            task_callback=task_callback,
+            start_time=start_frame,
+            duration=duration,
+        )
 
     @check_communicating
     def apply_pointing_delays(self: TileComponentManager, load_time: str = "") -> None:

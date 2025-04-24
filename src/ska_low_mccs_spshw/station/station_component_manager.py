@@ -38,8 +38,11 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser
 from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
+    CompositeCommandResultEvaluator,
     DeviceComponentManager,
     MccsBaseComponentManager,
+    MccsCommandProxy,
+    MccsCompositeCommandProxy,
 )
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from ska_low_mccs_common.utils import UniqueQueue, lock_power_state, threadsafe
@@ -2846,11 +2849,44 @@ class SpsStationComponentManager(
 
     def start_beamformer(
         self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        start_time: Optional[str] = None,
+        duration: int = -1,
+        subarray_beam_id: int = -1,
+        scan_id: int = 0,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _start_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._start_beamformer` for execution.
+
+        :param task_callback: Update task state, defaults to None
+        :param start_time: time at which to start the beamformer,
+            defaults to 0
+        :param duration: duration for which to run the beamformer,
+            defaults to -1 (run forever)
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param scan_id: ID of the scan which is started.
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._start_beamformer,
+            args=[start_time, duration, subarray_beam_id, scan_id],
+            task_callback=task_callback,
+        )
+
+    def _start_beamformer(
+        self: SpsStationComponentManager,
         start_time: str,
         duration: float,
         subarray_beam_id: int,
         scan_id: int,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Start the beamformer at the specified time.
 
@@ -2860,11 +2896,11 @@ class SpsStationComponentManager(
             defaults to -1 (run forever)
         :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param scan_id: ID of the scan which is started.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :param task_callback: Update task state, defaults to None.
+        :param task_abort_event: Check for abort, defaults to None
         """
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
         parameter_list = {
             "start_time": start_time,
             "duration": duration,
@@ -2872,19 +2908,65 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         json_argument = json.dumps(parameter_list)
-        return self._execute_async_on_tiles("StartBeamformer", json_argument)
+        start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
+        for tile_trl in self._tile_proxies:
+            start_beamformer_commands += MccsCommandProxy(
+                tile_trl, "StartBeamformer", self.logger, default_args=json_argument
+            )
+        result, message = start_beamformer_commands(
+            command_evaluator=CompositeCommandResultEvaluator(),
+        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result, message),
+            )
 
     def stop_beamformer(
         self: SpsStationComponentManager,
-    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Submit the _stop_beamformer method.
+
+        This method returns immediately after it submitted
+        `self._stop_beamformer` for execution.
+
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._stop_beamformer, args=[], task_callback=task_callback
+        )
+
+    def _stop_beamformer(
+        self: SpsStationComponentManager,
+        task_callback: Optional[Callable] = None,
+        task_abort_event: Optional[threading.Event] = None,
+    ) -> None:
         """
         Stop the beamformer.
 
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
+        :param task_callback: Update task state, defaults to None.
+        :param task_abort_event: Check for abort, defaults to None
         """
-        return self._execute_async_on_tiles("StopBeamformer")
+        if task_callback is not None:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
+        stop_beamformer_commands = MccsCompositeCommandProxy(self.logger)
+        for tile_trl in self._tile_proxies:
+            stop_beamformer_commands += MccsCommandProxy(
+                tile_trl, "StopBeamformer", self.logger
+            )
+        result, message = stop_beamformer_commands(
+            command_evaluator=CompositeCommandResultEvaluator()
+        )
+        if task_callback is not None:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(result, message),
+            )
 
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,

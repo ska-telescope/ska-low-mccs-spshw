@@ -1,5 +1,11 @@
 # Version History
 
+## 5.0.0
+
+* [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,
+  they are submitted to the polling loop to be picked up on the next poll, but the command returns
+  before the beamformer has actually started/stopped.
+
 ## 4.0.0
 
 * [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and

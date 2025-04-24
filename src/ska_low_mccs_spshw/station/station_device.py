@@ -251,6 +251,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             "required": ["first_channel", "last_channel"],
         }
 
+        start_beamformer_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station.schemas",
+                "SpsStation_StartBeamformer.json",
+            )
+        )
+
         initialise_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.station.schemas",
@@ -275,6 +282,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             ("SetChanneliserRounding", "set_channeliser_rounding", None),
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
+            ("StartBeamformer", "start_beamformer", start_beamformer_schema),
+            ("StopBeamformer", "stop_beamformer", None),
         ]:
             validator = (
                 None
@@ -2164,14 +2173,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartBeamformer", jstr)
         """
-        params = json.loads(argin)
-        start_time = params.get("start_time", None)
-        duration = params.get("duration", -1)
-        subarray_beam_id = params.get("subarray_beam_id", -1)
-        scan_id = params.get("scan_id", 0)
-        return self.component_manager.start_beamformer(
-            start_time, duration, subarray_beam_id, scan_id
-        )
+        handler = self.get_command_object("StartBeamformer")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
 
     @command(
         dtype_out="DevVarLongStringArray",
@@ -2189,7 +2193,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         >>> dp = tango.DeviceProxy("mccs/tile/01")
         >>> dp.command_inout("StopBeamformer")
         """
-        return self.component_manager.stop_beamformer()
+        handler = self.get_command_object("StopBeamformer")
+        (return_code, message) = handler()
+        return ([return_code], [message])
 
     @command(
         dtype_in="DevString",

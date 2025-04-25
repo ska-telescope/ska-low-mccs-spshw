@@ -13,9 +13,8 @@ from copy import copy
 from typing import Optional
 
 from ...tile.tile_data import TileData
-
-# from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
+from .data_handlers import AntennaBufferDataHandler
 
 __all__ = ["TestAntennaBuffer"]
 
@@ -38,6 +37,9 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def test(self: TestAntennaBuffer) -> None:
         """Test the data transmission from the Antenna Buffer to the DAQ."""
+        self._data_handler = AntennaBufferDataHandler(
+            self.test_logger, 1, self._data_received_callback
+        )
         fpga_list = range(TileData.NUM_FPGA)
         for fpga in fpga_list:
             self.test_fpga(fpga_id=fpga)
@@ -193,7 +195,7 @@ class TestAntennaBuffer(BaseDaqTest):
         data = copy(self._data)
         adders = copy(self._adders)
         pattern = copy(self._pattern)
-        fpga_id, antennas, polarisations, samples, _ = data.shape
+        antennas, polarisations, samples, _ = data.shape
         self.test_logger.info(f"data shape: {data.shape}")
         for antenna in range(antennas):
             for polarisation in range(polarisations):

@@ -342,7 +342,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         :param nof_tiles: number of tiles to expect data from
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 1
+        self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: AntennaBufferDataHandler) -> None:
@@ -355,7 +355,9 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
             )
-            self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
+            start_idx = TileData.ANTENNA_COUNT * tile_id
+            end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
+            self.data[start_idx:end_idx, :, :] = tile_data
 
     def initialise_data(self: AntennaBufferDataHandler) -> None:
         """Initialise empty antenna buffer data struct.
@@ -369,5 +371,5 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
                 TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
             ),
-            dtype=np.uint32,
+            dtype=np.int8,
         )

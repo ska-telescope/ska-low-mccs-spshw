@@ -326,48 +326,48 @@ class IntegratedBeamDataReceivedHandler(BaseDataReceivedHandler):
         )
 
 
-class AntennaBufferDataHandler(BaseDataReceivedHandler):
-    """Detect files created in the data directory."""
+# class AntennaBufferDataHandler(BaseDataReceivedHandler):
+#     """Detect files created in the data directory."""
 
-    def __init__(
-        self: AntennaBufferDataHandler,
-        logger: logging.Logger,
-        nof_tiles: int,
-        data_created_callback: Callable,
-    ):
-        """
-        Initialise a new instance.
+#     def __init__(
+#         self: AntennaBufferDataHandler,
+#         logger: logging.Logger,
+#         nof_tiles: int,
+#         data_created_callback: Callable,
+#     ):
+#         """
+#         Initialise a new instance.
 
-        :param logger: logger for the handler
-        :param nof_tiles: number of tiles to expect data from
-        :param data_created_callback: callback to call when data received
-        """
-        self._nof_samples = 1
-        super().__init__(logger, nof_tiles, data_created_callback)
+#         :param logger: logger for the handler
+#         :param nof_tiles: number of tiles to expect data from
+#         :param data_created_callback: callback to call when data received
+#         """
+#         self._nof_samples = 1
+#         super().__init__(logger, nof_tiles, data_created_callback)
 
-    def handle_data(self: AntennaBufferDataHandler) -> None:
-        """Handle the reading of antenna buffer data."""
-        raw_file = RawFormatFileManager(root_path=self._base_path)
-        for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
-                polarizations=list(range(TileData.POLS_PER_ANTENNA)),
-                n_samples=self._nof_samples,
-                tile_id=tile_id,
-            )
-            self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
+#     def handle_data(self: AntennaBufferDataHandler) -> None:
+#         """Handle the reading of antenna buffer data."""
+#         raw_file = RawFormatFileManager(root_path=self._base_path)
+#         for tile_id in range(self._nof_tiles):
+#             tile_data, timestamps = raw_file.read_data(
+#                 antennas=range(TileData.ANTENNA_COUNT),
+#                 polarizations=list(range(TileData.POLS_PER_ANTENNA)),
+#                 n_samples=self._nof_samples,
+#                 tile_id=tile_id,
+#             )
+#             self.data[:, :, tile_id, :] = tile_data[:, :, 0, :]
 
-    def initialise_data(self: AntennaBufferDataHandler) -> None:
-        """Initialise empty antenna buffer data struct.
+#     def initialise_data(self: AntennaBufferDataHandler) -> None:
+#         """Initialise empty antenna buffer data struct.
 
-        This is from my understanding of the original test_antenna_buffer.py
-        in aavs.
-        """
-        self.data = np.zeros(
-            (
-                TileData.ANTENNA_COUNT * TileData.NUM_FPGA,
-                TileData.POLS_PER_ANTENNA,
-                self._nof_samples,
-            ),
-            dtype=np.uint32,
-        )
+#         This is from my understanding of the original test_antenna_buffer.py
+#         in aavs.
+#         """
+#         self.data = np.zeros(
+#             (
+#                 TileData.ANTENNA_COUNT * TileData.NUM_FPGA,
+#                 TileData.POLS_PER_ANTENNA,
+#                 self._nof_samples,
+#             ),
+#             dtype=np.uint32,
+#         )

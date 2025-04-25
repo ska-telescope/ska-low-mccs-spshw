@@ -11,7 +11,7 @@ This page gives a general brief overview to the architecture of the MccsTile.
 During deployment MccsTile is constructed with a platform specific configuration defined by helm see https://developer.skao.int/projects/ska-low-mccs-spshw/en/latest/guide/deploy.html.
 The MccsTile contructs a TileComponentManager using information from this configuration. 
 This configuration includes a simulation_mode flag. When simulation_mode is TRUE a TileSimulator 
-will be constructed and used as the backend, when False a pyaavs.Tile object will be created to 
+will be constructed and used as the backend, when False a ska_low_sps_tpm_api.Tile object will be created to 
 interface with the hardware as a backend.
 
 Tile brief architecture

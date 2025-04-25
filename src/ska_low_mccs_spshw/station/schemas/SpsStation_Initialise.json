@@ -1,0 +1,14 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/SpsStation_Initialise.json",
+    "title": "SpsStation Initialise schema",
+    "description": "Schema for SpsStations's Initialise command",
+    "type": "object",
+    "properties": {
+        "start_bandpasses": {
+            "description": "Whether to configure the TPMs to send integrated channel data to the bandpass DAQ.",
+            "type": "boolean"
+        }
+    },
+    "required": []
+}

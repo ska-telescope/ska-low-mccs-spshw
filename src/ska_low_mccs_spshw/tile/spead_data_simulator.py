@@ -196,7 +196,7 @@ class SpeadDataSimulator:
 
         :raises RuntimeError: If a thread failed to finish
         """
-        # The AAVS tile only needs to stop channel continuous here but with the
+        # The SPS API tile only needs to stop channel continuous here but with the
         # sleep between antennas the other data modes can end up running for a
         # long time here so having a way to stop them is useful
         for data_type, event in self._stop_events.items():

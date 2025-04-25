@@ -1,6 +1,50 @@
 # Version History
 
-## Unreleased
+## 5.0.1
+
+* [THORN-152] Handle missing DAQ TRL.
+
+## 5.0.0
+
+* [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,
+  they are submitted to the polling loop to be picked up on the next poll, but the command returns
+  before the beamformer has actually started/stopped.
+
+## 4.0.0
+
+* [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
+  bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
+  property to populate on SpsStation.
+* [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
+  this is optional, defaults to True. If set to false we won't send integrated data during
+  SpsStation.Initialise()
+* [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
+  optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
+  property is used.
+  
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
+* [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
+
+## 3.1.0
+
+* [SKB-861] Add optional argument start_time to AcquireDataForCalibration
+* [SKB-861] Update AcquireDataForCalibration default start_time to 2 seconds in future.
+
+## 3.0.3
+
+* [THORN-144] Re-release of 3.0.2 with correct image.
+
+## 3.0.2
+
+* [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.
+
+## 3.0.1
+
+* pyfabil 2.1.0 -> 2.1.1 (<https://gitlab.com/ska-telescope/pyfabil/-/releases>)
+* aavs-system 2.1.3 -> 2.1.6 (<https://gitlab.com/ska-telescope/aavs-system/-/releases>)
+* TPM firmware version 6.2.0 -> 6.2.1
 
 ## 3.0.0
 

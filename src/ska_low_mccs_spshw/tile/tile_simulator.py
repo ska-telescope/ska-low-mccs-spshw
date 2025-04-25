@@ -22,7 +22,12 @@ from ipaddress import IPv4Address
 from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
 import numpy as np
-from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
+from ska_low_sps_tpm_api.base.definitions import (
+    BoardError,
+    Device,
+    LibraryError,
+    RegisterInfo,
+)
 
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
@@ -314,7 +319,7 @@ class MockTpmFirmwareInformation:
 
 
 class MockTpm:
-    """Simulator for a pyfabil::Tpm class."""
+    """Simulator for a ska_low_sps_tpm_api.boards::Tpm class."""
 
     # Register map.
     # Requires only registers which are directly accessed from
@@ -852,14 +857,15 @@ class PreAdu:
 
 class TileSimulator:
     """
-    This attempts to simulate pyaavs Tile.
+    This attempts to simulate ska_low_sps_tpm_api.Tile.
 
     This is used for testing the tpm_driver, it implements __getitem__,
     __setitem__ so that the TileSimulator can interface with the
-    TPMSimulator in the same way as the AAVS Tile interfaces with the
-    pyfabil TPM. Instead of writing to a register we write to a
-    dictionary. It overwrite read_address, write_address, read_register,
-    write_register for simplicity.
+    TPMSimulator in the same way as the ska_low_sps_tpm_api.Tile
+    interfaces with the ska_low_sps_tpm_api.boards.TPM. Instead of
+    writing to a register we write to a dictionary. It overwrite
+    read_address, write_address, read_register, write_register
+    for simplicity.
     """
 
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
@@ -991,12 +997,12 @@ class TileSimulator:
         Get the health state of the tile.
 
         :param kwargs: Any kwargs to identify health group.
-            see aavs-system.Tile
+            see ska_low_sps_tpm_api.Tile
 
         :return: mocked fetch of health.
         """
         if any([value == 2 for value in self._global_status_alarms.values()]):
-            # aavs-system return a subset of the health with mcu alarms
+            # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
@@ -1225,7 +1231,7 @@ class TileSimulator:
         """
         Return register information from a provided search string.
 
-        Note: this is a wrapper method of 'pyfabil.tpm.find_register'
+        Note: this is a wrapper method of 'ska_low_sps_tpm_api.boards.tpm.find_register'
 
         :param string: Regular expression to search against
         :param display: True to output result to console
@@ -1268,7 +1274,8 @@ class TileSimulator:
         :param fpga_id: A parameter to specify what fpga we want
             to return the beamformer table for. (Default fpga_id = 0)
 
-        Note: this is a wrapper method of 'pyfabil.tpm.station_beamf.get_channel_table'
+        Note: this is a wrapper method of
+        'ska_low_sps_tpm_api.boards.tpm.station_beamf.get_channel_table'
 
         :return: Nx7 table with one row every 8 channels
         """

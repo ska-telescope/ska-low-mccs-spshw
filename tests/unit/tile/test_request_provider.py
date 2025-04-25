@@ -80,7 +80,7 @@ class TestRequestProvider:
             tile_request_provider.get_request(TpmStatus.INITIALISED), TileLRCRequest
         )
         # Picked up when the TPM is connectable. Or ABORTED after 60 seconds.
-        tile_request_provider.desire_initialise(request)
+        tile_request_provider.enqueue_lrc(request)
         assert isinstance(
             tile_request_provider.get_request(TpmStatus.INITIALISED), TileLRCRequest
         )
@@ -88,6 +88,45 @@ class TestRequestProvider:
         assert not isinstance(
             tile_request_provider.get_request(TpmStatus.INITIALISED), TileLRCRequest
         )
+
+    def test_command_execution_order(
+        self: TestRequestProvider, tile_request_provider: TileRequestProvider
+    ) -> None:
+        """
+        Test that commands of equal priority are executed in the ordet they were input.
+
+        :param tile_request_provider: a `TileRequestProvider` instance.
+        """
+        request_1 = TileLRCRequest(
+            name="my_dummy_command_1",
+            command_object=unittest.mock.Mock(),
+            task_callback=unittest.mock.Mock(),
+        )
+        request_2 = TileLRCRequest(
+            name="my_dummy_command_2",
+            command_object=unittest.mock.Mock(),
+            task_callback=unittest.mock.Mock(),
+        )
+        assert not isinstance(
+            tile_request_provider.get_request(TpmStatus.INITIALISED), TileLRCRequest
+        )
+        for x in range(10):
+            if x % 2:
+                tile_request_provider.enqueue_lrc(request_1, priority=1)
+            else:
+                tile_request_provider.enqueue_lrc(request_2, priority=1)
+
+        for x in range(10):
+            if x % 2:
+                assert (
+                    tile_request_provider.get_request(TpmStatus.INITIALISED)
+                    == request_1
+                )
+            else:
+                assert (
+                    tile_request_provider.get_request(TpmStatus.INITIALISED)
+                    == request_2
+                )
 
     # pylint: disable=too-many-arguments
     @pytest.mark.parametrize(

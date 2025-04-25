@@ -7,7 +7,7 @@ class MccsTile {}
 class PollingComponentManager {}
 class TileComponentManager {}
 class MccsSubrack {}
-class pyaavs.Tile {}
+class ska_low_sps_tpm_api.Tile {}
 class TileSimulator {}
 class TileRequestProvider {}
 
@@ -17,7 +17,7 @@ MccsTile "1" -r- "1" TileComponentManager
 TileComponentManager "1" -u- "0..8" MccsSubrack
 TileComponentManager "1" -r- "1" TileRequestProvider
 PollingComponentManager <|-- TileComponentManager
-TileComponentManager "0..1" --  pyaavs.Tile
+TileComponentManager "0..1" --  ska_low_sps_tpm_api.Tile
 TileComponentManager "0..1" --  TileSimulator
 
 @enduml

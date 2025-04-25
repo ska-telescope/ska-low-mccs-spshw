@@ -33,6 +33,7 @@ def skip_member(app, what, name, obj, skip, options):
         return True  # Skip documenting these members
     return skip
 
+
 def setup(app):
     app.connect("autodoc-skip-member", skip_member)
 
@@ -59,11 +60,12 @@ sys.path.insert(0, os.path.abspath("../../src"))
 # -- Path set up --------------------------------------------------------------
 # pylint: disable=invalid-name
 autodoc_mock_imports = [
+    "h5py",
     "numpy",
-    "pyfabil",
-    "pyaavs",
+    "ska_low_sps_tpm_api",
     "scipy",
     "ska_tango_base",
+    "ska_low_mccs_daq",
     "tango",
     "ska_control_model",
     "ska_low_mccs_common",
@@ -73,7 +75,6 @@ autodoc_mock_imports = [
     "ska_ser_skuid",
     "ska_ser_logging",
     "astropy",
-    "pydaq",
     "watchdog",
 ]
 
@@ -109,8 +110,8 @@ nitpick_ignore = [
     ("py:class", "numpy.complex128"),
     ("py:exc", "fire.core.FireError"),
     ("py:exc", "yaml.YAMLError"),
-    ("py:class", "pyaavs.tile.Tile"),
-    ("py:class", "pyaavs.tile_wrapper.Tile"),
+    ("py:class", "ska_low_sps_tpm_api.tile.Tile"),
+    ("py:class", "ska_low_sps_tpm_api.tile_wrapper.Tile"),
     ("py:exc", "LibraryError"),
     ("py:exc", "HTTPException"),  # fastapi online docs are mkdocs-based
     ("py:class", "starlette.requests.Request"),  # mkdocs-based
@@ -118,7 +119,7 @@ nitpick_ignore = [
     ("py:class", "ska_tango_base.base.BaseComponentManager"),
     ("py:class", "ska_tango_base.base.CommandTracker"),
     ("py:class", "ska_low_mccs_common.EventSerialiser"),
-    ("py:class", "pyfabil.base.definitions.Device"),
+    ("py:class", "ska_low_sps_tpm_api.base.definitions.Device"),
     ("py:class", "HealthState"),
     ("py:class", "TaskStatus"),
     ("py:class", "TaskCallbackType"),

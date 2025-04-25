@@ -1948,6 +1948,7 @@ class TestMccsTileCommands:
         on_tile_device: MccsDeviceProxy,
         start_time: Optional[int],
         duration: Optional[int],
+        change_event_callbacks: MockTangoEventCallbackGroup,
     ) -> None:
         """
         Test for.
@@ -1962,12 +1963,26 @@ class TestMccsTileCommands:
             :py:class:`tango.test_context.DeviceTestContext`.
         :param start_time: time to state the beamformer
         :param duration: duration of time that the beamformer should run
+        :param change_event_callbacks: dictionary of Tango change event
+            callbacks with asynchrony support.
         """
+        on_tile_device.subscribe_event(
+            "longrunningcommandstatus",
+            EventType.CHANGE_EVENT,
+            change_event_callbacks["lrc_command"],
+        )
+        change_event_callbacks["lrc_command"].assert_change_event(Anything)
         assert not on_tile_device.isBeamformerRunning
         args = {"start_time": start_time, "duration": duration}
-        on_tile_device.StartBeamformer(json.dumps(args))
-        assert on_tile_device.isBeamformerRunning
-        on_tile_device.StopBeamformer()
+        [[result_code], [lrc_id]] = on_tile_device.StartBeamformer(json.dumps(args))
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
+        wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer()
+        change_event_callbacks["lrc_command"].assert_change_event(
+            (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
+        )
         assert not on_tile_device.isBeamformerRunning
 
     def test_configure_beamformer(

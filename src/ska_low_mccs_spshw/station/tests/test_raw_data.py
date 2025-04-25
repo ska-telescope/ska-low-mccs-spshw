@@ -106,7 +106,7 @@ class TestRaw(BaseDaqTest):
             self.test_logger.debug("Sending raw data")
             self._configure_and_start_pattern_generator("jesd")
             self._send_raw_data(sync=sync)
-            assert self._data_created_event.wait(100)
+            assert self._data_created_event.wait(20)
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
             self._check_raw(raw_data_synchronised=sync)

@@ -326,13 +326,24 @@ class DaqComponentManager(TaskExecutorComponentManager):
                     return
             self.logger.debug(f"Found {value} in DaqStatus[{status}]: {daq_status=}.")
 
+        def _check_config(cfg: dict, key: str, expected_val: Any) -> bool:
+            try:
+                if cfg[key] is not expected_val:
+                    return False
+            except KeyError:
+                return False
+            return True
+
         if not self._is_daq_configured_for_bandpasses():
             cur_cfg = self.get_configuration()
             new_cfg: dict[str, Any] = {}
-            if cur_cfg["append_integrated"] is not False:
+            if not _check_config(cur_cfg, "append_integrated", False):
                 new_cfg.update(append_integrated=False)
-            if cur_cfg["nof_tiles"] != self._configuration["nof_tiles"]:
-                new_cfg.update(nof_tiles=self._configuration["nof_tiles"])
+            if not _check_config(
+                cur_cfg, "nof_tiles", self._configuration["nof_tiles"]
+            ):
+                new_cfg.update(append_integrated=False)
+            self.configure_daq(json.dumps(new_cfg))
 
         if not self._is_integrated_channel_consumer_running():
             # start consumer
@@ -361,9 +372,12 @@ class DaqComponentManager(TaskExecutorComponentManager):
         self: DaqComponentManager,
     ) -> bool:
         cfg = self.get_configuration()
-        if cfg["append_integrated"] is not False:
-            return False
-        if cfg["nof_tiles"] != self._configuration["nof_tiles"]:
+        try:
+            if cfg["append_integrated"] is not False:
+                return False
+            if cfg["nof_tiles"] != self._configuration["nof_tiles"]:
+                return False
+        except KeyError:
             return False
         return True
 

@@ -118,8 +118,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
             power=None,
             fault=None,
         )
-        # We've bumped this to 3 workers to allow for the bandpass monitoring.
-        self._task_executor = TaskExecutor(max_workers=3)
+        # We've bumped this to 4 workers to allow for the bandpass monitoring.
+        self._task_executor = TaskExecutor(max_workers=4)
 
     def restart_daq_if_active(self: DaqComponentManager) -> None:
         """Restart daq if consumers are active."""
@@ -342,7 +342,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
             if not _check_config(
                 cur_cfg, "nof_tiles", self._configuration["nof_tiles"]
             ):
-                new_cfg.update(append_integrated=False)
+                new_cfg.update(nof_tiles=self._configuration["nof_tiles"])
+            self.logger.debug(f"Reconfiguring DAQ with config: {new_cfg}")
             self.configure_daq(json.dumps(new_cfg))
 
         if not self._is_integrated_channel_consumer_running():
@@ -485,7 +486,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             message indicating status. The message is for
             information purpose only.
         """
-        self.logger.info("Configuring DAQ receiver.")
+        self.logger.info("Configuring DAQ receiver with %s.", daq_config)
         result_code, message = self._daq_client.configure_daq(daq_config)
         if result_code == ResultCode.OK:
             self.logger.info("DAQ receiver configuration complete.")

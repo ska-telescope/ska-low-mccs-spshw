@@ -225,7 +225,11 @@ def ensure_subrack_fan_mode(
         tango.EventType.CHANGE_EVENT,
         change_event_callbacks["subrack_fan_mode"],
     )
-    # change_event_callbacks.assert_change_event("subrack_fan_mode", fan_modes)
+    change_event_callbacks.assert_change_event(
+        "subrack_fan_mode",
+        fan_modes,
+        lookahead=4,
+    )
 
     if not fan_modes:
         # We only just put it online / turned it on,
@@ -272,6 +276,7 @@ def ensure_subrack_fan_speed_percent(
     change_event_callbacks.assert_change_event(
         "subrack_fan_speeds_percent",
         expected_fan_speeds_percent,
+        lookahead=4
     )
 
     # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
@@ -485,7 +490,7 @@ def check_tpm_power_state(
 
     if target_power == "off":
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
+            PowerState.OFF, lookahead=4
         )
         print("TPM is off as expected.")
     else:

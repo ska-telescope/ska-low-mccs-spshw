@@ -274,9 +274,7 @@ def ensure_subrack_fan_speed_percent(
         change_event_callbacks["subrack_fan_speeds_percent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds_percent",
-        expected_fan_speeds_percent,
-        lookahead=4
+        "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=4
     )
 
     # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.

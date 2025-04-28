@@ -70,7 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=6.0,
+        timeout=15.0,
         assert_no_error=False,
     )
 
@@ -596,3 +596,57 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     _ = subrack_device.SetSubrackFanMode(json_kwargs)
 
     change_event_callbacks["subrackFanModes"].assert_change_event(expected_modes)
+
+
+def test_subrack_connection_lost(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Test our ability to rediscover attribute state after outage.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.subscribe_event(
+        "tpm1PowerState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["tpm1PowerState"],
+    )
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
+    subrack_device.subscribe_event(
+        "adminMode",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["adminMode"],
+    )
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
+
+    # simulate a drop out in connection
+    subrack_simulator.network_jitter_limits = (10_000, 11_000)
+    # change_event_callbacks["state"].assert_not_called()
+    # print("+=+=")
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
+
+    # simulate a connection resumed
+    subrack_simulator.network_jitter_limits = (0, 1_000)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Check that attribute state rediscovered
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)

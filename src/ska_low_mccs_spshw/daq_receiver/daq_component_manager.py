@@ -202,12 +202,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             daq_status: dict[str, Any] = json.loads(self.daq_status())
             self.logger.info("DaqStatus check results - %s", daq_status)
             if daq_status["Bandpass Monitor"] is True:
-                # bandpass_monitor_thread = threading.Thread(
-                #     target=self.start_bandpass_monitor,
-                #     name="submit_task_for_bandpass_monitoring",
-                #     args=[json.dumps({"plot_directory": "/tmp"})],
-                # )
-                # bandpass_monitor_thread.start()
                 self.start_bandpass_monitor(json.dumps({"plot_directory": "/tmp"}))
         else:
             self.logger.warning(
@@ -335,16 +329,23 @@ class DaqComponentManager(TaskExecutorComponentManager):
             return True
 
         if not self._is_daq_configured_for_bandpasses():
+            self.logger.debug("Daq not configured correctly, reconfiguring...")
             cur_cfg = self.get_configuration()
+            self.logger.debug(f"Current DAQ config: {cur_cfg}")
             new_cfg: dict[str, Any] = {}
             if not _check_config(cur_cfg, "append_integrated", False):
+                self.logger.debug("Setting `append_integrated` to False")
                 new_cfg.update(append_integrated=False)
             if not _check_config(
                 cur_cfg, "nof_tiles", self._configuration["nof_tiles"]
             ):
+                self.logger.debug(
+                    f"Setting `nof_tiles` to {self._configuration['nof_tiles']}"
+                )
                 new_cfg.update(nof_tiles=self._configuration["nof_tiles"])
             self.logger.debug(f"Reconfiguring DAQ with config: {new_cfg}")
             self.configure_daq(json.dumps(new_cfg))
+            self.logger.debug(f"Config is now: {self.get_configuration()}")
 
         if not self._is_integrated_channel_consumer_running():
             # start consumer

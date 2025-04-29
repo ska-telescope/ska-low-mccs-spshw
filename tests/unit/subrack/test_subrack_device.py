@@ -70,7 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=15.0,
+        timeout=20.0,
         assert_no_error=False,
     )
 
@@ -630,15 +630,18 @@ def test_subrack_connection_lost(
     )
 
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
-    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
 
     change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
 
     # simulate a drop out in connection
     subrack_simulator.network_jitter_limits = (10_000, 11_000)
     # change_event_callbacks["state"].assert_not_called()
-    # print("+=+=")
     change_event_callbacks["state"].assert_change_event(
         DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
     )

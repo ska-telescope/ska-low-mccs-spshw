@@ -125,14 +125,14 @@ environments:
         - stations/stfc-ral-software.yaml
     - config_files:
       - values/values-ral-software.yaml
-      datacentre: stfc-ral
+      datacentre: ext_tom_moynihan@te7stratton@kubernetes
   ral-software-minikube:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?7b072679bfdb6cc3dcd970b2c1040689066e128a#tmdata/stfc-ral
         datasets:
         - stations/stfc-ral-software.yaml
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/minikube
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?7b072679bfdb6cc3dcd970b2c1040689066e128a#tmdata/minikube
         datasets:
         - platform.yaml
       config_files:
@@ -141,7 +141,7 @@ environments:
   ral-firmware:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?7b072679bfdb6cc3dcd970b2c1040689066e128a#tmdata/stfc-ral
         datasets:
         - stfc-ral.yaml
         - stations/stfc-ral-firmware.yaml
@@ -151,7 +151,7 @@ environments:
   ral-partial:
     values:
     - telmodel:
-      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?de912ea5e026dbf471a1ec702747aae644ac0504#tmdata/stfc-ral
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?7b072679bfdb6cc3dcd970b2c1040689066e128a#tmdata/stfc-ral
         datasets:
         - stfc-ral.yaml
         - stations/stfc-ral-partial.yaml

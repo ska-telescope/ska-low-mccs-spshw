@@ -1,5 +1,10 @@
 # Version History
 
+## 6.0.0
+
+* [THORN-97] SpsStation.Initialise() reverted to not taking arguments. The version of initialise which
+  does is SpsStation.ReInitialise(json_arg)
+
 ## 5.0.2
 
 * [THORN-152] Remove daqs from log message.

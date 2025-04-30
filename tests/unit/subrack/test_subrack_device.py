@@ -641,7 +641,6 @@ def test_subrack_connection_lost(
 
     # simulate a drop out in connection
     subrack_simulator.network_jitter_limits = (10_000, 11_000)
-    # change_event_callbacks["state"].assert_not_called()
     change_event_callbacks["state"].assert_change_event(
         DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
     )

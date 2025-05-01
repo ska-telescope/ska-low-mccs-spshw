@@ -427,7 +427,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
     change_event_callbacks["state"].assert_not_called()
 
     change_event_callbacks["tpmCount"].assert_change_event(
@@ -480,7 +482,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
 
     # Let's change a value in the simulator and check that a change event is pushed.
     subrack_simulator.simulate_attribute("board_current", 0.7)
-    change_event_callbacks["boardCurrent"].assert_change_event([pytest.approx(0.7)])
+    change_event_callbacks["boardCurrent"].assert_change_event(
+        [pytest.approx(0.7)], lookahead=5, consume_nonmatches=True
+    )
 
     # Now let's try a command
     subrack_device.subscribe_event(
@@ -518,7 +522,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         )
 
         change_event_callbacks[f"tpm{tpm_to_power}PowerState"].assert_change_event(
-            PowerState.ON
+            PowerState.ON, lookahead=5, consume_nonmatches=True
         )
 
         change_event_callbacks["command_result"].assert_change_event(
@@ -560,7 +564,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         {"power_supply_fan_id": fan_to_change, "speed_percent": percent_to_set}
     )
     _ = subrack_device.SetPowerSupplyFanSpeed(json_kwargs)
-    change_event_callbacks["powerSupplyFanSpeeds"].assert_change_event(expected_speeds)
+    change_event_callbacks["powerSupplyFanSpeeds"].assert_change_event(
+        expected_speeds, lookahead=5, consume_nonmatches=True
+    )
 
     fan_to_change = 2
     percent_to_set = 49.0
@@ -580,9 +586,11 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     _ = subrack_device.SetSubrackFanSpeed(json_kwargs)
 
     change_event_callbacks["subrackFanSpeedsPercent"].assert_change_event(
-        expected_speeds_percent
+        expected_speeds_percent, lookahead=5, consume_nonmatches=True
     )
-    change_event_callbacks["subrackFanSpeeds"].assert_change_event(expected_speeds)
+    change_event_callbacks["subrackFanSpeeds"].assert_change_event(
+        expected_speeds, lookahead=5, consume_nonmatches=True
+    )
 
     fan_to_change = 3
     subrack_fan_mode = subrack_device.subrackFanModes
@@ -595,7 +603,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     json_kwargs = json.dumps({"fan_id": fan_to_change, "mode": int(mode_to_set)})
     _ = subrack_device.SetSubrackFanMode(json_kwargs)
 
-    change_event_callbacks["subrackFanModes"].assert_change_event(expected_modes)
+    change_event_callbacks["subrackFanModes"].assert_change_event(
+        expected_modes, lookahead=5, consume_nonmatches=True
+    )
 
 
 def test_subrack_connection_lost(

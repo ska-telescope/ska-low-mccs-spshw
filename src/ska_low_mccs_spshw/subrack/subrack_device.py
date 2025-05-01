@@ -295,7 +295,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
         "pdu_outlet_states": "pduOutletStates",
-        "pdu_outlet_currents": "pduCurrents",
+        "pdu_outlet_currents": "pduOutletCurrents",
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
@@ -1033,39 +1033,42 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._hardware_attributes.get("subrackTimestamp", None)
 
-    @attribute(dtype=(str,), label="pdu ip address")
-    def pduIpAddress(self: MccsSubrack) -> str:
-        """
-        Handle a Tango attribute read of the pdu ip address.
+    # TODO Enlogic PDUs don't have the ability to get IP or MAC addresses.
+    # Need to revisit
 
-        :return: the pdu ip address.
-        """
-        return self._pdu_ip_address()
+    # @attribute(dtype=(str,), label="pdu ip address")
+    # def pduIpAddress(self: MccsSubrack) -> str:
+    #     """
+    #     Handle a Tango attribute read of the pdu ip address.
 
-    def _pdu_ip_address(self: MccsSubrack) -> str:
-        """
-        Handle a Tango attribute read of the pdu ip address.
+    #     :return: the pdu ip address.
+    #     """
+    #     return self._pdu_ip_address()
 
-        :return: the pdu ip address.
-        """
-        return self._hardware_attributes.get("pduIpAddress", "")
+    # def _pdu_ip_address(self: MccsSubrack) -> str:
+    #     """
+    #     Handle a Tango attribute read of the pdu ip address.
 
-    @attribute(dtype=(str,), label="pdu mac address")
-    def pduMacAddress(self: MccsSubrack) -> str:
-        """
-        Handle a Tango attribute read of the pdu mac address.
+    #     :return: the pdu ip address.
+    #     """
+    #     return self._hardware_attributes.get("pduIpAddress", "")
 
-        :return: the pdu mac address.
-        """
-        return self._pdu_mac_address()
+    # @attribute(dtype=(str,), label="pdu mac address")
+    # def pduMacAddress(self: MccsSubrack) -> str:
+    #     """
+    #     Handle a Tango attribute read of the pdu mac address.
 
-    def _pdu_mac_address(self: MccsSubrack) -> str:
-        """
-        Handle a Tango attribute read of the pdu mac address.
+    #     :return: the pdu mac address.
+    #     """
+    #     return self._pdu_mac_address()
 
-        :return: the pdu mac address.
-        """
-        return self._hardware_attributes.get("pduMacAddress", "")
+    # def _pdu_mac_address(self: MccsSubrack) -> str:
+    #     """
+    #     Handle a Tango attribute read of the pdu mac address.
+
+    #     :return: the pdu mac address.
+    #     """
+    #     return self._hardware_attributes.get("pduMacAddress", "")
 
     @attribute(dtype=(str,), label="pdu model")
     def pduModel(self: MccsSubrack) -> str:
@@ -1116,7 +1119,10 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the state of the port.
         """
-        return self._hardware_attributes.get("pduOutlets", [])
+        states = []
+        for i in range(self._pdu_number_outlets()):
+            states.append(self._hardware_attributes.get(f"pdu{i}_state", None))
+        return states
 
     @attribute(dtype=(float,), label="pdu port currents")
     def pduOutletCurrents(self: MccsSubrack) -> list[float]:
@@ -1131,9 +1137,12 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         Handle a Tango attribute read of the current of pdu outlets.
 
-        :return: the state of the port.
+        :return: the current of the port.
         """
-        return self._hardware_attributes.get("pduCurrents", [])
+        currents = []
+        for i in range(self._pdu_number_outlets()):
+            currents.append(self._hardware_attributes.get(f"pdu{i}_current", None))
+        return currents
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float]:

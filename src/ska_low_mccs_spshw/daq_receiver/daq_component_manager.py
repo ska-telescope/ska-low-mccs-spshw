@@ -452,7 +452,10 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: The configuration in use by the DaqReceiver instance.
         """
-        return self._daq_client.get_configuration()
+        # print("GETTING CONFIG (SPS)...")
+        cfg = self._daq_client.get_configuration()
+        # print(f"RECEIVED CONFIG (SPS): {cfg}")
+        return cfg
 
     def _set_consumers_to_start(
         self: DaqComponentManager, consumers_to_start: str
@@ -489,6 +492,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         self.logger.info("Configuring DAQ receiver with %s.", daq_config)
         result_code, message = self._daq_client.configure_daq(daq_config)
+        print(f"CONFIGURE RESULTS: {result_code=}, {message=}", flush=True)
         if result_code == ResultCode.OK:
             self.logger.info("DAQ receiver configuration complete.")
         else:

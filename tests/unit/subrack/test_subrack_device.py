@@ -662,3 +662,4 @@ def test_subrack_connection_lost(
 
     # Check that attribute state rediscovered
     change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
+    assert subrack_device.tpm1PowerState == PowerState.OFF

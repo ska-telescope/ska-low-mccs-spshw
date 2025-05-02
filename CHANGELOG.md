@@ -1,5 +1,11 @@
 # Version History
 
+* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
+
+## 5.0.2
+
+* [THORN-152] Remove daqs from log message.
+
 ## 5.0.1
 
 * [THORN-152] Handle missing DAQ TRL.

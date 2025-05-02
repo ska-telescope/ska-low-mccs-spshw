@@ -1096,8 +1096,6 @@ class SpsStationComponentManager(
                 "In SpsStationComponentManager._evaluatePowerState with:\n"
                 f"\tsubracks: {self._subrack_power_states.values()}\n"
                 f"\ttiles: {self._tile_power_states.values()}\n"
-                f"\tLMCDAQ: {self._lmc_daq_power_state.values()}\n"
-                f"\tBandpassDAQ: {self._bandpass_daq_power_state.values()}\n"
                 f"\tresult: {str(evaluated_power_state)}"
             )
             self._update_component_state(power=evaluated_power_state)

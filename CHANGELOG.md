@@ -1,8 +1,23 @@
 # Version History
 
-# unreleased
+## unreleased
 
 * [SKB-854] Add check for bandpass daq configuration.
+* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
+
+## 5.0.2
+
+* [THORN-152] Remove daqs from log message.
+
+## 5.0.1
+
+* [THORN-152] Handle missing DAQ TRL.
+
+## 5.0.0
+
+* [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,
+  they are submitted to the polling loop to be picked up on the next poll, but the command returns
+  before the beamformer has actually started/stopped.
 
 ## 4.0.0
 

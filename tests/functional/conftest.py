@@ -252,6 +252,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         callbacks.
     """
     return MockTangoEventCallbackGroup(
+        "pdu_state",
         "subrack_state",
         "subrack_fan_mode",
         "subrack_fan_speeds",

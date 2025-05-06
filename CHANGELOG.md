@@ -3,7 +3,7 @@
 ## unreleased
 
 * [SKB-854] Add check for bandpass daq configuration.
-* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
+* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack loses conection to device
 
 ## 5.0.2
 

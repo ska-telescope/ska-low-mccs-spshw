@@ -19,7 +19,7 @@ priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.0"}
+ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.1"}
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "^10.0.0"
@@ -115,6 +115,7 @@ ska-low-mccs-daq-interface = {git = "https://gitlab.com/ska-telescope/mccs/ska-l
 ska-low-mccs-daq = "^2.0.0"
 #ska-low-mccs-daq = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/", branch="skb-854"}
 ska-telmodel = "^1.4.1"
+ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.1"}
 pysnmp = "^7.1.4"
 ska-ser-snmp = "^0.4.1"
 

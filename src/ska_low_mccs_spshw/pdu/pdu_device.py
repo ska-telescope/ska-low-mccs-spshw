@@ -14,12 +14,11 @@ from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_sat_lmc.pdu.pdu_health_model import PduHealthModel
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from tango import Attribute
-from tango.server import attribute, device_property
-
-from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
+from tango.server import device_property
 
 __all__ = ["MccsPdu", "main"]
 
@@ -62,18 +61,16 @@ class MccsPdu(AttributePollingDevice):
         # that calls __init__ when you least expect it.
         # So don't put anything executable in here
         # (other than the super() call).
+        super().__init__(*args, **kwargs)
+        self._dynamic_attrs: dict[str, Attribute]
         self._health_state: HealthState
         self._health_model: PduHealthModel
-        self._dynamic_attrs: dict[str, Attribute]
-        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-
-        super().__init__(*args, **kwargs)
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
         try:
             super().init_device()
-
+            self._version_id = sys.modules["ska_sat_lmc"].__version__
             device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
             version = f"{device_name} Software Version: {self._version_id}"
             properties = f"Initialised {device_name} on: {self.Host}:{self.Port}"
@@ -101,7 +98,7 @@ class MccsPdu(AttributePollingDevice):
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
-    def create_component_manager(self) -> SNMPComponentManager:
+    def create_component_manager(self: MccsPdu) -> SNMPComponentManager:
         """
         Create and return a component manager.
 
@@ -109,12 +106,12 @@ class MccsPdu(AttributePollingDevice):
         """
         filename = self.DeviceModels[self.Model]
         device_definition = importlib.resources.files(
-            "ska_low_mccs_spshw.pdu.device_definitions"
+            "ska_sat_lmc.pdu.device_definitions"
         ).joinpath(filename)
         # This goes here because you don't have access to properties
         # until tango.server.BaseDevice.init_device() has been called
         dynamic_attrs = parse_device_definition(
-            load_device_definition(str(device_definition), None)
+            load_device_definition(str(device_definition))
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 
@@ -159,7 +156,7 @@ class MccsPdu(AttributePollingDevice):
         """
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_disconnected",
+            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
             CommunicationStatus.ESTABLISHED: "component_on",
         }
         action = action_map[communication_state]

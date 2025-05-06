@@ -1,48 +1,67 @@
 attributes:
-  # Relatively static attributes that we'll poll only once
-  - name: firmwareVersion
-    oid: [ ENLOGIC-PDU-MIB, pduNamePlateFirmwareVersion, 1 ]
-    polling_period: .inf
-
-  - name: modelNumber
-    oid: [ ENLOGIC-PDU-MIB, pduNamePlatePartNumber, 1 ]
-    polling_period: .inf
-
-  - name: serialNumber
-    oid: [ ENLOGIC-PDU-MIB, pduNamePlateSerialNumber, 1 ]
-    polling_period: .inf
-
   - name: systemDescription
     oid: [ SNMPv2-MIB, sysDescr, 0 ]
     polling_period: .inf
+    access: readonly
+    description: The system description.
 
-  # more likely to change but only occasionally
-  - name: outlet{}Name
-    indexes:
-      - [ 1, 24 ]
-    oid: [ ENLOGIC-PDU-MIB, pduOutletSwitchedName, 1 ]
-    polling_period: 10000
+###################
+# Common attributes
+###################
+  - name: pduModel
+    oid: [ ENLOGIC-PDU-MIB, pduNamePlateModelNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU model name/number.
 
-  - name: outlet{}Command
-    indexes:
-      - [1, 24]
-    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedControlCommand, 1]
-    polling_period: 10000
+  - name: pduSerialNumber
+    oid: [ ENLOGIC-PDU-MIB, pduNamePlateSerialNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU serial number.
 
-  # update these at the poll rate
-  - name: outlet{}State
+  - name: pduFirmwareVersion
+    oid: [ ENLOGIC-PDU-MIB, pduNamePlateFirmwareVersion, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU firmware version.
+
+  - name: pduOutlets
+    oid: [ ENLOGIC-PDU-MIB, pduUnitPropertiesSwitchedOutletCount, 1 ]
+    polling_period: .inf
+    access: readonly
+    dtype: int
+    description: The number of switched outlets.
+
+  - name: pdu{}State
     indexes:
       - [1, 24]
     oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedSTATUSState, 1]
+    #polling_period: 3000
+    access: readonly
+    dtype: bool
+    description: Indicates the present switch state of the PDU switched outlet being queried. off (0), on (1)
 
-  - name: outlet{}Current
+  - name: pdu{}Current
     indexes:
       - [1, 24]
-    oid: [ENLOGIC-PDU-MIB, pduOutletMeteredSTATUSCurrent, 1]
+    oid: [ENLOGIC-PDU-MIB, pduOutletMeteredSTATUSCurrent, 5]
+    polling_period: 3000
+    access: readonly
+    dtype: int
+    description: Returns the current draw, in hundredths of Amps(A), of the load on the PDU outlet being queried.
 
-#  - name: outletCurrent
-#    oid: [ENLOGIC-PDU-MIB, pduOutletMeteredSTATUSCurrent, 1]
+  - name: pdu{}_voltage
+    indexes:
+      - [1, 24]
+    oid: [ENLOGIC-PDU-MIB, pduInputPhaseSTATUSEntry, 6 ]
+    polling_period: 3000
+    access: readonly
+    dtype: int
+    description: Returns the voltage, in Volts(V)
+
+#  - name: pdu{}Command
 #    indexes:
 #      - [1, 24]
-#    dtype: (int,)
-#    max_dim_x: 24
+#    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedControlCommand, 1]
+#    polling_period: 10000

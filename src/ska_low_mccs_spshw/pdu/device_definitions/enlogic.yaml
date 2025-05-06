@@ -26,14 +26,14 @@ attributes:
     access: readonly
     description: The PDU firmware version.
 
-  - name: pduOutlets
+  - name: pduNumberOfPorts
     oid: [ ENLOGIC-PDU-MIB, pduUnitPropertiesSwitchedOutletCount, 1 ]
     polling_period: .inf
     access: readonly
     dtype: int
     description: The number of switched outlets.
 
-  - name: pdu{}State
+  - name: pduPort{}State
     indexes:
       - [1, 24]
     oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedSTATUSState, 1]
@@ -42,7 +42,7 @@ attributes:
     dtype: bool
     description: Indicates the present switch state of the PDU switched outlet being queried. off (0), on (1)
 
-  - name: pdu{}Current
+  - name: pduPort{}Current
     indexes:
       - [1, 24]
     oid: [ENLOGIC-PDU-MIB, pduOutletMeteredSTATUSCurrent, 5]
@@ -51,7 +51,7 @@ attributes:
     dtype: int
     description: Returns the current draw, in hundredths of Amps(A), of the load on the PDU outlet being queried.
 
-  - name: pdu{}_voltage
+  - name: pduPort{}Voltage
     indexes:
       - [1, 24]
     oid: [ENLOGIC-PDU-MIB, pduInputPhaseSTATUSEntry, 6 ]
@@ -60,8 +60,10 @@ attributes:
     dtype: int
     description: Returns the voltage, in Volts(V)
 
-#  - name: pdu{}Command
-#    indexes:
-#      - [1, 24]
-#    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedControlCommand, 1]
-#    polling_period: 10000
+  - name: pduPort{}OnOff
+    indexes:
+      - [1, 24]
+    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedControlCommand, 1]
+    polling_period: 10000
+    access: read-write
+    

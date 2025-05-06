@@ -29,6 +29,8 @@ from ska_low_mccs_spshw.station import SpsStation
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
+    get_bandpass_daq_name,
+    get_lmc_daq_name,
     get_subrack_name,
     get_tile_name,
 )
@@ -89,7 +91,6 @@ def test_context_fixture(
     mock_tile_device_proxies: list[unittest.mock.Mock],
     mock_daq_device_proxy: unittest.mock.Mock,
     patched_sps_station_device_class: type[SpsStation],
-    daq_trl: str,
 ) -> Iterator[SpsTangoTestHarnessContext]:
     """
     Return a test context in which an SPS station Tango device is running.
@@ -106,7 +107,6 @@ def test_context_fixture(
     :param patched_sps_station_device_class: a subclass of SpsStation
         that has been patched with extra commands that mock system under
         control behaviours.
-    :param daq_trl: a Tango Resource Locator of a DAQ instance.
 
     :yields: a test context.
     """
@@ -121,11 +121,13 @@ def test_context_fixture(
         sdn_gateway,
         subrack_ids=[1],
         tile_ids=range(1, len(mock_tile_device_proxies) + 1),
-        daq_trl=daq_trl,
+        lmc_daq_trl=get_lmc_daq_name(),
+        bandpass_daq_trl=get_bandpass_daq_name(),
         device_class=patched_sps_station_device_class,
     )
 
-    harness.add_mock_daq_device(mock_daq_device_proxy)
+    harness.add_mock_lmc_daq_device(mock_daq_device_proxy)
+    harness.add_mock_bandpass_daq_device(mock_daq_device_proxy)
 
     with harness as context:
         yield context
@@ -445,7 +447,7 @@ def test_On(
                 {
                     "mode": "10G",
                     "payload_length": 8192,
-                    "destination_ip": "0.0.0.0",
+                    "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
                     "source_port": 61648,
                     "netmask_40g": int(
@@ -455,13 +457,15 @@ def test_On(
                 }
             )
         )
-        tile.SetLmcIntegratedDownload.assert_next_call(
+        tile.SetLmcIntegratedDownload.assert_last_call(
             json.dumps(
                 {
-                    "mode": "10G",
-                    "destination_ip": "0.0.0.0",
-                    "channel_payload_length": 8192,
-                    "beam_payload_length": 8192,
+                    "mode": "1G",
+                    "channel_payload_length": 1024,
+                    "beam_payload_length": 1024,
+                    "destination_ip": "10.244.170.166",
+                    "source_port": 61648,
+                    "destination_port": 4660,
                     "netmask_40g": int(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
@@ -725,7 +729,7 @@ def test_Initialise(
                 {
                     "mode": "10G",
                     "payload_length": 8192,
-                    "destination_ip": "0.0.0.0",
+                    "destination_ip": "10.244.170.166",
                     "destination_port": 4660,
                     "source_port": 61648,
                     "netmask_40g": int(
@@ -735,13 +739,15 @@ def test_Initialise(
                 }
             )
         )
-        tile.SetLmcIntegratedDownload.assert_next_call(
+        tile.SetLmcIntegratedDownload.assert_last_call(
             json.dumps(
                 {
-                    "mode": "10G",
-                    "destination_ip": "0.0.0.0",
-                    "channel_payload_length": 8192,
-                    "beam_payload_length": 8192,
+                    "mode": "1G",
+                    "channel_payload_length": 1024,
+                    "beam_payload_length": 1024,
+                    "destination_ip": "10.244.170.166",
+                    "source_port": 61648,
+                    "destination_port": 4660,
                     "netmask_40g": int(
                         ipaddress.ip_interface(sdn_first_interface).netmask
                     ),
@@ -1463,7 +1469,7 @@ def test_station_tile_attributes(
     )
 
 
-def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
+def test_stations_daq_trl(station_device: SpsStation) -> None:
     """
     Test that SPSStation properly stores its DAQ TRL.
 
@@ -1471,13 +1477,12 @@ def test_stations_daq_trl(station_device: SpsStation, daq_trl: str) -> None:
         able to change its value.
 
     :param station_device: The station device to use.
-    :param daq_trl: The DAQ TRL in use.
     """
-    assert station_device.daqTRL == daq_trl
+    assert station_device.LMCdaqTRL == get_lmc_daq_name()
 
-    station_device.daqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
+    station_device.LMCdaqTRL = "NEW_DAQ_TRL"  # type: ignore[method-assign]
 
-    assert station_device.daqTRL == "NEW_DAQ_TRL"
+    assert station_device.LMCdaqTRL == "NEW_DAQ_TRL"
 
 
 def test_AcquireDataForCalibration(

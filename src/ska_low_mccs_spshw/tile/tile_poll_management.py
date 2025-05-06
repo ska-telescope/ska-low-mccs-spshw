@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from itertools import count
+from queue import Empty, PriorityQueue
 from typing import Any, Callable, Optional
 
 from ska_control_model import ResultCode, TaskStatus
@@ -307,7 +309,11 @@ class RequestIterator:
         return item
 
 
-# pylint: disable=too-many-instance-attributes
+# (priority, command_counter, wipe_time, TileLRCRequest)
+# Lower numeric priority means a higher priority.
+LRCEntry = tuple[int, int, float, TileLRCRequest]
+
+
 class TileRequestProvider:
     """
     A class that manages requests for the Tile.
@@ -334,146 +340,45 @@ class TileRequestProvider:
         """
         self._stale_attribute_callback = stale_attribute_callback
         self.request_iterator = _request_iterator or RequestIterator()
-        self.initialise_request: Optional[TileLRCRequest] = None
-        self.download_firmware_request: Optional[TileLRCRequest] = None
-        self.start_acquisition_request: Optional[TileLRCRequest] = None
-        self.start_antenna_buffer_rqst: Optional[TileLRCRequest] = None
-        self.read_antenna_buffer_request: Optional[TileLRCRequest] = None
+        self._lrc_queue: PriorityQueue[LRCEntry] = PriorityQueue()
+        self.initialise_queued = False
+        # The command counter is used to ensure that commands are executed in the
+        # order they were received. It is incremented each time a command is
+        # added to the queue.
+        self._command_counter = count()
         self._desire_connection = False
-        self.command_wipe_time: dict[str, float] = {}
 
     def desire_connection(self) -> None:
         """Register a request to connect with the TPM."""
         self._desire_connection = True
 
-    def desire_initialise(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
+    def enqueue_lrc(
+        self,
+        request: TileLRCRequest,
+        priority: int = 999,
+        wipe_time: Optional[float] = None,
     ) -> None:
         """
-        Register a request to initialize a device.
+        Register a request to be executed on the Tile.
 
-        :param request: The initialise request to execute on
-            a poll.
+        :param priority: The priority of the request. Lower number means higher
+            priority.
+        :param request: The LRC request to execute on a poll.
         :param wipe_time: the approx time at which to wipe this command.
         """
-        # Remove download firmware and startacquisition command if exist.
-        if self.download_firmware_request:
-            self.download_firmware_request.notify_removed_from_queue()
-            self.download_firmware_request = None
-        if self.start_acquisition_request:
-            self.start_acquisition_request.notify_removed_from_queue()
-            self.start_acquisition_request = None
-        if self.initialise_request:
-            self.initialise_request.notify_removed_from_queue()
-            self.initialise_request = None
-        self.initialise_request = request
+        if request.name == "initialise":
+            while self._lrc_queue.qsize():
+                _, _, _, old_request = self._lrc_queue.get_nowait()
+                old_request.notify_removed_from_queue()
+
+            # Reset command counter back to 0
+            self._command_counter = count()
+            self.initialise_queued = True
+
         if wipe_time is None:
             wipe_time = time.time() + 60
-        self.command_wipe_time["initialise"] = wipe_time
-        self.initialise_request.notify_queued()
-
-    def desire_download_firmware(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to download new firmware to a device.
-
-        :param request: The download firmware request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        if self.download_firmware_request:
-            self.download_firmware_request.notify_removed_from_queue()
-            self.download_firmware_request = None
-        self.download_firmware_request = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time["download_firmware"] = wipe_time
-        self.download_firmware_request.notify_queued()
-
-    def desire_start_acquisition(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to download new firmware to a device.
-
-        :param request: The start acquisition request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        if self.start_acquisition_request:
-            self.start_acquisition_request.notify_removed_from_queue()
-            self.start_acquisition_request = None
-        self.start_acquisition_request = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time["start_acquisition"] = wipe_time
-        self.start_acquisition_request.notify_queued()
-
-    def desire_start_antenna_buffer(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to start the antenna buffer.
-
-        :param request: The start acquisition request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        if self.start_antenna_buffer_rqst:
-            self.start_antenna_buffer_rqst.notify_removed_from_queue()
-            self.start_antenna_buffer_rqst = None
-        self.start_antenna_buffer_rqst = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time["start_antenna_buffer"] = wipe_time
-        self.start_antenna_buffer_rqst.notify_queued()
-
-    def desire_read_antenna_buffer(
-        self, request: TileLRCRequest, wipe_time: Optional[float] = None
-    ) -> None:
-        """
-        Register a request to start the antenna buffer.
-
-        :param request: The start acquisition request to execute on
-            a poll.
-        :param wipe_time: the approx time at which to wipe this command.
-        """
-        if self.read_antenna_buffer_request:
-            self.read_antenna_buffer_request.notify_removed_from_queue()
-            self.read_antenna_buffer_request = None
-        self.read_antenna_buffer_request = request
-        if wipe_time is None:
-            wipe_time = time.time() + 60
-        self.command_wipe_time["read_antenna_buffer"] = wipe_time
-        self.read_antenna_buffer_request.notify_queued()
-
-    def _wipe_old_long_running_commands(self) -> None:
-        """Remove old commands."""
-        # Check if the initialise LRC need to be aborted.
-        for command, wipe_time in self.command_wipe_time.items():
-            if time.time() > wipe_time:
-                match command:
-                    case "initialise":
-                        if self.initialise_request:
-                            self.initialise_request.notify_removed_from_queue()
-                            self.initialise_request = None
-                    case "download_firmware":
-                        if self.download_firmware_request:
-                            self.download_firmware_request.notify_removed_from_queue()
-                            self.download_firmware_request = None
-                    case "start_acquisition":
-                        if self.start_acquisition_request:
-                            self.start_acquisition_request.notify_removed_from_queue()
-                            self.start_acquisition_request = None
-                    case "start_antenna_buffer":
-                        if self.start_antenna_buffer_rqst:
-                            self.start_antenna_buffer_rqst.notify_removed_from_queue()
-                            self.start_antenna_buffer_rqst = None
-                    case "read_antenna_buffer":
-                        if self.read_antenna_buffer_request:
-                            self.read_antenna_buffer_request.notify_removed_from_queue()
-                            self.read_antenna_buffer_request = None
+        self._lrc_queue.put((priority, next(self._command_counter), wipe_time, request))
+        request.notify_queued()
 
     def __del__(self) -> None:
         """Clean up and notify callbacks."""
@@ -483,9 +388,7 @@ class TileRequestProvider:
             if self._stale_attribute_callback is not None:
                 self._stale_attribute_callback(stale_attributes)
 
-    def get_request(  # pylint: disable=too-many-return-statements
-        self, tpm_status: TpmStatus
-    ) -> str | TileRequest | None:
+    def get_request(self, tpm_status: TpmStatus) -> str | TileRequest | None:
         """
         Get the next request to execute on the Tile.
 
@@ -493,7 +396,6 @@ class TileRequestProvider:
 
         :return: the next request to execute on the Tile.
         """
-        self._wipe_old_long_running_commands()
         # Calculate attributes no longer being polled, and call a callback with them
         # If a callback is available.
         stale_attributes = self.request_iterator.calculate_stale_attributes(tpm_status)
@@ -506,38 +408,28 @@ class TileRequestProvider:
             self._desire_connection = False
             return "CONNECT"
 
-        # Check for any commands.
+        try:
+            lrc_entry = self._lrc_queue.get_nowait()
+        except Empty:
+            return next(self.request_iterator)
+
+        _, _, wipe_time, request = lrc_entry
+        # Check if the request has timed out.
+        # If it has, we will notify the request and remove it from the queue.
+        if time.time() > wipe_time:
+            request.notify_removed_from_queue()
+            return next(self.request_iterator)
+
         match tpm_status:
             case TpmStatus.UNPROGRAMMED | TpmStatus.PROGRAMMED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self.download_firmware_request = None
+                if request.name in ("initialise", "download_firmware"):
+                    if request.name == "initialise":
+                        self.initialise_queued = False
                     return request
             case TpmStatus.INITIALISED | TpmStatus.SYNCHRONISED:
-                if self.initialise_request:
-                    request = self.initialise_request
-                    self.initialise_request = None
-                    return request
-                if self.download_firmware_request:
-                    request = self.download_firmware_request
-                    self.download_firmware_request = None
-                    return request
-                if self.start_acquisition_request:
-                    request = self.start_acquisition_request
-                    self.start_acquisition_request = None
-                    return request
-                if self.start_antenna_buffer_rqst:
-                    request = self.start_antenna_buffer_rqst
-                    self.start_antenna_buffer_rqst = None
-                    return request
-                if self.read_antenna_buffer_request:
-                    request = self.read_antenna_buffer_request
-                    self.read_antenna_buffer_request = None
-                    return request
+                return request
 
-        # return next item to poll
+        # If we are not in a state where we can process the request,
+        # notify the request and remove it from the queue.
+        request.notify_removed_from_queue()
         return next(self.request_iterator)

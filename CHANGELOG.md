@@ -1,7 +1,37 @@
 # Version History
 
-## Unreleased
+## 6.0.0
 
+* [THORN-97] SpsStation.Initialise() reverted to not taking arguments. The version of initialise which
+  does is SpsStation.ReInitialise(json_arg)
+* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
+
+## 5.0.2
+
+* [THORN-152] Remove daqs from log message.
+
+## 5.0.1
+
+* [THORN-152] Handle missing DAQ TRL.
+
+## 5.0.0
+
+* [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,
+  they are submitted to the polling loop to be picked up on the next poll, but the command returns
+  before the beamformer has actually started/stopped.
+
+## 4.0.0
+
+* [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
+  bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
+  property to populate on SpsStation.
+* [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
+  this is optional, defaults to True. If set to false we won't send integrated data during
+  SpsStation.Initialise()
+* [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
+  optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
+  property is used.
+  
 ## 3.1.1
 
 * [THORN-110] Updated daq refs after repo reorganisation, updated imports.

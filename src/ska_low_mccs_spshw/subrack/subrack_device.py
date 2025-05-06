@@ -273,6 +273,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     SubrackIp = device_property(dtype=str)
     SubrackPort = device_property(dtype=int, default_value=8081)
     UpdateRate = device_property(dtype=float, default_value=15.0)
+    PduTrl = device_property(dtype=str)
 
     # A map from the compnent manager argument to the name of the Tango attribute.
     # This only includes one-to-one mappings. It lets us boilerplate these cases.
@@ -351,6 +352,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             f"\tSubrackIP: {self.SubrackIp}\n"
             f"\tSubrackPort: {self.SubrackPort}\n"
             f"\tUpdateRate: {self.UpdateRate}\n"
+            f"\tPduTrl: {self.PduTrl}\n"
         )
         self.logger.info(
             "\n%s\n%s\n%s", str(self.GetVersionInfo()), version, properties
@@ -410,6 +412,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             self.SubrackIp,
             self.SubrackPort,
             self.logger,
+            self.PduTrl,
             self._communication_state_changed,
             self._component_state_changed,
             update_rate=self.UpdateRate,
@@ -1102,64 +1105,38 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         :return: the pdu model type.
         """
-        return self._hardware_attributes.get("pduModel", "")
+        return self.component_manager.pdu_model()
 
-    @attribute(dtype=(int,), label="pdu number outlets")
-    def pduNumberOutlets(self: MccsSubrack) -> int:
+    @attribute(dtype=(int,), label="pdu number ports")
+    def pduNumberPorts(self: MccsSubrack) -> int:
         """
-        Handle a Tango attribute read of thenumber of pdu outlets.
+        Handle a Tango attribute read of thenumber of pdu ports.
 
-        :return: the number of pdu outlets
+        :return: the number of pdu ports
         """
-        return self._pdu_number_outlets()
-
-    def _pdu_number_outlets(self: MccsSubrack) -> int:
-        """
-        Handle a Tango attribute read of the number of pdu outlets.
-
-        :return: the number of pdu outlets.
-        """
-        return self._hardware_attributes.get("pduOutlets", 0)
+        return self.component_manager.pdu_number_of_ports()
 
     @attribute(dtype=(str,), label="pdu port state")
-    def pduOutletStates(self: MccsSubrack) -> list[str]:
+    def pduPortState(self: MccsSubrack, port_number: int) -> str:
         """
-        Handle a Tango attribute read of the state of pdu outlets.
+        Handle a Tango attribute read of the state of pdu port.
+
+        :param port_number: the port number.
 
         :return: the state of the port.
         """
-        return self._pdu_outlet_state()
+        return self.component_manager.pdu_port_state(port_number)
 
-    def _pdu_outlet_state(self: MccsSubrack) -> list[str]:
+    @attribute(dtype=(str,), label="pdu port current")
+    def pduPortCurrent(self: MccsSubrack, port_number: int) -> str:
         """
-        Handle a Tango attribute read of the state of pdu outlets.
+        Handle a Tango attribute read of the current of pdu port.
 
-        :return: the state of the port.
-        """
-        states = []
-        for i in range(self._pdu_number_outlets()):
-            states.append(self._hardware_attributes.get(f"pdu{i}State", None))
-        return states
-
-    @attribute(dtype=(float,), label="pdu port currents")
-    def pduOutletCurrents(self: MccsSubrack) -> list[float]:
-        """
-        Handle a Tango attribute read of the current of pdu outlets.
+        :param port_number: the port number.
 
         :return: the state of the port.
         """
-        return self._pdu_outlet_current()
-
-    def _pdu_outlet_current(self: MccsSubrack) -> list[float]:
-        """
-        Handle a Tango attribute read of the current of pdu outlets.
-
-        :return: the current of the port.
-        """
-        currents = []
-        for i in range(self._pdu_number_outlets()):
-            currents.append(self._hardware_attributes.get(f"pdu{i}Current", None))
-        return currents
+        return self.component_manager.pdu_port_current(port_number)
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float]:

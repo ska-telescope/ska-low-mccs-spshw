@@ -10,19 +10,36 @@
 from __future__ import annotations  # allow forward references in type hints
 
 import functools
-import inspect
-import itertools
+import sys
 import threading
 import time
+from collections import namedtuple
 from contextlib import contextmanager
+from itertools import dropwhile, islice
 from logging import Logger
-from types import TracebackType
+from types import FrameType, TracebackType
 from typing import Any, Callable, Iterator, TypeVar, cast
 
 from ska_control_model import ResultCode, TaskStatus
 
 __all__ = ["acquire_timeout", "abort_task_on_exception"]
 Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
+
+_FrameInfo = namedtuple("_FrameInfo", ["frame", "filename", "lineno", "function"])
+
+
+def _iterate_stack() -> Iterator[_FrameInfo]:
+    """
+    Generate a fast, lazy subset of inspect.stack() that doesn't access the filesystem.
+
+    :yield: an inspect.FrameInfo-like namedtuple for each frame on the stack
+    """
+    frame: FrameType | None = sys._getframe()
+    while frame:
+        yield _FrameInfo(
+            frame, frame.f_code.co_filename, frame.f_lineno, frame.f_code.co_name
+        )
+        frame = frame.f_back
 
 
 class LogLock:
@@ -68,24 +85,25 @@ class LogLock:
         return acquired
 
     @staticmethod
-    def _caller() -> str:
+    def _caller(depth: int = 3) -> str:
         """
         Return a stringified call stack, with callers joined by "->".
 
-        Specifically returns the last three interesting frames on the call stack, 
-        by starting from the first call outside of the this file. 
-        
-        This filters out code within this class and other util functions that 
+        Specifically, return the last `depth` interesting frames on the call stack,
+        by starting from the first call outside this file.
+
+        This filters out code within this class and other util functions that
         we generally aren't interested in for logging purposes.
+
+        :param depth: how many frames to include
 
         :return: the last three callers' function names, joined by "->"
         """
-        stack = inspect.stack()
-        interesting_frames = itertools.islice(
-            itertools.dropwhile(lambda x: x[1] == __file__, stack),
-            3,
+        stack = _iterate_stack()
+        interesting_frames = islice(
+            dropwhile(lambda x: x.filename == __file__, stack), depth
         )
-        return ">".join(reversed([frame[3] for frame in interesting_frames]))
+        return ">".join(reversed([frame.function for frame in interesting_frames]))
 
     def release(self) -> None:
         """Release the lock."""

@@ -26,14 +26,14 @@ attributes:
     access: readonly
     description: The PDU firmware version.
 
-  - name: pduOutlets
+  - name: pduNumberOfPorts
     oid: [ PDU2-MIB, outletCount, 1 ]
     polling_period: .inf
     access: readonly
     dtype: int
     description: The number of outlets.
 
-  - name: pdu{1}State
+  - name: pduPort{1}State
     oid: [PDU2-MIB, measurementsOutletSensorState]
     polling_period: 3000
     access: readonly
@@ -46,7 +46,7 @@ attributes:
     dtype: bool
     description: The operating sensor state.
 
-  - name: pdu{1}Current
+  - name: pduPort{1}Current
     oid: [PDU2-MIB, measurementsOutletSensorValue]
     polling_period: 3000
     access: readonly
@@ -59,7 +59,7 @@ attributes:
     dtype: int
     description: The rms current outlet sensor value.
 
-  - name: pdu{1}_voltage
+  - name: pduPort{1}Voltage
     oid: [PDU2-MIB, measurementsOutletSensorValue]
     polling_period: 3000
     access: readonly
@@ -72,7 +72,16 @@ attributes:
     dtype: float
     description: The rms voltage outlet sensor value.
 
-# - name: pdu{}Command
-#   oid: [PDU2-MIB, pduOutlet, 1]
-#   polling_period: 3000
-#   dtype: int
+  - name: pduPort{}OnOff
+    oid: [PDU2-MIB, switchingOperation]
+    polling_period: 3000
+    dtype: int
+    start_index: 0
+    placeholder_index: 1
+    indexes:
+      - [1, 1]
+      - [1, 24, 1]
+      - [1, 1]
+    dtype: int
+    description: The switching operation: switch on, switch off or power-cycle.
+      

@@ -28,12 +28,13 @@ Wrapped = TypeVar("Wrapped", bound=Callable[..., Any])
 class LogLock:
     """A logging lock."""
 
-    def __init__(self, name: str, log: Logger) -> None:
+    def __init__(self, name: str, log: Logger, timeout_warning: float = 0.1) -> None:
         self.name = name
         self.log = log
         self.lock = threading.Lock()
         self.last_acquired_at = float("inf")
         self.last_acquired_by = ""
+        self._timeout_warning = timeout_warning
 
     def acquire(self, blocking: bool = True, timeout: float = -1) -> bool:
         """
@@ -69,7 +70,13 @@ class LogLock:
     @staticmethod
     def _caller() -> str:
         """
-        Return the last three interesting callers, joined by "->".
+        Return a stringified call stack, with callers joined by "->".
+
+        Specifically returns the last three interesting frames on the call stack, 
+        by starting from the first call outside of the this file. 
+        
+        This filters out code within this class and other util functions that 
+        we generally aren't interested in for logging purposes.
 
         :return: the last three callers' function names, joined by "->"
         """
@@ -86,7 +93,7 @@ class LogLock:
         caller = self._caller()
 
         self.log.debug(f"lock {self.name} released after {elapsed:.3f}s by {caller}")
-        if elapsed > 0.1:
+        if elapsed > self._timeout_warning:
             self.log.warning(f"lock {self.name} held for {elapsed:.3f}s by {caller}")
         self.lock.release()
 

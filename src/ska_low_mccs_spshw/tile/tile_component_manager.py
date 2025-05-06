@@ -1695,7 +1695,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :raises ConnectionError: if communication with tile failed
         """
         failed = False
-        with acquire_timeout(self._hardware_lock, timeout=8.4) as acquired:
+        with acquire_timeout(
+            self._hardware_lock, timeout=self._default_lock_timeout
+        ) as acquired:
             if acquired:
                 try:
                     self._fpga_current_frame = self.tile.get_fpga_timestamp()

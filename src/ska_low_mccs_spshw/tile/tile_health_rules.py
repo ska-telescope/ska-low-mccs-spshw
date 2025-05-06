@@ -173,10 +173,6 @@ class TileHealthRules(HealthRules):
                 else:
                     # TODO: MCCS-2196 - Updating the tile_health_attribute
                     # in ska-low-sps-tpm-api can cause a key error to be raised.
-                    # print(
-                    #     f"\nMonitoring point {p} is not being evaluated "
-                    #     "as part of the tile's health.\n"
-                    # )
                     continue
             else:
                 # last_path = path.split("/")[-1]

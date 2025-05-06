@@ -12,4 +12,6 @@ RUN apt-get update && apt-get install -y git
 
 RUN pip install -e .
 
+RUN pip install -r deps.txt
+
 USER tango

@@ -1,0 +1,78 @@
+attributes:
+  - name: systemDescription
+    oid: [ SNMPv2-MIB, sysDescr, 0 ]
+    polling_period: .inf
+    access: readonly
+    description: The system description.
+
+###################
+# Common attributes
+###################
+  - name: pduModel
+    oid: [ PDU2-MIB, pduModel, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU model name.
+
+  - name: pduSerialNumber
+    oid: [ PDU2-MIB, pduSerialNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU serial number.
+
+  - name: pduFirmwareVersion
+    oid: [ PDU2-MIB, boardFirmwareVersion, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU firmware version.
+
+  - name: pduOutlets
+    oid: [ PDU2-MIB, outletCount, 1 ]
+    polling_period: .inf
+    access: readonly
+    dtype: int
+    description: The number of outlets.
+
+  - name: pdu{1}State
+    oid: [PDU2-MIB, measurementsOutletSensorState]
+    polling_period: 3000
+    access: readonly
+    start_index: 0
+    placeholder_index: 1
+    indexes:
+      - [1, 1]
+      - [1, 24, 1]
+      - [1, 1]
+    dtype: bool
+    description: The operating sensor state.
+
+  - name: pdu{1}Current
+    oid: [PDU2-MIB, measurementsOutletSensorValue]
+    polling_period: 3000
+    access: readonly
+    start_index: 0
+    placeholder_index: 1
+    indexes:
+      - [1, 1]
+      - [1, 24, 1]
+      - [1, 1]
+    dtype: int
+    description: The rms current outlet sensor value.
+
+  - name: pdu{1}_voltage
+    oid: [PDU2-MIB, measurementsOutletSensorValue]
+    polling_period: 3000
+    access: readonly
+    start_index: 0
+    placeholder_index: 1
+    indexes:
+      - [1, 1]
+      - [1, 24, 1]
+      - [4, 4]
+    dtype: float
+    description: The rms voltage outlet sensor value.
+
+# - name: pdu{}Command
+#   oid: [PDU2-MIB, pduOutlet, 1]
+#   polling_period: 3000
+#   dtype: int

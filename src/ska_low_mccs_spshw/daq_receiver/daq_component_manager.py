@@ -283,7 +283,47 @@ class DaqComponentManager(TaskExecutorComponentManager):
             ]
         ):
             self.logger.warning("Problem detected in bandpass monitor, fixing...")
+            self._reset_bandpass_monitor()
             self._get_bandpass_running()
+
+    def _reset_bandpass_monitor(self: DaqComponentManager) -> None:
+        """
+        Reset the bandpass monitor.
+
+        This method is called when the monitoring thread detects that either
+        the consumer has stopped or the bandpass monitor itself has stopped.
+        It stops the bandpass monitor and consumers ready to be restarted.
+        """
+        self.logger.info("Stopping bandpass monitor.")
+        self.stop_bandpass_monitor()
+        self._wait_for_status(status="Bandpass Monitor", value="False")
+        self.logger.info("Stopping data consumers.")
+        self.stop_daq()
+        self._wait_for_status(status="Running Consumers", value=str([]))
+        self.logger.info("Bandpass monitor and consumers stopped.")
+
+    def _wait_for_status(self: DaqComponentManager, status: str, value: str) -> None:
+        """
+        Wait for Daq to achieve a certain status.
+
+        Intended as a helper to wait for a consumer or bandpass monitor to start.
+        Linear increase to retry time.
+
+        :param status: The Daq status category to check.
+        :param value: The expected value of the status.
+        """
+        daq_status = str(json.loads(self.daq_status())[status])
+        retry_count = 0
+        while value not in daq_status:
+            retry_count += 1
+            sleep(retry_count)
+            daq_status = str(json.loads(self.daq_status())[status])
+            if retry_count > 5:
+                self.logger.error(
+                    f"Failed to find {value} in DaqStatus[{status}]: {daq_status=}."
+                )
+                return
+        self.logger.debug(f"Found {value} in DaqStatus[{status}]: {daq_status=}.")
 
     def _get_bandpass_running(self: DaqComponentManager) -> None:
         """
@@ -296,29 +336,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
         This device-side handles starting the correct consumer, the daq-server side
         handles any reconfiguration.
         """
-
-        def _wait_for_status(status: str, value: str) -> None:
-            """
-            Wait for Daq to achieve a certain status.
-
-            Intended as a helper to wait for a consumer or bandpass monitor to start.
-            Linear increase to retry time.
-
-            :param status: The Daq status category to check.
-            :param value: The expected value of the status.
-            """
-            daq_status = str(json.loads(self.daq_status())[status])
-            retry_count = 0
-            while value not in daq_status:
-                retry_count += 1
-                sleep(retry_count)
-                daq_status = str(json.loads(self.daq_status())[status])
-                if retry_count > 5:
-                    self.logger.error(
-                        f"Failed to find {value} in DaqStatus[{status}]: {daq_status=}."
-                    )
-                    return
-            self.logger.debug(f"Found {value} in DaqStatus[{status}]: {daq_status=}.")
 
         def _check_config(cfg: dict, key: str, expected_val: Any) -> bool:
             try:
@@ -334,14 +351,10 @@ class DaqComponentManager(TaskExecutorComponentManager):
             self.logger.debug(f"Current DAQ config: {cur_cfg}")
             new_cfg: dict[str, Any] = {}
             if not _check_config(cur_cfg, "append_integrated", False):
-                self.logger.debug("Setting `append_integrated` to False")
                 new_cfg.update(append_integrated=False)
             if not _check_config(
                 cur_cfg, "nof_tiles", self._configuration["nof_tiles"]
             ):
-                self.logger.debug(
-                    f"Setting `nof_tiles` to {self._configuration['nof_tiles']}"
-                )
                 new_cfg.update(nof_tiles=self._configuration["nof_tiles"])
             self.logger.debug(f"Reconfiguring DAQ with config: {new_cfg}")
             self.configure_daq(json.dumps(new_cfg))
@@ -353,7 +366,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
                 "Auto starting INTEGRATED DATA consumer for bandpass monitoring."
             )
             self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
-            _wait_for_status(
+            self._wait_for_status(
                 status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
             )
 
@@ -368,7 +381,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
                 "Auto starting bandpass monitor with args: %s.", bandpass_args
             )
             self.start_bandpass_monitor(bandpass_args)
-            _wait_for_status(status="Bandpass Monitor", value="True")
+            self._wait_for_status(status="Bandpass Monitor", value="True")
 
     def _is_daq_configured_for_bandpasses(
         self: DaqComponentManager,
@@ -452,10 +465,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         :return: The configuration in use by the DaqReceiver instance.
         """
-        # print("GETTING CONFIG (SPS)...")
-        cfg = self._daq_client.get_configuration()
-        # print(f"RECEIVED CONFIG (SPS): {cfg}")
-        return cfg
+        return self._daq_client.get_configuration()
 
     def _set_consumers_to_start(
         self: DaqComponentManager, consumers_to_start: str

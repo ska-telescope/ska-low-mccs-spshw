@@ -425,7 +425,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             ("PowerUpTpms", "turn_on_tpms"),
             ("PowerDownTpms", "turn_off_tpms"),
             ("PowerPduPortOn", "power_pdu_port_on"),
-            ("PowerPduPortOff", "Power_pdu_port_off"),
+            ("PowerPduPortOff", "power_pdu_port_off"),
         ]:
             self.register_command_object(
                 command_name,
@@ -605,6 +605,23 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
             information purpose only.
         """
         handler = self.get_command_object("PowerPduPortOn")
+        result_code, message = handler(argin)
+        return ([result_code], [message])
+
+    @command(dtype_in="DevULong", dtype_out="DevVarLongStringArray")
+    def PowerPduPortOff(  # pylint: disable=invalid-name
+        self: MccsSubrack, argin: int
+    ) -> tuple[list[ResultCode], list[Optional[str]]]:
+        """
+        Turn the selected pdu port off.
+
+        :param argin: pdu port number
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+        """
+        handler = self.get_command_object("PowerPduPortOff")
         result_code, message = handler(argin)
         return ([result_code], [message])
 
@@ -1121,7 +1138,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         states = []
         for i in range(self._pdu_number_outlets()):
-            states.append(self._hardware_attributes.get(f"pdu{i}_state", None))
+            states.append(self._hardware_attributes.get(f"pdu{i}State", None))
         return states
 
     @attribute(dtype=(float,), label="pdu port currents")
@@ -1141,7 +1158,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         currents = []
         for i in range(self._pdu_number_outlets()):
-            currents.append(self._hardware_attributes.get(f"pdu{i}_current", None))
+            currents.append(self._hardware_attributes.get(f"pdu{i}Current", None))
         return currents
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)

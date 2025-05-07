@@ -75,6 +75,7 @@ attributes:
   - name: pduPort{}OnOff
     oid: [PDU2-MIB, switchingOperation]
     polling_period: 3000
+    access: read-write
     dtype: int
     start_index: 0
     placeholder_index: 1

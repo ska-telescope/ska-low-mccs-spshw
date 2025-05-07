@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-117] Correct claiming of lock in ping method. 
+
 ## 3.1.0
 
 * [SKB-861] Add optional argument start_time to AcquireDataForCalibration

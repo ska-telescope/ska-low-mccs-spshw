@@ -20,6 +20,8 @@ priority = "supplemental"
 [tool.poetry.dependencies]
 python = "~3.10"
 ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.0"}
+aavs_system = { git = "https://gitlab.com/ska-telescope/aavs-system.git", tag = "2.1.7", subdirectory = "python" }
+pyfabil = { git = "https://gitlab.com/ska-telescope/pyfabil.git", tag = "2.1.1" }
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "^10.0.0"

@@ -3330,6 +3330,25 @@ url = "https://pypi.org/simple"
 reference = "PyPI-public"
 
 [[package]]
+name = "restructuredtext-lint"
+version = "1.4.0"
+description = "reStructuredText linter"
+category = "dev"
+optional = false
+python-versions = "*"
+files = [
+    {file = "restructuredtext_lint-1.4.0.tar.gz", hash = "sha256:1b235c0c922341ab6c530390892eb9e92f90b9b75046063e047cacfb0f050c45"},
+]
+
+[package.dependencies]
+docutils = ">=0.11,<1.0"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
 name = "rpds-py"
 version = "0.24.0"
 description = ""
@@ -4790,4 +4809,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.10"
-content-hash = "b8a0a2dad1de203178dbe7c1ac74cf36a3d6d6ae42c369c236938c873c68e6da"
+content-hash = "a0e59da7ee37320fa3d7cd27585c96250675b02d319909d68b35f79fb4eb6757"

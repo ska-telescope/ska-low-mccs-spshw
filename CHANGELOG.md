@@ -1,4 +1,7 @@
 # Version History
+## Unreleased
+
+* [THORN-117] Correct claiming of lock in ping method. 
 
 ## 6.1.2
 

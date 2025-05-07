@@ -37,7 +37,8 @@ from ska_control_model import (
 from ska_low_mccs_common import EventSerialiser, MccsDeviceProxy
 from ska_low_mccs_common.component import MccsBaseComponentManager
 from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
-from ska_low_sps_tpm_api.tile import Tile
+
+# from ska_low_sps_tpm_api.tile import Tile
 from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager

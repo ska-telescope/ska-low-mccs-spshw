@@ -25,5 +25,5 @@
 #types-requests==2.32.0.20250306
 #typing_extensions==4.12.2
 #urllib3==2.3.0
-virtualenv==20.29.3
+#virtualenv==20.29.3
 watchfiles==1.0.4

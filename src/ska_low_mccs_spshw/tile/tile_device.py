@@ -141,6 +141,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         doc="Delays in nanoseconds to account for static delay missmatches.",
     )
 
+    DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
+
     # ---------------
     # Initialisation
     # ---------------
@@ -461,6 +463,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             self._update_attribute_callback,
             # self._tile_device_state_callback,
             event_serialiser=self._event_serialiser,
+            default_lock_timeout=self.DefaultLockTimeout,
         )
 
     def init_command_objects(self: MccsTile) -> None:

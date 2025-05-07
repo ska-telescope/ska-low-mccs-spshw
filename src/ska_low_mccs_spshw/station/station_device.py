@@ -266,7 +266,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         )
 
         for command_name, method_name, schema in [
-            ("Initialise", "initialise", initialise_schema),
+            ("Initialise", "initialise", None),
+            ("ReInitialise", "initialise", initialise_schema),
             ("StartAcquisition", "start_acquisition", None),
             (
                 "AcquireDataForCalibration",
@@ -1482,13 +1483,32 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     # -------------
 
     @command(
+        dtype_out="DevVarLongStringArray",
+    )
+    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
+        """
+        Initialise the station.
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+            >>> dp = tango.DeviceProxy("mccs/station/001")
+            >>> dp.command_inout("Initialise")
+        """  # noqa: E501
+        handler = self.get_command_object("Initialise")
+        (return_code, message) = handler()
+        return ([return_code], [message])
+
+    @command(
         dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     # pylint: disable=line-too-long
-    def Initialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def ReInitialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
-        Initialise the station.
+        Initialise the station with overridable defaults.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1503,7 +1523,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             >>> dp = tango.DeviceProxy("mccs/station/001")
             >>> dp.command_inout("Initialise")
         """  # noqa: E501
-        handler = self.get_command_object("Initialise")
+        handler = self.get_command_object("ReInitialise")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

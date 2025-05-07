@@ -1,5 +1,9 @@
 # Version History
 
+## 6.1.0
+
+* [SPRTS-433] The timeout for acquiring access to the HW in MccsTile is now a device property, configurable from deployment.
+
 ## 6.0.0
 
 * [THORN-97] SpsStation.Initialise() reverted to not taking arguments. The version of initialise which

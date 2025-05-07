@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-117] Correct claiming of lock in ping method. 
+
 ## 6.1.0
 
 * [SPRTS-433] The timeout for acquiring access to the HW in MccsTile is now a device property, configurable from deployment.

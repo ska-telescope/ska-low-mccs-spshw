@@ -23,3 +23,6 @@ ignored-classes = socket
 # W0612 unused variable
 # W0223 abstract-method
 disable = W0212, W0613, W0612, W0223
+
+[TYPECHECK]
+ignored-modules=ska_low_sps_tpm_api

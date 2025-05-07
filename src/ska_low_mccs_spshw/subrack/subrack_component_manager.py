@@ -83,12 +83,8 @@ class _PDUProxy(DeviceComponentManager):
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        model = self._proxy._device.pduModel
-
         attr_name = f"pduPort{port_number}OnOff"
         func = getattr(self._proxy._device, attr_name)
-
-        # Different models have different values to write.
 
         func()
 
@@ -101,12 +97,8 @@ class _PDUProxy(DeviceComponentManager):
         assert self._proxy is not None  # for the type checker
         assert self._proxy._device is not None  # for the type checker
 
-        model = self._proxy._device.pduModel
-
         attr_name = f"pduPort{port_number}OnOff"
         func = getattr(self._proxy._device, attr_name)
-
-        # Different models have different values to write.
 
         func()
 

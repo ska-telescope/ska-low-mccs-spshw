@@ -676,8 +676,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
                 TileSimulator.CHANNELISER_TRUNCATION,
                 [[2] * 512],
             ),
-            ("tile_id", TileSimulator.TILE_ID, [123]),
-            ("station_id", TileSimulator.STATION_ID, [321]),
             ("test_generator_active", False, [True]),
             ("csp_spead_format", TileSimulator.CSP_SPEAD_FORMAT, ["AAVS"]),
         ),
@@ -1056,13 +1054,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Set tile_id case
         tile_component_manager._station_id = 2
-        tile_component_manager.tile_id = 5
+        tile_component_manager.set_tile_id(5)
         assert tile_simulator._station_id == 2
         assert tile_simulator._tile_id == 5
 
         # Set station_id case
         tile_component_manager._tile_id = 2
-        tile_component_manager.station_id = 5
+        tile_component_manager.set_station_id(5)
         assert tile_simulator._station_id == 5
         assert tile_simulator._tile_id == 2
 
@@ -1074,13 +1072,15 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         )
         # set station_id with mocked failure
         tile_component_manager._tile_id = initial_tile_id + 1
-        tile_component_manager.station_id = initial_station_id + 1
+        with pytest.raises(LibraryError):
+            tile_component_manager.set_station_id(initial_station_id + 1)
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
         # set tile_id with mocked failure
         tile_component_manager._station_id = initial_station_id + 1
-        tile_component_manager.tile_id = initial_tile_id + 1
+        with pytest.raises(LibraryError):
+            tile_component_manager.set_tile_id(initial_tile_id + 1)
         assert tile_simulator._station_id == initial_station_id
         assert tile_simulator._tile_id == initial_tile_id
 
@@ -2883,8 +2883,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         ("attribute"),
         [
             ("register_list"),
-            ("station_id"),
-            ("tile_id"),
             ("is_programmed"),
             ("firmware_version"),
             ("firmware_name"),

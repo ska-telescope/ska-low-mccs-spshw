@@ -355,6 +355,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.get_temperature,
                     publish=True,
                 )
+            case "READ_CONFIGURATION":
+                request = TileRequest(
+                    "read_config",
+                    self.__update_configuration_from_tile,
+                    publish=False,
+                )
             case "CONNECT":
                 try:
                     self.ping()
@@ -987,7 +993,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Check we can communicate with TPM."""
         with self._hardware_lock:
             self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
-        self.__update_tpm_status()
+            self.__update_tpm_status()
 
     @check_hardware_lock_claimed
     def _check_initialised(self: TileComponentManager) -> bool:
@@ -1349,92 +1355,79 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # --------------------------------
     # Properties
     # --------------------------------
-    @property
-    @check_communicating
-    def tile_id(self: TileComponentManager) -> int:
-        """
-        Get the Tile ID.
+    @check_hardware_lock_claimed
+    def __update_configuration_from_tile(self: TileComponentManager) -> None:
+        """Read configuration information from the TPM."""
+        self.logger.info("Updating attribute configuration from TPM")
 
-        :return: assigned tile Id value
-        """
-        return self._tile_id
+        # NOTE: There is no API to read channeliser_truncation and
+        # csp_rounding from TPM.
+        channeliser_rounding = self.channeliser_truncation
+        csp_rounding = self.csp_rounding
 
-    @tile_id.setter  # type: ignore[no-redef]
-    def tile_id(self: TileComponentManager, value: int) -> None:
+        static_delays = self.get_static_delays()
+        station_id = self.tile.get_station_id()
+        tile_id = self.tile.get_tile_id()
+
+        self._update_attribute_callback(
+            static_delays=static_delays,
+            tile_id=tile_id,
+            station_id=station_id,
+            csp_rounding=csp_rounding,
+            channeliser_rounding=channeliser_rounding,
+        )
+
+        self.logger.info("Configuration information read from TPM")
+        assert self._request_provider is not None
+        self._request_provider.inform_configuration_read()
+
+    @check_hardware_lock_claimed
+    def __update_tpm_id(
+        self: TileComponentManager, station_id: int, tile_id: int
+    ) -> None:
+        """
+        Update the TPM id.
+
+        :param station_id: the station_id to set
+        :param tile_id: the tile_id to set.
+        """
+        self.tile.set_station_id(station_id, tile_id)
+        self.logger.info(f"setting station_id : {station_id}, " f"tile_id : {tile_id}")
+        self._station_id = self.tile.get_station_id()
+        self._tile_id = self.tile.get_tile_id()
+
+        self._update_attribute_callback(
+            tile_id=self._tile_id, station_id=self._station_id
+        )
+
+    def set_tile_id(self: TileComponentManager, value: int) -> None:
         """
         Set Tile ID.
 
         :param value: assigned tile Id value
 
         :raises TimeoutError: raised if we fail to acquire lock in time
-        :raises ValueError: If we failed to write tile_id.
         """
         with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
             if acquired:
                 if not self.tile.is_programmed():
                     return
-                try:
-                    self.tile.set_station_id(self._station_id, value)
-                    self._tile_id = self.tile.get_tile_id()
-                    self.logger.info(
-                        f"setting station_id:{self._station_id}, "
-                        f"tile_id:{self._tile_id}"
-                    )
-                    if self._tile_id != value:
-                        self.logger.error(
-                            f"Failed to set tile_id. Read : {self._tile_id}, "
-                            f"Expected : {value}"
-                        )
-                        raise ValueError("Failed to set the Tile ID")
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
+                self.__update_tpm_id(self._station_id, value)
             else:
                 self.logger.warning("Failed to acquire hardware lock")
                 raise TimeoutError("Failed to read tile_id, lock not acquired in time.")
 
-    @property
-    @check_communicating
-    def station_id(self: TileComponentManager) -> int:
-        """
-        Get the Station ID.
-
-        :return: assigned station Id value
-        """
-        return self._station_id
-
-    @station_id.setter  # type: ignore[no-redef]
-    def station_id(self: TileComponentManager, value: int) -> None:
+    def set_station_id(self: TileComponentManager, value: int) -> None:
         """
         Set Station ID.
 
         :param value: assigned station Id value
-
-        :raises ValueError: is the read value is not as expected.
         """
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 if not self.tile.is_programmed():
                     return
-                try:
-                    self.tile.set_station_id(value, self._tile_id)
-                    self._station_id = self.tile.get_station_id()
-                    self.logger.info(
-                        f"setting station:{self._station_id}, tile:{self._tile_id}"
-                    )
-                    if self._station_id != value:
-                        self.logger.error(
-                            f"Failed to set station_id. Read : {self._station_id}, "
-                            f"Expected : {value}"
-                        )
-                        raise ValueError("Failed to set the Station ID")
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
+                self.__update_tpm_id(value, self._tile_id)
             else:
                 self.logger.warning("Failed to acquire hardware lock")
 
@@ -1989,6 +1982,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.debug("Connecting to TPM")
                 self.tile.connect()
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+                # After connection lets check the configuration.
+                assert self._request_provider is not None
+                self._request_provider.desire_configuration_read()
             except Exception as e:
                 self.logger.error(f"Failed to connect to TPM {e}")
                 self.__update_tpm_status()

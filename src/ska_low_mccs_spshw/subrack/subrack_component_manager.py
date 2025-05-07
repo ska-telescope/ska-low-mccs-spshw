@@ -89,9 +89,8 @@ class _PDUProxy(DeviceComponentManager):
         func = getattr(self._proxy._device, attr_name)
 
         # Different models have different values to write.
-        on_value = 1 if model == "raritan" else 2
 
-        func(on_value)
+        func()
 
     def _pdu_port_off(self: _PDUProxy, port_number: int) -> None:
         """
@@ -108,9 +107,8 @@ class _PDUProxy(DeviceComponentManager):
         func = getattr(self._proxy._device, attr_name)
 
         # Different models have different values to write.
-        off_value = 0 if model == "raritan" else 1
 
-        func(off_value)
+        func()
 
     def _pdu_port_current(self: _PDUProxy, port_number: int) -> float:
         """

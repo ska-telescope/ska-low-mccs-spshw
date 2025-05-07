@@ -295,8 +295,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "subrack_pll_locked": "subrackPllLocked",
         "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
-        "pdu_outlet_states": "pduOutletStates",
-        "pdu_outlet_currents": "pduOutletCurrents",
+        "pdu_port_state": "pduPortState",
+        "pdu_port_current": "pduPortCurrent",
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
@@ -1090,7 +1090,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=(str,), label="pdu model")
+    @attribute(dtype=(str), label="pdu model")
     def pduModel(self: MccsSubrack) -> str:
         """
         Handle a Tango attribute read of the pdu model type.
@@ -1107,7 +1107,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_model()
 
-    @attribute(dtype=(int,), label="pdu number ports")
+    @attribute(dtype=(int), label="pdu number ports")
     def pduNumberPorts(self: MccsSubrack) -> int:
         """
         Handle a Tango attribute read of thenumber of pdu ports.
@@ -1116,7 +1116,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_number_of_ports()
 
-    @attribute(dtype=(str,), label="pdu port state")
+    @attribute(dtype=(str), label="pdu port state")
     def pduPortState(self: MccsSubrack, port_number: int) -> str:
         """
         Handle a Tango attribute read of the state of pdu port.
@@ -1127,7 +1127,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_port_state(port_number)
 
-    @attribute(dtype=(str,), label="pdu port current")
+    @attribute(dtype=(str), label="pdu port current")
     def pduPortCurrent(self: MccsSubrack, port_number: int) -> str:
         """
         Handle a Tango attribute read of the current of pdu port.

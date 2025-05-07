@@ -502,7 +502,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         self.logger.info("Configuring DAQ receiver with %s.", daq_config)
         result_code, message = self._daq_client.configure_daq(daq_config)
-        print(f"CONFIGURE RESULTS: {result_code=}, {message=}", flush=True)
         if result_code == ResultCode.OK:
             self.logger.info("DAQ receiver configuration complete.")
         else:

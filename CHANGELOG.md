@@ -1,5 +1,9 @@
 # Version History
 
+## 6.0.0
+
+* [THORN-97] SpsStation.Initialise() reverted to not taking arguments. The version of initialise which
+  does is SpsStation.ReInitialise(json_arg)
 * [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
 
 ## 5.0.2

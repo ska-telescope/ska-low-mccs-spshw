@@ -305,7 +305,7 @@ class TestStationTileIntegration:
         for i in range(number_of_iterations):
             # Check that the initialise LRC executes to COMPLETION
             execute_lrc_to_completion(
-                change_event_callbacks, sps_station_device, "Initialise", "{}"
+                change_event_callbacks, sps_station_device, "Initialise", None
             )
             assert tile_device.tileProgrammingState == "Initialised"
             wait_for_completed_command_to_clear_from_queue(tile_device)

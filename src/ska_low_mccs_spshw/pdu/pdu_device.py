@@ -14,11 +14,11 @@ from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
-from ska_sat_lmc.pdu.pdu_health_model import PduHealthModel
+from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from tango import Attribute
-from tango.server import device_property
+from tango.server import command, device_property
 
 __all__ = ["MccsPdu", "main"]
 
@@ -65,6 +65,8 @@ class MccsPdu(AttributePollingDevice):
         self._dynamic_attrs: dict[str, Attribute]
         self._health_state: HealthState
         self._health_model: PduHealthModel
+        self._on_value: int
+        self._off_value: int
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
@@ -76,6 +78,12 @@ class MccsPdu(AttributePollingDevice):
             properties = f"Initialised {device_name} on: {self.Host}:{self.Port}"
             version_info = f"{self.__class__.__name__}, {self._build_state}"
             self.logger.info("\n%s\n%s\n%s", version_info, version, properties)
+            if self.Model == "RARITAN":
+                self._off_value = 0
+                self._on_value = 1
+            elif (self.Model == ENLOGIC")
+                self._off_value= 1
+                self._on_value = 2
 
         # pylint: disable=broad-exception-caught
         except Exception as ex:
@@ -195,6 +203,17 @@ class MccsPdu(AttributePollingDevice):
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
 
+    @command(dtype_in=int)
+    def pduPortOn(self: MccsPdu, port) -> None:
+        """Set pdu port On."""
+        attr = getattr(self, f"pduPort{port}OnOff")
+        attr(self._on_value
+
+    @command(dtype_in=int)
+    def pduPortOff(self: MccsPdu, port) -> None:
+        """Set pdu port OFF."""
+        attr = getattr(self, f"pduPort{port}OnOff")
+        attr(self._off_value)
 
 # ----------
 # Run server

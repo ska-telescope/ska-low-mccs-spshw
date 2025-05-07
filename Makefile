@@ -30,9 +30,6 @@ PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and l
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_TEST_FILE = tests
 
-python-pre-lint:
-	poetry --version
-
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 

@@ -10,16 +10,16 @@ documentation = "https://developer.skatelescope.org/projects/ska-low-mccs-spshw"
 [[tool.poetry.source]]
 name = 'skao'
 url = 'https://artefact.skao.int/repository/pypi-internal/simple'
-priority = "primary"
+#priority = "primary"
 
 [[tool.poetry.source]]
 name = "PyPI-public"
 url = 'https://pypi.org/simple'
-priority = "supplemental"
+#priority = "supplemental"
 
 [tool.poetry.dependencies]
 python = "~3.10"
-ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.1"}
+ska-low-sps-tpm-api = {git = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/", tag="0.1.0"}
 fire = "^0.5.0"
 numpy = "^1.26.4"
 pytango = "^10.0.0"

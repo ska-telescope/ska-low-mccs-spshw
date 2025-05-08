@@ -40,8 +40,8 @@ astropy="5.3.4"
 jsonschema = "~4.22.0"
 referencing = "~0.28.4"
 jsonschema-specifications = "~2023.03.6"
-ska-low-mccs-daq = "^2.0.0"
-ska-low-mccs-daq-interface = "^1.0.0"
+ska-low-mccs-daq = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/", branch="skb-854"}
+ska-low-mccs-daq-interface = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface/", branch="skb-854"}
 watchdog = "^3.0.0"
 h5py = "^3.12.1"
 lockfile = "^0.12.2"
@@ -108,8 +108,8 @@ fire = "^0.5.0"
 PyYAML = "^6.0.1"
 typing-extensions = "^4.7.1"
 uvicorn = {extras = ["standard"], version = "^0.23.2"}
-ska-low-mccs-daq-interface = "^1.0.0"
-ska-low-mccs-daq = "^2.0.0"
+ska-low-mccs-daq-interface = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface/", branch="skb-854"}
+ska-low-mccs-daq = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/", branch="skb-854"}
 ska-telmodel = "^1.4.1"
 pysnmp = "^7.1.4"
 ska-ser-snmp = "^0.4.1"

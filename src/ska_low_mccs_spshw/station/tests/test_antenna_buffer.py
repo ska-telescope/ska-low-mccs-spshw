@@ -12,6 +12,8 @@ import json
 from copy import copy
 from typing import Optional
 
+import numpy as np
+
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
 from .data_handlers import AntennaBufferDataHandler
@@ -79,10 +81,17 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info(f"{tx_mode =}")
         self.test_logger.info(f"{receiver_frame_size =}")
 
+        # self.daq_eth_if = self._station_config['eth_if']['lmc']
+        # self.daq_eth_port = self._station_config['network']['lmc']['lmc_port']
+
         daq_config = {
+            "receiver_interface": "eth2",  # I don't know if it's eth2
+            # 'receiver_ports': str(self.daq_eth_port),
+            # 'nof_raw_samples': int(daq_nof_raw_samples),
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "receiver_frame_size": receiver_frame_size,
+            "max_filesize": 8,
         }
         # ANTENNA_BUFFER From pyaavs daq_reciever.py
         self._configure_daq(
@@ -100,12 +109,17 @@ class TestAntennaBuffer(BaseDaqTest):
                 ddr_start_byte_address=start_address,
                 max_ddr_byte_size=None,
             )
-            self._start_antenna_buffer(
+
+            daq_nof_raw_samples = self._start_antenna_buffer(
                 antenna_ids=antenna_ids,
                 start_time=-1,
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
+
+            daq_config = {
+                "nof_raw_samples": int(daq_nof_raw_samples),
+            }
             self._read_antenna_buffer()
             assert self._data_created_event.wait(20)
             self._data_created_event.clear()
@@ -148,15 +162,18 @@ class TestAntennaBuffer(BaseDaqTest):
         start_time: int,
         timestamp_capture_duration: int,
         continuous_mode: bool = False,
-    ) -> None:
+    ) -> int:
         """Start the antenna buffer.
 
         :param antenna_ids: List of antenna IDs.
         :param start_time: Start time in seconds since epoch.
         :param timestamp_capture_duration: capture duration in timestamps.
         :param continuous_mode: Whether to run in continuous mode or not.
+
+        :return: daq bullshit
         """
         self.test_logger.info("Starting antenna buffer for all tiles")
+        ddr_write_size: list = []
 
         for tile in self.tile_proxies:
             self.test_logger.info(f"Start antenna buffer for {tile}")
@@ -170,6 +187,16 @@ class TestAntennaBuffer(BaseDaqTest):
                     }
                 )
             )
+            ddr_write_size.append(tile.ddr_write_size)
+
+        # calculate actual DAQ buffer size in number of raw samples
+        # In theory they shjould all be the same, so we can use the first one
+        total_nof_samples = ddr_write_size[0] // 4
+        nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
+        nof_callback = max(nof_callback, 1)
+        nof_callback = 2 ** int(np.log2(nof_callback))
+        daq_nof_raw_samples = total_nof_samples / nof_callback
+        return daq_nof_raw_samples
 
     def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
         """Read from the antenna buffer."""

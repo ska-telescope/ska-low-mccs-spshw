@@ -146,7 +146,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments, too-many-locals
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,
@@ -268,6 +268,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self._firmware_name: str = self.FIRMWARE_NAME[tpm_version]
         self._fpga_current_frame: int = 0
         self.last_pointing_delays: list = [[0.0, 0.0] for _ in range(16)]
+        self.ddr_write_size: int = 0
 
         self._event_serialiser = event_serialiser
 
@@ -1929,7 +1930,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(self._hardware_lock, timeout=0.4) as acquired:
             if acquired:
                 try:
-                    ddr_write_size = self.tile.start_antenna_buffer(
+                    self.ddr_write_size = self.tile.start_antenna_buffer(
                         antennas,
                         start_time,
                         timestamp_capture_duration,
@@ -1940,7 +1941,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     success = False
 
                 self.logger.info(
-                    f"Started antenna buffer with ddr size: {ddr_write_size}"
+                    f"Started antenna buffer with ddr size: {self.ddr_write_size}"
                 )
                 success = self.tile._antenna_buffer_tile_attribute.get(
                     "data_capture_initiated", False

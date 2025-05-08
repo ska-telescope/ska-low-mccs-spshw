@@ -1286,6 +1286,21 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["clock_managers"].read()
 
+    @attribute(
+        dtype="DevShort",
+        label="ddr_write_size",
+    )
+    def ddr_write_size(self: MccsTile) -> int:
+        """
+        Return the ddr write size from running start_antenna_buffer.
+
+        :example:
+            >>> tile.ddr_write_size
+
+        :return: ddr write size of a frame
+        """
+        return self._component_manager.ddr_write_size
+
     # @attribute(
     #     dtype="DevString",
     #     label="ddr_rd_cnt",

@@ -81,9 +81,11 @@ class MccsPdu(AttributePollingDevice):
             if self.Model == "RARITAN":
                 self._off_value = 0
                 self._on_value = 1
-            elif (self.Model == ENLOGIC")
+            elif self.Model == "ENLOGIC":
                 self._off_value= 1
                 self._on_value = 2
+            else:
+                self.logger.error(f"Invalid model {self.Model} specified")
 
         # pylint: disable=broad-exception-caught
         except Exception as ex:

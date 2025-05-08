@@ -25,6 +25,8 @@ from ska_tango_base.poller import PollingComponentManager
 from .http_stack import HttpPollRequest, HttpPollResponse
 from .subrack_data import FanMode, SubrackData
 
+PDU_DATA_NO_PORTS = 24
+
 
 class HttpError(Exception):
     """Exception class for HttpErrors."""
@@ -118,6 +120,8 @@ class SubrackDriver(
             subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
+            pdu_outlet_states=None,
+            pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
@@ -184,6 +188,94 @@ class SubrackDriver(
             implemented
         """
         raise NotImplementedError("The device cannot be reset.")
+
+    def power_pdu_port_on(
+        self: SubrackDriver,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port on.
+
+        :param port_number: (one-based) number of the pdu port to turn on.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._turn_off_on_pdu_port(port_number, True, task_callback)
+
+    def power_pdu_port_off(
+        self: SubrackDriver,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port off.
+
+        :param port_number: (one-based) number of the pdu port to turn off.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._turn_off_on_pdu_port(port_number, False, task_callback)
+
+    def _turn_off_on_pdu_port(
+        self: SubrackDriver,
+        pdu_port_number: int,
+        is_turn_on: bool,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port off or on.
+
+        :param pdu_port_number: (one-based) number of the pdu port to
+            turn off or on. Zero means turn *all* ports off or on.
+        :param is_turn_on: whether to turn the port off or on. If true,
+            the port will be turned on. If false, it will be turned off.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        with self._write_lock:
+            if pdu_port_number == 0:
+                keys = [f"pdu_port_{i}_on_off" for i in range(PDU_DATA_NO_PORTS + 1)]
+                command_name = (
+                    "turn_on_pdu_ports" if is_turn_on else "turn_off_pdu_ports"
+                )
+                command_arg = ""
+            else:
+                keys = [f"pdu_port_{pdu_port_number}_on_off"]
+                command_name = "turn_on_pdu_port" if is_turn_on else "turn_off_pdu_port"
+                command_arg = str(pdu_port_number)
+
+            for key in keys:
+                if key in self._commands_to_execute:
+                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    if prior_callback is not None:
+                        prior_callback(
+                            status=TaskStatus.ABORTED,
+                            # message="Superseded by later command.",
+                        )
+
+            self._commands_to_execute[f"pdu_port_{pdu_port_number}_on_off"] = (
+                command_name,
+                command_arg,
+                task_callback,
+            )
+
+            off_on = "on" if is_turn_on else "off"
+
+            if task_callback is not None:
+                task_callback(status=TaskStatus.QUEUED)
+
+            if pdu_port_number == 0:
+                message = f"TPMs will be turned {off_on} at next poll."
+            else:
+                message = f"TPM {pdu_port_number} will be turned {off_on} at next poll."
+            return (TaskStatus.QUEUED, message)
 
     def turn_off_tpm(
         self: SubrackDriver,

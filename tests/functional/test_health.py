@@ -227,6 +227,25 @@ def station_online(
         get_device_online(station)
 
 
+@given("the subracks thresholds are normal")
+def set_subrack_thresholds(
+    station_devices: dict[str, list[tango.DeviceProxy]],
+) -> None:
+    """
+    Put a subracks thresholds to a reasonable value.
+
+    :param station_devices: A fixture with the station devices.
+    """
+    for subrack in station_devices["Subracks"]:
+        new_board_params = {
+            "failed_max_board_temp": 70.0,
+            "degraded_max_board_temp": 60.0,
+            "failed_min_board_temp": 10.0,
+            "degraded_min_board_temp": 20.0,
+        }
+        subrack.healthModelParams = json.dumps(new_board_params)
+
+
 @given("the Station has been commanded to turn On")
 @when("the Station has been commanded to turn On")
 def station_on(

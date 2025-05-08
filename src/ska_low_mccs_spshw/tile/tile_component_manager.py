@@ -146,7 +146,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     CSP_ROUNDING: list[int] = [2] * 384
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
 
-    # pylint: disable=too-many-arguments, too-many-locals
+    # pylint: disable=too-many-arguments, too-many-locals, too-many-statements
     def __init__(
         self: TileComponentManager,
         simulation_mode: SimulationMode,

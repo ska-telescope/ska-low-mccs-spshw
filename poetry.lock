@@ -4476,35 +4476,36 @@ numpy = "^1.23.0"
 PyYAML = "^6.0"
 singleton-decorator = "1.0.0"
 ska-control-model = "^1.0.0"
-ska-low-mccs-daq-interface = {git = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface/", branch = "skb-854"}
+ska-low-mccs-daq-interface = "^1.0.0"
 watchdog = "^3.0.0"
 
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/"
-reference = "skb-854"
-resolved_reference = "7c0da245bc6f4d1b5f7e78f0f3e19a5285a18f3b"
+reference = "2.0.0"
+resolved_reference = "6f62a1cf6140850c196b4c74bf86c522005c7cec"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
-version = "1.0.1"
+version = "1.0.0"
 description = "SKA Low MCCS DAQ Interface repository specifies the client-server interface between the DAQ and its monitoring and control component."
 optional = false
-python-versions = "^3.10"
+python-versions = ">=3.10,<4.0"
 groups = ["main", "docs"]
-files = []
-develop = false
+files = [
+    {file = "ska_low_mccs_daq_interface-1.0.0-py3-none-any.whl", hash = "sha256:f4f3b214fff73b0d2c1e1fec1c88b0c7eb2fc06dacd149fe0b317261df16170e"},
+    {file = "ska_low_mccs_daq_interface-1.0.0.tar.gz", hash = "sha256:700495ee78e108fbc88befc0be799266e0af1ebdf1063c1f567377681615ac31"},
+]
 
 [package.dependencies]
-grpcio = "^1.54.2"
-grpcio-tools = "^1.54.2"
-ska-control-model = "^1.0.0"
+grpcio = ">=1.54.2,<2.0.0"
+grpcio-tools = ">=1.54.2,<2.0.0"
+ska-control-model = ">=1.0.0,<2.0.0"
 
 [package.source]
-type = "git"
-url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface/"
-reference = "skb-854"
-resolved_reference = "648da0e309a320077a8b6c34ed0dd3ef0cc3bbaa"
+type = "legacy"
+url = "https://artefact.skao.int/repository/pypi-internal/simple"
+reference = "skao"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
@@ -5758,4 +5759,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "dd7676b34cd83d1ee00bde0a2bf09780d2e8bf877b0f0268fc2b839adff242c0"
+content-hash = "dbf4bcc32e33f0241b93754295adcbaf592c46d9e79ebfcde54b9346e6bb21f5"

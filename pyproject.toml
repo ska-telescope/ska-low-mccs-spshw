@@ -58,6 +58,7 @@ netifaces-binary = "^0.11.0"
 recommonmark = "^0.7.1"
 pysnmp = "^7.1.4"
 ska-ser-snmp = "^0.4.1"
+snowballstemmer = "2.2.0"
 
 # The following have been added for the DaqSimulator.
 singleton-decorator = "1.0.0"

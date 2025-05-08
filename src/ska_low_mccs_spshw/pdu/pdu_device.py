@@ -209,7 +209,7 @@ class MccsPdu(AttributePollingDevice):
     def pduPortOn(self: MccsPdu, port) -> None:
         """Set pdu port On."""
         attr = getattr(self, f"pduPort{port}OnOff")
-        attr(self._on_value
+        attr(self._on_value)
 
     @command(dtype_in=int)
     def pduPortOff(self: MccsPdu, port) -> None:

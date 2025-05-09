@@ -272,6 +272,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "core_communication": "coreCommunicationStatus",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
+            "ddr_write_size": "ddr_write_size",
         }
 
         attribute_converters: dict[str, Any] = {

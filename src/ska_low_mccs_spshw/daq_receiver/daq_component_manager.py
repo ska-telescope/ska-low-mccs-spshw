@@ -283,7 +283,6 @@ class DaqComponentManager(TaskExecutorComponentManager):
             ]
         ):
             self.logger.warning("Problem detected in bandpass monitor, fixing...")
-            self._reset_bandpass_monitor()
             self._get_bandpass_running()
 
     def _reset_bandpass_monitor(self: DaqComponentManager) -> None:
@@ -359,6 +358,9 @@ class DaqComponentManager(TaskExecutorComponentManager):
             self.logger.debug(f"Reconfiguring DAQ with config: {new_cfg}")
             self.configure_daq(json.dumps(new_cfg))
             self.logger.debug(f"Config is now: {self.get_configuration()}")
+
+        # Stop any existing bandpass monitor and consumers.
+        self._reset_bandpass_monitor()
 
         if not self._is_integrated_channel_consumer_running():
             # start consumer

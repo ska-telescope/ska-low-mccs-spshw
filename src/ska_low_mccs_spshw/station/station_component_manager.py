@@ -1312,6 +1312,9 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        # TODO: Update all methods called here that only return a ResultCode to
+        # return a tuple of (ResultCode, message) so that we can tell why
+        # something fails when it does.
         # pylint: disable=too-many-branches
         message: str = ""
         self.logger.debug("Starting on sequence.")
@@ -1428,6 +1431,9 @@ class SpsStationComponentManager(
         :param task_callback: Update task state, defaults to None
         :param task_abort_event: Abort the task
         """
+        # TODO: Update all methods called here that only return a ResultCode to
+        # return a tuple of (ResultCode, message) so that we can tell why
+        # something fails when it does.
         message: str = ""
         self.logger.debug("Starting initialise sequence")
         if task_callback:
@@ -1902,16 +1908,24 @@ class SpsStationComponentManager(
         :return: a result code
         """
         if self._lmc_daq_proxy is not None and self._lmc_daq_proxy._proxy is not None:
-            lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
+            try:
+                lmc_daq_status = json.loads(self._lmc_daq_proxy._proxy.DaqStatus())
+            except ConnectionError as e:
+                self.logger.error(f"Failed to get LMC DAQ status: {e}")
+                return ResultCode.FAILED
             self._lmc_ip = lmc_daq_status["Receiver IP"][0]
             self._lmc_port = lmc_daq_status["Receiver Ports"][0]
         if (
             self._bandpass_daq_proxy is not None
             and self._bandpass_daq_proxy._proxy is not None
         ):
-            bandpass_daq_status = json.loads(
-                self._bandpass_daq_proxy._proxy.DaqStatus()
-            )
+            try:
+                bandpass_daq_status = json.loads(
+                    self._bandpass_daq_proxy._proxy.DaqStatus()
+                )
+            except ConnectionError as e:
+                self.logger.error(f"Failed to get bandpass DAQ status: {e}")
+                return ResultCode.FAILED
             self._lmc_integrated_ip = bandpass_daq_status["Receiver IP"][0]
             self._lmc_integrated_port = bandpass_daq_status["Receiver Ports"][0]
         self.logger.debug(f"Configuring LMC Download: {self._lmc_ip}:{self._lmc_port}")

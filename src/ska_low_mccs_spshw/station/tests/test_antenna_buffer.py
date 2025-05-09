@@ -21,6 +21,7 @@ from .data_handlers import AntennaBufferDataHandler
 __all__ = ["TestAntennaBuffer"]
 
 
+# pylint: disable=too-many-arguments
 class TestAntennaBuffer(BaseDaqTest):
     """
     Test we can read data from the Antenna Buffer to the DAQ correctly.
@@ -71,8 +72,9 @@ class TestAntennaBuffer(BaseDaqTest):
         :param start_address: Starting address for data transfer
         :param timestamp_capture_duration: time duration in timestamps.
         """
-        self.test_logger.info((f"Executing test for fpga_id: {fpga_id} "
-                               f"and tile_id: {tile_id}"))
+        self.test_logger.info(
+            (f"Executing test for fpga_id: {fpga_id} " f"and tile_id: {tile_id}")
+        )
         self.test_logger.info(f"{use_1g =}")
         self.test_logger.info(f"{start_address =}")
         self.test_logger.info(f"{timestamp_capture_duration =}")
@@ -98,7 +100,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         daq_config = {
             "receiver_interface": "eth2",  # I don't know if it's eth2
-            'receiver_ports': 4660,
+            "receiver_ports": 4660,
             # 'nof_raw_samples': int(daq_nof_raw_samples),
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,

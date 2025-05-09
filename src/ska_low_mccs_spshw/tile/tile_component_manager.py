@@ -2039,6 +2039,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             return False
 
+    @property
+    def ddr_write_size(self: TileComponentManager) -> int:
+        """
+        Return the ddr write size value from the antenna buffer.
+
+        :return: the size of the antenna buffer ddr
+        """
+        return self.ddr_write_size
+
     # -----------------------------
     # FastCommands
     # ----------------------------

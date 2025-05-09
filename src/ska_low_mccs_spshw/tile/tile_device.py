@@ -1300,7 +1300,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     #     :return: ddr write size of a frame
     #     """
-    #     return ddr_write_size
+    #     return self._component_manager.ddr_write_size
 
     # @attribute(
     #     dtype="DevString",

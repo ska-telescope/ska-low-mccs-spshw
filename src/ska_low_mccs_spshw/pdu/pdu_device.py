@@ -210,14 +210,22 @@ class MccsPdu(AttributePollingDevice):
             self.logger.info(info_msg)
 
     @command(dtype_in=int)
-    def pduPortOn(self: MccsPdu, port) -> None:
-        """Set pdu port On."""
+    def pduPortOn(self: MccsPdu, port: int) -> None:
+        """
+        Set pdu port On.
+
+        :param port: The pdu port to turn on
+        """
         attr = getattr(self, f"pduPort{port}OnOff")
         attr(self._on_value)
 
     @command(dtype_in=int)
-    def pduPortOff(self: MccsPdu, port) -> None:
-        """Set pdu port OFF."""
+    def pduPortOff(self: MccsPdu, port: int) -> None:
+        """
+        Set pdu port OFF.
+
+        :param port: The pdu port to turn off
+        """
         attr = getattr(self, f"pduPort{port}OnOff")
         attr(self._off_value)
 

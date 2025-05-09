@@ -272,7 +272,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "core_communication": "coreCommunicationStatus",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
-            "ddr_write_size": "ddr_write_size",
         }
 
         attribute_converters: dict[str, Any] = {
@@ -1300,7 +1299,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: ddr write size of a frame
         """
-        return self._attribute_state["ddr_write_size"].read()
+        return self.component_manager.ddr_write_size
 
     # @attribute(
     #     dtype="DevString",
@@ -5484,7 +5483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("DisableStationBeamFlagging")
+        >>> dp.command_inout("DisableStationBeamFlagging")k
         """
         handler = self.get_command_object("DisableStationBeamFlagging")
         (return_code, message) = handler()

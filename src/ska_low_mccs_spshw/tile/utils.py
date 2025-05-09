@@ -48,7 +48,7 @@ class LogLock:
     def __init__(self, name: str, log: Logger, timeout_warning: float = 0.1) -> None:
         self.name = name
         self.log = log
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
         self.last_acquired_at = float("inf")
         self.last_acquired_by = ""
         self._timeout_warning = timeout_warning
@@ -115,14 +115,6 @@ class LogLock:
             self.log.warning(f"lock {self.name} held for {elapsed:.3f}s by {caller}")
         self.lock.release()
 
-    def locked(self) -> bool:
-        """
-        Check if lock is currently locked.
-
-        :return: True if the lock is currently locked, False otherwise.
-        """
-        return self.lock.locked()
-
     def __enter__(self) -> bool:
         return self.acquire()
 
@@ -151,49 +143,6 @@ def acquire_timeout(lock: LogLock | threading.Lock, timeout: float) -> Iterator[
     finally:
         if result:
             lock.release()
-
-
-def check_hardware_lock_claimed(func: Wrapped) -> Wrapped:
-    """
-    Return a function that checks the hardware lock is claimed before executing.
-
-    The component needs to have claimed a lock, in order for
-    the function to be called.
-
-    This function is intended to be used as a decorator:
-
-    .. code-block:: python
-
-        @check_hardware_lock_claimed
-        def initialise(self):
-            ...
-
-    :param func: the wrapped function
-
-    :return: the wrapped function
-    """
-
-    @functools.wraps(func)
-    def _wrapper(component: Any, *args: Any, **kwargs: Any) -> Any:
-        """
-        Check that the component has its hardware lock claimed before execution.
-
-        This is a wrapper function that implements the functionality of
-        the decorator.
-
-        :param component: the component to check
-        :param args: positional arguments to the wrapped function
-        :param kwargs: keyword arguments to the wrapped function
-
-        :raises AssertionError: when hardware lock has is not claimed.
-
-        :return: whatever the wrapped function returns
-        """
-        if not component._hardware_lock.locked():
-            raise AssertionError("Lock has not been acquired, cannot execute command.")
-        return func(component, *args, **kwargs)
-
-    return cast(Wrapped, _wrapper)
 
 
 def abort_task_on_exception(func: Wrapped) -> Wrapped:

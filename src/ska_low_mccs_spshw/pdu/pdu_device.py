@@ -216,8 +216,7 @@ class MccsPdu(AttributePollingDevice):
 
         :param port: The pdu port to turn on
         """
-        attr = getattr(self, f"pduPort{port}OnOff")
-        attr(self._on_value)
+        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._on_value)
 
     @command(dtype_in=int)
     def pduPortOff(self: MccsPdu, port: int) -> None:
@@ -226,8 +225,7 @@ class MccsPdu(AttributePollingDevice):
 
         :param port: The pdu port to turn off
         """
-        attr = getattr(self, f"pduPort{port}OnOff")
-        attr(self._off_value)
+        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
 
 
 # ----------

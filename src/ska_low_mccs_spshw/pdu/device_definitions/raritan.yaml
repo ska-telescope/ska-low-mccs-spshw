@@ -20,11 +20,11 @@ attributes:
     access: readonly
     description: The PDU serial number.
 
-  - name: pduFirmwareVersion
-    oid: [ PDU2-MIB, boardFirmwareVersion, 1 ]
-    polling_period: .inf
-    access: readonly
-    description: The PDU firmware version.
+#  - name: pduFirmwareVersion
+#    oid: [ PDU2-MIB, boardFirmwareVersion, 1 ]
+#    polling_period: .inf
+#    access: readonly
+#    description: The PDU firmware version.
 
   - name: pduNumberOfPorts
     oid: [ PDU2-MIB, outletCount, 1 ]
@@ -37,20 +37,20 @@ attributes:
     oid: [PDU2-MIB, measurementsOutletSensorState]
     polling_period: 3000
     access: readonly
-    start_index: 0
+    start_index: 1
     placeholder_index: 1
     indexes:
       - [1, 1]
       - [1, 24, 1]
       - [1, 1]
-    dtype: bool
+    dtype: int
     description: The operating sensor state.
 
   - name: pduPort{1}Current
     oid: [PDU2-MIB, measurementsOutletSensorValue]
     polling_period: 3000
     access: readonly
-    start_index: 0
+    start_index: 1
     placeholder_index: 1
     indexes:
       - [1, 1]
@@ -63,7 +63,7 @@ attributes:
     oid: [PDU2-MIB, measurementsOutletSensorValue]
     polling_period: 3000
     access: readonly
-    start_index: 0
+    start_index: 1
     placeholder_index: 1
     indexes:
       - [1, 1]
@@ -74,15 +74,12 @@ attributes:
 
   - name: pduPort{}OnOff
     oid: [PDU2-MIB, switchingOperation]
-    polling_period: 3000
-    access: read-write
-    dtype: int
-    start_index: 0
+    access: write
+    start_index: 1
     placeholder_index: 1
     indexes:
       - [1, 1]
       - [1, 24, 1]
       - [1, 1]
     dtype: int
-    description: The switching operation: switch on, switch off or power-cycle.
-      
+    description: The switching operation - switch on, switch off or power-cycle.

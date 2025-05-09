@@ -21,20 +21,30 @@ from .data_handlers import AntennaBufferDataHandler
 __all__ = ["TestAntennaBuffer"]
 
 
+# pylint: disable=too-many-arguments
 class TestAntennaBuffer(BaseDaqTest):
     """
-    Test we can send raw data from the Antenna Buffer to the DAQ correctly.
+    Test we can read data from the Antenna Buffer to the DAQ correctly.
 
     ##########
     TEST STEPS
     ##########
 
+    1. Configure data to read from the antenna buffer.
+    2. Set up the antenna buffer.
+    3. Start recording to the buffer.
+    4. Read from the buffer.
+    5. Verify that the data is correct.
 
     #################
     TEST REQUIREMENTS
     #################
 
-    TBA
+    1. Every SPS device in your station must be in adminmode.ENGINEERING, this is
+        common for all tests.
+    2. Your station must have at least 1 TPM.
+    3. Your TPMs must be synchronised.
+    4. You must have a DAQ available.
     """
 
     def test(self: TestAntennaBuffer) -> None:
@@ -49,18 +59,22 @@ class TestAntennaBuffer(BaseDaqTest):
     def test_fpga(
         self: TestAntennaBuffer,
         fpga_id: int = 0,
-        use_1g: bool = True,
-        start_address: int = 67108864 * 8,
+        tile_id: int = 0,
+        use_1g: bool = False,
+        start_address: int = 512 * 1024 * 1024,
         timestamp_capture_duration: int = 75,
     ) -> None:
         """Test data stream from the Antenna Buffer to DAQ.
 
         :param fpga_id: FPGA ID to test (default is 0)
+        :param tile_id: Tile ID to test (default is 0)
         :param use_1g: Whether to use 1G or 10G interface (default is True)
         :param start_address: Starting address for data transfer
         :param timestamp_capture_duration: time duration in timestamps.
         """
-        self.test_logger.info(f"Executing test for fpga_id: {fpga_id}")
+        self.test_logger.info(
+            (f"Executing test for fpga_id: {fpga_id} " f"and tile_id: {tile_id}")
+        )
         self.test_logger.info(f"{use_1g =}")
         self.test_logger.info(f"{start_address =}")
         self.test_logger.info(f"{timestamp_capture_duration =}")
@@ -86,7 +100,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         daq_config = {
             "receiver_interface": "eth2",  # I don't know if it's eth2
-            # 'receiver_ports': str(self.daq_eth_port),
+            "receiver_ports": 4660,
             # 'nof_raw_samples': int(daq_nof_raw_samples),
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,

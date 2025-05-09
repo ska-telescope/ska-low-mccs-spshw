@@ -1299,7 +1299,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :return: ddr write size of a frame
         """
-        return self._component_manager.ddr_write_size
+        return self.component_manager.ddr_write_size
 
     # @attribute(
     #     dtype="DevString",
@@ -5462,7 +5462,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("DisableStationBeamFlagging")
+        >>> dp.command_inout("DisableStationBeamFlagging")k
         """
         handler = self.get_command_object("DisableStationBeamFlagging")
         (return_code, message) = handler()

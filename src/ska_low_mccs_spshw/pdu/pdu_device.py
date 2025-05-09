@@ -14,11 +14,12 @@ from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
-from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from tango import Attribute
 from tango.server import command, device_property
+
+from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
 __all__ = ["MccsPdu", "main"]
 
@@ -82,7 +83,7 @@ class MccsPdu(AttributePollingDevice):
                 self._off_value = 0
                 self._on_value = 1
             elif self.Model == "ENLOGIC":
-                self._off_value= 1
+                self._off_value = 1
                 self._on_value = 2
             else:
                 self.logger.error(f"Invalid model {self.Model} specified")
@@ -116,7 +117,7 @@ class MccsPdu(AttributePollingDevice):
         """
         filename = self.DeviceModels[self.Model]
         device_definition = importlib.resources.files(
-            "ska_sat_lmc.pdu.device_definitions"
+            "ska_low_mccs_spshw.pdu.device_definitions"
         ).joinpath(filename)
         # This goes here because you don't have access to properties
         # until tango.server.BaseDevice.init_device() has been called
@@ -175,7 +176,9 @@ class MccsPdu(AttributePollingDevice):
 
         info_msg = f"Communication status is {communication_state}"
         self.logger.info(info_msg)
-        self._health_model.update_state(communicating=True)
+        self._health_model.update_state(
+            communicating=communication_state == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_state_changed(
         self: MccsPdu,
@@ -196,9 +199,10 @@ class MccsPdu(AttributePollingDevice):
         if "health" in kwargs:
             health = kwargs.pop("health")
             if self._health_state != health:
-                self._health_state = cast(HealthState, health)
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
+                # update health_state which is an attribute in the base class
+                # change and archive events are pushed there
+                self._update_health_state(health)
+        # update base class for power and/or fault
         super()._component_state_changed(**kwargs)
 
         for attribute_name, value in kwargs.items():
@@ -216,6 +220,7 @@ class MccsPdu(AttributePollingDevice):
         """Set pdu port OFF."""
         attr = getattr(self, f"pduPort{port}OnOff")
         attr(self._off_value)
+
 
 # ----------
 # Run server

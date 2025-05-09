@@ -2028,7 +2028,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self.logger.warning("Failed to acquire hardware lock")
             return False
 
-
     # -----------------------------
     # FastCommands
     # ----------------------------

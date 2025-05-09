@@ -59,7 +59,7 @@ class TestAntennaBuffer(BaseDaqTest):
     def test_fpga(
         self: TestAntennaBuffer,
         fpga_id: int = 0,
-        tile_id: int = 0,
+        tile_ids: Optional[list] = None,
         use_1g: bool = False,
         start_address: int = 512 * 1024 * 1024,
         timestamp_capture_duration: int = 75,
@@ -67,13 +67,19 @@ class TestAntennaBuffer(BaseDaqTest):
         """Test data stream from the Antenna Buffer to DAQ.
 
         :param fpga_id: FPGA ID to test (default is 0)
-        :param tile_id: Tile ID to test (default is 0)
+        :param tile_ids: a list of Tile IDs to test (default is [0])
         :param use_1g: Whether to use 1G or 10G interface (default is True)
         :param start_address: Starting address for data transfer
         :param timestamp_capture_duration: time duration in timestamps.
         """
+        if tile_ids is None:
+            tile_ids = [0]
+        elif len(tile_ids) > 1:
+            self.test_logger.error(
+                "Currently the Antenna buffer test can only use one tile per test run"
+            )
         self.test_logger.info(
-            (f"Executing test for fpga_id: {fpga_id} " f"and tile_id: {tile_id}")
+            (f"Executing test for fpga_id: {fpga_id} and tile_ids: {tile_ids}")
         )
         self.test_logger.info(f"{use_1g =}")
         self.test_logger.info(f"{start_address =}")
@@ -95,13 +101,13 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info(f"{tx_mode =}")
         self.test_logger.info(f"{receiver_frame_size =}")
 
-        # self.daq_eth_if = self._station_config['eth_if']['lmc']
-        # self.daq_eth_port = self._station_config['network']['lmc']['lmc_port']
+        tiles = []
+        for tile_id in tile_ids:
+            tiles.append(self.tile_proxies[tile_id])
 
         daq_config = {
             "receiver_interface": "eth2",  # I don't know if it's eth2
             "receiver_ports": 4660,
-            # 'nof_raw_samples': int(daq_nof_raw_samples),
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "receiver_frame_size": receiver_frame_size,
@@ -119,12 +125,14 @@ class TestAntennaBuffer(BaseDaqTest):
                 "jesd", pattern=list(range(1024)), adders=[0] * 32
             )
             self._set_up_antenna_buffer(
+                tiles=tiles,
                 mode=tx_mode,
                 ddr_start_byte_address=start_address,
                 max_ddr_byte_size=None,
             )
 
             daq_nof_raw_samples = self._start_antenna_buffer(
+                tiles=tiles,
                 antenna_ids=antenna_ids,
                 start_time=-1,
                 timestamp_capture_duration=timestamp_capture_duration,
@@ -134,7 +142,9 @@ class TestAntennaBuffer(BaseDaqTest):
             daq_config = {
                 "nof_raw_samples": int(daq_nof_raw_samples),
             }
-            self._read_antenna_buffer()
+            self._read_antenna_buffer(
+                tiles=tiles,
+            )
             assert self._data_created_event.wait(20)
             self._data_created_event.clear()
             self._stop_pattern_generator("jesd")
@@ -142,13 +152,15 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def _set_up_antenna_buffer(
         self: TestAntennaBuffer,
+        tiles: list,
         mode: str,
         ddr_start_byte_address: int,
         max_ddr_byte_size: Optional[int] = None,
     ) -> None:
         """Set up the antenna buffer.
 
-        :param mode:netwrok to transmit antenna buffer data to. Options: 'SDN'
+        :param tiles: set of tiles to set up
+        :param mode: network to transmit antenna buffer data to. Options: 'SDN'
                 (Science Data Network) and 'NSDN' (Non-Science Data Network)
         :param ddr_start_byte_address: first address in the DDR for antenna buffer
                 data to be written in (in bytes).
@@ -158,7 +170,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         """
         self.test_logger.info("Setting up antenna buffer for all tiles")
-        for tile in self.tile_proxies:
+        for tile in tiles:
             self.test_logger.info(f"Set up antenna buffer for {tile}")
             tile.SetUpAntennaBuffer(
                 json.dumps(
@@ -172,6 +184,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def _start_antenna_buffer(
         self: TestAntennaBuffer,
+        tiles: list,
         antenna_ids: list[int],
         start_time: int,
         timestamp_capture_duration: int,
@@ -179,6 +192,7 @@ class TestAntennaBuffer(BaseDaqTest):
     ) -> int:
         """Start the antenna buffer.
 
+        :param tiles: set of tiles to start recording
         :param antenna_ids: List of antenna IDs.
         :param start_time: Start time in seconds since epoch.
         :param timestamp_capture_duration: capture duration in timestamps.
@@ -189,7 +203,7 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info("Starting antenna buffer for all tiles")
         ddr_write_size: list = []
 
-        for tile in self.tile_proxies:
+        for tile in tiles:
             self.test_logger.info(f"Start antenna buffer for {tile}")
             tile.StartAntennaBuffer(
                 json.dumps(
@@ -212,10 +226,16 @@ class TestAntennaBuffer(BaseDaqTest):
         daq_nof_raw_samples = total_nof_samples / nof_callback
         return daq_nof_raw_samples
 
-    def _read_antenna_buffer(self: TestAntennaBuffer) -> None:
-        """Read from the antenna buffer."""
+    def _read_antenna_buffer(
+        self: TestAntennaBuffer,
+        tiles: list,
+    ) -> None:
+        """Read from the antenna buffer.
+
+        :param tiles: set of tiles to read from
+        """
         self.test_logger.info("Reading antenna buffer for all tiles")
-        for tile in self.tile_proxies:
+        for tile in tiles:
             self.test_logger.info(f"Reading antenna buffer for {tile}")
             tile.ReadAntennaBuffer()
 

@@ -74,6 +74,7 @@ autodoc_mock_imports = [
     "psycopg_pool",
     "ska_ser_skuid",
     "ska_ser_logging",
+    "ska_snmp_device",
     "astropy",
     "watchdog",
 ]
@@ -302,6 +303,10 @@ intersphinx_mapping = {
     ),
     "ska-low-mccs-common": (
         "https://developer.skao.int/projects/ska-low-mccs-common/en/latest/",
+        None,
+    ),
+    "ska-ser-snmp": (
+        "https://developer.skao.int/projects/ska-ser-snmp/en/latest/",
         None,
     ),
 }

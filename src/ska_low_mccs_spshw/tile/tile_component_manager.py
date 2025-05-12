@@ -798,6 +798,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Connect if not already.
             if not __is_connected or self.tile.tpm is None:
                 try:
+                    time.sleep(5)  # hack for test.
                     self.connect()
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except

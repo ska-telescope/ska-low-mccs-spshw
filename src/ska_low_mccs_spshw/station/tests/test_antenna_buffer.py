@@ -111,7 +111,6 @@ class TestAntennaBuffer(BaseDaqTest):
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
-        # ANTENNA_BUFFER From pyaavs daq_reciever.py
         self._configure_daq(
             daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
         )
@@ -122,6 +121,7 @@ class TestAntennaBuffer(BaseDaqTest):
             self._configure_and_start_pattern_generator(
                 "jesd", pattern=list(range(1024)), adders=[0] * 32
             )
+            self._send_raw_data(sync=False)
             self._set_up_antenna_buffer(
                 tiles=tiles,
                 mode=tx_mode,
@@ -236,6 +236,17 @@ class TestAntennaBuffer(BaseDaqTest):
         for tile in tiles:
             self.test_logger.info(f"Reading antenna buffer for {tile}")
             tile.ReadAntennaBuffer()
+
+    def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
+        self.component_manager.send_data_samples(
+            json.dumps(
+                {
+                    "data_type": "raw",
+                    "seconds": 1,
+                    "sync": sync,
+                }
+            )
+        )
 
     # pylint: disable=too-many-locals
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:

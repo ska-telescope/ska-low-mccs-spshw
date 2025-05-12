@@ -106,8 +106,6 @@ class TestAntennaBuffer(BaseDaqTest):
             tiles.append(self.tile_proxies[tile_id])
 
         daq_config = {
-            "receiver_interface": "eth2",  # I don't know if it's eth2
-            "receiver_ports": 4660,
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "receiver_frame_size": receiver_frame_size,

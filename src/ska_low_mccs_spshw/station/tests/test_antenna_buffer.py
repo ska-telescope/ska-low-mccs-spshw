@@ -121,7 +121,7 @@ class TestAntennaBuffer(BaseDaqTest):
             self._configure_and_start_pattern_generator(
                 "jesd", pattern=list(range(1024)), adders=[0] * 32
             )
-            self._send_raw_data(sync=sync)
+            self._send_raw_data(sync=False)
             self._set_up_antenna_buffer(
                 tiles=tiles,
                 mode=tx_mode,
@@ -237,7 +237,7 @@ class TestAntennaBuffer(BaseDaqTest):
             self.test_logger.info(f"Reading antenna buffer for {tile}")
             tile.ReadAntennaBuffer()
 
-    def _send_raw_data(self: TestRaw, sync: bool) -> None:
+    def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
         self.component_manager.send_data_samples(
             json.dumps(
                 {

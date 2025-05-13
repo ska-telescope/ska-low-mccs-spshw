@@ -1134,9 +1134,18 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
 
         tpm_power_state = None
         if power == PowerState.OFF:
+            self.component_manager.clear_hardware_state()
+            self._previous_tpm_power_states = []
             tpm_power_state = PowerState.NO_SUPPLY
         elif power == PowerState.UNKNOWN:
+            self.component_manager.clear_hardware_state()
+            self._previous_tpm_power_states = self._tpm_power_states.copy()
             tpm_power_state = PowerState.UNKNOWN
+        elif power == PowerState.ON:
+            if self._previous_tpm_power_states:
+                self._clear_hardware_attributes()
+                self._previous_tpm_power_states = []
+
         if tpm_power_state is not None:
             self._update_tpm_power_states([tpm_power_state] * SubrackData.TPM_BAY_COUNT)
             self._clear_hardware_attributes()

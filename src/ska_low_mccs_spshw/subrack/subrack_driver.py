@@ -724,6 +724,13 @@ class SubrackDriver(
 
         super().polling_stopped()
 
+    def clear_hardware_state(self) -> None:
+        """Clear the state of the driver."""
+        # self._update_component_state(
+        #     tpm_on_off=None,
+        # )
+        self._component_state["tpm_on_off"] = None
+
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:
         """
         Override parent to set PowerState.UNKNOWN when polling fails.

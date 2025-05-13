@@ -324,7 +324,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self._tpm_present: list[bool] = []
         self._tpm_count = 0
         self._tpm_power_states = [PowerState.UNKNOWN] * SubrackData.TPM_BAY_COUNT
-
+        self._previous_tpm_power_states: list[PowerState] = []
         self._hardware_attributes: dict[str, Any] = {}
 
         self._desired_fan_speeds: Optional[list[float]] = None

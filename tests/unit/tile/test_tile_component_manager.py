@@ -1502,11 +1502,12 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
                 force_reprogramming=True, pps_delay_correction=0
             )
             assert tile_component_manager.tpm_status == TpmStatus.INITIALISED
-            tile_component_manager._start_acquisition(delay=0)
 
         # Start acquisition will start a thread to determine if the desired state
         # is reached. In order to do so it must claim the lock to probe hardware
         # Hence we leave lock and wait for callback.
+        tile_component_manager._start_acquisition(delay=0)
+
         callbacks["attribute_state"].assert_against_call(
             programming_state=TpmStatus.SYNCHRONISED.pretty_name(),
             lookahead=20,

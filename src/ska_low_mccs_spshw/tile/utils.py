@@ -128,20 +128,27 @@ class LogLock:
 
 
 @contextmanager
-def acquire_timeout(lock: LogLock | threading.Lock, timeout: float) -> Iterator[bool]:
+def acquire_timeout(
+    lock: LogLock | threading.Lock, timeout: float, raise_exception: bool = False
+) -> Iterator[bool]:
     """
     Create an implementation of a lock context manager with timeout.
 
     :param lock: the thread lock instance
     :param timeout: timeout before giving up on acquiring the lock
+    :param raise_exception: if True, raise exception on timeout
 
     :yields: a context manager
+
+    :raises TimeoutError: if raise_exception is True and the lock isn't acquired
     """
-    result = lock.acquire(timeout=timeout)
+    acquired = lock.acquire(timeout=timeout)
+    if raise_exception and not acquired:
+        raise TimeoutError(f"lock not acquired in {timeout:.3f}s")
     try:
-        yield result
+        yield acquired
     finally:
-        if result:
+        if acquired:
             lock.release()
 
 

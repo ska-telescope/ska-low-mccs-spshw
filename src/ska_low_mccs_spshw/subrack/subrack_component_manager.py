@@ -8,15 +8,18 @@
 """This module implements component management for subracks."""
 from __future__ import annotations
 
+import functools
 import logging
-from typing import Callable, Optional, cast
+from typing import Any, Callable, Optional, cast
 
-from ska_control_model import CommunicationStatus, PowerState, TaskStatus
+from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
+from ska_low_mccs_common.communication_manager import CommunicationManager
 from ska_low_mccs_common.component import (
     ComponentManagerWithUpstreamPowerSupply,
     DeviceComponentManager,
     PowerSupplyProxySimulator,
 )
+from ska_tango_base.base import check_communicating
 
 from .subrack_data import FanMode
 from .subrack_driver import SubrackDriver
@@ -45,12 +48,24 @@ class _PDUProxy(DeviceComponentManager):
         :param component_state_callback: callback to be
             called when the component state changes
         """
+        self.fqdn = fqdn
         super().__init__(
             fqdn,
             logger,
             communication_state_callback,
             component_state_callback,
         )
+
+    def _get_health_state(self: _PDUProxy) -> str:
+        """
+        Get the pdu health.
+
+        :return: health.
+        """
+        assert self._proxy is not None  # for the type checker
+        assert self._proxy._device is not None  # for the type checker
+
+        return self._proxy._device.healthState
 
     def _get_model(self: _PDUProxy) -> str:
         """
@@ -118,7 +133,23 @@ class _PDUProxy(DeviceComponentManager):
 
         return func()
 
-    def _pdu_port_state(self: _PDUProxy, port_number: int) -> float:
+    def _pdu_port_voltage(self: _PDUProxy, port_number: int) -> float:
+        """
+        Get the voltage for a PDU port.
+
+        :param port_number: the port number to get voltage for.
+
+        :return: voltage for port provided.
+        """
+        assert self._proxy is not None  # for the type checker
+        assert self._proxy._device is not None  # for the type checker
+
+        attr_name = f"pduPort{port_number}Voltage"
+        func = getattr(self._proxy._device, attr_name)
+
+        return func()
+
+    def _pdu_port_state(self: _PDUProxy, port_number: int) -> int:
         """
         Get the state for a PDU port.
 
@@ -203,8 +234,8 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         self.pdu_proxy = _PDUProxy(
             pdu_trl,
             logger,
-            communication_state_changed_callback,
-            component_state_changed_callback,
+            functools.partial(self._device_communication_state_changed, pdu_trl),
+            functools.partial(self._pdu_state_changed, pdu_trl),
         )
 
         # we only need one worker; the heavy lifting is done by the poller in the
@@ -235,6 +266,54 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
+        self._pdu_proxy_map = {pdu_trl: self.pdu_proxy}
+
+        self._communication_manager = CommunicationManager(
+            self._update_communication_state,
+            self._update_component_state,
+            self.logger,
+            self._pdu_proxy_map,
+        )
+
+    def start_communicating(self: SubrackComponentManager) -> None:
+        """Establish communication with the subrack components."""
+        super().start_communicating()
+        self._communication_manager.start_communicating()
+
+    def stop_communicating(self: SubrackComponentManager) -> None:
+        """Break off communication with the subrack components."""
+        super().stop_communicating()
+        self._communication_manager.stop_communicating()
+
+    def _device_communication_state_changed(
+        self: SubrackComponentManager,
+        trl: str,
+        communication_state: CommunicationStatus,
+    ) -> None:
+        """
+        Subdevice communication state changed.
+
+        :param trl: device trl.
+        :param communication_state: communication status
+        """
+        self._communication_manager.update_communication_status(
+            trl, communication_state
+        )
+
+    def _pdu_state_changed(
+        self: SubrackComponentManager,
+        fqdn: str,
+        power: Optional[PowerState] = None,
+        **state_change: Any,
+    ) -> None:
+        """
+        Handle pdu state change.
+
+        :param fqdn: pdu fqdn.
+        :param power: pdu power.
+        :param state_change: state changes
+        """
+        self._component_state_changed_callback(pdu=state_change)
 
     def turn_off_tpm(
         self: SubrackComponentManager,
@@ -302,69 +381,175 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             task_callback=task_callback
         )
 
+    @check_communicating
+    def pdu_health_state(
+        self: SubrackComponentManager,
+    ) -> Optional[str]:
+        """
+        Get PDU health.
+
+        :return: pdu health.
+        """
+        if self.pdu_proxy is not None:
+            return self.pdu_proxy._get_health_state()
+        return None
+
+    @check_communicating
     def pdu_model(
         self: SubrackComponentManager,
-    ) -> str:
+    ) -> Optional[str]:
         """
         Get PDU model type.
 
         :return: pdu model type.
         """
-        return self.pdu_proxy._get_model()
+        if self.pdu_proxy is not None:
+            return self.pdu_proxy._get_model()
+        return None
 
+    @check_communicating
     def pdu_number_of_ports(
         self: SubrackComponentManager,
-    ) -> int:
+    ) -> Optional[int]:
         """
         Get number of pdu ports .
 
         :return: number of pdu ports
         """
-        return self.pdu_proxy._number_of_ports()
+        if self.pdu_proxy is not None:
+            return self.pdu_proxy._number_of_ports()
+        return None
 
-    def pdu_port_on(
+    @check_communicating
+    def power_pdu_port_on(
         self: SubrackComponentManager,
         port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port on.
+
+        :param port_number: the port number
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._power_pdu_port_on,
+            args=[port_number],
+            task_callback=task_callback,
+        )
+
+    def _power_pdu_port_on(
+        self: SubrackComponentManager,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
     ) -> None:
         """
         Turn a pdu port on.
 
         :param port_number: (one-based) number of the port to turn on.
+        :param task_callback: Update task state, defaults to None
         """
-        self.pdu_proxy._pdu_port_on(port_number)
+        if self.pdu_proxy is not None:
+            self.pdu_proxy._pdu_port_on(port_number)
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Set port value to ON"),
+            )
 
-    def pdu_port_off(
+    @check_communicating
+    def power_pdu_port_off(
         self: SubrackComponentManager,
         port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port off.
+
+        :param port_number: the port number
+            each channeliser frequency channel.
+        :param task_callback: Update task state, defaults to None
+
+        :return: a task status and response message
+        """
+        return self.submit_task(
+            self._power_pdu_port_off,
+            args=[port_number],
+            task_callback=task_callback,
+        )
+
+    def _power_pdu_port_off(
+        self: SubrackComponentManager,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
     ) -> None:
         """
         Turn a pdu port off.
 
         :param port_number: (one-based) number of the port to turn off.
+        :param task_callback: Update task state, defaults to None
         """
-        self.pdu_proxy._pdu_port_off(port_number)
+        if self.pdu_proxy is not None:
+            self.pdu_proxy._pdu_port_off(port_number)
+        if task_callback:
+            task_callback(
+                status=TaskStatus.COMPLETED,
+                result=(ResultCode.OK, "Set port value to OFF"),
+            )
 
-    def pdu_port_current(
+    @check_communicating
+    def pdu_port_currents(
         self: SubrackComponentManager,
-        port_number: int,
-    ) -> None:
+    ) -> Optional[list[float]]:
         """
-        Get the current for a pdu port.
+        Get the currents for a pdu port.
 
-        :param port_number: (one-based) number of the port.
+        :return: pdu port currents.
         """
-        self.pdu_proxy._pdu_port_current(port_number)
+        currents: list[float] = []
+        if self.pdu_proxy is not None:
+            number_of_ports = self.pdu_proxy._number_of_ports()
+            for port_number in range(number_of_ports):
+                currents.append(self.pdu_proxy._pdu_port_current(port_number))
+            return currents
+        return None
 
-    def pdu_port_state(
+    @check_communicating
+    def pdu_port_voltages(
         self: SubrackComponentManager,
-        port_number: int,
-    ) -> None:
+    ) -> Optional[list[float]]:
         """
-        Get the state for a pdu port.
+        Get the voltages for a pdu port.
 
-        :param port_number: (one-based) number of the port.
+        :return: pdu port voltages.
         """
-        self.pdu_proxy._pdu_port_state(port_number)
+        if self.pdu_proxy is not None:
+            voltages: list[float] = []
+            number_of_ports = self.pdu_proxy._number_of_ports()
+            for port_number in range(number_of_ports):
+                voltages.append(self.pdu_proxy._pdu_port_voltage(port_number))
+            return voltages
+        return None
+
+    @check_communicating
+    def pdu_port_states(
+        self: SubrackComponentManager,
+    ) -> Optional[list[int]]:
+        """
+        Get the states for a pdu port.
+
+        :return: pdu port statuses.
+        """
+        if self.pdu_proxy is not None:
+            states: list[int] = []
+            number_of_ports = self.pdu_proxy._number_of_ports()
+            for port_number in range(number_of_ports):
+                states.append(self.pdu_proxy._pdu_port_state(port_number))
+            return states
+        return None
 
     def set_subrack_fan_speed(
         self: SubrackComponentManager,

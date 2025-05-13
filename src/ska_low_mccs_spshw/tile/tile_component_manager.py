@@ -754,7 +754,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: True if connected, else False.
         """
         with self._hardware_lock:
-            return self.tile.check_communication()["CPLD"]
+            try:
+                # TODO: calling temperature is bad during powerup.?
+                self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
+                return True
+            except Exception:  # pylint: disable=broad-except
+                return False
 
     def _subrack_says_tpm_power_changed(
         self: TileComponentManager,
@@ -798,7 +803,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             # Connect if not already.
             if not __is_connected or self.tile.tpm is None:
                 try:
-                    time.sleep(5)  # hack for test.
                     self.connect()
                     __is_connected = True
                 except Exception:  # pylint: disable=broad-except

@@ -835,49 +835,50 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.power_state = event_value
         # Connect if not already.
-        with self._hardware_lock:
-            __is_connected = self.is_connected
-            # Connect if not already.
-            if not __is_connected or self.tile.tpm is None:
-                try:
-                    self.connect()
-                    __is_connected = True
-                except Exception:  # pylint: disable=broad-except
-                    self.logger.error("Subrack callback failed to connect to hardware.")
+        # with self._hardware_lock:
+        #     __is_connected = self.is_connected
+        #     # Connect if not already.
+        #     if not __is_connected or self.tile.tpm is None:
+        #         try:
+        #             self.connect()
+        #             __is_connected = True
+        #         except Exception:  # pylint: disable=broad-except
+        #             self.logger.error("Subrack callback failed to
+        # connect to hardware.")
 
         if event_value == PowerState.ON:
             self._tile_time.set_reference_time(self._fpga_reference_time)
 
             # Attempt reinitialisation if connected
             # and not already initialised/ing.
-            if __is_connected and self._tpm_status not in [
-                TpmStatus.INITIALISED,
-                TpmStatus.SYNCHRONISED,
-            ]:
-                with self._initialise_lock:
-                    if (
-                        self._request_provider
-                        and not (
-                            isinstance(self.active_request, TileLRCRequest)
-                            and self.active_request.name.lower() != "initialise"
-                        )
-                        and not self._request_provider.initialise_queued
-                    ):
-                        request = TileLRCRequest(
-                            name="initialise",
-                            command_object=self._execute_initialise,
-                            task_callback=None,
-                            force_reprogramming=False,
-                            pps_delay_correction=self._pps_delay_correction,
-                        )
-                        self.logger.info(
-                            "Subrack has registered that the TPM has power "
-                            "but is not yet initialised or synchronised. "
-                            "Initialising."
-                        )
-                        assert self._request_provider is not None
+            # if __is_connected and self._tpm_status not in [
+            #     TpmStatus.INITIALISED,
+            #     TpmStatus.SYNCHRONISED,
+            # ]:
+            #     with self._initialise_lock:
+            #         if (
+            #             self._request_provider
+            #             and not (
+            #                 isinstance(self.active_request, TileLRCRequest)
+            #                 and self.active_request.name.lower() != "initialise"
+            #             )
+            #             and not self._request_provider.initialise_queued
+            #         ):
+            #             request = TileLRCRequest(
+            #                 name="initialise",
+            #                 command_object=self._execute_initialise,
+            #                 task_callback=None,
+            #                 force_reprogramming=False,
+            #                 pps_delay_correction=self._pps_delay_correction,
+            #             )
+            #             self.logger.info(
+            #                 "Subrack has registered that the TPM has power "
+            #                 "but is not yet initialised or synchronised. "
+            #                 "Initialising."
+            #             )
+            #             assert self._request_provider is not None
 
-                        self._request_provider.enqueue_lrc(request, priority=0)
+            #             self._request_provider.enqueue_lrc(request, priority=0)
 
         else:
             self._tile_time.set_reference_time(0)

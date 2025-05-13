@@ -241,3 +241,11 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         return cast(
             SubrackDriver, self._hardware_component_manager
         ).set_power_supply_fan_speed(fan_number, speed, task_callback=task_callback)
+
+    def clear_hardware_state(self) -> None:
+        """Clear the state of the driver."""
+        cast(SubrackDriver, self._hardware_component_manager).clear_hardware_state()
+        # self._update_component_state(
+        #     tpm_on_off=None,
+        # )
+        self._component_state["tpm_on_off"] = None

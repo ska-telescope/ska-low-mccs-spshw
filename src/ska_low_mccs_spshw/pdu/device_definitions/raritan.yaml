@@ -5,9 +5,6 @@ attributes:
     access: readonly
     description: The system description.
 
-###################
-# Common attributes
-###################
   - name: pduModel
     oid: [ PDU2-MIB, pduModel, 1 ]
     polling_period: .inf
@@ -19,12 +16,6 @@ attributes:
     polling_period: .inf
     access: readonly
     description: The PDU serial number.
-
-#  - name: pduFirmwareVersion
-#    oid: [ PDU2-MIB, boardFirmwareVersion, 1 ]
-#    polling_period: .inf
-#    access: readonly
-#    description: The PDU firmware version.
 
   - name: pduNumberOfPorts
     oid: [ PDU2-MIB, outletCount, 1 ]
@@ -40,9 +31,9 @@ attributes:
     start_index: 1
     placeholder_index: 1
     indexes:
-      - [1, 1]
-      - [1, 24, 1]
-      - [1, 1]
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [1, 1]      # sensor type
     dtype: int
     description: The operating sensor state.
 
@@ -53,9 +44,9 @@ attributes:
     start_index: 1
     placeholder_index: 1
     indexes:
-      - [1, 1]
-      - [1, 24, 1]
-      - [1, 1]
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [1, 1]      # sensor type
     dtype: int
     description: The rms current outlet sensor value.
 
@@ -66,20 +57,17 @@ attributes:
     start_index: 1
     placeholder_index: 1
     indexes:
-      - [1, 1]
-      - [1, 24, 1]
-      - [4, 4]
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [4, 4]      # sensor type
     dtype: float
     description: The rms voltage outlet sensor value.
 
   - name: pduPort{}OnOff
     oid: [PDU2-MIB, switchingOperation]
     access: write
-    start_index: 1
-    placeholder_index: 1
     indexes:
-      - [1, 1]
-      - [1, 24, 1]
-      - [1, 1]
+      - [1, 1]   # pdu id
+      - [1, 24]  # port
     dtype: int
     description: The switching operation - switch on, switch off or power-cycle.

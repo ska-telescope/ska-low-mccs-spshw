@@ -5,9 +5,6 @@ attributes:
     access: readonly
     description: The system description.
 
-###################
-# Common attributes
-###################
   - name: pduModel
     oid: [ ENLOGIC-PDU-MIB, pduNamePlateModelNumber, 1 ]
     polling_period: .inf
@@ -19,12 +16,6 @@ attributes:
     polling_period: .inf
     access: readonly
     description: The PDU serial number.
-
-  - name: pduFirmwareVersion
-    oid: [ ENLOGIC-PDU-MIB, pduNamePlateFirmwareVersion, 1 ]
-    polling_period: .inf
-    access: readonly
-    description: The PDU firmware version.
 
   - name: pduNumberOfPorts
     oid: [ ENLOGIC-PDU-MIB, pduUnitPropertiesSwitchedOutletCount, 1 ]

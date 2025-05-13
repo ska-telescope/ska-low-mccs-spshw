@@ -513,7 +513,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         if isinstance(self.active_request, TileLRCRequest):
             self.active_request.notify_in_progress()
         # Claim lock before we attempt a request.
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             result = poll_request()
         return TileResponse(
             poll_request.name,
@@ -598,7 +600,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         is_faulty: bool = False
         match poll_success:
             case False:
-                with self._hardware_lock:
+                with acquire_timeout(
+                    self._hardware_lock,
+                    self._default_lock_timeout,
+                    raise_exception=True,
+                ):
                     if (
                         not self.is_connected
                         and self._subrack_says_tpm_power == PowerState.ON
@@ -790,7 +796,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: True if connected, else False.
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             try:
                 # TODO: calling temperature is bad during powerup.?
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
@@ -835,7 +843,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.power_state = event_value
         # Connect if not already.
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             __is_connected = self.is_connected
             # Connect if not already.
             if not __is_connected or self.tile.tpm is None:
@@ -939,7 +949,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: True is the re-evaluated TpmStatus differs from the
             automated evaluation.
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             _initial_tpm_status = self._tpm_status
             self.__update_tpm_status()
             if _initial_tpm_status != self._tpm_status:
@@ -957,7 +969,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: the TPM status
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             core_communication = self.tile.check_communication()
             self._update_attribute_callback(core_communication=core_communication)
 
@@ -993,7 +1007,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def ping(self: TileComponentManager) -> None:
         """Check we can communicate with TPM."""
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
             self.__update_tpm_status()
 
@@ -1006,7 +1022,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: initialisation state
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             _fpgas_time = [
                 self.tile.get_fpga_time(Device.FPGA_1),
                 self.tile.get_fpga_time(Device.FPGA_2),
@@ -1019,7 +1037,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: channelised stream data valid flag
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return (
                 self.tile["fpga1.dsp_regfile.stream_status.channelizer_vld"] == 1
                 and self.tile["fpga2.dsp_regfile.stream_status.channelizer_vld"] == 1
@@ -1078,7 +1098,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param pps_delay_correction: the delay correction to apply to the
             pps signal.
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             if force_reprogramming:
                 self.tile.erase_fpgas()
                 self._tpm_status = TpmStatus.UNPROGRAMMED
@@ -1202,7 +1224,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param bitfile: can either be the design name returned or a path to a file
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             self.logger.info("Programming fpgas ...")
             self.tile.program_fpgas(bitfile)
             is_programmed = self.tile.is_programmed()
@@ -1276,7 +1300,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises TimeoutError: When unable to abort previous command.
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             # Wait for COMPLETE status.
             task_waiter = TaskCompleteWaiter()
             self._synchronised_checker.abort(task_waiter)
@@ -1335,7 +1361,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         def __check_channeliser_started() -> bool:
             started = False
             try:
-                with self._hardware_lock:
+                with acquire_timeout(
+                    self._hardware_lock,
+                    self._default_lock_timeout,
+                    raise_exception=True,
+                ):
                     started = self._check_channeliser_started()
             # pylint: disable=broad-except
             except Exception as e:
@@ -2023,7 +2053,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ConnectionError: when unable to connect to TPM
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             if not self.is_connected or self.tile.tpm is None:
                 try:
                     self.logger.debug("Connecting to TPM")
@@ -2040,7 +2072,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def __update_tpm_status(self: TileComponentManager) -> None:
         """Update the TpmStatus."""
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             self._tpm_status = self.tpm_status
             self._update_attribute_callback(
                 programming_state=self._tpm_status.pretty_name()
@@ -2951,7 +2985,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: static delay, in nanoseconds one per TPM input
         """
         delays = []
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             try:
                 for i in range(16):
                     delays.append(
@@ -3365,13 +3401,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: PPS delay correction. Units: 1.25 ns
         """
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             return self.tile.get_pps_delay(
                 enable_correction=True
             ) - self.tile.get_pps_delay(enable_correction=False)
 
     def _get_pps_drift(self: TileComponentManager) -> int:
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             if self._initial_pps_delay is None:
                 self._initial_pps_delay = self.tile.get_pps_delay()
             return self.tile.get_pps_delay() - self._initial_pps_delay
@@ -3994,10 +4034,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     def enable_station_beam_flagging(self: TileComponentManager) -> None:
         """Enable station beam flagging."""
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             self.tile.enable_station_beam_flagging()
 
     def disable_station_beam_flagging(self: TileComponentManager) -> None:
         """Disable station beam flagging."""
-        with self._hardware_lock:
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
             self.tile.disable_station_beam_flagging()

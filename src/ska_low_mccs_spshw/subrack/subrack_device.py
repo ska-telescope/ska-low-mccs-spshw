@@ -1269,6 +1269,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         :param fault: whether the component is in fault or not
         :param power: the power state of the component
         :param health: the health state of a subordinate component.
+        :param pdu: any changes to the pdu device.
         :param kwargs: other state updates
         """
         super()._component_state_changed(fault=fault, power=power)

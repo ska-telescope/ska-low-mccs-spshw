@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import functools
 import logging
-from typing import Callable, Optional, cast, Any
+from typing import Any, Callable, Optional, cast
 
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_common.communication_manager import CommunicationManager
@@ -311,9 +311,9 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
         :param fqdn: pdu fqdn.
         :param power: pdu power.
+        :param state_change: state changes
         """
         self._component_state_changed_callback(pdu=state_change)
-
 
     def turn_off_tpm(
         self: SubrackComponentManager,

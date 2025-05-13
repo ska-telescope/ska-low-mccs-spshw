@@ -130,9 +130,7 @@ def check_subrack_is_online_and_on(
         print("Subrack device is in UNKNOWN state.")
 
     change_event_callbacks.assert_change_event(
-        "subrack_state",
-        OneOf(tango.DevState.OFF, tango.DevState.ON),
-        lookahead=4
+        "subrack_state", OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=4
     )
     state = subrack_device.state()
 
@@ -180,9 +178,7 @@ def choose_a_tpm(
         change_event_callbacks["subrack_tpm_present"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_tpm_present",
-        Anything,
-        lookahead=4
+        "subrack_tpm_present", Anything, lookahead=4
     )
     tpms_present = list(subrack_device.tpmPresent)
     if not tpms_present:

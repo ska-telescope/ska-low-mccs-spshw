@@ -655,11 +655,15 @@ def test_subrack_connection_lost(
         DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
     )
     change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
-
+    # This should pass is True or False.
+    subrack_simulator._attribute_values["tpm_on_off"] = [True] * 8
     # simulate a connection resumed
     subrack_simulator.network_jitter_limits = (0, 1_000)
-    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_change_event(DevState.ON, lookahead=2)
 
     # Check that attribute state rediscovered
-    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
-    assert subrack_device.tpm1PowerState == PowerState.OFF
+    change_event_callbacks["tpm1PowerState"].assert_change_event(
+        PowerState.ON, lookahead=2, consume_nonmatches=True
+    )
+    change_event_callbacks["tpm1PowerState"].assert_not_called()
+    assert subrack_device.tpm1PowerState == PowerState.ON

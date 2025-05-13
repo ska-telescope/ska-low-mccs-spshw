@@ -132,6 +132,7 @@ def check_subrack_is_online_and_on(
     change_event_callbacks.assert_change_event(
         "subrack_state",
         OneOf(tango.DevState.OFF, tango.DevState.ON),
+        lookahead=4
     )
     state = subrack_device.state()
 
@@ -181,6 +182,7 @@ def choose_a_tpm(
     change_event_callbacks.assert_change_event(
         "subrack_tpm_present",
         Anything,
+        lookahead=4
     )
     tpms_present = list(subrack_device.tpmPresent)
     if not tpms_present:
@@ -493,6 +495,6 @@ def check_tpm_power_state(
         print("TPM is off as expected.")
     else:
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.ON
+            PowerState.ON, lookahead=4
         )
-        print("TPM is off as expected.")
+        print("TPM is on as expected.")

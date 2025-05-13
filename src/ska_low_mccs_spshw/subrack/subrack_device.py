@@ -1091,6 +1091,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
+    @attribute(dtype=(str), label="pdu health")
+    def pduHealth(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu health.
+
+        :return: the pdu health
+        """
+        return self.component_manager.pdu_health_state()
+
     @attribute(dtype=(str), label="pdu model")
     def pduModel(self: MccsSubrack) -> str:
         """
@@ -1248,6 +1257,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         fault: Optional[bool] = None,
         power: Optional[PowerState] = None,
         health: HealthState | int | None = None,
+        pdu: Optional[HealthState] = None,
         **kwargs: Any,
     ) -> None:
         """

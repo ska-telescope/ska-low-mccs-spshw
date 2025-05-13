@@ -244,8 +244,25 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
 
     def clear_hardware_state(self) -> None:
         """Clear the state of the driver."""
+        # We manually clear the hardware state. We are not sending as an event since
+        # TODO: Update subrack device to deal with invalid attributes.
         cast(SubrackDriver, self._hardware_component_manager).clear_hardware_state()
-        # self._update_component_state(
-        #     tpm_on_off=None,
-        # )
         self._component_state["tpm_on_off"] = None
+        self._component_state["tpm_present"] = None
+        self._component_state["tpm_on_off"] = None
+        self._component_state["backplane_temperatures"] = None
+        self._component_state["board_temperatures"] = None
+        self._component_state["board_current"] = None
+        self._component_state["cpld_pll_locked"] = None
+        self._component_state["power_supply_currents"] = None
+        self._component_state["power_supply_fan_speeds"] = None
+        self._component_state["power_supply_powers"] = None
+        self._component_state["power_supply_voltages"] = None
+        self._component_state["subrack_fan_speeds"] = None
+        self._component_state["subrack_fan_speeds_percent"] = None
+        self._component_state["subrack_fan_mode"] = None
+        self._component_state["subrack_pll_locked"] = None
+        self._component_state["subrack_timestamp"] = None
+        self._component_state["tpm_currents"] = None
+        self._component_state["tpm_powers"] = None
+        self._component_state["tpm_voltages"] = None

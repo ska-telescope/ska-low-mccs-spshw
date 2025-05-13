@@ -1292,7 +1292,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
     def ddr_write_size(self: MccsTile) -> int:
         """
-        Return the ddr write size from running start_antenna_buffer.
+        Return the ddr write size obtained from running start_antenna_buffer.
 
         :example:
             >>> tile.ddr_write_size

@@ -709,6 +709,7 @@ class TestMccsTile:
             "tileProgrammingState",
             "isProgrammed",
             "coreCommunicationStatus",
+            "ddr_write_size",
             "ddr_rd_cnt",
             "ddr_wr_cnt",
             "ddr_rd_dat_cnt",

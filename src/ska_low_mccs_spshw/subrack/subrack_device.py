@@ -295,8 +295,9 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "subrack_pll_locked": "subrackPllLocked",
         "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
-        "pdu_port_state": "pduPortState",
-        "pdu_port_current": "pduPortCurrent",
+        "pdu_port_states": "pduPortStates",
+        "pdu_port_currents": "pduPortCurrents",
+        "pdu_port_voltages": "pduPortVoltages",
         "tpm_powers": "tpmPowers",
         # "tpm_temperatures": "tpmTemperatures",  # Not implemented on SMB
         "tpm_voltages": "tpmVoltages",
@@ -1090,6 +1091,15 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
+    @attribute(dtype=(str), label="pdu health")
+    def pduHealth(self: MccsSubrack) -> str:
+        """
+        Handle a Tango attribute read of the pdu health.
+
+        :return: the pdu health
+        """
+        return self.component_manager.pdu_health_state()
+
     @attribute(dtype=(str), label="pdu model")
     def pduModel(self: MccsSubrack) -> str:
         """
@@ -1116,27 +1126,32 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_number_of_ports()
 
-    @attribute(dtype=(str), label="pdu port state")
-    def pduPortState(self: MccsSubrack, port_number: int) -> str:
+    @attribute(dtype=(int,), label="pdu port statess")
+    def pduPortStates(self: MccsSubrack) -> list[int]:
         """
         Handle a Tango attribute read of the state of pdu port.
 
-        :param port_number: the port number.
-
         :return: the state of the port.
         """
-        return self.component_manager.pdu_port_state(port_number)
+        return self.component_manager.pdu_port_states()
 
-    @attribute(dtype=(str), label="pdu port current")
-    def pduPortCurrent(self: MccsSubrack, port_number: int) -> str:
+    @attribute(dtype=(float,), label="pdu port currents")
+    def pduPortCurrents(self: MccsSubrack) -> list[float]:
         """
         Handle a Tango attribute read of the current of pdu port.
 
-        :param port_number: the port number.
+        :return: the state of the port.
+        """
+        return self.component_manager.pdu_port_currents()
+
+    @attribute(dtype=(float,), label="pdu port voltages")
+    def pduPortVoltages(self: MccsSubrack) -> list[float]:
+        """
+        Handle a Tango attribute read of the current of pdu port.
 
         :return: the state of the port.
         """
-        return self.component_manager.pdu_port_current(port_number)
+        return self.component_manager.pdu_port_voltages()
 
     @attribute(dtype=(float,), max_dim_x=8, label="TPM currents", abs_change=0.1)
     def tpmCurrents(self: MccsSubrack) -> list[float]:
@@ -1241,13 +1256,27 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         self: MccsSubrack,
         fault: Optional[bool] = None,
         power: Optional[PowerState] = None,
+        health: HealthState | int | None = None,
+        pdu: Optional[HealthState] = None,
         **kwargs: Any,
     ) -> None:
+        """
+        Handle change in the state of the component.
+
+        This is a callback hook, called by the component manager when
+        the state of the component changes.
+
+        :param fault: whether the component is in fault or not
+        :param power: the power state of the component
+        :param health: the health state of a subordinate component.
+        :param pdu: any changes to the pdu device.
+        :param kwargs: other state updates
+        """
         super()._component_state_changed(fault=fault, power=power)
         if power is not None:
-            self._health_model.update_state(fault=fault, power=power)
+            self._health_model.update_state(fault=fault, power=power, health=health)
         else:
-            self._health_model.update_state(fault=fault)
+            self._health_model.update_state(fault=fault, health=health)
 
         for key, value in kwargs.items():
             special_update_method = getattr(self, f"_update_{key}", None)

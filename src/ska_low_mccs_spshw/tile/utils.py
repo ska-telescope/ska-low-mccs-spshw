@@ -144,7 +144,7 @@ def acquire_timeout(
     """
     acquired = lock.acquire(timeout=timeout)
     if raise_exception and not acquired:
-        raise TimeoutError("lock not acquired in {timeout:2f}s")
+        raise TimeoutError(f"lock not acquired in {timeout:.3f}s")
     try:
         yield acquired
     finally:

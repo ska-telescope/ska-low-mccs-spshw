@@ -295,6 +295,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         "subrack_pll_locked": "subrackPllLocked",
         "subrack_timestamp": "subrackTimestamp",
         "tpm_currents": "tpmCurrents",
+        "pdu_health": "pduHealth",
+        "pdu_model": "pduModel",
         "pdu_port_states": "pduPortStates",
         "pdu_port_currents": "pduPortCurrents",
         "pdu_port_voltages": "pduPortVoltages",
@@ -1091,8 +1093,8 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
     #     """
     #     return self._hardware_attributes.get("pduMacAddress", "")
 
-    @attribute(dtype=(str), label="pdu health")
-    def pduHealth(self: MccsSubrack) -> str:
+    @attribute(dtype=HealthState, label="pdu_health")
+    def pduHealth(self: MccsSubrack) -> HealthState:
         """
         Handle a Tango attribute read of the pdu health.
 
@@ -1100,7 +1102,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_health_state()
 
-    @attribute(dtype=(str), label="pdu model")
+    @attribute(dtype=str, label="pdu_model")
     def pduModel(self: MccsSubrack) -> str:
         """
         Handle a Tango attribute read of the pdu model type.
@@ -1117,7 +1119,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self.component_manager.pdu_model()
 
-    @attribute(dtype=(int), label="pdu number ports")
+    @attribute(dtype=int, label="pdu number ports")
     def pduNumberPorts(self: MccsSubrack) -> int:
         """
         Handle a Tango attribute read of thenumber of pdu ports.

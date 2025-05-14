@@ -365,7 +365,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         if not self._is_integrated_channel_consumer_running():
             # start consumer
             self.logger.info(
-                "Auto starting INTEGRATED DATA consumer for bandpass monitoring."
+                "Auto starting INTEGRATED_CHANNEL_DATA consumer for bandpass monitoring"
             )
             self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
             self._wait_for_status(

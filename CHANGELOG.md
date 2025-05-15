@@ -1,5 +1,9 @@
 # Version History
 
+## 6.1.1
+
+* [SPRTS-436] Update to sps-tpm-api (0.1.0 -> 0.1.2) to include fix for memory leak.
+
 ## 6.1.0
 
 * [SPRTS-433] The timeout for acquiring access to the HW in MccsTile is now a device property, configurable from deployment.

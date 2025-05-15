@@ -372,18 +372,18 @@ class DaqComponentManager(TaskExecutorComponentManager):
                 status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
             )
 
-        if not self._is_bandpass_monitor_running():
-            bandpass_args = json.dumps(
-                {
-                    "plot_directory": self.get_configuration()["directory"],
-                    "auto_handle_daq": True,
-                }
-            )
-            self.logger.info(
-                "Auto starting bandpass monitor with args: %s.", bandpass_args
-            )
-            self.start_bandpass_monitor(bandpass_args)
-            self._wait_for_status(status="Bandpass Monitor", value="True")
+        # if not self._is_bandpass_monitor_running():
+        #     bandpass_args = json.dumps(
+        #         {
+        #             "plot_directory": self.get_configuration()["directory"],
+        #             "auto_handle_daq": True,
+        #         }
+        #     )
+        #     self.logger.info(
+        #         "Auto starting bandpass monitor with args: %s.", bandpass_args
+        #     )
+        #     self.start_bandpass_monitor(bandpass_args)
+        #     self._wait_for_status(status="Bandpass Monitor", value="True")
 
     def _is_daq_configured_for_bandpasses(
         self: DaqComponentManager,

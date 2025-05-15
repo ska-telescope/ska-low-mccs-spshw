@@ -4421,7 +4421,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "1.4.1"
+version = "2.0.0"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4450,7 +4450,7 @@ transitions = "^0.9.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/"
 reference = "thorn-97-patch"
-resolved_reference = "1250845927a8994fd8621a489a57ba7702cf3938"
+resolved_reference = "b2bca5d7397cf666e4653d74d5c566ff4f6b4b54"
 
 [[package]]
 name = "ska-low-mccs-daq"
@@ -4479,7 +4479,7 @@ watchdog = "^3.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/"
 reference = "skb-854"
-resolved_reference = "3440e28208941f2a89d97031936283582ccaa354"
+resolved_reference = "ea380342cfb84a342ce20bc1176b47a0181837d3"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"

@@ -1745,6 +1745,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.SimulationConfig
 
     @simulationMode.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def simulationMode(  # pylint: disable=arguments-differ
         self: MccsTile, value: SimulationMode
     ) -> None:
@@ -1775,6 +1776,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     # pylint: disable=arguments-differ
     @testMode.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def testMode(self: MccsTile, value: int) -> None:
         """
         Set the test mode.
@@ -1804,6 +1806,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["logicalTileId"].read()
 
     @logicalTileId.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def logicalTileId(self: MccsTile, value: int) -> None:
         """
         Set the logicalTileId attribute.
@@ -1838,6 +1841,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return station
 
     @stationId.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def stationId(self: MccsTile, value: int) -> None:
         """
         Set the id of the station to which this tile is assigned.
@@ -1872,6 +1876,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.firmware_name
 
     @firmwareName.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def firmwareName(self: MccsTile, value: str) -> None:
         """
         Set the firmware name.
@@ -1891,6 +1896,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.firmware_version
 
     @firmwareVersion.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def firmwareVersion(self: MccsTile, value: str) -> None:
         """
         Set the firmware version.
@@ -2000,6 +2006,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["fpga2Temperature"].read()
 
     @attribute(dtype=("DevLong",), max_dim_x=2, abs_change=1)
+    @tango.InfoIt()
     def fpgasUnixTime(self: MccsTile) -> list[int]:
         """
         Return the time for FPGAs.
@@ -2039,6 +2046,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpga_frame_time
 
     @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1, label="Antenna ID's")
+    @tango.InfoIt()
     def antennaIds(self: MccsTile) -> list[int]:
         """
         Return the antenna IDs.
@@ -2048,6 +2056,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._antenna_ids
 
     @antennaIds.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def antennaIds(self: MccsTile, antenna_ids: list[int]) -> None:
         """
         Set the antenna IDs.
@@ -2057,6 +2066,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids = list(antenna_ids)
 
     @attribute(dtype=("DevString",), max_dim_x=16)
+    @tango.InfoIt()
     def fortyGbDestinationIps(self: MccsTile) -> list[str]:
         """
         Return the destination IPs for all 40Gb ports on the tile.
@@ -2068,6 +2078,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         ]
 
     @attribute(dtype=("DevLong",), max_dim_x=16, abs_change=1)
+    @tango.InfoIt()
     def fortyGbDestinationPorts(self: MccsTile) -> list[int]:
         """
         Return the destination ports for all 40Gb ports on the tile.
@@ -2081,6 +2092,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype=("DevDouble",), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1
     )
+    @tango.InfoIt()
     def adcPower(self: MccsTile) -> list[float] | None:
         """
         Return the RMS power of every ADC signal.
@@ -2173,6 +2185,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["phaseTerminalCount"].read()
 
     @phaseTerminalCount.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def phaseTerminalCount(self: MccsTile, value: int) -> None:
         """
         Set the phase terminal count.
@@ -2215,6 +2228,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ppsDelayCorrection"].read()
 
     @ppsDelayCorrection.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def ppsDelayCorrection(self: MccsTile, pps_delay_correction: int) -> None:
         """
         Set a correction to make to the pps delay.
@@ -2327,6 +2341,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=512,
         abs_change=1,
     )
+    @tango.InfoIt()
     def channeliserRounding(self: MccsTile) -> list[int]:
         """
         Channeliser rounding.
@@ -2343,6 +2358,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["channeliserRounding"].read()
 
     @channeliserRounding.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def channeliserRounding(self: MccsTile, truncation: list[int]) -> None:
         """
         Set channeliser rounding.
@@ -2357,6 +2373,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=32,
         abs_change=1,
     )
+    @tango.InfoIt()
     def staticTimeDelays(self: MccsTile) -> list[int]:
         """
         Get static time delay correction.
@@ -2370,6 +2387,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["staticTimeDelays"].read()
 
     @staticTimeDelays.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def staticTimeDelays(self: MccsTile, delays: list[float]) -> None:
         """
         Set static time delay.
@@ -2384,6 +2402,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=384,
         abs_change=1,
     )
+    @tango.InfoIt()
     def cspRounding(self: MccsTile) -> np.ndarray | None:
         """
         CSP formatter rounding.
@@ -2398,6 +2417,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["cspRounding"].read()
 
     @cspRounding.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def cspRounding(self: MccsTile, rounding: np.ndarray) -> None:
         """
         Set CSP formatter rounding.
@@ -2418,6 +2438,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.global_reference_time
 
     @globalReferenceTime.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def globalReferenceTime(self: MccsTile, reference_time: str) -> None:
         """
         Set the global global synchronization timestamp.
@@ -2427,6 +2448,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.global_reference_time = reference_time
 
     @attribute(dtype=(float,), max_dim_x=32, abs_change=0.1, archive_abs_change=0.1)
+    @tango.InfoIt()
     def preaduLevels(self: MccsTile) -> list[float]:
         """
         Get attenuator level of preADU channels, one per input channel.
@@ -2436,6 +2458,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["preaduLevels"].read()
 
     @preaduLevels.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def preaduLevels(self: MccsTile, levels: np.ndarray) -> None:
         """
         Set attenuator level of preADU channels, one per input channel.
@@ -2445,6 +2468,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.set_preadu_levels(list(levels))
 
     @attribute(dtype=("DevLong",), max_dim_x=336, abs_change=1)
+    @tango.InfoIt()
     def beamformerTable(self: MccsTile) -> list[int] | None:
         """
         Get beamformer region table.
@@ -2478,6 +2502,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return json.dumps(self._health_model.health_params)
 
     @healthModelParams.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def healthModelParams(self: MccsTile, argin: str) -> None:
         """
         Set the params for health transition rules.
@@ -2624,6 +2649,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ""
 
     @srcip40gfpga1.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def srcip40gfpga1(self: MccsTile, argin: str) -> None:
         """
         Set source IP for FPGA1.
@@ -2646,6 +2672,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ""
 
     @srcip40gfpga2.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def srcip40gfpga2(self: MccsTile, argin: str) -> None:
         """
         Set source IP for FPGA2.
@@ -2672,6 +2699,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.csp_spead_format
 
     @cspSpeadFormat.write  # type: ignore[no-redef]
+    @tango.InfoIt()
     def cspSpeadFormat(self: MccsTile, spead_format: str) -> None:
         """
         Set CSP SPEAD format.
@@ -2697,6 +2725,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_x=2,  # [Delay, delay rate]
         max_dim_y=16,  # channel (same for x and y)
     )
+    @tango.InfoIt()
     def lastPointingDelays(self: MccsTile) -> list[list]:
         """
         Return last pointing delays applied to the tile.
@@ -2715,6 +2744,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_dim_y=16,  # antenna
         abs_change=1,
     )
+    @tango.InfoIt()
     def rfiCount(self: MccsTile) -> list[list]:
         """
         Return the RFI count per antenna/pol.

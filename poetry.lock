@@ -5786,7 +5786,11 @@ reference = "PyPI-public"
 lock-version = "2.1"
 python-versions = "~3.10"
 <<<<<<< HEAD
+<<<<<<< HEAD
 content-hash = "de87248f0f24e1e528331615df7751a217cf25d228e7db76c3a8bb723fd5e7ab"
 =======
 content-hash = "b0177be87a69e3a392e047226485cefb651b1beebc32f5f44d29d9821e18ef7b"
 >>>>>>> 49755967 (WOM-638 add on/off command)
+=======
+content-hash = "0431e7b06d61d875ae659ebb68e24ab8349be621abfc7ce8f672d892d0d599c5"
+>>>>>>> bdd5e874 (WOM-638 revert pyproject.toml)

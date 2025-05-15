@@ -105,6 +105,7 @@ class TestAntennaBuffer(BaseDaqTest):
         for tile_id in tile_ids:
             tiles.append(self.tile_proxies[tile_id])
 
+        
         daq_config = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
@@ -214,7 +215,6 @@ class TestAntennaBuffer(BaseDaqTest):
                 )
             )
             ddr_write_size.append(tile.ddr_write_size)
-
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they shjould all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
@@ -222,6 +222,8 @@ class TestAntennaBuffer(BaseDaqTest):
         nof_callback = max(nof_callback, 1)
         nof_callback = 2 ** int(np.log2(nof_callback))
         daq_nof_raw_samples = total_nof_samples / nof_callback
+        self.test_logger.info(f"Number of raw samples: {daq_nof_raw_samples}")
+
         return daq_nof_raw_samples
 
     def _read_antenna_buffer(
@@ -238,6 +240,7 @@ class TestAntennaBuffer(BaseDaqTest):
             tile.ReadAntennaBuffer()
 
     def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
+        self.test_logger.info("Sending raw data samples (testing)")
         self.component_manager.send_data_samples(
             json.dumps(
                 {

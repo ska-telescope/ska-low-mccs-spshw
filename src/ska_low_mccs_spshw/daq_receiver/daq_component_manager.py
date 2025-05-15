@@ -262,8 +262,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
                     # Give comms a moment to establish before checking again
                     sleep(2)
                     continue
-                if self._dedicated_bandpass_daq:
-                    self._check_bandpass_monitor(current_status)
+                # if self._dedicated_bandpass_daq:
+                self._check_bandpass_monitor(current_status)
                 sleep(self._daq_initialisation_retry_frequency)
             while self._stop_establishing_communication:
                 sleep(self._daq_initialisation_retry_frequency)
@@ -277,8 +277,8 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         if not all(
             [
-                # self._is_bandpass_monitor_running(status),
-                # self._is_integrated_channel_consumer_running(status),
+                self._is_bandpass_monitor_running(status),
+                self._is_integrated_channel_consumer_running(status),
                 self._is_daq_configured_for_bandpasses(),
             ]
         ):
@@ -362,29 +362,28 @@ class DaqComponentManager(TaskExecutorComponentManager):
         # Stop any existing bandpass monitor and consumers.
         self._reset_bandpass_monitor()
 
-        # if not self._is_integrated_channel_consumer_running():
-        #     # start consumer
-        #     self.logger.info(
-        #         "Auto starting INTEGRATED_CHANNEL_DATA consumer for bandpass
-        # monitoring"
-        #     )
-        #     self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
-        #     self._wait_for_status(
-        #         status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
-        #     )
+        if not self._is_integrated_channel_consumer_running():
+            # start consumer
+            self.logger.info(
+                "Auto starting INTEGRATED_CHANNEL_DATA consumer for bandpass monitoring"
+            )
+            self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
+            self._wait_for_status(
+                status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
+            )
 
-        # if not self._is_bandpass_monitor_running():
-        #     bandpass_args = json.dumps(
-        #         {
-        #             "plot_directory": self.get_configuration()["directory"],
-        #             "auto_handle_daq": True,
-        #         }
-        #     )
-        #     self.logger.info(
-        #         "Auto starting bandpass monitor with args: %s.", bandpass_args
-        #     )
-        #     self.start_bandpass_monitor(bandpass_args)
-        #     self._wait_for_status(status="Bandpass Monitor", value="True")
+        if not self._is_bandpass_monitor_running():
+            bandpass_args = json.dumps(
+                {
+                    "plot_directory": self.get_configuration()["directory"],
+                    "auto_handle_daq": True,
+                }
+            )
+            self.logger.info(
+                "Auto starting bandpass monitor with args: %s.", bandpass_args
+            )
+            self.start_bandpass_monitor(bandpass_args)
+            self._wait_for_status(status="Bandpass Monitor", value="True")
 
     def _is_daq_configured_for_bandpasses(
         self: DaqComponentManager,

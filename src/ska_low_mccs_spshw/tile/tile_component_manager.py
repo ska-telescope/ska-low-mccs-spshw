@@ -2022,7 +2022,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Check we can connect to the TPM.
 
         :raises ConnectionError: when unable to connect to TPM
+        :raises RuntimeError: when connect if forbidden.
         """
+        if self._subrack_says_tpm_power != PowerState.ON:
+            # TODO: Again why not orchestrate from SpsStation.
+            raise RuntimeError(
+                "Do not even attempt to connect (its too soon apparently). "
+                "Client is not happy (does subrack.turn_on_tpm return too soon?)."
+                "This check add state coupling to subrack should be fixed in SMB?"
+            )
         with self._hardware_lock:
             if not self.is_connected or self.tile.tpm is None:
                 try:

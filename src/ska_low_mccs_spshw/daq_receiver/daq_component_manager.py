@@ -277,7 +277,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         """
         if not all(
             [
-                self._is_bandpass_monitor_running(status),
+                # self._is_bandpass_monitor_running(status),
                 self._is_integrated_channel_consumer_running(status),
                 self._is_daq_configured_for_bandpasses(),
             ]

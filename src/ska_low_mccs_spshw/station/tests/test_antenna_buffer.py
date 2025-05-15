@@ -105,7 +105,6 @@ class TestAntennaBuffer(BaseDaqTest):
         for tile_id in tile_ids:
             tiles.append(self.tile_proxies[tile_id])
 
-        
         daq_config = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,

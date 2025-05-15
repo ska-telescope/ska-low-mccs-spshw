@@ -278,7 +278,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         if not all(
             [
                 # self._is_bandpass_monitor_running(status),
-                self._is_integrated_channel_consumer_running(status),
+                # self._is_integrated_channel_consumer_running(status),
                 self._is_daq_configured_for_bandpasses(),
             ]
         ):
@@ -362,15 +362,15 @@ class DaqComponentManager(TaskExecutorComponentManager):
         # Stop any existing bandpass monitor and consumers.
         self._reset_bandpass_monitor()
 
-        if not self._is_integrated_channel_consumer_running():
-            # start consumer
-            self.logger.info(
-                "Auto starting INTEGRATED_CHANNEL_DATA consumer for bandpass monitoring"
-            )
-            self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
-            self._wait_for_status(
-                status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
-            )
+        # if not self._is_integrated_channel_consumer_running():
+        #     # start consumer
+        #     self.logger.info(
+        #         "Auto starting INTEGRATED_CHANNEL_DATA consumer for bandpass monitoring"
+        #     )
+        #     self.start_daq(modes_to_start="INTEGRATED_CHANNEL_DATA")
+        #     self._wait_for_status(
+        #         status="Running Consumers", value=str(["INTEGRATED_CHANNEL_DATA", 5])
+        #     )
 
         # if not self._is_bandpass_monitor_running():
         #     bandpass_args = json.dumps(

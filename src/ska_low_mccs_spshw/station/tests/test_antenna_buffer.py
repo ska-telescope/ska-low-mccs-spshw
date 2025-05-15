@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import time
 from copy import copy
 from typing import Optional
 
@@ -108,6 +109,8 @@ class TestAntennaBuffer(BaseDaqTest):
         daq_config = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
+            "nof_tiles": len(tiles),
+            "nof_antennas": 8,
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
@@ -170,7 +173,7 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info("Setting up antenna buffer for all tiles")
         for tile in tiles:
             self.test_logger.info(f"Set up antenna buffer for {tile}")
-            tile.SetUpAntennaBuffer(
+            return_code, message = tile.SetUpAntennaBuffer(
                 json.dumps(
                     {
                         "mode": mode,
@@ -179,6 +182,7 @@ class TestAntennaBuffer(BaseDaqTest):
                     }
                 )
             )
+            self.test_logger.info(f"{return_code =} | {message =}")
 
     def _start_antenna_buffer(
         self: TestAntennaBuffer,
@@ -203,7 +207,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         for tile in tiles:
             self.test_logger.info(f"Start antenna buffer for {tile}")
-            tile.StartAntennaBuffer(
+            return_code, message = tile.StartAntennaBuffer(
                 json.dumps(
                     {
                         "antennas": antenna_ids,
@@ -213,15 +217,21 @@ class TestAntennaBuffer(BaseDaqTest):
                     }
                 )
             )
+            self.test_logger.info(f"{return_code =} | {message =}")
+            time.sleep(60)  # wait a minute for the function to finish
             ddr_write_size.append(tile.ddr_write_size)
-
         # calculate actual DAQ buffer size in number of raw samples
-        # In theory they shjould all be the same, so we can use the first one
+        # In theory they should all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
         nof_callback = max(nof_callback, 1)
         nof_callback = 2 ** int(np.log2(nof_callback))
         daq_nof_raw_samples = total_nof_samples / nof_callback
+        self.test_logger.info(f"{ddr_write_size =}")
+        self.test_logger.info(f"{nof_callback =}")
+        self.test_logger.info(f"{total_nof_samples =}")
+        self.test_logger.info(f"{daq_nof_raw_samples =}")
+
         return daq_nof_raw_samples
 
     def _read_antenna_buffer(
@@ -235,9 +245,11 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in tiles:
             self.test_logger.info(f"Reading antenna buffer for {tile}")
-            tile.ReadAntennaBuffer()
+            return_code, message = tile.ReadAntennaBuffer()
+            self.test_logger.info(f"{return_code =} | {message =}")
 
     def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
+        self.test_logger.info("Sending raw data samples (testing)")
         self.component_manager.send_data_samples(
             json.dumps(
                 {

@@ -348,6 +348,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
     def handle_data(self: AntennaBufferDataHandler) -> None:
         """Handle the reading of antenna buffer data."""
         raw_file = RawFormatFileManager(root_path=self._base_path)
+        self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(
                 antennas=range(TileData.ANTENNA_COUNT),
@@ -365,6 +366,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         This is from my understanding of the original test_antenna_buffer.py
         in aavs.
         """
+        self._logger.info("+=+= Data initialiased")
         self.data = np.zeros(
             (
                 TileData.ANTENNA_COUNT * TileData.NUM_FPGA,

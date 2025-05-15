@@ -94,11 +94,22 @@ class BaseDaqTest(TpmSelfCheckTest):
         daq_config.update(
             {
                 "directory": "/",
-                "nof_tiles": len(self.tile_proxies),
-                "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
                 "description": "self-check data",
             }
         )
+        if "nof_antennas" not in daq_config:
+            daq_config.update(
+                {
+                    "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                }
+            )
+        if "nof_tiles" not in daq_config:
+            daq_config.update(
+                {
+                    "nof_tiles": len(self.tile_proxies),
+                }
+            )
+
         self.daq_proxy.Configure(json.dumps(daq_config))
         time.sleep(1)
         self.daq_proxy.Start(json.dumps({"modes_to_start": daq_mode}))

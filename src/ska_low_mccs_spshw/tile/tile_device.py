@@ -853,6 +853,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="adc_pll_status",
     )
+    @tango.InfoIt()
     def adc_pll_status(self: MccsTile) -> str:
         """
         Return the pll status of all 16 ADCs.
@@ -872,6 +873,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="tile_beamformer_status",
     )
+    @tango.InfoIt()
     def tile_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the tile beamformer.
@@ -891,6 +893,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="station_beamformer_status",
     )
+    @tango.InfoIt()
     def station_beamformer_status(self: MccsTile) -> bool:
         """
         Return the status of the station beamformer.
@@ -909,6 +912,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="station_beamformer_error_count",
     )
+    @tango.InfoIt()
     def station_beamformer_error_count(self: MccsTile) -> str:
         """
         Return the station beamformer error count per FPGA.
@@ -927,6 +931,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="station_beamformer_flagged_count",
     )
+    @tango.InfoIt()
     def station_beamformer_flagged_count(self: MccsTile) -> str:
         """
         Return the station beamformer error count per FPGA.
@@ -950,6 +955,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="crc_error_count",
     )
+    @tango.InfoIt()
     def crc_error_count(self: MccsTile) -> str:
         """
         Return the crc error count per FPGA.
@@ -968,6 +974,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="bip_error_count",
     )
+    @tango.InfoIt()
     def bip_error_count(self: MccsTile) -> str:
         """
         Return the bip error count per FPGA.
@@ -987,6 +994,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="decode_error_count",
     )
+    @tango.InfoIt()
     def decode_error_count(self: MccsTile) -> str:
         """
         Return the decode error count per FPGA.
@@ -1008,6 +1016,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="linkup_loss_count",
     )
+    @tango.InfoIt()
     def linkup_loss_count(self: MccsTile) -> str:
         """
         Return the linkup loss count per FPGA.
@@ -1026,6 +1035,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="data_router_status",
     )
+    @tango.InfoIt()
     def data_router_status(self: MccsTile) -> str:
         """
         Return the status of the data router.
@@ -1044,6 +1054,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="data_router_discarded_packets",
     )
+    @tango.InfoIt()
     def data_router_discarded_packets(self: MccsTile) -> str:
         """
         Return the number of discarded packets.
@@ -1062,6 +1073,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="arp",
     )
+    @tango.InfoIt()
     def arp(self: MccsTile) -> bool:
         """
         Return the arp status.
@@ -1080,6 +1092,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="udp_status",
     )
+    @tango.InfoIt()
     def udp_status(self: MccsTile) -> bool:
         """
         Return the UDP status.
@@ -1098,6 +1111,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="ddr_initialisation",
     )
+    @tango.InfoIt()
     def ddr_initialisation(self: MccsTile) -> bool:
         """
         Return the ddr initialisation status.
@@ -1116,6 +1130,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="ddr_reset_counter",
     )
+    @tango.InfoIt()
     def ddr_reset_counter(self: MccsTile) -> str:
         """
         Return the ddr reset count per FPGA.
@@ -1131,6 +1146,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ddr_reset_counter"].read()
 
     @attribute(dtype="DevShort", label="f2f_soft_errors", abs_change=1)
+    @tango.InfoIt()
     def f2f_soft_errors(self: MccsTile) -> int:
         """
         Return the f2f interface soft error count.
@@ -1146,6 +1162,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["f2f_soft_errors"].read()
 
     @attribute(dtype="DevShort", label="f2f_hard_errors", abs_change=1)
+    @tango.InfoIt()
     def f2f_hard_errors(self: MccsTile) -> int:
         """
         Return the f2f interface hard error count.
@@ -1166,6 +1183,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="resync_count",
     )
+    @tango.InfoIt()
     def resync_count(self: MccsTile) -> str:
         """
         Return the resync count per FPGA.
@@ -1184,6 +1202,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="lane_status",
     )
+    @tango.InfoIt()
     def lane_status(self: MccsTile) -> bool:
         """
         Return the lane status.
@@ -1202,6 +1221,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevBoolean",
         label="link_status",
     )
+    @tango.InfoIt()
     def link_status(self: MccsTile) -> bool:
         """
         Return the jesd link status.
@@ -1220,6 +1240,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="lane_error_count",
     )
+    @tango.InfoIt()
     def lane_error_count(self: MccsTile) -> str:
         """
         Return the error count per lane, per core, per FPGA.
@@ -1245,6 +1266,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="clock_managers",
     )
+    @tango.InfoIt()
     def clock_managers(self: MccsTile) -> str:
         """
         Return the PLL lock status and lock loss counter for C2C, JESD and DSP.
@@ -1325,6 +1347,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="clocks",
     )
+    @tango.InfoIt()
     def clocks(self: MccsTile) -> str:
         """
         Return the status of clocks for the interfaces of both FPGAs.
@@ -1344,6 +1367,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="adc_sysref_counter",
     )
+    @tango.InfoIt()
     def adc_sysref_counter(self: MccsTile) -> str:
         """
         Return the sysref_counter of all ADCs.
@@ -1362,6 +1386,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="adc_sysref_timing_requirements",
     )
+    @tango.InfoIt()
     def adc_sysref_timing_requirements(self: MccsTile) -> str:
         """
         Return the sysref_timing_requirements of all ADCs.
@@ -1380,6 +1405,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="qpll_status",
     )
+    @tango.InfoIt()
     def qpll_status(self: MccsTile) -> str:
         """
         Return the QPLL lock status and lock loss counter.
@@ -1399,6 +1425,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="f2f_pll_status",
     )
+    @tango.InfoIt()
     def f2f_pll_status(self: MccsTile) -> str:
         """
         Return the PLL lock status and lock loss counter.
@@ -1418,6 +1445,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="timing_pll_status",
     )
+    @tango.InfoIt()
     def timing_pll_status(self: MccsTile) -> str:
         """
         Return the PLL lock status and lock loss counter.
@@ -1438,6 +1466,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="tile_info",
     )
+    @tango.InfoIt()
     def tile_info(self: MccsTile) -> str:
         """
         Return all the tile info available.
@@ -1477,6 +1506,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="voltages",
     )
+    @tango.InfoIt()
     def voltages(self: MccsTile) -> str:
         """
         Return all the voltage values available.
@@ -1489,6 +1519,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="temperatures",
     )
+    @tango.InfoIt()
     def temperatures(self: MccsTile) -> str:
         """
         Return all the temperatures values available.
@@ -1501,6 +1532,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="currents",
     )
+    @tango.InfoIt()
     def currents(self: MccsTile) -> str:
         """
         Return all the currents values available.
@@ -1513,6 +1545,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="timing",
     )
+    @tango.InfoIt()
     def timing(self: MccsTile) -> str:
         """
         Return a dictionary of the timing signals status.
@@ -1525,6 +1558,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="io",
     )
+    @tango.InfoIt()
     def io(self: MccsTile) -> str:
         """
         Return a dictionary of I/O interfaces status available.
@@ -1537,6 +1571,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="dsp",
     )
+    @tango.InfoIt()
     def dsp(self: MccsTile) -> str:
         """
         Return the tile beamformer and station beamformer status.
@@ -1549,6 +1584,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="adcs",
     )
+    @tango.InfoIt()
     def adcs(self: MccsTile) -> str:
         """
         Return the ADC status.
@@ -1563,6 +1599,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
     )
+    @tango.InfoIt()
     def I2C_access_alm(
         self: MccsTile,
     ) -> int | None:
@@ -1583,6 +1620,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
     )
+    @tango.InfoIt()
     def temperature_alm(
         self: MccsTile,
     ) -> int | None:
@@ -1603,6 +1641,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
     )
+    @tango.InfoIt()
     def voltage_alm(
         self: MccsTile,
     ) -> int | None:
@@ -1623,6 +1662,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
     )
+    @tango.InfoIt()
     def SEM_wd(
         self: MccsTile,
     ) -> int | None:
@@ -1643,6 +1683,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         max_alarm=2,
         abs_change=1,
     )
+    @tango.InfoIt()
     def MCU_wd(
         self: MccsTile,
     ) -> int | None:
@@ -1661,6 +1702,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="cspDestinationIp",
     )
+    @tango.InfoIt()
     def cspDestinationIp(self: MccsTile) -> str:
         """
         Return the cspDestinationIp attribute.
@@ -1673,6 +1715,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="cspDestinationMac",
     )
+    @tango.InfoIt()
     def cspDestinationMac(self: MccsTile) -> str:
         """
         Return the cspDestinationMac attribute.
@@ -1682,6 +1725,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._csp_destination_mac
 
     @attribute(dtype="DevLong", label="cspDestinationPort", abs_change=1)
+    @tango.InfoIt()
     def cspDestinationPort(self: MccsTile) -> int:
         """
         Return the cspDestinationMac attribute.
@@ -1691,6 +1735,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._csp_destination_port
 
     @attribute(dtype=SimulationMode, memorized=True, hw_memorized=True, abs_change=1)
+    @tango.InfoIt()
     def simulationMode(self: MccsTile) -> int:
         """
         Report the simulation mode of the device.
@@ -1719,6 +1764,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(dtype=TestMode, memorized=True, hw_memorized=True, abs_change=1)
+    @tango.InfoIt()
     def testMode(self: MccsTile) -> int:
         """
         Report the test mode of the device.
@@ -1746,6 +1792,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.
@@ -1768,6 +1815,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.tile_id = value
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def tileProgrammingState(self: MccsTile) -> str | None:
         """
         Get the tile programming state.
@@ -1777,6 +1825,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["tileProgrammingState"].read()
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def stationId(self: MccsTile) -> int:
         """
         Return the id of the station to which this tile is assigned.
@@ -1800,6 +1849,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.station_id = value
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def firmwareTemperatureThresholds(
         self: MccsTile,
     ) -> str | dict[str, tuple[int, int]]:
@@ -1812,6 +1862,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return json.dumps(self.component_manager.get_tpm_temperature_thresholds())
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def firmwareName(self: MccsTile) -> str:
         """
         Return the firmware name.
@@ -1830,6 +1881,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.firmware_name = value
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def firmwareVersion(self: MccsTile) -> str:
         """
         Return the firmware version.
@@ -1855,6 +1907,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=4.55,
         max_alarm=5.45,
     )
+    @tango.InfoIt()
     def voltageMon(self: MccsTile) -> float | None:
         """
         Return the internal 5V supply of the TPM.
@@ -1864,6 +1917,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["voltageMon"].read()
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def isProgrammed(self: MccsTile) -> bool:
         """
         Return a flag indicating whether of not the board is programmed.
@@ -1915,6 +1969,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=68.0,
     )
+    @tango.InfoIt()
     def fpga1Temperature(
         self: MccsTile,
     ) -> tuple[float | None, float, tango.AttrQuality] | None:
@@ -1933,6 +1988,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=68.0,
     )
+    @tango.InfoIt()
     def fpga2Temperature(
         self: MccsTile,
     ) -> tuple[float | None, float, tango.AttrQuality] | None:
@@ -1953,6 +2009,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpgas_time
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def fpgaTime(self: MccsTile) -> str:
         """
         Return the FPGA internal time.
@@ -1962,6 +2019,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpga_time
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def fpgaReferenceTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -1971,6 +2029,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.formatted_fpga_reference_time
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def fpgaFrameTime(self: MccsTile) -> str:
         """
         Return the FPGA synchronization timestamp.
@@ -2033,6 +2092,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["adcPower"].read()
 
     @attribute(dtype="DevLong")
+    @tango.InfoIt()
     def currentTileBeamformerFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2051,6 +2111,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["currentTileBeamformerFrame"].read()
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def coreCommunicationStatus(self: MccsTile) -> str | None:
         """
         Return status of connection to TPM, CPLD and FPGAs.
@@ -2069,6 +2130,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["coreCommunicationStatus"].read()
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def currentFrame(self: MccsTile) -> int:
         """
         Return current frame.
@@ -2081,6 +2143,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.fpga_current_frame
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def pendingDataRequests(self: MccsTile) -> bool | None:
         """
         Check for pending data requests.
@@ -2090,6 +2153,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.pending_data_requests
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def isBeamformerRunning(self: MccsTile) -> bool | None:
         """
         Check if beamformer is running.
@@ -2099,6 +2163,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.is_beamformer_running
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def phaseTerminalCount(self: MccsTile) -> int:
         """
         Get phase terminal count.
@@ -2117,6 +2182,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.set_phase_terminal_count(value)
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def ppsDelay(self: MccsTile) -> int | None:
         """
         Return the delay between PPS and 10 MHz clock.
@@ -2129,6 +2195,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ppsDelay"].read()
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def ppsDrift(self: MccsTile) -> int:
         """
         Return the observed drift in the ppsDelay of this Tile.
@@ -2138,6 +2205,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["ppsDrift"].read()
 
     @attribute(dtype="DevLong", abs_change=1)
+    @tango.InfoIt()
     def ppsDelayCorrection(self: MccsTile) -> int | None:
         """
         Return the correction made to the pps delay.
@@ -2158,6 +2226,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.set_pps_delay_correction(pps_delay_correction)
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def testGeneratorActive(self: MccsTile) -> bool:
         """
         Report if the test generator is used for some channels.
@@ -2167,6 +2236,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self.component_manager.test_generator_active
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def ppsPresent(self: MccsTile) -> tuple[bool | None, float, tango.AttrQuality]:
         """
         Report if PPS signal is present at the TPM input.
@@ -2219,6 +2289,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return automatic_state_analysis
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def clockPresent(self: MccsTile) -> NoReturn:
         """
         Report if 10 MHz clock signal is present at the TPM input.
@@ -2230,6 +2301,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def sysrefPresent(self: MccsTile) -> NoReturn:
         """
         Report if SYSREF signal is present at the FPGA.
@@ -2241,6 +2313,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         )
 
     @attribute(dtype="DevBoolean")
+    @tango.InfoIt()
     def pllLocked(self: MccsTile) -> bool | None:
         """
         Report if ADC clock PLL is in locked state.
@@ -2335,6 +2408,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.csp_rounding = rounding
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def globalReferenceTime(self: MccsTile) -> str:
         """
         Return the global FPGA synchronization time.
@@ -2394,6 +2468,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         format="%s",
     )
+    @tango.InfoIt()
     def healthModelParams(self: MccsTile) -> str:
         """
         Get the health params from the health model.
@@ -2413,6 +2488,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._health_model.update_health()
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def temperatureHealth(self: MccsTile) -> HealthState:
         """
         Read the temperature Health State of the device.
@@ -2426,6 +2502,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["temperatures"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def voltageHealth(self: MccsTile) -> HealthState:
         """
         Read the voltage Health State of the device.
@@ -2439,6 +2516,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["voltages"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def currentHealth(self: MccsTile) -> HealthState:
         """
         Read the current Health State of the device.
@@ -2452,6 +2530,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["currents"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def alarmHealth(self: MccsTile) -> HealthState:
         """
         Read the alarm Health State of the device.
@@ -2465,6 +2544,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["alarms"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def adcHealth(self: MccsTile) -> HealthState:
         """
         Read the ADC Health State of the device.
@@ -2478,6 +2558,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["adcs"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def timingHealth(self: MccsTile) -> HealthState:
         """
         Read the timing Health State of the device.
@@ -2491,6 +2572,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["timing"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def ioHealth(self: MccsTile) -> HealthState:
         """
         Read the io Health State of the device.
@@ -2504,6 +2586,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["io"][0]
 
     @attribute(dtype=HealthState)
+    @tango.InfoIt()
     def dspHealth(self: MccsTile) -> HealthState:
         """
         Read the dsp Health State of the device.
@@ -2517,6 +2600,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.intermediate_healths["dsp"][0]
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def healthReport(self: MccsTile) -> str:
         """
         Get the health report.
@@ -2527,6 +2611,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._health_model.health_report
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def srcip40gfpga1(self: MccsTile) -> str:
         """
         Return source IP for FPGA1, to be set by SpsStation.
@@ -2548,6 +2633,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self.component_manager.src_ip_40g_fpga1 = argin
 
     @attribute(dtype="DevString")
+    @tango.InfoIt()
     def srcip40gfpga2(self: MccsTile) -> str:
         """
         Return source IP for FPGA2, to be set by SpsStation.
@@ -2572,6 +2658,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype="DevString",
         label="cspSpeadFormat",
     )
+    @tango.InfoIt()
     def cspSpeadFormat(self: MccsTile) -> str:
         """
         Get CSP SPEAD format.
@@ -2644,6 +2731,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         min_alarm=16.0,
         max_alarm=65.0,
     )
+    @tango.InfoIt()
     def boardTemperature(
         self: MccsTile,
     ) -> tuple[float | None, float, tango.AttrQuality] | None:
@@ -2666,6 +2754,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     # # --------
 
     @command(dtype_in="DevString")
+    @tango.InfoIt()
     def Configure(self: MccsTile, argin: str) -> None:
         """
         Configure the tile device attributes.
@@ -2687,6 +2776,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self._antenna_ids = apply_if_valid("antenna_ids", self._antenna_ids)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def Initialise(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Perform all required initialisation.
@@ -2745,6 +2835,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._component_manager.reevaluate_tpm_status()
 
     @command(dtype_out="DevBoolean", fisallowed="is_engineering")
+    @tango.InfoIt()
     def EvaluateTileProgrammingState(self: MccsTile) -> bool:
         """
         Re-evaluate the TileProgrammingState.
@@ -2795,6 +2886,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return json.dumps(self._component_manager.firmware_available)
 
     @command(dtype_out="DevString", fisallowed="is_programmed")
+    @tango.InfoIt()
     def GetFirmwareAvailable(self: MccsTile) -> str:
         """
         Get available firmware.
@@ -2823,6 +2915,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return handler()
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def DownloadFirmware(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Download the firmware contained in bitfile to all FPGAs on the board.
@@ -2884,6 +2977,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._component_manager.register_list
 
     @command(dtype_out="DevVarStringArray")
+    @tango.InfoIt()
     def GetRegisterList(self: MccsTile) -> list[str]:
         """
         Return a list of descriptions of the exposed firmware (and CPLD) registers.
@@ -2941,6 +3035,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return value
 
     @command(dtype_in="DevString", dtype_out="DevVarULongArray")
+    @tango.InfoIt()
     def ReadRegister(self: MccsTile, register_name: str) -> list[int]:
         """
         Return the value(s) of the specified register.
@@ -3013,6 +3108,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, "WriteRegister completed OK")
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def WriteRegister(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Write values to the specified register.
@@ -3087,6 +3183,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return self._component_manager.read_address(address, nvalues)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarULongArray")
+    @tango.InfoIt()
     def ReadAddress(self: MccsTile, argin: list[int]) -> list[int]:
         """
         Read n 32-bit values from address.
@@ -3152,6 +3249,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarULongArray", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def WriteAddress(self: MccsTile, argin: list[int]) -> DevVarLongStringArrayType:
         """
         Write list of values at address.
@@ -3253,6 +3351,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def Configure40GCore(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Configure 40g core_id with specified parameters.
@@ -3365,6 +3464,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return json.dumps(item_new)
 
     @command(dtype_in="DevString", dtype_out="DevString")
+    @tango.InfoIt()
     def Get40GCoreConfiguration(self: MccsTile, argin: str) -> str:
         """
         Get 40g core configuration for core_id.
@@ -3468,6 +3568,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetLmcDownload(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Specify whether control data will be transmitted over 1G or 40G networks.
@@ -3572,6 +3673,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetLmcIntegratedDownload(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -3677,6 +3779,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetAttributeThresholds(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Set the ALARM and WARNING thresholds on attributes.
@@ -3732,6 +3835,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return json.dumps(self._component_manager.arp_table)
 
     @command(dtype_out="DevString")
+    @tango.InfoIt()
     def GetArpTable(self: MccsTile) -> str:
         """
         Return a dictionary with populated ARP table for all used cores.
@@ -3836,6 +3940,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarLongArray", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetBeamFormerRegions(
         self: MccsTile, argin: list[int]
     ) -> DevVarLongStringArrayType:
@@ -3940,6 +4045,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ConfigureStationBeamformer(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -4042,6 +4148,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (result, message)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def LoadCalibrationCoefficients(
         self: MccsTile, argin: list[float]
     ) -> DevVarLongStringArrayType:
@@ -4132,6 +4239,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (return_code, message)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ApplyCalibration(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Load the calibration coefficients at the specified time delay.
@@ -4210,6 +4318,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevVarDoubleArray", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def LoadPointingDelays(
         self: MccsTile, argin: list[float]
     ) -> DevVarLongStringArrayType:
@@ -4285,6 +4394,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ApplyPointingDelays(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Apply the pointing delays at the specified time delay.
@@ -4365,6 +4475,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StartBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Start the beamformer at the specified time delay.
@@ -4432,6 +4543,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopBeamformer(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
@@ -4514,6 +4626,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ConfigureIntegratedChannelData(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -4609,6 +4722,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ConfigureIntegratedBeamData(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -4677,6 +4791,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopIntegratedData(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop the integrated  data.
@@ -4763,6 +4878,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SendDataSamples(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Transmit a snapshot containing raw antenna data.
@@ -4850,6 +4966,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopDataTransmission(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop data transmission from board.
@@ -4914,6 +5031,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StartAcquisition(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Start data acquisition.
@@ -5060,6 +5178,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ConfigureTestGenerator(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Set the test signal generator.
@@ -5166,6 +5285,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ConfigurePatternGenerator(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -5258,6 +5378,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
         """
         Stop the pattern generator at the specified stage.
@@ -5325,6 +5446,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StartPatternGenerator(self: MccsTile, stage: str) -> DevVarLongStringArrayType:
         """
         Start the pattern generator at the specified stage.
@@ -5380,6 +5502,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StartADCs(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Start the ADCs.
@@ -5428,6 +5551,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
     @engineering_mode_required
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopADCs(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop the ADCs.
@@ -5477,6 +5601,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Enable station beam flagging.
@@ -5529,6 +5654,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Disable station beam flagging.
@@ -5664,6 +5790,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetFirmwareTemperatureThresholds(
         self: MccsTile, argin: str
     ) -> DevVarLongStringArrayType:
@@ -5756,6 +5883,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def SetUpAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """Set up the antenna buffer.
 
@@ -5777,6 +5905,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StartAntennaBuffer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Start recording to the antenna buffer.
@@ -5801,6 +5930,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def ReadAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Read the data from the antenna buffer.
@@ -5848,6 +5978,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
+    @tango.InfoIt()
     def StopAntennaBuffer(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Stop writting to the antenna buffer.
@@ -5866,6 +5997,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
         dtype_out="DevVarLongStringArray"
     )
+    @tango.InfoIt()
     def Off(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn the device off.
@@ -5883,6 +6015,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @command(  # type: ignore[misc]  # "Untyped decorator makes function untyped"
         dtype_out="DevVarLongStringArray"
     )
+    @tango.InfoIt()
     def On(self: MccsTile) -> DevVarLongStringArrayType:
         """
         Turn device on.

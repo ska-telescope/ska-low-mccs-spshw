@@ -728,7 +728,7 @@ class SubrackDriver(
                     )
                     # Remove cache to ensure upon reconnection
                     # the state is updated.
-                    self.__clear_hardware_state()
+                    self.__clear_hardware_state(fault=False)
                     raise RequestError(f"{attribute_response['info']}")
                 case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                     raise HttpError(f"{attribute_response['info']}")
@@ -784,8 +784,8 @@ class SubrackDriver(
             self._active_callback = None
 
         values = poll_response.query_responses
-
-        self._update_component_state(power=PowerState.ON, fault=fault, **values)
+        self._update_component_state(power=PowerState.ON, fault=fault)
+        self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:
         """
@@ -799,33 +799,39 @@ class SubrackDriver(
         # requested as soon as possible.
         self._tick = self._max_tick
 
+        # Clear all hardware state.
         self.__clear_hardware_state()
 
         super().polling_stopped()
 
-    def __clear_hardware_state(self) -> None:
-        """Clear the state of the driver."""
+    def __clear_hardware_state(self, **kwargs: Any) -> None:
+        """
+        Clear the state of the driver.
+
+        :param kwargs: Any state you want to define explicitly
+            (default None).
+        """
         self._update_component_state(
-            fault=None,
-            tpm_present=None,
-            tpm_on_off=None,
-            backplane_temperatures=None,
-            board_temperatures=None,
-            board_current=None,
-            cpld_pll_locked=None,
-            power_supply_currents=None,
-            power_supply_fan_speeds=None,
-            power_supply_powers=None,
-            power_supply_voltages=None,
-            subrack_fan_speeds=None,
-            subrack_fan_speeds_percent=None,
-            subrack_fan_mode=None,
-            subrack_pll_locked=None,
-            subrack_timestamp=None,
-            tpm_currents=None,
-            tpm_powers=None,
-            # tpm_temperatures=None,  # Not implemented on SMB
-            tpm_voltages=None,
+            fault=kwargs.get("fault"),
+            tpm_present=kwargs.get("tpm_present"),
+            tpm_on_off=kwargs.get("tpm_on_off"),
+            backplane_temperatures=kwargs.get("backplane_temperatures"),
+            board_temperatures=kwargs.get("board_temperatures"),
+            board_current=kwargs.get("board_current"),
+            cpld_pll_locked=kwargs.get("cpld_pll_locked"),
+            power_supply_currents=kwargs.get("power_supply_currents"),
+            power_supply_fan_speeds=kwargs.get("power_supply_fan_speeds"),
+            power_supply_powers=kwargs.get("power_supply_powers"),
+            power_supply_voltages=kwargs.get("power_supply_voltages"),
+            subrack_fan_speeds=kwargs.get("subrack_fan_speeds"),
+            subrack_fan_speeds_percent=kwargs.get("subrack_fan_speeds_percent"),
+            subrack_fan_mode=kwargs.get("subrack_fan_mode"),
+            subrack_pll_locked=kwargs.get("subrack_pll_locked"),
+            subrack_timestamp=kwargs.get("subrack_timestamp"),
+            tpm_currents=kwargs.get("tpm_currents"),
+            tpm_powers=kwargs.get("tpm_powers"),
+            # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
+            tpm_voltages=kwargs.get("tpm_voltages"),
         )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:

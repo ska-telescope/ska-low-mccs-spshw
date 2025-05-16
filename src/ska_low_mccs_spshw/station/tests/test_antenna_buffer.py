@@ -108,6 +108,8 @@ class TestAntennaBuffer(BaseDaqTest):
         daq_config = {
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
+            "nof_tiles": len(tiles),
+            "nof_antennas": 8,
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }

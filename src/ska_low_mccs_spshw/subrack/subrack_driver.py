@@ -721,6 +721,14 @@ class SubrackDriver(
                     )
                     poll_response.add_query_response(attribute, None)
                 case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
+                    self.logger.warning(
+                        "RequestException raised "
+                        f"error_info={attribute_response['info']} ."
+                        "Clearing all attribute cache."
+                    )
+                    # Remove cache to ensure upon reconnection
+                    # the state is updated.
+                    self.__clear_hardware_state()
                     raise RequestError(f"{attribute_response['info']}")
                 case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                     raise HttpError(f"{attribute_response['info']}")
@@ -791,6 +799,12 @@ class SubrackDriver(
         # requested as soon as possible.
         self._tick = self._max_tick
 
+        self.__clear_hardware_state()
+
+        super().polling_stopped()
+
+    def __clear_hardware_state(self) -> None:
+        """Clear the state of the driver."""
         self._update_component_state(
             fault=None,
             tpm_present=None,
@@ -813,8 +827,6 @@ class SubrackDriver(
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
-
-        super().polling_stopped()
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:
         """

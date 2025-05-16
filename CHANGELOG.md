@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+* [THORN-165] Add missing hardware_lock to methods.
 * [SKB-816] Remove subrack tpm_power_state attribute cache upon RequestError.
 
 ## 6.1.1

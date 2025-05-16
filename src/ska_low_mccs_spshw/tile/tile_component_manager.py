@@ -3248,14 +3248,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
-        if len(self.tile.find_register(register_name)) == 0:
-            self.logger.error("Register '" + register_name + "' not present")
-            return []
         with acquire_timeout(
             self._hardware_lock, timeout=self._default_lock_timeout
         ) as acquired:
             if acquired:
                 try:
+                    if len(self.tile.find_register(register_name)) == 0:
+                        self.logger.error(
+                            "Register '" + register_name + "' not present"
+                        )
+                        return []
                     value = self.tile.read_register(register_name)
                 # pylint: disable=broad-except
                 except Exception as e:
@@ -3291,22 +3293,22 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         regname = devname + register_name
         if self.tile.tpm is None:
             raise ValueError("Cannot read register on unconnected TPM.")
-        if len(self.tile.find_register(regname)) == 0:
-            self.logger.error("Register '" + regname + "' not present")
-        else:
-            with acquire_timeout(
-                self._hardware_lock, timeout=self._default_lock_timeout
-            ) as acquired:
-                if acquired:
-                    try:
-                        self.tile.write_register(register_name, values)
-                    # pylint: disable=broad-except
-                    except Exception as e:
-                        self.logger.warning(
-                            f"TileComponentManager: Tile access failed: {e}"
-                        )
-                else:
-                    self.logger.warning("Failed to acquire hardware lock")
+        with acquire_timeout(
+            self._hardware_lock, timeout=self._default_lock_timeout
+        ) as acquired:
+            if acquired:
+                try:
+                    if len(self.tile.find_register(regname)) == 0:
+                        self.logger.error("Register '" + regname + "' not present")
+                        return
+                    self.tile.write_register(register_name, values)
+                # pylint: disable=broad-except
+                except Exception as e:
+                    self.logger.warning(
+                        f"TileComponentManager: Tile access failed: {e}"
+                    )
+            else:
+                self.logger.warning("Failed to acquire hardware lock")
 
     def read_address(
         self: TileComponentManager, address: int, nvalues: int
@@ -3977,9 +3979,29 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 raise TimeoutError("Failed to acquire lock")
 
     def enable_station_beam_flagging(self: TileComponentManager) -> None:
-        """Enable station beam flagging."""
-        self.tile.enable_station_beam_flagging()
+        """
+        Enable station beam flagging.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(
+            self._hardware_lock, timeout=self._default_lock_timeout
+        ) as acquired:
+            if acquired:
+                self.tile.enable_station_beam_flagging()
+            else:
+                raise TimeoutError("Failed to acquire lock")
 
     def disable_station_beam_flagging(self: TileComponentManager) -> None:
-        """Disable station beam flagging."""
-        self.tile.disable_station_beam_flagging()
+        """
+        Disable station beam flagging.
+
+        :raises TimeoutError: raised if we fail to acquire lock in time
+        """
+        with acquire_timeout(
+            self._hardware_lock, timeout=self._default_lock_timeout
+        ) as acquired:
+            if acquired:
+                self.tile.disable_station_beam_flagging()
+            else:
+                raise TimeoutError("Failed to acquire lock")

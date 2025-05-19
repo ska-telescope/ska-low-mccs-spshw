@@ -67,7 +67,7 @@ class TestSubrackTileIntegration:
         self: TestSubrackTileIntegration,
         subrack_device: tango.DeviceProxy,
         tile_device: tango.DeviceProxy,
-#        pdu_device: tango.DeviceProxy,
+        #        pdu_device: tango.DeviceProxy,
         tile_simulator: TileSimulator,
         daq_device: tango.DeviceProxy,
         change_event_callbacks: MockTangoEventCallbackGroup,
@@ -89,7 +89,7 @@ class TestSubrackTileIntegration:
         :param change_event_callbacks: dictionary of Tango change event
             callbacks with asynchrony support.
         """
-#        :param pdu_device: the pdu Tango device under test.
+        #        :param pdu_device: the pdu Tango device under test.
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
         #        assert pdu_device.adminMode == AdminMode.OFFLINE

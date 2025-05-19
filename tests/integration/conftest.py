@@ -365,20 +365,19 @@ def subrack_device_fixture(
     return integration_test_context.get_subrack_device(subrack_id)
 
 
-@pytest.fixture(name="pdu_device")
-def pdu_device_fixture(
-    integration_test_context: SpsTangoTestHarnessContext,
-) -> DeviceProxy:
-    """
-    Fixture that returns the pdu Tango device under test.
-
-    :param integration_test_context: the test context in which
-        integration tests will be run.
-
-    :return: the tile Tango device under test.
-    """
-    # return integration_test_context.get_pdu_device()
-    return None
+# @pytest.fixture(name="pdu_device")
+# def pdu_device_fixture(
+#     integration_test_context: SpsTangoTestHarnessContext,
+# ) -> DeviceProxy:
+#     """
+#     Fixture that returns the pdu Tango device under test.
+# 
+#     :param integration_test_context: the test context in which
+#         integration tests will be run.
+# 
+#     :return: the tile Tango device under test.
+#     """
+#     return integration_test_context.get_pdu_device()
 
 
 @pytest.fixture(name="tile_device")

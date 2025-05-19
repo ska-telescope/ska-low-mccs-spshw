@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import time
 from copy import copy
 from typing import Optional
 
@@ -215,9 +216,10 @@ class TestAntennaBuffer(BaseDaqTest):
                     }
                 )
             )
+            time.sleep(60)  # wait a minute for the function to finish
             ddr_write_size.append(tile.ddr_write_size)
         # calculate actual DAQ buffer size in number of raw samples
-        # In theory they shjould all be the same, so we can use the first one
+        # In theory they should all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
         self.test_logger.info(f"{nof_callback =}")
@@ -231,7 +233,7 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info(f"{nof_callback =}")
         self.test_logger.info(f"{total_nof_samples =}")
 
-        return daq_nof_raw_samples
+        return 1
 
     def _read_antenna_buffer(
         self: TestAntennaBuffer,

@@ -13,11 +13,11 @@ platform:
             simulated: true
           bandpass:
             simulated: true
-        pdus:
-          ci-1:
-            model: PDU
-            host: 10.135.253.170
-            v2_community: public
+#        pdus:
+#          ci-1:
+#            model: PDU
+#            host: 10.135.253.170
+#            v2_community: public
         subracks:
           sr1:
             simulated: true

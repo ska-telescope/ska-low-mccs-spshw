@@ -30,8 +30,6 @@ PYTHON_LINT_TARGET = src tests  ## Paths containing python to be formatted and l
 PYTHON_VARS_AFTER_PYTEST = --forked
 PYTHON_TEST_FILE = tests
 
-CI_POETRY_VERSION = 2.1.3
-
 python-post-lint:
 	mypy --config-file mypy.ini src/ tests
 

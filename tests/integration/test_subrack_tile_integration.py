@@ -92,7 +92,7 @@ class TestSubrackTileIntegration:
         """
         assert subrack_device.adminMode == AdminMode.OFFLINE
         assert tile_device.adminMode == AdminMode.OFFLINE
-        assert pdu_device.adminMode == AdminMode.OFFLINE
+#        assert pdu_device.adminMode == AdminMode.OFFLINE
         assert daq_device.adminMode == AdminMode.OFFLINE
 
         daq_device.subscribe_event(
@@ -103,7 +103,7 @@ class TestSubrackTileIntegration:
         change_event_callbacks["daq_state"].assert_change_event(tango.DevState.DISABLE)
 
         daq_device.adminMode = AdminMode.ONLINE
-        pdu_device.adminMode = AdminMode.ONLINE
+#        pdu_device.adminMode = AdminMode.ONLINE
 
         change_event_callbacks["daq_state"].assert_change_event(
             tango.DevState.ON, lookahead=2

@@ -3153,6 +3153,9 @@ class SpsStationComponentManager(
         """
         success = True
 
+        if task_callback:
+            task_callback(status=TaskStatus.IN_PROGRESS)
+
         if start_time is None:
             start_time = Time(int(time.time() + 2), format="unix").isot + "Z"
         else:

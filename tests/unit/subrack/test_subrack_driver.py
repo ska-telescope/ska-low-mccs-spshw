@@ -388,8 +388,10 @@ def test_failed_poll(
         "attribute": attr_name,
         "value": None,
     }
-
-    callbacks["component_state"].assert_call(power=PowerState.UNKNOWN)
+    # lookahead of 2 due to a call to wipe attribute cache
+    callbacks["component_state"].assert_call(
+        power=PowerState.UNKNOWN, lookahead=2, consume_nonmatches=True
+    )
 
     subrack_client.get_attribute = lambda attr_name: {
         "status": HardwareClientResponseStatusCodes.OK.name,
@@ -405,7 +407,11 @@ def test_failed_poll(
         "attribute": attr_name,
         "value": subrack_simulator_attribute_values.get(attr_name),
     }
-    callbacks["component_state"].assert_call(fault=True)
+    # lookahead of 2 due to a call to populate attribute cache
+    # following PowerState.ON.
+    callbacks["component_state"].assert_call(
+        fault=True, lookahead=2, consume_nonmatches=True
+    )
 
     subrack_client.get_attribute = lambda attr_name: {
         "status": HardwareClientResponseStatusCodes.OK.name,

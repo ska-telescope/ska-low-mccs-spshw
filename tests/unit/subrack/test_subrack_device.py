@@ -608,10 +608,15 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     )
 
 
+@pytest.mark.parametrize(
+    ("state_of_device_under_control_after_dropout"),
+    [(PowerState.ON), (PowerState.OFF)],
+)
 def test_subrack_connection_lost(
     subrack_device: MccsSubrack,
     subrack_simulator: SubrackSimulator,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    state_of_device_under_control_after_dropout: PowerState,
 ) -> None:
     """
     Test our ability to rediscover attribute state after outage.
@@ -620,6 +625,8 @@ def test_subrack_connection_lost(
     :param subrack_simulator: the simulator for the backend
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
+    :param state_of_device_under_control_after_dropout: The PowerState
+        the simulator has upon reconnection.
     """
     subrack_device.subscribe_event(
         "state",
@@ -656,10 +663,19 @@ def test_subrack_connection_lost(
     )
     change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
 
+    # This should pass is True or False.
+    is_on = state_of_device_under_control_after_dropout == PowerState.ON
+    subrack_simulator._attribute_values["tpm_on_off"] = [is_on] * 8
+
     # simulate a connection resumed
     subrack_simulator.network_jitter_limits = (0, 1_000)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     # Check that attribute state rediscovered
-    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
-    assert subrack_device.tpm1PowerState == PowerState.OFF
+    change_event_callbacks["tpm1PowerState"].assert_change_event(
+        state_of_device_under_control_after_dropout,
+        lookahead=2,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["tpm1PowerState"].assert_not_called()
+    assert subrack_device.tpm1PowerState == state_of_device_under_control_after_dropout

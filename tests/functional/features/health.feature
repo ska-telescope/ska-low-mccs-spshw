@@ -6,6 +6,7 @@ Feature: Test health
         And the Station has been commanded to turn to Standby
         And the Station reports that its state is STANDBY
         And the Tiles reports that its state is OFF
+        And the subracks thresholds are normal
         When the Station has been commanded to turn On
         Then the Station reports that its state is ON
         And the Tiles reports that its state is ON
@@ -32,6 +33,7 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK
@@ -45,6 +47,7 @@ Feature: Test health
         And the Station has been commanded to turn On
         And the Station reports that its state is ON
         And the Tiles reports that its state is ON
+        And the subracks thresholds are normal
         And the Subracks reports that its HealthState is OK
         And the Tiles reports that its HealthState is OK
         And the Station reports that its HealthState is OK

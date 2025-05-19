@@ -6,6 +6,7 @@ Deploy the subrack simulator/s.
       "s8-1-1":
         srmb_host: subrack-simulator-s8-1
         srmb_port: 8081
+        pdu_trl: low-mccs/pdu/ci-1
 
 */}}
 {{- range $key, $spec := ((.Values.simulators).subracks)}}

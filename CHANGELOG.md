@@ -3,6 +3,11 @@
 ## unreleased
 
 * [SKB-854] Add check for bandpass daq configuration.
+* [SKB-816] Remove subrack tpm_power_state attribute cache upon RequestError.
+
+## 6.1.1
+
+* [SPRTS-436] Update to sps-tpm-api (0.1.0 -> 0.1.2) to include fix for memory leak.
 
 ## 6.1.0
 

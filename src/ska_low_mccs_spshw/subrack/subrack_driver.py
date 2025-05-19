@@ -25,6 +25,8 @@ from ska_tango_base.poller import PollingComponentManager
 from .http_stack import HttpPollRequest, HttpPollResponse
 from .subrack_data import FanMode, SubrackData
 
+PDU_DATA_NO_PORTS = 24
+
 
 class HttpError(Exception):
     """Exception class for HttpErrors."""
@@ -118,6 +120,8 @@ class SubrackDriver(
             subrack_timestamp=None,
             tpm_currents=None,
             tpm_powers=None,
+            pdu_outlet_states=None,
+            pdu_outlet_currents=None,
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
@@ -184,6 +188,94 @@ class SubrackDriver(
             implemented
         """
         raise NotImplementedError("The device cannot be reset.")
+
+    def power_pdu_port_on(
+        self: SubrackDriver,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port on.
+
+        :param port_number: (one-based) number of the pdu port to turn on.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._turn_off_on_pdu_port(port_number, True, task_callback)
+
+    def power_pdu_port_off(
+        self: SubrackDriver,
+        port_number: int,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port off.
+
+        :param port_number: (one-based) number of the pdu port to turn off.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        return self._turn_off_on_pdu_port(port_number, False, task_callback)
+
+    def _turn_off_on_pdu_port(
+        self: SubrackDriver,
+        pdu_port_number: int,
+        is_turn_on: bool,
+        task_callback: Optional[Callable] = None,
+    ) -> tuple[TaskStatus, str]:
+        """
+        Turn a pdu port off or on.
+
+        :param pdu_port_number: (one-based) number of the pdu port to
+            turn off or on. Zero means turn *all* ports off or on.
+        :param is_turn_on: whether to turn the port off or on. If true,
+            the port will be turned on. If false, it will be turned off.
+        :param task_callback: callback to be called when the status of
+            the command changes
+
+        :return: the task status and a human-readable status message
+        """
+        with self._write_lock:
+            if pdu_port_number == 0:
+                keys = [f"pdu_port_{i}_on_off" for i in range(PDU_DATA_NO_PORTS + 1)]
+                command_name = (
+                    "turn_on_pdu_ports" if is_turn_on else "turn_off_pdu_ports"
+                )
+                command_arg = ""
+            else:
+                keys = [f"pdu_port_{pdu_port_number}_on_off"]
+                command_name = "turn_on_pdu_port" if is_turn_on else "turn_off_pdu_port"
+                command_arg = str(pdu_port_number)
+
+            for key in keys:
+                if key in self._commands_to_execute:
+                    (_, _, prior_callback) = self._commands_to_execute[key]
+                    if prior_callback is not None:
+                        prior_callback(
+                            status=TaskStatus.ABORTED,
+                            # message="Superseded by later command.",
+                        )
+
+            self._commands_to_execute[f"pdu_port_{pdu_port_number}_on_off"] = (
+                command_name,
+                command_arg,
+                task_callback,
+            )
+
+            off_on = "on" if is_turn_on else "off"
+
+            if task_callback is not None:
+                task_callback(status=TaskStatus.QUEUED)
+
+            if pdu_port_number == 0:
+                message = f"TPMs will be turned {off_on} at next poll."
+            else:
+                message = f"TPM {pdu_port_number} will be turned {off_on} at next poll."
+            return (TaskStatus.QUEUED, message)
 
     def turn_off_tpm(
         self: SubrackDriver,
@@ -629,6 +721,14 @@ class SubrackDriver(
                     )
                     poll_response.add_query_response(attribute, None)
                 case HardwareClientResponseStatusCodes.REQUEST_EXCEPTION.name:
+                    self.logger.warning(
+                        "RequestException raised "
+                        f"error_info={attribute_response['info']} ."
+                        "Clearing all attribute cache."
+                    )
+                    # Remove cache to ensure upon reconnection
+                    # the state is updated.
+                    self.__clear_hardware_state(fault=False)
                     raise RequestError(f"{attribute_response['info']}")
                 case HardwareClientResponseStatusCodes.HTTP_ERROR.name:
                     raise HttpError(f"{attribute_response['info']}")
@@ -684,8 +784,8 @@ class SubrackDriver(
             self._active_callback = None
 
         values = poll_response.query_responses
-
-        self._update_component_state(power=PowerState.ON, fault=fault, **values)
+        self._update_component_state(power=PowerState.ON, fault=fault)
+        self._update_component_state(**values)
 
     def polling_stopped(self: SubrackDriver) -> None:
         """
@@ -699,30 +799,40 @@ class SubrackDriver(
         # requested as soon as possible.
         self._tick = self._max_tick
 
-        self._update_component_state(
-            fault=None,
-            tpm_present=None,
-            tpm_on_off=None,
-            backplane_temperatures=None,
-            board_temperatures=None,
-            board_current=None,
-            cpld_pll_locked=None,
-            power_supply_currents=None,
-            power_supply_fan_speeds=None,
-            power_supply_powers=None,
-            power_supply_voltages=None,
-            subrack_fan_speeds=None,
-            subrack_fan_speeds_percent=None,
-            subrack_fan_mode=None,
-            subrack_pll_locked=None,
-            subrack_timestamp=None,
-            tpm_currents=None,
-            tpm_powers=None,
-            # tpm_temperatures=None,  # Not implemented on SMB
-            tpm_voltages=None,
-        )
+        # Clear all hardware state.
+        self.__clear_hardware_state()
 
         super().polling_stopped()
+
+    def __clear_hardware_state(self, **kwargs: Any) -> None:
+        """
+        Clear the state of the driver.
+
+        :param kwargs: Any state you want to define explicitly
+            (default None).
+        """
+        self._update_component_state(
+            fault=kwargs.get("fault"),
+            tpm_present=kwargs.get("tpm_present"),
+            tpm_on_off=kwargs.get("tpm_on_off"),
+            backplane_temperatures=kwargs.get("backplane_temperatures"),
+            board_temperatures=kwargs.get("board_temperatures"),
+            board_current=kwargs.get("board_current"),
+            cpld_pll_locked=kwargs.get("cpld_pll_locked"),
+            power_supply_currents=kwargs.get("power_supply_currents"),
+            power_supply_fan_speeds=kwargs.get("power_supply_fan_speeds"),
+            power_supply_powers=kwargs.get("power_supply_powers"),
+            power_supply_voltages=kwargs.get("power_supply_voltages"),
+            subrack_fan_speeds=kwargs.get("subrack_fan_speeds"),
+            subrack_fan_speeds_percent=kwargs.get("subrack_fan_speeds_percent"),
+            subrack_fan_mode=kwargs.get("subrack_fan_mode"),
+            subrack_pll_locked=kwargs.get("subrack_pll_locked"),
+            subrack_timestamp=kwargs.get("subrack_timestamp"),
+            tpm_currents=kwargs.get("tpm_currents"),
+            tpm_powers=kwargs.get("tpm_powers"),
+            # tpm_temperatures=kwargs.get('tpm_temperatures'),  # Not implemented on SMB
+            tpm_voltages=kwargs.get("tpm_voltages"),
+        )
 
     def poll_failed(self: SubrackDriver, exception: Exception) -> None:
         """

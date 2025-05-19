@@ -220,10 +220,16 @@ class TestAntennaBuffer(BaseDaqTest):
         # In theory they shjould all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
+        self.test_logger.info(f"{nof_callback =}")
         nof_callback = max(nof_callback, 1)
+        self.test_logger.info(f"{nof_callback =}")
         nof_callback = 2 ** int(np.log2(nof_callback))
+        self.test_logger.info(f"{nof_callback =}")
         daq_nof_raw_samples = total_nof_samples / nof_callback
         self.test_logger.info(f"Number of raw samples: {daq_nof_raw_samples}")
+        self.test_logger.info(f"{ddr_write_size =}")
+        self.test_logger.info(f"{nof_callback =}")
+        self.test_logger.info(f"{total_nof_samples =}")
 
         return daq_nof_raw_samples
 

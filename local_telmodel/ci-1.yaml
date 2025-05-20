@@ -13,17 +13,17 @@ platform:
             simulated: true
           bandpass:
             simulated: true
-#        pdus:
-#          ci-1:
-#            model: PDU
-#            host: 10.135.253.170
-#            v2_community: public
+        pdus:
+          ci-1:
+            model: ENLOGIC
+            host: 10.135.253.170
+            v2_community: public
         subracks:
           sr1:
             simulated: true
             srmb_host: srmb-1
             srmb_port: 8081
-#            pdu_trl: low-mccs/pdu/ci-1
+            pdu_trl: low-mccs/pdu/ci-1
         tpms:
           tpm10:
             id: 9

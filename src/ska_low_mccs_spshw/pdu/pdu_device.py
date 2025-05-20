@@ -73,7 +73,7 @@ class MccsPdu(AttributePollingDevice):
         """Initialise the device."""
         try:
             super().init_device()
-            self._version_id = sys.modules["ska_sat_lmc"].__version__
+            self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
             device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
             version = f"{device_name} Software Version: {self._version_id}"
             properties = f"Initialised {device_name} on: {self.Host}:{self.Port}"

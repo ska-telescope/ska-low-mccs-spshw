@@ -23,8 +23,8 @@ platform:
             version: tpm_v1_6
             subrack: sr1
             subrack_slot: 1
-#        pdus:
-#          ci-1:
-#            model: PDU
-#            host: 10.135.253.170
-#            v2_community: public
+        pdus:
+          ci-1:
+            model: ENLOGIC
+            host: 10.135.253.170
+            v2_community: public

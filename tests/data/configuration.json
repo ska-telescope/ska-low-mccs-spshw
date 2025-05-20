@@ -20,9 +20,9 @@
                             "SubrackPort": [
                                 "8081"
                             ],
-#                            "PduTrl": [
-#                                "low-mccs/pdu/ci-1"
-#                            ]
+                            "PduTrl": [
+                                "low-mccs/pdu/ci-1"
+                            ]
                         }
                     }
                 }

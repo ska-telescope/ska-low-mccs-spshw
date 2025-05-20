@@ -23,6 +23,7 @@ import numpy as np
 
 # This is introducing gRPC as a dependency here where really we want to be
 # agnostic to the underlying implementation.
+from grpc import RpcError  # type: ignore
 from grpc._channel import _InactiveRpcError as InactiveRPCError  # type: ignore
 from ska_control_model import CommunicationStatus, PowerState, ResultCode, TaskStatus
 from ska_low_mccs_daq_interface import DaqClient
@@ -262,6 +263,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
                     # Give comms a moment to establish before checking again
                     sleep(2)
                     continue
+                # TODO: Remember to uncomment this!
                 # if self._dedicated_bandpass_daq:
                 self._check_bandpass_monitor(current_status)
                 sleep(self._daq_initialisation_retry_frequency)
@@ -740,7 +742,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
             self.logger.error(f"Caught mismatch in {data_to_extract} shape: {e}")
         return extracted_data
 
-    # pylint: disable = too-many-branches
+    # pylint: disable = too-many-branches, too-many-nested-blocks
     @check_communicating
     def _start_bandpass_monitor(
         self: DaqComponentManager,
@@ -779,50 +781,57 @@ class DaqComponentManager(TaskExecutorComponentManager):
 
         try:
             for response in self._daq_client.start_bandpass_monitor(argin):
-                x_bandpass_plot: np.ndarray | None = None
-                y_bandpass_plot: np.ndarray | None = None
-                rms_plot = None
-                call_callback: bool = (
-                    False  # Only call the callback if we have something to say.
-                )
-                if task_callback is not None:
-                    task_callback(
-                        result=response["message"],
+                try:
+                    print("GOT BANDPASS RESPONSE!", flush=True)
+                    x_bandpass_plot: np.ndarray | None = None
+                    y_bandpass_plot: np.ndarray | None = None
+                    rms_plot = None
+                    call_callback: bool = (
+                        False  # Only call the callback if we have something to say.
                     )
-
-                if "x_bandpass_plot" in response:
-                    if response["x_bandpass_plot"] != [None]:
-                        # Reconstruct the numpy array.
-                        x_bandpass_plot = self._get_data_from_response(
-                            response, "x_bandpass_plot", nof_channels
+                    if task_callback is not None:
+                        task_callback(
+                            result=response["message"],
                         )
-                        if x_bandpass_plot is not None:
-                            call_callback = True
 
-                if "y_bandpass_plot" in response:
-                    if response["y_bandpass_plot"] != [None]:
-                        # Reconstruct the numpy array.
-                        y_bandpass_plot = self._get_data_from_response(
-                            response, "y_bandpass_plot", nof_channels
-                        )
-                        if y_bandpass_plot is not None:
-                            call_callback = True
+                    if "x_bandpass_plot" in response:
+                        if response["x_bandpass_plot"] != [None]:
+                            # Reconstruct the numpy array.
+                            x_bandpass_plot = self._get_data_from_response(
+                                response, "x_bandpass_plot", nof_channels
+                            )
+                            if x_bandpass_plot is not None:
+                                call_callback = True
 
-                if "rms_plot" in response:
-                    if response["rms_plot"] != [None]:
-                        rms_plot = self._get_data_from_response(
-                            response, "rms_plot", nof_channels
-                        )
-                        if rms_plot is not None:
-                            call_callback = True
+                    if "y_bandpass_plot" in response:
+                        if response["y_bandpass_plot"] != [None]:
+                            # Reconstruct the numpy array.
+                            y_bandpass_plot = self._get_data_from_response(
+                                response, "y_bandpass_plot", nof_channels
+                            )
+                            if y_bandpass_plot is not None:
+                                call_callback = True
 
-                if call_callback:
-                    if self._component_state_callback is not None:
-                        self._component_state_callback(
-                            x_bandpass_plot=x_bandpass_plot,
-                            y_bandpass_plot=y_bandpass_plot,
-                            rms_plot=rms_plot,
-                        )
+                    if "rms_plot" in response:
+                        if response["rms_plot"] != [None]:
+                            rms_plot = self._get_data_from_response(
+                                response, "rms_plot", nof_channels
+                            )
+                            if rms_plot is not None:
+                                call_callback = True
+
+                    if call_callback:
+                        if self._component_state_callback is not None:
+                            self._component_state_callback(
+                                x_bandpass_plot=x_bandpass_plot,
+                                y_bandpass_plot=y_bandpass_plot,
+                                rms_plot=rms_plot,
+                            )
+                except RpcError as e:
+                    self.logger.error(
+                        f"Caught exception in bandpass monitor: {repr(e)}"
+                    )
+                    continue
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # XXX
             self.logger.error("Caught exception in bandpass monitor: %s", e)

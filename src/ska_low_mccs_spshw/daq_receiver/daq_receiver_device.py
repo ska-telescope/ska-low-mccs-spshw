@@ -481,6 +481,7 @@ class MccsDaqReceiver(MccsBaseDevice):
             self._health_model.update_state(fault=False)
 
         if x_bandpass_plot is not None:
+            print("GOT X BANDPASS!")
             if isinstance(x_bandpass_plot, list):
                 x_bandpass_plot = x_bandpass_plot[0]
             self._x_bandpass_plot = x_bandpass_plot
@@ -490,6 +491,7 @@ class MccsDaqReceiver(MccsBaseDevice):
             self.push_archive_event("xPolBandpass", x_bandpass_plot)
 
         if y_bandpass_plot is not None:
+            print("GOT Y BANDPASS!")
             if isinstance(y_bandpass_plot, list):
                 y_bandpass_plot = y_bandpass_plot[0]
             self._y_bandpass_plot = y_bandpass_plot

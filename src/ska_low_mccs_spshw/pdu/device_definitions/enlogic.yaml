@@ -42,14 +42,14 @@ attributes:
     dtype: int
     description: Returns the current draw, in hundredths of Amps(A), of the load on the PDU outlet being queried.
 
-  - name: pduPort{}Voltage
-    indexes:
-      - [1, 24]
-    oid: [ENLOGIC-PDU-MIB, pduInputPhaseSTATUSEntry, 6 ]
-    polling_period: 3000
-    access: readonly
-    dtype: int
-    description: Returns the voltage, in Volts(V)
+#  - name: pduPort{}Voltage
+#    indexes:
+#      - [1, 24]
+#    oid: [ENLOGIC-PDU-MIB, pduInputPhaseSTATUSEntry, 6 ]
+#    polling_period: 3000
+#    access: readonly
+#    dtype: int
+#    description: Returns the voltage, in Volts(V)
 
   - name: pduPort{}OnOff
     indexes:

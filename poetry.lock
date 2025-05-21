@@ -516,14 +516,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "click"
-version = "8.2.0"
+version = "8.2.1"
 description = "Composable command line interface toolkit"
 optional = false
 python-versions = ">=3.10"
 groups = ["main", "dev", "docs"]
 files = [
-    {file = "click-8.2.0-py3-none-any.whl", hash = "sha256:6b303f0b2aa85f1cb4e5303078fadcbcd4e476f114fab9b5007005711839325c"},
-    {file = "click-8.2.0.tar.gz", hash = "sha256:f5452aeddd9988eefa20f90f05ab66f17fce1ee2a36907fd30b05bbb5953814d"},
+    {file = "click-8.2.1-py3-none-any.whl", hash = "sha256:61a3265b914e850b85317d0b3109c7f8cd35a670f963866005d6ef1d5175a12b"},
+    {file = "click-8.2.1.tar.gz", hash = "sha256:27c491cc05d968d271d5a1db13e3b5a184636d9d930f148c50b038f0d0646202"},
 ]
 
 [package.dependencies]
@@ -4337,14 +4337,14 @@ reference = "PyPI-public"
 
 [[package]]
 name = "setuptools"
-version = "80.7.1"
+version = "80.8.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "docs"]
 files = [
-    {file = "setuptools-80.7.1-py3-none-any.whl", hash = "sha256:ca5cc1069b85dc23070a6628e6bcecb3292acac802399c7f8edc0100619f9009"},
-    {file = "setuptools-80.7.1.tar.gz", hash = "sha256:f6ffc5f0142b1bd8d0ca94ee91b30c0ca862ffd50826da1ea85258a06fd94552"},
+    {file = "setuptools-80.8.0-py3-none-any.whl", hash = "sha256:95a60484590d24103af13b686121328cc2736bee85de8936383111e421b9edc0"},
+    {file = "setuptools-80.8.0.tar.gz", hash = "sha256:49f7af965996f26d43c8ae34539c8d99c5042fbff34302ea151eaa9c207cd257"},
 ]
 
 [package.extras]
@@ -4421,7 +4421,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-mccs-common"
-version = "2.0.0"
+version = "2.0.1"
 description = "The Monitoring, Control and Calibration Subsystem (MCCS) of the SKA Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4449,8 +4449,8 @@ transitions = "^0.9.0"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-common/"
-reference = "thorn-97-patch"
-resolved_reference = "b2bca5d7397cf666e4653d74d5c566ff4f6b4b54"
+reference = "skb-854"
+resolved_reference = "f278afc5c3b9572e6243656801072dbec89e7d66"
 
 [[package]]
 name = "ska-low-mccs-daq"
@@ -4479,7 +4479,7 @@ watchdog = "^3.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq/"
 reference = "skb-854"
-resolved_reference = "270cd31aee252270c20b0d8c0794e7145a551e74"
+resolved_reference = "964661a35248671409bfbdf697f3d77e725de3a7"
 
 [[package]]
 name = "ska-low-mccs-daq-interface"
@@ -4500,7 +4500,7 @@ ska-control-model = "^1.0.0"
 type = "git"
 url = "https://gitlab.com/ska-telescope/mccs/ska-low-mccs-daq-interface/"
 reference = "skb-854"
-resolved_reference = "5abebd50ad5ff3c7859b87fb07f2ac39f2611a9d"
+resolved_reference = "6e8b709c694f74f3e8f91906097c17c8ff545667"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
@@ -5751,4 +5751,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "8e8cadbd96c94ebeca444579da14de49bfa55de1e3d390eb2fa84979a7af99a5"
+content-hash = "f4f561bda96ea2e1f6bbe9a2b85db7ef9425fa0fdc875566ae877943da51bd5c"

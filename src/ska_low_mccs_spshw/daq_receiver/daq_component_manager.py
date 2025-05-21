@@ -296,12 +296,22 @@ class DaqComponentManager(TaskExecutorComponentManager):
         It stops the bandpass monitor and consumers ready to be restarted.
         """
         self.logger.info("Stopping bandpass monitor.")
-        self.stop_bandpass_monitor()
-        self._wait_for_status(status="Bandpass Monitor", value="False")
+        try:
+            self.stop_bandpass_monitor()
+            self._wait_for_status(status="Bandpass Monitor", value="False")
+        except RpcError as e:
+            self.logger.error(
+                "Caught exception stopping bandpass monitor during bandpass reset: "
+                f"{repr(e)}"
+            )
         self.logger.info("Stopping data consumers.")
-        self.stop_daq()
-        self._wait_for_status(status="Running Consumers", value=str([]))
-        self.logger.info("Bandpass monitor and consumers stopped.")
+        try:
+            self.stop_daq()
+            self._wait_for_status(status="Running Consumers", value=str([]))
+        except RpcError as e:
+            self.logger.error(
+                f"Caught exception stopping consumer during bandpass reset: {repr(e)}"
+            )
 
     def _wait_for_status(self: DaqComponentManager, status: str, value: str) -> None:
         """
@@ -782,7 +792,7 @@ class DaqComponentManager(TaskExecutorComponentManager):
         try:
             for response in self._daq_client.start_bandpass_monitor(argin):
                 try:
-                    print("GOT BANDPASS RESPONSE!", flush=True)
+                    print(f"GOT BANDPASS RESPONSE! {response=}", flush=True)
                     x_bandpass_plot: np.ndarray | None = None
                     y_bandpass_plot: np.ndarray | None = None
                     rms_plot = None
@@ -828,13 +838,11 @@ class DaqComponentManager(TaskExecutorComponentManager):
                                 rms_plot=rms_plot,
                             )
                 except RpcError as e:
-                    self.logger.error(
-                        f"Caught exception in bandpass monitor: {repr(e)}"
-                    )
+                    self.logger.error(f"Caught RPCError in bandpass monitor: {repr(e)}")
                     continue
 
         except Exception as e:  # pylint: disable=broad-exception-caught  # XXX
-            self.logger.error("Caught exception in bandpass monitor: %s", e)
+            self.logger.error("Caught unexpected exception in bandpass monitor: %s", e)
             if task_callback:
                 task_callback(
                     status=TaskStatus.FAILED,

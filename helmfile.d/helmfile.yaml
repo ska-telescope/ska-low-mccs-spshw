@@ -158,6 +158,16 @@ environments:
     - config_files:
       - values/values-ral-partial.yaml
       datacentre: stfc-ral
+  jbo:
+    values:
+    - telmodel:
+      - source: gitlab://gitlab.com/ska-telescope/mccs/ska-low-mccs-common?fd74b581e28e8061aecbb8fcdbecaf9f5c46aa12#tmdata/jbo
+        datasets:
+        - jbo.yaml
+        - stations/jbo.yaml
+    - config_files:
+      - values/values-jbo.yaml
+      datacentre: jbo
 
 
 ---

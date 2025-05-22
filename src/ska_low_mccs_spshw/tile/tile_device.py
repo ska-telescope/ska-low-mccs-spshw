@@ -1455,6 +1455,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     @attribute(
         dtype="DevString",
         label="tile_info",
+        fisallowed="is_programmed",
     )
     def tile_info(self: MccsTile) -> str:
         """

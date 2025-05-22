@@ -1075,6 +1075,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         with self._hardware_lock:
             if force_reprogramming:
+                self.logger.info("Forcing erasing of FPGA.")
                 self.tile.erase_fpgas()
                 self._tpm_status = TpmStatus.UNPROGRAMMED
                 self._update_attribute_callback(

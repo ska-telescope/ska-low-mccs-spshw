@@ -561,6 +561,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED.pretty_name(),
+            lookahead=20,
+            consume_nonmatches=True,
+        )
 
         return tile_component_manager
 

@@ -1,7 +1,9 @@
 # Version History
-## Unreleased
 
-* [THORN-117] Correct claiming of lock in ping method. 
+## 6.1.3
+
+* [THORN-117] Correct claiming of lock in ping method.
+* [SPRTS-436] add 2Gi memory limit to spshw Pods.
 
 ## 6.1.2
 

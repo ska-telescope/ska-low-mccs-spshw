@@ -1452,11 +1452,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self._attribute_state["timing_pll_status"].read()
 
-    @attribute(
-        dtype="DevString",
-        label="tile_info",
-        fisallowed="is_programmed",
-    )
+    @attribute(dtype="DevString", label="tile_info", fisallowed="_is_programmed")
     def tile_info(self: MccsTile) -> str:
         """
         Return all the tile info available.
@@ -1891,9 +1887,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         return self.component_manager.is_programmed
 
-    def is_programmed(self: MccsTile) -> bool:
+    def _is_programmed(self: MccsTile, *args: Any) -> bool:
         """
         Return a flag representing whether we are programmed or not.
+
+        :param args: The tango.AttReqType.
 
         :return: True if Tile is in Programmed, Initialised or Synchronised states.
         """
@@ -2813,7 +2811,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             return json.dumps(self._component_manager.firmware_available)
 
-    @command(dtype_out="DevString", fisallowed="is_programmed")
+    @command(dtype_out="DevString", fisallowed="_is_programmed")
     def GetFirmwareAvailable(self: MccsTile) -> str:
         """
         Get available firmware.

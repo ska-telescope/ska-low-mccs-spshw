@@ -1840,7 +1840,6 @@ class TileSimulator:
         self._is_fpga1_connectable = connectable
         self._is_fpga2_connectable = connectable
 
-    @check_mocked_overheating
     @connected
     def __getitem__(self: TileSimulator, key: int | str) -> Any:
         """
@@ -1848,7 +1847,29 @@ class TileSimulator:
 
         :param key: key
         :return: mocked item at address
+
+        :raises BoardError: if you are trying to attempt communication with
+            a FPGA that is OFF.
         """
+        cpld_registers = [int(0x30000000)]
+        if self.tpm_mocked_overheating:
+            # We can still access the (CPLD version) when FPGAs are shutdown.
+            if key in cpld_registers and self._is_cpld_connectable:
+                pass
+            else:
+                self.logger.warning(
+                    "BoardError: Not possible to communicate with the FPG0: "
+                    "Failed to read_address 0x4 on board: UCP::read. "
+                    "Command failed on board. "
+                    "Requested address 0x4 received address 0xfffffffb"
+                )
+                raise BoardError(
+                    "BoardError: Not possible to communicate with the FPG0: "
+                    "Failed to read_address 0x4 on board: UCP::read. "
+                    "Command failed on board. "
+                    "Requested address 0x4 received address 0xfffffffb"
+                )
+
         return self.tpm[key]  # type: ignore
 
     @check_mocked_overheating

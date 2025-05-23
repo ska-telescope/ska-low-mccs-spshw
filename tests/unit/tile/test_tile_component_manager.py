@@ -125,7 +125,7 @@ class TestTileComponentManager:
         )
 
     # pylint: disable=too-many-arguments
-    @pytest.mark.parametrize("power_state", [PowerState.ON])
+    @pytest.mark.parametrize("power_state", PowerState)
     def test_communication_when_tpm_reachable(
         self: TestTileComponentManager,
         tile_component_manager: TileComponentManager,
@@ -561,6 +561,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED.pretty_name(),
+            lookahead=20,
+            consume_nonmatches=True,
+        )
 
         return tile_component_manager
 
@@ -731,6 +736,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("configure_integrated_beam_data", []),
             ("stop_integrated_data", []),
             ("set_lmc_integrated_download", ["raw", 8190, 8190]),
+            ("ping", []),
         ),
     )
     def test_command(

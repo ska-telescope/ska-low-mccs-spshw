@@ -1,5 +1,11 @@
 # Version History
 
+## Unreleased
+
+* [SPRTS-441] added a VerifyEvents boolean property to MccsTile,
+  which defaults to True and determines whether pushed archive and change events
+  are verified by Tango against the rel_change and abs_change attribute properties.
+
 ## 6.1.3
 
 * [THORN-117] Correct claiming of lock in ping method.

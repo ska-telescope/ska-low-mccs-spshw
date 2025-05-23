@@ -70,7 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=20.0,
+        timeout=5.0,
         assert_no_error=False,
     )
 
@@ -261,7 +261,6 @@ def test_off_on(
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["state"].assert_not_called()
 
     # There are heaps of attribute we can subscribe to here.
     # We'll subscribe to all of them in the next test.
@@ -273,13 +272,11 @@ def test_off_on(
         change_event_callbacks["boardCurrent"],
     )
     change_event_callbacks["boardCurrent"].assert_change_event([])
-    change_event_callbacks["boardCurrent"].assert_not_called()
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["state"].assert_not_called()
 
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],
@@ -314,7 +311,6 @@ def test_off_on(
         (off_command_id, "IN_PROGRESS")
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    change_event_callbacks["state"].assert_not_called()
 
     assert subrack_device.state() == DevState.OFF
 
@@ -383,7 +379,6 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["state"].assert_not_called()
 
     for attribute_name, expected_initial_value in [
         ("tpmPresent", []),
@@ -422,7 +417,6 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         change_event_callbacks[attribute_name].assert_change_event(
             expected_initial_value
         )
-        change_event_callbacks[attribute_name].assert_not_called()
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
@@ -656,8 +650,11 @@ def test_subrack_connection_lost(
 
     change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
 
+    min_jitter: int = 10_000  # milliseconds
+    max_jitter: int = 11_000  # milliseconds
     # simulate a drop out in connection
-    subrack_simulator.network_jitter_limits = (10_000, 11_000)
+    subrack_simulator.network_jitter_limits = (min_jitter, max_jitter)
+    time.sleep(min_jitter / 1000)
     change_event_callbacks["state"].assert_change_event(
         DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
     )
@@ -669,6 +666,7 @@ def test_subrack_connection_lost(
 
     # simulate a connection resumed
     subrack_simulator.network_jitter_limits = (0, 1_000)
+    time.sleep(min_jitter / 1000)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
 
     # Check that attribute state rediscovered

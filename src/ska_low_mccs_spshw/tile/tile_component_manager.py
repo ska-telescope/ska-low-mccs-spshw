@@ -800,7 +800,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             try:
-                # TODO: calling temperature is bad during powerup.?
                 self.tile[int(0x30000000)]  # pylint: disable=expression-not-assigned
                 return True
             except Exception:  # pylint: disable=broad-except

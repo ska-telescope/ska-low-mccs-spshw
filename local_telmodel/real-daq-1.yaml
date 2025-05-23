@@ -25,6 +25,6 @@ platform:
             subrack_slot: 1
         pdus:
           ci-1:
-            model: PDU
+            model: ENLOGIC
             host: 10.135.253.170
             v2_community: public

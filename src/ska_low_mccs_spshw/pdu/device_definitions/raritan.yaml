@@ -1,0 +1,73 @@
+attributes:
+  - name: systemDescription
+    oid: [ SNMPv2-MIB, sysDescr, 0 ]
+    polling_period: .inf
+    access: readonly
+    description: The system description.
+
+  - name: pduModel
+    oid: [ PDU2-MIB, pduModel, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU model name.
+
+  - name: pduSerialNumber
+    oid: [ PDU2-MIB, pduSerialNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU serial number.
+
+  - name: pduNumberOfPorts
+    oid: [ PDU2-MIB, outletCount, 1 ]
+    polling_period: .inf
+    access: readonly
+    dtype: int
+    description: The number of outlets.
+
+  - name: pduPort{1}State
+    oid: [PDU2-MIB, measurementsOutletSensorState]
+    polling_period: 3000
+    access: readonly
+    start_index: 1
+    placeholder_index: 1
+    indexes:
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [1, 1]      # sensor type
+    dtype: int
+    description: The operating sensor state.
+
+  - name: pduPort{1}Current
+    oid: [PDU2-MIB, measurementsOutletSensorValue]
+    polling_period: 3000
+    access: readonly
+    start_index: 1
+    placeholder_index: 1
+    indexes:
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [1, 1]      # sensor type
+    dtype: int
+    description: The rms current outlet sensor value.
+
+  - name: pduPort{1}Voltage
+    oid: [PDU2-MIB, measurementsOutletSensorValue]
+    polling_period: 3000
+    access: readonly
+    start_index: 1
+    placeholder_index: 1
+    indexes:
+      - [1, 1]      # pdu id
+      - [1, 24, 1]  # port
+      - [4, 4]      # sensor type
+    dtype: float
+    description: The rms voltage outlet sensor value.
+
+  - name: pduPort{}OnOff
+    oid: [PDU2-MIB, switchingOperation]
+    access: write
+    indexes:
+      - [1, 1]   # pdu id
+      - [1, 24]  # port
+    dtype: int
+    description: The switching operation - switch on, switch off or power-cycle.

@@ -128,7 +128,7 @@ def integration_test_context_fixture(
     harness.add_subrack_simulator(subrack_id, subrack_simulator)
     harness.add_subrack_device(subrack_id, logging_level=int(LoggingLevel.ERROR))
     harness.add_pdu_device(
-        "PDU", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
+        "ENLOGIC", "10.135.253.170", "public", logging_level=int(LoggingLevel.ERROR)
     )
     harness.add_tile_device(
         tile_id,

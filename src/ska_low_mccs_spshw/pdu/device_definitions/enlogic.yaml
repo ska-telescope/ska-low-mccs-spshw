@@ -1,0 +1,60 @@
+attributes:
+  - name: systemDescription
+    oid: [ SNMPv2-MIB, sysDescr, 0 ]
+    polling_period: .inf
+    access: readonly
+    description: The system description.
+
+  - name: pduModel
+    oid: [ ENLOGIC-PDU-MIB, pduNamePlateModelNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU model name/number.
+
+  - name: pduSerialNumber
+    oid: [ ENLOGIC-PDU-MIB, pduNamePlateSerialNumber, 1 ]
+    polling_period: .inf
+    access: readonly
+    description: The PDU serial number.
+
+  - name: pduNumberOfPorts
+    oid: [ ENLOGIC-PDU-MIB, pduUnitPropertiesSwitchedOutletCount, 1 ]
+    polling_period: .inf
+    access: readonly
+    dtype: int
+    description: The number of switched outlets.
+
+  - name: pduPort{}State
+    indexes:
+      - [1, 24]
+    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedSTATUSState, 1]
+    #polling_period: 3000
+    access: readonly
+    dtype: bool
+    description: Indicates the present switch state of the PDU switched outlet being queried. off (0), on (1)
+
+  - name: pduPort{}Current
+    indexes:
+      - [1, 24]
+    oid: [ENLOGIC-PDU-MIB, pduOutletMeteredSTATUSCurrent, 5]
+    polling_period: 3000
+    access: readonly
+    dtype: int
+    description: Returns the current draw, in hundredths of Amps(A), of the load on the PDU outlet being queried.
+
+#  - name: pduPort{}Voltage
+#    indexes:
+#      - [1, 24]
+#    oid: [ENLOGIC-PDU-MIB, pduInputPhaseSTATUSEntry, 6 ]
+#    polling_period: 3000
+#    access: readonly
+#    dtype: int
+#    description: Returns the voltage, in Volts(V)
+
+  - name: pduPort{}OnOff
+    indexes:
+      - [1, 24]
+    oid: [ENLOGIC-PDU-MIB, pduOutletSwitchedControlCommand, 1]
+    polling_period: 10000
+    access: read-write
+    

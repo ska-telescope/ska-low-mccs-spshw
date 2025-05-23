@@ -897,13 +897,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return information about the tile.
 
         :return: information relevant to tile.
-
-        :raises TimeoutError: if lock not acquired in time.
         """
-        with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
-            if acquired:
-                return self.tile.info
-        raise TimeoutError("Failed to acquire lock in time.")
+        with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
+            return self.tile.info
 
     @property
     def global_reference_time(self: TileComponentManager) -> str | None:
@@ -1415,34 +1411,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param value: assigned tile Id value
 
-        :raises TimeoutError: raised if we fail to acquire lock in time
         :raises ValueError: If we failed to write tile_id.
         """
-        with acquire_timeout(self._hardware_lock, timeout=2.4) as acquired:
-            if acquired:
-                if not self.tile.is_programmed():
-                    return
-                try:
-                    self.tile.set_station_id(self._station_id, value)
-                    self._tile_id = self.tile.get_tile_id()
-                    self.logger.info(
-                        f"setting station_id:{self._station_id}, "
-                        f"tile_id:{self._tile_id}"
+        with acquire_timeout(self._hardware_lock, timeout=2.4, raise_exception=True):
+            if not self.tile.is_programmed():
+                return
+            try:
+                self.tile.set_station_id(self._station_id, value)
+                self._tile_id = self.tile.get_tile_id()
+                self.logger.info(
+                    f"setting station_id:{self._station_id}, "
+                    f"tile_id:{self._tile_id}"
+                )
+                if self._tile_id != value:
+                    self.logger.error(
+                        f"Failed to set tile_id. Read : {self._tile_id}, "
+                        f"Expected : {value}"
                     )
-                    if self._tile_id != value:
-                        self.logger.error(
-                            f"Failed to set tile_id. Read : {self._tile_id}, "
-                            f"Expected : {value}"
-                        )
-                        raise ValueError("Failed to set the Tile ID")
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("Failed to read tile_id, lock not acquired in time.")
+                    raise ValueError("Failed to set the Tile ID")
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @property
     @check_communicating
@@ -1516,25 +1505,23 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the name of the firmware that this TPM simulator is running.
 
         :return: firmware version (major.minor)
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                _firmware_list = self.tile.get_firmware_list()[0]
-                return (
-                    "Ver."
-                    + str(_firmware_list["major"])
-                    + "."
-                    + str(_firmware_list["minor"])
-                    + " build "
-                    + str(_firmware_list["build"])
-                    + ":"
-                    + str(_firmware_list["time"])
-                )
-        raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            _firmware_list = self.tile.get_firmware_list()[0]
+            return (
+                "Ver."
+                + str(_firmware_list["major"])
+                + "."
+                + str(_firmware_list["minor"])
+                + " build "
+                + str(_firmware_list["build"])
+                + ":"
+                + str(_firmware_list["time"])
+            )
 
     @property
     @check_communicating
@@ -1568,29 +1555,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :return: list of registers
 
-        :raises TimeoutError: raised if we fail to acquire lock in time
         :raises ValueError: if the tpm is value None.
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                reglist = []
-                try:
-                    if self.tile.tpm is None:
-                        raise ValueError("Cannot read register on unconnected TPM.")
-                    regmap = self.tile.find_register("")
-                    for reg in regmap:
-                        if isinstance(reg, RegisterInfo):
-                            reglist.append(reg.name)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-                return reglist
-            self.logger.warning("Failed to acquire hardware lock")
-            raise TimeoutError("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            reglist = []
+            try:
+                if self.tile.tpm is None:
+                    raise ValueError("Cannot read register on unconnected TPM.")
+                regmap = self.tile.find_register("")
+                for reg in regmap:
+                    if isinstance(reg, RegisterInfo):
+                        reglist.append(reg.name)
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+            return reglist
 
     # ---------------------------------------------
     # Timed commands. Convert time to frame number.
@@ -1687,15 +1670,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         to UTC time
 
         :return: the FPGA_1 reference time, in Unix seconds
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile["fpga1.pps_manager.sync_time_val"]
-        raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile["fpga1.pps_manager.sync_time_val"]
 
     @property
     def fpga_frame_time(self: TileComponentManager) -> str:
@@ -1762,19 +1743,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return current tile beamformer frame, in units of 256 ADC frames.
 
         :return: current tile beamformer frame
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.current_tile_beamformer_frame()
-        self.logger.warning("Failed to acquire hardware lock")
-        raise TimeoutError(
-            "failed to check current_tile_beamformer_frame, "
-            "lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.current_tile_beamformer_frame()
 
     @check_communicating
     def get_tpm_temperature_thresholds(
@@ -1785,15 +1760,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :returns: A dictionary containing the thresholds or
             None if lock could not be acquired in 0.4 seconds.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_tpm_temperature_thresholds()
-        raise TimeoutError("Failed to acquire_lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_tpm_temperature_thresholds()
 
     @property
     @check_communicating
@@ -1802,15 +1775,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the pps delay from the TPM.
 
         :return: the pps_delay from the TPM.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_pps_delay(enable_correction=False)
-        raise TimeoutError("Failed to read pps_delay, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_pps_delay(enable_correction=False)
 
     @property
     def csp_spead_format(self: TileComponentManager) -> str:
@@ -2117,99 +2088,64 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param dst_port: destination port, defaults to 4660
         :param netmask_40g: netmask of the 40g subnet
         :param gateway_40g: IP address of the 40g subnet gateway, if it exists.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: set_lmc_integrated_download")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_lmc_integrated_download(
-                        mode,
-                        channel_payload_length,
-                        beam_payload_length,
-                        dst_ip,
-                        src_port,
-                        dst_port,
-                        netmask_40g=netmask_40g,
-                        gateway_ip_40g=gateway_40g,
-                    )
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.error("Failed to acquire hardware lock")
-                raise TimeoutError(
-                    "Failed to execute set_lmc_integrated_download, "
-                    "lock not acquired in time"
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.set_lmc_integrated_download(
+                    mode,
+                    channel_payload_length,
+                    beam_payload_length,
+                    dst_ip,
+                    src_port,
+                    dst_port,
+                    netmask_40g=netmask_40g,
+                    gateway_ip_40g=gateway_40g,
                 )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
     def stop_integrated_data(self: TileComponentManager) -> None:
-        """
-        Stop the integrated data.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
-        """
+        """Stop the integrated data."""
         self.logger.debug("TileComponentManager: Stop integrated data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.stop_integrated_data()
-                    time.sleep(0.2)
-                    self._pending_data_requests = (
-                        self.tile.check_pending_data_requests()
-                    )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.stop_integrated_data()
+                time.sleep(0.2)
+                self._pending_data_requests = self.tile.check_pending_data_requests()
 
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError(
-                    "Failed to execute stop_integrated_data, "
-                    "lock not acquired in time"
-                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     def stop_data_transmission(self: TileComponentManager) -> None:
-        """
-        Stop data transmission for send_channelised_data_continuous.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
-        """
+        """Stop data transmission for send_channelised_data_continuous."""
         self.logger.debug("TileComponentManager: stop_data_transmission")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.stop_data_transmission()
-                    time.sleep(0.2)
-                    self._pending_data_requests = (
-                        self.tile.check_pending_data_requests()
-                    )
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError(
-                    "Failed to execute stop_data_transmission, "
-                    "lock not acquired in time"
-                )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.stop_data_transmission()
+                time.sleep(0.2)
+                self._pending_data_requests = self.tile.check_pending_data_requests()
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
-    def send_data_samples(  # pylint: disable=too-many-locals, too-many-branches
+    def send_data_samples(  # pylint: disable=too-many-branches
         self: TileComponentManager,
         data_type: str = "",
         start_time: Optional[str] = None,
@@ -2240,23 +2176,19 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param params: any additional keyword arguments
 
         :raises ValueError: error in time specification
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug(f"send_data_samples: {data_type}")
         # Check if another operation is pending. Wait at most 0.2 seconds
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if self.tile.check_pending_data_requests():
+                time.sleep(0.2)
                 if self.tile.check_pending_data_requests():
-                    time.sleep(0.2)
-                    if self.tile.check_pending_data_requests():
-                        self.logger.error("Another send operation is active")
-                        raise ValueError(
-                            "Cannot send data, another send operation active"
-                        )
-            else:
-                raise TimeoutError("Failed to acquire lock.")
+                    self.logger.error("Another send operation is active")
+                    raise ValueError("Cannot send data, another send operation active")
         # Check for type of data to be sent to LMC
         if start_time is None:
             timestamp = 0
@@ -2316,17 +2248,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param sync: whether synchronised, defaults to False
         :param timestamp: when to start, defaults to now
         :param seconds: delay with respect to timestamp, defaults to 0.2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: send_raw_data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
-            else:
-                raise TimeoutError("_send_raw_data failed, lock not acquire in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.send_raw_data(sync=sync, timestamp=timestamp, seconds=seconds)
 
     def _send_channelised_data(
         self: TileComponentManager,
@@ -2344,25 +2273,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param last_channel: last channel to send, defaults to 511
         :param timestamp: when to start(?), defaults to None
         :param seconds: when to synchronise, defaults to 0.2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: send_channelised_data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.send_channelised_data(
-                    number_of_samples=number_of_samples,
-                    first_channel=first_channel,
-                    last_channel=last_channel,
-                    timestamp=timestamp,
-                    seconds=seconds,
-                )
-            else:
-                raise TimeoutError(
-                    "_send_channelised_data failed, lock not acquire in time."
-                )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.send_channelised_data(
+                number_of_samples=number_of_samples,
+                first_channel=first_channel,
+                last_channel=last_channel,
+                timestamp=timestamp,
+                seconds=seconds,
+            )
 
     def _send_channelised_data_continuous(
         self: TileComponentManager,
@@ -2382,25 +2306,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param wait_seconds: wait time before sending data
         :param timestamp: when to start(?), defaults to None
         :param seconds: when to synchronise, defaults to 0.2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: send_channelised_data_continuous")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.send_channelised_data_continuous(
-                    channel_id,
-                    number_of_samples=number_of_samples,
-                    wait_seconds=wait_seconds,
-                    timestamp=timestamp,
-                    seconds=seconds,
-                )
-            else:
-                raise TimeoutError(
-                    "_send_channelised_data_continuous failed, lock not acquire in time"
-                )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.send_channelised_data_continuous(
+                channel_id,
+                number_of_samples=number_of_samples,
+                wait_seconds=wait_seconds,
+                timestamp=timestamp,
+                seconds=seconds,
+            )
 
     def _send_channelised_data_narrowband(
         self: TileComponentManager,
@@ -2422,26 +2341,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param wait_seconds: wait time before sending data, defaults to 0
         :param timestamp: when to start, defaults to None
         :param seconds: when to synchronise, defaults to 0.2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: send_channelised_data_narrowband")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.send_channelised_data_narrowband(
-                    frequency,
-                    round_bits,
-                    number_of_samples,
-                    wait_seconds,
-                    timestamp,
-                    seconds,
-                )
-            else:
-                raise TimeoutError(
-                    "_send_channelised_data_narrowband failed, lock not acquire in time"
-                )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.send_channelised_data_narrowband(
+                frequency,
+                round_bits,
+                number_of_samples,
+                wait_seconds,
+                timestamp,
+                seconds,
+            )
 
     def _send_beam_data(
         self: TileComponentManager,
@@ -2453,17 +2367,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param timestamp: when to start(?), defaults to None
         :param seconds: when to synchronise, defaults to 0.2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: send_beam_data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
-            else:
-                raise TimeoutError("_send_beam_data failed, lock not acquire in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.send_beam_data(timestamp=timestamp, seconds=seconds)
 
     @check_communicating
     def configure_integrated_beam_data(
@@ -2482,26 +2393,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: configure_integrated_beam_data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.configure_integrated_beam_data(
-                        integration_time, first_channel, last_channel
-                    )
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("_send_beam_data failed, lock not acquire in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.configure_integrated_beam_data(
+                    integration_time, first_channel, last_channel
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
     def configure_integrated_channel_data(
@@ -2520,26 +2425,20 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param integration_time: integration time in seconds, defaults to 0.5
         :param first_channel: first channel
         :param last_channel: last channel
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.debug("TileComponentManager: configure_integrated_channel_data")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.configure_integrated_channel_data(
-                        integration_time, first_channel, last_channel
-                    )
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("_send_beam_data failed, lock not acquire in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.configure_integrated_channel_data(
+                    integration_time, first_channel, last_channel
+                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     def stop_beamformer(
         self: TileComponentManager, task_callback: Optional[Callable] = None
@@ -2623,7 +2522,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param load_time: switch time as ISO formatted time
 
         :raises ValueError: invalid time
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         if load_time == "":
             load_frame = 0
@@ -2642,19 +2540,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         self.logger.debug("TileComponentManager: load_pointing_delay")
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.load_pointing_delay(load_frame)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError("start_beamformer failed, lock not acquire in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.load_pointing_delay(load_frame)
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     @check_communicating
     def load_pointing_delays(
@@ -3193,20 +3087,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param arp_table_entry: ARP table entry to use
 
         :return: core configuration or list of core configurations
-
-        :raises TimeoutError: when lock cannot be acquired in time.
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_40g_core_configuration(
-                    core_id,
-                    arp_table_entry,
-                )
-            self.logger.warning("Failed to acquire hardware lock")
-            raise TimeoutError(
-                "Failed to read 40g core configuration, lock not acquired in time."
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_40g_core_configuration(
+                core_id,
+                arp_table_entry,
             )
 
     def configure_40g_core(
@@ -3421,48 +3310,33 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Set preadu levels in dB.
 
         :param levels: Preadu attenuation levels in dB
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    self.tile.set_preadu_levels(levels)
-                    _preadu_levels = self.tile.get_preadu_levels()
-                    if _preadu_levels != levels:
-                        self.logger.warning(
-                            "TileComponentManager: Updating PreADU levels failed"
-                        )
-                # pylint: disable=broad-except
-                except Exception as e:
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                self.tile.set_preadu_levels(levels)
+                _preadu_levels = self.tile.get_preadu_levels()
+                if _preadu_levels != levels:
                     self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
+                        "TileComponentManager: Updating PreADU levels failed"
                     )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
-                raise TimeoutError(
-                    "Failed to set_preadu_levels, lock not acquire in time"
-                )
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """
         Set the phase terminal count.
 
         :param value: the phase terminal count
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
-        with acquire_timeout(self._hardware_lock, timeout=0.8) as acquired:
-            if acquired:
-                self.tile.set_phase_terminal_count(value)
-                read_value = self.tile.get_phase_terminal_count()
-                self._update_attribute_callback(phase_terminal_count=read_value)
-            else:
-                raise TimeoutError(
-                    "Failed set phase_terminal_count, lock not acquired in time."
-                )
+        with acquire_timeout(self._hardware_lock, timeout=0.8, raise_exception=True):
+            self.tile.set_phase_terminal_count(value)
+            read_value = self.tile.get_phase_terminal_count()
+            self._update_attribute_callback(phase_terminal_count=read_value)
 
     @property
     @check_communicating
@@ -3471,17 +3345,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Check if the beamformer is running.
 
         :return: True if the beamformer is running
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.beamformer_is_running()
-        raise TimeoutError(
-            "Failed to read is_beamformer_running, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.beamformer_is_running()
 
     @property
     @check_communicating
@@ -3494,15 +3364,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         LMC with only one ARP.
 
         :return: list of core id and arp table populated
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_arp_table()
-        raise TimeoutError("Failed to read arp_table, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_arp_table()
 
     @property
     @check_communicating
@@ -3511,17 +3379,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Check for pending data requests.
 
         :return: whether there are pending send data requests
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.check_pending_data_requests()
-        raise TimeoutError(
-            "Failed to check pending_data_requests, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.check_pending_data_requests()
 
     @property
     @check_communicating
@@ -3530,15 +3394,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Check if PPS signal is present.
 
         :return: True if PPS is present. Checked in poll loop, cached
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["timing"]["pps"]["status"]
-        raise TimeoutError("Failed to check pps_present, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["timing"]["pps"]["status"]
 
     @property
     @check_communicating
@@ -3547,15 +3409,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the internal 5V supply of the TPM.
 
         :return: the internal 5V supply of the TPM
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["voltages"]["MON_5V0"]
-        raise TimeoutError("Failed to check voltage_mon, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["voltages"]["MON_5V0"]
 
     @property
     @check_communicating
@@ -3564,19 +3424,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the total number of flagged packets by the TPM.
 
         :return: the total number of flagged packets by the TPM
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["dsp"]["station_beamf"][
-                    "discarded_or_flagged_packet_count"
-                ]
-        raise TimeoutError(
-            "Failed to check flagged_packets, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["dsp"]["station_beamf"][
+                "discarded_or_flagged_packet_count"
+            ]
 
     @property
     @check_communicating
@@ -3585,18 +3441,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the data router values.
 
         :return: The status of both FPGAs
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["io"]["data_router"]
-
-        raise TimeoutError(
-            "Failed to check flagged_packets, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["io"]["data_router"]
 
     @property
     @check_communicating
@@ -3605,18 +3456,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the data router values.
 
         :return: The number of discarded packets
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["io"]["data_router"]
-
-        raise TimeoutError(
-            "Failed to check flagged_packets, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["io"]["data_router"]
 
     @property
     @check_communicating
@@ -3625,17 +3471,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the temperature of FPGA 1.
 
         :return: the temperature of FPGA 1
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["temperatures"]["FPGA0"]
-        raise TimeoutError(
-            "Failed to check fpga1_temperature, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["temperatures"]["FPGA0"]
 
     @property
     @check_communicating
@@ -3644,17 +3486,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the temperature of FPGA 2.
 
         :return: the temperature of FPGA 2
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["temperatures"]["FPGA1"]
-        raise TimeoutError(
-            "Failed to check fpga2_temperature, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["temperatures"]["FPGA1"]
 
     @property
     @check_communicating
@@ -3663,17 +3501,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the temperature of the TPM.
 
         :return: the temperature of the TPM
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["temperatures"]["board"]
-        raise TimeoutError(
-            "Failed to check board_temperature, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["temperatures"]["board"]
 
     @property
     @check_communicating
@@ -3682,15 +3516,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the ADC status in the TPM.
 
         :return: ADC status in the TPM
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["adcs"]
-        raise TimeoutError("Failed to check adcs, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["adcs"]
 
     @property
     @check_communicating
@@ -3699,15 +3531,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return the alarms status in the TPM.
 
         :return: alarms status in the TPM
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.get_health_status()["alarms"]
-        raise TimeoutError("Failed to check alarms, lock not acquired in time.")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.get_health_status()["alarms"]
 
     @property
     def is_programmed(self: TileComponentManager) -> bool:
@@ -3715,19 +3545,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Return whether this TPM is programmed (i.e. firmware has been downloaded to it).
 
         :return: whether this TPM is programmed
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         if not self.tile:  # Tile unconnected
             return False
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                return self.tile.is_programmed()
-        raise TimeoutError(
-            "Failed to check programmed state, lock not acquired in time."
-        )
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.is_programmed()
 
     @check_communicating
     def set_tpm_temperature_thresholds(
@@ -3786,7 +3612,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     # -----------------------------
     # Test generator methods
     # -----------------------------
-    # pylint: disable=too-many-arguments, too-many-branches
+    # pylint: disable=too-many-arguments
     @check_communicating
     def configure_test_generator(
         self: TileComponentManager,
@@ -3820,7 +3646,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: invalid time specified
         :raises ValueError: if the tpm is value None.
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         if load_time is None:
             load_frame = 0
@@ -3847,12 +3672,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         end_time: int = 0
         if load_frame == 0:
             with acquire_timeout(
-                self._hardware_lock, timeout=self._default_lock_timeout
-            ) as acquired:
-                if acquired:
-                    load_frame = self.tile.get_fpga_timestamp() + 180
-                else:
-                    raise TimeoutError("Failed to acquire lock")
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                load_frame = self.tile.get_fpga_timestamp() + 180
             self.logger.info(f"Tile generator uses asynchronous timestamp {load_frame}")
         else:
             self.logger.info(f"Test generator load time: {load_frame}")
@@ -3898,17 +3722,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Specified using a 32 bit mask, with LSB for ADC input 0.
 
         :param inputs: Bit mask of inputs using test signal
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         self.logger.info("Test generator: set inputs " + hex(inputs))
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.test_generator_input_select(inputs)
-            else:
-                raise TimeoutError("Failed to acquire_lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.test_generator_input_select(inputs)
 
     @property
     def test_generator_active(self: TileComponentManager) -> bool:
@@ -3957,16 +3778,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param zero: An integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. The same mask is applied to both FPGAs,
             supporting up to 8 antennas and 2 polarizations. The default value is 0.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
-            else:
-                raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
 
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
@@ -3975,16 +3793,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
             or 'beamf' (output of tile beamformer) or 'all' for all stages.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.stop_pattern(stage)
-            else:
-                raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.stop_pattern(stage)
 
     def start_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
@@ -3993,44 +3808,31 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param stage: The stage in the signal chain where the pattern was injected.
             Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
             or 'beamf' (output of tile beamformer) or 'all' for all stages.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
         """
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.start_pattern(stage)
-            else:
-                raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.start_pattern(stage)
 
     def start_adcs(self: TileComponentManager) -> None:
-        """
-        Start the ADCs.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
-        """
+        """Start the ADCs."""
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.enable_all_adcs()
-            else:
-                raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.enable_all_adcs()
 
     def stop_adcs(self: TileComponentManager) -> None:
-        """
-        Stop the ADCs.
-
-        :raises TimeoutError: raised if we fail to acquire lock in time
-        """
+        """Stop the ADCs."""
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                self.tile.disable_all_adcs()
-            else:
-                raise TimeoutError("Failed to acquire lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.disable_all_adcs()
 
     def enable_station_beam_flagging(self: TileComponentManager) -> None:
         """Enable station beam flagging."""

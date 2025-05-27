@@ -142,6 +142,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
     )
 
     DefaultLockTimeout = device_property(dtype=float, default_value=0.4)
+    VerifyEvents = device_property(dtype=bool, default_value=True)
 
     # ---------------
     # Initialisation
@@ -426,15 +427,15 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         }
 
         for attr_name in self._attribute_state:
-            self.set_change_event(attr_name, True, True)
-            self.set_archive_event(attr_name, True, True)
+            self.set_change_event(attr_name, True, self.VerifyEvents)
+            self.set_archive_event(attr_name, True, self.VerifyEvents)
 
     def _init_state_model(self: MccsTile) -> None:
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN  # InitCommand.do() does this too late.
         self._health_model = TileHealthModel(self._health_changed)
-        self.set_change_event("healthState", True, True)
-        self.set_archive_event("healthState", True, True)
+        self.set_change_event("healthState", True, self.VerifyEvents)
+        self.set_archive_event("healthState", True, self.VerifyEvents)
 
     def create_component_manager(
         self: MccsTile,

@@ -205,6 +205,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         # Map from name used by TileComponentManager to the
         # name of the Tango Attribute.
         self.attr_map = {
+            "pending_data_requests": "pendingDataRequests",
+            "fpga_reference_time": "fpgaReferenceTime",
             "I2C_access_alm": "I2C_access_alm",
             "temperature_alm": "temperature_alm",
             "voltage_alm": "voltage_alm",

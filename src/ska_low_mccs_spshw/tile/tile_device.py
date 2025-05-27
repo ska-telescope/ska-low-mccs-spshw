@@ -836,7 +836,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         if isinstance(attr_value, dict):
             attr_value = json.dumps(attr_value)
-        self.logger.debug(f"{name} = {attr_value}")
+        if attr_quality == tango.AttrQuality.ATTR_INVALID:
+            self.logger.debug(f"{name} -> {tango.AttrQuality.ATTR_INVALID.name}")
+        else:
+            self.logger.debug(f"{name} = {attr_value}")
         self.push_archive_event(name, attr_value, attr_time, attr_quality)
         self.push_change_event(name, attr_value, attr_time, attr_quality)
 

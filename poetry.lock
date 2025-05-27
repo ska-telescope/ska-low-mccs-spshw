@@ -4309,8 +4309,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "900380afff0f2fb52c2af2234173ac1fb08dd6ba"
-resolved_reference = "900380afff0f2fb52c2af2234173ac1fb08dd6ba"
+reference = "0.2.2"
+resolved_reference = "c344551cf566de022486cef0f2c10c21da8244ad"
 
 [[package]]
 name = "ska-ser-logging"
@@ -5524,4 +5524,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "680e3539f136bb331225017e2d348ed9388607fdf168250c4e25088d71fd4cfd"
+content-hash = "8380d0dfe10b63dab97f6d073bd38e1c0c5b341072da0a8c12ce751011a39e85"

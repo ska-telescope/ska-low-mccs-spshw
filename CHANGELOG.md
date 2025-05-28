@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 6.2.1
 
 * [SKB-804] HotFix: Revert changes to force reprogramming.
 

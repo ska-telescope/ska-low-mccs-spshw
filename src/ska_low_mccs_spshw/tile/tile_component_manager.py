@@ -1096,83 +1096,86 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            prog_status = False
-
-            if self.tile.is_programmed() is False:
-                # Why is this needed?
-                if force_reprogramming:
-                    self.tile.erase_fpgas()
-
-                self.logger.error(
-                    f"Programming tile with firmware {self._firmware_name}"
-                )
-                self.tile.program_fpgas(self._firmware_name)
-
-            prog_status = self.tile.is_programmed()
-
-            if not prog_status:
+            if force_reprogramming:
+                self.logger.info("Forcing erasing of FPGA.")
+                self.tile.erase_fpgas()
                 self._tpm_status = TpmStatus.UNPROGRAMMED
                 self._update_attribute_callback(
                     programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
                 )
-                return
+            prog_status = False
+
+            if self.tile.is_programmed() is False:
+                self.logger.error(
+                    f"Programming tile with firmware {self._firmware_name}"
+                )
+
+                self.tile.program_fpgas(self._firmware_name)
+            prog_status = self.tile.is_programmed()
 
             #
             # Initialisation after programming the FPGA
             #
-            self._tpm_status = TpmStatus.PROGRAMMED
-            self._update_attribute_callback(
-                programming_state=TpmStatus.PROGRAMMED.pretty_name()
-            )
-            #
-            # Base initialisation
-            #
-            self.logger.info(
-                "initialising tile with: \n"
-                f"* tile ID of {self._tile_id} \n"
-                f"* pps correction of {pps_delay_correction} \n"
-                f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
-                f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
-                f"* staticTimeDelays of {self._static_time_delays} \n"
-                f"* PreAduLevels of {self._preadu_levels} \n"
-            )
-            self.tile.initialise(
-                tile_id=self._tile_id,
-                pps_delay=pps_delay_correction,
-                active_40g_ports_setting="port1-only",
-                src_ip_fpga1=self.src_ip_40g_fpga1,
-                src_ip_fpga2=self.src_ip_40g_fpga2,
-                time_delays=self._static_time_delays,
-            )
+            if prog_status:
+                self._tpm_status = TpmStatus.PROGRAMMED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name()
+                )
+                #
+                # Base initialisation
+                #
+                self.logger.info(
+                    "initialising tile with: \n"
+                    f"* tile ID of {self._tile_id} \n"
+                    f"* pps correction of {pps_delay_correction} \n"
+                    f"* src_ip_fpga1 of {self.src_ip_40g_fpga1} \n"
+                    f"* src_ip_fpga2 of {self.src_ip_40g_fpga2} \n"
+                    f"* staticTimeDelays of {self._static_time_delays} \n"
+                    f"* PreAduLevels of {self._preadu_levels} \n"
+                )
+                self.tile.initialise(
+                    tile_id=self._tile_id,
+                    pps_delay=pps_delay_correction,
+                    active_40g_ports_setting="port1-only",
+                    src_ip_fpga1=self.src_ip_40g_fpga1,
+                    src_ip_fpga2=self.src_ip_40g_fpga2,
+                    time_delays=self._static_time_delays,
+                )
 
-            self.tile.set_station_id(0, 0)
-            #
-            # extra steps required to have it working
-            #
-            self.logger.info("TileComponentManager: reset_and_initialise_beamformer")
-            self.tile.initialise_beamformer(128, 8)
+                self.tile.set_station_id(0, 0)
+                #
+                # extra steps required to have it working
+                #
+                self.logger.info(
+                    "TileComponentManager: reset_and_initialise_beamformer"
+                )
+                self.tile.initialise_beamformer(128, 8)
 
-            self.tile.set_first_last_tile(False, False)
+                self.tile.set_first_last_tile(False, False)
 
-            # self.tile.post_synchronisation()
-            self.tile.set_station_id(self._station_id, self._tile_id)
+                # self.tile.post_synchronisation()
+                self.tile.set_station_id(self._station_id, self._tile_id)
 
-            if self._preadu_levels:
-                self.logger.info("TileComponentManager: setting PreADU attenuation...")
-                self.tile.set_preadu_levels(self._preadu_levels)
-                if self.tile.get_preadu_levels() != self._preadu_levels:
-                    self.logger.warning(
-                        "TileComponentManager: set PreADU attenuation failed"
+                if self._preadu_levels:
+                    self.logger.info(
+                        "TileComponentManager: setting PreADU attenuation..."
                     )
+                    self.tile.set_preadu_levels(self._preadu_levels)
+                    if self.tile.get_preadu_levels() != self._preadu_levels:
+                        self.logger.warning(
+                            "TileComponentManager: set PreADU attenuation failed"
+                        )
 
-            self.logger.info("TileComponentManager: initialisation completed")
-            self._tpm_status = TpmStatus.INITIALISED
-            self._update_attribute_callback(
-                programming_state=TpmStatus.INITIALISED.pretty_name()
-            )
-            if self._global_reference_time:
-                self.logger.info("Global reference time specifed, starting acquisition")
-                self._start_acquisition()
+                self.logger.info("TileComponentManager: initialisation completed")
+                self._tpm_status = TpmStatus.INITIALISED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.INITIALISED.pretty_name()
+                )
+                if self._global_reference_time:
+                    self.logger.info(
+                        "Global reference time specifed, starting acquisition"
+                    )
+                    self._start_acquisition()
 
     @abort_task_on_exception
     @check_communicating

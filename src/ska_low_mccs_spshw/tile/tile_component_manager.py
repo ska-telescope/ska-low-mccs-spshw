@@ -1099,17 +1099,17 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             if force_reprogramming:
                 self.logger.info("Forcing erasing of FPGA.")
                 self.tile.erase_fpgas()
-
+                self._tpm_status = TpmStatus.UNPROGRAMMED
+                self._update_attribute_callback(
+                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
+                )
             prog_status = False
 
             if self.tile.is_programmed() is False:
                 self.logger.error(
                     f"Programming tile with firmware {self._firmware_name}"
                 )
-                self._tpm_status = TpmStatus.UNPROGRAMMED
-                self._update_attribute_callback(
-                    programming_state=TpmStatus.UNPROGRAMMED.pretty_name()
-                )
+
                 self.tile.program_fpgas(self._firmware_name)
             prog_status = self.tile.is_programmed()
 

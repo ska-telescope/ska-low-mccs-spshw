@@ -126,6 +126,10 @@ class MccsPdu(AttributePollingDevice):
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 
+        self.logger.error(
+            f"v2_commuinity == {self.V2Community} username == {self.V3UserName}"
+        )
+
         assert (self.V2Community and not self.V3UserName) or (
             not self.V2Community and self.V3UserName
         ), "Can't be V2 & V3 simultaneously"

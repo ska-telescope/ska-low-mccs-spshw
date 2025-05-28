@@ -371,6 +371,8 @@ class TestMccsTile:
             "cspDestinationMac",
             "cspDestinationPort",
             "logicalTileId",
+            "staticTimeDelays",
+            "cspRounding",
             "stationId",
             "antennaIds",
             "srcip40gfpga1",

@@ -270,7 +270,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
-            "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
 
@@ -379,6 +378,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "ppsPresent": ["timing", "pps", "status"],
             "fpga1Temperature": ["temperatures", "FPGA0"],
             "fpga2Temperature": ["temperatures", "FPGA1"],
+            "boardTemperature": ["temperatures", "board"],
             "io": ["io"],
             "dsp": ["dsp"],
             "voltages": ["voltages"],
@@ -1786,7 +1786,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         :param value: the new logical tile id
         """
-        self.component_manager.tile_id = value
+        self.component_manager.set_tile_id(value)
 
     @attribute(dtype="DevString")
     def tileProgrammingState(self: MccsTile) -> str | None:
@@ -1818,7 +1818,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         message = f"stationId: write value = {value}"
         self.logger.info(message)
-        self.component_manager.station_id = value
+        self.component_manager.set_station_id(value)
 
     @attribute(dtype="DevString")
     def firmwareTemperatureThresholds(

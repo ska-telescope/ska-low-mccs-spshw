@@ -1,6 +1,6 @@
 # Version History
 
-## 6.1.4
+## 6.2.0
 
 * [SKB-804] ska-low-sps-tpm-api dependency 0.1.2 -> 0.2.2 (allow re-configuring of LMC routing.)
 * [SKB-804] Only force reprogramming if programmed.

@@ -172,60 +172,45 @@ class RequestIterator:
     UNKNOWN_POLLED_ATTRIBUTES = ["CONNECT", "CHECK_CPLD_COMMS"]
     UNPROGRAMMED_POLLED_ATTRIBUTES = ["CHECK_CPLD_COMMS"]
     PROGRAMMED_POLLED_ATTRIBUTES = [
-        "CHANNELISER_ROUNDING",
-        "CHECK_BOARD_TEMPERATURE",
         "CHECK_CPLD_COMMS",
-        "CSP_ROUNDING",
         "HEALTH_STATUS",
         "IS_PROGRAMMED",
         "PLL_LOCKED",
     ]
     INITIALISED_POLLED_ATTRIBUTES = [
-        "ADC_RMS",
-        "BEAMFORMER_TABLE",
-        "CHANNELISER_ROUNDING",
-        "CHECK_BOARD_TEMPERATURE",
         "CHECK_CPLD_COMMS",
-        "CSP_ROUNDING",
         "FPGA_REFERENCE_TIME",
         "HEALTH_STATUS",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
+        "PLL_LOCKED",
+        "ADC_RMS",
         "PENDING_DATA_REQUESTS",
         "PHASE_TERMINAL_COUNT",
-        "PLL_LOCKED",
         "PPS_DELAY",
-        "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
+        "PPS_DELAY_CORRECTION",
         "PREADU_LEVELS",
-        "STATIC_DELAYS",
-        "STATION_ID",
-        "TILE_ID",
+        "BEAMFORMER_TABLE",
     ]
 
     SYNCHRONISED_POLLED_ATTRIBUTES = [
-        "ADC_RMS",
-        "BEAMFORMER_TABLE",
-        "CHANNELISER_ROUNDING",
-        "CHECK_BOARD_TEMPERATURE",
         "CHECK_CPLD_COMMS",
-        "CSP_ROUNDING",
         "FPGA_REFERENCE_TIME",
         "HEALTH_STATUS",
         "IS_BEAMFORMER_RUNNING",
         "IS_PROGRAMMED",
+        "PLL_LOCKED",
+        "ADC_RMS",
         "PENDING_DATA_REQUESTS",
         "PHASE_TERMINAL_COUNT",
-        "PLL_LOCKED",
         "PPS_DELAY",
         "PPS_DELAY_CORRECTION",
         "PPS_DRIFT",
         "PREADU_LEVELS",
+        "BEAMFORMER_TABLE",
         "RFI_COUNT",
-        "STATIC_DELAYS",
-        "STATION_ID",
         "TILE_BEAMFORMER_FRAME",
-        "TILE_ID",
     ]
 
     def __init__(self: RequestIterator):
@@ -343,10 +328,19 @@ class TileRequestProvider:
         # added to the queue.
         self._command_counter = count()
         self._desire_connection = False
+        self._read_configuration = False
 
     def desire_connection(self) -> None:
         """Register a request to connect with the TPM."""
         self._desire_connection = True
+
+    def desire_configuration_read(self) -> None:
+        """Register a request to read configuration from the TPM."""
+        self._read_configuration = True
+
+    def inform_configuration_read(self) -> None:
+        """Remove request to read configuration from TPM."""
+        self._read_configuration = False
 
     def enqueue_lrc(
         self,
@@ -384,6 +378,7 @@ class TileRequestProvider:
             if self._stale_attribute_callback is not None:
                 self._stale_attribute_callback(stale_attributes)
 
+    # pylint: disable=too-many-return-statements
     def get_request(self, tpm_status: TpmStatus) -> str | TileRequest | None:
         """
         Get the next request to execute on the Tile.
@@ -407,6 +402,8 @@ class TileRequestProvider:
         try:
             lrc_entry = self._lrc_queue.get_nowait()
         except Empty:
+            if self._read_configuration:
+                return "READ_CONFIGURATION"
             return next(self.request_iterator)
 
         _, _, wipe_time, request = lrc_entry

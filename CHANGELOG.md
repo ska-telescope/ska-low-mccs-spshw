@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [SKB-804] HotFix: Revert changes to force reprogramming.
+
 ## 6.2.0
 
 * [SKB-804] ska-low-sps-tpm-api dependency 0.1.2 -> 0.2.2 (allow re-configuring of LMC routing.)

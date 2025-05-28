@@ -1742,6 +1742,7 @@ optional = false
 python-versions = "*"
 groups = ["dev"]
 files = [
+    {file = "junit-xml-2-1.9.tar.gz", hash = "sha256:3b8d9635c5215f754c7807104f6493e3ea3bc9481e2d33db294560da3a1b00f7"},
     {file = "junit_xml_2-1.9-py2.py3-none-any.whl", hash = "sha256:05093d75fe11120ccd51293884b5ee334ff3bc4b5106647c2bcc928486600588"},
 ]
 
@@ -3314,6 +3315,16 @@ optional = false
 python-versions = ">=3.9"
 groups = ["main", "dev", "docs"]
 files = [
+    {file = "pytango-10.0.2-1-cp310-cp310-win32.whl", hash = "sha256:bdfa0a482d7243d4df5a24afeffa774f3500c17dcbd6a2720397f04888ac0334"},
+    {file = "pytango-10.0.2-1-cp310-cp310-win_amd64.whl", hash = "sha256:a694460b2bdae34cbceb6f4852c9c02a786628d56792fdbc4b3bb43d416ff7fb"},
+    {file = "pytango-10.0.2-1-cp311-cp311-win32.whl", hash = "sha256:40d015a2698bcc16dbe8173e5e1e4e94ecdaee90adb54164090e891470b5f5e1"},
+    {file = "pytango-10.0.2-1-cp311-cp311-win_amd64.whl", hash = "sha256:b8309c74990a709008ab311d66ba50b7bab4f542366705633603c0a6d9adbf96"},
+    {file = "pytango-10.0.2-1-cp312-cp312-win32.whl", hash = "sha256:d164915b075606b2188313e27dc06fd316fdb69715a05bb83c3871516970338b"},
+    {file = "pytango-10.0.2-1-cp312-cp312-win_amd64.whl", hash = "sha256:999300d6a4c99468a577b52b904a45f9b3f158ca387ac7f2c77368c4c1d40b28"},
+    {file = "pytango-10.0.2-1-cp313-cp313-win32.whl", hash = "sha256:374e9cc18c75378443648826bfc77247054519b3894e70206a6d2de4690aacc8"},
+    {file = "pytango-10.0.2-1-cp313-cp313-win_amd64.whl", hash = "sha256:c574c8abfff8eb7d0551c075ccfa1e8fa8026dee049894a5e42c811da06f964d"},
+    {file = "pytango-10.0.2-1-cp39-cp39-win32.whl", hash = "sha256:fbadc1f7bff66bef9f2182256aeb46ab008fec615e72d8526681c3d6c35ad2e3"},
+    {file = "pytango-10.0.2-1-cp39-cp39-win_amd64.whl", hash = "sha256:4e11abed4c2978440232c23d56c9bc4d9780bbb688d6ae2b476b5ed7f3b8d83b"},
     {file = "pytango-10.0.2-cp310-cp310-macosx_12_0_arm64.whl", hash = "sha256:b266c717460bbb6b02cb97eaf4c2ce230538b118a33e30da37c27b31b1f5f52f"},
     {file = "pytango-10.0.2-cp310-cp310-macosx_12_0_x86_64.whl", hash = "sha256:06ac20a53a619e836d74cb402cfb638d0cf499f2836cba61a0a02b4309f1f663"},
     {file = "pytango-10.0.2-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:2035ee83a7d3e7d1ac029b1183a5d29176d5776aea6ef506c79ff35f47489922"},
@@ -4284,7 +4295,7 @@ reference = "skao"
 
 [[package]]
 name = "ska-low-sps-tpm-api"
-version = "0.1.2"
+version = "0.2.2"
 description = "An API for management of the Tile Processing Modules of the SKA-Low telescope"
 optional = false
 python-versions = "^3.10"
@@ -4298,8 +4309,8 @@ numpy = "^1.26.4"
 [package.source]
 type = "git"
 url = "https://gitlab.com/ska-telescope/ska-low-sps-tpm/ska-low-sps-tpm-api/"
-reference = "0.1.2"
-resolved_reference = "83475d211e9cf04131238bb36bc4f2f993d3bda2"
+reference = "0.2.2"
+resolved_reference = "c344551cf566de022486cef0f2c10c21da8244ad"
 
 [[package]]
 name = "ska-ser-logging"
@@ -5513,4 +5524,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "5a6ed02c356f19083af349e3aa459cdbe8f665d609a100960124c0c89f8bd776"
+content-hash = "8380d0dfe10b63dab97f6d073bd38e1c0c5b341072da0a8c12ce751011a39e85"

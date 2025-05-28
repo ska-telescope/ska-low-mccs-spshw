@@ -1,7 +1,14 @@
 # Version History
 
-## Unreleased
+## 6.2.0
 
+* [SKB-804] ska-low-sps-tpm-api dependency 0.1.2 -> 0.2.2 (allow re-configuring of LMC routing.)
+* [SKB-804] Only force reprogramming if programmed.
+* [SKB-804] Improve logging for INVALID attributes.
+* [SKB-804] Add missing attributes to attr_map.
+* [SKB-804] Speedup subrack tests.
+* [SPRTS-364] fix tile hardware lock TimeoutError message
+* [THORN-93] Link PDU device to subrack via TANGO commands
 * [SPRTS-441] added a VerifyEvents boolean property to MccsTile,
   which defaults to True and determines whether pushed archive and change events
   are verified by Tango against the rel_change and abs_change attribute properties.

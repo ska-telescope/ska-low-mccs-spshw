@@ -2075,7 +2075,9 @@ class TileSimulator:
         start_time: int = 0,
         duration: int = -1,
         scan_id: int = 0,
-        mask: int = 0xFFFFFFFFFF,
+        mask: int | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
     ) -> bool:
         """
         Start beamformer.
@@ -2083,7 +2085,11 @@ class TileSimulator:
         :param start_time: start time UTC
         :param duration: duration
         :param scan_id: ID of the scan, to be specified in the CSP SPEAD header
-        :param mask: Bitmask of the channels to be started. Unsupported by FW
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: true if the beamformer was started successfully.
         """
@@ -2095,8 +2101,21 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def stop_beamformer(self: TileSimulator) -> None:
-        """Stop beamformer."""
+    def stop_beamformer(
+        self: TileSimulator,
+        mask: bool | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
+    ) -> None:
+        """
+        Stop beamformer.
+
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
+        """
         self.tpm.beam1.stop()  # type: ignore
         self.tpm.beam2.stop()  # type: ignore
 
@@ -2552,9 +2571,20 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def beamformer_is_running(self: TileSimulator) -> bool:
+    def beamformer_is_running(
+        self: TileSimulator,
+        mask: bool | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
+    ) -> bool:
         """
         Beamformer is running.
+
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: is the beam is running
         """

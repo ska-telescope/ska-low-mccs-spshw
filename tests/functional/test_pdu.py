@@ -114,7 +114,6 @@ def check_pdu_is_online_and_on(
         callbacks with asynchrony support.
     """
     admin_mode = pdu_device.adminMode
-    print(f"pdu device is in admin_mode {admin_mode.name}")
     assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
 
     pdu_device.subscribe_event(
@@ -127,11 +126,8 @@ def check_pdu_is_online_and_on(
     # so we only need to act if the admin mode is OFFLINE
     if admin_mode == AdminMode.OFFLINE:
         change_event_callbacks.assert_change_event("pdu_state", tango.DevState.DISABLE)
-        print("pdu device is in DISABLE state.")
-        print("Putting pdu device ONLINE...")
         pdu_device.adminMode = AdminMode.ONLINE
         change_event_callbacks.assert_change_event("pdu_state", tango.DevState.UNKNOWN)
-        print("PDU device is in UNKNOWN state.")
 
     change_event_callbacks.assert_change_event(
         "pdu_state",
@@ -140,8 +136,6 @@ def check_pdu_is_online_and_on(
     state = pdu_device.state()
 
     if state == tango.DevState.OFF:
-        print("Pdu device is in OFF state.")
-        print("Turning Pdu device on...")
         pdu_device.On()
 
         change_event_callbacks.assert_change_event(
@@ -150,7 +144,6 @@ def check_pdu_is_online_and_on(
         )
 
     assert pdu_device.state() == tango.DevState.ON
-    print("Pdu device is in ON state.")
 
 
 @given("a subrack that is online and ON")
@@ -166,7 +159,6 @@ def check_subrack_is_online_and_on(
         callbacks with asynchrony support.
     """
     admin_mode = subrack_device.adminMode
-    print(f"Subrack device is in admin_mode {admin_mode.name}")
     assert admin_mode in [AdminMode.OFFLINE, AdminMode.ONLINE, AdminMode.ENGINEERING]
 
     subrack_device.subscribe_event(
@@ -181,13 +173,10 @@ def check_subrack_is_online_and_on(
         change_event_callbacks.assert_change_event(
             "subrack_state", tango.DevState.DISABLE
         )
-        print("Subrack device is in DISABLE state.")
-        print("Putting subrack device ONLINE...")
         subrack_device.adminMode = AdminMode.ONLINE
         change_event_callbacks.assert_change_event(
             "subrack_state", tango.DevState.UNKNOWN
         )
-        print("Subrack device is in UNKNOWN state.")
 
     change_event_callbacks.assert_change_event(
         "subrack_state",
@@ -196,8 +185,6 @@ def check_subrack_is_online_and_on(
     state = subrack_device.state()
 
     if state == tango.DevState.OFF:
-        print("Subrack device is in OFF state.")
-        print("Turning subrack device on...")
         subrack_device.On()
 
         change_event_callbacks.assert_change_event(
@@ -206,7 +193,6 @@ def check_subrack_is_online_and_on(
         )
 
     assert subrack_device.state() == tango.DevState.ON
-    print("Subrack device is in ON state.")
 
 
 @given("all the PDU ports are OFF")

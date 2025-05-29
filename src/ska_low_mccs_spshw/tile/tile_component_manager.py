@@ -2895,21 +2895,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self.logger.debug("TileComponentManager: set_static_delays")
         delays_float = [float(d) for d in delays]
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if not self.tile.set_time_delays(delays_float):
-                        self.logger.warning("Failed to set static time delays.")
-                    static_delays = self.get_static_delays()
-                    self._update_attribute_callback(static_delays=static_delays)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            if not self.tile.set_time_delays(delays_float):
+                self.logger.warning("Failed to set static time delays.")
+            static_delays = self.get_static_delays()
+            self._update_attribute_callback(static_delays=static_delays)
 
     @property
     @check_communicating

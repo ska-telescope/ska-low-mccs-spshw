@@ -1911,10 +1911,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([4.0] * 32)
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 4.00
-        # Try to set more levels (33) than there are channels (32),
-        # in order to check that the TileComponentManager swallows exceptions.
-        # Possibly a bad idea?
-        tile_component_manager.set_preadu_levels([3.0] * 33)
+
+        with pytest.raises(ValueError):
+            tile_component_manager.set_preadu_levels([3.0] * 33)
 
     def test_load_calibration_coefficients(
         self: TestStaticSimulator,

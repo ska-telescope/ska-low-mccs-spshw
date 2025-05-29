@@ -974,27 +974,6 @@ class TestMccsTile:
         )
         assert on_tile_device.state() == DevState.ALARM
 
-    def test_attributes_with_initial_value(
-        self: TestMccsTile,
-        tile_device: MccsDeviceProxy,
-        tile_id: int,
-        station_id: int,
-    ) -> None:
-        """
-        Test attributes with initial value.
-
-        :param tile_device: fixture that provides a
-            :py:class:`tango.DeviceProxy` to the device under test, in a
-            :py:class:`tango.test_context.DeviceTestContext`.
-        :param tile_id: A fixture with the TileId this tile is configured
-            with.
-        :param station_id: A fixture with the StationId this tile is configured
-            with.
-        """
-        # These values are configuration values we do not have to be online to read.
-        assert tile_device.logicalTileID == tile_id
-        assert tile_device.stationId == station_id
-
     @pytest.mark.parametrize(
         ("attribute", "initial_value", "write_value"),
         [

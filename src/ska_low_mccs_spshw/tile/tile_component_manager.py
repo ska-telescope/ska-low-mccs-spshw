@@ -1141,6 +1141,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     )
                     self._start_acquisition()
 
+                self.__update_configuration_from_tile()
+                assert self._request_provider is not None
+                self._request_provider.inform_configuration_read()
+
     @abort_task_on_exception
     @check_communicating
     def download_firmware(

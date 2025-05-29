@@ -331,14 +331,6 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                     functools.partial(self.post_change_event, "ppsPresent"),
                     alarm_flag="LOW",
                 ),
-                "stationId": AttributeManager(
-                    functools.partial(self.post_change_event, "stationId"),
-                    initial_value=self.StationID,
-                ),
-                "logicalTileId": AttributeManager(
-                    functools.partial(self.post_change_event, "logicalTileId"),
-                    initial_value=self.TileId,
-                ),
                 "tileProgrammingState": AttributeManager(
                     functools.partial(self.post_change_event, "tileProgrammingState"),
                     initial_value=TpmStatus.UNKNOWN.pretty_name(),
@@ -1782,7 +1774,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "the 'TestConfig' property set as desired."
         )
 
-    @attribute(dtype="DevLong", abs_change=1)
+    @attribute(dtype="DevLong", abs_change=1, min_value=-1)
     def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.

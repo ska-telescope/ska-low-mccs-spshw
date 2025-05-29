@@ -1098,6 +1098,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     f"* PreAduLevels of {self._preadu_levels} \n"
                 )
                 self.tile.initialise(
+                    station_id=self._station_id,
                     tile_id=self._tile_id,
                     pps_delay=pps_delay_correction,
                     active_40g_ports_setting="port1-only",
@@ -1105,8 +1106,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     src_ip_fpga2=self.src_ip_40g_fpga2,
                     time_delays=self._static_time_delays,
                 )
-
-                self.tile.set_station_id(0, 0)
                 #
                 # extra steps required to have it working
                 #
@@ -1118,7 +1117,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.tile.set_first_last_tile(False, False)
 
                 # self.tile.post_synchronisation()
-                self.tile.set_station_id(self._station_id, self._tile_id)
 
                 if self._preadu_levels:
                     self.logger.info(
@@ -1131,6 +1129,12 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         )
 
                 self.logger.info("TileComponentManager: initialisation completed")
+
+                # Update configuration before we transition to INITIALISED.
+                self.__update_configuration_from_tile()
+                assert self._request_provider is not None
+                self._request_provider.inform_configuration_read()
+
                 self._tpm_status = TpmStatus.INITIALISED
                 self._update_attribute_callback(
                     programming_state=TpmStatus.INITIALISED.pretty_name()
@@ -1140,10 +1144,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                         "Global reference time specifed, starting acquisition"
                     )
                     self._start_acquisition()
-
-                self.__update_configuration_from_tile()
-                assert self._request_provider is not None
-                self._request_provider.inform_configuration_read()
 
     @abort_task_on_exception
     @check_communicating
@@ -3294,22 +3294,27 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         Set preadu levels in dB.
 
         :param levels: Preadu attenuation levels in dB
+
+        :raises ValueError: When attempting to set preaduLevels with
+            a list of length not equal to 32 (i.e 32 ADC channels).
         """
+        if len(levels) != 32:
+            raise ValueError(
+                f"length must be 32. Attempting to set with length {len(levels)}"
+            )
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
-            try:
-                self.tile.set_preadu_levels(levels)
-                _preadu_levels = self.tile.get_preadu_levels()
-                if _preadu_levels != levels:
-                    self.logger.warning(
-                        "TileComponentManager: Updating PreADU levels failed"
-                    )
-            # pylint: disable=broad-except
-            except Exception as e:
-                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+            self.tile.set_preadu_levels(levels)
+            _preadu_levels = self.tile.get_preadu_levels()
+            if _preadu_levels != levels:
+                self.logger.warning(
+                    "TileComponentManager: Updating PreADU levels failed"
+                )
+
+            self._update_attribute_callback(_preadu_levels=_preadu_levels)
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

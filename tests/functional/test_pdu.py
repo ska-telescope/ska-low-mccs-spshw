@@ -6,7 +6,7 @@
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
 """
-This file contains a test for the pdu functional tests
+This file contains a test for the pdu functional tests.
 
 Depending on your exact deployment the individual tests may or may not be run.
 This test just checks that anything which can run passes.
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import time
 from typing import Any
+
 import pytest
 import tango
 from pytest_bdd import given, scenario, then, when
@@ -22,7 +23,7 @@ from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import OneOf
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
-from tests.harness import get_subrack_name, get_pdu_name
+from tests.harness import get_pdu_name, get_subrack_name
 
 
 @pytest.fixture(name="subrack_device")
@@ -32,8 +33,6 @@ def subrack_device_fixture(
     """
     Return the subrack device under test.
 
-    :param functional_test_context: the test context in which functional
-        tests are run.
     :param subrack_id: ID of the subrack Tango device.
 
     :return: the subrack Tango device under test.
@@ -42,13 +41,9 @@ def subrack_device_fixture(
 
 
 @pytest.fixture(name="pdu_device")
-def pdu_device_fixture(
-) -> tango.DeviceProxy:
+def pdu_device_fixture() -> tango.DeviceProxy:
     """
     Return the pdu device under test.
-
-    :param functional_test_context: the test context in which functional
-        tests are run.
 
     :return: the pdu Tango device under test.
     """
@@ -93,6 +88,7 @@ def test_pdu_port_off_test() -> None:
         for trl in tango.Database().get_device_exported("low-mccs/*")
     ]:
         device.adminmode = AdminMode.ONLINE
+
 
 @given("an SPS deployment against HW")
 def check_against_hardware(hw_context: bool) -> None:
@@ -216,14 +212,11 @@ def check_subrack_is_online_and_on(
 @given("all the PDU ports are OFF")
 def assert_pdu_ports_are_off(
     pdu_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Makes sure the pdu ports are off
+    Make sure the pdu ports are off.
 
     :param pdu_device: the pdu Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     """
     port_state = pdu_device.outlet1State
     if port_state == 0:
@@ -241,14 +234,11 @@ def assert_pdu_ports_are_off(
 @given("all the PDU ports are ON")
 def assert_pdu_ports_are_on(
     pdu_device: tango.DeviceProxy,
-    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
-    Makes sure the pdu ports are on
+    Make sure the pdu ports are on.
 
     :param pdu_device: the pdu Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     """
     port_state = pdu_device.outlet1State
     if port_state == 1:
@@ -272,8 +262,6 @@ def subrack_commands_pdu_port_on(
     Subrack commands the pdu to turn on port.
 
     :param subrack_device: the subrack Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     :param pdu_port: the pdu port to power on and off
     """
     subrack_device.PowerPduPortOn(pdu_port)
@@ -288,8 +276,6 @@ def subrack_commands_pdu_port_off(
     Subrack commands the pdu to turn off port.
 
     :param subrack_device: the subrack Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     :param pdu_port: the pdu port to power on and off
     """
     subrack_device.PowerPduPortOff(pdu_port)
@@ -303,8 +289,6 @@ def pdu_port_turns_on(
     PDU port turns on.
 
     :param pdu_device: the subrack Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     """
     for i in range(5):
         port_state = pdu_device.outlet1State
@@ -322,8 +306,6 @@ def pdu_port_turns_off(
     PDU port turns off.
 
     :param pdu_device: the subrack Tango device under test.
-    :param change_event_callbacks: dictionary of Tango change event
-        callbacks with asynchrony support.
     """
     for i in range(5):
         port_state = pdu_device.outlet1State

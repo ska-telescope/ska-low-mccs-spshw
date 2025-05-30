@@ -113,7 +113,11 @@ K8S_TEST_RUNNER_CHART_TAG ?= 0.9.1
 
 K8S_TEST_RUNNER_VOLUME_TO_MOUNT=daq-data
 
+ifdef TANGO_HOST
+K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=$(TANGO_HOST)
+else
 K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=databaseds-tango-base:10000  # TODO: This should be the default in the k8s-test-runner
+endif
 
 ifdef PASS_PROXY_CONFIG
 FACILITY_HTTP_PROXY ?= $(http_proxy)

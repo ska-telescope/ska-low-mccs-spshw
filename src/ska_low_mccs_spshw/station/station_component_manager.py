@@ -169,11 +169,11 @@ class _TileProxy(DeviceComponentManager):
         if event_value == tango.DevState.ON:
             assert self._proxy is not None  # for the type checker
             try:
-                __tile_id = self._proxy.get_property("TileId")["TileId"][0]
+                __tile_id = self._proxy.logicalTileId
             except tango.DevFailed:
                 __tile_id = None
             try:
-                __station_id = self._proxy.get_property("StationID")["StationID"][0]
+                __station_id = self._proxy.stationId
             except tango.DevFailed:
                 __station_id = None
             if __station_id is not None and __station_id != self._station_id:

@@ -2204,7 +2204,7 @@ class SpsStationComponentManager(
 
         :param delays: Array of one value per antenna/polarization (32 per tile)
 
-        :raises ValueError: When the tiles logicalTileId is not known,
+        :raises RuntimeError: When the tiles logicalTileId is not known,
             this information is required to ensure the delays are applied
             to the correct TPM.
         """
@@ -2213,7 +2213,7 @@ class SpsStationComponentManager(
             assert proxy._proxy is not None  # for the type checker
             __tile_id = proxy._proxy.logicalTileId
             if __tile_id is None:
-                raise ValueError(
+                raise RuntimeError(
                     "logicalTileId is not valid. "
                     "Unable to set static delays without knowledge of mapping"
                 )

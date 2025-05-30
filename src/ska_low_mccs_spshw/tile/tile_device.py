@@ -716,6 +716,10 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         else:
             self._health_model.update_state(fault=fault)
 
+        if power == PowerState.OFF:
+            for attr in self._attribute_state.values():
+                attr.mark_stale()
+
     def unpack_alarms(
         self: MccsTile,
         alarms: dict[str, int],

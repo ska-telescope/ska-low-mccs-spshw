@@ -648,6 +648,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """Initialise the request provider and start connecting."""
         self._request_provider = TileRequestProvider(self._on_arrested_attribute)
         self._request_provider.desire_connection()
+        self._request_provider.desire_configuration_read()
         self._start_communicating_with_subrack()
 
     def polling_stopped(self: TileComponentManager) -> None:
@@ -1132,8 +1133,6 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
                 # Update configuration before we transition to INITIALISED.
                 self.__update_configuration_from_tile()
-                assert self._request_provider is not None
-                self._request_provider.inform_configuration_read()
 
                 self._tpm_status = TpmStatus.INITIALISED
                 self._update_attribute_callback(

@@ -39,6 +39,7 @@ from ska_tango_base.base import TaskCallbackType, check_communicating
 from ska_tango_base.executor import TaskExecutor
 from ska_tango_base.poller import PollingComponentManager
 
+from .exception_codes import HardwareVerificationError
 from .tile_poll_management import (
     TileLRCRequest,
     TileRequest,
@@ -1398,22 +1399,36 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param station_id: the station_id to set
         :param tile_id: the tile_id to set.
+
+        :raises HardwareVerificationError: When the readback from a set_value
+            has unexpected result.
         """
+        # ska-low-sps-tpm-api will return -1 when TPM not programmed.
+        # This flag is used to mark the attribute as INVALID.
+        error_code = -1
+
         with acquire_timeout(
             self._hardware_lock,
             timeout=self._default_lock_timeout,
             raise_exception=True,
         ):
             self.tile.set_station_id(station_id, tile_id)
-            self.logger.info(
-                f"setting station_id : {station_id}, " f"tile_id : {tile_id}"
-            )
             self._station_id = self.tile.get_station_id()
             self._tile_id = self.tile.get_tile_id()
 
         self._update_attribute_callback(
-            tile_id=self._tile_id, station_id=self._station_id
+            tile_id=self._tile_id, mark_invalid=self._tile_id == error_code
         )
+        self._update_attribute_callback(
+            station_id=self._station_id, mark_invalid=self._station_id == error_code
+        )
+        if self._station_id != station_id:
+            raise HardwareVerificationError(
+                expected=station_id, actual=self._station_id
+            )
+        if self._tile_id != tile_id:
+            raise HardwareVerificationError(expected=tile_id, actual=self._tile_id)
+        self.logger.info(f"set station_id : {station_id}, " f"tile_id : {tile_id}")
 
     def set_tile_id(self: TileComponentManager, value: int) -> None:
         """
@@ -2669,27 +2684,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             f"initialise_beamformer for chans {start_channel}:{nof_channels}"
         )
         with acquire_timeout(
-            self._hardware_lock, timeout=self._default_lock_timeout
-        ) as acquired:
-            if acquired:
-                try:
-                    if self.tile.tpm is None:
-                        raise ValueError("Cannot read register on unconnected TPM.")
-                    self.tile.set_spead_format(self._csp_spead_format == "SKA")
-                    self.tile.define_channel_table(
-                        [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
-                    )
-                    self.tile.set_first_last_tile(is_first, is_last)
-                    self._nof_blocks = nof_channels // 8
-                    beamformer_table = self.tile.get_beamformer_table()
-                    self._update_attribute_callback(beamformer_table=beamformer_table)
-                # pylint: disable=broad-except
-                except Exception as e:
-                    self.logger.warning(
-                        f"TileComponentManager: Tile access failed: {e}"
-                    )
-            else:
-                self.logger.warning("Failed to acquire hardware lock")
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            try:
+                if self.tile.tpm is None:
+                    raise ValueError("Cannot read register on unconnected TPM.")
+                self.tile.set_spead_format(self._csp_spead_format == "SKA")
+                self.tile.define_channel_table(
+                    [[start_channel, nof_channels, 0, 0, 0, 0, 0, 0]]
+                )
+                self.tile.set_first_last_tile(is_first, is_last)
+                self._nof_blocks = nof_channels // 8
+                __beamformer_table = self.tile.get_beamformer_table()
+            # pylint: disable=broad-except
+            except Exception as e:
+                self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
+                return
+        self._update_attribute_callback(beamformer_table=__beamformer_table)
 
     def set_beamformer_regions(
         self: TileComponentManager, regions: list[list[int]]
@@ -3296,6 +3309,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :raises ValueError: When attempting to set preaduLevels with
             a list of length not equal to 32 (i.e 32 ADC channels).
+        :raises HardwareVerificationError: When the readback from hardware is
+            unexpected.
         """
         if len(levels) != 32:
             raise ValueError(
@@ -3308,12 +3323,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.set_preadu_levels(levels)
             _preadu_levels = self.tile.get_preadu_levels()
-            if _preadu_levels != levels:
-                self.logger.warning(
-                    "TileComponentManager: Updating PreADU levels failed"
-                )
 
-            self._update_attribute_callback(_preadu_levels=_preadu_levels)
+        self._update_attribute_callback(preadu_levels=_preadu_levels)
+
+        if _preadu_levels != levels:
+            raise HardwareVerificationError(expected=levels, actual=_preadu_levels)
 
     def set_phase_terminal_count(self: TileComponentManager, value: int) -> None:
         """

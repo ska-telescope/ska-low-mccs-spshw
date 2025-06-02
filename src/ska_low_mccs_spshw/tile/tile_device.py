@@ -1777,7 +1777,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "the 'TestConfig' property set as desired."
         )
 
-    @attribute(dtype="DevLong", abs_change=1, min_value=-1)
+    @attribute(dtype="DevLong", abs_change=1, min_value=0, max_value=15)
     def logicalTileId(self: MccsTile) -> int:
         """
         Return the logical tile id.

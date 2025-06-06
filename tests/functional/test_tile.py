@@ -25,6 +25,7 @@ from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 
 from tests.harness import get_sps_station_name
+from tests.test_tools import TileWrapper
 
 
 @pytest.fixture(name="station")
@@ -64,6 +65,30 @@ def command_info_fixture() -> dict[str, Any]:
 
 @scenario("features/tile.feature", "Flagged packets is ok")
 def test_tile(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param sps_devices_trl_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in sps_devices_trl_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario("features/tile.feature", "Tile synchronised state recovered after dev_init")
+def test_tile_synchronised_recover(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
+    """
+    Run a test scenario that tests the tile device.
+
+    :param sps_devices_trl_exported: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in sps_devices_trl_exported:
+        device.adminmode = AdminMode.ONLINE
+
+
+@scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
+def test_tile_initialised_recover(sps_devices_trl_exported: list[tango.DeviceProxy]) -> None:
     """
     Run a test scenario that tests the tile device.
 
@@ -182,6 +207,80 @@ def tile_dropped_packets_is_0(first_tile: tango.DeviceProxy) -> None:
         )
 
 
+@given("the Tile is in a defined synchronised state", target_fixture="defined_state")
+def tile_has_defined_synchronised_state(
+    tile_device: tango.DeviceProxy,
+) -> dict[str, Any]:
+    """
+    Verify that a device is in the desired state.
+
+    :param tile_device: tile device under test.
+
+    :returns: a fixture with the defined_state
+    """
+    defined_state = {
+        "logical_tile_id": 2,
+        "station_id": 2,
+        "static_time_delays": [5] * 32,
+        "csp_rounding": [4] * 32,
+        "channeliser_rounding": [8] * 512,
+    }
+    tw = TileWrapper(tile_device)
+    tw.set_state(programming_state=6, **defined_state)
+    defined_state["programming_state"] = 6
+    return defined_state
+
+
+@given("the Tile is available", target_fixture="tile_device")
+def tile_device_fixture() -> str:
+    """
+    Return a ``tango.DeviceProxy`` to the Tile device under test.
+
+    :return: a ``tango.DeviceProxy`` to the Tile device under test.
+    """
+    tile_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
+    ]
+    return tile_devices[-1]
+
+@given("the Tile is in a defined initialised state", target_fixture="defined_state")
+def tile_has_defined_initialised_state(
+    tile_device: tango.DeviceProxy,
+) -> dict[str, Any]:
+    """
+    Verify that a device is in the desired state.
+
+    :param tile_device: tile device under test.
+
+    :returns: a fixture with the defined_state
+    """
+    defined_state = {
+        "logical_tile_id": 2,
+        "station_id": 2,
+        "static_time_delays": [5] * 32,
+        "csp_rounding": [4] * 32,
+        "channeliser_rounding": [8] * 512,
+    }
+    tw = TileWrapper(tile_device)
+    tw.set_state(
+        programming_state=5,
+        **defined_state,
+    )
+    defined_state["programming_state"] = 5
+    return defined_state
+
+
+@when("the Tile TANGO device is restarted")
+def tile_is_restarted(tile_device: tango.DeviceProxy) -> None:
+    """
+    Start data acquisition.
+
+    :param tile_device: tile device under test.
+    """
+    tile_device.init()
+
+
 @when("the Tile data acquisition is started")
 def tile_start_data_acq(
     first_tile: tango.DeviceProxy,
@@ -199,6 +298,35 @@ def tile_start_data_acq(
         time.sleep(1)
         timeout = timeout + 1
     assert timeout <= 60, "Tiles didn't synchronise"
+
+
+@then("the Tile comes up in the defined state")
+def tile_is_in_state(
+    tile_device: tango.DeviceProxy,
+    defined_state: dict[str, Any],
+    change_event_callbacks: MockTangoEventCallbackGroup,
+) -> None:
+    """
+    Assert that the number of dropped packets is 0.
+
+    :param tile_device: tile device under test.
+    :param defined_state: A fixture containing the defined state.
+    :param change_event_callbacks: a dictionary of callables to be used as
+        tango change event callbacks.
+    """
+    tile_device.subscribe_event(
+        "tileProgrammingState",
+        tango.EventType.CHANGE_EVENT,
+        change_event_callbacks["tile_programming_state"],
+    )
+    change_event_callbacks.assert_change_event("tile_programming_state", Anything)
+    if tile_device.tileProgrammingState != "Initialised":
+        change_event_callbacks.assert_change_event(
+            "tile_programming_state", "Initialised", lookahead=4
+        )
+    tw = TileWrapper(tile_device)
+    for item, val in defined_state.items():
+        assert getattr(tw, item) == val
 
 
 @then("the Tile dropped packets is 0 after 30 seconds")

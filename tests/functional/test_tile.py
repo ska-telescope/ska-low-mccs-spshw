@@ -108,13 +108,14 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
+    if station.adminmode != AdminMode.ENGINEERING:
+        station.adminmode = AdminMode.ENGINEERING
+        change_event_callbacks.assert_change_event(
+            "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
+        )
     for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_root]:
         if device.adminmode != AdminMode.ENGINEERING:
             device.adminmode = AdminMode.ENGINEERING
-
-    change_event_callbacks.assert_change_event(
-        "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
-    )
 
     if station.state() != tango.DevState.ON:
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)

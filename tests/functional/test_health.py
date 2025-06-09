@@ -183,20 +183,6 @@ def get_device_online(
             )
 
         change_event_callbacks.assert_change_event("device_state", Anything)
-        if "low-mccs/tile/" in device_proxy.dev_name():
-            try:
-                # Tile may enter a transient FAULT when put ONLINE.
-                # The TPM can be polled but the Subrack is not yet
-                # reporting the TPM as ON.
-                change_event_callbacks.assert_change_event(
-                    "device_state",
-                    tango.DevState.FAULT,
-                    lookahead=2,
-                    consume_nonmatches=True,
-                )
-                change_event_callbacks.assert_change_event("device_state", Anything)
-            except AssertionError:
-                pass
         device_proxy.unsubscribe_event(sub_id)
 
     return _get_device_online
@@ -463,6 +449,8 @@ def read_all_tile_attributes(
     :param attribute_read_info: A dict of values returned by an attribute read.
     :param excluded_tile_attributes: A list of attributes to not check.
     """
+    # Allow a time for all attributes to be polled.
+    time.sleep(10)
     tiles = station_devices["Tiles"]
     for tile in tiles:
         for attr in tile.get_attribute_list():

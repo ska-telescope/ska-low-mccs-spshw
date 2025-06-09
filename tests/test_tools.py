@@ -394,7 +394,10 @@ class _ProgrammingStateAccess:
                 raise NotImplementedError("Not yet able to drive TPM to this state.")
 
         AttributeWaiter(timeout=30).wait_for_value(
-            obj._tile_device, "tileProgrammingState", value, lookahead=5
+            obj._tile_device,
+            "tileProgrammingState",
+            TpmStatus(value).pretty_name(),
+            lookahead=5,
         )
 
 

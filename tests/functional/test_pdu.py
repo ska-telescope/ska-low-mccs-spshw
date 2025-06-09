@@ -47,6 +47,8 @@ def pdu_device_fixture() -> tango.DeviceProxy:
 
     :return: the pdu Tango device under test.
     """
+    if get_pdu_name() not in tango.Database().get_device_exported("low-mccs/pdu/*"):
+        pytest.xfail("The PDU device is not an exported device. Unable to run test.")
     return tango.DeviceProxy(get_pdu_name())
 
 
@@ -71,21 +73,33 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/pdu.feature", "Pdu turns ports ON")
-def test_pdu_port_on_test() -> None:
-    """Run a test scenario that tests turning on the pdu port."""
+def test_pdu_port_on_test(sps_devices_trl_root: list[str]) -> None:
+    """
+    Run a test scenario that tests turning on the pdu port.
+
+    :param sps_devices_trl_root: Fixture containing the trl
+        root for all sps devices.
+    """
     for device in [
         tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
+        for trl in sps_devices_trl_root
+        + tango.Database().get_device_exported("low-mccs/pdu/*")
     ]:
         device.adminmode = AdminMode.ONLINE
 
 
 @scenario("features/pdu.feature", "Pdu turns ports OFF")
-def test_pdu_port_off_test() -> None:
-    """Run a test scenario that tests turning off the pdu port."""
+def test_pdu_port_off_test(sps_devices_trl_root: list[str]) -> None:
+    """
+    Run a test scenario that tests turning off the pdu port.
+
+    :param sps_devices_trl_root: Fixture containing the trl
+        root for all sps devices.
+    """
     for device in [
         tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
+        for trl in sps_devices_trl_root
+        + tango.Database().get_device_exported("low-mccs/pdu/*")
     ]:
         device.adminmode = AdminMode.ONLINE
 

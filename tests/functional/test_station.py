@@ -66,13 +66,41 @@ def command_info_fixture() -> dict[str, Any]:
     return {}
 
 
-@scenario("features/station.feature", "Synchronising time stamping")
-def test_tile() -> None:
-    """Run a test scenario that tests the station device."""
-    for device in [
+@pytest.fixture(name="sps_devices_trl_root")
+def sps_devices_trl_root_fixture() -> list[str]:
+    """
+    Fixture containing the trl root for all sps devices.
+
+    :returns: A list of trl strings.
+    """
+    tile_devices = [
         tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
-    ]:
+        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
+    ]
+    subrack_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/subrack/*")
+    ]
+    daq_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/daqreceiver/*")
+    ]
+    station_devices = [
+        tango.DeviceProxy(trl)
+        for trl in tango.Database().get_device_exported("low-mccs/spsstation/*")
+    ]
+    return tile_devices + subrack_devices + daq_devices + station_devices
+
+
+@scenario("features/station.feature", "Synchronising time stamping")
+def test_tile(sps_devices_trl_root: list[str]) -> None:
+    """
+    Run a test scenario that tests the station device.
+
+    :param sps_devices_trl_root: Fixture containing the trl
+        root for all sps devices.
+    """
+    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_root]:
         device.adminmode = AdminMode.ONLINE
 
 
@@ -91,6 +119,7 @@ def check_against_hardware(hw_context: bool) -> None:
 def check_spsstation_state(
     station: tango.DeviceProxy,
     change_event_callbacks: MockTangoEventCallbackGroup,
+    sps_devices_trl_root: list[str],
 ) -> None:
     """
     Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
@@ -98,6 +127,8 @@ def check_spsstation_state(
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
+    :param sps_devices_trl_root: Fixture containing the trl
+        root for all sps devices.
     """
     station.subscribe_event(
         "adminmode",
@@ -107,10 +138,7 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
-    for device in [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
-    ]:
+    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_root]:
         device.adminmode = AdminMode.ENGINEERING
 
     change_event_callbacks.assert_change_event(

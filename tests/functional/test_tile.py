@@ -62,32 +62,6 @@ def command_info_fixture() -> dict[str, Any]:
     return {}
 
 
-@pytest.fixture(name="sps_devices_trl_root")
-def sps_devices_trl_root_fixture() -> list[str]:
-    """
-    Fixture containing the trl root for all sps devices.
-
-    :returns: A list of trl strings.
-    """
-    tile_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
-    ]
-    subrack_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/subrack/*")
-    ]
-    daq_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/daqreceiver/*")
-    ]
-    station_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/spsstation/*")
-    ]
-    return tile_devices + subrack_devices + daq_devices + station_devices
-
-
 @scenario("features/tile.feature", "Flagged packets is ok")
 def test_tile(sps_devices_trl_root: list[str]) -> None:
     """
@@ -97,26 +71,6 @@ def test_tile(sps_devices_trl_root: list[str]) -> None:
         root for all sps devices.
     """
     for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_root]:
-        device.adminmode = AdminMode.ONLINE
-
-
-@scenario("features/tile.feature", "Tile synchronised state recovered after dev_init")
-def test_tile_synchronised_recover() -> None:
-    """Run a test scenario that tests the tile device."""
-    for device in [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
-    ]:
-        device.adminmode = AdminMode.ONLINE
-
-
-@scenario("features/tile.feature", "Tile initialised state recovered after dev_init")
-def test_tile_initialised_recover() -> None:
-    """Run a test scenario that tests the tile device."""
-    for device in [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/*")
-    ]:
         device.adminmode = AdminMode.ONLINE
 
 

@@ -47,6 +47,8 @@ def pdu_device_fixture() -> tango.DeviceProxy:
 
     :return: the pdu Tango device under test.
     """
+    if get_pdu_name() not in tango.Database().get_device_exported("low-mccs/pdu/*"):
+        pytest.xfail("The PDU device is not an exported device. Unable to run test.")
     return tango.DeviceProxy(get_pdu_name())
 
 

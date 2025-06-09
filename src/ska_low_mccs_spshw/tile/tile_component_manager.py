@@ -1062,6 +1062,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
+            self._initial_pps_delay = None
             if force_reprogramming:
                 self.logger.info("Forcing erasing of FPGA.")
                 self.tile.erase_fpgas()

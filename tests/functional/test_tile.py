@@ -17,6 +17,7 @@ import json
 import time
 from typing import Any
 
+import numpy as np
 import pytest
 import tango
 from pytest_bdd import given, scenario, then, when
@@ -221,9 +222,9 @@ def tile_has_defined_synchronised_state(
     defined_state = {
         "logical_tile_id": 2,
         "station_id": 2,
-        "static_time_delays": [5] * 32,
-        "csp_rounding": [4] * 32,
-        "channeliser_rounding": [8] * 512,
+        "static_time_delays": np.array([5] * 32),
+        "csp_rounding": np.array([4] * 32),
+        "channeliser_rounding": np.array([8] * 512),
     }
     tw = TileWrapper(tile_device)
     tw.set_state(programming_state=6, **defined_state)
@@ -258,9 +259,9 @@ def tile_has_defined_initialised_state(
     defined_state = {
         "logical_tile_id": 2,
         "station_id": 2,
-        "static_time_delays": [5] * 32,
-        "csp_rounding": [4] * 32,
-        "channeliser_rounding": [8] * 512,
+        "static_time_delays": np.array([5] * 32),
+        "csp_rounding": np.array([4] * 32),
+        "channeliser_rounding": np.array([8] * 512),
     }
     tw = TileWrapper(tile_device)
     tw.set_state(

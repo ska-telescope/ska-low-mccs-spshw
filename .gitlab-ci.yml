@@ -141,7 +141,11 @@ psi-low-stop-k8s:
 ral-low-k8s-test:
   stage: test-ral-low
   extends: k8s-test
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: on_schedule
+      allow_failure: false
+    - when: manual
   needs:
     - oci-image-build
   tags:
@@ -201,6 +205,7 @@ ral-low-stop-k8s:
   variables:
     KUBE_NAMESPACE: 'ci-$CI_PROJECT_NAME-$CI_COMMIT_SHORT_SHA'
   script:
+    - sleep 60
     - export KUBECONFIG=~/.kube/config  # Not sure why this is not default
     - make k8s-uninstall-chart
     - kubectl -n $KUBE_NAMESPACE delete pods,svc,daemonsets,deployments,replicasets,statefulsets,cronjobs,jobs,ingresses,configmaps --all

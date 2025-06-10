@@ -20,7 +20,7 @@ from typing import Any
 import numpy as np
 import pytest
 import tango
-from pytest_bdd import given, scenario, then, when
+from pytest_bdd import given, parsers, scenario, then, when
 from ska_control_model import AdminMode
 from ska_tango_testing.mock.placeholders import Anything
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
@@ -301,10 +301,11 @@ def tile_start_data_acq(
     assert timeout <= 60, "Tiles didn't synchronise"
 
 
-@then("the Tile comes up in the defined state")
+@then(parsers.cfparse("the Tile comes up in the defined {programming_state} state"))
 def tile_is_in_state(
     tile_device: tango.DeviceProxy,
     defined_state: dict[str, Any],
+    programming_state: str,
     change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
@@ -312,6 +313,7 @@ def tile_is_in_state(
 
     :param tile_device: tile device under test.
     :param defined_state: A fixture containing the defined state.
+    :param programming_state: the programmingstate to check against.
     :param change_event_callbacks: a dictionary of callables to be used as
         tango change event callbacks.
     """
@@ -321,9 +323,9 @@ def tile_is_in_state(
         change_event_callbacks["tile_programming_state"],
     )
     change_event_callbacks.assert_change_event("tile_programming_state", Anything)
-    if tile_device.tileProgrammingState != "Initialised":
+    if tile_device.tileProgrammingState != programming_state:
         change_event_callbacks.assert_change_event(
-            "tile_programming_state", "Initialised", lookahead=4
+            "tile_programming_state", programming_state, lookahead=4
         )
     tw = TileWrapper(tile_device)
     for item, val in defined_state.items():

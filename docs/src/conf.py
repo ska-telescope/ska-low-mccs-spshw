@@ -126,6 +126,8 @@ nitpick_ignore = [
     ("py:class", "TaskCallbackType"),
     ("py:class", "JSONData"),
     ("py:class", "ResultCode"),
+    ("py:class", "SNMPAttrInfo"),
+    ("py:class", "CommunicationStatusCallbackType"),
 ]
 
 # If your documentation needs a minimal Sphinx version, state it here.

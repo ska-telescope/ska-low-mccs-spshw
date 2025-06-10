@@ -144,8 +144,11 @@ def station_not_synched(station: tango.DeviceProxy) -> None:
 
     :param station: station device under test.
     """
-    if not all(status in ("Synchronised") for status in station.tileProgrammingState):
-        station.initialise()
+    if not all(status in ("Initialised") for status in station.tileProgrammingState):
+        # Reset the global reference time to None,
+        # before initialisation to ensure initialised.
+        station.globalreferencetime = ""
+        station.Initialise()
         timeout = 0
         while timeout < 60:
             if all(
@@ -155,7 +158,9 @@ def station_not_synched(station: tango.DeviceProxy) -> None:
             time.sleep(1)
             timeout = timeout + 1
         if timeout >= 60:
-            assert False, "Stations failed to initialise"
+            assert (
+                False
+            ), f"Stations failed to initialise: {station.tileProgrammingState}"
 
 
 @when("the station is ordered to synchronise")

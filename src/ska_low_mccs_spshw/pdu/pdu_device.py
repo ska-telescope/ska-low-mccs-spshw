@@ -8,6 +8,7 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
+import functools
 import importlib.resources
 import sys
 from typing import Any, cast
@@ -15,15 +16,17 @@ from typing import Any, cast
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
-from ska_snmp_device.snmp_component_manager import SNMPComponentManager
 from tango import Attribute
 from tango.server import command, device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
+from .pdu_component_manager import PduComponentManager
+
 __all__ = ["MccsPdu", "main"]
 
 
+# pylint: disable=too-many-instance-attributes
 class MccsPdu(AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
@@ -36,6 +39,8 @@ class MccsPdu(AttributePollingDevice):
     V3PrivKey = device_property(dtype=str)
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
+    PowerMashallerFqdn = device_property(dtype=str, default_value="")
+    PortFqdns = device_property(dtype=(str,), default_value=[])
 
     DeviceModels: dict[str, str] = {
         "ENLOGIC": "enlogic.yaml",
@@ -68,6 +73,13 @@ class MccsPdu(AttributePollingDevice):
         self._health_model: PduHealthModel
         self._on_value: int
         self._off_value: int
+        self.component_manager: PduComponentManager
+
+        self._port_device_information: list[str] = []
+
+        if self.PortFqdns:
+            for fqdn in self.PortFqdns:
+                self._port_device_information.append(fqdn)
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
@@ -109,7 +121,7 @@ class MccsPdu(AttributePollingDevice):
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
-    def create_component_manager(self: MccsPdu) -> SNMPComponentManager:
+    def create_component_manager(self: MccsPdu) -> PduComponentManager:
         """
         Create and return a component manager.
 
@@ -139,7 +151,7 @@ class MccsPdu(AttributePollingDevice):
                 "privKey": self.V3PrivKey,
             }
 
-        return SNMPComponentManager(
+        return PduComponentManager(
             host=self.Host,
             port=self.Port,
             authority=authority,
@@ -149,6 +161,7 @@ class MccsPdu(AttributePollingDevice):
             component_state_callback=self._component_state_changed,
             attributes=dynamic_attrs,
             poll_rate=self.UpdateRate,
+            power_marshaller_fqdn=self.PowerMashallerFqdn,
         )
 
     def _communication_state_changed(
@@ -226,6 +239,38 @@ class MccsPdu(AttributePollingDevice):
         :param port: The pdu port to turn off
         """
         self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
+
+    @command(dtype_in=int)
+    def SchedulePduPortOn(self: MccsPdu, port: int) -> None:
+        """
+        Schedule PDU port on with power marshaller.
+
+        :param port: The pdu port to turn on
+        """
+        if not self._port_device_information:
+            self.logger.error("No information known about attached device")
+            return
+        attached_device_info = self._port_device_information[port]
+        power_callback = functools.partial(self.pduPortOn, port)
+        self.component_manager.schedule_power(
+            attached_device_info, "on", power_callback
+        )
+
+    @command(dtype_in=int)
+    def SchedulePduPortOff(self: MccsPdu, port: int) -> None:
+        """
+        Schedule PDU port off with power marshaller.
+
+        :param port: The pdu port to turn off
+        """
+        if not self._port_device_information:
+            self.logger.error("No information known about attached device")
+            return
+        attached_device_info = self._port_device_information[port]
+        power_callback = functools.partial(self.pduPortOff, port)
+        self.component_manager.schedule_power(
+            attached_device_info, "off", power_callback
+        )
 
 
 # ----------

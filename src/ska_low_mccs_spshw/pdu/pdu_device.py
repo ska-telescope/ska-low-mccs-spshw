@@ -39,8 +39,8 @@ class MccsPdu(AttributePollingDevice):
     V3PrivKey = device_property(dtype=str)
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
-    PowerMashallerFqdn = device_property(dtype=str, default_value="")
-    PortFqdns = device_property(dtype=(str,), default_value=[])
+    PowerMashallerTrl = device_property(dtype=str, default_value="")
+    PortDeviceTrls = device_property(dtype=(str,), default_value=[])
 
     DeviceModels: dict[str, str] = {
         "ENLOGIC": "enlogic.yaml",
@@ -77,9 +77,9 @@ class MccsPdu(AttributePollingDevice):
 
         self._port_device_information: list[str] = []
 
-        if self.PortFqdns:
-            for fqdn in self.PortFqdns:
-                self._port_device_information.append(fqdn)
+        if self.PortDeviceTrls:
+            for trl in self.PortDeviceTrls:
+                self._port_device_information.append(trl)
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
@@ -161,7 +161,7 @@ class MccsPdu(AttributePollingDevice):
             component_state_callback=self._component_state_changed,
             attributes=dynamic_attrs,
             poll_rate=self.UpdateRate,
-            power_marshaller_fqdn=self.PowerMashallerFqdn,
+            power_marshaller_trl=self.PowerMashallerTrl,
         )
 
     def _communication_state_changed(

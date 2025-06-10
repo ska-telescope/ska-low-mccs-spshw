@@ -25,7 +25,7 @@ class _PowerMarshallerProxy(DeviceComponentManager):
 
     def __init__(
         self: _PowerMarshallerProxy,
-        fqdn: str,
+        trl: str,
         logger: logging.Logger,
         communication_state_callback: Callable[[CommunicationStatus], None],
         component_state_callback: Callable[..., None],
@@ -33,7 +33,7 @@ class _PowerMarshallerProxy(DeviceComponentManager):
         """
         Initialise a new instance.
 
-        :param fqdn: the FQDN of the device
+        :param trl: the trl of the device
         :param logger: the logger to be used by this object.
         :param communication_state_callback: callback to be
             called when the status of the communications channel between
@@ -41,9 +41,9 @@ class _PowerMarshallerProxy(DeviceComponentManager):
         :param component_state_callback: callback to be
             called when the component state changes
         """
-        self.fqdn = fqdn
+        self.trl = trl
         super().__init__(
-            fqdn,
+            trl,
             logger,
             communication_state_callback,
             component_state_callback,
@@ -83,7 +83,7 @@ class PduComponentManager(SNMPComponentManager):
         component_state_callback: Callable[..., None],
         attributes: Sequence[SNMPAttrInfo],
         poll_rate: float,
-        power_marshaller_fqdn: Optional[str],
+        power_marshaller_trl: Optional[str],
     ) -> None:
         """
         Initialise a new instance.
@@ -100,7 +100,7 @@ class PduComponentManager(SNMPComponentManager):
             called when the component state changes
         :param attributes: pdu attributes
         :param poll_rate: how often the pdu polls
-        :param power_marshaller_fqdn: fqdn of power marhsaller
+        :param power_marshaller_trl: trl of power marhsaller
         """
         super().__init__(
             host=host,
@@ -114,16 +114,16 @@ class PduComponentManager(SNMPComponentManager):
             poll_rate=poll_rate,
         )
         self.marshaller_proxy: _PowerMarshallerProxy
-        if power_marshaller_fqdn:
-            self._power_marshaller_fqdn = power_marshaller_fqdn
+        if power_marshaller_trl:
+            self._power_marshaller_trl = power_marshaller_trl
             self.marshaller_proxy = _PowerMarshallerProxy(
-                power_marshaller_fqdn,
+                power_marshaller_trl,
                 logger,
                 communication_state_callback,
                 component_state_callback,
             )
         else:
-            self._power_marshaller_fqdn = ""
+            self._power_marshaller_trl = ""
 
     @check_communicating
     def schedule_power(
@@ -139,7 +139,7 @@ class PduComponentManager(SNMPComponentManager):
         :param on_off: if the device is being turned on or off.
         :param power_command: Callable to power on/off a port.
         """
-        if self._power_marshaller_fqdn:
+        if self._power_marshaller_trl:
             self.marshaller_proxy.schedule_power(
                 attached_device_info, on_off, power_command
             )

@@ -64,12 +64,17 @@ def pytest_addoption(
 
 
 @pytest.fixture(name="sps_devices_trl_root")
-def sps_devices_trl_root_fixture() -> list[str]:
+def sps_devices_trl_root_fixture(true_context: bool) -> list[str]:
     """
     Fixture containing the trl root for all sps devices.
 
+    :param true_context: whether to test against an existing Tango deployment
+
     :returns: A list of trl strings.
     """
+    if not true_context:
+        return []
+
     tile_devices = [
         tango.DeviceProxy(trl)
         for trl in tango.Database().get_device_exported("low-mccs/tile/*")

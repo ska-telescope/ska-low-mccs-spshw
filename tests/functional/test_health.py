@@ -96,8 +96,8 @@ def excluded_tile_attributes_fixture() -> list[str]:
     """
     return [
         "buildState",  # Mismatch between cpp and tango args.
-        "clockPresent",  # Not yet implemented in aavs-system.
-        "sysrefPresent",  # Not yet implemented in aavs-system.
+        "clockPresent",  # Not yet implemented in ska-low-sps-tpm-api.
+        "sysrefPresent",  # Not yet implemented in ska-low-sps-tpm-api.
         "fortyGbDestinationIps",  # Issue in TileSimulator with 40gConfig.
         "fortyGbDestinationPorts",  # Issue in TileSimulator with 40gConfig.
         "_lrcEvent",  # Requires more setup than the test performs.
@@ -131,7 +131,10 @@ def device_proxies_fixture(station_name: str) -> dict[str, list[tango.DeviceProx
     station_proxy = tango.DeviceProxy(get_sps_station_name(station_name))
     tiles_fqdns = list(station_proxy.get_property("TileFQDNs")["TileFQDNs"])
     subracks_fqdns = list(station_proxy.get_property("SubrackFQDNs")["SubrackFQDNs"])
-    daqs_fqdns = list(station_proxy.get_property("DaqTRL")["DaqTRL"])
+    daqs_fqdns = [
+        station_proxy.get_property("LMCDaqTRL")["LMCDaqTRL"][0],
+        station_proxy.get_property("BandpassDaqTRL")["BandpassDaqTRL"][0],
+    ]
     return {
         "Tiles": [tango.DeviceProxy(tile_fqdn) for tile_fqdn in tiles_fqdns],
         "Subracks": [
@@ -222,6 +225,25 @@ def station_online(
         get_device_online(daq)
     for station in station_devices["Station"]:
         get_device_online(station)
+
+
+@given("the subracks thresholds are normal")
+def set_subrack_thresholds(
+    station_devices: dict[str, list[tango.DeviceProxy]],
+) -> None:
+    """
+    Put a subracks thresholds to a reasonable value.
+
+    :param station_devices: A fixture with the station devices.
+    """
+    for subrack in station_devices["Subracks"]:
+        new_board_params = {
+            "failed_max_board_temp": 70.0,
+            "degraded_max_board_temp": 60.0,
+            "failed_min_board_temp": 10.0,
+            "degraded_min_board_temp": 20.0,
+        }
+        subrack.healthModelParams = json.dumps(new_board_params)
 
 
 @given("the Station has been commanded to turn On")

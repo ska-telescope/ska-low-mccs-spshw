@@ -126,7 +126,7 @@ def functional_test_context_generator_fixture(
                 harness.add_subrack_simulator(subrack_id)
             harness.add_subrack_device(subrack_id, subrack_address)
             harness.set_daq_instance()
-            harness.set_daq_device(
+            harness.set_lmc_daq_device(
                 daq_id,
                 address=None,  # dynamically get address of DAQ instance
             )
@@ -234,7 +234,7 @@ def functional_test_context_fixture(
         harness.add_tile_device(1)
         harness.set_sps_station_device(subrack_ids=range(1, 2), tile_ids=range(1, 2))
         harness.set_daq_instance()
-        harness.set_daq_device(
+        harness.set_lmc_daq_device(
             daq_id,
             address=None,  # dynamically get address of DAQ instance
         )
@@ -252,6 +252,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         callbacks.
     """
     return MockTangoEventCallbackGroup(
+        "pdu_state",
         "subrack_state",
         "subrack_fan_mode",
         "subrack_fan_speeds",

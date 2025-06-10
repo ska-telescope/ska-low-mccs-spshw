@@ -8,6 +8,10 @@
         "global_reference_time": {
             "description": "Common global reference time for all TPMs, needs to be some time in the last 2 weeks. If not provided, 8am on the most recent Monday AWST will be used.",
             "type": "string"
+        },
+        "start_bandpasses": {
+            "description": "Whether to configure the TPMs to send integrated channel data to the bandpass DAQ.",
+            "type": "boolean"
         }
     },
     "required": []

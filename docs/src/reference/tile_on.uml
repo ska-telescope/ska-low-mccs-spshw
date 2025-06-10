@@ -4,7 +4,7 @@ participant "MccsTile" as tile
 participant "TileComponentManager" as tile_component_manager
 participant "TilePollManagement" as tpl
 participant "MccsSubrack" as subrack
-participant "aavs-system.tile \n (or TileSimilator)" as aavs
+participant "ska_low_sps_tpm_api.tile \n (or TileSimilator)" as aavs
 
 
 user -> tile: On()

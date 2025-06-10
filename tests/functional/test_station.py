@@ -158,7 +158,7 @@ def station_not_synched(station: tango.DeviceProxy) -> None:
     :param station: station device under test.
     """
     if not all(status in ("Synchronised") for status in station.tileProgrammingState):
-        station.initialise("{}")
+        station.initialise()
         timeout = 0
         while timeout < 60:
             if all(

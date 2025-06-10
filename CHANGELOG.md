@@ -1,8 +1,107 @@
 # Version History
 
-## Unreleased
+## 6.2.1
 
+* [SKB-804] HotFix: Revert changes to force reprogramming.
+
+## 6.2.0
+
+* [SKB-804] ska-low-sps-tpm-api dependency 0.1.2 -> 0.2.2 (allow re-configuring of LMC routing.)
+* [SKB-804] Only force reprogramming if programmed.
+* [SKB-804] Improve logging for INVALID attributes.
+* [SKB-804] Add missing attributes to attr_map.
+* [SKB-804] Speedup subrack tests.
+* [SPRTS-364] fix tile hardware lock TimeoutError message
+* [THORN-93] Link PDU device to subrack via TANGO commands
+* [SPRTS-441] added a VerifyEvents boolean property to MccsTile,
+  which defaults to True and determines whether pushed archive and change events
+  are verified by Tango against the rel_change and abs_change attribute properties.
+
+## 6.1.3
+
+* [THORN-117] Correct claiming of lock in ping method.
+* [SPRTS-436] add 2Gi memory limit to spshw Pods.
+
+## 6.1.2
+
+* [THORN-165] Add missing hardware_lock to methods.
+* [SKB-816] Remove subrack tpm_power_state attribute cache upon RequestError.
+
+## 6.1.1
+
+* [SPRTS-436] Update to sps-tpm-api (0.1.0 -> 0.1.2) to include fix for memory leak.
+
+## 6.1.0
+
+* [SPRTS-433] The timeout for acquiring access to the HW in MccsTile is now a device property, configurable from deployment.
+
+## 6.0.0
+
+* [THORN-97] SpsStation.Initialise() reverted to not taking arguments. The version of initialise which
+  does is SpsStation.ReInitialise(json_arg)
+* [SKB-816] Changed _component_state_changed() callback to keep track of previous tpm states when subrack looses conection to device
+
+## 5.0.2
+
+* [THORN-152] Remove daqs from log message.
+
+## 5.0.1
+
+* [THORN-152] Handle missing DAQ TRL.
+
+## 5.0.0
+
+* [SKB-872] MccsTile.StartBeamformer/StopBeamformer commands are now long running commands,
+  they are submitted to the polling loop to be picked up on the next poll, but the command returns
+  before the beamformer has actually started/stopped.
+
+## 4.0.0
+
+* [THORN-97] Update SpsStation.Initialise() to route general LMC data to DAQ and
+  bandpasses to the bandpass DAQ. This means we now have a 'BandpassDAQ'
+  property to populate on SpsStation.
+* [THORN-97] SpsStation also has the 'StartBandpassesInInitialise',
+  this is optional, defaults to True. If set to false we won't send integrated data during
+  SpsStation.Initialise()
+* [THORN-97] SpsStation.Initialise() now accepts a json argument, at present it only has one
+  optional argument 'start_bandpasses' which is a boolean, if not given the value in the device
+  property is used.
+  
+## 3.1.1
+
+* [THORN-110] Updated daq refs after repo reorganisation, updated imports.
+* [THORN-149] Migrate from AAVSSystem and PyFabil to ska-low-sps-tpm-api
+
+## 3.1.0
+
+* [SKB-861] Add optional argument start_time to AcquireDataForCalibration
+* [SKB-861] Update AcquireDataForCalibration default start_time to 2 seconds in future.
+
+## 3.0.3
+
+* [THORN-144] Re-release of 3.0.2 with correct image.
+
+## 3.0.2
+
+* [THORN-144] DAQ was going to ON before doing its automatic starting/stopping of receivers, this meant code waiting on DAQ turning to ON would think the DAQ is ready too soon. Now DAQ reports ON after it has finished automatically starting/stopping consumers.
+
+## 3.0.1
+
+* pyfabil 2.1.0 -> 2.1.1 (<https://gitlab.com/ska-telescope/pyfabil/-/releases>)
+* aavs-system 2.1.3 -> 2.1.6 (<https://gitlab.com/ska-telescope/aavs-system/-/releases>)
+* TPM firmware version 6.2.0 -> 6.2.1
+
+## 3.0.0
+
+* Update ska-tango-base 1.3.1 -> 1.3.2 (<https://gitlab.com/ska-telescope/ska-tango-base/-/releases>)
+* [THORN-99] Prune logging.
+* [THORN-108] Update STFC RAL ref to use persistent DB.
 * [THORN-121] Add deploy stage to pipeline.
+* [THORN-134] Added ska-low-mccs-common ref.
+* [SKB-843] Add a NumberOfTiles property to MccsDaqReceiver
+* [LOW-1272] Update to latest ska-tango-devices 0.2.0 -> 0.2.1 (<https://gitlab.com/ska-telescope/ska-tango-devices/-/releases>)
+* [THORN-91] Update PDU charts to match new configuration
+* [LOW-1304] Update for upstream bugfixes
 
 ## 2.0.0
 

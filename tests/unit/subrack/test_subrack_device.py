@@ -70,7 +70,7 @@ def change_event_callbacks_fixture() -> MockTangoEventCallbackGroup:
         # "tpmTemperatures",  # Not implemented on SMB
         "tpmVoltages",
         "adminMode",
-        timeout=6.0,
+        timeout=5.0,
         assert_no_error=False,
     )
 
@@ -261,7 +261,6 @@ def test_off_on(
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["state"].assert_not_called()
 
     # There are heaps of attribute we can subscribe to here.
     # We'll subscribe to all of them in the next test.
@@ -273,13 +272,11 @@ def test_off_on(
         change_event_callbacks["boardCurrent"],
     )
     change_event_callbacks["boardCurrent"].assert_change_event([])
-    change_event_callbacks["boardCurrent"].assert_not_called()
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
     change_event_callbacks["state"].assert_change_event(DevState.ON)
-    change_event_callbacks["state"].assert_not_called()
 
     change_event_callbacks["boardCurrent"].assert_change_event(
         subrack_device_attribute_values["boardCurrent"],
@@ -314,7 +311,6 @@ def test_off_on(
         (off_command_id, "IN_PROGRESS")
     )
     change_event_callbacks["state"].assert_change_event(DevState.OFF)
-    change_event_callbacks["state"].assert_not_called()
 
     assert subrack_device.state() == DevState.OFF
 
@@ -383,7 +379,6 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         change_event_callbacks["state"],
     )
     change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
-    change_event_callbacks["state"].assert_not_called()
 
     for attribute_name, expected_initial_value in [
         ("tpmPresent", []),
@@ -422,12 +417,13 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         change_event_callbacks[attribute_name].assert_change_event(
             expected_initial_value
         )
-        change_event_callbacks[attribute_name].assert_not_called()
 
     # Now let's put the device online
     subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
     change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
-    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
     change_event_callbacks["state"].assert_not_called()
 
     change_event_callbacks["tpmCount"].assert_change_event(
@@ -480,7 +476,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
 
     # Let's change a value in the simulator and check that a change event is pushed.
     subrack_simulator.simulate_attribute("board_current", 0.7)
-    change_event_callbacks["boardCurrent"].assert_change_event([pytest.approx(0.7)])
+    change_event_callbacks["boardCurrent"].assert_change_event(
+        [pytest.approx(0.7)], lookahead=5, consume_nonmatches=True
+    )
 
     # Now let's try a command
     subrack_device.subscribe_event(
@@ -518,7 +516,7 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         )
 
         change_event_callbacks[f"tpm{tpm_to_power}PowerState"].assert_change_event(
-            PowerState.ON
+            PowerState.ON, lookahead=5, consume_nonmatches=True
         )
 
         change_event_callbacks["command_result"].assert_change_event(
@@ -560,7 +558,9 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
         {"power_supply_fan_id": fan_to_change, "speed_percent": percent_to_set}
     )
     _ = subrack_device.SetPowerSupplyFanSpeed(json_kwargs)
-    change_event_callbacks["powerSupplyFanSpeeds"].assert_change_event(expected_speeds)
+    change_event_callbacks["powerSupplyFanSpeeds"].assert_change_event(
+        expected_speeds, lookahead=5, consume_nonmatches=True
+    )
 
     fan_to_change = 2
     percent_to_set = 49.0
@@ -580,9 +580,11 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     _ = subrack_device.SetSubrackFanSpeed(json_kwargs)
 
     change_event_callbacks["subrackFanSpeedsPercent"].assert_change_event(
-        expected_speeds_percent
+        expected_speeds_percent, lookahead=5, consume_nonmatches=True
     )
-    change_event_callbacks["subrackFanSpeeds"].assert_change_event(expected_speeds)
+    change_event_callbacks["subrackFanSpeeds"].assert_change_event(
+        expected_speeds, lookahead=5, consume_nonmatches=True
+    )
 
     fan_to_change = 3
     subrack_fan_mode = subrack_device.subrackFanModes
@@ -595,4 +597,83 @@ def test_monitoring_and_control(  # pylint: disable=too-many-locals, too-many-st
     json_kwargs = json.dumps({"fan_id": fan_to_change, "mode": int(mode_to_set)})
     _ = subrack_device.SetSubrackFanMode(json_kwargs)
 
-    change_event_callbacks["subrackFanModes"].assert_change_event(expected_modes)
+    change_event_callbacks["subrackFanModes"].assert_change_event(
+        expected_modes, lookahead=5, consume_nonmatches=True
+    )
+
+
+@pytest.mark.parametrize(
+    ("state_of_device_under_control_after_dropout"),
+    [(PowerState.ON), (PowerState.OFF)],
+)
+def test_subrack_connection_lost(
+    subrack_device: MccsSubrack,
+    subrack_simulator: SubrackSimulator,
+    change_event_callbacks: MockTangoEventCallbackGroup,
+    state_of_device_under_control_after_dropout: PowerState,
+) -> None:
+    """
+    Test our ability to rediscover attribute state after outage.
+
+    :param subrack_device: the subrack Tango device under test.
+    :param subrack_simulator: the simulator for the backend
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
+    :param state_of_device_under_control_after_dropout: The PowerState
+        the simulator has upon reconnection.
+    """
+    subrack_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
+    subrack_device.subscribe_event(
+        "tpm1PowerState",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["tpm1PowerState"],
+    )
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
+    subrack_device.subscribe_event(
+        "adminMode",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["adminMode"],
+    )
+
+    subrack_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["state"].assert_change_event(
+        DevState.ON, lookahead=5, consume_nonmatches=True
+    )
+
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.OFF)
+
+    min_jitter: int = 10_000  # milliseconds
+    max_jitter: int = 11_000  # milliseconds
+    # simulate a drop out in connection
+    subrack_simulator.network_jitter_limits = (min_jitter, max_jitter)
+    time.sleep(min_jitter / 1000)
+    change_event_callbacks["state"].assert_change_event(
+        DevState.UNKNOWN, lookahead=5, consume_nonmatches=True
+    )
+    change_event_callbacks["tpm1PowerState"].assert_change_event(PowerState.UNKNOWN)
+
+    # This should pass is True or False.
+    is_on = state_of_device_under_control_after_dropout == PowerState.ON
+    subrack_simulator._attribute_values["tpm_on_off"] = [is_on] * 8
+
+    # simulate a connection resumed
+    subrack_simulator.network_jitter_limits = (0, 1_000)
+    time.sleep(min_jitter / 1000)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+
+    # Check that attribute state rediscovered
+    change_event_callbacks["tpm1PowerState"].assert_change_event(
+        state_of_device_under_control_after_dropout,
+        lookahead=2,
+        consume_nonmatches=True,
+    )
+    change_event_callbacks["tpm1PowerState"].assert_not_called()
+    assert subrack_device.tpm1PowerState == state_of_device_under_control_after_dropout

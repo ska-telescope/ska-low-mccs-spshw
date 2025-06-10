@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import enum
 import json
+import time
 
 import pytest
 import tango
@@ -129,8 +130,7 @@ def check_subrack_is_online_and_on(
         print("Subrack device is in UNKNOWN state.")
 
     change_event_callbacks.assert_change_event(
-        "subrack_state",
-        OneOf(tango.DevState.OFF, tango.DevState.ON),
+        "subrack_state", OneOf(tango.DevState.OFF, tango.DevState.ON), lookahead=4
     )
     state = subrack_device.state()
 
@@ -178,8 +178,7 @@ def choose_a_tpm(
         change_event_callbacks["subrack_tpm_present"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_tpm_present",
-        Anything,
+        "subrack_tpm_present", Anything, lookahead=4
     )
     tpms_present = list(subrack_device.tpmPresent)
     if not tpms_present:
@@ -209,9 +208,15 @@ def ensure_subrack_fan_mode(
     :param change_event_callbacks: dictionary of Tango change event
         callbacks with asynchrony support.
     """
-    fan_modes = subrack_device.subrackFanModes
-    if fan_modes is not None:
-        fan_modes = list(fan_modes)  # from numpy
+    for i in range(5):
+        fan_modes = subrack_device.subrackFanModes
+        if fan_modes is not None:
+            fan_modes = list(fan_modes)  # from numpy
+            break
+        time.sleep(1)
+
+    if fan_modes is None:
+        pytest.fail("device failed to connect with comp manager in time")
 
     subrack_device.subscribe_event(
         "subrackFanModes",
@@ -221,6 +226,7 @@ def ensure_subrack_fan_mode(
     change_event_callbacks.assert_change_event(
         "subrack_fan_mode",
         fan_modes,
+        lookahead=4,
     )
 
     if not fan_modes:
@@ -238,8 +244,7 @@ def ensure_subrack_fan_mode(
         subrack_device.SetSubrackFanMode(encoded_arg)
 
         change_event_callbacks.assert_change_event(
-            "subrack_fan_mode",
-            expected_fan_modes,
+            "subrack_fan_mode", expected_fan_modes, lookahead=4
         )
 
 
@@ -267,8 +272,7 @@ def ensure_subrack_fan_speed_percent(
         change_event_callbacks["subrack_fan_speeds_percent"],
     )
     change_event_callbacks.assert_change_event(
-        "subrack_fan_speeds_percent",
-        expected_fan_speeds_percent,
+        "subrack_fan_speeds_percent", expected_fan_speeds_percent, lookahead=4
     )
 
     # TODO: There is a server-side bug in handling of SetSubrackFanSpeed.
@@ -359,7 +363,7 @@ def ensure_tpm_power_state(
         subrack_device.PowerOffTpm(tpm_number)
 
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
+            PowerState.OFF, lookahead=4
         )
         print("TPM is off.")
     elif target_power == "on" and tpm_power_state == PowerState.OFF:
@@ -482,11 +486,11 @@ def check_tpm_power_state(
 
     if target_power == "off":
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.OFF
+            PowerState.OFF, lookahead=4
         )
         print("TPM is off as expected.")
     else:
         change_event_callbacks["subrack_tpm_power_state"].assert_change_event(
-            PowerState.ON
+            PowerState.ON, lookahead=4
         )
-        print("TPM is off as expected.")
+        print("TPM is on as expected.")

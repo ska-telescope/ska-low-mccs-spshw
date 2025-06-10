@@ -21,7 +21,6 @@ import numpy as np
 import pytest
 import pytest_mock
 import tango
-from pyfabil.base.definitions import LibraryError
 from ska_control_model import (
     CommunicationStatus,
     PowerState,
@@ -30,6 +29,7 @@ from ska_control_model import (
     TaskStatus,
     TestMode,
 )
+from ska_low_sps_tpm_api.base.definitions import LibraryError
 from ska_tango_testing.mock import MockCallableGroup
 from ska_tango_testing.mock.placeholders import Anything
 
@@ -178,10 +178,14 @@ class TestTileComponentManager:
                     consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.PROGRAMMED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.PROGRAMMED.pretty_name(),
+                    lookahead=5,
+                    consume_nonmatches=True,
                 )
                 callbacks["attribute_state"].assert_call(
-                    programming_state=TpmStatus.INITIALISED.pretty_name(), lookahead=2
+                    programming_state=TpmStatus.INITIALISED.pretty_name(),
+                    lookahead=5,
+                    consume_nonmatches=True,
                 )
                 try:
                     callbacks["component_state"].assert_call(
@@ -557,6 +561,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             status=TaskStatus.COMPLETED,
             result=(ResultCode.OK, "Command executed to completion."),
         )
+        callbacks["attribute_state"].assert_call(
+            programming_state=TpmStatus.INITIALISED.pretty_name(),
+            lookahead=20,
+            consume_nonmatches=True,
+        )
 
         return tile_component_manager
 
@@ -727,6 +736,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             ("configure_integrated_beam_data", []),
             ("stop_integrated_data", []),
             ("set_lmc_integrated_download", ["raw", 8190, 8190]),
+            ("ping", []),
         ),
     )
     def test_command(
@@ -761,7 +771,6 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         (
             ("apply_calibration", True),
             ("apply_pointing_delays", True),
-            ("start_beamformer", True),
         ),
     )
     def test_timed_command(
@@ -921,6 +930,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
     def test_start_stop_beamformer(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Test start and stop beamformer.
@@ -932,11 +942,26 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         :param tile_component_manager: the tile_component_manager class
             object under test.
+        :param callbacks: dictionary of mock callbacks
+
         """
         assert not tile_component_manager.is_beamformer_running
-        tile_component_manager.start_beamformer()
+        tile_component_manager.start_beamformer(callbacks["task_lrc"])
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
+
         assert tile_component_manager.is_beamformer_running
-        tile_component_manager.stop_beamformer()
+        tile_component_manager.stop_beamformer(callbacks["task_lrc"])
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
         assert not tile_component_manager.is_beamformer_running
 
     def test_set_beamformer_regions(
@@ -1881,7 +1906,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
 
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([3.0] * 32)
-        # Read PyFABIL software preADU levels for preADU 1, channel 1
+        # Read ska_low_sps_tpm_api software preADU levels for preADU 1, channel 1
         assert tile_simulator.tpm.preadu[1].get_attenuation()[1] == 3.00
         # Set preADU levels to 3 for all channels
         tile_component_manager.set_preadu_levels([4.0] * 32)
@@ -2017,12 +2042,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the start_beamformer function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile_simulator.connect()
         assert tile_simulator.tpm
@@ -2034,7 +2061,15 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             datetime.datetime.fromtimestamp(time.time() + 0.5), RFC_FORMAT
         )
 
-        tile_component_manager.start_beamformer(start_time, 4)
+        tile_component_manager.start_beamformer(
+            callbacks["task_lrc"], start_time=start_time, duration=4
+        )
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
 
         assert tile_component_manager.is_beamformer_running
 
@@ -2042,25 +2077,35 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             unittest.mock.Mock(side_effect=Exception("mocked exception"))
         )
 
-        tile_component_manager.start_beamformer(start_time, 4)
+        tile_component_manager.start_beamformer(
+            callbacks["task_lrc"], start_time=start_time, duration=4
+        )
 
     def test_stop_beamformer(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
+        callbacks: MockCallableGroup,
     ) -> None:
         """
         Unit test for the stop_beamformer function.
 
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
+        :param callbacks: dictionary of driver callbacks.
         """
         tile_simulator.connect()
         tile_simulator.stop_beamformer = (  # type: ignore[assignment]
             unittest.mock.Mock()
         )
 
-        tile_component_manager.stop_beamformer()
+        tile_component_manager.stop_beamformer(callbacks["task_lrc"])
+        callbacks["task_lrc"].assert_call(status=TaskStatus.QUEUED)
+        callbacks["task_lrc"].assert_call(status=TaskStatus.IN_PROGRESS)
+        callbacks["task_lrc"].assert_call(
+            status=TaskStatus.COMPLETED,
+            result=(ResultCode.OK, "Command executed to completion."),
+        )
         tile_simulator.stop_beamformer.assert_called()
 
         # Check that thrown exception are caught when thrown.

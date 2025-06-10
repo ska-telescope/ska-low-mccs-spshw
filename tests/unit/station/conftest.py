@@ -20,7 +20,7 @@ from tango.server import command
 from ska_low_mccs_spshw import SpsStation
 from ska_low_mccs_spshw.station import SpsStationSelfCheckManager
 from ska_low_mccs_spshw.station.tests import TpmSelfCheckTest
-from tests.harness import get_daq_name, get_subrack_name, get_tile_name
+from tests.harness import get_lmc_daq_name, get_subrack_name, get_tile_name
 
 
 @pytest.fixture(name="mock_subrack_device_proxy")
@@ -261,7 +261,7 @@ def patched_sps_station_device_class_fixture() -> type[SpsStation]:
             """
             base_dir = "/product/eb-mvp01-20250314-00005/ska-low-mccs/5/correlator_data"
             file_name = "/correlation_burst_106_20250314_58668_0.hdf5"
-            self.component_manager._daq_state_changed(
+            self.component_manager._lmc_daq_state_changed(
                 "some/daq/fqdn",
                 dataReceivedResult=(
                     "correlator",
@@ -378,7 +378,7 @@ def station_self_check_manager_fixture(
     """
     tile_trls = [get_tile_name(1)]
     subrack_trls = [get_subrack_name(1)]
-    daq_trl = get_daq_name()
+    daq_trl = get_lmc_daq_name()
     mock_component_manager = unittest.mock.Mock()
     station_self_check_manager = SpsStationSelfCheckManager(
         component_manager=mock_component_manager,

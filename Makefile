@@ -41,7 +41,7 @@ python-post-lint:
 ########################################################################
 include .make/oci.mk
 
-FIRMWARE_VERSION = 6.2.0
+FIRMWARE_VERSION = 6.2.1
 DESIRED_FIRMWARE_FILE_NAME = itpm_v1_6.bit
 
 install-firmware:
@@ -156,6 +156,8 @@ K8S_TEST_RUNNER_PIP_INSTALL_COMMAND = pip install ${K8S_TEST_RUNNER_PIP_INSTALL_
 endif
 
 K8S_TEST_RUNNER_WORKING_DIRECTORY ?= /home/tango
+
+PYTHON_VARS_AFTER_PYTEST += "-n 16"
 
 k8s-do-test:
 	helm -n $(KUBE_NAMESPACE) upgrade --install --repo $(K8S_TEST_RUNNER_CHART_REGISTRY) \

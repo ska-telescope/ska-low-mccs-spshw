@@ -22,7 +22,12 @@ from ipaddress import IPv4Address
 from typing import Any, Callable, Final, Generator, List, Optional, TypeVar, cast
 
 import numpy as np
-from pyfabil.base.definitions import BoardError, Device, LibraryError, RegisterInfo
+from ska_low_sps_tpm_api.base.definitions import (
+    BoardError,
+    Device,
+    LibraryError,
+    RegisterInfo,
+)
 
 from .dynamic_value_generator import DynamicValuesGenerator, DynamicValuesUpdater
 from .spead_data_simulator import SpeadDataSimulator
@@ -314,7 +319,7 @@ class MockTpmFirmwareInformation:
 
 
 class MockTpm:
-    """Simulator for a pyfabil::Tpm class."""
+    """Simulator for a ska_low_sps_tpm_api.boards::Tpm class."""
 
     # Register map.
     # Requires only registers which are directly accessed from
@@ -852,14 +857,15 @@ class PreAdu:
 
 class TileSimulator:
     """
-    This attempts to simulate pyaavs Tile.
+    This attempts to simulate ska_low_sps_tpm_api.Tile.
 
     This is used for testing the tpm_driver, it implements __getitem__,
     __setitem__ so that the TileSimulator can interface with the
-    TPMSimulator in the same way as the AAVS Tile interfaces with the
-    pyfabil TPM. Instead of writing to a register we write to a
-    dictionary. It overwrite read_address, write_address, read_register,
-    write_register for simplicity.
+    TPMSimulator in the same way as the ska_low_sps_tpm_api.Tile
+    interfaces with the ska_low_sps_tpm_api.boards.TPM. Instead of
+    writing to a register we write to a dictionary. It overwrite
+    read_address, write_address, read_register, write_register
+    for simplicity.
     """
 
     CHANNELISER_TRUNCATION: list[int] = [3] * 512
@@ -991,12 +997,12 @@ class TileSimulator:
         Get the health state of the tile.
 
         :param kwargs: Any kwargs to identify health group.
-            see aavs-system.Tile
+            see ska_low_sps_tpm_api.Tile
 
         :return: mocked fetch of health.
         """
         if any([value == 2 for value in self._global_status_alarms.values()]):
-            # aavs-system return a subset of the health with mcu alarms
+            # ska-low-sps-tpm-api returns a subset of the health with mcu alarms
             # when a hard shutoff has occured.
             return {"alarms": self._tile_health_structure["alarms"]}
         return copy.deepcopy(self._tile_health_structure)
@@ -1225,7 +1231,7 @@ class TileSimulator:
         """
         Return register information from a provided search string.
 
-        Note: this is a wrapper method of 'pyfabil.tpm.find_register'
+        Note: this is a wrapper method of 'ska_low_sps_tpm_api.boards.tpm.find_register'
 
         :param string: Regular expression to search against
         :param display: True to output result to console
@@ -1268,7 +1274,8 @@ class TileSimulator:
         :param fpga_id: A parameter to specify what fpga we want
             to return the beamformer table for. (Default fpga_id = 0)
 
-        Note: this is a wrapper method of 'pyfabil.tpm.station_beamf.get_channel_table'
+        Note: this is a wrapper method of
+        'ska_low_sps_tpm_api.boards.tpm.station_beamf.get_channel_table'
 
         :return: Nx7 table with one row every 8 channels
         """
@@ -1833,7 +1840,6 @@ class TileSimulator:
         self._is_fpga1_connectable = connectable
         self._is_fpga2_connectable = connectable
 
-    @check_mocked_overheating
     @connected
     def __getitem__(self: TileSimulator, key: int | str) -> Any:
         """
@@ -1841,7 +1847,29 @@ class TileSimulator:
 
         :param key: key
         :return: mocked item at address
+
+        :raises BoardError: if you are trying to attempt communication with
+            a FPGA that is OFF.
         """
+        cpld_registers = [int(0x30000000)]
+        if self.tpm_mocked_overheating:
+            # We can still access the (CPLD version) when FPGAs are shutdown.
+            if key in cpld_registers and self._is_cpld_connectable:
+                pass
+            else:
+                self.logger.warning(
+                    "BoardError: Not possible to communicate with the FPG0: "
+                    "Failed to read_address 0x4 on board: UCP::read. "
+                    "Command failed on board. "
+                    "Requested address 0x4 received address 0xfffffffb"
+                )
+                raise BoardError(
+                    "BoardError: Not possible to communicate with the FPG0: "
+                    "Failed to read_address 0x4 on board: UCP::read. "
+                    "Command failed on board. "
+                    "Requested address 0x4 received address 0xfffffffb"
+                )
+
         return self.tpm[key]  # type: ignore
 
     @check_mocked_overheating
@@ -2047,7 +2075,9 @@ class TileSimulator:
         start_time: int = 0,
         duration: int = -1,
         scan_id: int = 0,
-        mask: int = 0xFFFFFFFFFF,
+        mask: int | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
     ) -> bool:
         """
         Start beamformer.
@@ -2055,7 +2085,11 @@ class TileSimulator:
         :param start_time: start time UTC
         :param duration: duration
         :param scan_id: ID of the scan, to be specified in the CSP SPEAD header
-        :param mask: Bitmask of the channels to be started. Unsupported by FW
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: true if the beamformer was started successfully.
         """
@@ -2067,8 +2101,21 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def stop_beamformer(self: TileSimulator) -> None:
-        """Stop beamformer."""
+    def stop_beamformer(
+        self: TileSimulator,
+        mask: bool | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
+    ) -> None:
+        """
+        Stop beamformer.
+
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
+        """
         self.tpm.beam1.stop()  # type: ignore
         self.tpm.beam2.stop()  # type: ignore
 
@@ -2524,9 +2571,20 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
-    def beamformer_is_running(self: TileSimulator) -> bool:
+    def beamformer_is_running(
+        self: TileSimulator,
+        mask: bool | None = None,
+        beam: int | None = None,
+        channel_groups: list[int] | None = None,
+    ) -> bool:
         """
         Beamformer is running.
+
+        :param mask: Bitmask of the channels to be started.
+            Ignored if beam is specified.
+        :param beam: Beam number to start. Computes the mask using beam table
+        :param channel_groups: list of channel groups, in range 0:48.
+            group 0 for channels 0-7, to group 47 for channels 380-383.
 
         :return: is the beam is running
         """

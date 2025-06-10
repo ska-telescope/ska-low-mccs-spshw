@@ -76,7 +76,7 @@ def test_context_fixture(daq_id: int) -> Iterator[SpsTangoTestHarnessContext]:
     """
     test_harness = SpsTangoTestHarness()
     test_harness.set_daq_instance()
-    test_harness.set_daq_device(daq_id, address=None)  # dynamically get DAQ address
+    test_harness.set_lmc_daq_device(daq_id, address=None)  # dynamically get DAQ address
     with test_harness as test_context:
         yield test_context
 
@@ -108,6 +108,7 @@ def daq_component_manager_fixture(
         "",
         test_context.get_daq_server_address(daq_id),
         "",
+        1,
         skuid_url,
         logger,
         callbacks["communication_state"],

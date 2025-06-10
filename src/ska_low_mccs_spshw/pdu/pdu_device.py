@@ -12,11 +12,12 @@ import importlib.resources
 import sys
 from typing import Any, cast
 
+from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from ska_snmp_device.snmp_component_manager import SNMPComponentManager
-from ska_snmp_device.snmp_device import AttributePollingDevice
-from tango.server import device_property
+from tango import Attribute
+from tango.server import command, device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
@@ -37,7 +38,8 @@ class MccsPdu(AttributePollingDevice):
     UpdateRate = device_property(dtype=float, default_value=3.0)
 
     DeviceModels: dict[str, str] = {
-        "PDU": "pdu.yaml",
+        "ENLOGIC": "enlogic.yaml",
+        "RARITAN": "raritan.yaml",
     }
 
     # ---------------
@@ -60,23 +62,31 @@ class MccsPdu(AttributePollingDevice):
         # that calls __init__ when you least expect it.
         # So don't put anything executable in here
         # (other than the super() call).
+        super().__init__(*args, **kwargs)
+        self._dynamic_attrs: dict[str, Attribute]
         self._health_state: HealthState
         self._health_model: PduHealthModel
-        self._dynamic_attrs: dict
-        self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
-
-        super().__init__(*args, **kwargs)
+        self._on_value: int
+        self._off_value: int
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
         try:
             super().init_device()
-
+            self._version_id = sys.modules["ska_low_mccs_spshw"].__version__
             device_name = f'{str(self.__class__).rsplit(".", maxsplit=1)[-1][0:-2]}'
             version = f"{device_name} Software Version: {self._version_id}"
             properties = f"Initialised {device_name} on: {self.Host}:{self.Port}"
             version_info = f"{self.__class__.__name__}, {self._build_state}"
             self.logger.info("\n%s\n%s\n%s", version_info, version, properties)
+            if self.Model == "RARITAN":
+                self._off_value = 0
+                self._on_value = 1
+            elif self.Model == "ENLOGIC":
+                self._off_value = 1
+                self._on_value = 2
+            else:
+                self.logger.error(f"Invalid model {self.Model} specified")
 
         # pylint: disable=broad-exception-caught
         except Exception as ex:
@@ -99,20 +109,20 @@ class MccsPdu(AttributePollingDevice):
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
-    def create_component_manager(self) -> SNMPComponentManager:
+    def create_component_manager(self: MccsPdu) -> SNMPComponentManager:
         """
         Create and return a component manager.
 
         :return: SNMPComponent manager
         """
-        # This goes here because you don't have access to properties
-        # until tango.server.BaseDevice.init_device() has been called
         filename = self.DeviceModels[self.Model]
         device_definition = importlib.resources.files(
-            "ska_low_mccs_spshw.pdu.pdu"
+            "ska_low_mccs_spshw.pdu.device_definitions"
         ).joinpath(filename)
+        # This goes here because you don't have access to properties
+        # until tango.server.BaseDevice.init_device() has been called
         dynamic_attrs = parse_device_definition(
-            load_device_definition(str(device_definition), None)
+            load_device_definition(str(device_definition))
         )
         self._dynamic_attrs = {attr.name: attr for attr in dynamic_attrs}
 
@@ -157,7 +167,7 @@ class MccsPdu(AttributePollingDevice):
         """
         action_map = {
             CommunicationStatus.DISABLED: "component_disconnected",
-            CommunicationStatus.NOT_ESTABLISHED: "component_disconnected",
+            CommunicationStatus.NOT_ESTABLISHED: "component_unknown",
             CommunicationStatus.ESTABLISHED: "component_on",
         }
         action = action_map[communication_state]
@@ -166,7 +176,9 @@ class MccsPdu(AttributePollingDevice):
 
         info_msg = f"Communication status is {communication_state}"
         self.logger.info(info_msg)
-        self._health_model.update_state(communicating=True)
+        self._health_model.update_state(
+            communicating=communication_state == CommunicationStatus.ESTABLISHED
+        )
 
     def _component_state_changed(
         self: MccsPdu,
@@ -187,14 +199,33 @@ class MccsPdu(AttributePollingDevice):
         if "health" in kwargs:
             health = kwargs.pop("health")
             if self._health_state != health:
-                self._health_state = cast(HealthState, health)
-                self.push_change_event("healthState", health)
-                self.push_archive_event("healthState", health)
+                # update health_state which is an attribute in the base class
+                # change and archive events are pushed there
+                self._update_health_state(health)
+        # update base class for power and/or fault
         super()._component_state_changed(**kwargs)
 
         for attribute_name, value in kwargs.items():
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
+
+    @command(dtype_in=int)
+    def pduPortOn(self: MccsPdu, port: int) -> None:
+        """
+        Set pdu port On.
+
+        :param port: The pdu port to turn on
+        """
+        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._on_value)
+
+    @command(dtype_in=int)
+    def pduPortOff(self: MccsPdu, port: int) -> None:
+        """
+        Set pdu port OFF.
+
+        :param port: The pdu port to turn off
+        """
+        self.component_manager.enqueue_write(f"pduPort{port}OnOff", self._off_value)
 
 
 # ----------

@@ -172,11 +172,7 @@ class TileHealthRules(HealthRules):
                     )
                 else:
                     # TODO: MCCS-2196 - Updating the tile_health_attribute
-                    # in aavs-system can cause a key error to be raised.
-                    print(
-                        f"\nMonitoring point {p} is not being evaluated as part of the "
-                        "tiles health.\n"
-                    )
+                    # in ska-low-sps-tpm-api can cause a key error to be raised.
                     continue
             else:
                 # last_path = path.split("/")[-1]

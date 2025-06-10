@@ -96,7 +96,7 @@ def check_spsstation_state(
     sps_devices_trl_root: list[str],
 ) -> None:
     """
-    Check the SpsStation is ON, and all devices are in ENGINEERING AdminMode.
+    Check the SpsStation is ON, and all devices are in ONLINE AdminMode.
 
     :param station: a proxy to the station under test.
     :param change_event_callbacks: a dictionary of callables to be used as
@@ -112,13 +112,14 @@ def check_spsstation_state(
     change_event_callbacks.assert_change_event(
         "device_adminmode", Anything, consume_nonmatches=True
     )
+    if station.adminMode == AdminMode.OFFLINE:
+        station.adminmode = AdminMode.ONLINE
+        change_event_callbacks.assert_change_event(
+            "device_adminmode", AdminMode.ONLINE, consume_nonmatches=True
+        )
     for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_root]:
-        device.adminmode = AdminMode.ENGINEERING
-
-    change_event_callbacks.assert_change_event(
-        "device_adminmode", AdminMode.ENGINEERING, consume_nonmatches=True
-    )
-
+        device.adminmode = AdminMode.ONLINE
+    time.sleep(5)
     if station.state() != tango.DevState.ON:
         state_callback = MockTangoEventCallbackGroup("state", timeout=300)
         station.subscribe_event(

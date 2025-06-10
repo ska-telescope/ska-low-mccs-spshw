@@ -141,7 +141,9 @@ psi-low-stop-k8s:
 ral-low-k8s-test:
   stage: test-ral-low
   extends: k8s-test
-  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - when: manual
   needs:
     - oci-image-build
   tags:

@@ -19,6 +19,7 @@ import time
 from datetime import datetime
 from typing import Any
 
+import numpy as np
 import pytest
 import tango
 from ska_control_model import AdminMode, ResultCode
@@ -211,7 +212,15 @@ class AttributeWaiter:  # pylint: disable=too-few-public-methods
         )
         self._attr_callback["attr_callback"].assert_change_event(Anything)
         try:
-            if getattr(device_proxy, attr_name) != attr_value:
+            read_attr_value = getattr(device_proxy, attr_name)
+            if isinstance(read_attr_value, np.ndarray):
+                if not np.array_equal(read_attr_value, attr_value):
+                    self._attr_callback["attr_callback"].assert_change_event(
+                        attr_value or Anything,
+                        lookahead=lookahead,
+                        consume_nonmatches=True,
+                    )
+            elif read_attr_value != attr_value:
                 self._attr_callback["attr_callback"].assert_change_event(
                     attr_value or Anything,
                     lookahead=lookahead,

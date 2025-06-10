@@ -5024,6 +5024,61 @@ url = "https://pypi.org/simple"
 reference = "PyPI-public"
 
 [[package]]
+name = "types-icalendar"
+version = "6.3.1.20250521"
+description = "Typing stubs for icalendar"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "types_icalendar-6.3.1.20250521-py3-none-any.whl", hash = "sha256:449cacdd0e5768e148753722e34c38b13e4078973b7174a5b0b938159ce32fae"},
+    {file = "types_icalendar-6.3.1.20250521.tar.gz", hash = "sha256:c8fdc7e6afd39973191bb67cec5a5918c1bf4cdde64ae8c44cbc0cfa4e31a1ef"},
+]
+
+[package.dependencies]
+types-python-dateutil = "*"
+types-pytz = "*"
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
+name = "types-python-dateutil"
+version = "2.9.0.20250516"
+description = "Typing stubs for python-dateutil"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "types_python_dateutil-2.9.0.20250516-py3-none-any.whl", hash = "sha256:2b2b3f57f9c6a61fba26a9c0ffb9ea5681c9b83e69cd897c6b5f668d9c0cab93"},
+    {file = "types_python_dateutil-2.9.0.20250516.tar.gz", hash = "sha256:13e80d6c9c47df23ad773d54b2826bd52dbbb41be87c3f339381c1700ad21ee5"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
+name = "types-pytz"
+version = "2025.2.0.20250516"
+description = "Typing stubs for pytz"
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "types_pytz-2025.2.0.20250516-py3-none-any.whl", hash = "sha256:e0e0c8a57e2791c19f718ed99ab2ba623856b11620cb6b637e5f62ce285a7451"},
+    {file = "types_pytz-2025.2.0.20250516.tar.gz", hash = "sha256:e1216306f8c0d5da6dafd6492e72eb080c9a166171fa80dd7a1990fd8be7a7b3"},
+]
+
+[package.source]
+type = "legacy"
+url = "https://pypi.org/simple"
+reference = "PyPI-public"
+
+[[package]]
 name = "types-pyyaml"
 version = "6.0.12.20250516"
 description = "Typing stubs for PyYAML"
@@ -5606,4 +5661,4 @@ reference = "PyPI-public"
 [metadata]
 lock-version = "2.1"
 python-versions = "~3.10"
-content-hash = "fda8faa50149e65e5af950c662b4668196f12ca57f3ae296eccb946a10059c2d"
+content-hash = "0bb864e3219dc118ba72185ed67ddcdc60af181193f6a68df464643c1f2e2c72"

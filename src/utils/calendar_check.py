@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""Utilities for checking calender entries."""
+"""Utilities for checking calendar entries."""
 
 import re
 from datetime import datetime, timedelta
@@ -25,9 +25,17 @@ RESERVATION_CALENDAR_URL = (
 )
 
 
-CALENDAR_METADATA = {
+CALENDAR_METADATA: dict[str, dict[str, Any]] = {
     "RAL": {
         "UID": "001afcabcce946c9ee9be34c1110951a7cd63006",
+        "event_type_allowlist": [
+            # Subrack 1
+            "ed980302-93a7-487c-8a6b-d5989cf6877f",
+            # Subrack 3
+            "cdd6246b-1cd8-46d2-92b9-54ceec438235",
+            # TPM 1.2
+            "07cb51cf-605d-473a-8650-0e7f4fe90828",
+        ],
     },
 }
 UNITS = {
@@ -135,8 +143,13 @@ def parse_duration(duration_str: str) -> timedelta:
     :param duration_str: a duration in the format '\d+[smh]' where
         's' means seconds, 'm' means minutes, and 'h' means hours.
     :return: a timedelta representing the duration
+    :raises ValueError: when no match found.
     """
     unit_strs = "".join(UNITS)
     pattern = re.compile(rf"(\d+)([{unit_strs}])")
-    number_str, unit = pattern.fullmatch(duration_str).groups()
+    if pattern.fullmatch(duration_str) is None:
+        raise ValueError("No match found")
+    __match = pattern.fullmatch(duration_str)
+    assert __match is not None
+    number_str, unit = __match.groups()
     return UNITS[unit] * int(number_str)

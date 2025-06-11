@@ -41,14 +41,22 @@ def subrack_device_fixture(
 
 
 @pytest.fixture(name="pdu_device")
-def pdu_device_fixture() -> tango.DeviceProxy:
+def pdu_device_fixture(
+    true_context: bool, exported_pdus: list[str]
+) -> tango.DeviceProxy:
     """
     Return the pdu device under test.
 
+    :param true_context: True if we are running in a true context.
+    :param exported_pdus: A list containing the ``tango.DeviceProxy``
+        of the exported pdus. Or Empty list if no devices exported.
+
     :return: the pdu Tango device under test.
     """
-    if get_pdu_name() not in tango.Database().get_device_exported("low-mccs/pdu/*"):
-        pytest.skip("The PDU device is not an exported device. Unable to run test.")
+    if true_context:
+        if len(exported_pdus) == 0:
+            pytest.skip("The PDU device is not an exported device. Unable to run test.")
+        return tango.DeviceProxy(exported_pdus[-1])
     return tango.DeviceProxy(get_pdu_name())
 
 
@@ -73,34 +81,26 @@ def command_info_fixture() -> dict[str, Any]:
 
 
 @scenario("features/pdu.feature", "Pdu turns ports ON")
-def test_pdu_port_on_test(sps_devices_trl_root: list[str]) -> None:
+def test_pdu_port_on_test(sps_devices_trl_exported: list[str]) -> None:
     """
     Run a test scenario that tests turning on the pdu port.
 
-    :param sps_devices_trl_root: Fixture containing the trl
+    :param sps_devices_trl_exported: Fixture containing the trl
         root for all sps devices.
     """
-    for device in [
-        tango.DeviceProxy(trl)
-        for trl in sps_devices_trl_root
-        + tango.Database().get_device_exported("low-mccs/pdu/*")
-    ]:
+    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
         device.adminmode = AdminMode.ONLINE
 
 
 @scenario("features/pdu.feature", "Pdu turns ports OFF")
-def test_pdu_port_off_test(sps_devices_trl_root: list[str]) -> None:
+def test_pdu_port_off_test(sps_devices_trl_exported: list[str]) -> None:
     """
     Run a test scenario that tests turning off the pdu port.
 
-    :param sps_devices_trl_root: Fixture containing the trl
+    :param sps_devices_trl_exported: Fixture containing the trl
         root for all sps devices.
     """
-    for device in [
-        tango.DeviceProxy(trl)
-        for trl in sps_devices_trl_root
-        + tango.Database().get_device_exported("low-mccs/pdu/*")
-    ]:
+    for device in [tango.DeviceProxy(trl) for trl in sps_devices_trl_exported]:
         device.adminmode = AdminMode.ONLINE
 
 

@@ -63,35 +63,127 @@ def pytest_addoption(
     )
 
 
-@pytest.fixture(name="sps_devices_trl_root")
-def sps_devices_trl_root_fixture(true_context: bool) -> list[str]:
+@pytest.fixture(name="sps_devices_trl_exported")
+def sps_devices_trl_exported_fixture(
+    exported_tiles: list[str],
+    exported_subracks: list[str],
+    exported_stations: list[str],
+    exported_daqs: list[str],
+    exported_pdus: list[str],
+) -> list[tango.DeviceProxy]:
     """
-    Fixture containing the trl root for all sps devices.
+    Fixture containing the trl for all sps devices.
 
-    :param true_context: whether to test against an existing Tango deployment
+    :param exported_tiles: A list containing the ``tango.DeviceProxy``
+        of the exported tiles. Or Empty list if no devices exported.
+    :param exported_subracks: A list containing the ``tango.DeviceProxy``
+        of the exported subracks. Or Empty list if no devices exported.
+    :param exported_stations: A list containing the ``tango.DeviceProxy``
+        of the exported stations. Or Empty list if no devices exported.
+    :param exported_daqs: A list containing the ``tango.DeviceProxy``
+         of the exported daqs. Or Empty list if no devices exported.
+    :param exported_pdus: A list containing the ``tango.DeviceProxy``
+         of the exported pdus. Or Empty list if no devices exported.
 
     :returns: A list of trl strings.
     """
-    if not true_context:
-        return []
+    return (
+        exported_tiles
+        + exported_subracks
+        + exported_stations
+        + exported_daqs
+        + exported_pdus
+    )
 
-    tile_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/tile/*")
-    ]
-    subrack_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/subrack/*")
-    ]
-    daq_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/daqreceiver/*")
-    ]
-    station_devices = [
-        tango.DeviceProxy(trl)
-        for trl in tango.Database().get_device_exported("low-mccs/spsstation/*")
-    ]
-    return tile_devices + subrack_devices + daq_devices + station_devices
+
+@pytest.fixture(name="exported_tiles")
+def exported_tiles_fixture(true_context: bool) -> list[tango.DeviceProxy]:
+    """
+    Return the name of the tiles under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: A list containing the ``tango.DeviceProxy`` of the exported tiles.
+        Or Empty list if no devices exported.
+    """
+    if true_context:
+        return [
+            tango.DeviceProxy(trl)
+            for trl in tango.Database().get_device_exported("low-mccs/tile/*")
+        ]
+    return []
+
+
+@pytest.fixture(name="exported_pdus")
+def exported_pdus_fixture(true_context: bool) -> list[tango.DeviceProxy]:
+    """
+    Return the name of the pdus under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: A list containing the ``tango.DeviceProxy`` of the exported PDU'.
+        Or Empty list if no devices exported.
+    """
+    if true_context:
+        return [
+            tango.DeviceProxy(trl)
+            for trl in tango.Database().get_device_exported("low-mccs/pdu/*")
+        ]
+    return []
+
+
+@pytest.fixture(name="exported_subracks")
+def exported_subracks_fixture(true_context: bool) -> list[tango.DeviceProxy]:
+    """
+    Return the trls of the subracks under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: A list containing the ``tango.DeviceProxy`` of the exported subracks.
+        Or Empty list if no devices exported.
+    """
+    if true_context:
+        return [
+            tango.DeviceProxy(trl)
+            for trl in tango.Database().get_device_exported("low-mccs/subrack/*")
+        ]
+    return []
+
+
+@pytest.fixture(name="exported_stations")
+def exported_stations_fixture(true_context: bool) -> list[tango.DeviceProxy]:
+    """
+    Return the trls of the stations under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: A list containing the ``tango.DeviceProxy`` of the exported stations.
+        Or Empty list if no devices exported.
+    """
+    if true_context:
+        return [
+            tango.DeviceProxy(trl)
+            for trl in tango.Database().get_device_exported("low-mccs/spsstation/*")
+        ]
+    return []
+
+
+@pytest.fixture(name="exported_daqs")
+def exported_daq_fixture(true_context: bool) -> list[tango.DeviceProxy]:
+    """
+    Return the trls of the daq under test.
+
+    :param true_context: whether to test against an existing Tango deployment
+
+    :return: A list containing the ``tango.DeviceProxy`` of the exported daqs.
+        Or Empty list if no devices exported.
+    """
+    if true_context:
+        return [
+            tango.DeviceProxy(trl)
+            for trl in tango.Database().get_device_exported("low-mccs/daqreceiver/*")
+        ]
+    return []
 
 
 @pytest.fixture(name="available_stations")

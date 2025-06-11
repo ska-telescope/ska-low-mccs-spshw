@@ -5,7 +5,7 @@
 #
 # Distributed under the terms of the BSD 3-clause new license.
 # See LICENSE for more info.
-"""This subpackage contains tests of the ska-low-mccs project."""
+"""This file contains a script for checking if the calendar is booked."""
 
 
 import argparse

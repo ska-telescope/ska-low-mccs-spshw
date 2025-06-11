@@ -1287,7 +1287,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return self._attribute_state["clock_managers"].read()
 
     @attribute(
-        dtype="DevShort",
+        dtype="DevLong",
         label="ddr_write_size",
     )
     def ddr_write_size(self: MccsTile) -> int:

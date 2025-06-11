@@ -5483,7 +5483,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("DisableStationBeamFlagging")k
+        >>> dp.command_inout("DisableStationBeamFlagging")
         """
         handler = self.get_command_object("DisableStationBeamFlagging")
         (return_code, message) = handler()

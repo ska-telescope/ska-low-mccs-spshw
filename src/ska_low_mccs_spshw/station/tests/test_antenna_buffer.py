@@ -114,9 +114,6 @@ class TestAntennaBuffer(BaseDaqTest):
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
-        self._configure_daq(
-            daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
-        )
         with self.reset_context():
             self.test_logger.debug("Starting directory watch")
             self._start_directory_watch()
@@ -140,9 +137,14 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
 
-            daq_config = {
-                "nof_raw_samples": int(daq_nof_raw_samples),
-            }
+            daq_config.update(
+                {
+                    "nof_raw_samples": int(daq_nof_raw_samples),
+                }
+            )
+            self._configure_daq(
+                daq_mode="ANTENNA_BUFFER", integrated=True, daq_config=daq_config
+            )
             self._read_antenna_buffer(
                 tiles=tiles,
             )
@@ -207,6 +209,7 @@ class TestAntennaBuffer(BaseDaqTest):
 
         for tile in tiles:
             self.test_logger.info(f"Start antenna buffer for {tile}")
+            # TODO Use MccsCommandProxy in blocking mode?
             return_code, message = tile.StartAntennaBuffer(
                 json.dumps(
                     {
@@ -245,6 +248,8 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in tiles:
             self.test_logger.info(f"Reading antenna buffer for {tile}")
+            # TODO; Slow command, does it need to be?
+            # Should we actualy wait on LRC. MCCSCommandProxy?
             return_code, message = tile.ReadAntennaBuffer()
             self.test_logger.info(f"{return_code =} | {message =}")
 

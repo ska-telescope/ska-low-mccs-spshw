@@ -1,0 +1,16 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/SpsStation_StopBeamformer.json",
+    "title": "SpsStation StopBeamformer schema",
+    "description": "Schema for SpsStation's StopBeamformer command",
+    "type": "object",
+    "properties": {
+        "subarray_beam_id": {
+            "description": "Subarray beam ID of the beam to be stopped.",
+            "oneOf": [
+                {"type": "integer", "minimum": -1},
+                {"type": "null"}
+            ]
+        }
+    }
+}

@@ -258,6 +258,13 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             )
         )
 
+        stop_beamformer_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.station.schemas",
+                "SpsStation_StopBeamformer.json",
+            )
+        )
+
         initialise_schema: Final = json.loads(
             importlib.resources.read_text(
                 "ska_low_mccs_spshw.station.schemas",
@@ -284,7 +291,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             ("SelfCheck", "self_check", None),
             ("RunTest", "run_test", run_test_schema),
             ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", None),
+            ("StopBeamformer", "stop_beamformer", stop_beamformer_schema),
         ]:
             validator = (
                 None

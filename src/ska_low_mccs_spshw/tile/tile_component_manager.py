@@ -2440,7 +2440,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.warning(f"TileComponentManager: Tile access failed: {e}")
 
     def stop_beamformer(
-        self: TileComponentManager, task_callback: Optional[Callable] = None
+        self: TileComponentManager,
+        task_callback: Optional[Callable] = None,
+        *,
+        subarray_beam_id: int | None,
     ) -> tuple[TaskStatus, str] | None:
         """
         Stop the beamformer.
@@ -2450,10 +2453,18 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :return: A tuple containing a task status and a unique id string to
 
         """
+        if subarray_beam_id == -1:
+            subarray_beam_id = None
+        if subarray_beam_id is None:
+            self.logger.warning(
+                "stop_beamformer: stopping all beams"
+            )
+
         return self._submit_lrc_request(
             command_name="stop_beamformer",
             command_object=self.tile.stop_beamformer,
             task_callback=task_callback,
+            subarray_beam=subarray_beam_id,
         )
 
     @check_communicating
@@ -2498,12 +2509,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
 
-        if subarray_beam_id != -1:
+        if subarray_beam_id == -1:
             self.logger.warning(
-                "start_beamformer: separate start for different subarrays not supported"
+                "start_beamformer: starting all beams"
             )
-        if scan_id != 0:
-            self.logger.warning("start_beamformer: scan ID value ignored")
+            subarray_beam_id = None
+        #if scan_id != 0:
+        #    self.logger.warning("start_beamformer: scan ID value ignored")
 
         return self._submit_lrc_request(
             command_name="start_beamformer",
@@ -2511,6 +2523,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             task_callback=task_callback,
             start_time=start_frame,
             duration=duration,
+            scan_id=scan_id,
+            subarray_beam=subarray_beam_id,
         )
 
     @check_communicating
@@ -3351,6 +3365,26 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             return self.tile.beamformer_is_running()
+
+    @property
+    @check_communicating
+    def running_beams(self: TileComponentManager) -> Optional[list[int]]:
+        """
+        List subarray beams currently running.
+
+        return: list of subarray beam IDs
+        """
+        subarray_beams = []
+        for beam in range(48):
+            with acquire_timeout(
+                self._hardware_lock,
+                timeout=self._default_lock_timeout,
+                raise_exception=True,
+            ):
+                running = self.tile.beamformer_is_running(subarray_beam=beam)
+            if running:
+                beams.append(beam)
+        return subarray_beams
 
     @property
     @check_communicating

@@ -530,6 +530,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             )
         )
 
+        stop_beamformer_schema: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_StopBeamformer.json",
+            )
+        )
+
         for command_name, method_name, schema in [
             ("Initialise", "initialise", None),
             ("DownloadFirmware", "download_firmware", None),
@@ -537,7 +544,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("StartAntennaBuffer", "start_antenna_buffer", None),
             ("Configure", "configure", None),
             ("StartBeamformer", "start_beamformer", start_beamformer_schema),
-            ("StopBeamformer", "stop_beamformer", None),
+            ("StopBeamformer", "stop_beamformer", stop_beamformer_schema),
         ]:
             validator = (
                 None

@@ -2922,6 +2922,7 @@ class SpsStationComponentManager(
 
     def stop_beamformer(
         self: SpsStationComponentManager,
+        subarray_beam_id: int,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
@@ -2930,32 +2931,39 @@ class SpsStationComponentManager(
         This method returns immediately after it submitted
         `self._stop_beamformer` for execution.
 
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param task_callback: Update task state, defaults to None
 
         :return: a task status and response message
         """
         return self.submit_task(
-            self._stop_beamformer, args=[], task_callback=task_callback
+            self._stop_beamformer, args=[subarray_beam_id], task_callback=task_callback
         )
 
     def _stop_beamformer(
         self: SpsStationComponentManager,
+        subarray_beam_id: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
     ) -> None:
         """
         Stop the beamformer.
 
+        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
         :param task_callback: Update task state, defaults to None.
         :param task_abort_event: Check for abort, defaults to None
         """
+        parameter_list = {
+            "subarray_beam_id": subarray_beam_id,
+        }
+        json_argument = json.dumps(parameter_list)
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)
 
         stop_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
             stop_beamformer_commands += MccsCommandProxy(
-                tile_trl, "StopBeamformer", self.logger
+                tile_trl, "StopBeamformer", self.logger, default_args=json_argument
             )
         result, message = stop_beamformer_commands(
             command_evaluator=CompositeCommandResultEvaluator()

@@ -1,0 +1,16 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://skao.int/MccsTile_StopBeamformer.json",
+    "title": "MccsTile StopBeamformer schema",
+    "description": "Schema for MccsTile's StopBeamformer command",
+    "type": "object",
+    "properties": {
+        "subarray_beam_id": {
+            "description": "Subarray beam ID of the changes to be stopped.",
+            "oneOf": [
+                {"type": "integer", "minimum": -1},
+                {"type": "null"}
+            ]
+        }
+    }
+}

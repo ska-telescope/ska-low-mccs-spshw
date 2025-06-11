@@ -1,5 +1,9 @@
 # Version History
 
+## 6.2.2
+
+* [THORN-182] Update TPM current thresholds to 10.5/10A
+
 ## 6.2.1
 
 * [SKB-804] HotFix: Revert changes to force reprogramming.

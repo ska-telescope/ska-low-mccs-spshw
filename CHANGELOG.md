@@ -1,5 +1,10 @@
 # Version History
 
+## Unreleased
+
+* [THORN-214] Update RAL pipeline k8s runner tango host.
+* [THORN-214] Update RAL pipeline to run on schedule.
+
 ## 6.2.2
 
 * [THORN-182] Update TPM current thresholds to 10.5/10A

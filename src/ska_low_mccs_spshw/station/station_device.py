@@ -1485,15 +1485,9 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    # pylint: disable=line-too-long
-    def Initialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
+    def Initialise(self: SpsStation) -> DevVarLongStringArrayType:
         """
         Initialise the station.
-
-        :param argin: A json-ified dictionary adhering to the initialise schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_Initialise.json
-            :language: json
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -1505,32 +1499,6 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         """  # noqa: E501
         handler = self.get_command_object("Initialise")
         (return_code, message) = handler()
-        return ([return_code], [message])
-
-    @command(
-        dtype_in="DevString",
-        dtype_out="DevVarLongStringArray",
-    )
-    # pylint: disable=line-too-long
-    def ReInitialise(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
-        """
-        Initialise the station with overridable defaults.
-
-        :return: A tuple containing a return code and a string
-            message indicating status. The message is for
-            information purpose only.
-
-        :param argin: A json-ified dictionary adhering to the initialise schema:
-
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_Initialise.json
-            :language: json
-
-        :example:
-            >>> dp = tango.DeviceProxy("mccs/station/001")
-            >>> dp.command_inout("Initialise")
-        """  # noqa: E501
-        handler = self.get_command_object("ReInitialise")
-        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(

@@ -27,6 +27,7 @@ from typing import Any, Callable, Optional, Sequence, Union, cast
 import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
+from astropy.utils import iers
 from ska_control_model import (
     AdminMode,
     CommunicationStatus,
@@ -1416,7 +1417,9 @@ class SpsStationComponentManager(
         :return: a task status and response message
         """
         return self.submit_task(
-            self._initialise, task_callback=task_callback, args=[start_bandpasses, global_reference_time]
+            self._initialise,
+            task_callback=task_callback,
+            args=[start_bandpasses, global_reference_time],
         )
 
     @check_communicating
@@ -1630,10 +1633,21 @@ class SpsStationComponentManager(
         if global_reference_time is not None:
             self.global_reference_time = global_reference_time
         else:
+            iers_table = iers.LeapSeconds.auto_open()
+            total_leap_seconds = max(iers_table["tai_utc"])
+            tai_2000_epoch = (
+                int(Time("2000-01-01 00:00:00", scale="utc").unix) - total_leap_seconds
+            )
+            rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
             today = datetime.now(timezone.utc).date()
-            monday_morning = today - timedelta(days=today.weekday())
-            self.global_reference_time = monday_morning.strftime(
-                "%Y-%m-%dT00:00:00.000000Z"
+            reference_time = today.strftime("%Y-%m-%dT00:00:00.000000Z")
+            dt = datetime.strptime(reference_time, rfc_format)
+            time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
+            time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
+            if time_ref < int(time.time()) - 864000:
+                raise ValueError("Reference time too old: more than 10 days")
+            self.global_reference_time = datetime.strftime(
+                datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
             )
         self.logger.debug(f"Global reference time: {self.global_reference_time}")
         return ResultCode.OK

@@ -110,7 +110,7 @@ class TestAntennaBuffer(BaseDaqTest):
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "nof_tiles": len(tiles),
-            "nof_antennas": 8,
+            "nof_antennas": 4,
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
@@ -221,7 +221,9 @@ class TestAntennaBuffer(BaseDaqTest):
                 )
             )
             self.test_logger.info(f"{return_code =} | {message =}")
-            time.sleep(60)  # wait a minute for the function to finish
+            time.sleep(
+                timestamp_capture_duration + 4
+            )  # wait a minute for the function to finish
             ddr_write_size.append(tile.ddr_write_size)
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they should all be the same, so we can use the first one

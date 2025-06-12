@@ -129,8 +129,7 @@ class TestAntennaBuffer(BaseDaqTest):
                 max_ddr_byte_size=None,
             )
 
-            # daq_nof_raw_samples =
-            self._start_antenna_buffer(
+            daq_nof_raw_samples = self._start_antenna_buffer(
                 tiles=tiles,
                 antenna_ids=antenna_ids,
                 start_time=-1,
@@ -138,13 +137,13 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             # TODO: Firmware says this nof_raw_samples cannot be changed. Huh?
-            # daq_config.update(
-            #     {
-            #         "nof_raw_samples": int(daq_nof_raw_samples),
-            #     }
-            # )
+            daq_config.update(
+                {
+                    "nof_raw_samples": int(daq_nof_raw_samples),
+                }
+            )
             self._configure_daq(
-                daq_mode="ANTENNA_BUFFER", integrated=False, daq_config=daq_config
+                daq_mode="ANTENNA_BUFFER", integrated=False, **daq_config
             )
             self._read_antenna_buffer(
                 tiles=tiles,

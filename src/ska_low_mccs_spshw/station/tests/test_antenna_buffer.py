@@ -110,7 +110,7 @@ class TestAntennaBuffer(BaseDaqTest):
             "nof_beam_channels": 384,
             "nof_beam_samples": 32,
             "nof_tiles": len(tiles),
-            "nof_antennas": 8,
+            "nof_antennas": 4,
             "receiver_frame_size": receiver_frame_size,
             "max_filesize": 8,
         }
@@ -129,8 +129,7 @@ class TestAntennaBuffer(BaseDaqTest):
                 max_ddr_byte_size=None,
             )
 
-            # daq_nof_raw_samples =
-            self._start_antenna_buffer(
+            daq_nof_raw_samples = self._start_antenna_buffer(
                 tiles=tiles,
                 antenna_ids=antenna_ids,
                 start_time=-1,
@@ -138,13 +137,13 @@ class TestAntennaBuffer(BaseDaqTest):
                 continuous_mode=False,
             )
             # TODO: Firmware says this nof_raw_samples cannot be changed. Huh?
-            # daq_config.update(
-            #     {
-            #         "nof_raw_samples": int(daq_nof_raw_samples),
-            #     }
-            # )
+            daq_config.update(
+                {
+                    "nof_raw_samples": int(daq_nof_raw_samples),
+                }
+            )
             self._configure_daq(
-                daq_mode="ANTENNA_BUFFER", integrated=False, daq_config=daq_config
+                daq_mode="ANTENNA_BUFFER", integrated=False, **daq_config
             )
             self._read_antenna_buffer(
                 tiles=tiles,
@@ -222,7 +221,9 @@ class TestAntennaBuffer(BaseDaqTest):
                 )
             )
             self.test_logger.info(f"{return_code =} | {message =}")
-            time.sleep(60)  # wait a minute for the function to finish
+            time.sleep(
+                timestamp_capture_duration + 4
+            )  # wait a minute for the function to finish
             ddr_write_size.append(tile.ddr_write_size)
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they should all be the same, so we can use the first one

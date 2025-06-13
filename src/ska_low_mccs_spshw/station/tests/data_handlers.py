@@ -12,6 +12,7 @@ import abc
 import logging
 import os
 import threading
+import time
 import traceback
 from typing import Callable
 
@@ -333,6 +334,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         self: AntennaBufferDataHandler,
         logger: logging.Logger,
         nof_tiles: int,
+        nof_antenna: int,
         data_created_callback: Callable,
     ):
         """
@@ -340,20 +342,28 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
 
         :param logger: logger for the handler
         :param nof_tiles: number of tiles to expect data from
+        :param nof_antenna: the number of antenna
         :param data_created_callback: callback to call when data received
         """
         self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
+        self._nof_antenna = nof_antenna
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: AntennaBufferDataHandler) -> None:
         """Handle the reading of antenna buffer data."""
+        sleep_time = 5
+        self._logger.info(
+            f"I am sleeping for {sleep_time} seconds. "
+            "File is not ready in time apparently!"
+        )
+        time.sleep(sleep_time)
         raw_file = RawFormatFileManager(
             root_path=self._base_path, daq_mode=FileDAQModes.Burst
         )
         self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
+            tile_data, _ = raw_file.read_data(
+                antennas=range(self._nof_antenna),
                 polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
@@ -371,7 +381,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         self._logger.info("+=+= Data initialiased")
         self.data = np.zeros(
             (
-                TileData.ANTENNA_COUNT * TileData.NUM_FPGA,
+                self._nof_antenna,
                 TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
             ),

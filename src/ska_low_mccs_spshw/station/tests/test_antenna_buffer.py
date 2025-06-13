@@ -50,8 +50,12 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def test(self: TestAntennaBuffer) -> None:
         """Test the data transmission from the Antenna Buffer to the DAQ."""
+        # TODO: make variables better defined
+        nof_tiles = 1
+        nof_antenna = 2
+
         self._data_handler = AntennaBufferDataHandler(
-            self.test_logger, 1, self._data_received_callback
+            self.test_logger, nof_tiles, nof_antenna, self._data_received_callback
         )
         fpga_list = range(TileData.NUM_FPGA)
         for fpga in fpga_list:
@@ -267,7 +271,6 @@ class TestAntennaBuffer(BaseDaqTest):
             )
         )
 
-    # pylint: disable=too-many-locals
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.
 
@@ -277,49 +280,59 @@ class TestAntennaBuffer(BaseDaqTest):
         """
         self.test_logger.debug("Checking received data")
         assert self._data is not None
-        assert self._pattern is not None
-        assert self._adders is not None
-        self.test_logger.debug(f"{self._data.shape =}")
-
         data = copy(self._data)
-        adders = copy(self._adders)
-        pattern = copy(self._pattern)
-        antennas, polarisations, samples, _ = data.shape
-        self.test_logger.info(f"data shape: {data.shape}")
+        self.test_logger.info(
+            "Unpacking data into (antenna, polarisation, _). "
+            f"data shape: {data.shape}"
+        )
+        antennas, polarisations, _ = data.shape
         for antenna in range(antennas):
             for polarisation in range(polarisations):
                 self.test_logger.info(
                     f"fpga_id: {fpga_id}, antenna: {antenna},"
                     + f" polarisation: {polarisation}"
                 )
-                sample_idx = TileData.POLS_PER_ANTENNA * fpga_id
-                signal_idx = (
-                    antenna % TileData.ANTENNA_COUNT
-                ) * TileData.POLS_PER_ANTENNA + polarisation
-                exp_re = pattern[sample_idx] + adders[signal_idx]
-                exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
-                expected_data_real = self._signed(exp_re, "CHANNEL")
-                expected_data_imag = self._signed(exp_im, "CHANNEL")
-                self.test_logger.info(f"{expected_data_real =}")
-                self.test_logger.info(f"{expected_data_imag =}")
-                for i in range(samples):
-                    if (
-                        expected_data_real != data[antenna, polarisation, i, 0]
-                        or expected_data_imag != data[antenna, polarisation, i, 1]
-                    ):
-                        self.test_logger.error("Data Error!")
-                        self.test_logger.error(f"FPGA ID: {fpga_id}")
-                        self.test_logger.error(f"Antenna: {antenna}")
-                        self.test_logger.error(f"Polarization: {polarisation}")
-                        self.test_logger.error(f"Sample index: {i}")
-                        self.test_logger.error(
-                            f"Expected data real: {expected_data_real}"
+                # TODO: Remove magic numbers
+                nof_samples = 16588800
+
+                signal_data = (
+                    np.reshape(
+                        data[antenna + 2 * fpga_id, polarisation], (nof_samples // 4, 4)
+                    )
+                    .astype(np.uint8)
+                    .astype(np.uint32)
+                )
+                decoded_signal_data = (
+                    (signal_data[:, 0] & 0xFF)
+                    | (signal_data[:, 1] << 8)
+                    | (signal_data[:, 2] << 16)
+                    | (signal_data[:, 3] << 24)
+                )
+
+                if polarisation % 2 == 0:
+                    seed = decoded_signal_data[0]
+                else:
+                    seed += 1233
+                self.logger.info(
+                    "Checking incremental 32 bit pattern for "
+                    f"antenna {antenna}, pol {polarisation}"
+                )
+                for sample in range(nof_samples // 4):
+                    # exp_value = (seed + sample) & 0xFFFFFFFF
+                    exp_value = np.uint32(seed + sample)
+                    if exp_value != decoded_signal_data[sample]:
+                        self.logger.error("Error detected, ramp pattern")
+                        self.logger.error("Antenna index: " + str(antenna))
+                        self.logger.error("Buffer position: " + str(sample))
+                        self.logger.error("Expected value: " + str(exp_value))
+                        self.logger.error(
+                            "Received value: " + str(decoded_signal_data[sample])
                         )
-                        self.test_logger.error(
-                            f"Expected data imag: {expected_data_imag}"
-                        )
-                        self.test_logger.error(
-                            "Received data: " f"{data[antenna, polarisation, i, :]}"
-                        )
+                        lo = max(sample - 128, 0)
+                        hi = min(sample + 128, nof_samples // 4)
+                        self.logger.error(decoded_signal_data[lo:hi])
+                        self.logger.error("ANTENNA BUFFER TEST FAILED!")
+
                         raise AssertionError
+
                 self.test_logger.info("Data check passed")

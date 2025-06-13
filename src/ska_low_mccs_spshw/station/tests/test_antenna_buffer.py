@@ -274,7 +274,6 @@ class TestAntennaBuffer(BaseDaqTest):
             )
         )
 
-    # pylint: disable=too-many-locals
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.
 
@@ -323,10 +322,7 @@ class TestAntennaBuffer(BaseDaqTest):
                 )
                 for sample in range(nof_samples // 4):
                     # exp_value = (seed + sample) & 0xFFFFFFFF
-                    made_up_value_from_observation = 67372036
-                    exp_value = np.uint32(
-                        seed + (sample * made_up_value_from_observation)
-                    )
+                    exp_value = np.uint32(seed + sample)
                     if exp_value != decoded_signal_data[sample]:
                         self.test_logger.error("Error detected, ramp pattern")
                         self.test_logger.error(f"Antenna index: {str(antenna)}")

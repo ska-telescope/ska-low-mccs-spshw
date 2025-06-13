@@ -3810,6 +3810,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
 
+            # Test Pattern Generation
+            self.tile["fpga1.pattern_gen.jesd_ramp1_enable"] = 0x5555
+            self.tile["fpga1.pattern_gen.jesd_ramp2_enable"] = 0xAAAA
+            # Test Pattern Generation
+            self.tile["fpga2.pattern_gen.jesd_ramp1_enable"] = 0x5555
+            self.tile["fpga2.pattern_gen.jesd_ramp2_enable"] = 0xAAAA
+
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
         Stop the pattern generator.

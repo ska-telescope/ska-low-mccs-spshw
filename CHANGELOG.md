@@ -4,6 +4,7 @@
 
 * [THORN-214] Update RAL pipeline k8s runner tango host.
 * [THORN-214] Update RAL pipeline to run on schedule.
+* [THORN-71] Update to include command schemas in docs
 
 ## 6.2.2
 

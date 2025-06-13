@@ -345,7 +345,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         :param nof_antenna: the number of antenna
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
+        self._nof_samples = 16588800
         self._nof_antenna = nof_antenna
         super().__init__(logger, nof_tiles, data_created_callback)
 
@@ -371,6 +371,15 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
+
+    def set_nof_samples(self: AntennaBufferDataHandler, nof_samples: int) -> None:
+        """
+        Reconfigure the number of samples.
+
+        :param nof_samples: the new number of samples.
+        """
+        self._nof_samples = nof_samples
+        self.initialise_data()
 
     def initialise_data(self: AntennaBufferDataHandler) -> None:
         """Initialise empty antenna buffer data struct.

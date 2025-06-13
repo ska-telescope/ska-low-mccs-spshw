@@ -54,7 +54,7 @@ class TestAntennaBuffer(BaseDaqTest):
         nof_tiles = 1
         nof_antenna = 2
 
-        self._data_handler = AntennaBufferDataHandler(
+        self._data_handler: AntennaBufferDataHandler = AntennaBufferDataHandler(
             self.test_logger, nof_tiles, nof_antenna, self._data_received_callback
         )
         fpga_list = range(TileData.NUM_FPGA)
@@ -232,6 +232,8 @@ class TestAntennaBuffer(BaseDaqTest):
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they should all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
+        # TODO: Access to private member, change this.
+        self._data_handler.set_nof_samples(total_nof_samples)
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
         nof_callback = max(nof_callback, 1)
         nof_callback = 2 ** int(np.log2(nof_callback))

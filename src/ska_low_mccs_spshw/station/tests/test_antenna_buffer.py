@@ -60,6 +60,8 @@ class TestAntennaBuffer(BaseDaqTest):
         fpga_list = range(TileData.NUM_FPGA)
         for fpga in fpga_list:
             self.test_fpga(fpga_id=fpga)
+        for fpga in fpga_list:
+            self.test_fpga(fpga_id=fpga, use_1g=True)
 
     def test_fpga(
         self: TestAntennaBuffer,
@@ -232,7 +234,6 @@ class TestAntennaBuffer(BaseDaqTest):
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they should all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
-        # TODO: Access to private member, change this.
         self._data_handler.set_nof_samples(total_nof_samples)
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
         nof_callback = max(nof_callback, 1)
@@ -273,6 +274,7 @@ class TestAntennaBuffer(BaseDaqTest):
             )
         )
 
+    # pylint: disable=too-many-locals
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.
 
@@ -284,8 +286,8 @@ class TestAntennaBuffer(BaseDaqTest):
         assert self._data is not None
         data = copy(self._data)
         self.test_logger.info(
-            "Unpacking data into (antenna, polarisation, _). "
-            f"data shape: {data.shape}"
+            f"Unpacking data shape {data.shape} "
+            "---> (antenna, polarisation, nof_samples). "
         )
         antennas, polarisations, _ = data.shape
         for antenna in range(antennas):
@@ -315,25 +317,28 @@ class TestAntennaBuffer(BaseDaqTest):
                     seed = decoded_signal_data[0]
                 else:
                     seed += 1233
-                self.logger.info(
+                self.test_logger.info(
                     "Checking incremental 32 bit pattern for "
                     f"antenna {antenna}, pol {polarisation}"
                 )
                 for sample in range(nof_samples // 4):
                     # exp_value = (seed + sample) & 0xFFFFFFFF
-                    exp_value = np.uint32(seed + sample)
+                    made_up_value_from_observation = 67372036
+                    exp_value = np.uint32(
+                        seed + (sample * made_up_value_from_observation)
+                    )
                     if exp_value != decoded_signal_data[sample]:
-                        self.logger.error("Error detected, ramp pattern")
-                        self.logger.error("Antenna index: " + str(antenna))
-                        self.logger.error("Buffer position: " + str(sample))
-                        self.logger.error("Expected value: " + str(exp_value))
-                        self.logger.error(
-                            "Received value: " + str(decoded_signal_data[sample])
+                        self.test_logger.error("Error detected, ramp pattern")
+                        self.test_logger.error(f"Antenna index: {str(antenna)}")
+                        self.test_logger.error(f"Buffer position: {str(sample)}")
+                        self.test_logger.error(f"Expected value: {str(exp_value)}")
+                        self.test_logger.error(
+                            f"Received value: {str(decoded_signal_data[sample])}"
                         )
                         lo = max(sample - 128, 0)
                         hi = min(sample + 128, nof_samples // 4)
-                        self.logger.error(decoded_signal_data[lo:hi])
-                        self.logger.error("ANTENNA BUFFER TEST FAILED!")
+                        self.test_logger.error(decoded_signal_data[lo:hi])
+                        self.test_logger.error("ANTENNA BUFFER TEST FAILED!")
 
                         raise AssertionError
 

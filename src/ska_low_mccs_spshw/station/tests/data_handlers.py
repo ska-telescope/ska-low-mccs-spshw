@@ -347,7 +347,9 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
 
     def handle_data(self: AntennaBufferDataHandler) -> None:
         """Handle the reading of antenna buffer data."""
-        raw_file = RawFormatFileManager(root_path=self._base_path)
+        raw_file = RawFormatFileManager(
+            root_path=self._base_path, daq_mode=FileDAQModes.Burst
+        )
         self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
             tile_data, timestamps = raw_file.read_data(

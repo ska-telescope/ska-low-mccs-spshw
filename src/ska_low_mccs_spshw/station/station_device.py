@@ -2184,6 +2184,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         * start_time - (str, ISO UTC time) start time
         * duration - (int) if > 0 is a duration in seconds
                if < 0 run forever
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
+
         * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
                 Command affects only beamformed channels for given subarray ID
                 Default -1: all channels
@@ -2207,9 +2211,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
     @command(
         dtype_out="DevVarLongStringArray",
     )
-    def StopBeamformer(self: SpsStation) -> DevVarLongStringArrayType:
+    def StopBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
+
+        :param argin: json dictionary with optional keywords:
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -2218,10 +2227,12 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("StopBeamformer")
+        >>> dict = {"channel_groups": [0,1,4] }
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StopBeamformer", dict)
         """
         handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     @command(

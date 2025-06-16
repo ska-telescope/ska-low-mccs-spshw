@@ -2851,7 +2851,7 @@ class SpsStationComponentManager(
         *,
         start_time: Optional[str] = None,
         duration: int = -1,
-        subarray_beam_id: int = -1,
+        channel_groups: Optional[list[int]] = None,
         scan_id: int = 0,
     ) -> tuple[TaskStatus, str]:
         """
@@ -2865,14 +2865,14 @@ class SpsStationComponentManager(
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
         :param scan_id: ID of the scan which is started.
 
         :return: a task status and response message
         """
         return self.submit_task(
             self._start_beamformer,
-            args=[start_time, duration, subarray_beam_id, scan_id],
+            args=[start_time, duration, channel_groups, scan_id],
             task_callback=task_callback,
         )
 
@@ -2880,7 +2880,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_time: str,
         duration: float,
-        subarray_beam_id: int,
+        channel_groups: list[int],
         scan_id: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -2892,7 +2892,7 @@ class SpsStationComponentManager(
             defaults to 0
         :param duration: duration for which to run the beamformer,
             defaults to -1 (run forever)
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
         :param scan_id: ID of the scan which is started.
         :param task_callback: Update task state, defaults to None.
         :param task_abort_event: Check for abort, defaults to None
@@ -2902,9 +2902,10 @@ class SpsStationComponentManager(
         parameter_list = {
             "start_time": start_time,
             "duration": duration,
-            "subarray_beam_id": subarray_beam_id,
             "scan_id": scan_id,
         }
+        if channel_groups is not None:
+            parameter_list["channel_groups"] = channel_groups,
         json_argument = json.dumps(parameter_list)
         start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
@@ -2922,7 +2923,7 @@ class SpsStationComponentManager(
 
     def stop_beamformer(
         self: SpsStationComponentManager,
-        subarray_beam_id: int,
+        channel_groups: Optional[list[int]] = None,
         task_callback: Optional[Callable] = None,
     ) -> tuple[TaskStatus, str]:
         """
@@ -2931,31 +2932,35 @@ class SpsStationComponentManager(
         This method returns immediately after it submitted
         `self._stop_beamformer` for execution.
 
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
+
         :param task_callback: Update task state, defaults to None
 
         :return: a task status and response message
         """
         return self.submit_task(
-            self._stop_beamformer, args=[subarray_beam_id], task_callback=task_callback
+            self._stop_beamformer, 
+            args=[channel_groups], 
+            task_callback=task_callback
         )
 
     def _stop_beamformer(
         self: SpsStationComponentManager,
-        subarray_beam_id: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
+        *,
+        channel_groups: Optional[list[int]],
     ) -> None:
         """
         Stop the beamformer.
 
-        :param subarray_beam_id: ID of the subarray beam to start. Default = -1, all
+        :param channel_groups: Channel groups to which the command applies.
         :param task_callback: Update task state, defaults to None.
         :param task_abort_event: Check for abort, defaults to None
         """
-        parameter_list = {
-            "subarray_beam_id": subarray_beam_id,
-        }
+        parameter_list = {}
+        if channel_groups is not None: 
+            parameter_list["channel_groups"] = channel_groups
         json_argument = json.dumps(parameter_list)
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)

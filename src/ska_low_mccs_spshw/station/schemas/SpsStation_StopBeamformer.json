@@ -5,12 +5,16 @@
     "description": "Schema for SpsStation's StopBeamformer command",
     "type": "object",
     "properties": {
-        "subarray_beam_id": {
-            "description": "Subarray beam ID of the beam to be stopped.",
-            "oneOf": [
-                {"type": "integer", "minimum": -1},
-                {"type": "null"}
-            ]
+        "channel_groups": {
+            "description": "Channel groups to be started.",
+            "type": "array",
+           "items":  {
+                "type": "integer",
+               "minimum": 0,
+               "maximum": 47
+           },
+            "minItems": 1,
+           "maxItems": 48
         }
     }
 }

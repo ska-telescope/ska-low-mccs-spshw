@@ -1979,7 +1979,8 @@ class TestMccsTileCommands:
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
-        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer()
+        args = {}
+        [[result_code], [lrc_id]] = on_tile_device.StopBeamformer(ijson_dums(args))
         change_event_callbacks["lrc_command"].assert_change_event(
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )

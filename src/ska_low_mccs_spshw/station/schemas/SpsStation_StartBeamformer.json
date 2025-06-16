@@ -29,10 +29,16 @@
                 }
             ]
         },
-        "subarray_beam_id": {
-            "description": "Subarray beam ID of the changes to be started.",
-            "type": "integer",
-            "minimum": -1
+        "channel_groups": {
+            "description": "Channel groups to be started.",
+            "type": "array",
+           "items":  {
+                "type": "integer",
+               "minimum": 0,
+               "maximum": 47
+           },
+            "minItems": 1,
+           "maxItems": 48
         },
         "scan_id": {
             "description": "The unique ID for the started scan",

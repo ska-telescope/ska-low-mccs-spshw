@@ -4319,7 +4319,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         """
         Apply the pointing delays at the specified time delay.
 
-        :param argin: time delay (default = 0)
+        :param argin: time for applying the delays (default = 0)
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4344,9 +4344,9 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         * start_time - (str, ISO UTC time) start time
         * duration - (int) if > 0 is a duration in CSP frames (2211.84 us)
                if == -1 run forever
-        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
         * scan_id - (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
@@ -4356,7 +4356,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dict = {"StartTime":10, "Duration":20}
+        >>> dict = {"StartTime":10, "Duration":20, "channel_groups": [0,1,4] }
         >>> jstr = json.dumps(dict)
         >>> dp.command_inout("StartBeamformer", jstr)
         """
@@ -4365,9 +4365,14 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         return ([return_code], [message])
 
     @command(dtype_out="DevVarLongStringArray")
-    def StopBeamformer(self: MccsTile) -> DevVarLongStringArrayType:
+    def StopBeamformer(self: MccsTile, argin:str) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
+
+        :param argin: json dictionary with optional keywords:
+        * channel_groups - (list(int)) : list of channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -4376,10 +4381,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :example:
 
         >>> dp = tango.DeviceProxy("mccs/tile/01")
-        >>> dp.command_inout("StopBeamformer")
+        >>> dict = {"channel_groups": [0,1,4] }
+        >>> jstr = json.dumps(dict)
+        >>> dp.command_inout("StopBeamformer", dict)
         """
         handler = self.get_command_object("StopBeamformer")
-        (return_code, message) = handler()
+        (return_code, message) = handler(argin)
         return ([return_code], [message])
 
     class ConfigureIntegratedChannelDataCommand(FastCommand):

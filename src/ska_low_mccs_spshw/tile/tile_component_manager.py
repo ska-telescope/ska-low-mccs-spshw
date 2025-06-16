@@ -2443,20 +2443,21 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         task_callback: Optional[Callable] = None,
         *,
-        subarray_beam_id: int | None,
+        channel_groups: Optional[list[int]] = None,
     ) -> tuple[TaskStatus, str] | None:
         """
         Stop the beamformer.
 
         :param task_callback: Update task state, defaults to None
+        :param channel_groups: Channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
 
         :return: A tuple containing a task status and a unique id string to
 
         """
-        if subarray_beam_id == -1:
-            subarray_beam_id = None
-        if subarray_beam_id is None:
-            self.logger.warning(
+        if channel_groups is None:
+            self.logger.info(
                 "stop_beamformer: stopping all beams"
             )
 
@@ -2464,7 +2465,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             command_name="stop_beamformer",
             command_object=self.tile.stop_beamformer,
             task_callback=task_callback,
-            subarray_beam=subarray_beam_id,
+            channel_groups=channel_groups,
         )
 
     @check_communicating
@@ -2474,7 +2475,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         *,
         start_time: Optional[str] = None,
         duration: int = -1,
-        subarray_beam_id: int = -1,
+        channel_groups: Optional[list[int]] = None,
         scan_id: int = 0,
     ) -> tuple[TaskStatus, str] | None:
         """
@@ -2486,9 +2487,9 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param task_callback: Update task state, defaults to None
         :param start_time: Start time as ISO formatted time
         :param duration: Scan duration, in frames, default "forever"
-        :param subarray_beam_id: Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+        :param channel_groups: Channel groups to be started
+                Command affects only beamformed channels for given groups
+                Default: all channels
         :param scan_id: ID of the scan to be started. Default 0
 
         :raises ValueError: invalid time specified
@@ -2509,11 +2510,10 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 self.logger.error("start_beamformer: time not enough in the future")
                 raise ValueError("Time too early")
 
-        if subarray_beam_id == -1:
-            self.logger.warning(
+        if channel_groups is None:
+            self.logger.info(
                 "start_beamformer: starting all beams"
             )
-            subarray_beam_id = None
         #if scan_id != 0:
         #    self.logger.warning("start_beamformer: scan ID value ignored")
 
@@ -2524,7 +2524,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             start_time=start_frame,
             duration=duration,
             scan_id=scan_id,
-            subarray_beam=subarray_beam_id,
+            channel_groups=channel_groups,
         )
 
     @check_communicating

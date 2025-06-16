@@ -3199,6 +3199,46 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         buffer = tile_simulator._antenna_buffer_tile_attribute
         assert buffer["stop_antenna_buffer"] is True
 
+    def test_get_station_beam_flag(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for get_beam_flag function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        beam_flags = tile_simulator.get_station_beam_flag()
+
+        assert beam_flags[0] is False
+        assert beam_flags[1] is False
+
+    def test_change_station_beam_flagging(
+        self: TestStaticSimulator,
+        tile_component_manager: TileComponentManager,
+        tile_simulator: TileSimulator,
+    ) -> None:
+        """Unit test for get_beam_flag function.
+
+        :param tile_component_manager: The TileComponentManager instance.
+        :param tile_simulator: The tile simulator instance.
+        """
+        beam_flags = tile_simulator.get_station_beam_flag()
+
+        assert beam_flags[0] is False
+        assert beam_flags[1] is False
+
+        tile_simulator.enable_station_beam_flagging()
+
+        assert beam_flags[0] is True
+        assert beam_flags[1] is True
+
+        tile_simulator.disable_station_beam_flagging()
+
+        assert beam_flags[0] is False
+        assert beam_flags[1] is False
+
 
 class TestDynamicSimulator:
     """Class for testing using the DynamicTileSimulator as a backend."""

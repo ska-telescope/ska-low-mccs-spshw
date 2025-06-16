@@ -3846,3 +3846,16 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
             self.tile.disable_station_beam_flagging()
+
+    @property
+    @check_communicating
+    def get_station_beam_flag(self: TileComponentManager) -> list:
+        """
+        Return the station beam former flag value.
+
+        :return: station beam former flag value
+        """
+        with acquire_timeout(
+            self._hardware_lock, self._default_lock_timeout, raise_exception=True
+        ):
+            return self.tile.get_station_beam_flag()

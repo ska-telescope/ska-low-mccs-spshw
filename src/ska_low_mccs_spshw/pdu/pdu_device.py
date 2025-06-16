@@ -8,16 +8,16 @@
 
 from __future__ import annotations  # allow forward references in type hints
 
-import functools
 import importlib.resources
 import sys
 from typing import Any, cast
 
 from ska_attribute_polling.attribute_polling_device import AttributePollingDevice
 from ska_control_model import CommunicationStatus, HealthState, PowerState
+from ska_low_mccs_common import MccsBaseDevice
 from ska_snmp_device.definitions import load_device_definition, parse_device_definition
 from tango import Attribute
-from tango.server import command, device_property
+from tango.server import attribute, command, device_property
 
 from ska_low_mccs_spshw.pdu.pdu_health_model import PduHealthModel
 
@@ -27,7 +27,7 @@ __all__ = ["MccsPdu", "main"]
 
 
 # pylint: disable=too-many-instance-attributes
-class MccsPdu(AttributePollingDevice):
+class MccsPdu(MccsBaseDevice, AttributePollingDevice):
     """An implementation of a PDU Tango device for MCCS."""
 
     Model = device_property(dtype=str, mandatory=True)
@@ -39,7 +39,7 @@ class MccsPdu(AttributePollingDevice):
     V3PrivKey = device_property(dtype=str)
     MaxObjectsPerSNMPCmd = device_property(dtype=int, default_value=24)
     UpdateRate = device_property(dtype=float, default_value=3.0)
-    PowerMashallerTrl = device_property(dtype=str, default_value="")
+    PowerMarshallerTrl = device_property(dtype=str, default_value="")
     PortDeviceTrls = device_property(dtype=(str,), default_value=[])
 
     DeviceModels: dict[str, str] = {
@@ -75,11 +75,11 @@ class MccsPdu(AttributePollingDevice):
         self._off_value: int
         self.component_manager: PduComponentManager
 
-        self._port_device_information: list[str] = []
+        self._port_device_information: list[str] = [""] * 24
 
         if self.PortDeviceTrls:
-            for trl in self.PortDeviceTrls:
-                self._port_device_information.append(trl)
+            for i, trl in enumerate(self.PortDeviceTrls):
+                self._port_device_information[i] = trl
 
     def init_device(self: MccsPdu) -> None:
         """Initialise the device."""
@@ -118,7 +118,7 @@ class MccsPdu(AttributePollingDevice):
         """Initialise the state model."""
         super()._init_state_model()
         self._health_state = HealthState.UNKNOWN
-        self._health_model = PduHealthModel(self._component_state_changed)
+        self._health_model = PduHealthModel(self._health_changed, True)
         self.set_change_event("healthState", True, False)
         self.set_archive_event("healthState", True, False)
 
@@ -162,7 +162,7 @@ class MccsPdu(AttributePollingDevice):
             component_state_callback=self._component_state_changed,
             attributes=dynamic_attrs,
             poll_rate=self.UpdateRate,
-            power_marshaller_trl=self.PowerMashallerTrl,
+            power_marshaller_trl=self.PowerMarshallerTrl,
         )
 
     def _communication_state_changed(
@@ -193,6 +193,7 @@ class MccsPdu(AttributePollingDevice):
         self._health_model.update_state(
             communicating=communication_state == CommunicationStatus.ESTABLISHED
         )
+        super()._communication_state_changed(communication_state)
 
     def _component_state_changed(
         self: MccsPdu,
@@ -223,6 +224,30 @@ class MccsPdu(AttributePollingDevice):
             info_msg = f"Updating {attribute_name}, {value}"
             self.logger.info(info_msg)
 
+    def _health_changed(self: MccsPdu, health: HealthState) -> None:
+        """
+        Handle change in this device's health state.
+
+        This is a callback hook, called whenever the HealthModel's
+        evaluated health state changes. It is responsible for updating
+        the tango side of things i.e. making sure the attribute is up to
+        date, and events are pushed.
+
+        :param health: the new health value
+        """
+        if self._health_state != health:
+            self._health_state = health
+            self.push_change_event("healthState", health)
+
+    @attribute(dtype="DevString")
+    def healthReport(self: MccsPdu) -> str:
+        """
+        Get the health report.
+
+        :return: the health report.
+        """
+        return self._health_model.health_report
+
     @command(dtype_in=int)
     def pduPortOn(self: MccsPdu, port: int) -> None:
         """
@@ -248,13 +273,12 @@ class MccsPdu(AttributePollingDevice):
 
         :param port: The pdu port to turn on
         """
-        if not self._port_device_information:
+        if not self._port_device_information or self._port_device_information[port]:
             self.logger.error("No information known about attached device")
             return
         attached_device_info = self._port_device_information[port]
-        power_callback = functools.partial(self.pduPortOn, port)
         self.component_manager.schedule_power(
-            attached_device_info, "on", power_callback
+            attached_device_info, self.get_name(), "pduPortOn", str(port)
         )
 
     @command(dtype_in=int)
@@ -264,13 +288,12 @@ class MccsPdu(AttributePollingDevice):
 
         :param port: The pdu port to turn off
         """
-        if not self._port_device_information:
+        if not self._port_device_information or self._port_device_information[port]:
             self.logger.error("No information known about attached device")
             return
         attached_device_info = self._port_device_information[port]
-        power_callback = functools.partial(self.pduPortOff, port)
         self.component_manager.schedule_power(
-            attached_device_info, "off", power_callback
+            attached_device_info, self.get_name(), "pduPortOff", str(port)
         )
 
 

@@ -4364,12 +4364,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 
-    @command(dtype_out="DevVarLongStringArray")
-    def StopBeamformer(self: MccsTile, argin:str) -> DevVarLongStringArrayType:
+    @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
+    def StopBeamformer(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
         """
         Stop the beamformer.
 
         :param argin: json dictionary with optional keywords:
+
         * channel_groups - (list(int)) : list of channel groups to be started
                 Command affects only beamformed channels for given groups
                 Default: all channels

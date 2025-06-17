@@ -883,9 +883,13 @@ def test_Standby(
         ),
         pytest.param(
             "StopBeamformer",
-            None,
+            "{}",
             "StopBeamformer",
-            None,
+            json.dumps(
+                {
+                    "channel_groups": None,
+                }
+            ),
         ),
         pytest.param(
             "StartBeamformer",
@@ -895,7 +899,6 @@ def test_Standby(
                 {
                     "start_time": None,
                     "duration": -1,
-                    "subarray_beam_id": -1,
                     "scan_id": 0,
                 }
             ),

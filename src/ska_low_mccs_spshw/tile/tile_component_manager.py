@@ -2457,9 +2457,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         """
         if channel_groups is None:
-            self.logger.info(
-                "stop_beamformer: stopping all beams"
-            )
+            self.logger.info("stop_beamformer: stopping all beams")
 
         return self._submit_lrc_request(
             command_name="stop_beamformer",
@@ -2511,10 +2509,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                 raise ValueError("Time too early")
 
         if channel_groups is None:
-            self.logger.info(
-                "start_beamformer: starting all beams"
-            )
-        #if scan_id != 0:
+            self.logger.info("start_beamformer: starting all beams")
+        # if scan_id != 0:
         #    self.logger.warning("start_beamformer: scan ID value ignored")
 
         return self._submit_lrc_request(
@@ -3372,7 +3368,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         """
         List subarray beams currently running.
 
-        return: list of subarray beam IDs
+        :return: list of subarray beam IDs
         """
         subarray_beams = []
         for beam in range(48):
@@ -3383,7 +3379,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             ):
                 running = self.tile.beamformer_is_running(subarray_beam=beam)
             if running:
-                beams.append(beam)
+                subarray_beams.append(beam)
         return subarray_beams
 
     @property

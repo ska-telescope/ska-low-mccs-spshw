@@ -2076,7 +2076,7 @@ class TileSimulator:
         duration: int = -1,
         scan_id: int = 0,
         mask: int | None = None,
-        beam: int | None = None,
+        subarray_beam: int | None = None,
         channel_groups: list[int] | None = None,
     ) -> bool:
         """
@@ -2087,7 +2087,8 @@ class TileSimulator:
         :param scan_id: ID of the scan, to be specified in the CSP SPEAD header
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param subarray_beam: subarray_beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
 
@@ -2095,8 +2096,13 @@ class TileSimulator:
         """
         if self.beamformer_is_running():
             return False
-        self.tpm.beam1.start()  # type: ignore
-        self.tpm.beam2.start()  # type: ignore
+        if subarray_beam is None:
+            self.tpm.beam1.start()  # type: ignore
+            self.tpm.beam2.start()  # type: ignore
+        elif subarray_beam == 1:
+            self.tpm.beam1.start()  # type: ignore
+        elif subarray_beam == 2:
+            self.tpm.beam2.start()  # type: ignore
         return True
 
     @check_mocked_overheating
@@ -2104,7 +2110,7 @@ class TileSimulator:
     def stop_beamformer(
         self: TileSimulator,
         mask: bool | None = None,
-        beam: int | None = None,
+        subarray_beam: int | None = None,
         channel_groups: list[int] | None = None,
     ) -> None:
         """
@@ -2112,12 +2118,18 @@ class TileSimulator:
 
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param subarray_beam: Subarray beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
         """
-        self.tpm.beam1.stop()  # type: ignore
-        self.tpm.beam2.stop()  # type: ignore
+        if subarray_beam is None:
+            self.tpm.beam1.stop()  # type: ignore
+            self.tpm.beam2.stop()  # type: ignore
+        elif subarray_beam == 1:
+            self.tpm.beam1.stop()  # type: ignore
+        elif subarray_beam == 2:
+            self.tpm.beam2.stop()  # type: ignore
 
     @check_mocked_overheating
     @connected
@@ -2574,7 +2586,7 @@ class TileSimulator:
     def beamformer_is_running(
         self: TileSimulator,
         mask: bool | None = None,
-        beam: int | None = None,
+        subarray_beam: int | None = None,
         channel_groups: list[int] | None = None,
     ) -> bool:
         """
@@ -2582,7 +2594,8 @@ class TileSimulator:
 
         :param mask: Bitmask of the channels to be started.
             Ignored if beam is specified.
-        :param beam: Beam number to start. Computes the mask using beam table
+        :param subarray_beam: subarray beam number to start.
+            Computes the mask using beam table
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
 

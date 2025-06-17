@@ -910,17 +910,17 @@ class SpsStationComponentManager(
         attribute_name = attribute_name.lower()
         match attribute_name:
             case "adcpower":
-                self._adc_power[logical_tile_id] = attribute_value.tolist()
+                self._adc_power[logical_tile_id] = list(attribute_value)
                 adc_powers: list[float] = []
                 for _, adc_power in self._adc_power.items():
                     if adc_power is not None:
                         adc_powers += adc_power
                 self._update_component_state(adc_power=adc_powers)
             case "statictimedelays":
-                self._static_delays[logical_tile_id] = attribute_value.tolist()
+                self._static_delays[logical_tile_id] = list(attribute_value)
             case "preadulevels":
                 # Note: Currently all we do is update the attribute value.
-                self._preadu_levels[logical_tile_id] = attribute_value.tolist()
+                self._preadu_levels[logical_tile_id] = list(attribute_value)
             case "ppsdelay":
                 # Only calc for TPMs actually present.
                 self._pps_delays[logical_tile_id] = attribute_value
@@ -2880,7 +2880,7 @@ class SpsStationComponentManager(
         self: SpsStationComponentManager,
         start_time: str,
         duration: float,
-        channel_groups: list[int],
+        channel_groups: list[int] | None,
         scan_id: int,
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
@@ -2905,7 +2905,7 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         if channel_groups is not None:
-            parameter_list["channel_groups"] = channel_groups,
+            parameter_list["channel_groups"] = (channel_groups,)
         json_argument = json.dumps(parameter_list)
         start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:
@@ -2923,8 +2923,9 @@ class SpsStationComponentManager(
 
     def stop_beamformer(
         self: SpsStationComponentManager,
-        channel_groups: Optional[list[int]] = None,
         task_callback: Optional[Callable] = None,
+        *,
+        channel_groups: Optional[list[int]] = None,
     ) -> tuple[TaskStatus, str]:
         """
         Submit the _stop_beamformer method.
@@ -2938,18 +2939,16 @@ class SpsStationComponentManager(
 
         :return: a task status and response message
         """
+        logging.info(f"stop_beamformer called with channel_groups {channel_groups}")
         return self.submit_task(
-            self._stop_beamformer, 
-            args=[channel_groups], 
-            task_callback=task_callback
+            self._stop_beamformer, args=[channel_groups], task_callback=task_callback
         )
 
     def _stop_beamformer(
         self: SpsStationComponentManager,
+        channel_groups: Optional[list[int]],
         task_callback: Optional[Callable] = None,
         task_abort_event: Optional[threading.Event] = None,
-        *,
-        channel_groups: Optional[list[int]],
     ) -> None:
         """
         Stop the beamformer.
@@ -2959,8 +2958,8 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         parameter_list = {}
-        if channel_groups is not None: 
-            parameter_list["channel_groups"] = channel_groups
+        #if channel_groups is not None:
+        parameter_list = {"channel_groups": channel_groups}
         json_argument = json.dumps(parameter_list)
         if task_callback is not None:
             task_callback(status=TaskStatus.IN_PROGRESS)

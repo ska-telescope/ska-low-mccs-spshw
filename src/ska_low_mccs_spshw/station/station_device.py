@@ -2185,12 +2185,8 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         * duration - (int) if > 0 is a duration in seconds
                if < 0 run forever
         * channel_groups - (list(int)) : list of channel groups to be started
-                Command affects only beamformed channels for given groups
-                Default: all channels
-
-        * subarray_beam_id - (int) : Subarray beam ID of the channels to be started
-                Command affects only beamformed channels for given subarray ID
-                Default -1: all channels
+               Command affects only beamformed channels for given groups
+               Default: all channels
         * scan_id - (int) The unique ID for the started scan. Default 0
 
         :return: A tuple containing a return code and a string
@@ -2209,6 +2205,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         return ([return_code], [message])
 
     @command(
+        dtype_in="DevString",
         dtype_out="DevVarLongStringArray",
     )
     def StopBeamformer(self: SpsStation, argin: str) -> DevVarLongStringArrayType:
@@ -2216,9 +2213,10 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
         Stop the beamformer.
 
         :param argin: json dictionary with optional keywords:
+
         * channel_groups - (list(int)) : list of channel groups to be started
-                Command affects only beamformed channels for given groups
-                Default: all channels
+            Command affects only beamformed channels for given groups
+            Default: all channels
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

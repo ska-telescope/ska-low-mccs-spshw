@@ -402,6 +402,7 @@ class TestMccsTile:
             "currentFrame",
             "pendingDataRequests",
             "isBeamformerRunning",
+            "getStationBeamFlag",
             "rfiCount",
         ]
 

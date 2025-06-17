@@ -270,6 +270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
+            "get_station_beam_flag": "getStationBeamFlag",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
@@ -2658,6 +2659,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :returns: the RFI count per antenna/pol.
         """
         return self._attribute_state["rfiCount"].read()
+
+    @attribute(
+        dtype=("DevBoolean",),
+        max_dim_x=2,  # fpgas
+    )
+    def getStationBeamFlag(
+        self: MccsTile,
+    ) -> list[bool]:
+        """
+        Return the station beam flag value for all fpgas.
+
+        :return: list of station beam flags (bool)
+        """
+        return self.component_manager.get_station_beam_flag
 
     @attribute(
         dtype="DevDouble",

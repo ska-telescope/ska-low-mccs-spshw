@@ -43,13 +43,13 @@ class SetSubrackFanSpeedCommand(SubmittedSlowCommand):
     This command takes as input a JSON string that conforms to the
     following schema:
 
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetSubrackFanSpeed.json
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetSubrackFanSpeed.json
        :language: json
     """  # noqa: E501
 
     SCHEMA: Final = json.loads(
         importlib.resources.read_text(
-            "ska_low_mccs_spshw.subrack.schemas",
+            "ska_low_mccs_spshw.schemas.subrack",
             "MccsSubrack_SetSubrackFanSpeed.json",
         )
     )
@@ -123,13 +123,13 @@ class SetSubrackFanModeCommand(SubmittedSlowCommand):
     This command takes as input a JSON string that conforms to the
     following schema:
 
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetSubrackFanMode.json
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetSubrackFanMode.json
        :language: json
     """  # noqa: E501
 
     SCHEMA: Final = json.loads(
         importlib.resources.read_text(
-            "ska_low_mccs_spshw.subrack.schemas",
+            "ska_low_mccs_spshw.schemas.subrack",
             "MccsSubrack_SetSubrackFanMode.json",
         )
     )
@@ -198,13 +198,13 @@ class SetPowerSupplyFanSpeedCommand(SubmittedSlowCommand):
     This command takes as input a JSON string that conforms to the
     following schema:
 
-    .. literalinclude:: /../../src/ska_low_mccs_spshw/subrack/schemas/MccsSubrack_SetPowerSupplyFanSpeed.json
+    .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/subrack/MccsSubrack_SetPowerSupplyFanSpeed.json
        :language: json
     """  # noqa: E501
 
     SCHEMA: Final = json.loads(
         importlib.resources.read_text(
-            "ska_low_mccs_spshw.subrack.schemas",
+            "ska_low_mccs_spshw.schemas.subrack",
             "MccsSubrack_SetPowerSupplyFanSpeed.json",
         )
     )

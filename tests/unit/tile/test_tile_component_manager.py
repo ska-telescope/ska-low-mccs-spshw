@@ -3229,12 +3229,14 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         assert beam_flags[0] is False
         assert beam_flags[1] is False
 
-        tile_simulator.enable_station_beam_flagging()
+        tile_component_manager.enable_station_beam_flagging()
+        beam_flags = tile_simulator.get_station_beam_flag()
 
         assert beam_flags[0] is True
         assert beam_flags[1] is True
 
-        tile_simulator.disable_station_beam_flagging()
+        tile_component_manager.disable_station_beam_flagging()
+        beam_flags = tile_simulator.get_station_beam_flag()
 
         assert beam_flags[0] is False
         assert beam_flags[1] is False

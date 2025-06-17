@@ -253,14 +253,14 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         start_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.station.schemas",
+                "ska_low_mccs_spshw.schemas.station",
                 "SpsStation_StartBeamformer.json",
             )
         )
 
         initialise_schema: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.station.schemas",
+                "ska_low_mccs_spshw.schemas.station",
                 "SpsStation_Initialise.json",
             )
         )
@@ -1516,7 +1516,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         :param argin: A json-ified dictionary adhering to the initialise schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/station/schemas/SpsStation_Initialise.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/station/SpsStation_Initialise.json
             :language: json
 
         :example:

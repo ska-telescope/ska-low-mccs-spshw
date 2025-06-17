@@ -22,6 +22,10 @@ import sphinx.ext.autodoc
 from sphinx.ext.autodoc.mock import _MockObject
 
 
+# Removing some simulator code from autodoc.
+# Normally we could use  @functools.wraps, but in this specific case
+# the decorator antenna_buffer_implemented cannot use as it changes
+# test behavior
 def skip_member(app, what, name, obj, skip, options):
     if name in {
         "antenna_buffer_implemented",

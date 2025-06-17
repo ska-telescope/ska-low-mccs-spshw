@@ -187,8 +187,6 @@ telmodel-deps:
 k8s-pre-install-chart: telmodel-deps
 k8s-pre-uninstall-chart: telmodel-deps
 
-.PHONY: k8s-do-test
-
 python-pre-format:
 	python docs/scripts/document_schemas.py
 

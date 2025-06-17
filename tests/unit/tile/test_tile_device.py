@@ -1941,6 +1941,42 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
+    def test_EnableDisableBeamFalgging(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        tile_component_manager: unittest.mock.Mock,
+    ) -> None:
+        """
+        Test for Enable/Disable Beam Flagging Commands.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param tile_component_manager: A component manager.
+            (Using a TileSimulator)
+        """
+        values = tile_component_manager.get_station_beam_flag
+        # assert that all values are false
+        assert all(not value for value in values)
+
+        # Enable Beam Flagging
+        [[result_code], [message]] = on_tile_device.EnableStationBeamFlagging()
+
+        assert result_code == ResultCode.OK
+
+        values = tile_component_manager.get_station_beam_flag
+        # assert that all values are true
+        assert all(value for value in values)
+
+        # Disable Beam Flagging
+        [[result_code], [message]] = on_tile_device.DisableStationBeamFlagging()
+
+        assert result_code == ResultCode.OK
+
+        values = tile_component_manager.get_station_beam_flag
+        # assert that all values are false again
+        assert all(not value for value in values)
+
     @pytest.mark.parametrize("start_time", (None,))
     @pytest.mark.parametrize("duration", (None, -1))
     def test_start_and_stop_beamformer(

@@ -5388,6 +5388,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "EnableStationBeamFlagging command completed OK"
+        FAILED_MESSAGE = "EnableStationBeamFlagging failed to execute"
 
         def do(
             self: MccsTile.EnableStationBeamFlaggingCommand,
@@ -5400,7 +5401,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.enable_station_beam_flagging()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            beam_flag_values = self._component_manager.get_station_beam_flag
+
+            if all(value for value in beam_flag_values):
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
@@ -5440,6 +5445,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "DisableStationBeamFlagging command completed OK"
+        FAILED_MESSAGE = "DisableStationBeamFlagging failed to execute"
 
         def do(
             self: MccsTile.DisableStationBeamFlaggingCommand,
@@ -5452,7 +5458,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.disable_station_beam_flagging()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            beam_flag_values = self._component_manager.get_station_beam_flag
+
+            if all(not value for value in beam_flag_values):
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:

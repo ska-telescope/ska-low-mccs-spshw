@@ -1,8 +1,8 @@
 # Version History
 
-## Unreleased
+## 6.3.0
 
-* [THORN-11] ska-low-sps-tpm-api dependency 0.2.2 -> 0.3.0 
+* [THORN-11] ska-low-sps-tpm-api dependency 0.2.2 -> 0.3.0
 * [THORN-11] Add ConfigureRampPattern to MccsTile.
 * [THORN-214] Update RAL pipeline k8s runner tango host.
 * [THORN-214] Update RAL pipeline to run on schedule.

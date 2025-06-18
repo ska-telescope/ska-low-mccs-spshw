@@ -3199,7 +3199,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         buffer = tile_simulator._antenna_buffer_tile_attribute
         assert buffer["stop_antenna_buffer"] is True
 
-    def test_get_station_beam_flag(
+    def test_is_station_beam_flagging_enabled(
         self: TestStaticSimulator,
         tile_component_manager: TileComponentManager,
         tile_simulator: TileSimulator,
@@ -3209,7 +3209,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
-        beam_flags = tile_simulator.get_station_beam_flag()
+        beam_flags = tile_simulator.is_station_beam_flagging_enabled()
 
         assert beam_flags[0] is False
         assert beam_flags[1] is False
@@ -3224,19 +3224,19 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         :param tile_component_manager: The TileComponentManager instance.
         :param tile_simulator: The tile simulator instance.
         """
-        beam_flags = tile_simulator.get_station_beam_flag()
+        beam_flags = tile_simulator.is_station_beam_flagging_enabled()
 
         assert beam_flags[0] is False
         assert beam_flags[1] is False
 
         tile_component_manager.enable_station_beam_flagging()
-        beam_flags = tile_simulator.get_station_beam_flag()
+        beam_flags = tile_simulator.is_station_beam_flagging_enabled()
 
         assert beam_flags[0] is True
         assert beam_flags[1] is True
 
         tile_component_manager.disable_station_beam_flagging()
-        beam_flags = tile_simulator.get_station_beam_flag()
+        beam_flags = tile_simulator.is_station_beam_flagging_enabled()
 
         assert beam_flags[0] is False
         assert beam_flags[1] is False

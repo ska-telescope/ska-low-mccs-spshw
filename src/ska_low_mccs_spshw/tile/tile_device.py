@@ -270,7 +270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
-            "get_station_beam_flag": "getStationBeamFlag",
+            "is_station_beam_flagging_enabled": "getStationBeamFlag",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
@@ -2668,11 +2668,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
     ) -> list[bool]:
         """
-        Return the station beam flag value for all fpgas.
+        Return True if station beam data flagging is enabled
 
-        :return: list of station beam flags (bool)
+        :return: a list of bool values corresponding to the fpgas
         """
-        return self.component_manager.get_station_beam_flag
+        return self.component_manager.is_station_beam_flagging_enabled
 
     @attribute(
         dtype="DevDouble",
@@ -5416,7 +5416,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.enable_station_beam_flagging()
-            beam_flag_values = self._component_manager.get_station_beam_flag
+            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
 
             if all(value for value in beam_flag_values):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
@@ -5473,7 +5473,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.disable_station_beam_flagging()
-            beam_flag_values = self._component_manager.get_station_beam_flag
+            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
 
             if all(not value for value in beam_flag_values):
                 return (ResultCode.OK, self.SUCCEEDED_MESSAGE)

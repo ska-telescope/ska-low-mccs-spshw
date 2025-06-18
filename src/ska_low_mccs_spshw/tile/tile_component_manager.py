@@ -3849,13 +3849,13 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
     @property
     @check_communicating
-    def get_station_beam_flag(self: TileComponentManager) -> list:
+    def is_station_beam_flagging_enabled(self: TileComponentManager) -> list:
         """
-        Return the station beam former flag value.
+        Return station beam data flagging state for each fpga
 
-        :return: station beam former flag value
+        :return: a list of bool values corresponding to the fpgas
         """
         with acquire_timeout(
             self._hardware_lock, self._default_lock_timeout, raise_exception=True
         ):
-            return self.tile.get_station_beam_flag()
+            return self.tile.is_station_beam_flagging_enabled()

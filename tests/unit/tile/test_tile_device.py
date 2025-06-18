@@ -1956,7 +1956,7 @@ class TestMccsTileCommands:
         :param tile_component_manager: A component manager.
             (Using a TileSimulator)
         """
-        values = tile_component_manager.get_station_beam_flag
+        values = tile_component_manager.is_station_beam_flagging_enabled
         # assert that all values are false
         assert all(not value for value in values)
 
@@ -1965,7 +1965,7 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
-        values = tile_component_manager.get_station_beam_flag
+        values = tile_component_manager.is_station_beam_flagging_enabled
         # assert that all values are true
         assert all(value for value in values)
 
@@ -1974,7 +1974,7 @@ class TestMccsTileCommands:
 
         assert result_code == ResultCode.OK
 
-        values = tile_component_manager.get_station_beam_flag
+        values = tile_component_manager.is_station_beam_flagging_enabled
         # assert that all values are false again
         assert all(not value for value in values)
 

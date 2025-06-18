@@ -280,11 +280,11 @@ class StationBeamformer:
         """Disable station beam flagging."""
         self.station_beam_flag = False
 
-    def get_station_beam_flag(self) -> bool:
+    def is_station_beam_flagging_enabled(self) -> bool:
         """
-        Get station beam flag state.
-
-        :return: is station beam flag enabled (bool)
+        Get the station beam flag state for each FPGA.
+        
+        :return: station beam flag values as list of bool values
         """
         return self.station_beam_flag
 
@@ -1625,7 +1625,7 @@ class TileSimulator:
             self.tpm.station_beamf[fpga].disable_flagging()
 
     @connected
-    def get_station_beam_flag(
+    def is_station_beam_flagging_enabled(
         self: TileSimulator, fpga_id: Optional[int] = None
     ) -> list:
         """
@@ -1643,7 +1643,7 @@ class TileSimulator:
             fpgas = [fpga_id]
 
         for fpga in fpgas:
-            values.append(self.tpm.station_beamf[fpga].get_station_beam_flag())
+            values.append(self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled())
 
         return values
 

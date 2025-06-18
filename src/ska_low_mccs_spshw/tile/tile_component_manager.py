@@ -3785,6 +3785,32 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
 
+    def configure_ramp_pattern(
+        self: TileComponentManager,
+        stage: str,
+        polarisation: int,
+        ramp: str,
+    ) -> None:
+        """
+        Configure the ramp pattern.
+
+        :param stage: The stage in the signal chain where the ramp is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
+            or 'beamf' (output of tile beamformer) or 'all' for all stages.
+        :param polarisation: The polarisation to apply the ramp for.
+            This must be 0, 1 or -1 to use all stages.
+        :param ramp: The ramp to use. Options are 'ramp1', 'ramp2' or 'all'
+            to use all ramps. (note: ramp2 = ramp1 + 1234)
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            self.tile.configure_ramp_pattern(
+                stage=stage, polarisation=polarisation, ramp=ramp
+            )
+
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """
         Stop the pattern generator.

@@ -2177,6 +2177,51 @@ class TestMccsTileCommands:
             tile_device.ConfigureTestGenerator(json.dumps({"pulse_frequency": 8}))
 
     @pytest.mark.parametrize(
+        ("param", "expected_failure"),
+        [
+            ({"stage": "invalid_stage"}, True),  # missing kwarg ramp and polariation
+            ({"stage": "jesd", "polarisation": -1, "ramp": "ramp1"}, False),
+            (
+                {
+                    "stage": "jesd",
+                    "polarisation": -1,
+                },
+                True,
+            ),  # missing kwarg ramp
+            (
+                {"stage": "jesd", "polarisation": 2, "ramp": "ramp1"},
+                True,
+            ),  # invalid polarisation
+            (
+                {"stage": "jesd", "polarisation": -1, "ramp": "invalid_ramp"},
+                True,
+            ),  # invalid ramp
+        ],
+    )
+    def test_ramp_pattern(
+        self: TestMccsTileCommands,
+        on_tile_device: MccsDeviceProxy,
+        param: dict,
+        expected_failure: bool,
+    ) -> None:
+        """
+        Test interface for configuring ramp pattern.
+
+        :param on_tile_device: fixture that provides a
+            :py:class:`tango.DeviceProxy` to the device under test, in a
+            :py:class:`tango.test_context.DeviceTestContext`.
+        :param param: A dictionary with the parameter.
+        :param expected_failure: True if we expect a failure.
+        """
+        on_tile_device.adminMode = AdminMode.ENGINEERING
+
+        if not expected_failure:
+            on_tile_device.ConfigureRampPattern(json.dumps(param))
+        else:
+            with pytest.raises(Exception):
+                on_tile_device.ConfigureRampPattern(json.dumps(param))
+
+    @pytest.mark.parametrize(
         "incorrect_param",
         [
             ({"stage": "invalid_stage"}),

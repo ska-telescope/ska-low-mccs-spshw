@@ -507,6 +507,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("StopDataTransmission", self.StopDataTransmissionCommand),
             ("ConfigureTestGenerator", self.ConfigureTestGeneratorCommand),
             ("ConfigurePatternGenerator", self.ConfigurePatternGeneratorCommand),
+            ("ConfigureRampPattern", self.ConfigureRampPatternCommand),
             ("StartPatternGenerator", self.StartPatternGeneratorCommand),
             ("StopPatternGenerator", self.StopPatternGeneratorCommand),
             ("StartADCs", self.StartAdcsCommand),
@@ -5137,6 +5138,96 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         >>> values = dp.command_inout("ConfigurePatternGenerator", jstr)
         """
         handler = self.get_command_object("ConfigurePatternGenerator")
+        (return_code, message) = handler(argin)
+        return ([return_code], [message])
+
+    class ConfigureRampPatternCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class for handling the ConfigureRampPattern() command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureRampPattern.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.tile.schemas",
+                "MccsTile_ConfigureRampPattern.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.ConfigureRampPatternCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new ConfigureRampPatternCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator("ConfigureRampPattern", self.SCHEMA, logger)
+            super().__init__(logger, validator)
+
+        SUCCEEDED_MESSAGE = "ConfigureRampPattern command completed OK"
+
+        def do(
+            self: MccsTile.ConfigureRampPatternCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> tuple[ResultCode, str]:
+            """
+            Implement :py:meth:`.MccsTile.ConfigureRampPattern` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: A tuple containing a return code and a string
+                   message indicating status. The message is for
+                   information purpose only.
+            """
+            self._component_manager.configure_ramp_pattern(**kwargs)
+            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+
+    @command(
+        dtype_in="DevString",
+        dtype_out="DevVarLongStringArray",
+        fisallowed="is_engineering",
+    )
+    def ConfigureRampPattern(self: MccsTile, argin: str) -> DevVarLongStringArrayType:
+        """
+        Configure the ramp pattern.
+
+        :param argin: JSON dictionary with the following keywords:
+
+        * stage: The stage in the signal chain where the pattern is injected.
+            Options are: 'jesd' (output of ADCs), 'channel' (output of the
+            channelizer), or 'beamf' (output of the tile beamformer).
+        * polarisation: The polarisation to apply the ramp for.
+            This must be 0, 1 or -1 to use all stages.
+        * ramp: The ramp to use. Options are 'ramp1', 'ramp2' or 'all'
+            to use all ramps. (note: ramp2 = ramp1 + 1234)
+
+        :return: A tuple containing a return code and a string
+            message indicating status. The message is for
+            information purpose only.
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> config = {"stage": "jesd", "polarisation": -1, "ramp": "all"}
+        >>> jstr = json.dumps(config)
+        >>> values = dp.command_inout("ConfigureRampPattern", jstr)
+        """
+        handler = self.get_command_object("ConfigureRampPattern")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
 

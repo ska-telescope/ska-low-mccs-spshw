@@ -3851,7 +3851,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def is_station_beam_flagging_enabled(self: TileComponentManager) -> list:
         """
-        Return station beam data flagging state for each fpga
+        Return station beam data flagging state for each fpga.
 
         :return: a list of bool values corresponding to the fpgas
         """

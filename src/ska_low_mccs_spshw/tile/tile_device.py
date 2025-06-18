@@ -2668,7 +2668,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         self: MccsTile,
     ) -> list[bool]:
         """
-        Return True if station beam data flagging is enabled
+        Return True if station beam data flagging is enabled.
 
         :return: a list of bool values corresponding to the fpgas
         """

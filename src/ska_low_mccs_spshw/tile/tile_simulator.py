@@ -283,7 +283,7 @@ class StationBeamformer:
     def is_station_beam_flagging_enabled(self) -> bool:
         """
         Get the station beam flag state for each FPGA.
-        
+
         :return: station beam flag values as list of bool values
         """
         return self.station_beam_flag
@@ -1643,7 +1643,9 @@ class TileSimulator:
             fpgas = [fpga_id]
 
         for fpga in fpgas:
-            values.append(self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled())
+            values.append(
+                self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled()
+            )
 
         return values
 

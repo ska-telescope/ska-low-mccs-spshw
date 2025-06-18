@@ -12,6 +12,7 @@ These schemas are for use with MccsTile commands
   MccsTile_ConfigureIntegratedBeamData
   MccsTile_ConfigureIntegratedChannelData
   MccsTile_ConfigurePatternGenerator
+  MccsTile_ConfigureRampPattern
   MccsTile_ConfigureStationBeamformer
   MccsTile_ConfigureTestGenerator
   MccsTile_Get40gCoreConfiguration

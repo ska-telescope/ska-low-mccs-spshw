@@ -843,7 +843,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("boardCurrent", None) or []
 
     @attribute(dtype=bool, label="CPLD PLL locked")
-    def cpldPllLocked(self: MccsSubrack) -> bool:
+    def cpldPllLocked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack CPLD PLL locked attribute.
 
@@ -851,7 +851,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._cpld_pll_locked()
 
-    def _cpld_pll_locked(self: MccsSubrack) -> bool:
+    def _cpld_pll_locked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack CPLD PLL locked attribute.
 
@@ -1018,7 +1018,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         return self._hardware_attributes.get("subrackFanModes", None) or []
 
     @attribute(dtype=bool, label="PLL locked")
-    def subrackPllLocked(self: MccsSubrack) -> bool:
+    def subrackPllLocked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack PLL locked attribute.
 
@@ -1026,7 +1026,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._subrack_pll_locked()
 
-    def _subrack_pll_locked(self: MccsSubrack) -> bool:
+    def _subrack_pll_locked(self: MccsSubrack) -> bool | None:
         """
         Handle a Tango attribute read of the subrack PLL locked attribute.
 
@@ -1039,7 +1039,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         label="Timestamp",
         abs_change=1,
     )
-    def subrackTimestamp(self: MccsSubrack) -> int:
+    def subrackTimestamp(self: MccsSubrack) -> int | None:
         """
         Handle a Tango attribute read of the subrack timestamp attribute.
 
@@ -1047,7 +1047,7 @@ class MccsSubrack(MccsBaseDevice[SubrackComponentManager]):
         """
         return self._subrack_timestamp()
 
-    def _subrack_timestamp(self: MccsSubrack) -> int:
+    def _subrack_timestamp(self: MccsSubrack) -> int | None:
         """
         Handle a Tango attribute read of the subrack timestamp attribute.
 

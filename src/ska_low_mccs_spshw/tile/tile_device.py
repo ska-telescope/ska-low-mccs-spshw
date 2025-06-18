@@ -3251,29 +3251,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-            src_mac = kwargs.get("source_mac", None)
-            src_ip = kwargs.get("source_ip", None)
-            src_port = kwargs.get("source_port", None)
-            dst_ip = kwargs.get("destination_ip", None)
-            dst_port = kwargs.get("destination_port", None)
-            rx_port_filter = kwargs.get("rx_port_filter", None)
-            netmask = kwargs.get("netmask", None)
-            gateway_ip = kwargs.get("gateway_ip", None)
-
-            self._component_manager.configure_40g_core(
-                core_id,
-                arp_table_entry,
-                src_mac,
-                src_ip,
-                src_port,
-                dst_ip,
-                dst_port,
-                rx_port_filter,
-                netmask,
-                gateway_ip,
-            )
+            self._component_manager.configure_40g_core(**kwargs)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -3361,12 +3339,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
             :raises ValueError: if the argin is an invalid code id
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-
-            item_list = self._component_manager.get_40g_configuration(
-                core_id, arp_table_entry
-            )
+            item_list = self._component_manager.get_40g_configuration(**kwargs)
             item_new = []
             for item in item_list:
                 item_new.append(
@@ -5149,13 +5122,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureRampPattern.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureRampPattern.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigureRampPattern.json",
             )
         )

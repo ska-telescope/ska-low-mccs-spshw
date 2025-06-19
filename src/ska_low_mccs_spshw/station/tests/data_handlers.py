@@ -12,6 +12,7 @@ import abc
 import logging
 import os
 import threading
+import time
 import traceback
 from typing import Callable
 
@@ -333,6 +334,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         self: AntennaBufferDataHandler,
         logger: logging.Logger,
         nof_tiles: int,
+        nof_antennas: int,
         data_created_callback: Callable,
     ):
         """
@@ -340,20 +342,26 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
 
         :param logger: logger for the handler
         :param nof_tiles: number of tiles to expect data from
+        :param nof_antennas: number of antennas
         :param data_created_callback: callback to call when data received
         """
-        self._nof_samples = 32 * 1024  # Raw ADC: 32KB per polarisation
+        self._nof_samples = 16588800
+        self._nof_antennas = nof_antennas
         super().__init__(logger, nof_tiles, data_created_callback)
 
     def handle_data(self: AntennaBufferDataHandler) -> None:
         """Handle the reading of antenna buffer data."""
+        # TODO: Understand this behaviour. Seems without a sleep
+        # the file lock is claimed by another process.
+        sleep_time = 10
+        time.sleep(sleep_time)
+
         raw_file = RawFormatFileManager(
             root_path=self._base_path, daq_mode=FileDAQModes.Burst
         )
         self._logger.info("+=+= Handle data for tile")
         for tile_id in range(self._nof_tiles):
-            tile_data, timestamps = raw_file.read_data(
-                antennas=range(TileData.ANTENNA_COUNT),
+            tile_data, _ = raw_file.read_data(
                 polarizations=list(range(TileData.POLS_PER_ANTENNA)),
                 n_samples=self._nof_samples,
                 tile_id=tile_id,
@@ -361,6 +369,15 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
             start_idx = TileData.ANTENNA_COUNT * tile_id
             end_idx = TileData.ANTENNA_COUNT * (tile_id + 1)
             self.data[start_idx:end_idx, :, :] = tile_data
+
+    def set_nof_samples(self: AntennaBufferDataHandler, nof_samples: int) -> None:
+        """
+        Reconfigure the number of samples.
+
+        :param nof_samples: the new number of samples.
+        """
+        self._nof_samples = nof_samples
+        self.initialise_data()
 
     def initialise_data(self: AntennaBufferDataHandler) -> None:
         """Initialise empty antenna buffer data struct.
@@ -371,7 +388,7 @@ class AntennaBufferDataHandler(BaseDataReceivedHandler):
         self._logger.info("+=+= Data initialiased")
         self.data = np.zeros(
             (
-                TileData.ANTENNA_COUNT * TileData.NUM_FPGA,
+                self._nof_antennas,
                 TileData.POLS_PER_ANTENNA,
                 self._nof_samples,
             ),

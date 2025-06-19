@@ -9,11 +9,11 @@
 from __future__ import annotations
 
 import json
-import time
 from copy import copy
 from typing import Optional
 
 import numpy as np
+from ska_low_mccs_common.component.command_proxy import MccsCommandProxy
 
 from ...tile.tile_data import TileData
 from .base_daq_test import BaseDaqTest
@@ -50,8 +50,8 @@ class TestAntennaBuffer(BaseDaqTest):
 
     def test(self: TestAntennaBuffer) -> None:
         """Test the data transmission from the Antenna Buffer to the DAQ."""
-        self._data_handler = AntennaBufferDataHandler(
-            self.test_logger, 1, self._data_received_callback
+        self._data_handler: AntennaBufferDataHandler = AntennaBufferDataHandler(
+            self.test_logger, 1, 4, self._data_received_callback
         )
         fpga_list = range(TileData.NUM_FPGA)
         for fpga in fpga_list:
@@ -61,7 +61,6 @@ class TestAntennaBuffer(BaseDaqTest):
         self: TestAntennaBuffer,
         fpga_id: int = 0,
         tile_ids: Optional[list] = None,
-        use_1g: bool = False,
         start_address: int = 512 * 1024 * 1024,
         timestamp_capture_duration: int = 75,
     ) -> None:
@@ -69,7 +68,6 @@ class TestAntennaBuffer(BaseDaqTest):
 
         :param fpga_id: FPGA ID to test (default is 0)
         :param tile_ids: a list of Tile IDs to test (default is [0])
-        :param use_1g: Whether to use 1G or 10G interface (default is True)
         :param start_address: Starting address for data transfer
         :param timestamp_capture_duration: time duration in timestamps.
         """
@@ -82,7 +80,6 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.info(
             (f"Executing test for fpga_id: {fpga_id} and tile_ids: {tile_ids}")
         )
-        self.test_logger.info(f"{use_1g =}")
         self.test_logger.info(f"{start_address =}")
         self.test_logger.info(f"{timestamp_capture_duration =}")
 
@@ -91,12 +88,8 @@ class TestAntennaBuffer(BaseDaqTest):
         else:
             antenna_ids = [8, 9]
 
-        if use_1g:
-            tx_mode = "NSDN"
-            receiver_frame_size = 1664
-        else:
-            tx_mode = "SDN"
-            receiver_frame_size = 8320
+        tx_mode = "SDN"
+        receiver_frame_size = 8320
 
         self.test_logger.info(f"{antenna_ids =}")
         self.test_logger.info(f"{tx_mode =}")
@@ -136,11 +129,10 @@ class TestAntennaBuffer(BaseDaqTest):
             daq_nof_raw_samples = self._start_antenna_buffer(
                 tiles=tiles,
                 antenna_ids=antenna_ids,
-                start_time=-1,
+                start_time=-1,  # Start writting to buffer as soon as possible.
                 timestamp_capture_duration=timestamp_capture_duration,
                 continuous_mode=False,
             )
-            # TODO: Firmware says this nof_raw_samples cannot be changed. Huh?
             daq_config.update(
                 {
                     "nof_raw_samples": int(daq_nof_raw_samples),
@@ -212,26 +204,30 @@ class TestAntennaBuffer(BaseDaqTest):
         ddr_write_size: list = []
 
         for tile in tiles:
-            self.test_logger.info(f"Start antenna buffer for {tile}")
-            # TODO Use MccsCommandProxy in blocking mode?
-            return_code, message = tile.StartAntennaBuffer(
-                json.dumps(
-                    {
-                        "antennas": antenna_ids,
-                        "start_time": start_time,
-                        "timestamp_capture_duration": timestamp_capture_duration,
-                        "continuous_mode": continuous_mode,
-                    }
-                )
+            self.test_logger.info(f"Start antenna buffer for {tile.dev_name()}")
+            start_buffer_args = json.dumps(
+                {
+                    "antennas": antenna_ids,
+                    "start_time": start_time,
+                    "timestamp_capture_duration": timestamp_capture_duration,
+                    "continuous_mode": continuous_mode,
+                }
             )
+            start_buffer = MccsCommandProxy(
+                tile.dev_name(), "StartAntennaBuffer", self.test_logger
+            )
+
+            return_code, message = start_buffer(
+                arg=start_buffer_args, run_in_thread=False
+            )
+
             self.test_logger.info(f"{return_code =} | {message =}")
-            time.sleep(
-                timestamp_capture_duration + 4
-            )  # wait a minute for the function to finish
+
             ddr_write_size.append(tile.ddr_write_size)
         # calculate actual DAQ buffer size in number of raw samples
         # In theory they should all be the same, so we can use the first one
         total_nof_samples = ddr_write_size[0] // 4
+        self._data_handler.set_nof_samples(total_nof_samples)
         nof_callback = np.ceil(total_nof_samples / (8 * 1024 * 1024))
         nof_callback = max(nof_callback, 1)
         nof_callback = 2 ** int(np.log2(nof_callback))
@@ -253,10 +249,14 @@ class TestAntennaBuffer(BaseDaqTest):
         """
         self.test_logger.info("Reading antenna buffer for all tiles")
         for tile in tiles:
-            self.test_logger.info(f"Reading antenna buffer for {tile}")
-            # TODO; Slow command, does it need to be?
-            # Should we actualy wait on LRC. MCCSCommandProxy?
-            return_code, message = tile.ReadAntennaBuffer()
+            self.test_logger.info(f"Reading antenna buffer for {tile.dev_name()}")
+
+            read_buffer = MccsCommandProxy(
+                tile.dev_name(), "ReadAntennaBuffer", self.test_logger
+            )
+
+            return_code, message = read_buffer(run_in_thread=False)
+
             self.test_logger.info(f"{return_code =} | {message =}")
 
     def _send_raw_data(self: TestAntennaBuffer, sync: bool) -> None:
@@ -271,7 +271,6 @@ class TestAntennaBuffer(BaseDaqTest):
             )
         )
 
-    # pylint: disable=too-many-locals
     def _check_data(self: TestAntennaBuffer, fpga_id: int) -> None:
         """Check that DAQ data is as expected.
 
@@ -281,10 +280,6 @@ class TestAntennaBuffer(BaseDaqTest):
         """
         self.test_logger.debug("Checking received data")
         assert self._data is not None
-        assert self._pattern is not None
-        assert self._adders is not None
-        self.test_logger.debug(f"{self._data.shape =}")
-
         data = copy(self._data)
         self.test_logger.info(
             f"Unpacking data shape {data.shape} "
@@ -297,34 +292,45 @@ class TestAntennaBuffer(BaseDaqTest):
                     f"fpga_id: {fpga_id}, antenna: {antenna},"
                     + f" polarisation: {polarisation}"
                 )
-                sample_idx = TileData.POLS_PER_ANTENNA * fpga_id
-                signal_idx = (
-                    antenna % TileData.ANTENNA_COUNT
-                ) * TileData.POLS_PER_ANTENNA + polarisation
-                exp_re = pattern[sample_idx] + adders[signal_idx]
-                exp_im = pattern[sample_idx + 1233] + adders[signal_idx]
-                expected_data_real = self._signed(exp_re, "CHANNEL")
-                expected_data_imag = self._signed(exp_im, "CHANNEL")
-                self.test_logger.info(f"{expected_data_real =}")
-                self.test_logger.info(f"{expected_data_imag =}")
-                for i in range(samples):
-                    if (
-                        expected_data_real != data[antenna, polarisation, i, 0]
-                        or expected_data_imag != data[antenna, polarisation, i, 1]
-                    ):
-                        self.test_logger.error("Data Error!")
-                        self.test_logger.error(f"FPGA ID: {fpga_id}")
-                        self.test_logger.error(f"Antenna: {antenna}")
-                        self.test_logger.error(f"Polarization: {polarisation}")
-                        self.test_logger.error(f"Sample index: {i}")
+
+                signal_data = (
+                    np.reshape(
+                        data[antenna + fpga_id * 2, polarisation], (nof_samples // 4, 4)
+                    )
+                    .astype(np.uint8)
+                    .astype(np.uint32)
+                )
+                decoded_signal_data = (
+                    (signal_data[:, 0] & 0xFF)
+                    | (signal_data[:, 1] << 8)
+                    | (signal_data[:, 2] << 16)
+                    | (signal_data[:, 3] << 24)
+                )
+
+                if polarisation % 2 == 0:
+                    seed = decoded_signal_data[0]
+                else:
+                    seed += 1233
+                self.test_logger.info(
+                    "Checking incremental 32 bit pattern for "
+                    f"antenna {antenna}, pol {polarisation}"
+                )
+                for sample in range(nof_samples // 4):
+                    # exp_value = (seed + sample) & 0xFFFFFFFF
+                    exp_value = np.uint32(seed + sample)
+                    if exp_value != decoded_signal_data[sample]:
+                        self.test_logger.error("Error detected, ramp pattern")
+                        self.test_logger.error(f"Antenna index: {str(antenna)}")
+                        self.test_logger.error(f"Buffer position: {str(sample)}")
+                        self.test_logger.error(f"Expected value: {str(exp_value)}")
                         self.test_logger.error(
-                            f"Expected data real: {expected_data_real}"
+                            f"Received value: {str(decoded_signal_data[sample])}"
                         )
-                        self.test_logger.error(
-                            f"Expected data imag: {expected_data_imag}"
-                        )
-                        self.test_logger.error(
-                            "Received data: " f"{data[antenna, polarisation, i, :]}"
-                        )
+                        lo = max(sample - 128, 0)
+                        hi = min(sample + 128, nof_samples // 4)
+                        self.test_logger.error(decoded_signal_data[lo:hi])
+                        self.test_logger.error("ANTENNA BUFFER TEST FAILED!")
+
                         raise AssertionError
+
                 self.test_logger.info("Data check passed")

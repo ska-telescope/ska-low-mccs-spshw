@@ -270,7 +270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
-            "is_station_beam_flagging_enabled": "getStationBeamFlag",
+            "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
@@ -2664,7 +2664,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         dtype=("DevBoolean",),
         max_dim_x=2,  # fpgas
     )
-    def getStationBeamFlag(
+    def stationBeamFlagEnabled(
         self: MccsTile,
     ) -> list[bool]:
         """

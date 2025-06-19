@@ -1636,18 +1636,15 @@ class TileSimulator:
         """
         assert self.tpm
 
-        values = []
         if fpga_id is None:
             fpgas = list(range(len(self.tpm.station_beamf)))
         else:
             fpgas = [fpga_id]
 
-        for fpga in fpgas:
-            values.append(
-                self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled()
-            )
-
-        return values
+        return [
+            self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled()
+            for fpga in fpgas
+        ]
 
     @property
     def tile_info(self: TileSimulator) -> str:

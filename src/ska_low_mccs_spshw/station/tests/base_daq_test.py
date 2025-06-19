@@ -148,12 +148,24 @@ class BaseDaqTest(TpmSelfCheckTest):
         proxy: MccsDeviceProxy | None = None,
         pattern: list | None = None,
         adders: list | None = None,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
     ) -> None:
         self.test_logger.debug("Configuring and starting pattern generator")
         if pattern is None:
             pattern = [random.randrange(0, 255) for _ in range(int(1024))]
         if adders is None:
             adders = list(range(TileData.ANTENNA_COUNT * TileData.POLS_PER_ANTENNA))
+        pattern_config: dict[str, Any] = {
+            "stage": stage,
+            "pattern": pattern,
+            "adders": adders,
+        }
+        if ramp1 is not None:
+            pattern_config.update(ramp1)
+        if ramp2 is not None:
+            pattern_config.update(ramp2)
+
         self._pattern = pattern
         self._adders = adders
         if proxy is None:
@@ -162,9 +174,7 @@ class BaseDaqTest(TpmSelfCheckTest):
             tiles = [proxy]
         for tile in tiles:
             tile.StopPatternGenerator(stage)
-            tile.ConfigurePatternGenerator(
-                json.dumps({"stage": stage, "pattern": pattern, "adders": adders})
-            )
+            tile.ConfigurePatternGenerator(json.dumps(pattern_config))
             tile.StartPatternGenerator(stage)
 
     def _stop_pattern_generator(

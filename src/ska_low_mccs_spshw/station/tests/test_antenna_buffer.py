@@ -119,7 +119,11 @@ class TestAntennaBuffer(BaseDaqTest):
             self._start_directory_watch()
             self.test_logger.debug("Set up pattern generator")
             self._configure_and_start_pattern_generator(
-                "jesd", pattern=list(range(1024)), adders=[0] * 32
+                "jesd",
+                pattern=list(range(1024)),
+                adders=[0] * 32,
+                ramp1={"polarisation": 0},
+                ramp2={"polarisation": 1},
             )
             self._send_raw_data(sync=False)
             self._set_up_antenna_buffer(
@@ -282,11 +286,12 @@ class TestAntennaBuffer(BaseDaqTest):
         self.test_logger.debug(f"{self._data.shape =}")
 
         data = copy(self._data)
-        adders = copy(self._adders)
-        pattern = copy(self._pattern)
-        antennas, polarisations, samples, _ = data.shape
-        self.test_logger.info(f"data shape: {data.shape}")
-        for antenna in range(antennas):
+        self.test_logger.info(
+            f"Unpacking data shape {data.shape} "
+            "---> (antenna, polarisation, nof_samples). "
+        )
+        _, polarisations, nof_samples = data.shape
+        for antenna in range(2):
             for polarisation in range(polarisations):
                 self.test_logger.info(
                     f"fpga_id: {fpga_id}, antenna: {antenna},"

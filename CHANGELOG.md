@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 6.4.0
 
 * [THORN-11] New self check test added 'TestAntennaBuffer'
 * [THORN-11] Attribute ddr_write_size added to the MccsTile device

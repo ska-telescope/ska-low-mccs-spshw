@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+* [THORN-11] New self check test added 'TestAntennaBuffer'
+* [THORN-11] Attribute ddr_write_size added to the MccsTile device
+* [THORN-11] ska-low-mccs-daq-interface dependency 1.0.0-> 1.0.1
+* [THORN-11] Update helm ska-low-mccs-daq dependency 2.0.0 -> 2.0.4-dev.c6b8c425d
 * [THORN-214] Update RAL platform spec.
 
 ## 6.3.0

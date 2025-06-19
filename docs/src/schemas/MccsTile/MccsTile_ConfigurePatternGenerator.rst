@@ -24,3 +24,17 @@ Properties
 
 * **zero** (integer): An integer (0-65535) used as a mask to disable the pattern on specific antennas and polarizations. The same mask is applied to both FPGAs, so it supports up to 8 antennas and 2 polarizations. Minimum: 0. Maximum: 65535.
 
+* **ramp1** (object): Optional ramp1 applied after pattern. Cannot contain additional properties.
+
+  * **polarisation**: Refer to *[#/$defs/polarisation](#%24defs/polarisation)*.
+
+* **ramp2** (object): Optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234). Cannot contain additional properties.
+
+  * **polarisation**: Refer to *[#/$defs/polarisation](#%24defs/polarisation)*.
+
+***********
+Definitions
+***********
+
+<a id="%24defs/polarisation"></a>* **polarisation** (integer): The polarisation to apply the ramp for. Must be 0, 1, or -1 to use all stages. Must be one of: [0, 1, -1].
+

@@ -3250,29 +3250,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-            src_mac = kwargs.get("source_mac", None)
-            src_ip = kwargs.get("source_ip", None)
-            src_port = kwargs.get("source_port", None)
-            dst_ip = kwargs.get("destination_ip", None)
-            dst_port = kwargs.get("destination_port", None)
-            rx_port_filter = kwargs.get("rx_port_filter", None)
-            netmask = kwargs.get("netmask", None)
-            gateway_ip = kwargs.get("gateway_ip", None)
-
-            self._component_manager.configure_40g_core(
-                core_id,
-                arp_table_entry,
-                src_mac,
-                src_ip,
-                src_port,
-                dst_ip,
-                dst_port,
-                rx_port_filter,
-                netmask,
-                gateway_ip,
-            )
+            self._component_manager.configure_40g_core(**kwargs)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -3360,12 +3338,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
             :raises ValueError: if the argin is an invalid code id
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-
-            item_list = self._component_manager.get_40g_configuration(
-                core_id, arp_table_entry
-            )
+            item_list = self._component_manager.get_40g_configuration(**kwargs)
             item_new = []
             for item in item_list:
                 item_new.append(
@@ -5116,6 +5089,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * zero: Integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. Applied to both FPGAs, supports
             up to 8 antennas and 2 polarizations.
+        * ramp1: An optional ramp1 applied after pattern.
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
+        * ramp2: An optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234)
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

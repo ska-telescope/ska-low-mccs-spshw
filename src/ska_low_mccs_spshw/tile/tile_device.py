@@ -3276,6 +3276,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             netmask = kwargs.get("netmask", None)
             gateway_ip = kwargs.get("gateway_ip", None)
 
+            assert core_id  # linter happy == good
+
             self._component_manager.configure_40g_core(
                 core_id,
                 arp_table_entry,
@@ -3377,6 +3379,8 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             """
             core_id = kwargs.get("core_id", None)
             arp_table_entry = kwargs.get("arp_table_entry", 0)
+
+            assert core_id  # make sure we don't pass None
 
             item_list = self._component_manager.get_40g_configuration(
                 core_id, arp_table_entry

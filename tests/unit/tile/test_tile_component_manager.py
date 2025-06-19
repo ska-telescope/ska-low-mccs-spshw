@@ -1478,7 +1478,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.set_static_delays([12.0] * 32)
         with tile_component_manager._hardware_lock:
             _ = tile_component_manager.get_static_delays()
-        tile_component_manager.csp_rounding = [2] * 384
+        tile_component_manager.csp_rounding = np.array([2] * 384)
         _ = tile_component_manager.csp_rounding
         tile_component_manager.set_preadu_levels([12.0] * 32)
 

@@ -3756,6 +3756,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         start: bool = False,
         shift: int = 0,
         zero: int = 0,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
     ) -> None:
         """
         Configure the TPM pattern generator.
@@ -3777,6 +3779,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param zero: An integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. The same mask is applied to both FPGAs,
             supporting up to 8 antennas and 2 polarizations. The default value is 0.
+        :param ramp1: if defined a ramp will be applied for ramp1 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
+        :param ramp2: if defined a ramp will be applied for ramp2 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
         """
         with acquire_timeout(
             self._hardware_lock,
@@ -3785,31 +3795,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
 
-    def configure_ramp_pattern(
-        self: TileComponentManager,
-        stage: str,
-        polarisation: int,
-        ramp: str,
-    ) -> None:
-        """
-        Configure the ramp pattern.
-
-        :param stage: The stage in the signal chain where the ramp is injected.
-            Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer),
-            or 'beamf' (output of tile beamformer) or 'all' for all stages.
-        :param polarisation: The polarisation to apply the ramp for.
-            This must be 0, 1 or -1 to use all stages.
-        :param ramp: The ramp to use. Options are 'ramp1', 'ramp2' or 'all'
-            to use all ramps. (note: ramp2 = ramp1 + 1234)
-        """
-        with acquire_timeout(
-            self._hardware_lock,
-            timeout=self._default_lock_timeout,
-            raise_exception=True,
-        ):
-            self.tile.configure_ramp_pattern(
-                stage=stage, polarisation=polarisation, ramp=ramp
-            )
+            if ramp1 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp1["polarisation"], ramp="ramp1"
+                )
+            if ramp2 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp2["polarisation"], ramp="ramp2"
+                )
 
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """

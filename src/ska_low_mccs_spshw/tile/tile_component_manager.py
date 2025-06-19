@@ -3101,11 +3101,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         core_id: int = 0,
         arp_table_entry: int = 0,
-        src_mac: Optional[int] = None,
-        src_ip: Optional[str] = None,
-        src_port: Optional[int] = None,
-        dst_ip: Optional[str] = None,
-        dst_port: Optional[int] = None,
+        source_mac: Optional[int] = None,
+        source_ip: Optional[str] = None,
+        source_port: Optional[int] = None,
+        destination_ip: Optional[str] = None,
+        destination_port: Optional[int] = None,
         rx_port_filter: Optional[int] = None,
         netmask: Optional[int] = None,
         gateway_ip: Optional[int] = None,
@@ -3115,11 +3115,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param core_id: id of the core
         :param arp_table_entry: ARP table entry to use
-        :param src_mac: MAC address of the source
-        :param src_ip: IP address of the source
-        :param src_port: port of the source
-        :param dst_ip: IP address of the destination
-        :param dst_port: port of the destination
+        :param source_mac: MAC address of the source
+        :param source_ip: IP address of the source
+        :param source_port: port of the source
+        :param destination_ip: IP address of the destination
+        :param destination_port: port of the destination
         :param rx_port_filter: Filter for incoming packets
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
@@ -3133,11 +3133,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.configure_40g_core(
                         core_id,
                         arp_table_entry,
-                        src_mac,
-                        src_ip,
-                        src_port,
-                        dst_ip,
-                        dst_port,
+                        source_mac,
+                        source_ip,
+                        source_port,
+                        destination_ip,
+                        destination_port,
                         rx_port_filter,
                         netmask,
                         gateway_ip,

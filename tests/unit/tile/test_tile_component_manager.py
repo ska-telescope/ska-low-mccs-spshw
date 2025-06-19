@@ -1478,7 +1478,7 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_component_manager.set_static_delays([12.0] * 32)
         with tile_component_manager._hardware_lock:
             _ = tile_component_manager.get_static_delays()
-        tile_component_manager.csp_rounding = np.array([2] * 384)
+        tile_component_manager.csp_rounding = 2
         _ = tile_component_manager.csp_rounding
         tile_component_manager.set_preadu_levels([12.0] * 32)
 
@@ -2725,11 +2725,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         core_dict: dict[str, Any] = {
             "core_id": 0,
             "arp_table_entry": 1,
-            "src_mac": 0x14109FD4041A,
-            "src_ip": "3221226219",
-            "src_port": 8080,
-            "dst_ip": "3221226219",
-            "dst_port": 9000,
+            "source_mac": 0x14109FD4041A,
+            "source_ip": "3221226219",
+            "source_port": 8080,
+            "destination_ip": "3221226219",
+            "destination_port": 9000,
             "rx_port_filter": None,
             "netmask": None,
             "gateway_ip": None,
@@ -2739,11 +2739,11 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
         tile_simulator.configure_40g_core.assert_called_once_with(
             core_dict["core_id"],
             core_dict["arp_table_entry"],
-            core_dict["src_mac"],
-            core_dict["src_ip"],
-            core_dict["src_port"],
-            core_dict["dst_ip"],
-            core_dict["dst_port"],
+            core_dict["source_mac"],
+            core_dict["source_ip"],
+            core_dict["source_port"],
+            core_dict["destination_ip"],
+            core_dict["destination_port"],
             core_dict["rx_port_filter"],
             core_dict["netmask"],
             core_dict["gateway_ip"],

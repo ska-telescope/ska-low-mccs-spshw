@@ -3756,6 +3756,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         start: bool = False,
         shift: int = 0,
         zero: int = 0,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
     ) -> None:
         """
         Configure the TPM pattern generator.
@@ -3777,6 +3779,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param zero: An integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. The same mask is applied to both FPGAs,
             supporting up to 8 antennas and 2 polarizations. The default value is 0.
+        :param ramp1: if defined a ramp will be applied for ramp1 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
+        :param ramp2: if defined a ramp will be applied for ramp2 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
         """
         with acquire_timeout(
             self._hardware_lock,
@@ -3784,6 +3794,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+
+            if ramp1 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp1["polarisation"], ramp="ramp1"
+                )
+            if ramp2 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp2["polarisation"], ramp="ramp2"
+                )
 
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """

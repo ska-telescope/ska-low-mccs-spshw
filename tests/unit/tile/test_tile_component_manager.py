@@ -2516,9 +2516,13 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             "start": True,
             "shift": 0,
             "zero": 0,
+            "ramp2": {"polarisation": 0},
         }
 
         tile_simulator.set_pattern = unittest.mock.Mock()  # type: ignore[assignment]
+        tile_simulator.configure_ramp_pattern = (  # type: ignore[assignment]
+            unittest.mock.Mock()
+        )
 
         tile_component_manager.configure_pattern_generator(**mocked_input_params)
         tile_simulator.set_pattern.assert_called_with(
@@ -2528,6 +2532,9 @@ class TestStaticSimulator:  # pylint: disable=too-many-public-methods
             mocked_input_params["start"],
             mocked_input_params["shift"],
             mocked_input_params["zero"],
+        )
+        tile_simulator.configure_ramp_pattern.assert_called_with(
+            stage=mocked_input_params["stage"], polarisation=0, ramp="ramp2"
         )
 
     def test_start_pattern_generator(

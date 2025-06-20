@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+* [THORN-214] Update RAL platform spec.
+
+## 6.3.0
+
+* [THORN-11] ska-low-sps-tpm-api dependency 0.2.2 -> 0.3.0
+* [THORN-11] Add ability to configure a ramp in ConfigurePatternGenerator.
 * [THORN-214] Update RAL pipeline k8s runner tango host.
 * [THORN-214] Update RAL pipeline to run on schedule.
 * [THORN-71] Update to include command schemas in docs

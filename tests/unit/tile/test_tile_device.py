@@ -2216,13 +2216,18 @@ class TestMccsTileCommands:
     @pytest.mark.parametrize(
         "incorrect_param",
         [
-            ({"stage": "invalid_stage"}),
-            ({"pattern": []}),
-            ({"pattern": list(range(1025))}),
-            ({"adders": list(range(31))}),
-            ({"adders": list(range(33))}),
-            ({"shift": -1}),
-            ({"zero": 70000}),
+            {"stage": "invalid_stage"},
+            {"ramp1": "invalid_key"},
+            {"ramp1": {"polarisation": -1}},
+            {"ramp1": {"polarisation": 10}},
+            {"ramp1": {"invalid_key": -1}},
+            {"ramp2": {"invalid_key": -1}},
+            {"pattern": []},
+            {"pattern": list(range(1025))},
+            {"adders": list(range(31))},
+            {"adders": list(range(33))},
+            {"shift": -1},
+            {"zero": 70000},
         ],
     )
     def test_configure_pattern_generator(

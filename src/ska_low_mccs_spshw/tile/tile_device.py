@@ -5104,6 +5104,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * zero: Integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. Applied to both FPGAs, supports
             up to 8 antennas and 2 polarizations.
+        * ramp1: An optional ramp1 applied after pattern.
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
+        * ramp2: An optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234)
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for

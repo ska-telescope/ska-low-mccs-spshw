@@ -19,7 +19,7 @@ import logging
 import threading
 import time
 from concurrent.futures import Future, ThreadPoolExecutor, wait
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from queue import Empty
 from statistics import mean
 from typing import Any, Callable, Optional, Sequence, Union, cast
@@ -1625,7 +1625,7 @@ class SpsStationComponentManager(
 
     @check_communicating
     def _set_global_reference_time(
-        self: SpsStationComponentManager, global_reference_time: Optional[str]
+        self: SpsStationComponentManager, global_reference_time: Optional[str] = None
     ) -> ResultCode:
         if self.csp_spead_format != "SKA":
             self.logger.debug("Not setting global reference time for non-SKA format")
@@ -1633,19 +1633,13 @@ class SpsStationComponentManager(
         if global_reference_time is not None:
             self.global_reference_time = global_reference_time
         else:
-            iers_table = iers.LeapSeconds.auto_open()
-            total_leap_seconds = max(iers_table["tai_utc"])
-            tai_2000_epoch = (
-                int(Time("2000-01-01 00:00:00", scale="utc").unix) - total_leap_seconds
+            time_ref = int(
+                Time(  # parse
+                    date.today().isoformat(),  # last midnight
+                    scale="tai",  # as a TAI time
+                ).unix  # convert to unix timestamp
             )
-            rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
-            today = datetime.now(timezone.utc).date()
-            reference_time = today.strftime("%Y-%m-%dT00:00:00.000000Z")
-            dt = datetime.strptime(reference_time, rfc_format)
-            time_ref = dt.replace(tzinfo=timezone.utc).timestamp()
-            time_ref = int(time_ref - (time_ref - tai_2000_epoch) % 864)
-            if time_ref < int(time.time()) - 864000:
-                raise ValueError("Reference time too old: more than 10 days")
+
             self.global_reference_time = datetime.strftime(
                 datetime.fromtimestamp(time_ref, tz=timezone.utc), rfc_format
             )

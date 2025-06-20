@@ -724,6 +724,9 @@ def test_Initialise(
             "is_first": (i == 0),
             "is_last": (last_tile),
         }
+
+        assert tile.globalReferenceTime == station_device.globalReferenceTime
+
         tile.SetLmcDownload.assert_last_call(
             json.dumps(
                 {

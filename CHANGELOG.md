@@ -1,5 +1,9 @@
 # Version History
 
+## Unreleased
+
+* [THORN-214] Update RAL platform spec.
+
 ## 6.3.0
 
 * [THORN-11] ska-low-sps-tpm-api dependency 0.2.2 -> 0.3.0

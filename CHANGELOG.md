@@ -3,6 +3,7 @@
 ## Unreleased
 
 * [THORN-214] Update RAL platform spec.
+* [THORN-68] Added stationBeamFlagEnabled attribute
 
 ## 6.3.0
 

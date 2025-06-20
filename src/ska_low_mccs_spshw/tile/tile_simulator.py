@@ -201,6 +201,7 @@ class StationBeamformer:
         self._is_running = False
         self._start_frame = 0
         self._last_frame = 0
+        self.station_beam_flag = False
 
     def define_channel_table(self: StationBeamformer, table: list[list[int]]) -> None:
         """
@@ -270,6 +271,22 @@ class StationBeamformer:
     def is_running(self: StationBeamformer) -> bool:
         """:return: is running."""
         return self._is_running
+
+    def enable_flagging(self) -> None:
+        """Enable station beam flagging."""
+        self.station_beam_flag = True
+
+    def disable_flagging(self) -> None:
+        """Disable station beam flagging."""
+        self.station_beam_flag = False
+
+    def is_station_beam_flagging_enabled(self) -> bool:
+        """
+        Get the station beam flag state for each FPGA.
+
+        :return: station beam flag values as list of bool values
+        """
+        return self.station_beam_flag
 
 
 class MockTpmFirmwareInformation:
@@ -1580,7 +1597,14 @@ class TileSimulator:
 
         :param fpga_id: id of the fpga.
         """
-        self._station_beam_flagging = True
+        assert self.tpm
+
+        if fpga_id is None:
+            fpgas = list(range(len(self.tpm.station_beamf)))
+        else:
+            fpgas = [fpga_id]
+        for fpga in fpgas:
+            self.tpm.station_beamf[fpga].enable_flagging()
 
     @connected
     def disable_station_beam_flagging(
@@ -1591,7 +1615,36 @@ class TileSimulator:
 
         :param fpga_id: id of the fpga.
         """
-        self._station_beam_flagging = False
+        assert self.tpm
+
+        if fpga_id is None:
+            fpgas = list(range(len(self.tpm.station_beamf)))
+        else:
+            fpgas = [fpga_id]
+        for fpga in fpgas:
+            self.tpm.station_beamf[fpga].disable_flagging()
+
+    @connected
+    def is_station_beam_flagging_enabled(
+        self: TileSimulator, fpga_id: Optional[int] = None
+    ) -> list:
+        """
+        Get the station beam flag state.
+
+        :param fpga_id: id of the fpga.
+        :return: is station beam flag enabled
+        """
+        assert self.tpm
+
+        if fpga_id is None:
+            fpgas = list(range(len(self.tpm.station_beamf)))
+        else:
+            fpgas = [fpga_id]
+
+        return [
+            self.tpm.station_beamf[fpga].is_station_beam_flagging_enabled()
+            for fpga in fpgas
+        ]
 
     @property
     def tile_info(self: TileSimulator) -> str:

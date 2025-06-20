@@ -22,7 +22,9 @@ Properties
 
     * null
 
-* **subarray_beam_id** (integer): Subarray beam ID of the changes to be started. Minimum: -1.
+* **channel_groups** (array): Channel groups to be started. Length must be between 1 and 48 (inclusive).
+
+  * **Items** (integer): Minimum: 0. Maximum: 47.
 
 * **scan_id** (integer): The unique ID for the started scan. Minimum: 0.
 

@@ -10,3 +10,4 @@ These schemas are for use with SpsStation commands
 
   SpsStation_Initialise
   SpsStation_StartBeamformer
+  SpsStation_StopBeamformer

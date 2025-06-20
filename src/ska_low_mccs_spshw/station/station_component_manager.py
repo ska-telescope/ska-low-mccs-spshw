@@ -27,7 +27,6 @@ from typing import Any, Callable, Optional, Sequence, Union, cast
 import numpy as np
 import tango
 from astropy.time import Time  # type: ignore
-from astropy.utils import iers
 from ska_control_model import (
     AdminMode,
     CommunicationStatus,
@@ -1633,6 +1632,8 @@ class SpsStationComponentManager(
         if global_reference_time is not None:
             self.global_reference_time = global_reference_time
         else:
+            rfc_format = "%Y-%m-%dT%H:%M:%S.%fZ"
+
             time_ref = int(
                 Time(  # parse
                     date.today().isoformat(),  # last midnight

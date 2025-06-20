@@ -1,5 +1,21 @@
 # Version History
 
+## Unreleased
+
+* [THORN-214] Update RAL platform spec.
+
+## 6.3.0
+
+* [THORN-11] ska-low-sps-tpm-api dependency 0.2.2 -> 0.3.0
+* [THORN-11] Add ability to configure a ramp in ConfigurePatternGenerator.
+* [THORN-214] Update RAL pipeline k8s runner tango host.
+* [THORN-214] Update RAL pipeline to run on schedule.
+* [THORN-71] Update to include command schemas in docs
+
+## 6.2.2
+
+* [THORN-182] Update TPM current thresholds to 10.5/10A
+
 ## 6.2.1
 
 * [SKB-804] HotFix: Revert changes to force reprogramming.

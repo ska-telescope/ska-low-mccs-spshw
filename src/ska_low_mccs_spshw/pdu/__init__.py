@@ -9,8 +9,11 @@
 __all__ = [
     "PduHealthModel",
     "MccsPdu",
+    "PduComponentManager",
 ]  # , "PduSimulator"]
 
+
+from .pdu_component_manager import PduComponentManager
 
 # from .simulator import PduSimulator
 from .pdu_device import MccsPdu

@@ -1428,6 +1428,7 @@ def test_station_tile_attributes(
     init_expected_value: Callable[[int], Any],
     final_tile_attribute_values: Callable[[int], Any],
     final_expected_value: Callable[[int], Any],
+    change_event_callbacks: MockTangoEventCallbackGroup,
 ) -> None:
     """
     Test of attributes which aggregate tile attributes.
@@ -1448,8 +1449,20 @@ def test_station_tile_attributes(
         should take.
     :param final_expected_value: the final expected value of the station attribute, as
         a function of the number of tiles in the station.
+    :param change_event_callbacks: dictionary of Tango change event
+        callbacks with asynchrony support.
     """
+    sub_id = station_device.subscribe_event(
+        "state",
+        EventType.CHANGE_EVENT,
+        change_event_callbacks["state"],
+    )
+    change_event_callbacks["state"].assert_change_event(DevState.DISABLE)
     station_device.adminMode = AdminMode.ONLINE  # type: ignore[assignment]
+    change_event_callbacks["state"].assert_change_event(DevState.UNKNOWN)
+    change_event_callbacks["state"].assert_change_event(DevState.ON)
+    station_device.unsubscribe_event(sub_id)
+
     for i, tile in enumerate(mock_tile_device_proxies):
         if tile_attribute_name == "fpgaTemperature":
             setattr(tile, "fpga1Temperature", init_tile_attribute_values(i))

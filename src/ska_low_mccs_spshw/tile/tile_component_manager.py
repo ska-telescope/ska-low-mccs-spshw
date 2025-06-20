@@ -3111,11 +3111,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         self: TileComponentManager,
         core_id: int = 0,
         arp_table_entry: int = 0,
-        src_mac: Optional[int] = None,
-        src_ip: Optional[str] = None,
-        src_port: Optional[int] = None,
-        dst_ip: Optional[str] = None,
-        dst_port: Optional[int] = None,
+        source_mac: Optional[int] = None,
+        source_ip: Optional[str] = None,
+        source_port: Optional[int] = None,
+        destination_ip: Optional[str] = None,
+        destination_port: Optional[int] = None,
         rx_port_filter: Optional[int] = None,
         netmask: Optional[int] = None,
         gateway_ip: Optional[int] = None,
@@ -3125,11 +3125,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
 
         :param core_id: id of the core
         :param arp_table_entry: ARP table entry to use
-        :param src_mac: MAC address of the source
-        :param src_ip: IP address of the source
-        :param src_port: port of the source
-        :param dst_ip: IP address of the destination
-        :param dst_port: port of the destination
+        :param source_mac: MAC address of the source
+        :param source_ip: IP address of the source
+        :param source_port: port of the source
+        :param destination_ip: IP address of the destination
+        :param destination_port: port of the destination
         :param rx_port_filter: Filter for incoming packets
         :param netmask: Netmask
         :param gateway_ip: Gateway IP
@@ -3143,11 +3143,11 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
                     self.tile.configure_40g_core(
                         core_id,
                         arp_table_entry,
-                        src_mac,
-                        src_ip,
-                        src_port,
-                        dst_ip,
-                        dst_port,
+                        source_mac,
+                        source_ip,
+                        source_port,
+                        destination_ip,
+                        destination_port,
                         rx_port_filter,
                         netmask,
                         gateway_ip,
@@ -3786,6 +3786,8 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         start: bool = False,
         shift: int = 0,
         zero: int = 0,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
     ) -> None:
         """
         Configure the TPM pattern generator.
@@ -3807,6 +3809,14 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         :param zero: An integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. The same mask is applied to both FPGAs,
             supporting up to 8 antennas and 2 polarizations. The default value is 0.
+        :param ramp1: if defined a ramp will be applied for ramp1 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
+        :param ramp2: if defined a ramp will be applied for ramp2 after
+            the pattern is set.
+            A mandatory kwarg polarisation is used a configuration.
+            This must be 0, 1 or -1 to use all stages.
         """
         with acquire_timeout(
             self._hardware_lock,
@@ -3814,6 +3824,15 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
             raise_exception=True,
         ):
             self.tile.set_pattern(stage, pattern, adders, start, shift, zero)
+
+            if ramp1 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp1["polarisation"], ramp="ramp1"
+                )
+            if ramp2 is not None:
+                self.tile.configure_ramp_pattern(
+                    stage=stage, polarisation=ramp2["polarisation"], ramp="ramp2"
+                )
 
     def stop_pattern_generator(self: TileComponentManager, stage: str) -> None:
         """

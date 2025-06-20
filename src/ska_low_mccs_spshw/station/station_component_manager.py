@@ -2958,7 +2958,7 @@ class SpsStationComponentManager(
         :param task_abort_event: Check for abort, defaults to None
         """
         parameter_list = {}
-        #if channel_groups is not None:
+        # if channel_groups is not None:
         parameter_list = {"channel_groups": channel_groups}
         json_argument = json.dumps(parameter_list)
         if task_callback is not None:

@@ -53,8 +53,7 @@ class TestAntennaBuffer(BaseDaqTest):
         self._data_handler: AntennaBufferDataHandler = AntennaBufferDataHandler(
             self.test_logger, 1, 4, self._data_received_callback
         )
-        fpga_list = range(TileData.NUM_FPGA)
-        for fpga in fpga_list:
+        for fpga in range(TileData.NUM_FPGA):
             self.test_fpga(fpga_id=fpga)
 
     def test_fpga(
@@ -118,7 +117,6 @@ class TestAntennaBuffer(BaseDaqTest):
                 ramp1={"polarisation": 0},
                 ramp2={"polarisation": 1},
             )
-            self._send_raw_data(sync=False)
             self._set_up_antenna_buffer(
                 tiles=tiles,
                 mode=tx_mode,
@@ -198,7 +196,7 @@ class TestAntennaBuffer(BaseDaqTest):
         :param timestamp_capture_duration: capture duration in timestamps.
         :param continuous_mode: Whether to run in continuous mode or not.
 
-        :return: daq bullshit
+        :return: daq number of raw samples.
         """
         self.test_logger.info("Starting antenna buffer for all tiles")
         ddr_write_size: list = []

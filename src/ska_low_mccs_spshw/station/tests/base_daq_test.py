@@ -162,9 +162,9 @@ class BaseDaqTest(TpmSelfCheckTest):
             "adders": adders,
         }
         if ramp1 is not None:
-            pattern_config.update(ramp1)
+            pattern_config.update({"ramp1": ramp1})
         if ramp2 is not None:
-            pattern_config.update(ramp2)
+            pattern_config.update({"ramp2": ramp2})
 
         self._pattern = pattern
         self._adders = adders

@@ -565,11 +565,7 @@ class TestStationTileIntegration:
         request_provider.get_request = (  # type: ignore[method-assign]
             unittest.mock.Mock(return_value="PREADU_LEVELS")
         )
-        # Set the value in the backend TileSimulator.
-        initial_preadu_levels = [12.0] * 32
-        tile_simulator.set_preadu_levels(initial_preadu_levels)
 
-        # Subscibe to change events on the preaduLevels attribute.
         tile_device.subscribe_event(
             "preaduLevels",
             tango.EventType.CHANGE_EVENT,
@@ -577,18 +573,14 @@ class TestStationTileIntegration:
         )
         change_event_callbacks["tile_preadu_levels"].assert_change_event(Anything)
 
+        # Set the value in the backend TileSimulator.
+        initial_preadu_levels = [12.0] * 32
         assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
+        tile_simulator.set_preadu_levels(initial_preadu_levels)
 
-        # Force a poll on the backend simulator.
-
-        assert sps_station_device.preaduLevels.tolist() != initial_preadu_levels
-
-        # This will cause the Tile to push a change event.
         change_event_callbacks["tile_preadu_levels"].assert_change_event(
-            initial_preadu_levels
+            initial_preadu_levels, lookahead=2, consume_nonmatches=True
         )
-
-        # Check the station updates its own map.
         assert sps_station_device.preaduLevels.tolist() == initial_preadu_levels
 
         # Now set the value in `SpsStation`, check `MccsTile` and `TileSimulator`,

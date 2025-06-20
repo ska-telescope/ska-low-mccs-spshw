@@ -2144,6 +2144,18 @@ class TileSimulator:
 
     @check_mocked_overheating
     @connected
+    def configure_ramp_pattern(self, stage: str, polarisation: int, ramp: str) -> None:
+        """
+        Configure a ramp pattern.
+
+        :param stage: one of ("jesd", "channel", "beamf", "all")
+        :param polarisation: one of (0, 1, -1).
+            select -1 for "all" polariations
+        :param ramp: ("ramp1", "ramp2", "all")
+        """
+
+    @check_mocked_overheating
+    @connected
     def configure_integrated_beam_data(
         self: TileSimulator,
         integration_time: float = 0.5,

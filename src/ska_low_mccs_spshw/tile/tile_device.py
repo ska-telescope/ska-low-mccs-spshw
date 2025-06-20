@@ -525,7 +525,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         start_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_StartBeamformer.json",
             )
         )
@@ -2987,13 +2987,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_WriteRegister.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_WriteRegister.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_WriteRegister.json",
             )
         )
@@ -3205,13 +3205,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_Configure40gCore.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_Configure40gCore.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_Configure40gCore.json",
             )
         )
@@ -3250,29 +3250,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 message indicating status. The message is for
                 information purpose only.
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-            src_mac = kwargs.get("source_mac", None)
-            src_ip = kwargs.get("source_ip", None)
-            src_port = kwargs.get("source_port", None)
-            dst_ip = kwargs.get("destination_ip", None)
-            dst_port = kwargs.get("destination_port", None)
-            rx_port_filter = kwargs.get("rx_port_filter", None)
-            netmask = kwargs.get("netmask", None)
-            gateway_ip = kwargs.get("gateway_ip", None)
-
-            self._component_manager.configure_40g_core(
-                core_id,
-                arp_table_entry,
-                src_mac,
-                src_ip,
-                src_port,
-                dst_ip,
-                dst_port,
-                rx_port_filter,
-                netmask,
-                gateway_ip,
-            )
+            self._component_manager.configure_40g_core(**kwargs)
             return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
 
     @command(dtype_in="DevString", dtype_out="DevVarLongStringArray")
@@ -3317,13 +3295,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_Get40gCoreConfiguration.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_Get40gCoreConfiguration.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_Get40gCoreConfiguration.json",
             )
         )
@@ -3360,12 +3338,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
             :raises ValueError: if the argin is an invalid code id
             """
-            core_id = kwargs.get("core_id", None)
-            arp_table_entry = kwargs.get("arp_table_entry", 0)
-
-            item_list = self._component_manager.get_40g_configuration(
-                core_id, arp_table_entry
-            )
+            item_list = self._component_manager.get_40g_configuration(**kwargs)
             item_new = []
             for item in item_list:
                 item_new.append(
@@ -3423,13 +3396,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SetLmcDownload.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetLmcDownload.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_SetLmcDownload.json",
             )
         )
@@ -3528,13 +3501,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SetLmcIntegratedDownload.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SetLmcIntegratedDownload.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_SetLmcIntegratedDownload.json",
             )
         )
@@ -3902,13 +3875,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureStationBeamformer.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureStationBeamformer.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigureStationBeamformer.json",
             )
         )
@@ -4383,13 +4356,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureIntegratedChannelData.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureIntegratedChannelData.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigureIntegratedChannelData.json",
             )
         )
@@ -4478,13 +4451,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureIntegratedBeamData.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureIntegratedBeamData.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigureIntegratedBeamData.json",
             )
         )
@@ -4623,13 +4596,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_SendDataSamples.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_SendDataSamples.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas", "MccsTile_SendDataSamples.json"
+                "ska_low_mccs_spshw.schemas.tile", "MccsTile_SendDataSamples.json"
             )
         )
 
@@ -4801,13 +4774,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_StartAcquisition.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_StartAcquisition.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_StartAcquisition.json",
             )
         )
@@ -4873,13 +4846,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigureTestGenerator.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigureTestGenerator.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigureTestGenerator.json",
             )
         )
@@ -5042,13 +5015,13 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         This command takes as input a JSON string that conforms to the
         following schema:
 
-        .. literalinclude:: /../../src/ska_low_mccs_spshw/tile/schemas/MccsTile_ConfigurePatternGenerator.json
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_ConfigurePatternGenerator.json
            :language: json
         """  # noqa: E501
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_ConfigurePatternGenerator.json",
             )
         )
@@ -5116,6 +5089,12 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             * zero: Integer (0-65535) used as a mask to disable the pattern on
             specific antennas and polarizations. Applied to both FPGAs, supports
             up to 8 antennas and 2 polarizations.
+        * ramp1: An optional ramp1 applied after pattern.
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
+        * ramp2: An optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234)
+            * polarisation: The polarisation to apply the ramp for.
+                This must be 0, 1 or -1 to use all stages.
 
         :return: A tuple containing a return code and a string
             message indicating status. The message is for
@@ -5539,7 +5518,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         SCHEMA: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_SetTemperatureThresholds.json",
             )
         )

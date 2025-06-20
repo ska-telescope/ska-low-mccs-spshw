@@ -113,7 +113,11 @@ K8S_TEST_RUNNER_CHART_TAG ?= 0.9.1
 
 K8S_TEST_RUNNER_VOLUME_TO_MOUNT=daq-data
 
+ifdef TANGO_HOST
+K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=$(TANGO_HOST)
+else
 K8S_TEST_RUNNER_CHART_OVERRIDES = --set global.tango_host=databaseds-tango-base:10000  # TODO: This should be the default in the k8s-test-runner
+endif
 
 ifdef PASS_PROXY_CONFIG
 FACILITY_HTTP_PROXY ?= $(http_proxy)
@@ -183,8 +187,13 @@ telmodel-deps:
 k8s-pre-install-chart: telmodel-deps
 k8s-pre-uninstall-chart: telmodel-deps
 
-.PHONY: k8s-do-test
+python-pre-format:
+	python docs/scripts/document_schemas.py
 
+python-pre-lint:
+	python docs/scripts/document_schemas.py -c
+
+.PHONY: docs-pre-build python-post-format python-post-lint k8s-do-test k8s-pre-install-chart k8s-pre-uninstall-chart
 
 ########################################################################
 # HELMFILE

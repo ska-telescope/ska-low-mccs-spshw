@@ -21,6 +21,12 @@ prototype for the `Square Kilometre Array`_.
 
 .. toctree::
    :maxdepth: 1
+   :caption: Schemas
+
+   schemas/index
+
+.. toctree::
+   :maxdepth: 1
    :caption: Reference material
 
    reference/tile_brief_overview.rst

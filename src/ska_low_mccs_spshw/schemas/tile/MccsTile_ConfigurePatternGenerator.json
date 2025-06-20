@@ -1,0 +1,100 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"$id": "https://skao.int/MccsTile_ConfigureTestGenerator.json",
+	"title": "MccsTile ConfigureTestGenerator schema",
+	"description": "Schema for MccsTile's ConfigureTestGenerator command",
+	"type": "object",
+	"properties": {
+		"stage": {
+			"description": "The stage in the signal chain where the pattern is injected. Options are: 'jesd' (output of ADCs), 'channel' (output of channelizer), or 'beamf' (output of tile beamformer).",
+			"type": "string",
+			"enum": [
+				"jesd",
+				"channel",
+				"beamf"
+			]
+		},
+		"pattern": {
+			"description": "The data pattern in time order. It must be an array of length 1 to 1024.",
+			"items": {
+				"type": "number"
+			},
+			"minItems": 1,
+			"maxItems": 1024
+		},
+		"adders": {
+			"description": "A list of length 32 that expands the pattern to cover 16 antennas and 2 polarizations in hardware.",
+			"type": "array",
+			"items": {
+				"type": "integer"
+			},
+			"minItems": 32,
+			"maxItems": 32
+		},
+		"start": {
+			"description": "Boolean flag indicating whether to start the pattern immediately. If False, the pattern will need to be started manually later.",
+			"type": "boolean"
+		},
+		"shift": {
+			"description": "Optional bit shift (divides by 2^shift). This must not be used in the 'beamf' stage, where it is always overridden to 4.",
+			"type": "integer",
+			"minimum": 0
+		},
+		"zero": {
+			"description": "An integer (0-65535) used as a mask to disable the pattern on specific antennas and polarizations. The same mask is applied to both FPGAs, so it supports up to 8 antennas and 2 polarizations.",
+			"type": "integer",
+			"minimum": 0,
+			"maximum": 65535
+		},
+		"ramp1": {
+			"description": "Optional ramp1 applied after pattern.",
+			"type": "object",
+			"properties": {
+				"polarisation": {
+					"$ref": "#/$defs/polarisation"
+				}
+			},
+			"required": [
+				"polarisation"
+			],
+			"additionalProperties": false
+		},
+		"ramp2": {
+			"description": "Optional ramp2 applied after pattern. (note: ramp2 = ramp1 + 1234)",
+			"type": "object",
+			"properties": {
+				"polarisation": {
+					"$ref": "#/$defs/polarisation"
+				}
+			},
+			"required": [
+				"polarisation"
+			],
+			"additionalProperties": false
+		}
+	},
+	"required": [
+		"stage",
+		"pattern",
+		"adders"
+	],
+	"dependentRequired": {
+		"ramp1": [
+			"ramp1.polarisation"
+		],
+		"ramp2": [
+			"ramp2.polarisation"
+		]
+	},
+	"$defs": {
+		"polarisation": {
+			"description": "The polarisation to apply the ramp for. Must be 0, 1, or -1 to use all stages.",
+			"type": "integer",
+			"enum": [
+				0,
+				1,
+				-1
+			]
+		}
+	}
+}

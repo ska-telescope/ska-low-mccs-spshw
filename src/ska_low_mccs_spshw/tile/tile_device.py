@@ -533,7 +533,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
 
         stop_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.tile.schemas",
+                "ska_low_mccs_spshw.schemas.tile",
                 "MccsTile_StopBeamformer.json",
             )
         )

@@ -260,7 +260,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
 
         stop_beamformer_schema: Final = json.loads(
             importlib.resources.read_text(
-                "ska_low_mccs_spshw.station.schemas",
+                "ska_low_mccs_spshw.schemas.station",
                 "SpsStation_StopBeamformer.json",
             )
         )

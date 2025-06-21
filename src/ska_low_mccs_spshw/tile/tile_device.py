@@ -270,6 +270,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             "station_beamformer_error_count": "station_beamformer_error_count",
             "station_beamformer_flagged_count": "station_beamformer_flagged_count",
             "core_communication": "coreCommunicationStatus",
+            "is_station_beam_flagging_enabled": "stationBeamFlagEnabled",
             "board_temperature": "boardTemperature",
             "rfi_count": "rfiCount",
         }
@@ -2665,6 +2666,20 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         :returns: the RFI count per antenna/pol.
         """
         return self._attribute_state["rfiCount"].read()
+
+    @attribute(
+        dtype=("DevBoolean",),
+        max_dim_x=2,  # fpgas
+    )
+    def stationBeamFlagEnabled(
+        self: MccsTile,
+    ) -> list[bool]:
+        """
+        Return True if station beam data flagging is enabled.
+
+        :return: a list of bool values corresponding to the fpgas
+        """
+        return self.component_manager.is_station_beam_flagging_enabled
 
     @attribute(
         dtype="DevDouble",
@@ -5382,6 +5397,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "EnableStationBeamFlagging command completed OK"
+        FAILED_MESSAGE = "EnableStationBeamFlagging failed to execute"
 
         def do(
             self: MccsTile.EnableStationBeamFlaggingCommand,
@@ -5394,7 +5410,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.enable_station_beam_flagging()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
+
+            if all(value for value in beam_flag_values):
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def EnableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:
@@ -5434,6 +5454,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             super().__init__(logger)
 
         SUCCEEDED_MESSAGE = "DisableStationBeamFlagging command completed OK"
+        FAILED_MESSAGE = "DisableStationBeamFlagging failed to execute"
 
         def do(
             self: MccsTile.DisableStationBeamFlaggingCommand,
@@ -5446,7 +5467,11 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
                 information purpose only.
             """
             self._component_manager.disable_station_beam_flagging()
-            return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            beam_flag_values = self._component_manager.is_station_beam_flagging_enabled
+
+            if all(not value for value in beam_flag_values):
+                return (ResultCode.OK, self.SUCCEEDED_MESSAGE)
+            return (ResultCode.FAILED, self.FAILED_MESSAGE)
 
     @command(dtype_out="DevVarLongStringArray")
     def DisableStationBeamFlagging(self: MccsTile) -> DevVarLongStringArrayType:

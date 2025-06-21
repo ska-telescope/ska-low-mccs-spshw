@@ -7,14 +7,20 @@
     "properties": {
         "channel_groups": {
             "description": "Channel groups to be started.",
-            "type": "array",
-           "items":  {
-                "type": "integer",
-               "minimum": 0,
-               "maximum": 47
-           },
-            "minItems": 1,
-           "maxItems": 48
+	    "oneOf": [
+                {
+                    "type": "array",
+                    "items":  {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 47
+                    },
+                    "minItems": 1,
+                    "maxItems": 48
+                },
+                {"type": "null"}
+            ]
+
         }
     }
 }

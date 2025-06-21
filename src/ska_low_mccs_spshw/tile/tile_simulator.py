@@ -202,6 +202,7 @@ class StationBeamformer:
         self._start_frame = 0
         self._last_frame = 0
         self.station_beam_flag = False
+        self._group_is_running = [False] * 48
 
     def define_channel_table(self: StationBeamformer, table: list[list[int]]) -> None:
         """
@@ -260,17 +261,52 @@ class StationBeamformer:
 
     def start(
         self: StationBeamformer,
+        channel_groups: Optional[list[int]],
     ) -> None:
-        """Start."""
+        """
+        Start.
+
+        :param channel_groups: Groups of channels to start
+        """
+        if channel_groups is None:
+            channel_groups = list(range(48))
         self._is_running = True
+        for group in channel_groups:
+            self._group_is_running[group] = True
 
-    def stop(self: StationBeamformer) -> None:
-        """stop."""
-        self._is_running = False
+    def stop(
+        self: StationBeamformer,
+        channel_groups: Optional[list[int]],
+    ) -> None:
+        """
+        Stop.
 
-    def is_running(self: StationBeamformer) -> bool:
-        """:return: is running."""
-        return self._is_running
+        :param channel_groups: Groups of channels to start
+        """
+        if channel_groups is None:
+            channel_groups = list(range(48))
+        for group in channel_groups:
+            self._group_is_running[group] = False
+        if not any(self._group_is_running):
+            self._is_running = False
+
+    def is_running(
+        self: StationBeamformer,
+        channel_groups: Optional[list[int]] = None,
+    ) -> bool:
+        """
+        Check if the beamformer is running for the specified channels.
+
+        :param channel_groups: Groups of channels to start
+
+        :return: is running.
+        """
+        if channel_groups is None:
+            return self._is_running
+        running = False
+        for group in channel_groups:
+            running = running or self._group_is_running[group]
+        return self._is_running and running
 
     def enable_flagging(self) -> None:
         """Enable station beam flagging."""
@@ -2147,15 +2183,10 @@ class TileSimulator:
 
         :return: true if the beamformer was started successfully.
         """
-        if self.beamformer_is_running():
+        if self.beamformer_is_running(channel_groups=channel_groups):
             return False
-        if subarray_beam is None:
-            self.tpm.beam1.start()  # type: ignore
-            self.tpm.beam2.start()  # type: ignore
-        elif subarray_beam == 1:
-            self.tpm.beam1.start()  # type: ignore
-        elif subarray_beam == 2:
-            self.tpm.beam2.start()  # type: ignore
+        self.tpm.beam1.start(channel_groups)  # type: ignore
+        self.tpm.beam2.start(channel_groups)  # type: ignore
         return True
 
     @check_mocked_overheating
@@ -2176,13 +2207,8 @@ class TileSimulator:
         :param channel_groups: list of channel groups, in range 0:48.
             group 0 for channels 0-7, to group 47 for channels 380-383.
         """
-        if subarray_beam is None:
-            self.tpm.beam1.stop()  # type: ignore
-            self.tpm.beam2.stop()  # type: ignore
-        elif subarray_beam == 1:
-            self.tpm.beam1.stop()  # type: ignore
-        elif subarray_beam == 2:
-            self.tpm.beam2.stop()  # type: ignore
+        self.tpm.beam1.stop(channel_groups)  # type: ignore
+        self.tpm.beam2.stop(channel_groups)  # type: ignore
 
     @check_mocked_overheating
     @connected
@@ -2650,7 +2676,7 @@ class TileSimulator:
     @connected
     def beamformer_is_running(
         self: TileSimulator,
-        mask: bool | None = None,
+        mask: int | None = None,
         subarray_beam: int | None = None,
         channel_groups: list[int] | None = None,
     ) -> bool:
@@ -2666,9 +2692,10 @@ class TileSimulator:
 
         :return: is the beam is running
         """
-        return (
-            self.tpm.beam1.is_running()  # type: ignore
-            and self.tpm.beam2.is_running()  # type: ignore
+        return self.tpm.beam1.is_running(  # type: ignore
+            channel_groups
+        ) and self.tpm.beam2.is_running(  # type: ignore
+            channel_groups
         )
 
     def set_tpm_temperature_thresholds(

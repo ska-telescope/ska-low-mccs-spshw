@@ -2905,7 +2905,7 @@ class SpsStationComponentManager(
             "scan_id": scan_id,
         }
         if channel_groups is not None:
-            parameter_list["channel_groups"] = (channel_groups,)
+            parameter_list["channel_groups"] = channel_groups
         json_argument = json.dumps(parameter_list)
         start_beamformer_commands = MccsCompositeCommandProxy(self.logger)
         for tile_trl in self._tile_proxies:

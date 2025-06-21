@@ -3362,6 +3362,25 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
         ):
             return self.tile.beamformer_is_running()
 
+    @check_communicating
+    def beamformer_running_for_channels(
+        self: TileComponentManager,
+        channel_groups: list[int],
+    ) -> bool:
+        """
+        Check if the beamformer is running in a list of channel blocks.
+
+        :param channel_groups: List of channel blocks to check
+
+        :return: True if the beamformer is running
+        """
+        with acquire_timeout(
+            self._hardware_lock,
+            timeout=self._default_lock_timeout,
+            raise_exception=True,
+        ):
+            return self.tile.beamformer_is_running(channel_groups=channel_groups)
+
     @property
     @check_communicating
     def running_beams(self: TileComponentManager) -> Optional[list[int]]:

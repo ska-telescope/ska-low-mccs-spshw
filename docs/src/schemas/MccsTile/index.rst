@@ -8,7 +8,6 @@ These schemas are for use with MccsTile commands
   :caption: MccsTile Schemas
   :maxdepth: 2
 
-  
   MccsTile_Configure40gCore
   MccsTile_ConfigureIntegratedBeamData
   MccsTile_ConfigureIntegratedChannelData

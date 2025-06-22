@@ -1994,6 +1994,7 @@ class TestMccsTileCommands:
 
         * StartBeamformer command
         * StopBeamformer command
+        * BeamformerRunningForChannels command
         * isBeamformerRunning attribute
 
         :param on_tile_device: fixture that provides a
@@ -2013,6 +2014,7 @@ class TestMccsTileCommands:
         )
         change_event_callbacks["lrc_command"].assert_change_event(Anything)
         assert not on_tile_device.isBeamformerRunning
+        assert not on_tile_device.BeamformerRunningForChannels("{}")
         args = {
             "start_time": start_time,
             "duration": duration,
@@ -2023,12 +2025,16 @@ class TestMccsTileCommands:
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )
         wait_for_completed_command_to_clear_from_queue(on_tile_device)
+        assert on_tile_device.isBeamformerRunning
         args = {"channel_groups": channel_groups}
+        assert on_tile_device.BeamformerRunningForChannels(json.dumps(args))
+
         [[result_code], [lrc_id]] = on_tile_device.StopBeamformer(json.dumps(args))
         change_event_callbacks["lrc_command"].assert_change_event(
             (lrc_id, "COMPLETED"), lookahead=5, consume_nonmatches=True
         )
         assert not on_tile_device.isBeamformerRunning
+        assert not on_tile_device.BeamformerRunningForChannels(json.dumps(args))
 
     def test_configure_beamformer(
         self: TestMccsTileCommands,

@@ -494,6 +494,7 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
             ("SetLmcIntegratedDownload", self.SetLmcIntegratedDownloadCommand),
             ("SetBeamFormerRegions", self.SetBeamFormerRegionsCommand),
             ("ConfigureStationBeamformer", self.ConfigureStationBeamformerCommand),
+            ("BeamformerRunningForChannels", self.BeamformerRunningCommand),
             ("LoadCalibrationCoefficients", self.LoadCalibrationCoefficientsCommand),
             ("ApplyCalibration", self.ApplyCalibrationCommand),
             ("LoadPointingDelays", self.LoadPointingDelaysCommand),
@@ -4377,6 +4378,84 @@ class MccsTile(MccsBaseDevice[TileComponentManager]):
         handler = self.get_command_object("StopBeamformer")
         (return_code, message) = handler(argin)
         return ([return_code], [message])
+
+    class BeamformerRunningCommand(FastCommand):
+        # pylint: disable=line-too-long
+        """
+        Class to handle BeamformerRunningForChannels command.
+
+        This command takes as input a JSON string that conforms to the
+        following schema:
+
+        .. literalinclude:: /../../src/ska_low_mccs_spshw/schemas/tile/MccsTile_BeamformerRunningForChannels.json
+           :language: json
+        """  # noqa: E501
+
+        SCHEMA: Final = json.loads(
+            importlib.resources.read_text(
+                "ska_low_mccs_spshw.schemas.tile",
+                "MccsTile_BeamformerRunningForChannels.json",
+            )
+        )
+
+        def __init__(
+            self: MccsTile.BeamformerRunningCommand,
+            component_manager: TileComponentManager,
+            logger: logging.Logger | None = None,
+        ) -> None:
+            """
+            Initialise a new BeamformerRunningCommand instance.
+
+            :param component_manager: the device to which this command belongs.
+            :param logger: a logger for this command to use.
+            """
+            self._component_manager = component_manager
+            validator = JsonValidator(
+                "BeamformerRunningForChannels", self.SCHEMA, logger
+            )
+            super().__init__(logger, validator)
+
+        def do(
+            self: MccsTile.BeamformerRunningCommand,
+            *args: Any,
+            **kwargs: Any,
+        ) -> bool:
+            """
+            Implement :py:meth:`.MccsTile.BeamformerRunningForChannels` commands.
+
+            :param args: Positional arguments. This should be empty and
+                is provided for type hinting purposes only.
+            :param kwargs: keyword arguments unpacked from the JSON
+                argument to the command.
+
+            :return: whether the beamformer is running in the specified
+            """
+            channel_groups = kwargs.get("channel_groups", None)
+            return self._component_manager.beamformer_running_for_channels(
+                channel_groups
+            )
+
+    @command(dtype_in="DevString", dtype_out="DevBoolean")
+    def BeamformerRunningForChannels(self: MccsTile, argin: str) -> bool:
+        """
+        Check whether the beamformer is running for the given channel groups.
+
+        :param argin: json dictionary with optional keywords:
+
+        * channel_groups - (list) List of channel groups
+
+        :return: Whether the beamformer is running
+
+        :example:
+
+        >>> dp = tango.DeviceProxy("mccs/tile/01")
+        >>> dict = {"channel_groups": [0,1,4,5]}
+        >>> jstr = json.dumps(dict)
+        >>> running = dp.command_inout("BeamformerRunningForChannels", jstr)
+        """
+        handler = self.get_command_object("BeamformerRunningForChannels")
+        return_code = handler(argin)
+        return return_code
 
     class ConfigureIntegratedChannelDataCommand(FastCommand):
         # pylint: disable=line-too-long

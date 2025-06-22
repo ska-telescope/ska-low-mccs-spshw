@@ -923,6 +923,18 @@ def test_Standby(
             ),
         ),
         pytest.param(
+            "BeamformerRunningForChannels",
+            "{}",
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": None}),
+        ),
+        pytest.param(
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+            "BeamformerRunningForChannels",
+            json.dumps({"channel_groups": [1, 2, 4, 5]}),
+        ),
+        pytest.param(
             "ApplyPointingDelays",
             "20230101T12:34:55.000Z",
             "ApplyPointingDelays",

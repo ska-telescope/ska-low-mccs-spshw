@@ -2978,6 +2978,24 @@ class SpsStationComponentManager(
                 result=(result, message),
             )
 
+    def beamformer_running_for_channels(
+        self: SpsStationComponentManager,
+        channel_groups: list[int] | None,
+    ) -> bool:
+        """
+        Check if the beamformer is running in a list of channel blocks.
+
+        :param channel_groups: List of channel blocks to check
+
+        :return: True if the beamformer is running
+        """
+        json_arg = json.dumps({"channel_groups": channel_groups})
+        return all(
+            tile._proxy is not None
+            and tile._proxy.BeamformerRunningForChannels(json_arg)
+            for tile in self._tile_proxies.values()
+        )
+
     def configure_integrated_channel_data(
         self: SpsStationComponentManager,
         integration_time: float,

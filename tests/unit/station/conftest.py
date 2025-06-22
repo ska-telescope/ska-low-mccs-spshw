@@ -84,6 +84,7 @@ def mock_tile_builder_fixture(tile_id: int) -> MockDeviceBuilder:
         builder.add_command(
             command_name, ([ResultCode.OK], [f"{command_name} completed OK."])
         )
+    builder.add_command("BeamformerRunningForChannels", True)
     # Dummy commands for testing the async commands method
     builder.add_command("FailedCommand", ([ResultCode.FAILED], ["Command failed."]))
     builder.add_command(

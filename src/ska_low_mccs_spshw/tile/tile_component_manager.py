@@ -3365,7 +3365,7 @@ class TileComponentManager(MccsBaseComponentManager, PollingComponentManager):
     @check_communicating
     def beamformer_running_for_channels(
         self: TileComponentManager,
-        channel_groups: list[int],
+        channel_groups: list[int] | None,
     ) -> bool:
         """
         Check if the beamformer is running in a list of channel blocks.

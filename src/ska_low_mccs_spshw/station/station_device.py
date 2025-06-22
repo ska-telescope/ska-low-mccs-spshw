@@ -2544,7 +2544,7 @@ class SpsStation(MccsBaseDevice, SKAObsDevice):
             **kwargs: Any,
         ) -> bool:
             """
-            Implement :py:meth:`.MccsTile.BeamformerRunningForChannels` commands.
+            Implement :py:meth:`.SpsStation.BeamformerRunningForChannels` commands.
 
             :param args: Positional arguments. This should be empty and
                 is provided for type hinting purposes only.

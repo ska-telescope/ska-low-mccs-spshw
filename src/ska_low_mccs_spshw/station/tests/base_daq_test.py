@@ -20,7 +20,6 @@ from threading import Event
 from typing import TYPE_CHECKING, Any, Iterator
 
 import numpy as np
-from ska_control_model import AdminMode
 from ska_low_mccs_common.device_proxy import MccsDeviceProxy
 from watchdog.observers import Observer
 from watchdog.observers.inotify import InotifyObserver
@@ -90,21 +89,27 @@ class BaseDaqTest(TpmSelfCheckTest):
     ) -> None:
         assert self.daq_proxy is not None
         self.test_logger.debug("Configuring DAQ")
-        self.daq_proxy.adminmode = AdminMode.OFFLINE
-        time.sleep(1)
-        self.daq_proxy.adminmode = AdminMode.ONLINE
-        time.sleep(1)
-        self.daq_proxy.adminmode = AdminMode.ENGINEERING
         self.daq_proxy.Stop()
         time.sleep(1)
         daq_config.update(
             {
                 "directory": "/",
-                "nof_tiles": len(self.tile_proxies),
-                "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
                 "description": "self-check data",
             }
         )
+        if "nof_antennas" not in daq_config:
+            daq_config.update(
+                {
+                    "nof_antennas": TileData.ANTENNA_COUNT * len(self.tile_proxies),
+                }
+            )
+        if "nof_tiles" not in daq_config:
+            daq_config.update(
+                {
+                    "nof_tiles": len(self.tile_proxies),
+                }
+            )
+
         self.daq_proxy.Configure(json.dumps(daq_config))
         time.sleep(1)
         self.daq_proxy.Start(json.dumps({"modes_to_start": daq_mode}))
@@ -143,12 +148,24 @@ class BaseDaqTest(TpmSelfCheckTest):
         proxy: MccsDeviceProxy | None = None,
         pattern: list | None = None,
         adders: list | None = None,
+        ramp1: dict[str, int] | None = None,
+        ramp2: dict[str, int] | None = None,
     ) -> None:
         self.test_logger.debug("Configuring and starting pattern generator")
         if pattern is None:
             pattern = [random.randrange(0, 255) for _ in range(int(1024))]
         if adders is None:
             adders = list(range(TileData.ANTENNA_COUNT * TileData.POLS_PER_ANTENNA))
+        pattern_config: dict[str, Any] = {
+            "stage": stage,
+            "pattern": pattern,
+            "adders": adders,
+        }
+        if ramp1 is not None:
+            pattern_config.update({"ramp1": ramp1})
+        if ramp2 is not None:
+            pattern_config.update({"ramp2": ramp2})
+
         self._pattern = pattern
         self._adders = adders
         if proxy is None:
@@ -157,9 +174,7 @@ class BaseDaqTest(TpmSelfCheckTest):
             tiles = [proxy]
         for tile in tiles:
             tile.StopPatternGenerator(stage)
-            tile.ConfigurePatternGenerator(
-                json.dumps({"stage": stage, "pattern": pattern, "adders": adders})
-            )
+            tile.ConfigurePatternGenerator(json.dumps(pattern_config))
             tile.StartPatternGenerator(stage)
 
     def _stop_pattern_generator(

@@ -449,80 +449,80 @@ class TileWrapper:  # pylint: disable=too-few-public-methods
     beamformer_table = _CommandDrivenAttributeAccess(
         "SetBeamFormerRegions", "beamformerTable"
     )
-    beamformer_table = _CommandDrivenAttributeAccess(
-        "SetBeamFormerRegions", "beamformerTable"
-    )
 
-    preadu_levels = _AttributeAccess("preaduLevels")
-    csp_rounding = _AttributeAccess("cspRounding")
-    static_time_delays = _AttributeAccess("staticTimeDelays")
-    channeliser_rounding = _AttributeAccess("channeliserRounding")
-    global_reference_time = _AttributeAccess("globalReferenceTime")
-    health_model_params = _AttributeAccess("healthModelParams")
-    srcip40gfpga1 = _AttributeAccess("srcip40gfpga1")
-    srcip40gfpga2 = _AttributeAccess("srcip40gfpga2")
-    csp_spead_format = _AttributeAccess("cspSpeadFormat")
-    logical_tile_id = _AttributeAccess("logicalTileId")
-    station_id = _AttributeAccess("stationId")
-    firmware_name = _AttributeAccess("firmwareName")
-    firmware_version = _AttributeAccess("firmwareVersion")
-    antenna_ids = _AttributeAccess("antennaIds")
-    phase_terminal_count = _AttributeAccess("phaseTerminalCount")
+    # (wrapper_attr_name, device_attr_name) pairs
+    # for assigning _AttributeAccess descriptors
+    _rw_attrs = [
+        ("preadu_levels", "preaduLevels"),
+        ("csp_rounding", "cspRounding"),
+        ("static_time_delays", "staticTimeDelays"),
+        ("channeliser_rounding", "channeliserRounding"),
+        ("global_reference_time", "globalReferenceTime"),
+        ("health_model_params", "healthModelParams"),
+        ("srcip40gfpga1", "srcip40gfpga1"),
+        ("srcip40gfpga2", "srcip40gfpga2"),
+        ("csp_spead_format", "cspSpeadFormat"),
+        ("logical_tile_id", "logicalTileId"),
+        ("station_id", "stationId"),
+        ("firmware_name", "firmwareName"),
+        ("firmware_version", "firmwareVersion"),
+        ("antenna_ids", "antennaIds"),
+        ("phase_terminal_count", "phaseTerminalCount"),
+    ]
+    for name, api_name in _rw_attrs:
+        locals()[name] = _AttributeAccess(api_name)
 
-    # READ ONLY
-    adc_pll_status = _AttributeReadOnlyAccess("adc_pll_status")
-    tile_beamformer_status = _AttributeReadOnlyAccess("tile_beamformer_status")
-    station_beamformer_status = _AttributeReadOnlyAccess("station_beamformer_status")
-    station_beamformer_error_count = _AttributeReadOnlyAccess(
-        "station_beamformer_error_count"
-    )
-    station_beamformer_flagged_count = _AttributeReadOnlyAccess(
-        "station_beamformer_flagged_count"
-    )
-    crc_error_count = _AttributeReadOnlyAccess("crc_error_count")
+    # (wrapper_attr_name, device_attr_name) pairs
+    # for assigning _AttributeReadOnlyAccess descriptors
+    _ro_attrs = [
+        ("adc_pll_status", "adc_pll_status"),
+        ("tile_beamformer_status", "tile_beamformer_status"),
+        ("station_beamformer_status", "station_beamformer_status"),
+        ("station_beamformer_error_count", "station_beamformer_error_count"),
+        ("station_beamformer_flagged_count", "station_beamformer_flagged_count"),
+        ("crc_error_count", "crc_error_count"),
+        ("bip_error_count", "bip_error_count"),
+        ("decode_error_count", "decode_error_count"),
+        ("linkup_loss_count", "linkup_loss_count"),
+        ("data_router_status", "data_router_status"),
+        ("data_router_discarded_packets", "data_router_discarded_packets"),
+        ("arp", "arp"),
+        ("udp_status", "udp_status"),
+        ("ddr_initialisation", "ddr_initialisation"),
+        ("ddr_reset_counter", "ddr_reset_counter"),
+        ("f2f_soft_errors", "f2f_soft_errors"),
+        ("f2f_hard_errors", "f2f_hard_errors"),
+        ("resync_count", "resync_count"),
+        ("lane_status", "lane_status"),
+        ("lane_error_count", "lane_error_count"),
+        ("clock_managers", "clock_managers"),
+        ("clocks", "clocks"),
+        ("adc_sysref_counter", "adc_sysref_counter"),
+        ("adc_sysref_timing_requirements", "adc_sysref_timing_requirements"),
+        ("f2f_pll_status", "f2f_pll_status"),
+        ("qpll_status", "qpll_status"),
+        ("timing_pll_status", "timing_pll_status"),
+        ("tile_info", "tile_info"),
+        ("voltages", "voltages"),
+        ("temperatures", "temperatures"),
+        ("currents", "currents"),
+        ("timing", "timing"),
+        ("io", "io"),
+        ("dsp", "dsp"),
+        ("adcs", "adcs"),
+        ("I2C_access_alm", "I2C_access_alm"),
+        ("temperature_alm", "temperature_alm"),
+        ("SEM_wd", "SEM_wd"),
+        ("MCU_wd", "MCU_wd"),
+        ("csp_destination_ip", "cspDestinationIp"),
+        ("csp_destination_mac", "cspDestinationMac"),
+        ("csp_destination_port", "cspDestinationPort"),
+    ]
+    for name, api_name in _ro_attrs:
+        locals()[name] = _AttributeReadOnlyAccess(api_name)
 
-    bip_error_count = _AttributeReadOnlyAccess("bip_error_count")
-    decode_error_count = _AttributeReadOnlyAccess("decode_error_count")
-    linkup_loss_count = _AttributeReadOnlyAccess("linkup_loss_count")
-    data_router_status = _AttributeReadOnlyAccess("data_router_status")
-    data_router_discarded_packets = _AttributeReadOnlyAccess(
-        "data_router_discarded_packets"
-    )
-    arp = _AttributeReadOnlyAccess("arp")
-    udp_status = _AttributeReadOnlyAccess("udp_status")
-    ddr_initialisation = _AttributeReadOnlyAccess("ddr_initialisation")
-
-    ddr_reset_counter = _AttributeReadOnlyAccess("ddr_reset_counter")
-    f2f_soft_errors = _AttributeReadOnlyAccess("f2f_soft_errors")
-    f2f_hard_errors = _AttributeReadOnlyAccess("f2f_hard_errors")
-    resync_count = _AttributeReadOnlyAccess("resync_count")
-    lane_status = _AttributeReadOnlyAccess("lane_status")
-    lane_error_count = _AttributeReadOnlyAccess("lane_error_count")
-    clock_managers = _AttributeReadOnlyAccess("clock_managers")
-    clocks = _AttributeReadOnlyAccess("clocks")
-    adc_sysref_counter = _AttributeReadOnlyAccess("adc_sysref_counter")
-    adc_sysref_timing_requirements = _AttributeReadOnlyAccess(
-        "adc_sysref_timing_requirements"
-    )
-    f2f_pll_status = _AttributeReadOnlyAccess("f2f_pll_status")
-    qpll_status = _AttributeReadOnlyAccess("qpll_status")
-    timing_pll_status = _AttributeReadOnlyAccess("timing_pll_status")
-    tile_info = _AttributeReadOnlyAccess("tile_info")
-    voltages = _AttributeReadOnlyAccess("voltages")
-
-    temperatures = _AttributeReadOnlyAccess("temperatures")
-    currents = _AttributeReadOnlyAccess("currents")
-    timing = _AttributeReadOnlyAccess("timing")
-    io = _AttributeReadOnlyAccess("io")
-    dsp = _AttributeReadOnlyAccess("dsp")
-    adcs = _AttributeReadOnlyAccess("adcs")
-    I2C_access_alm = _AttributeReadOnlyAccess("I2C_access_alm")
-    temperature_alm = _AttributeReadOnlyAccess("temperature_alm")
-    SEM_wd = _AttributeReadOnlyAccess("SEM_wd")
-    MCU_wd = _AttributeReadOnlyAccess("MCU_wd")
-    csp_destination_ip = _AttributeReadOnlyAccess("cspDestinationIp")
-    csp_destination_mac = _AttributeReadOnlyAccess("cspDestinationMac")
-    csp_destination_port = _AttributeReadOnlyAccess("cspDestinationPort")
+    # Clean up to avoid leaking variables
+    del name, api_name, _rw_attrs, _ro_attrs
 
     def __init__(self: TileWrapper, tile_device: tango.DeviceProxy) -> None:
         """

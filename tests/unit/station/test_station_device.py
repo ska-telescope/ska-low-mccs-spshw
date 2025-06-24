@@ -28,7 +28,6 @@ from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.station import SpsStation
-from src.ska_low_mccs_spshw.tile.time_util import TileTime
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,

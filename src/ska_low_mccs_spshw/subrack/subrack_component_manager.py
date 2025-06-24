@@ -231,12 +231,6 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             initial_power_state=_initial_power_state,
             initial_fail=_initial_fail,
         )
-        self.pdu_proxy = _PDUProxy(
-            pdu_trl,
-            logger,
-            functools.partial(self._device_communication_state_changed, pdu_trl),
-            functools.partial(self._pdu_state_changed, pdu_trl),
-        )
 
         # we only need one worker; the heavy lifting is done by the poller in the
         # hardware component manager
@@ -266,24 +260,40 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
             # tpm_temperatures=None,  # Not implemented on SMB
             tpm_voltages=None,
         )
-        self._pdu_proxy_map = {pdu_trl: self.pdu_proxy}
-
-        self._communication_manager = CommunicationManager(
-            self._update_communication_state,
-            self._update_component_state,
-            self.logger,
-            self._pdu_proxy_map,
+        self.pdu_proxy = (
+            None
+            if not pdu_trl
+            else _PDUProxy(
+                pdu_trl,
+                logger,
+                functools.partial(self._device_communication_state_changed, pdu_trl),
+                functools.partial(self._pdu_state_changed, pdu_trl),
+            )
         )
+        self._communication_manager: CommunicationManager | None = None
+        if self.pdu_proxy is not None:
+            self._pdu_proxy_map = {pdu_trl: self.pdu_proxy}
+
+            # TODO: This CommunicationManager does not play well with the
+            # ComponentManagerWithUpstreamPowerSupply.
+            self._communication_manager = CommunicationManager(
+                self._update_communication_state,
+                self._update_component_state,
+                self.logger,
+                self._pdu_proxy_map,
+            )
 
     def start_communicating(self: SubrackComponentManager) -> None:
         """Establish communication with the subrack components."""
         super().start_communicating()
-        self._communication_manager.start_communicating()
+        if self._communication_manager is not None:
+            self._communication_manager.start_communicating()
 
     def stop_communicating(self: SubrackComponentManager) -> None:
         """Break off communication with the subrack components."""
         super().stop_communicating()
-        self._communication_manager.stop_communicating()
+        if self._communication_manager is not None:
+            self._communication_manager.stop_communicating()
 
     def _device_communication_state_changed(
         self: SubrackComponentManager,
@@ -296,9 +306,10 @@ class SubrackComponentManager(ComponentManagerWithUpstreamPowerSupply):
         :param trl: device trl.
         :param communication_state: communication status
         """
-        self._communication_manager.update_communication_status(
-            trl, communication_state
-        )
+        if self._communication_manager is not None:
+            self._communication_manager.update_communication_status(
+                trl, communication_state
+            )
 
     def _pdu_state_changed(
         self: SubrackComponentManager,

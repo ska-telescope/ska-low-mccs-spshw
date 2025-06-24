@@ -337,7 +337,6 @@ class SpsTangoTestHarness:
             device_class,
             SubrackIp=host,
             SubrackPort=port,
-            PduTrl=get_pdu_name(),
             UpdateRate=update_rate,
             LoggingLevelDefault=logging_level,
             ParentTRL=get_sps_station_name(self._station_label),

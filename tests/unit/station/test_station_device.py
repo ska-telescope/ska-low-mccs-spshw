@@ -16,16 +16,19 @@ import ipaddress
 import json
 import time
 import unittest.mock
+from datetime import timezone
 from typing import Any, Callable, Iterator
 
 import numpy as np
 import pytest
+from astropy.utils import iers
 from ska_control_model import AdminMode, HealthState, ResultCode
 from ska_low_mccs_common.testing.mock import MockCallable
 from ska_tango_testing.mock.tango import MockTangoEventCallbackGroup
 from tango import DeviceProxy, DevState, EventType
 
 from ska_low_mccs_spshw.station import SpsStation
+from src.ska_low_mccs_spshw.tile.time_util import TileTime
 from tests.harness import (
     SpsTangoTestHarness,
     SpsTangoTestHarnessContext,
@@ -664,6 +667,22 @@ def test_Initialise(
         (command_id, "COMPLETED")
     )
 
+    # get total number of leap seconds
+    iers_table = iers.LeapSeconds.auto_open()
+    total_leap_seconds = max(iers_table["tai_utc"])
+
+    current_time = datetime.datetime.now()
+    midnight = current_time.replace(
+        hour=0,
+        minute=0,
+        second=0,
+        tzinfo=timezone.utc,
+    )
+    # The expected global reference time will be the last midnight in tai.
+    # To get this, take the current time, change hours/min/s to midnight, transform
+    # it to a posix value (number of seconds) then subtract the leap seconds.
+    expected_grt = int(np.floor(midnight.timestamp())) - int(total_leap_seconds)
+
     for i, tile in enumerate(mock_tile_device_proxies):
         last_tile = i == num_tiles - 1
         if last_tile:
@@ -726,6 +745,12 @@ def test_Initialise(
         }
 
         assert tile.globalReferenceTime == station_device.globalReferenceTime
+        dt = datetime.datetime.strptime(
+            tile.globalReferenceTime, "%Y-%m-%dT%H:%M:%S.%fZ"
+        )
+        # Transform to Posix timestamp to match the expected_grt
+        ts = dt.replace(tzinfo=timezone.utc).timestamp()
+        assert int(np.ceil(ts)) == expected_grt
 
         tile.SetLmcDownload.assert_last_call(
             json.dumps(

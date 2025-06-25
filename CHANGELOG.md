@@ -1,6 +1,6 @@
 # Version History
 
-## Unreleased
+## 6.5.1
 
 * [THORN-214] make PduTrl optional in componentmanager.
 
